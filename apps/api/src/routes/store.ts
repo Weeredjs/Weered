@@ -62,39 +62,61 @@ export default async function storeRoutes(app: FastifyInstance, opts: Opts) {
       if (existing) return reply.code(400).send({ ok: false, error: "already_owned" });
     }
 
-    const mintNumber = item.maxSupply != null ? item.totalMinted + 1 : null;
-
     try {
-      const [userItem] = await prisma.$transaction([
-        (prisma as any).userItem.create({
-          data: {
-            userId: u.id,
-            itemId,
-            acquiredFrom: "store",
-            acquiredPrice: item.price,
-            mintNumber,
-          },
-        }),
-        prisma.user.update({ where: { id: u.id }, data: { paper: { decrement: item.price } } }),
-        (prisma as any).storeItem.update({ where: { id: itemId }, data: { totalMinted: { increment: 1 } } }),
-        (prisma as any).paperTransaction.create({
+      // Race-safe purchase: the pre-reads above are only a fast-path. The
+      // affordability + supply checks are re-applied as guarded writes on the
+      // locked rows INSIDE the transaction, so concurrent buys can neither
+      // overdraft the balance nor over-mint past maxSupply (matches awardPaper).
+      const result: any = await prisma.$transaction(async (tx) => {
+        const deb = await tx.user.updateMany({
+          where: { id: u.id, paper: { gte: item.price } },
+          data: { paper: { decrement: item.price } },
+        });
+        if (deb.count === 0) return { error: "insufficient_paper" };
+
+        let claimedMint: number | null = null;
+        if (item.maxSupply != null) {
+          const sup = await (tx as any).storeItem.updateMany({
+            where: { id: itemId, totalMinted: { lt: item.maxSupply } },
+            data: { totalMinted: { increment: 1 } },
+          });
+          if (sup.count === 0) throw new Error("__SOLD_OUT__"); // rolls back the debit
+          const si = await (tx as any).storeItem.findUnique({ where: { id: itemId }, select: { totalMinted: true } });
+          claimedMint = (si as any)?.totalMinted ?? null;
+        } else {
+          await (tx as any).storeItem.update({ where: { id: itemId }, data: { totalMinted: { increment: 1 } } });
+        }
+
+        const fresh = await tx.user.findUnique({ where: { id: u.id }, select: { paper: true } });
+        const newBalance = (fresh as any)?.paper ?? 0;
+
+        const userItem = await (tx as any).userItem.create({
+          data: { userId: u.id, itemId, acquiredFrom: "store", acquiredPrice: item.price, mintNumber: claimedMint },
+        });
+        await (tx as any).paperTransaction.create({
           data: {
             userId: u.id,
             type: "SPEND_STORE",
             amount: -item.price,
-            balance: (user as any).paper - item.price,
+            balance: newBalance,
             description: `Purchased: ${item.name}`,
             refId: itemId,
           },
-        }),
-      ]);
+        });
+        return { userItem, mintNumber: claimedMint, balance: newBalance };
+      });
+
+      if (result?.error === "insufficient_paper") {
+        return reply.code(400).send({ ok: false, error: "insufficient_paper", need: item.price, have: (user as any)?.paper || 0 });
+      }
 
       return reply.send({
         ok: true,
-        item: { id: userItem.id, name: item.name, rarity: item.rarity, mintNumber },
-        balance: (user as any).paper - item.price,
+        item: { id: result.userItem.id, name: item.name, rarity: item.rarity, mintNumber: result.mintNumber },
+        balance: result.balance,
       });
     } catch (e) {
+      if ((e as any)?.message === "__SOLD_OUT__") return reply.code(400).send({ ok: false, error: "sold_out" });
       console.error("[store] purchase error:", e);
       return reply.code(500).send({ ok: false, error: "purchase_failed" });
     }
@@ -274,31 +296,48 @@ export default async function storeRoutes(app: FastifyInstance, opts: Opts) {
     }
 
     try {
-      const buyerNewBalance = (buyer as any).paper - listing.price;
-      const seller = await prisma.user.findUnique({ where: { id: listing.sellerId }, select: { paper: true } });
-      const sellerNewBalance = ((seller as any)?.paper || 0) + listing.price;
+      // Race-safe purchase: claim the listing (ACTIVE->SOLD) and debit the buyer
+      // as GUARDED writes inside the tx so the same listing can't be sold twice
+      // and the buyer can't overdraft; credit the seller via INCREMENT (not an
+      // absolute write) so a concurrent change to the seller's balance is never
+      // clobbered (the prior absolute writes were a lost-update for both sides).
+      const result: any = await prisma.$transaction(async (tx) => {
+        const claim = await (tx as any).marketListing.updateMany({
+          where: { id: listingId, status: "ACTIVE" },
+          data: { status: "SOLD", buyerId: u.id, soldAt: new Date() },
+        });
+        if (claim.count === 0) return { error: "not_found" };
 
-      await prisma.$transaction([
-        (prisma as any).userItem.update({
+        const deb = await tx.user.updateMany({
+          where: { id: u.id, paper: { gte: listing.price } },
+          data: { paper: { decrement: listing.price } },
+        });
+        if (deb.count === 0) throw new Error("__INSUFFICIENT__"); // rolls back the listing claim
+
+        await tx.user.update({ where: { id: listing.sellerId }, data: { paper: { increment: listing.price } } });
+        await (tx as any).userItem.update({
           where: { id: listing.userItemId },
           data: { userId: u.id, acquiredFrom: listing.sellerId, acquiredPrice: listing.price, acquiredAt: new Date(), equipped: false },
-        }),
-        (prisma as any).marketListing.update({
-          where: { id: listingId },
-          data: { status: "SOLD", buyerId: u.id, soldAt: new Date() },
-        }),
-        prisma.user.update({ where: { id: u.id }, data: { paper: buyerNewBalance } }),
-        prisma.user.update({ where: { id: listing.sellerId }, data: { paper: sellerNewBalance } }),
-        (prisma as any).paperTransaction.create({
-          data: { userId: u.id, type: "SPEND_MARKET", amount: -listing.price, balance: buyerNewBalance, description: `Bought: ${listing.itemName}`, refId: listingId },
-        }),
-        (prisma as any).paperTransaction.create({
-          data: { userId: listing.sellerId, type: "EARN_TRADE_SOLD", amount: listing.price, balance: sellerNewBalance, description: `Sold: ${listing.itemName}`, refId: listingId },
-        }),
-      ]);
+        });
 
-      return reply.send({ ok: true, balance: buyerNewBalance });
+        const buyerFresh = await tx.user.findUnique({ where: { id: u.id }, select: { paper: true } });
+        const sellerFresh = await tx.user.findUnique({ where: { id: listing.sellerId }, select: { paper: true } });
+        const buyerNewBalance = (buyerFresh as any)?.paper ?? 0;
+        const sellerNewBalance = (sellerFresh as any)?.paper ?? 0;
+
+        await (tx as any).paperTransaction.create({
+          data: { userId: u.id, type: "SPEND_MARKET", amount: -listing.price, balance: buyerNewBalance, description: `Bought: ${listing.itemName}`, refId: listingId },
+        });
+        await (tx as any).paperTransaction.create({
+          data: { userId: listing.sellerId, type: "EARN_TRADE_SOLD", amount: listing.price, balance: sellerNewBalance, description: `Sold: ${listing.itemName}`, refId: listingId },
+        });
+        return { balance: buyerNewBalance };
+      });
+
+      if (result?.error === "not_found") return reply.code(404).send({ ok: false, error: "not_found" });
+      return reply.send({ ok: true, balance: result.balance });
     } catch (e) {
+      if ((e as any)?.message === "__INSUFFICIENT__") return reply.code(400).send({ ok: false, error: "insufficient_paper" });
       console.error("[market] purchase error:", e);
       return reply.code(500).send({ ok: false, error: "purchase_failed" });
     }
