@@ -157,6 +157,7 @@ import {
   Prisma,
   NotificationType,
 } from "@prisma/client";
+import { canAccessStaff, getLobbyRole, canModLobby } from "./lib/lobbyAuth";
 import {
   Card,
   RANKS,
@@ -847,15 +848,6 @@ async function getGlobalRole(userId: string): Promise<GlobalRole> {
   }
 }
 
-function canAccessStaff(role: GlobalRole) {
-  return (
-    role === GlobalRole.SUPPORT ||
-    role === GlobalRole.STAFF ||
-    role === GlobalRole.ADMIN ||
-    role === GlobalRole.GOD
-  );
-}
-
 function canAssignRoles(role: GlobalRole) {
   return role === GlobalRole.STAFF || role === GlobalRole.ADMIN || role === GlobalRole.GOD;
 }
@@ -881,28 +873,6 @@ async function isNameReserved(
     },
   });
   return Boolean(match);
-}
-
-async function getLobbyRole(userId: string, lobbyId: string): Promise<LobbyRole | null> {
-  try {
-    const m = await prisma.lobbyMember.findUnique({
-      where: { lobbyId_userId: { lobbyId, userId } },
-      select: { role: true },
-    });
-    return m?.role ?? null;
-  } catch {
-    return null;
-  }
-}
-
-async function canModLobby(
-  userId: string,
-  lobbyId: string,
-  globalRole: GlobalRole,
-): Promise<boolean> {
-  if (canAccessStaff(globalRole)) return true;
-  const lr = await getLobbyRole(userId, lobbyId);
-  return lr === LobbyRole.OWNER || lr === LobbyRole.MOD;
 }
 
 async function seedLobbies() {
