@@ -10,7 +10,7 @@ jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: pnpm/action-setup@v4
         with:
           version: 10.29.3
@@ -52,7 +52,7 @@ jobs:
       # apps/api/test/integration/setup.ts (which refuses non-test databases).
       DATABASE_URL: postgresql://weered:weered@localhost:5432/weered_test
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: pnpm/action-setup@v4
         with:
           version: 10.29.3
