@@ -2480,12 +2480,18 @@ async function main() {
     const status = e.statusCode || 500;
     // Schema (Zod) validation failures are client errors: clean 400, no Sentry noise.
     if (status === 400 && (e.validation || e.code === "FST_ERR_VALIDATION")) {
-      return reply.status(400).send({ error: "validation_error", message: e.message || "Invalid request" });
+      return reply.status(400).send({ ok: false, error: "validation_error", message: e.message || "Invalid request" });
     }
     if (status >= 500 && process.env.SENTRY_DSN_API) {
       Sentry.captureException(err, { tags: { route: req.routeOptions?.url || req.url } });
     }
-    reply.status(status).send({ error: e.message || "Internal error" });
+    reply.status(status).send({ ok: false, error: e.message || "Internal error" });
+  });
+
+  // Unknown routes get the same { ok:false, error, message } envelope as the rest
+  // of the API (Fastify's default 404 shape was the odd one out).
+  app.setNotFoundHandler((req, reply) => {
+    reply.status(404).send({ ok: false, error: "not_found", message: `Route ${req.method} ${req.url} not found` });
   });
   await app.register(fastifySwagger, {
     openapi: {
