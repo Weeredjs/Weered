@@ -11,7 +11,8 @@
     "web": "pnpm --filter @weered/web dev",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "typecheck": "bash scripts/check.sh"
+    "typecheck": "bash scripts/check.sh",
+    "prepare": "husky || true"
   },
   "devDependencies": {
     "@eslint/js": "^9.0.0",
@@ -21,6 +22,8 @@
     "@types/ws": "^8.18.1",
     "eslint": "^9.0.0",
     "eslint-plugin-react-hooks": "^5.2.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.0.7",
     "prettier": "^3.0.0",
     "typescript-eslint": "^8.0.0"
   },
@@ -39,5 +42,14 @@
       "brace-expansion@2": "2.1.1"
     }
   },
-  "license": "UNLICENSED"
+  "license": "UNLICENSED",
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx,mjs,cjs}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md,css,yml,yaml,html}": [
+      "prettier --write"
+    ]
+  }
 }
