@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
+import { z } from "zod";
 
 type Opts = {
   authFromHeader: (h?: string) => { id: string; name: string } | null;
@@ -82,7 +83,9 @@ export default async function socialRoutes(app: FastifyInstance, opts: Opts) {
     return reply.send({ requests: (reqs as any[]).map((r: any) => ({ ...r, fromName: senderMap.get(r.fromId) ?? r.fromId })) });
   });
 
-  app.post("/friends/request/:userId", async (req, reply) => {
+  app.post("/friends/request/:userId", {
+    schema: { tags: ["social"], summary: "Send a friend request", params: z.object({ userId: z.string().min(1) }) },
+  }, async (req, reply) => {
     const token = String((req.headers.authorization || "").replace("Bearer ", "").trim());
     const u = verifyToken(token);
     if (!u) return reply.code(401).send({ error: "Unauthorized" });
@@ -100,7 +103,9 @@ export default async function socialRoutes(app: FastifyInstance, opts: Opts) {
     return reply.send({ ok: true, request: fr });
   });
 
-  app.post("/friends/accept/:requestId", async (req, reply) => {
+  app.post("/friends/accept/:requestId", {
+    schema: { tags: ["social"], summary: "Accept a friend request", params: z.object({ requestId: z.string().min(1) }) },
+  }, async (req, reply) => {
     const token = String((req.headers.authorization || "").replace("Bearer ", "").trim());
     const u = verifyToken(token);
     if (!u) return reply.code(401).send({ error: "Unauthorized" });
@@ -120,7 +125,9 @@ export default async function socialRoutes(app: FastifyInstance, opts: Opts) {
     return reply.send({ ok: true });
   });
 
-  app.post("/friends/decline/:requestId", async (req, reply) => {
+  app.post("/friends/decline/:requestId", {
+    schema: { tags: ["social"], summary: "Decline a friend request", params: z.object({ requestId: z.string().min(1) }) },
+  }, async (req, reply) => {
     const token = String((req.headers.authorization || "").replace("Bearer ", "").trim());
     const u = verifyToken(token);
     if (!u) return reply.code(401).send({ error: "Unauthorized" });
@@ -135,7 +142,9 @@ export default async function socialRoutes(app: FastifyInstance, opts: Opts) {
   // Direct room invite: "come hang where I am". Target's invitePolicy
   // gates it; 5-min dedupe per sender+target+room.
   const _inviteSentAt = new Map<string, number>();
-  app.post("/friends/:userId/invite", async (req, reply) => {
+  app.post("/friends/:userId/invite", {
+    schema: { tags: ["social"], summary: "Invite a friend to your room", params: z.object({ userId: z.string().min(1) }) },
+  }, async (req, reply) => {
     const u = authFromHeader((req.headers as any).authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const targetId = String((req.params as any).userId || "");
@@ -179,7 +188,9 @@ export default async function socialRoutes(app: FastifyInstance, opts: Opts) {
     return reply.send({ ok: true });
   });
 
-  app.delete("/friends/:userId", async (req, reply) => {
+  app.delete("/friends/:userId", {
+    schema: { tags: ["social"], summary: "Remove a friend", params: z.object({ userId: z.string().min(1) }) },
+  }, async (req, reply) => {
     const token = String((req.headers.authorization || "").replace("Bearer ", "").trim());
     const u = verifyToken(token);
     if (!u) return reply.code(401).send({ error: "Unauthorized" });
@@ -256,7 +267,9 @@ export default async function socialRoutes(app: FastifyInstance, opts: Opts) {
     return reply.send({ ok: true, recents });
   });
 
-  app.post("/recents", async (req, reply) => {
+  app.post("/recents", {
+    schema: { tags: ["social"], summary: "Record a recent visit", body: z.object({ roomId: z.string().optional(), lobbyId: z.string().optional() }).passthrough() },
+  }, async (req, reply) => {
     const user = authFromHeader((req as any).headers?.authorization);
     if (!user) return reply.code(401).send({ error: "unauthorized" });
 
@@ -288,7 +301,9 @@ export default async function socialRoutes(app: FastifyInstance, opts: Opts) {
     }
   });
 
-  app.delete("/recents/:id", async (req, reply) => {
+  app.delete("/recents/:id", {
+    schema: { tags: ["social"], summary: "Delete a recent visit", params: z.object({ id: z.string().min(1) }) },
+  }, async (req, reply) => {
     const user = authFromHeader((req as any).headers?.authorization);
     if (!user) return reply.code(401).send({ error: "unauthorized" });
 
@@ -321,7 +336,9 @@ export default async function socialRoutes(app: FastifyInstance, opts: Opts) {
     return reply.send({ ok: true, ids, lobbies });
   });
 
-  app.post("/me/favorites/:id", async (req, reply) => {
+  app.post("/me/favorites/:id", {
+    schema: { tags: ["social"], summary: "Favorite a lobby", params: z.object({ id: z.string().min(1) }) },
+  }, async (req, reply) => {
     const user = authFromHeader((req as any).headers?.authorization);
     if (!user) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const id = String((req.params as any).id || "").trim();
@@ -334,7 +351,9 @@ export default async function socialRoutes(app: FastifyInstance, opts: Opts) {
     return reply.send({ ok: true });
   });
 
-  app.delete("/me/favorites/:id", async (req, reply) => {
+  app.delete("/me/favorites/:id", {
+    schema: { tags: ["social"], summary: "Unfavorite a lobby", params: z.object({ id: z.string().min(1) }) },
+  }, async (req, reply) => {
     const user = authFromHeader((req as any).headers?.authorization);
     if (!user) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const id = String((req.params as any).id || "").trim();
@@ -344,7 +363,9 @@ export default async function socialRoutes(app: FastifyInstance, opts: Opts) {
     return reply.send({ ok: true });
   });
 
-  app.post("/me/favorites/merge", async (req, reply) => {
+  app.post("/me/favorites/merge", {
+    schema: { tags: ["social"], summary: "Merge favorite lobby ids", body: z.object({ ids: z.array(z.string()).optional() }).passthrough() },
+  }, async (req, reply) => {
     const user = authFromHeader((req as any).headers?.authorization);
     if (!user) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const body = (req as any).body || {};
@@ -376,7 +397,9 @@ export default async function socialRoutes(app: FastifyInstance, opts: Opts) {
     });
   });
 
-  app.post("/users/:userId/block", async (req, reply) => {
+  app.post("/users/:userId/block", {
+    schema: { tags: ["social"], summary: "Block a user", params: z.object({ userId: z.string().min(1) }) },
+  }, async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const targetId = String((req as any).params?.userId || "");
@@ -395,7 +418,9 @@ export default async function socialRoutes(app: FastifyInstance, opts: Opts) {
     }
   });
 
-  app.delete("/users/:userId/block", async (req, reply) => {
+  app.delete("/users/:userId/block", {
+    schema: { tags: ["social"], summary: "Unblock a user", params: z.object({ userId: z.string().min(1) }) },
+  }, async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const targetId = String((req as any).params?.userId || "");
@@ -411,7 +436,9 @@ export default async function socialRoutes(app: FastifyInstance, opts: Opts) {
   const VALID_REPORT_REASONS = new Set(["SPAM", "HARASSMENT", "HATE_SPEECH", "THREATS", "NSFW", "MINOR_SAFETY", "IMPERSONATION", "SELF_HARM", "OTHER"]);
   const VALID_TARGET_TYPES = new Set(["MESSAGE", "USER", "ROOM", "LOBBY"]);
 
-  app.post("/reports", async (req, reply) => {
+  app.post("/reports", {
+    schema: { tags: ["social"], summary: "Report content/user", body: z.object({ targetType: z.string(), targetId: z.string(), reason: z.string(), context: z.string().nullish(), note: z.string().nullish() }).passthrough() },
+  }, async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const body: any = (req as any).body || {};
