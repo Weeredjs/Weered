@@ -1,3 +1,4 @@
+import { log } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 import { fetchWithTimeout } from "../lib/fetchWithTimeout";
 
@@ -20,15 +21,19 @@ export default async function pgaRoutes(app: FastifyInstance) {
         score: c.score || "E",
         rounds: (c.linescores || []).map((l: any) => l.value),
         today: c.linescores?.length ? c.linescores[c.linescores.length - 1]?.value : null,
-        todayDisplay: c.linescores?.length ? c.linescores[c.linescores.length - 1]?.displayValue : null,
+        todayDisplay: c.linescores?.length
+          ? c.linescores[c.linescores.length - 1]?.displayValue
+          : null,
         thru: c.status?.thru || c.status?.displayValue || "",
         status: c.status?.type?.description || "",
-        holeByHole: c.linescores?.length ? (c.linescores[c.linescores.length - 1]?.linescores || []).map((h: any, hi: number) => ({
-          hole: hi + 1,
-          score: h.value,
-          display: h.displayValue,
-          toPar: h.scoreType?.displayValue || "E",
-        })) : [],
+        holeByHole: c.linescores?.length
+          ? (c.linescores[c.linescores.length - 1]?.linescores || []).map((h: any, hi: number) => ({
+              hole: hi + 1,
+              score: h.value,
+              display: h.displayValue,
+              toPar: h.scoreType?.displayValue || "E",
+            }))
+          : [],
       }));
 
       return reply.send({
@@ -46,7 +51,7 @@ export default async function pgaRoutes(app: FastifyInstance) {
         players,
       });
     } catch (e) {
-      console.error("[pga leaderboard]", e);
+      log.error("[pga leaderboard]", e);
       return reply.send({ ok: true, event: null, players: [], error: "fetch_failed" });
     }
   });
@@ -66,7 +71,7 @@ export default async function pgaRoutes(app: FastifyInstance) {
       }));
       return reply.send({ ok: true, articles });
     } catch (e) {
-      console.error("[pga news]", e);
+      log.error("[pga news]", e);
       return reply.send({ ok: true, articles: [], error: "fetch_failed" });
     }
   });
@@ -74,7 +79,9 @@ export default async function pgaRoutes(app: FastifyInstance) {
   app.get("/pga/schedule", async (req, reply) => {
     try {
       const year = new Date().getFullYear();
-      const calRes = await fetchWithTimeout(`https://site.api.espn.com/apis/site/v2/sports/golf/pga/calendar?dates=${year}`);
+      const calRes = await fetchWithTimeout(
+        `https://site.api.espn.com/apis/site/v2/sports/golf/pga/calendar?dates=${year}`,
+      );
       const calData = await calRes.json();
 
       let events: any[] = [];
@@ -82,7 +89,9 @@ export default async function pgaRoutes(app: FastifyInstance) {
         events = calData.events;
       } else if (calData?.leagues?.[0]?.calendar) {
         const cal = calData.leagues[0].calendar;
-        events = (Array.isArray(cal) ? cal : []).flatMap((c: any) => c.entries || [c]).filter((e: any) => e.label || e.detail);
+        events = (Array.isArray(cal) ? cal : [])
+          .flatMap((c: any) => c.entries || [c])
+          .filter((e: any) => e.label || e.detail);
       }
 
       const schedule = events.slice(0, 30).map((e: any) => ({
@@ -95,7 +104,7 @@ export default async function pgaRoutes(app: FastifyInstance) {
 
       return reply.send({ ok: true, schedule });
     } catch (e) {
-      console.error("[pga schedule]", e);
+      log.error("[pga schedule]", e);
       return reply.send({ ok: true, schedule: [], error: "fetch_failed" });
     }
   });
@@ -134,7 +143,7 @@ export default async function pgaRoutes(app: FastifyInstance) {
         field,
       });
     } catch (e) {
-      console.error("[pga field]", e);
+      log.error("[pga field]", e);
       return reply.send({ ok: true, event: null, field: [], error: "fetch_failed" });
     }
   });

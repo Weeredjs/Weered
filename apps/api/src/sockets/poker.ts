@@ -1,3 +1,4 @@
+import { log } from "../lib/logger";
 // Poker WS handlers extracted from the index.ts main message handler:
 // poker:join/spectate/leave/start/action. The poker engine helpers + the
 // pokerTables Map + the PokerTable types remain in index.ts (shared with the
@@ -16,13 +17,31 @@ type Opts = {
   activePlayersInHand: (table: any) => any[];
   activeSeatCount: (table: any) => number;
   broadcastToPokerTable: (tableId: string, event: any) => void;
-  awardPaper: (userId: string, type: string, amount: number, description: string, refId?: string) => Promise<{ balance: number } | null>;
+  awardPaper: (
+    userId: string,
+    type: string,
+    amount: number,
+    description: string,
+    refId?: string,
+  ) => Promise<{ balance: number } | null>;
   pokerTables: Map<string, any>;
   send: (ws: any, msg: any) => void;
 };
 
 export async function handlePoker(ws: any, msg: any, opts: Opts): Promise<void> {
-  const { getOrCreatePokerTable, broadcastPokerState, startPokerHand, buildPokerStateForUser, advancePokerGame, activePlayersInHand, activeSeatCount, broadcastToPokerTable, awardPaper, pokerTables, send } = opts;
+  const {
+    getOrCreatePokerTable,
+    broadcastPokerState,
+    startPokerHand,
+    buildPokerStateForUser,
+    advancePokerGame,
+    activePlayersInHand,
+    activeSeatCount,
+    broadcastToPokerTable,
+    awardPaper,
+    pokerTables,
+    send,
+  } = opts;
 
   if (msg.type === "poker:join") {
     const tableId = String(msg.tableId || "").trim();
@@ -32,7 +51,10 @@ export async function handlePoker(ws: any, msg: any, opts: Opts): Promise<void> 
     const table = getOrCreatePokerTable(tableId);
 
     if (buyin < table.minBuyin || buyin > table.maxBuyin) {
-      send(ws, { type: "poker:error", error: `Buy-in must be between ${table.minBuyin} and ${table.maxBuyin} Paper` });
+      send(ws, {
+        type: "poker:error",
+        error: `Buy-in must be between ${table.minBuyin} and ${table.maxBuyin} Paper`,
+      });
       return;
     }
 
@@ -48,13 +70,19 @@ export async function handlePoker(ws: any, msg: any, opts: Opts): Promise<void> 
     }
 
     try {
-      const res = await awardPaper(ws.user.id, "POKER_BUYIN", -buyin, `Poker buy-in at table ${tableId}`, tableId);
+      const res = await awardPaper(
+        ws.user.id,
+        "POKER_BUYIN",
+        -buyin,
+        `Poker buy-in at table ${tableId}`,
+        tableId,
+      );
       if (!res) {
         send(ws, { type: "poker:error", error: "Insufficient Paper balance" });
         return;
       }
     } catch (e) {
-      console.error("[poker:join] Paper deduction failed:", e);
+      log.error("[poker:join] Paper deduction failed:", e);
       send(ws, { type: "poker:error", error: "Failed to process buy-in" });
       return;
     }
@@ -72,7 +100,9 @@ export async function handlePoker(ws: any, msg: any, opts: Opts): Promise<void> 
 
     table.spectators.delete(ws.user.id);
 
-    console.log(`[poker] ${ws.user.name} joined table ${tableId} seat ${emptySeatIndex} with ${buyin} chips`);
+    log.log(
+      `[poker] ${ws.user.name} joined table ${tableId} seat ${emptySeatIndex} with ${buyin} chips`,
+    );
     broadcastPokerState(tableId);
 
     const seatedCount = table.seats.filter((s: any) => s !== null).length;
@@ -127,10 +157,16 @@ export async function handlePoker(ws: any, msg: any, opts: Opts): Promise<void> 
     table.seats[seatIdx] = null;
 
     if (chipsToReturn > 0) {
-      await awardPaper(ws.user.id, "POKER_CASHOUT", chipsToReturn, `Left poker table ${tableId} with ${chipsToReturn} chips`, tableId);
+      await awardPaper(
+        ws.user.id,
+        "POKER_CASHOUT",
+        chipsToReturn,
+        `Left poker table ${tableId} with ${chipsToReturn} chips`,
+        tableId,
+      );
     }
 
-    console.log(`[poker] ${ws.user.name} left table ${tableId}`);
+    log.log(`[poker] ${ws.user.name} left table ${tableId}`);
 
     send(ws, { type: "poker:state", ...buildPokerStateForUser(table, ws.user.id), youLeft: true });
 
@@ -150,7 +186,10 @@ export async function handlePoker(ws: any, msg: any, opts: Opts): Promise<void> 
     const tableId = String(msg.tableId || "").trim();
     if (!ws.user || !tableId) return;
     const table = pokerTables.get(tableId);
-    if (!table) { send(ws, { type: "poker:error", error: "Table not found" }); return; }
+    if (!table) {
+      send(ws, { type: "poker:error", error: "Table not found" });
+      return;
+    }
 
     if (!table.seats.some((s: any) => s && s.userId === ws.user!.id)) {
       send(ws, { type: "poker:error", error: "Not seated at this table" });
@@ -173,7 +212,9 @@ export async function handlePoker(ws: any, msg: any, opts: Opts): Promise<void> 
 
   if (msg.type === "poker:action") {
     const tableId = String(msg.tableId || "").trim();
-    const action = String(msg.action || "").trim().toLowerCase();
+    const action = String(msg.action || "")
+      .trim()
+      .toLowerCase();
     const amount = Number(msg.amount || 0);
     if (!ws.user || !tableId || !action) return;
 
@@ -184,7 +225,10 @@ export async function handlePoker(ws: any, msg: any, opts: Opts): Promise<void> 
     }
 
     const seatIdx = table.seats.findIndex((s: any) => s && s.userId === ws.user!.id);
-    if (seatIdx === -1) { send(ws, { type: "poker:error", error: "Not seated" }); return; }
+    if (seatIdx === -1) {
+      send(ws, { type: "poker:error", error: "Not seated" });
+      return;
+    }
 
     const seat = table.seats[seatIdx]!;
 
@@ -219,7 +263,10 @@ export async function handlePoker(ws: any, msg: any, opts: Opts): Promise<void> 
         actionAmount = callAmount;
       }
     } else if (action === "raise") {
-      if (amount <= 0) { send(ws, { type: "poker:error", error: "Raise amount required" }); return; }
+      if (amount <= 0) {
+        send(ws, { type: "poker:error", error: "Raise amount required" });
+        return;
+      }
 
       const totalBet = amount;
       const raiseAmount = totalBet - seat.bet;

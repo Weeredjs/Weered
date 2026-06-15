@@ -1,3 +1,4 @@
+import { log } from "./logger";
 import { prisma } from "./prisma";
 
 // Server-authoritative Paper economy primitive. Race-safe atomic credit/debit:
@@ -28,7 +29,7 @@ export async function awardPaper(
       return { balance: newBalance };
     });
   } catch (e) {
-    console.error("[paper] awardPaper error:", e);
+    log.error("[paper] awardPaper error:", e);
     return null;
   }
 }

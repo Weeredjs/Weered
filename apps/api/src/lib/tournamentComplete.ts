@@ -1,14 +1,25 @@
-
+import { log } from "./logger";
 import type { PrismaClient } from "@prisma/client";
 import { grantFlairToUser } from "./flair";
 
 type CreateNotification = (opts: {
-  userId: string; type: string; title: string;
-  body?: string; actionUrl?: string | null;
-  actorId?: string; actorName?: string; meta?: any;
+  userId: string;
+  type: string;
+  title: string;
+  body?: string;
+  actionUrl?: string | null;
+  actorId?: string;
+  actorName?: string;
+  meta?: any;
 }) => Promise<any>;
 
-type AwardPaper = (userId: string, type: string, amount: number, description: string, refId?: string) => Promise<{ balance: number } | null>;
+type AwardPaper = (
+  userId: string,
+  type: string,
+  amount: number,
+  description: string,
+  refId?: string,
+) => Promise<{ balance: number } | null>;
 
 export type TournamentCompleteDeps = {
   awardPaper?: AwardPaper;
@@ -54,12 +65,17 @@ export async function completeTournament(
       if (stats[m.winnerEntryId]) stats[m.winnerEntryId].wins++;
       if (loserId && stats[loserId]) stats[loserId].losses++;
       if (m.scoreA != null && m.scoreB != null) {
-        if (stats[m.entryAId!]) stats[m.entryAId!].diff += (m.scoreA - m.scoreB);
-        if (stats[m.entryBId!]) stats[m.entryBId!].diff += (m.scoreB - m.scoreA);
+        if (stats[m.entryAId!]) stats[m.entryAId!].diff += m.scoreA - m.scoreB;
+        if (stats[m.entryBId!]) stats[m.entryBId!].diff += m.scoreB - m.scoreA;
       }
     }
     entries = allEntries
-      .map((e: any) => ({ ...e, _wins: stats[e.id].wins, _losses: stats[e.id].losses, _diff: stats[e.id].diff }))
+      .map((e: any) => ({
+        ...e,
+        _wins: stats[e.id].wins,
+        _losses: stats[e.id].losses,
+        _diff: stats[e.id].diff,
+      }))
       .sort((a: any, b: any) => {
         if (b._wins !== a._wins) return b._wins - a._wins;
         if (b._diff !== a._diff) return b._diff - a._diff;
@@ -84,11 +100,16 @@ export async function completeTournament(
   const defaultPayout = (t: string, total: number) => {
     const scale = Math.min(1.0, Math.log2(Math.max(2, total)) / 4);
     switch (t) {
-      case "CHAMPION": return { paper: Math.round(2000 * scale), notoriety: Math.round(500 * scale) };
-      case "PODIUM":   return { paper: Math.round(1000 * scale), notoriety: Math.round(250 * scale) };
-      case "TOP8":     return { paper: Math.round(500 * scale),  notoriety: Math.round(100 * scale) };
-      case "TOP16":    return { paper: Math.round(200 * scale),  notoriety: Math.round(50 * scale) };
-      default:         return { paper: 0, notoriety: 0 };
+      case "CHAMPION":
+        return { paper: Math.round(2000 * scale), notoriety: Math.round(500 * scale) };
+      case "PODIUM":
+        return { paper: Math.round(1000 * scale), notoriety: Math.round(250 * scale) };
+      case "TOP8":
+        return { paper: Math.round(500 * scale), notoriety: Math.round(100 * scale) };
+      case "TOP16":
+        return { paper: Math.round(200 * scale), notoriety: Math.round(50 * scale) };
+      default:
+        return { paper: 0, notoriety: 0 };
     }
   };
 
@@ -102,12 +123,23 @@ export async function completeTournament(
     payouts.push({ userId: e.userId, displayName: e.displayName, rank: i + 1, tier: t, ...p });
 
     if (awardPaper && p.paper > 0) {
-      await awardPaper(e.userId, "TOURNAMENT_PRIZE", p.paper, `${tournament.title} · ${t}`, tournamentId).catch(() => {});
+      await awardPaper(
+        e.userId,
+        "TOURNAMENT_PRIZE",
+        p.paper,
+        `${tournament.title} · ${t}`,
+        tournamentId,
+      ).catch(() => {});
     }
     if (p.notoriety > 0) {
       try {
         await (prisma as any).notorietyEvent.create({
-          data: { userId: e.userId, action: `TOURNAMENT_${t}`, points: p.notoriety, refId: tournamentId },
+          data: {
+            userId: e.userId,
+            action: `TOURNAMENT_${t}`,
+            points: p.notoriety,
+            refId: tournamentId,
+          },
         });
         await (prisma as any).user.update({
           where: { id: e.userId },
@@ -121,9 +153,14 @@ export async function completeTournament(
       for (const rw of rewardsArr) {
         if (rw && rw.kind === "FLAIR" && rw.flairItemId) {
           try {
-            await grantFlairToUser(prisma, e.userId, String(rw.flairItemId), `tournament:${tournamentId}`);
+            await grantFlairToUser(
+              prisma,
+              e.userId,
+              String(rw.flairItemId),
+              `tournament:${tournamentId}`,
+            );
           } catch (err) {
-            console.warn("[tournament] flair grant failed:", err);
+            log.warn("[tournament] flair grant failed:", err);
           }
         }
       }
@@ -149,7 +186,7 @@ export async function completeTournament(
           create: { userId: e.userId, badgeId: badge.id },
         });
       } catch (err) {
-        console.warn("[tournament] badge award failed:", err);
+        log.warn("[tournament] badge award failed:", err);
       }
     }
 
@@ -157,12 +194,14 @@ export async function completeTournament(
       await createNotification({
         userId: e.userId,
         type: "CHALLENGE_COMPLETED",
-        title: t === "CHAMPION"
-          ? `🏆 You won ${tournament.title}`
-          : `Top ${i + 1} in ${tournament.title}`,
-        body: p.paper > 0 || p.notoriety > 0
-          ? `Awarded ${p.paper > 0 ? `${p.paper}P` : ""}${p.paper > 0 && p.notoriety > 0 ? " + " : ""}${p.notoriety > 0 ? `${p.notoriety} Notoriety` : ""}.`
-          : "Honor only — no payout.",
+        title:
+          t === "CHAMPION"
+            ? `🏆 You won ${tournament.title}`
+            : `Top ${i + 1} in ${tournament.title}`,
+        body:
+          p.paper > 0 || p.notoriety > 0
+            ? `Awarded ${p.paper > 0 ? `${p.paper}P` : ""}${p.paper > 0 && p.notoriety > 0 ? " + " : ""}${p.notoriety > 0 ? `${p.notoriety} Notoriety` : ""}.`
+            : "Honor only — no payout.",
         actionUrl: tournament.lobbyId ? `/lobby/${encodeURIComponent(tournament.lobbyId)}` : null,
         meta: { kind: "tournament_complete", tournamentId, rank: i + 1, tier: t },
       }).catch(() => {});

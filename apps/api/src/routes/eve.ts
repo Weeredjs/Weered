@@ -1,3 +1,4 @@
+import { log } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 import { fetchWithTimeout } from "../lib/fetchWithTimeout";
 import { prisma } from "../lib/prisma";
@@ -18,10 +19,10 @@ const EVE_SCOPES = [
   "esi-killmails.read_killmails.v1",
 ].join(" ");
 
-const EVE_CLIENT_ID     = process.env.EVE_CLIENT_ID     || "";
+const EVE_CLIENT_ID = process.env.EVE_CLIENT_ID || "";
 const EVE_CLIENT_SECRET = process.env.EVE_CLIENT_SECRET || "";
-const SITE_URL          = process.env.SITE_URL          || "https://weered.ca";
-const API_URL           = process.env.API_URL           || "https://api.weered.ca";
+const SITE_URL = process.env.SITE_URL || "https://weered.ca";
+const API_URL = process.env.API_URL || "https://api.weered.ca";
 
 function decodeJwtSub(jwt: string): string | null {
   try {
@@ -77,13 +78,19 @@ async function esiAuthedGet<T = any>(path: string, token: string): Promise<T | n
   }
 }
 
-async function esiResolveNames(ids: number[]): Promise<Record<number, { name: string; category: string }>> {
-  const unique = Array.from(new Set(ids.filter(n => typeof n === "number" && n > 0)));
+async function esiResolveNames(
+  ids: number[],
+): Promise<Record<number, { name: string; category: string }>> {
+  const unique = Array.from(new Set(ids.filter((n) => typeof n === "number" && n > 0)));
   if (unique.length === 0) return {};
   try {
     const r = await fetchWithTimeout(`${ESI_BASE}/universe/names/`, {
       method: "POST",
-      headers: { "User-Agent": ESI_USER_AGENT, Accept: "application/json", "Content-Type": "application/json" },
+      headers: {
+        "User-Agent": ESI_USER_AGENT,
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify(unique),
     });
     if (!r.ok) return {};
@@ -91,7 +98,9 @@ async function esiResolveNames(ids: number[]): Promise<Record<number, { name: st
     const out: Record<number, { name: string; category: string }> = {};
     for (const row of rows) out[row.id] = { name: row.name, category: row.category };
     return out;
-  } catch { return {}; }
+  } catch {
+    return {};
+  }
 }
 
 type Opts = {
@@ -114,7 +123,7 @@ export default async function eveRoutes(app: FastifyInstance, opts: Opts) {
   });
 
   app.get("/auth/eve/callback", async (req, reply) => {
-    const code  = String((req as any).query?.code  || "");
+    const code = String((req as any).query?.code || "");
     const state = String((req as any).query?.state || "");
     if (!code) return reply.code(400).send({ error: "Missing code" });
 
@@ -134,7 +143,7 @@ export default async function eveRoutes(app: FastifyInstance, opts: Opts) {
       });
       const tokens = await tokenRes.json();
       if (!tokens.access_token) {
-        console.error("[eve oauth] token error", tokens);
+        log.error("[eve oauth] token error", tokens);
         return reply.redirect(`${SITE_URL}/lobby/eve?eve=error`);
       }
 
@@ -191,7 +200,7 @@ export default async function eveRoutes(app: FastifyInstance, opts: Opts) {
       awardNotoriety(userId, "EVE_LINKED").catch(() => {});
       return reply.redirect(`${SITE_URL}/lobby/eve?eve=success`);
     } catch (e) {
-      console.error("[eve oauth callback]", e);
+      log.error("[eve oauth callback]", e);
       return reply.redirect(`${SITE_URL}/lobby/eve?eve=error`);
     }
   });
@@ -222,10 +231,10 @@ export default async function eveRoutes(app: FastifyInstance, opts: Opts) {
     const characterId = acct.externalId;
     const token = acct.accessToken;
     const [loc, ship, online, queue]: any = await Promise.all([
-      esiAuthedGet(`/characters/${characterId}/location/`,      token),
-      esiAuthedGet(`/characters/${characterId}/ship/`,           token),
-      esiAuthedGet(`/characters/${characterId}/online/`,         token),
-      esiAuthedGet(`/characters/${characterId}/skillqueue/`,     token),
+      esiAuthedGet(`/characters/${characterId}/location/`, token),
+      esiAuthedGet(`/characters/${characterId}/ship/`, token),
+      esiAuthedGet(`/characters/${characterId}/online/`, token),
+      esiAuthedGet(`/characters/${characterId}/skillqueue/`, token),
     ]);
 
     const idsToResolve: number[] = [];
@@ -243,15 +252,25 @@ export default async function eveRoutes(app: FastifyInstance, opts: Opts) {
         lastLogin: online?.last_login || null,
         lastLogout: online?.last_logout || null,
         loginCount: online?.logins ?? null,
-        system: loc?.solar_system_id ? { id: loc.solar_system_id, name: names[loc.solar_system_id]?.name || null } : null,
-        ship: ship?.ship_type_id ? { id: ship.ship_type_id, name: names[ship.ship_type_id]?.name || null, customName: ship?.ship_name || null } : null,
-        trainingSkill: activeSkill ? {
-          id: activeSkill.skill_id,
-          name: names[activeSkill.skill_id]?.name || null,
-          finishedLevel: activeSkill.finished_level,
-          finishDate: activeSkill.finish_date || null,
-          startDate: activeSkill.start_date || null,
-        } : null,
+        system: loc?.solar_system_id
+          ? { id: loc.solar_system_id, name: names[loc.solar_system_id]?.name || null }
+          : null,
+        ship: ship?.ship_type_id
+          ? {
+              id: ship.ship_type_id,
+              name: names[ship.ship_type_id]?.name || null,
+              customName: ship?.ship_name || null,
+            }
+          : null,
+        trainingSkill: activeSkill
+          ? {
+              id: activeSkill.skill_id,
+              name: names[activeSkill.skill_id]?.name || null,
+              finishedLevel: activeSkill.finished_level,
+              finishDate: activeSkill.finish_date || null,
+              startDate: activeSkill.start_date || null,
+            }
+          : null,
         queueLength: Array.isArray(queue) ? queue.length : 0,
       },
     });
@@ -263,7 +282,11 @@ export default async function eveRoutes(app: FastifyInstance, opts: Opts) {
     try {
       const r = await fetchWithTimeout(`${ESI_BASE}/universe/ids/`, {
         method: "POST",
-        headers: { "User-Agent": ESI_USER_AGENT, Accept: "application/json", "Content-Type": "application/json" },
+        headers: {
+          "User-Agent": ESI_USER_AGENT,
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify([q]),
       });
       if (!r.ok) return reply.send({ ok: true, results: [] });
@@ -288,9 +311,15 @@ export default async function eveRoutes(app: FastifyInstance, opts: Opts) {
     return reply.send({
       ok: true,
       character: {
-        id, name: info.name, securityStatus: info.security_status,
-        corpId, corpName: corpInfo?.name, corpTicker: corpInfo?.ticker,
-        allianceId, allianceName: allianceInfo?.name, allianceTicker: allianceInfo?.ticker,
+        id,
+        name: info.name,
+        securityStatus: info.security_status,
+        corpId,
+        corpName: corpInfo?.name,
+        corpTicker: corpInfo?.ticker,
+        allianceId,
+        allianceName: allianceInfo?.name,
+        allianceTicker: allianceInfo?.ticker,
         birthday: info.birthday,
       },
     });
@@ -329,10 +358,12 @@ export default async function eveRoutes(app: FastifyInstance, opts: Opts) {
       .filter((k: any) => k?.killmail_id && k?.zkb?.hash)
       .sort((a: any, b: any) => (b.zkb?.totalValue || 0) - (a.zkb?.totalValue || 0))
       .slice(0, 15);
-    const details = await Promise.all(top.map(async (k: any) => {
-      const d: any = await esiGet(`/killmails/${k.killmail_id}/${k.zkb.hash}/`);
-      return d ? { k, d } : null;
-    }));
+    const details = await Promise.all(
+      top.map(async (k: any) => {
+        const d: any = await esiGet(`/killmails/${k.killmail_id}/${k.zkb.hash}/`);
+        return d ? { k, d } : null;
+      }),
+    );
     const valid = details.filter(Boolean) as Array<{ k: any; d: any }>;
     const idSet: number[] = [];
     for (const { d } of valid) {
@@ -349,11 +380,11 @@ export default async function eveRoutes(app: FastifyInstance, opts: Opts) {
       solo: !!k.zkb?.solo,
       npc: !!k.zkb?.npc,
       time: d.killmail_time || null,
-      system: d.solar_system_id ? (names[d.solar_system_id]?.name || `#${d.solar_system_id}`) : null,
+      system: d.solar_system_id ? names[d.solar_system_id]?.name || `#${d.solar_system_id}` : null,
       shipTypeId: d.victim?.ship_type_id || null,
-      ship: d.victim?.ship_type_id ? (names[d.victim.ship_type_id]?.name || null) : null,
-      victimName: d.victim?.character_id ? (names[d.victim.character_id]?.name || null) : null,
-      victimCorp: d.victim?.corporation_id ? (names[d.victim.corporation_id]?.name || null) : null,
+      ship: d.victim?.ship_type_id ? names[d.victim.ship_type_id]?.name || null : null,
+      victimName: d.victim?.character_id ? names[d.victim.character_id]?.name || null : null,
+      victimCorp: d.victim?.corporation_id ? names[d.victim.corporation_id]?.name || null : null,
       attackers: Array.isArray(d.attackers) ? d.attackers.length : 0,
     }));
     _globalKillsCache = { at: Date.now(), data: kills };
@@ -367,7 +398,9 @@ export default async function eveRoutes(app: FastifyInstance, opts: Opts) {
     return reply.send({
       ok: true,
       corp: {
-        id, name: info.name, ticker: info.ticker,
+        id,
+        name: info.name,
+        ticker: info.ticker,
         memberCount: info.member_count,
         allianceId: info.alliance_id || null,
         ceoId: info.ceo_id || null,
@@ -382,7 +415,9 @@ export default async function eveRoutes(app: FastifyInstance, opts: Opts) {
     return reply.send({
       ok: true,
       alliance: {
-        id, name: info.name, ticker: info.ticker,
+        id,
+        name: info.name,
+        ticker: info.ticker,
         executorCorpId: info.executor_corporation_id || null,
         dateFounded: info.date_founded || null,
       },
@@ -393,17 +428,25 @@ export default async function eveRoutes(app: FastifyInstance, opts: Opts) {
     const camps: any[] = (await esiGet(`/sovereignty/campaigns/`)) || [];
     if (!Array.isArray(camps) || camps.length === 0) return reply.send({ ok: true, campaigns: [] });
     const ids: number[] = [];
-    for (const c of camps) { if (c.solar_system_id) ids.push(c.solar_system_id); if (c.defender_id) ids.push(c.defender_id); }
+    for (const c of camps) {
+      if (c.solar_system_id) ids.push(c.solar_system_id);
+      if (c.defender_id) ids.push(c.defender_id);
+    }
     const names = await esiResolveNames(ids);
-    const out = camps.map((c: any) => ({
-      campaignId: c.campaign_id,
-      system: { id: c.solar_system_id, name: names[c.solar_system_id]?.name || null },
-      defender: c.defender_id ? { id: c.defender_id, name: names[c.defender_id]?.name || null } : null,
-      eventType: c.event_type,
-      startTime: c.start_time || null,
-      defenderScore: typeof c.defender_score === "number" ? c.defender_score : null,
-      attackersScore: typeof c.attackers_score === "number" ? c.attackers_score : null,
-    })).sort((a: any, b: any) => (String(a.startTime) < String(b.startTime) ? -1 : 1)).slice(0, 40);
+    const out = camps
+      .map((c: any) => ({
+        campaignId: c.campaign_id,
+        system: { id: c.solar_system_id, name: names[c.solar_system_id]?.name || null },
+        defender: c.defender_id
+          ? { id: c.defender_id, name: names[c.defender_id]?.name || null }
+          : null,
+        eventType: c.event_type,
+        startTime: c.start_time || null,
+        defenderScore: typeof c.defender_score === "number" ? c.defender_score : null,
+        attackersScore: typeof c.attackers_score === "number" ? c.attackers_score : null,
+      }))
+      .sort((a: any, b: any) => (String(a.startTime) < String(b.startTime) ? -1 : 1))
+      .slice(0, 40);
     return reply.send({ ok: true, campaigns: out });
   });
 
@@ -419,13 +462,16 @@ export default async function eveRoutes(app: FastifyInstance, opts: Opts) {
   ];
   app.get("/eve/market/signals", async (_req, reply) => {
     try {
-      const types = MARKET_WATCH.map(w => w.id).join(",");
-      const r = await fetchWithTimeout(`https://market.fuzzwork.co.uk/aggregates/?region=10000002&types=${types}`, {
-        headers: { "User-Agent": ESI_USER_AGENT, Accept: "application/json" },
-      });
+      const types = MARKET_WATCH.map((w) => w.id).join(",");
+      const r = await fetchWithTimeout(
+        `https://market.fuzzwork.co.uk/aggregates/?region=10000002&types=${types}`,
+        {
+          headers: { "User-Agent": ESI_USER_AGENT, Accept: "application/json" },
+        },
+      );
       if (!r.ok) return reply.send({ ok: true, items: [], region: "Jita / The Forge" });
       const data: any = await r.json();
-      const items = MARKET_WATCH.map(w => {
+      const items = MARKET_WATCH.map((w) => {
         const d = data[String(w.id)];
         if (!d) return null;
         const buy = d.buy?.max ? Number(d.buy.max) : null;
@@ -449,17 +495,33 @@ export default async function eveRoutes(app: FastifyInstance, opts: Opts) {
     const jumpArr: any[] = Array.isArray(jumps) ? jumps : [];
     const totalShipKills = killArr.reduce((s, k) => s + (k.ship_kills || 0), 0);
     const totalPodKills = killArr.reduce((s, k) => s + (k.pod_kills || 0), 0);
-    const topDanger = [...killArr].sort((a, b) => (b.ship_kills || 0) - (a.ship_kills || 0)).slice(0, 8);
-    const topBusy = [...jumpArr].sort((a, b) => (b.ship_jumps || 0) - (a.ship_jumps || 0)).slice(0, 8);
-    const names = await esiResolveNames([...topDanger.map(s => s.system_id), ...topBusy.map(s => s.system_id)]);
+    const topDanger = [...killArr]
+      .sort((a, b) => (b.ship_kills || 0) - (a.ship_kills || 0))
+      .slice(0, 8);
+    const topBusy = [...jumpArr]
+      .sort((a, b) => (b.ship_jumps || 0) - (a.ship_jumps || 0))
+      .slice(0, 8);
+    const names = await esiResolveNames([
+      ...topDanger.map((s) => s.system_id),
+      ...topBusy.map((s) => s.system_id),
+    ]);
     return reply.send({
       ok: true,
       players: status?.players ?? null,
       totalShipKills,
       totalPodKills,
       incursions: Array.isArray(incursions) ? incursions.length : 0,
-      dangerous: topDanger.map(s => ({ id: s.system_id, name: names[s.system_id]?.name || null, shipKills: s.ship_kills || 0, podKills: s.pod_kills || 0 })),
-      busiest: topBusy.map(s => ({ id: s.system_id, name: names[s.system_id]?.name || null, jumps: s.ship_jumps || 0 })),
+      dangerous: topDanger.map((s) => ({
+        id: s.system_id,
+        name: names[s.system_id]?.name || null,
+        shipKills: s.ship_kills || 0,
+        podKills: s.pod_kills || 0,
+      })),
+      busiest: topBusy.map((s) => ({
+        id: s.system_id,
+        name: names[s.system_id]?.name || null,
+        jumps: s.ship_jumps || 0,
+      })),
     });
   });
 
@@ -472,7 +534,11 @@ export default async function eveRoutes(app: FastifyInstance, opts: Opts) {
     return reply.send({
       ok: true,
       period: weekly.length ? "last week" : "all-time",
-      pilots: rows.map((r: any) => ({ id: r.character_id, name: names[r.character_id]?.name || `Pilot #${r.character_id}`, kills: r.amount })),
+      pilots: rows.map((r: any) => ({
+        id: r.character_id,
+        name: names[r.character_id]?.name || `Pilot #${r.character_id}`,
+        kills: r.amount,
+      })),
     });
   });
 
@@ -480,7 +546,7 @@ export default async function eveRoutes(app: FastifyInstance, opts: Opts) {
     try {
       const r = await fetchWithTimeout(
         `https://news.google.com/rss/search?q=%22EVE+Online%22+when:7d&hl=en-US&gl=US&ceid=US:en`,
-        { headers: { "User-Agent": ESI_USER_AGENT, Accept: "application/xml" } }
+        { headers: { "User-Agent": ESI_USER_AGENT, Accept: "application/xml" } },
       );
       if (!r.ok) return reply.send({ ok: true, items: [] });
       const xml = await r.text();
@@ -495,7 +561,12 @@ export default async function eveRoutes(app: FastifyInstance, opts: Opts) {
         const block = m[1];
         const title = pick(block, "title");
         if (!title) continue;
-        items.push({ title, link: pick(block, "link"), pubDate: pick(block, "pubDate"), source: pick(block, "source") });
+        items.push({
+          title,
+          link: pick(block, "link"),
+          pubDate: pick(block, "pubDate"),
+          source: pick(block, "source"),
+        });
       }
       return reply.send({ ok: true, items });
     } catch {

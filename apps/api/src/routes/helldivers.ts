@@ -1,3 +1,4 @@
+import { log } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 
 type Opts = {
@@ -10,7 +11,7 @@ export default async function helldiversRoutes(app: FastifyInstance, _opts: Opts
     "User-Agent": "Weered/1.0 (https://weered.ca)",
     "X-Super-Client": "Weered",
     "X-Super-Contact": process.env.HD2_CONTACT || "james@weered.ca",
-    "Accept": "application/json",
+    Accept: "application/json",
   };
 
   const cache = new Map<string, { data: any; expiresAt: number }>();
@@ -31,13 +32,22 @@ export default async function helldiversRoutes(app: FastifyInstance, _opts: Opts
       // handler; expected upstream failures (rate-limit / 5xx / network) are
       // operational WARNINGS, not errors — graceful degradation returns null
       // and the route serves stale/empty cache.
-      const res = await fetch(`${HD2_BASE}${path}`, { headers: HD2_HEADERS, signal: AbortSignal.timeout(8000) });
-      if (res.status === 429) { console.warn("[helldivers2] rate limited", path); return null; }
+      const res = await fetch(`${HD2_BASE}${path}`, {
+        headers: HD2_HEADERS,
+        signal: AbortSignal.timeout(8000),
+      });
+      if (res.status === 429) {
+        log.warn("[helldivers2] rate limited", path);
+        return null;
+      }
       if (res.status === 404) return null;
-      if (!res.ok) { console.warn(`[helldivers2] upstream ${res.status} ${path}`); return null; }
+      if (!res.ok) {
+        log.warn(`[helldivers2] upstream ${res.status} ${path}`);
+        return null;
+      }
       return await res.json();
     } catch (e) {
-      console.warn(`[helldivers2] fetch failed ${path}: ${(e as any)?.message || e}`);
+      log.warn(`[helldivers2] fetch failed ${path}: ${(e as any)?.message || e}`);
       return null;
     }
   }
@@ -57,12 +67,14 @@ export default async function helldiversRoutes(app: FastifyInstance, _opts: Opts
       if (campaigns) cacheSet("campaigns", campaigns);
       if (planets) cacheSet("planets", planets);
     } catch (e) {
-      console.warn(`[helldivers2] warmCache failed: ${(e as any)?.message || e}`);
+      log.warn(`[helldivers2] warmCache failed: ${(e as any)?.message || e}`);
     }
   }
 
   warmCache().catch(() => {});
-  setInterval(() => { warmCache().catch(() => {}); }, 60_000);
+  setInterval(() => {
+    warmCache().catch(() => {});
+  }, 60_000);
 
   async function getOrFetch(key: string, path: string) {
     const hit = cacheGet(key);
@@ -130,7 +142,7 @@ export default async function helldiversRoutes(app: FastifyInstance, _opts: Opts
         description: a.setting?.taskDescription || a.description || "",
         type: a.setting?.type,
         flags: a.setting?.flags,
-        reward: a.setting?.reward || (a.setting?.rewards?.[0] || null),
+        reward: a.setting?.reward || a.setting?.rewards?.[0] || null,
         rewards: a.setting?.rewards || [],
         tasks,
         progress,
@@ -177,11 +189,20 @@ export default async function helldiversRoutes(app: FastifyInstance, _opts: Opts
       const isDefense = !!event;
       const liberation = Number(planet?.statistics?.percentage ?? planet?.health ?? 0);
       let liberationPct = 0;
-      if (typeof planet.health === "number" && typeof planet.maxHealth === "number" && planet.maxHealth > 0) {
+      if (
+        typeof planet.health === "number" &&
+        typeof planet.maxHealth === "number" &&
+        planet.maxHealth > 0
+      ) {
         liberationPct = Math.round(((planet.maxHealth - planet.health) / planet.maxHealth) * 100);
       }
       let defensePct = 0;
-      if (event && typeof event.health === "number" && typeof event.maxHealth === "number" && event.maxHealth > 0) {
+      if (
+        event &&
+        typeof event.health === "number" &&
+        typeof event.maxHealth === "number" &&
+        event.maxHealth > 0
+      ) {
         defensePct = Math.round(((event.maxHealth - event.health) / event.maxHealth) * 100);
       }
 
@@ -204,16 +225,18 @@ export default async function helldiversRoutes(app: FastifyInstance, _opts: Opts
           liberationPct,
           players: planet?.statistics?.playerCount || 0,
         },
-        event: event ? {
-          id: event.id,
-          eventType: event.eventType,
-          faction: event.faction,
-          health: event.health,
-          maxHealth: event.maxHealth,
-          startTime: event.startTime,
-          endTime: event.endTime,
-          defensePct,
-        } : null,
+        event: event
+          ? {
+              id: event.id,
+              eventType: event.eventType,
+              faction: event.faction,
+              health: event.health,
+              maxHealth: event.maxHealth,
+              startTime: event.startTime,
+              endTime: event.endTime,
+              defensePct,
+            }
+          : null,
       };
     });
 
@@ -228,13 +251,20 @@ export default async function helldiversRoutes(app: FastifyInstance, _opts: Opts
     if (!planet) {
       const all = (await getOrFetch("planets", "/planets")) || [];
       if (Array.isArray(all)) {
-        planet = all.find((p: any) => String(p.index) === planetId || String(p.name).toLowerCase() === planetId.toLowerCase());
+        planet = all.find(
+          (p: any) =>
+            String(p.index) === planetId || String(p.name).toLowerCase() === planetId.toLowerCase(),
+        );
       }
     }
     if (!planet) return reply.code(404).send({ ok: false, error: "planet_not_found" });
 
     let liberationPct = 0;
-    if (typeof planet.health === "number" && typeof planet.maxHealth === "number" && planet.maxHealth > 0) {
+    if (
+      typeof planet.health === "number" &&
+      typeof planet.maxHealth === "number" &&
+      planet.maxHealth > 0
+    ) {
       liberationPct = Math.round(((planet.maxHealth - planet.health) / planet.maxHealth) * 100);
     }
 

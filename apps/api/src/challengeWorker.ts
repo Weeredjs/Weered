@@ -1,4 +1,4 @@
-
+import { log } from "./lib/logger";
 import { PrismaClient } from "@prisma/client";
 import { resolveActivity, resolveItem } from "./manifest";
 import {
@@ -42,7 +42,57 @@ type ObjProgress = {
 };
 
 const HIGH_TIER_MARKER_HASHES = new Set<string>([
-  "1288529377", "3273465074", "510222748", "3237237808", "3237237809", "3237237811", "518782643", "3352453709", "1282797377", "1282797378", "1282797379", "1282797380", "1282797381", "3649914542", "1957676549", "426853779", "3191180704", "3191180705", "3191180706", "3191180710", "3191180711", "56643583", "3272021286", "1288529376", "1806613733", "198058552", "198058553", "198058554", "3103802699", "567947480", "2735568802", "173444685", "2084001784", "2084001786", "2084001787", "2084001788", "2084001789", "3168893556", "2419549505", "2419549506", "2419549507", "2419549508", "2419549509", "2907154606", "2284069897", "3350802550", "307925599", "431730392", "3514038500", "320183569", "3870674195"
+  "1288529377",
+  "3273465074",
+  "510222748",
+  "3237237808",
+  "3237237809",
+  "3237237811",
+  "518782643",
+  "3352453709",
+  "1282797377",
+  "1282797378",
+  "1282797379",
+  "1282797380",
+  "1282797381",
+  "3649914542",
+  "1957676549",
+  "426853779",
+  "3191180704",
+  "3191180705",
+  "3191180706",
+  "3191180710",
+  "3191180711",
+  "56643583",
+  "3272021286",
+  "1288529376",
+  "1806613733",
+  "198058552",
+  "198058553",
+  "198058554",
+  "3103802699",
+  "567947480",
+  "2735568802",
+  "173444685",
+  "2084001784",
+  "2084001786",
+  "2084001787",
+  "2084001788",
+  "2084001789",
+  "3168893556",
+  "2419549505",
+  "2419549506",
+  "2419549507",
+  "2419549508",
+  "2419549509",
+  "2907154606",
+  "2284069897",
+  "3350802550",
+  "307925599",
+  "431730392",
+  "3514038500",
+  "320183569",
+  "3870674195",
 ]);
 
 function hasHighTierMarker(modifierHashes: string[]): boolean {
@@ -55,7 +105,8 @@ function matchesFilters(activity: ActivityEntry, filters: ObjectiveSpec["filters
   if (filters.activityHashes && filters.activityHashes.length > 0) {
     if (!filters.activityHashes.includes(String(activity.activityHash))) return false;
   }
-  if (filters.activityHashes?.length && !filters.activityHashes.includes(activity.activityHash)) return false;
+  if (filters.activityHashes?.length && !filters.activityHashes.includes(activity.activityHash))
+    return false;
   if (filters.requireCompletion && !activity.completed) return false;
   if (filters.requireWin && activity.standing !== 0) return false;
   if (filters.maxDuration && activity.duration > filters.maxDuration) return false;
@@ -81,7 +132,8 @@ function definitionRequirementsMet(
   requireDifficultyTier: number | null,
 ): boolean {
   if (requireDifficultyTier != null) {
-    const tierOk = activityDifficultyTier != null && activityDifficultyTier >= requireDifficultyTier;
+    const tierOk =
+      activityDifficultyTier != null && activityDifficultyTier >= requireDifficultyTier;
     const markerOk = requireDifficultyTier >= 4 && hasHighTierMarker(activityModifierHashes || []);
     if (!tierOk && !markerOk) return false;
   }
@@ -143,7 +195,10 @@ function evaluateObjective(
         break;
 
       case "speed_clear":
-        if (act.completed && (!objective.filters.maxDuration || act.duration <= objective.filters.maxDuration)) {
+        if (
+          act.completed &&
+          (!objective.filters.maxDuration || act.duration <= objective.filters.maxDuration)
+        ) {
           current += 1;
         }
         break;
@@ -209,16 +264,19 @@ function needsWeaponData(enrollments: any[]): boolean {
 const BATCH_SIZE = 50;
 const WORKER_INTERVAL = 30_000;
 
-type ChallengeNotify = (userId: string, event: {
-  type: "challenge:progress" | "challenge:completed";
-  enrollmentId: string;
-  instanceId: string;
-  challengeTitle: string;
-  progress: Record<string, ObjProgress>;
-  notorietyReward?: number;
-  paperReward?: number;
-  badgeId?: string | null;
-}) => void;
+type ChallengeNotify = (
+  userId: string,
+  event: {
+    type: "challenge:progress" | "challenge:completed";
+    enrollmentId: string;
+    instanceId: string;
+    challengeTitle: string;
+    progress: Record<string, ObjProgress>;
+    notorietyReward?: number;
+    paperReward?: number;
+    badgeId?: string | null;
+  },
+) => void;
 
 async function creditChallengeRace(
   prisma: PrismaClient,
@@ -226,7 +284,13 @@ async function creditChallengeRace(
   defId: string,
   defLobbyId: string | null | undefined,
   createNotification?: (opts: any) => Promise<any>,
-  awardPaper?: (userId: string, type: string, amount: number, description: string, refId?: string) => Promise<any>,
+  awardPaper?: (
+    userId: string,
+    type: string,
+    amount: number,
+    description: string,
+    refId?: string,
+  ) => Promise<any>,
 ) {
   const tournaments: any[] = await prisma.tournament.findMany({
     where: {
@@ -284,11 +348,11 @@ async function creditChallengeRace(
     }
 
     if (shouldComplete) {
-      console.log(`[tournaments] CHALLENGE_RACE "${t.title}" auto-completing (winner: ${userId})`);
+      log.log(`[tournaments] CHALLENGE_RACE "${t.title}" auto-completing (winner: ${userId})`);
       try {
         await completeTournament(prisma, t.id, { awardPaper, createNotification });
       } catch (err: any) {
-        console.warn("[tournaments] auto-complete failed:", err?.message || err);
+        log.warn("[tournaments] auto-complete failed:", err?.message || err);
       }
     }
   }
@@ -298,11 +362,17 @@ export function startChallengeWorker(
   prisma: PrismaClient,
   awardNotoriety: (userId: string, action: string) => Promise<any>,
   notify?: ChallengeNotify,
-  awardPaper?: (userId: string, type: string, amount: number, description: string, refId?: string) => Promise<any>,
+  awardPaper?: (
+    userId: string,
+    type: string,
+    amount: number,
+    description: string,
+    refId?: string,
+  ) => Promise<any>,
   broadcastToLobby?: (lobbyId: string, event: any) => void,
   createNotification?: (opts: any) => Promise<any>,
 ) {
-  console.log("[challenges] Worker started — polling every 30s");
+  log.log("[challenges] Worker started — polling every 30s");
 
   async function cycle() {
     try {
@@ -335,45 +405,53 @@ export function startChallengeWorker(
           });
           if (!acct?.externalId || !acct.platform) {
             await prisma.challengeEnrollment.updateMany({
-              where: { id: { in: userEnrollments.map(e => e.id) } },
+              where: { id: { in: userEnrollments.map((e) => e.id) } },
               data: { lastCheckedAt: new Date() },
             });
             continue;
           }
 
           const profileRes = await bungieGet(
-            `/Destiny2/${acct.platform}/Profile/${acct.externalId}/?components=100`
+            `/Destiny2/${acct.platform}/Profile/${acct.externalId}/?components=100`,
           );
           const charIds = profileRes?.Response?.profile?.data?.characterIds || [];
           if (charIds.length === 0) continue;
 
           const activities = await fetchRecentActivities(
-            acct.platform, acct.externalId, charIds[0], 25
+            acct.platform,
+            acct.externalId,
+            charIds[0],
+            25,
           );
 
           if (activities.length === 0) {
             await prisma.challengeEnrollment.updateMany({
-              where: { id: { in: userEnrollments.map(e => e.id) } },
+              where: { id: { in: userEnrollments.map((e) => e.id) } },
               data: { lastCheckedAt: new Date() },
             });
             continue;
           }
 
           const wantWeapons = needsWeaponData(userEnrollments);
-          const wantMods    = needsModifierData(userEnrollments);
+          const wantMods = needsModifierData(userEnrollments);
           const skullByInstance = new Map<string, string[]>();
           const tierByInstance = new Map<string, number | null>();
           if (wantWeapons || wantMods) {
             for (const act of activities) {
               if (!act.activityInstanceId) continue;
               const existing = await prisma.bungieActivityLog.findUnique({
-                where: { userId_activityInstanceId: { userId, activityInstanceId: act.activityInstanceId } },
+                where: {
+                  userId_activityInstanceId: { userId, activityInstanceId: act.activityInstanceId },
+                },
                 select: { weaponKills: true, modifierHashes: true, difficultyTier: true },
               });
-              const existingMods = Array.isArray(existing?.modifierHashes) ? (existing!.modifierHashes as any[]).map(String) : [];
-              const haveWeapons = Array.isArray(existing?.weaponKills) && (existing!.weaponKills as any[]).length > 0;
-              const haveMods    = existingMods.length > 0;
-              const haveTier    = existing?.difficultyTier != null;
+              const existingMods = Array.isArray(existing?.modifierHashes)
+                ? (existing!.modifierHashes as any[]).map(String)
+                : [];
+              const haveWeapons =
+                Array.isArray(existing?.weaponKills) && (existing!.weaponKills as any[]).length > 0;
+              const haveMods = existingMods.length > 0;
+              const haveTier = existing?.difficultyTier != null;
               if (haveWeapons && haveMods && haveTier) {
                 act.weaponKills = existing!.weaponKills as any;
                 skullByInstance.set(act.activityInstanceId, existingMods);
@@ -396,34 +474,38 @@ export function startChallengeWorker(
             (act as any).modifierHashes = merged;
             const pgcrTier = tierByInstance.get(act.activityInstanceId);
             const tier = pgcrTier != null ? pgcrTier : (actDef?.difficultyTier ?? null);
-            await prisma.bungieActivityLog.upsert({
-              where: { userId_activityInstanceId: { userId, activityInstanceId: act.activityInstanceId } },
-              create: {
-                userId,
-                membershipId: acct.externalId,
-                activityInstanceId: act.activityInstanceId,
-                activityHash: act.activityHash,
-                activityName: actDef?.name || "",
-                mode: act.mode,
-                modeName: MODE_NAMES[act.mode] || "",
-                period: new Date(act.period),
-                kills: act.kills,
-                deaths: act.deaths,
-                assists: act.assists,
-                score: act.score,
-                standing: act.standing,
-                completed: act.completed,
-                duration: act.duration,
-                weaponKills: act.weaponKills as any,
-                modifierHashes: merged as any,
-                difficultyTier: tier,
-              },
-              update: {
-                ...(act.weaponKills.length > 0 ? { weaponKills: act.weaponKills as any } : {}),
-                modifierHashes: merged as any,
-                difficultyTier: tier,
-              },
-            }).catch(() => {});
+            await prisma.bungieActivityLog
+              .upsert({
+                where: {
+                  userId_activityInstanceId: { userId, activityInstanceId: act.activityInstanceId },
+                },
+                create: {
+                  userId,
+                  membershipId: acct.externalId,
+                  activityInstanceId: act.activityInstanceId,
+                  activityHash: act.activityHash,
+                  activityName: actDef?.name || "",
+                  mode: act.mode,
+                  modeName: MODE_NAMES[act.mode] || "",
+                  period: new Date(act.period),
+                  kills: act.kills,
+                  deaths: act.deaths,
+                  assists: act.assists,
+                  score: act.score,
+                  standing: act.standing,
+                  completed: act.completed,
+                  duration: act.duration,
+                  weaponKills: act.weaponKills as any,
+                  modifierHashes: merged as any,
+                  difficultyTier: tier,
+                },
+                update: {
+                  ...(act.weaponKills.length > 0 ? { weaponKills: act.weaponKills as any } : {}),
+                  modifierHashes: merged as any,
+                  difficultyTier: tier,
+                },
+              })
+              .catch(() => {});
           }
 
           for (const enrollment of userEnrollments) {
@@ -432,11 +514,13 @@ export function startChallengeWorker(
             const progress = (enrollment.progress as Record<string, ObjProgress>) || {};
 
             const instanceStart = new Date(enrollment.instance.startsAt).getTime();
-            let newActivities = activities.filter(a => new Date(a.period).getTime() >= instanceStart);
+            let newActivities = activities.filter(
+              (a) => new Date(a.period).getTime() >= instanceStart,
+            );
 
             const watermark = enrollment.lastActivityInstanceId;
             if (watermark) {
-              const wmIdx = newActivities.findIndex(a => a.activityInstanceId === watermark);
+              const wmIdx = newActivities.findIndex((a) => a.activityInstanceId === watermark);
               if (wmIdx >= 0) {
                 newActivities = newActivities.slice(0, wmIdx);
               }
@@ -473,7 +557,11 @@ export function startChallengeWorker(
             let allCompleted = true;
             let completedCount = 0;
             for (const obj of objectives as ObjectiveSpec[]) {
-              const existing = progress[obj.id] || { current: 0, target: obj.target, completed: false };
+              const existing = progress[obj.id] || {
+                current: 0,
+                target: obj.target,
+                completed: false,
+              };
               const updated = evaluateObjective(obj, filteredActivities.reverse(), existing);
               progress[obj.id] = updated;
               if (updated.completed) completedCount++;
@@ -488,8 +576,7 @@ export function startChallengeWorker(
               progress: progress as any,
               lastCheckedAt: new Date(),
               lastActivityInstanceId:
-                newActivities[0]?.activityInstanceId
-                ?? enrollment.lastActivityInstanceId,
+                newActivities[0]?.activityInstanceId ?? enrollment.lastActivityInstanceId,
             };
 
             if (isComplete && enrollment.status !== "COMPLETED") {
@@ -500,16 +587,24 @@ export function startChallengeWorker(
                 awardNotoriety(userId, "CHALLENGE_COMPLETED").catch(() => {});
               }
               if ((def as any).paperReward > 0 && awardPaper) {
-                awardPaper(userId, "EARN_CHALLENGE", (def as any).paperReward, `Challenge completed: ${def.title}`, enrollment.instanceId).catch(() => {});
+                awardPaper(
+                  userId,
+                  "EARN_CHALLENGE",
+                  (def as any).paperReward,
+                  `Challenge completed: ${def.title}`,
+                  enrollment.instanceId,
+                ).catch(() => {});
               }
 
               if (def.badgeId) {
-                prisma.userBadge.create({
-                  data: { userId, badgeId: def.badgeId },
-                }).catch(() => {});
+                prisma.userBadge
+                  .create({
+                    data: { userId, badgeId: def.badgeId },
+                  })
+                  .catch(() => {});
               }
 
-              console.log(`[challenges] ${userId} completed "${def.title}"`);
+              log.log(`[challenges] ${userId} completed "${def.title}"`);
 
               if (notify) {
                 notify(userId, {
@@ -533,9 +628,16 @@ export function startChallengeWorker(
               }
 
               try {
-                await creditChallengeRace(prisma, userId, def.id, (def as any).lobbyId, createNotification, awardPaper);
+                await creditChallengeRace(
+                  prisma,
+                  userId,
+                  def.id,
+                  (def as any).lobbyId,
+                  createNotification,
+                  awardPaper,
+                );
               } catch (err: any) {
-                console.warn("[challenges] race credit failed:", err?.message || err);
+                log.warn("[challenges] race credit failed:", err?.message || err);
               }
             } else if (newActivities.length > 0 && notify) {
               notify(userId, {
@@ -553,11 +655,11 @@ export function startChallengeWorker(
             });
           }
         } catch (e: any) {
-          console.error(`[challenges] Error processing user ${userId}:`, e.message);
+          log.error(`[challenges] Error processing user ${userId}:`, e.message);
         }
       }
     } catch (e: any) {
-      console.error("[challenges] Worker cycle error:", e.message);
+      log.error("[challenges] Worker cycle error:", e.message);
     }
   }
 
@@ -570,9 +672,9 @@ export function startChallengeWorker(
       for (const t of expiredRace) {
         try {
           await completeTournament(prisma as any, t.id, { awardPaper, createNotification });
-          console.log(`[tournaments] CHALLENGE_RACE "${t.title}" expired — auto-completed`);
+          log.log(`[tournaments] CHALLENGE_RACE "${t.title}" expired — auto-completed`);
         } catch (err: any) {
-          console.warn(`[tournaments] expiry complete failed for ${t.id}:`, err?.message || err);
+          log.warn(`[tournaments] expiry complete failed for ${t.id}:`, err?.message || err);
         }
       }
 
@@ -586,16 +688,18 @@ export function startChallengeWorker(
         if (new Date(tourney.endsAt).getTime() < Date.now()) {
           const ranked = tourney.entries.sort((a, b) => b.score - a.score);
           for (let i = 0; i < ranked.length; i++) {
-            await prisma.tournamentEntry.update({
-              where: { id: ranked[i].id },
-              data: { rank: i + 1 },
-            }).catch(() => {});
+            await prisma.tournamentEntry
+              .update({
+                where: { id: ranked[i].id },
+                data: { rank: i + 1 },
+              })
+              .catch(() => {});
           }
           await prisma.tournament.update({
             where: { id: tourney.id },
             data: { status: "COMPLETED" },
           });
-          console.log(`[tournaments] "${tourney.title}" completed — ${ranked.length} entries ranked`);
+          log.log(`[tournaments] "${tourney.title}" completed — ${ranked.length} entries ranked`);
           continue;
         }
 
@@ -612,7 +716,6 @@ export function startChallengeWorker(
               where.instance = { definitionId: { in: rule.definitionIds } };
             }
             score = await prisma.challengeEnrollment.count({ where });
-
           } else if (rule.type === "total_kills") {
             const logs = await prisma.bungieActivityLog.findMany({
               where: {
@@ -622,7 +725,6 @@ export function startChallengeWorker(
               select: { kills: true },
             });
             score = logs.reduce((sum, l) => sum + l.kills, 0);
-
           } else if (rule.type === "total_activities") {
             score = await prisma.bungieActivityLog.count({
               where: {
@@ -631,7 +733,6 @@ export function startChallengeWorker(
                 completed: true,
               },
             });
-
           } else if (rule.type === "fastest_clear") {
             const actHash = rule.activityHash;
             if (actHash) {
@@ -650,15 +751,17 @@ export function startChallengeWorker(
           }
 
           if (score !== entry.score) {
-            await prisma.tournamentEntry.update({
-              where: { id: entry.id },
-              data: { score },
-            }).catch(() => {});
+            await prisma.tournamentEntry
+              .update({
+                where: { id: entry.id },
+                data: { score },
+              })
+              .catch(() => {});
           }
         }
       }
     } catch (e: any) {
-      console.error("[tournaments] Scoring cycle error:", e.message);
+      log.error("[tournaments] Scoring cycle error:", e.message);
     }
   }
 
@@ -681,7 +784,15 @@ export function startChallengeWorker(
       });
 
       const now = new Date();
-      const dayNames = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+      const dayNames = [
+        "sunday",
+        "monday",
+        "tuesday",
+        "wednesday",
+        "thursday",
+        "friday",
+        "saturday",
+      ];
       const todayName = dayNames[now.getDay()];
 
       for (const def of recurring) {
@@ -712,15 +823,19 @@ export function startChallengeWorker(
           const endsAt = new Date(startsAt.getTime() + durationHours * 3600000);
 
           if (lastInstance && lastInstance.status === "ACTIVE") {
-            await prisma.challengeInstance.update({
-              where: { id: lastInstance.id },
-              data: { status: "COMPLETED" },
-            }).catch(() => {});
+            await prisma.challengeInstance
+              .update({
+                where: { id: lastInstance.id },
+                data: { status: "COMPLETED" },
+              })
+              .catch(() => {});
 
-            await prisma.challengeEnrollment.updateMany({
-              where: { instanceId: lastInstance.id, status: "ACTIVE" },
-              data: { status: "FAILED" },
-            }).catch(() => {});
+            await prisma.challengeEnrollment
+              .updateMany({
+                where: { instanceId: lastInstance.id, status: "ACTIVE" },
+                data: { status: "FAILED" },
+              })
+              .catch(() => {});
           }
 
           await prisma.challengeInstance.create({
@@ -732,11 +847,11 @@ export function startChallengeWorker(
             },
           });
 
-          console.log(`[challenges] Recurring instance created for "${def.title}" (${schedule})`);
+          log.log(`[challenges] Recurring instance created for "${def.title}" (${schedule})`);
         }
       }
     } catch (e: any) {
-      console.error("[challenges] Recurring cycle error:", e.message);
+      log.error("[challenges] Recurring cycle error:", e.message);
     }
   }
 

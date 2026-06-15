@@ -1,3 +1,4 @@
+import { log } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 import { fetchWithTimeout } from "../lib/fetchWithTimeout";
 import { prisma } from "../lib/prisma";
@@ -22,9 +23,18 @@ export default async function publicMiscRoutes(app: FastifyInstance, opts: Opts)
       const fallback = await prisma.lobby.findFirst({
         where: { pinned: true },
         select: {
-          id: true, name: true, description: true, verified: true, pinned: true,
-          moduleType: true, moduleConfig: true, keywords: true,
-          accentColor: true, logoUrl: true, bannerUrl: true, websiteUrl: true,
+          id: true,
+          name: true,
+          description: true,
+          verified: true,
+          pinned: true,
+          moduleType: true,
+          moduleConfig: true,
+          keywords: true,
+          accentColor: true,
+          logoUrl: true,
+          bannerUrl: true,
+          websiteUrl: true,
           _count: { select: { rooms: true, members: true } },
         },
         orderBy: { name: "asc" },
@@ -35,9 +45,18 @@ export default async function publicMiscRoutes(app: FastifyInstance, opts: Opts)
     const lobby = await prisma.lobby.findUnique({
       where: { id: featuredId },
       select: {
-        id: true, name: true, description: true, verified: true, pinned: true,
-        moduleType: true, moduleConfig: true, keywords: true,
-        accentColor: true, logoUrl: true, bannerUrl: true, websiteUrl: true,
+        id: true,
+        name: true,
+        description: true,
+        verified: true,
+        pinned: true,
+        moduleType: true,
+        moduleConfig: true,
+        keywords: true,
+        accentColor: true,
+        logoUrl: true,
+        bannerUrl: true,
+        websiteUrl: true,
         _count: { select: { rooms: true, members: true } },
       },
     });
@@ -50,26 +69,35 @@ export default async function publicMiscRoutes(app: FastifyInstance, opts: Opts)
   });
 
   app.get("/feed/hot", async (req, reply) => {
-    const qs       = (req as any).query as any;
+    const qs = (req as any).query as any;
     const category = qs?.category && qs.category !== "all" ? String(qs.category) : undefined;
-    const domain   = qs?.domain ? String(qs.domain) : undefined;
-    const sort     = qs?.sort === "new" ? { postedAt: "desc" as const } : { heat: "desc" as const };
+    const domain = qs?.domain ? String(qs.domain) : undefined;
+    const sort = qs?.sort === "new" ? { postedAt: "desc" as const } : { heat: "desc" as const };
     const where: any = {};
     if (category) where.category = category;
-    if (domain)   where.domain   = domain;
-    const items    = await prisma.feedItem.findMany({
-      where:   Object.keys(where).length ? where : undefined,
+    if (domain) where.domain = domain;
+    const items = await prisma.feedItem.findMany({
+      where: Object.keys(where).length ? where : undefined,
       orderBy: sort,
-      take:    50,
+      take: 50,
     });
     return reply.send({ items, updatedAt: new Date().toISOString() });
   });
 
   app.get("/banner", async (_req, reply) => {
     const pinned = await annDb.announcement.findMany({
-      where: { pinned: true }, orderBy: { createdAt: "desc" }, take: 10,
+      where: { pinned: true },
+      orderBy: { createdAt: "desc" },
+      take: 10,
     });
-    const banners = pinned.map((a: any) => ({ id: a.id, message: a.message, level: a.level, sticky: a.sticky, from: a.createdByName, ts: a.createdAt?.getTime?.() ?? 1 }));
+    const banners = pinned.map((a: any) => ({
+      id: a.id,
+      message: a.message,
+      level: a.level,
+      sticky: a.sticky,
+      from: a.createdByName,
+      ts: a.createdAt?.getTime?.() ?? 1,
+    }));
     return reply.send({ ok: true, banner: banners[0] ?? null, banners });
   });
 
@@ -95,17 +123,26 @@ export default async function publicMiscRoutes(app: FastifyInstance, opts: Opts)
       const j: any = await res.json();
       const count = j?.response?.player_count;
       if (typeof count !== "number") return reply.send({ ok: false, error: "no_count" });
-      const result = { ok: true, players: count, appid: DESTINY2_APPID, checkedAt: new Date().toISOString() };
+      const result = {
+        ok: true,
+        players: count,
+        appid: DESTINY2_APPID,
+        checkedAt: new Date().toISOString(),
+      };
       d2CacheSet(cacheKey, result, 60 * 1000);
       return reply.send(result);
     } catch (e) {
-      console.error("[destiny/live-players]", e);
+      log.error("[destiny/live-players]", e);
       return reply.send({ ok: false, error: "fetch_failed" });
     }
   });
 
   app.get("/presence/users", async (req, reply) => {
-    const ids = String((req.query as any)?.ids || "").split(",").map((s) => s.trim()).filter(Boolean).slice(0, 60);
+    const ids = String((req.query as any)?.ids || "")
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .slice(0, 60);
     if (ids.length === 0) return reply.send({ ok: true, presence: {} });
     const rows = await prisma.user.findMany({
       where: { id: { in: ids } },

@@ -1,4 +1,4 @@
-
+import { log } from "./lib/logger";
 import fs from "fs";
 import path from "path";
 
@@ -62,53 +62,63 @@ export interface ModifierDef {
 }
 
 const TIER_NAMES: Record<number, string> = {
-  0: "Unknown", 1: "Currency", 2: "Common", 3: "Uncommon",
-  4: "Rare", 5: "Legendary", 6: "Exotic",
+  0: "Unknown",
+  1: "Currency",
+  2: "Common",
+  3: "Uncommon",
+  4: "Rare",
+  5: "Legendary",
+  6: "Exotic",
 };
 
 export const BUCKET_HASHES = {
-  KINETIC:   1498876634,
-  ENERGY:    2465295065,
-  POWER:     953998645,
-  HELMET:    3448274439,
+  KINETIC: 1498876634,
+  ENERGY: 2465295065,
+  POWER: 953998645,
+  HELMET: 3448274439,
   GAUNTLETS: 3551918588,
-  CHEST:     14239492,
-  LEGS:      20886954,
-  CLASS:     1585787867,
-  GHOST:     4023194814,
-  VEHICLE:   2025709351,
-  SHIP:      284967655,
-  SUBCLASS:  3284755031,
-  EMBLEM:    4274335291,
-  FINISHER:  3683254069,
-  ARTIFACT:  1506418338,
+  CHEST: 14239492,
+  LEGS: 20886954,
+  CLASS: 1585787867,
+  GHOST: 4023194814,
+  VEHICLE: 2025709351,
+  SHIP: 284967655,
+  SUBCLASS: 3284755031,
+  EMBLEM: 4274335291,
+  FINISHER: 3683254069,
+  ARTIFACT: 1506418338,
 };
 
 export const WEAPON_BUCKETS = new Set([
-  BUCKET_HASHES.KINETIC, BUCKET_HASHES.ENERGY, BUCKET_HASHES.POWER,
+  BUCKET_HASHES.KINETIC,
+  BUCKET_HASHES.ENERGY,
+  BUCKET_HASHES.POWER,
 ]);
 
 export const ARMOR_BUCKETS = new Set([
-  BUCKET_HASHES.HELMET, BUCKET_HASHES.GAUNTLETS, BUCKET_HASHES.CHEST,
-  BUCKET_HASHES.LEGS, BUCKET_HASHES.CLASS,
+  BUCKET_HASHES.HELMET,
+  BUCKET_HASHES.GAUNTLETS,
+  BUCKET_HASHES.CHEST,
+  BUCKET_HASHES.LEGS,
+  BUCKET_HASHES.CLASS,
 ]);
 
 export const ARMOR_STAT_HASHES = {
-  MOBILITY:    2996146975,
-  RESILIENCE:  392767087,
-  RECOVERY:    1943323491,
-  DISCIPLINE:  1735777505,
-  INTELLECT:   144602215,
-  STRENGTH:    4244567218,
+  MOBILITY: 2996146975,
+  RESILIENCE: 392767087,
+  RECOVERY: 1943323491,
+  DISCIPLINE: 1735777505,
+  INTELLECT: 144602215,
+  STRENGTH: 4244567218,
 };
 
-const itemIndex     = new Map<string, ItemDef>();
+const itemIndex = new Map<string, ItemDef>();
 const activityIndex = new Map<string, ActivityDef>();
 const milestoneIndex = new Map<string, MilestoneDef>();
-const bucketIndex   = new Map<string, BucketDef>();
-const statIndex     = new Map<string, StatDef>();
-const damageIndex   = new Map<string, DamageTypeDef>();
-const classIndex    = new Map<string, ClassDef>();
+const bucketIndex = new Map<string, BucketDef>();
+const statIndex = new Map<string, StatDef>();
+const damageIndex = new Map<string, DamageTypeDef>();
+const classIndex = new Map<string, ClassDef>();
 const modifierIndex = new Map<string, ModifierDef>();
 
 let _loaded = false;
@@ -139,35 +149,52 @@ export function resolveClass(hash: number | string): ClassDef | null {
 export function resolveModifier(hash: number | string): ModifierDef | null {
   return modifierIndex.get(String(hash)) || null;
 }
-export function resolveItemPerks(plugHashes: number[]): { hash: number; name: string; icon: string; description: string }[] {
+export function resolveItemPerks(
+  plugHashes: number[],
+): { hash: number; name: string; icon: string; description: string }[] {
   return plugHashes
-    .map(h => {
+    .map((h) => {
       const def = resolveItem(h);
       if (!def) return null;
-      return { hash: h, name: def.name, icon: def.icon ? `${BUNGIE_BASE}${def.icon}` : "", description: def.description };
+      return {
+        hash: h,
+        name: def.name,
+        icon: def.icon ? `${BUNGIE_BASE}${def.icon}` : "",
+        description: def.description,
+      };
     })
     .filter(Boolean) as any;
 }
-export function isLoaded(): boolean { return _loaded; }
-export function manifestVersion(): string { return _version; }
+export function isLoaded(): boolean {
+  return _loaded;
+}
+export function manifestVersion(): string {
+  return _version;
+}
 
 export function enrichProfile(profileData: any) {
   const characters = profileData?.characters?.data || {};
-  const equipment  = profileData?.characterEquipment?.data || {};
+  const equipment = profileData?.characterEquipment?.data || {};
   const inventories = profileData?.characterInventories?.data || {};
-  const instances  = profileData?.itemComponents?.instances?.data || {};
-  const sockets    = profileData?.itemComponents?.sockets?.data || {};
+  const instances = profileData?.itemComponents?.instances?.data || {};
+  const sockets = profileData?.itemComponents?.sockets?.data || {};
   const reusablePlugs = profileData?.itemComponents?.reusablePlugs?.data || {};
-  const itemStats  = profileData?.itemComponents?.stats?.data || {};
+  const itemStats = profileData?.itemComponents?.stats?.data || {};
   const vaultItems = profileData?.profileInventory?.data?.items || [];
 
   const enrichedChars = Object.entries(characters).map(([charId, char]: [string, any]) => {
-    const equippedItems = (equipment[charId]?.items || []).map((item: any) => enrichItem(item, instances, sockets, itemStats, reusablePlugs));
-    const inventoryItems = (inventories[charId]?.items || []).map((item: any) => enrichItem(item, instances, sockets, itemStats, reusablePlugs));
+    const equippedItems = (equipment[charId]?.items || []).map((item: any) =>
+      enrichItem(item, instances, sockets, itemStats, reusablePlugs),
+    );
+    const inventoryItems = (inventories[charId]?.items || []).map((item: any) =>
+      enrichItem(item, instances, sockets, itemStats, reusablePlugs),
+    );
 
     const weapons = equippedItems.filter((i: any) => WEAPON_BUCKETS.has(i.bucketHash));
-    const armor   = equippedItems.filter((i: any) => ARMOR_BUCKETS.has(i.bucketHash));
-    const other   = equippedItems.filter((i: any) => !WEAPON_BUCKETS.has(i.bucketHash) && !ARMOR_BUCKETS.has(i.bucketHash));
+    const armor = equippedItems.filter((i: any) => ARMOR_BUCKETS.has(i.bucketHash));
+    const other = equippedItems.filter(
+      (i: any) => !WEAPON_BUCKETS.has(i.bucketHash) && !ARMOR_BUCKETS.has(i.bucketHash),
+    );
 
     return {
       characterId: charId,
@@ -189,7 +216,9 @@ export function enrichProfile(profileData: any) {
     };
   });
 
-  const enrichedVault = vaultItems.map((item: any) => enrichItem(item, instances, sockets, itemStats, reusablePlugs));
+  const enrichedVault = vaultItems.map((item: any) =>
+    enrichItem(item, instances, sockets, itemStats, reusablePlugs),
+  );
 
   return {
     characters: enrichedChars,
@@ -199,10 +228,17 @@ export function enrichProfile(profileData: any) {
 }
 
 const HIDDEN_PLUG_NAMES = new Set([
-  "Empty Mod Socket", "Empty Tuning Mod Socket", "Default Shader",
-  "Default Ornament", "Upgrade Armor", "Upgrade Weapon",
-  "Kill Tracker", "Crucible Tracker", "Memento Tracker",
-  "Empty Catalyst Socket", "Empty Activity Mod Socket",
+  "Empty Mod Socket",
+  "Empty Tuning Mod Socket",
+  "Default Shader",
+  "Default Ornament",
+  "Upgrade Armor",
+  "Upgrade Weapon",
+  "Kill Tracker",
+  "Crucible Tracker",
+  "Memento Tracker",
+  "Empty Catalyst Socket",
+  "Empty Activity Mod Socket",
 ]);
 
 function enrichItem(
@@ -218,7 +254,16 @@ function enrichItem(
   const damage = resolveDamageType(instance.damageTypeHash || def?.damageTypeHash || 0);
   const bHash = item.bucketHash || def?.bucketHash || 0;
 
-  let perks: { hash: number; name: string; icon: string; description: string; isEnabled: boolean; isJunk: boolean; socketIndex: number; availablePlugs?: { hash: number; name: string; icon: string; description: string }[] }[] = [];
+  let perks: {
+    hash: number;
+    name: string;
+    icon: string;
+    description: string;
+    isEnabled: boolean;
+    isJunk: boolean;
+    socketIndex: number;
+    availablePlugs?: { hash: number; name: string; icon: string; description: string }[];
+  }[] = [];
   const socketData = sockets?.[item.itemInstanceId]?.sockets;
   const reusableData = reusablePlugs?.[item.itemInstanceId]?.plugs;
 
@@ -231,10 +276,15 @@ function enrichItem(
         if (!plugDef || !plugDef.name) return null;
         const isJunk = HIDDEN_PLUG_NAMES.has(plugDef.name);
 
-        let availablePlugs: { hash: number; name: string; icon: string; description: string }[] | undefined;
+        let availablePlugs:
+          | { hash: number; name: string; icon: string; description: string }[]
+          | undefined;
         if (reusableData?.[String(idx)]) {
           availablePlugs = reusableData[String(idx)]
-            .filter((rp: any) => rp.plugItemHash && rp.plugItemHash !== s.plugHash && rp.canInsert !== false)
+            .filter(
+              (rp: any) =>
+                rp.plugItemHash && rp.plugItemHash !== s.plugHash && rp.canInsert !== false,
+            )
             .map((rp: any) => {
               const rpDef = resolveItem(rp.plugItemHash);
               if (!rpDef || !rpDef.name || HIDDEN_PLUG_NAMES.has(rpDef.name)) return null;
@@ -267,7 +317,15 @@ function enrichItem(
       .map((s, idx) => {
         const plugDef = resolveItem(s.plugHash);
         if (!plugDef || !plugDef.name) return null;
-        return { hash: s.plugHash, name: plugDef.name, icon: plugDef.icon ? `${BUNGIE_BASE}${plugDef.icon}` : "", description: plugDef.description || "", isEnabled: true, isJunk: HIDDEN_PLUG_NAMES.has(plugDef.name), socketIndex: idx };
+        return {
+          hash: s.plugHash,
+          name: plugDef.name,
+          icon: plugDef.icon ? `${BUNGIE_BASE}${plugDef.icon}` : "",
+          description: plugDef.description || "",
+          isEnabled: true,
+          isJunk: HIDDEN_PLUG_NAMES.has(plugDef.name),
+          socketIndex: idx,
+        };
       })
       .filter(Boolean) as any;
   }
@@ -281,7 +339,15 @@ function enrichItem(
     const d = Number(stats[ARMOR_STAT_HASHES.DISCIPLINE]?.value || 0);
     const i = Number(stats[ARMOR_STAT_HASHES.INTELLECT]?.value || 0);
     const s = Number(stats[ARMOR_STAT_HASHES.STRENGTH]?.value || 0);
-    armorStats = { mobility: m, resilience: res, recovery: rec, discipline: d, intellect: i, strength: s, total: m + res + rec + d + i + s };
+    armorStats = {
+      mobility: m,
+      resilience: res,
+      recovery: rec,
+      discipline: d,
+      intellect: i,
+      strength: s,
+      total: m + res + rec + d + i + s,
+    };
   }
 
   return {
@@ -326,15 +392,23 @@ export function enrichVendorSales(
         .map((s: any) => {
           const plugDef = resolveItem(s.plugHash);
           if (!plugDef || !plugDef.name) return null;
-          return { hash: s.plugHash, name: plugDef.name, icon: plugDef.icon ? `${BUNGIE_BASE}${plugDef.icon}` : "" };
+          return {
+            hash: s.plugHash,
+            name: plugDef.name,
+            icon: plugDef.icon ? `${BUNGIE_BASE}${plugDef.icon}` : "",
+          };
         })
         .filter(Boolean) as any;
     } else if (def.socketEntries) {
       perks = def.socketEntries
-        .map(s => {
+        .map((s) => {
           const plugDef = resolveItem(s.plugHash);
           if (!plugDef || !plugDef.name) return null;
-          return { hash: s.plugHash, name: plugDef.name, icon: plugDef.icon ? `${BUNGIE_BASE}${plugDef.icon}` : "" };
+          return {
+            hash: s.plugHash,
+            name: plugDef.name,
+            icon: plugDef.icon ? `${BUNGIE_BASE}${plugDef.icon}` : "",
+          };
         })
         .filter(Boolean) as any;
     }
@@ -367,10 +441,19 @@ export function enrichMilestones(milestonesData: Record<string, any>) {
 
     const activities = (ms.activities || []).map((act: any) => {
       const actDef = resolveActivity(act.activityHash);
-      const modifiers = (act.modifierHashes || []).map((mh: number) => {
-        const mod = resolveModifier(mh);
-        return mod ? { hash: mh, name: mod.name, icon: `${BUNGIE_BASE}${mod.icon}`, description: mod.description } : { hash: mh };
-      }).filter((m: any) => m.name);
+      const modifiers = (act.modifierHashes || [])
+        .map((mh: number) => {
+          const mod = resolveModifier(mh);
+          return mod
+            ? {
+                hash: mh,
+                name: mod.name,
+                icon: `${BUNGIE_BASE}${mod.icon}`,
+                description: mod.description,
+              }
+            : { hash: mh };
+        })
+        .filter((m: any) => m.name);
 
       return {
         activityHash: act.activityHash,
@@ -405,7 +488,9 @@ export function enrichMilestones(milestonesData: Record<string, any>) {
   return result;
 }
 
-export async function syncManifest(apiKey: string): Promise<{ ok: boolean; version: string; counts: Record<string, number> }> {
+export async function syncManifest(
+  apiKey: string,
+): Promise<{ ok: boolean; version: string; counts: Record<string, number> }> {
   if (_syncing) return { ok: false, version: _version, counts: {} };
   _syncing = true;
 
@@ -420,7 +505,7 @@ export async function syncManifest(apiKey: string): Promise<{ ok: boolean; versi
       }
     } catch {}
 
-    console.log("[manifest] Fetching manifest metadata...");
+    log.log("[manifest] Fetching manifest metadata...");
     const metaRes = await fetch(`${BUNGIE_BASE}/Platform/Destiny2/Manifest/`, {
       headers: { "X-API-Key": apiKey },
     });
@@ -429,16 +514,20 @@ export async function syncManifest(apiKey: string): Promise<{ ok: boolean; versi
     const version = meta?.Response?.version || "unknown";
     const jsonPaths = meta?.Response?.jsonWorldComponentContentPaths?.en || {};
 
-    console.log(`[manifest] Version: ${version}`);
+    log.log(`[manifest] Version: ${version}`);
 
     if (diskMeta?.version === version && _loaded) {
-      console.log("[manifest] Already up to date.");
+      log.log("[manifest] Already up to date.");
       _syncing = false;
-      return { ok: true, version, counts: { items: itemIndex.size, activities: activityIndex.size } };
+      return {
+        ok: true,
+        version,
+        counts: { items: itemIndex.size, activities: activityIndex.size },
+      };
     }
 
     if (diskMeta?.version === version && !_loaded) {
-      console.log("[manifest] Loading from disk cache...");
+      log.log("[manifest] Loading from disk cache...");
       loadFromDisk();
       if (_loaded) {
         _version = version;
@@ -451,26 +540,40 @@ export async function syncManifest(apiKey: string): Promise<{ ok: boolean; versi
       ["DestinyInventoryItemDefinition", jsonPaths.DestinyInventoryItemDefinition, buildItemIndex],
       ["DestinyActivityDefinition", jsonPaths.DestinyActivityDefinition, buildActivityIndex],
       ["DestinyMilestoneDefinition", jsonPaths.DestinyMilestoneDefinition, buildMilestoneIndex],
-      ["DestinyInventoryBucketDefinition", jsonPaths.DestinyInventoryBucketDefinition, buildBucketIndex],
+      [
+        "DestinyInventoryBucketDefinition",
+        jsonPaths.DestinyInventoryBucketDefinition,
+        buildBucketIndex,
+      ],
       ["DestinyStatDefinition", jsonPaths.DestinyStatDefinition, buildStatIndex],
       ["DestinyDamageTypeDefinition", jsonPaths.DestinyDamageTypeDefinition, buildDamageIndex],
       ["DestinyClassDefinition", jsonPaths.DestinyClassDefinition, buildClassIndex],
-      ["DestinyActivityModifierDefinition", jsonPaths.DestinyActivityModifierDefinition, buildModifierIndex],
+      [
+        "DestinyActivityModifierDefinition",
+        jsonPaths.DestinyActivityModifierDefinition,
+        buildModifierIndex,
+      ],
     ];
 
     for (const [name, jsonPath, builder] of tables) {
-      if (!jsonPath) { console.log(`[manifest] Skipping ${name} — no path`); continue; }
+      if (!jsonPath) {
+        log.log(`[manifest] Skipping ${name} — no path`);
+        continue;
+      }
       try {
         const url = `${BUNGIE_BASE}${jsonPath}`;
-        console.log(`[manifest] Downloading ${name}...`);
+        log.log(`[manifest] Downloading ${name}...`);
         const res = await fetch(url);
-        if (!res.ok) { console.error(`[manifest] ${name} failed: ${res.status}`); continue; }
+        if (!res.ok) {
+          log.error(`[manifest] ${name} failed: ${res.status}`);
+          continue;
+        }
         const raw = await res.json();
         const count = Object.keys(raw).length;
-        console.log(`[manifest] ${name}: ${count} entries`);
+        log.log(`[manifest] ${name}: ${count} entries`);
         builder(raw);
       } catch (e) {
-        console.error(`[manifest] ${name} error:`, e);
+        log.error(`[manifest] ${name} error:`, e);
       }
     }
 
@@ -479,12 +582,11 @@ export async function syncManifest(apiKey: string): Promise<{ ok: boolean; versi
     _version = version;
 
     const counts = getCounts();
-    console.log("[manifest] Sync complete:", counts);
+    log.log("[manifest] Sync complete:", counts);
     _syncing = false;
     return { ok: true, version, counts };
-
   } catch (e) {
-    console.error("[manifest] Sync failed:", e);
+    log.error("[manifest] Sync failed:", e);
     _syncing = false;
     return { ok: false, version: _version, counts: getCounts() };
   }
@@ -512,7 +614,10 @@ function buildItemIndex(raw: Record<string, any>) {
       entry.socketEntries = sockets
         .filter((s: any) => s.singleInitialItemHash && s.singleInitialItemHash !== 0)
         .slice(0, 10)
-        .map((s: any) => ({ plugHash: s.singleInitialItemHash, socketTypeHash: s.socketTypeHash || 0 }));
+        .map((s: any) => ({
+          plugHash: s.singleInitialItemHash,
+          socketTypeHash: s.socketTypeHash || 0,
+        }));
     }
     itemIndex.set(hash, entry);
   }
@@ -534,7 +639,9 @@ function buildActivityIndex(raw: Record<string, any>) {
     const dp = def?.displayProperties;
     if (!dp?.name) continue;
     const modifierHashes: string[] = Array.isArray(def.modifiers)
-      ? def.modifiers.map((m: any) => String(m?.activityModifierHash || "")).filter((h: string) => h)
+      ? def.modifiers
+          .map((m: any) => String(m?.activityModifierHash || ""))
+          .filter((h: string) => h)
       : [];
     activityIndex.set(hash, {
       name: dp.name,
@@ -630,10 +737,13 @@ function saveToDisk(version: string) {
     fs.writeFileSync(path.join(CACHE_DIR, "damage.json"), serialize(damageIndex));
     fs.writeFileSync(path.join(CACHE_DIR, "classes.json"), serialize(classIndex));
     fs.writeFileSync(path.join(CACHE_DIR, "modifiers.json"), serialize(modifierIndex));
-    fs.writeFileSync(path.join(CACHE_DIR, "_meta.json"), JSON.stringify({ version, savedAt: new Date().toISOString() }));
-    console.log("[manifest] Saved to disk.");
+    fs.writeFileSync(
+      path.join(CACHE_DIR, "_meta.json"),
+      JSON.stringify({ version, savedAt: new Date().toISOString() }),
+    );
+    log.log("[manifest] Saved to disk.");
   } catch (e) {
-    console.error("[manifest] Disk save failed:", e);
+    log.error("[manifest] Disk save failed:", e);
   }
 }
 
@@ -655,9 +765,9 @@ function loadFromDisk() {
     load("classes.json", classIndex);
     load("modifiers.json", modifierIndex);
     _loaded = true;
-    console.log("[manifest] Loaded from disk:", getCounts());
+    log.log("[manifest] Loaded from disk:", getCounts());
   } catch (e) {
-    console.error("[manifest] Disk load failed:", e);
+    log.error("[manifest] Disk load failed:", e);
   }
 }
 
@@ -674,4 +784,6 @@ function getCounts() {
   };
 }
 
-try { loadFromDisk(); } catch {}
+try {
+  loadFromDisk();
+} catch {}

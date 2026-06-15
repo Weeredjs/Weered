@@ -1,3 +1,4 @@
+import { log } from "./lib/logger";
 import { fetchWithTimeout } from "./lib/fetchWithTimeout";
 import type { PrismaClient } from "@prisma/client";
 
@@ -7,9 +8,9 @@ const CHESS_COM_MONTHS_BACK = 1;
 
 function timeControlBucket(initialSeconds: number, incrementSeconds: number): string {
   const est = initialSeconds + 40 * incrementSeconds;
-  if (est < 30)   return "ultraBullet";
-  if (est < 180)  return "bullet";
-  if (est < 480)  return "blitz";
+  if (est < 30) return "ultraBullet";
+  if (est < 180) return "bullet";
+  if (est < 480) return "blitz";
   if (est < 1500) return "rapid";
   return "classical";
 }
@@ -19,15 +20,18 @@ function parseLichessGame(g: any, myUsername: string): any | null {
   const players = g.players || {};
   const white = players.white?.user?.name || players.white?.userId || "";
   const black = players.black?.user?.name || players.black?.userId || "";
-  const myColor = (white && white.toLowerCase() === myUsername.toLowerCase()) ? "WHITE"
-                : (black && black.toLowerCase() === myUsername.toLowerCase()) ? "BLACK"
-                : null;
+  const myColor =
+    white && white.toLowerCase() === myUsername.toLowerCase()
+      ? "WHITE"
+      : black && black.toLowerCase() === myUsername.toLowerCase()
+        ? "BLACK"
+        : null;
   if (!myColor) return null;
   const me = myColor === "WHITE" ? players.white : players.black;
   const opp = myColor === "WHITE" ? players.black : players.white;
 
   let result: "WIN" | "LOSS" | "DRAW";
-  if (g.status === "draw" || g.status === "stalemate" || g.winner === undefined && !g.winner) {
+  if (g.status === "draw" || g.status === "stalemate" || (g.winner === undefined && !g.winner)) {
     result = "DRAW";
   } else if (g.winner === (myColor === "WHITE" ? "white" : "black")) {
     result = "WIN";
@@ -40,9 +44,10 @@ function parseLichessGame(g: any, myUsername: string): any | null {
   const clock = g.clock || {};
   const initial = clock.initial ?? null;
   const increment = clock.increment ?? null;
-  const tc = (typeof initial === "number" && typeof increment === "number")
-    ? timeControlBucket(initial, increment)
-    : (g.perf || "unknown");
+  const tc =
+    typeof initial === "number" && typeof increment === "number"
+      ? timeControlBucket(initial, increment)
+      : g.perf || "unknown";
 
   return {
     provider: "LICHESS",
@@ -83,7 +88,9 @@ async function fetchLichessGames(username: string): Promise<any[]> {
       } catch {}
     }
     return out;
-  } catch { return []; }
+  } catch {
+    return [];
+  }
 }
 
 function parseChessComGame(g: any, myUsername: string): any | null {
@@ -99,7 +106,12 @@ function parseChessComGame(g: any, myUsername: string): any | null {
   const myResult = String(me?.result || "");
   let result: "WIN" | "LOSS" | "DRAW";
   if (myResult === "win") result = "WIN";
-  else if (["agreed","stalemate","repetition","insufficient","50move","timevsinsufficient"].includes(myResult)) result = "DRAW";
+  else if (
+    ["agreed", "stalemate", "repetition", "insufficient", "50move", "timevsinsufficient"].includes(
+      myResult,
+    )
+  )
+    result = "DRAW";
   else result = "LOSS";
 
   const tc = String(g.time_class || "").toLowerCase();
@@ -135,7 +147,9 @@ async function fetchChessComGames(username: string): Promise<any[]> {
   const mm = String(now.getUTCMonth() + 1).padStart(2, "0");
   const url = `https://api.chess.com/pub/player/${encodeURIComponent(username.toLowerCase())}/games/${yyyy}/${mm}`;
   try {
-    const r = await fetchWithTimeout(url, { headers: { "User-Agent": "Weered (https://weered.ca)" } });
+    const r = await fetchWithTimeout(url, {
+      headers: { "User-Agent": "Weered (https://weered.ca)" },
+    });
     if (!r.ok) return [];
     const data = await r.json();
     const games = Array.isArray(data?.games) ? data.games : [];
@@ -146,11 +160,13 @@ async function fetchChessComGames(username: string): Promise<any[]> {
       if (parsed) out.push(parsed);
     }
     return out;
-  } catch { return []; }
+  } catch {
+    return [];
+  }
 }
 
 export function startChessWorker(prisma: PrismaClient) {
-  console.log("[chess] worker started — polling every 5min");
+  log.log("[chess] worker started — polling every 5min");
 
   async function cycle() {
     try {
@@ -162,8 +178,8 @@ export function startChessWorker(prisma: PrismaClient) {
 
       for (const u of users) {
         const games: any[] = [];
-        if (u.lichessUsername) games.push(...await fetchLichessGames(u.lichessUsername));
-        if (u.chessComUsername) games.push(...await fetchChessComGames(u.chessComUsername));
+        if (u.lichessUsername) games.push(...(await fetchLichessGames(u.lichessUsername)));
+        if (u.chessComUsername) games.push(...(await fetchChessComGames(u.chessComUsername)));
 
         for (const g of games) {
           try {
@@ -172,15 +188,18 @@ export function startChessWorker(prisma: PrismaClient) {
               create: { userId: u.id, ...g },
               update: {},
             });
-          } catch (err: any) {
-          }
+          } catch (err: any) {}
         }
       }
     } catch (err: any) {
-      console.error("[chess] cycle error:", err?.message || err);
+      log.error("[chess] cycle error:", err?.message || err);
     }
   }
 
-  setTimeout(() => { void cycle(); }, 30_000);
-  setInterval(() => { void cycle(); }, POLL_INTERVAL_MS);
+  setTimeout(() => {
+    void cycle();
+  }, 30_000);
+  setInterval(() => {
+    void cycle();
+  }, POLL_INTERVAL_MS);
 }

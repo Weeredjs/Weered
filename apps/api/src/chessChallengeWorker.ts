@@ -1,7 +1,13 @@
+import { log } from "./lib/logger";
 import type { PrismaClient } from "@prisma/client";
 
 const POLL_INTERVAL_MS = 60_000;
-const CHESS_OBJECTIVE_TYPES = new Set(["chess_wins", "chess_streak", "chess_rating_climb", "chess_opening_wins"]);
+const CHESS_OBJECTIVE_TYPES = new Set([
+  "chess_wins",
+  "chess_streak",
+  "chess_rating_climb",
+  "chess_opening_wins",
+]);
 
 type ChessFilters = {
   timeControl?: string[];
@@ -40,7 +46,12 @@ function matchesChessFilters(g: ChessGameRow, f: ChessFilters | undefined): bool
       const re = new RegExp(f.opening, "i");
       if (!re.test(String(g.openingName || ""))) return false;
     } catch {
-      if (!String(g.openingName || "").toLowerCase().includes(f.opening.toLowerCase())) return false;
+      if (
+        !String(g.openingName || "")
+          .toLowerCase()
+          .includes(f.opening.toLowerCase())
+      )
+        return false;
     }
   }
   return true;
@@ -53,7 +64,9 @@ function evaluateChessObjective(
 ): ObjProgress {
   if (existing.completed) return existing;
 
-  const sorted = [...games].sort((a, b) => new Date(a.playedAt).getTime() - new Date(b.playedAt).getTime());
+  const sorted = [...games].sort(
+    (a, b) => new Date(a.playedAt).getTime() - new Date(b.playedAt).getTime(),
+  );
 
   let current = existing.current;
   let currentStreak = existing.currentStreak ?? 0;
@@ -118,10 +131,16 @@ function evaluateChessObjective(
 export function startChessChallengeWorker(
   prisma: PrismaClient,
   awardNotoriety: (userId: string, action: string) => Promise<any>,
-  awardPaper?: (userId: string, type: string, amount: number, description: string, refId?: string) => Promise<any>,
+  awardPaper?: (
+    userId: string,
+    type: string,
+    amount: number,
+    description: string,
+    refId?: string,
+  ) => Promise<any>,
   broadcastToLobby?: (lobbyId: string, event: any) => void,
 ) {
-  console.log("[chess-challenges] worker started — polling every 60s");
+  log.log("[chess-challenges] worker started — polling every 60s");
 
   async function cycle() {
     try {
@@ -134,9 +153,9 @@ export function startChessChallengeWorker(
         take: 200,
       });
 
-      const relevant = enrollments.filter(e => {
+      const relevant = enrollments.filter((e) => {
         const objs: any[] = (e.instance.definition.objectives as any[]) || [];
-        return objs.some(o => CHESS_OBJECTIVE_TYPES.has(String(o?.type || "")));
+        return objs.some((o) => CHESS_OBJECTIVE_TYPES.has(String(o?.type || "")));
       });
       if (relevant.length === 0) return;
 
@@ -160,7 +179,9 @@ export function startChessChallengeWorker(
           const progress = (enr.progress as Record<string, ObjProgress>) || {};
 
           const instanceStart = new Date(enr.instance.startsAt).getTime();
-          const windowGames = games.filter((g: any) => new Date(g.playedAt).getTime() >= instanceStart);
+          const windowGames = games.filter(
+            (g: any) => new Date(g.playedAt).getTime() >= instanceStart,
+          );
 
           let allCompleted = true;
           let completedCount = 0;
@@ -169,7 +190,11 @@ export function startChessChallengeWorker(
               if (!progress[obj.id]?.completed) allCompleted = false;
               continue;
             }
-            const existing = progress[obj.id] || { current: 0, target: obj.target, completed: false };
+            const existing = progress[obj.id] || {
+              current: 0,
+              target: obj.target,
+              completed: false,
+            };
             const updated = evaluateChessObjective(obj, windowGames, existing);
             progress[obj.id] = updated;
             if (updated.completed) completedCount++;
@@ -187,14 +212,21 @@ export function startChessChallengeWorker(
           if (isComplete && enr.status !== "COMPLETED") {
             updateData.status = "COMPLETED";
             updateData.completedAt = new Date();
-            if (def.notorietyReward > 0) awardNotoriety(userId, "CHALLENGE_COMPLETED").catch(() => {});
+            if (def.notorietyReward > 0)
+              awardNotoriety(userId, "CHALLENGE_COMPLETED").catch(() => {});
             if ((def as any).paperReward > 0 && awardPaper) {
-              awardPaper(userId, "EARN_CHALLENGE", (def as any).paperReward, `Chess challenge: ${def.title}`, enr.instanceId).catch(() => {});
+              awardPaper(
+                userId,
+                "EARN_CHALLENGE",
+                (def as any).paperReward,
+                `Chess challenge: ${def.title}`,
+                enr.instanceId,
+              ).catch(() => {});
             }
             if (def.badgeId) {
               prisma.userBadge.create({ data: { userId, badgeId: def.badgeId } }).catch(() => {});
             }
-            console.log(`[chess-challenges] ${userId} completed "${def.title}"`);
+            log.log(`[chess-challenges] ${userId} completed "${def.title}"`);
             if (broadcastToLobby && (def as any).lobbyId) {
               broadcastToLobby((def as any).lobbyId, {
                 type: "challenge:completed",
@@ -209,10 +241,14 @@ export function startChessChallengeWorker(
         }
       }
     } catch (err: any) {
-      console.error("[chess-challenges] cycle error:", err?.message || err);
+      log.error("[chess-challenges] cycle error:", err?.message || err);
     }
   }
 
-  setTimeout(() => { void cycle(); }, 45_000);
-  setInterval(() => { void cycle(); }, POLL_INTERVAL_MS);
+  setTimeout(() => {
+    void cycle();
+  }, 45_000);
+  setInterval(() => {
+    void cycle();
+  }, POLL_INTERVAL_MS);
 }

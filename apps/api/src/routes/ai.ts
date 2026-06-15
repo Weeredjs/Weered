@@ -1,3 +1,4 @@
+import { log } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
 
@@ -25,19 +26,33 @@ export default async function aiRoutes(app: FastifyInstance, opts: Opts) {
 
     const [lobbyList, onlineCount] = await Promise.all([
       prisma.lobby.findMany({
-        select: { id: true, name: true, description: true, moduleType: true, pinned: true, verified: true },
+        select: {
+          id: true,
+          name: true,
+          description: true,
+          moduleType: true,
+          pinned: true,
+          verified: true,
+        },
         orderBy: { name: "asc" },
       }),
-      Promise.resolve((() => {
-        const ids = new Set<string>();
-        for (const [, r] of rooms) {
-          for (const [uid] of r.users) ids.add(uid);
-        }
-        return ids.size;
-      })()),
+      Promise.resolve(
+        (() => {
+          const ids = new Set<string>();
+          for (const [, r] of rooms) {
+            for (const [uid] of r.users) ids.add(uid);
+          }
+          return ids.size;
+        })(),
+      ),
     ]);
 
-    const lobbyContext = lobbyList.map((l: any) => `${l.name} (${l.moduleType || "general"})${l.verified ? " [verified]" : ""}: ${l.description || "no description"}`).join("\n");
+    const lobbyContext = lobbyList
+      .map(
+        (l: any) =>
+          `${l.name} (${l.moduleType || "general"})${l.verified ? " [verified]" : ""}: ${l.description || "no description"}`,
+      )
+      .join("\n");
 
     try {
       const response = await ai.messages.create({
@@ -63,11 +78,19 @@ RESPOND ONLY WITH VALID JSON. No markdown, no explanation.`,
         .replace(/\s*```\s*$/i, "")
         .trim();
       let parsed: any = {};
-      try { parsed = JSON.parse(text); } catch { parsed = { answer: text.slice(0, 300) }; }
+      try {
+        parsed = JSON.parse(text);
+      } catch {
+        parsed = { answer: text.slice(0, 300) };
+      }
 
-      const wanted = Array.isArray(parsed.lobbies) ? parsed.lobbies.map((x: any) => String(x).toLowerCase()) : [];
-      const matchedLobbies = lobbyList.filter((l: any) =>
-        wanted.includes(String(l.id).toLowerCase()) || wanted.includes(String(l.name).toLowerCase())
+      const wanted = Array.isArray(parsed.lobbies)
+        ? parsed.lobbies.map((x: any) => String(x).toLowerCase())
+        : [];
+      const matchedLobbies = lobbyList.filter(
+        (l: any) =>
+          wanted.includes(String(l.id).toLowerCase()) ||
+          wanted.includes(String(l.name).toLowerCase()),
       );
 
       return reply.send({
@@ -77,7 +100,7 @@ RESPOND ONLY WITH VALID JSON. No markdown, no explanation.`,
         action: parsed.action || null,
       });
     } catch (e: any) {
-      console.error("[ai/search]", e);
+      log.error("[ai/search]", e);
       return reply.send({ ok: true, results: [], answer: "The Operator is offline right now." });
     }
   });
@@ -109,7 +132,12 @@ RESPOND ONLY WITH VALID JSON. No markdown, no explanation.`,
 - "explanation": brief explanation of why this is correct
 
 Generate exactly ${num} questions. Mix question types if "mixed" is specified. Focus on key concepts, definitions, and application. Make questions challenging but fair.`,
-        messages: [{ role: "user", content: `Generate ${num} ${questionTypes} practice questions from this material:\n\n${text}` }],
+        messages: [
+          {
+            role: "user",
+            content: `Generate ${num} ${questionTypes} practice questions from this material:\n\n${text}`,
+          },
+        ],
       });
 
       const raw = response?.content?.[0]?.text || "[]";
@@ -123,7 +151,7 @@ Generate exactly ${num} questions. Mix question types if "mixed" is specified. F
 
       return reply.send({ ok: true, questions });
     } catch (e: any) {
-      console.error("[ai/quiz]", e);
+      log.error("[ai/quiz]", e);
       return reply.send({ ok: false, error: "Quiz generation failed" });
     }
   });

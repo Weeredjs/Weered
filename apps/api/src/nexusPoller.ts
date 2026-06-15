@@ -1,4 +1,4 @@
-
+import { log } from "./lib/logger";
 import { PrismaClient } from "@prisma/client";
 
 const NEXUS_BASE = "https://api.nexusmods.com/v1";
@@ -29,12 +29,12 @@ async function nexusFetch<T>(apiKey: string, path: string): Promise<T | null> {
       headers: { apikey: apiKey, "User-Agent": USER_AGENT, Accept: "application/json" },
     });
     if (!res.ok) {
-      console.warn(`[nexusPoller] ${path} → ${res.status}`);
+      log.warn(`[nexusPoller] ${path} → ${res.status}`);
       return null;
     }
     return (await res.json()) as T;
   } catch (e) {
-    console.warn(`[nexusPoller] ${path} failed`, e);
+    log.warn(`[nexusPoller] ${path} failed`, e);
     return null;
   }
 }
@@ -103,28 +103,32 @@ async function runPollOnce(prisma: PrismaClient, apiKey: string): Promise<number
 export function startNexusPoller(prisma: PrismaClient): void {
   const apiKey = (process.env.NEXUSMODS_API_KEY || "").trim();
   if (!apiKey) {
-    console.log("[nexusPoller] NEXUSMODS_API_KEY not set — poller disabled");
+    log.log("[nexusPoller] NEXUSMODS_API_KEY not set — poller disabled");
     return;
   }
 
   const tick = async () => {
     try {
       const n = await runPollOnce(prisma, apiKey);
-      console.log(`[nexusPoller] upserted ${n} mods`);
+      log.log(`[nexusPoller] upserted ${n} mods`);
     } catch (e) {
-      console.warn("[nexusPoller] tick failed", e);
+      log.warn("[nexusPoller] tick failed", e);
     }
   };
 
-  setTimeout(() => { void tick(); }, 30_000);
-  setInterval(() => { void tick(); }, 12 * 60 * 60 * 1000);
-  console.log("[nexusPoller] started");
+  setTimeout(() => {
+    void tick();
+  }, 30_000);
+  setInterval(
+    () => {
+      void tick();
+    },
+    12 * 60 * 60 * 1000,
+  );
+  log.log("[nexusPoller] started");
 }
 
-export async function fetchAndUpsertMod(
-  prisma: PrismaClient,
-  nexusModId: number,
-): Promise<void> {
+export async function fetchAndUpsertMod(prisma: PrismaClient, nexusModId: number): Promise<void> {
   const apiKey = (process.env.NEXUSMODS_API_KEY || "").trim();
   if (!apiKey) return;
   const m = await nexusFetch<NexusMod>(apiKey, `/games/${GAME_SLUG}/mods/${nexusModId}.json`);

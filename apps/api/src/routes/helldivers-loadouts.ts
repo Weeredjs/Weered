@@ -1,3 +1,4 @@
+import { log } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
 
@@ -14,19 +15,22 @@ function isStaff(role?: string) {
 }
 
 function slugify(s: string) {
-  return String(s || "")
-    .toLowerCase()
-    .normalize("NFKD")
-    .replace(/[^\w\s-]/g, "")
-    .trim()
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-")
-    .slice(0, 48) || "loadout";
+  return (
+    String(s || "")
+      .toLowerCase()
+      .normalize("NFKD")
+      .replace(/[^\w\s-]/g, "")
+      .trim()
+      .replace(/\s+/g, "-")
+      .replace(/-+/g, "-")
+      .slice(0, 48) || "loadout"
+  );
 }
 
 function randSuffix(n = 5) {
   let out = "";
-  for (let i = 0; i < n; i++) out += SLUG_ALPHABET[Math.floor(Math.random() * SLUG_ALPHABET.length)];
+  for (let i = 0; i < n; i++)
+    out += SLUG_ALPHABET[Math.floor(Math.random() * SLUG_ALPHABET.length)];
   return out;
 }
 
@@ -51,10 +55,10 @@ export default async function helldiversLoadoutsRoutes(app: FastifyInstance, opt
     const name = clampStr(body.name, 80).trim();
     if (!name) return reply.code(400).send({ ok: false, error: "name_required" });
 
-    const primary    = clampStr(body.primary, 60).trim();
-    const secondary  = clampStr(body.secondary, 60).trim();
-    const throwable  = clampStr(body.throwable, 60).trim();
-    const armor      = clampStr(body.armor, 60).trim();
+    const primary = clampStr(body.primary, 60).trim();
+    const secondary = clampStr(body.secondary, 60).trim();
+    const throwable = clampStr(body.throwable, 60).trim();
+    const armor = clampStr(body.armor, 60).trim();
     if (!primary || !secondary || !throwable || !armor) {
       return reply.code(400).send({ ok: false, error: "loadout_incomplete" });
     }
@@ -68,46 +72,64 @@ export default async function helldiversLoadoutsRoutes(app: FastifyInstance, opt
     }
 
     const description = clampStr(body.description, 1000) || null;
-    const helmet      = clampStr(body.helmet, 60).trim() || null;
-    const faction     = normalizeFaction(body.faction);
-    const difficulty  = clampStr(body.difficulty, 24).trim() || null;
-    const role        = clampStr(body.role, 32).trim() || null;
+    const helmet = clampStr(body.helmet, 60).trim() || null;
+    const faction = normalizeFaction(body.faction);
+    const difficulty = clampStr(body.difficulty, 24).trim() || null;
+    const role = clampStr(body.role, 32).trim() || null;
 
     let slug = "";
     for (let attempt = 0; attempt < 6; attempt++) {
       const candidate = `${slugify(name)}-${randSuffix(5)}`;
-      const existing = await prisma.helldiversLoadout.findUnique({ where: { slug: candidate } }).catch(() => null);
-      if (!existing) { slug = candidate; break; }
+      const existing = await prisma.helldiversLoadout
+        .findUnique({ where: { slug: candidate } })
+        .catch(() => null);
+      if (!existing) {
+        slug = candidate;
+        break;
+      }
     }
     if (!slug) slug = `${slugify(name)}-${randSuffix(8)}`;
 
     try {
       const loadout = await prisma.helldiversLoadout.create({
         data: {
-          slug, name, description,
+          slug,
+          name,
+          description,
           authorId: auth.id,
-          primary, secondary, throwable, armor, helmet,
-          stratagem1, stratagem2, stratagem3, stratagem4,
-          faction, difficulty, role,
+          primary,
+          secondary,
+          throwable,
+          armor,
+          helmet,
+          stratagem1,
+          stratagem2,
+          stratagem3,
+          stratagem4,
+          faction,
+          difficulty,
+          role,
         },
-        include: { author: { select: { id: true, name: true, usernameKey: true, avatar: true, tier: true } } },
+        include: {
+          author: { select: { id: true, name: true, usernameKey: true, avatar: true, tier: true } },
+        },
       });
       return reply.send({ ok: true, loadout });
     } catch (e: any) {
-      console.error("[helldivers/loadouts] create failed", e);
+      log.error("[helldivers/loadouts] create failed", e);
       return reply.code(500).send({ ok: false, error: "create_failed" });
     }
   });
 
   app.get("/helldivers/loadouts", async (req, reply) => {
     const q = (req.query || {}) as any;
-    const faction    = q.faction ? String(q.faction).toUpperCase() : null;
-    const role       = q.role ? String(q.role) : null;
+    const faction = q.faction ? String(q.faction).toUpperCase() : null;
+    const role = q.role ? String(q.role) : null;
     const difficulty = q.difficulty ? String(q.difficulty) : null;
-    const sort       = String(q.sort || "top").toLowerCase();
-    const limit      = Math.min(Math.max(parseInt(String(q.limit || "30"), 10) || 30, 1), 100);
-    const offset     = Math.max(parseInt(String(q.offset || "0"), 10) || 0, 0);
-    const search     = clampStr(q.q || q.search, 80).trim();
+    const sort = String(q.sort || "top").toLowerCase();
+    const limit = Math.min(Math.max(parseInt(String(q.limit || "30"), 10) || 30, 1), 100);
+    const offset = Math.max(parseInt(String(q.offset || "0"), 10) || 0, 0);
+    const search = clampStr(q.q || q.search, 80).trim();
 
     const where: any = {};
     if (faction && FACTIONS.has(faction)) where.faction = faction;
@@ -130,14 +152,21 @@ export default async function helldiversLoadoutsRoutes(app: FastifyInstance, opt
     try {
       const [loadouts, total] = await Promise.all([
         prisma.helldiversLoadout.findMany({
-          where, orderBy, take: limit, skip: offset,
-          include: { author: { select: { id: true, name: true, usernameKey: true, avatar: true, tier: true } } },
+          where,
+          orderBy,
+          take: limit,
+          skip: offset,
+          include: {
+            author: {
+              select: { id: true, name: true, usernameKey: true, avatar: true, tier: true },
+            },
+          },
         }),
         prisma.helldiversLoadout.count({ where }),
       ]);
       return reply.send({ ok: true, loadouts, total, limit, offset });
     } catch (e: any) {
-      console.error("[helldivers/loadouts] list failed", e);
+      log.error("[helldivers/loadouts] list failed", e);
       return reply.code(500).send({ ok: false, error: "list_failed" });
     }
   });
@@ -148,24 +177,30 @@ export default async function helldiversLoadoutsRoutes(app: FastifyInstance, opt
     try {
       const loadout = await prisma.helldiversLoadout.findUnique({
         where: { slug },
-        include: { author: { select: { id: true, name: true, usernameKey: true, avatar: true, tier: true } } },
+        include: {
+          author: { select: { id: true, name: true, usernameKey: true, avatar: true, tier: true } },
+        },
       });
       if (!loadout) return reply.code(404).send({ ok: false, error: "not_found" });
 
-      prisma.helldiversLoadout.update({ where: { slug }, data: { views: { increment: 1 } } }).catch(() => {});
+      prisma.helldiversLoadout
+        .update({ where: { slug }, data: { views: { increment: 1 } } })
+        .catch(() => {});
 
       let myVote = 0;
       const auth = authFromHeader(String((req.headers as any).authorization || ""));
       if (auth?.id) {
-        const v = await prisma.helldiversLoadoutVote.findUnique({
-          where: { loadoutId_userId: { loadoutId: loadout.id, userId: auth.id } },
-        }).catch(() => null);
+        const v = await prisma.helldiversLoadoutVote
+          .findUnique({
+            where: { loadoutId_userId: { loadoutId: loadout.id, userId: auth.id } },
+          })
+          .catch(() => null);
         myVote = v?.value || 0;
       }
 
       return reply.send({ ok: true, loadout: { ...loadout, views: loadout.views + 1 }, myVote });
     } catch (e: any) {
-      console.error("[helldivers/loadouts] get failed", e);
+      log.error("[helldivers/loadouts] get failed", e);
       return reply.code(500).send({ ok: false, error: "get_failed" });
     }
   });
@@ -176,7 +211,7 @@ export default async function helldiversLoadoutsRoutes(app: FastifyInstance, opt
 
     const slug = String((req.params as any).slug || "");
     const body = (req.body || {}) as any;
-    const raw  = Number(body.value);
+    const raw = Number(body.value);
     const value = raw === 1 ? 1 : raw === -1 ? -1 : 0;
 
     try {
@@ -204,9 +239,14 @@ export default async function helldiversLoadoutsRoutes(app: FastifyInstance, opt
         data: { upvotes: up, downvotes: down },
       });
 
-      return reply.send({ ok: true, upvotes: updated.upvotes, downvotes: updated.downvotes, myVote: value });
+      return reply.send({
+        ok: true,
+        upvotes: updated.upvotes,
+        downvotes: updated.downvotes,
+        myVote: value,
+      });
     } catch (e: any) {
-      console.error("[helldivers/loadouts] vote failed", e);
+      log.error("[helldivers/loadouts] vote failed", e);
       return reply.code(500).send({ ok: false, error: "vote_failed" });
     }
   });
@@ -227,7 +267,7 @@ export default async function helldiversLoadoutsRoutes(app: FastifyInstance, opt
       await prisma.helldiversLoadout.delete({ where: { id: loadout.id } });
       return reply.send({ ok: true });
     } catch (e: any) {
-      console.error("[helldivers/loadouts] delete failed", e);
+      log.error("[helldivers/loadouts] delete failed", e);
       return reply.code(500).send({ ok: false, error: "delete_failed" });
     }
   });

@@ -1,4 +1,4 @@
-
+import { log } from "./lib/logger";
 import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
@@ -119,7 +119,14 @@ export async function operatorCommentateOnWarEvent(
       eventType,
     });
   } catch (e) {
-    console.error("[operator-war]", { eventType, planetName: ctx.planetName, planetId: ctx.planetId, faction: ctx.faction, moTitle: ctx.title, error: (e as any)?.message || String(e) });
+    log.error("[operator-war]", {
+      eventType,
+      planetName: ctx.planetName,
+      planetId: ctx.planetId,
+      faction: ctx.faction,
+      moTitle: ctx.title,
+      error: (e as any)?.message || String(e),
+    });
   }
 }
 
@@ -150,7 +157,7 @@ async function syncCampaignRooms(active: Map<number, CampaignSnapshot>) {
         },
       });
     } catch (e) {
-      console.warn("[helldiversWorker] room upsert failed", id, (e as any)?.message);
+      log.warn("[helldiversWorker] room upsert failed", id, (e as any)?.message);
     }
   }
 
@@ -163,13 +170,18 @@ async function syncCampaignRooms(active: Map<number, CampaignSnapshot>) {
       const pidStr = row.id.replace("helldivers2-campaign-", "");
       const pid = Number(pidStr);
       if (!Number.isFinite(pid) || !active.has(pid)) {
-        await prisma.room.update({ where: { id: row.id }, data: { pinned: false } }).catch(() => {});
+        await prisma.room
+          .update({ where: { id: row.id }, data: { pinned: false } })
+          .catch(() => {});
       }
     }
   } catch {}
 }
 
-async function syncMajorOrderChallenges(active: Map<number, MajorOrderSnapshot>, systemUserId: string | null) {
+async function syncMajorOrderChallenges(
+  active: Map<number, MajorOrderSnapshot>,
+  systemUserId: string | null,
+) {
   if (!systemUserId) return;
   for (const [moId, mo] of active) {
     const externalRef = `hd2:mo:${moId}`;
@@ -183,11 +195,10 @@ async function syncMajorOrderChallenges(active: Map<number, MajorOrderSnapshot>,
       await prisma.challengeDefinition.create({
         data: {
           title: truncate("Major Order: " + (mo.title || "Super Earth Directive"), 80),
-          description:
-            truncate(
-              "Self-reportable participation challenge for the active Helldivers 2 Major Order. Rewards Paper + Notoriety on claim.",
-              500,
-            ),
+          description: truncate(
+            "Self-reportable participation challenge for the active Helldivers 2 Major Order. Rewards Paper + Notoriety on claim.",
+            500,
+          ),
           category: "helldivers2",
           difficulty: 3,
           scope: "LOBBY" as any,
@@ -225,7 +236,7 @@ async function syncMajorOrderChallenges(active: Map<number, MajorOrderSnapshot>,
         });
       }
     } catch (e) {
-      console.warn("[helldiversWorker] MO challenge upsert failed", moId, (e as any)?.message);
+      log.warn("[helldiversWorker] MO challenge upsert failed", moId, (e as any)?.message);
     }
   }
 }
@@ -239,8 +250,14 @@ async function getSystemUserId(): Promise<string | null> {
       orderBy: { createdAt: "asc" },
       select: { id: true },
     });
-    if (u?.id) { _systemUserIdCache = u.id; return u.id; }
-    const fallback = await prisma.user.findFirst({ orderBy: { createdAt: "asc" }, select: { id: true } });
+    if (u?.id) {
+      _systemUserIdCache = u.id;
+      return u.id;
+    }
+    const fallback = await prisma.user.findFirst({
+      orderBy: { createdAt: "asc" },
+      select: { id: true },
+    });
     _systemUserIdCache = fallback?.id || null;
     return _systemUserIdCache;
   } catch {
@@ -330,7 +347,12 @@ export async function runHelldiversWorker(deps: {
   }
 
   if (primed) {
-    const buckets: Record<string, any[]> = { defense_won: [], defense_lost: [], planet_liberated: [], planet_lost: [] };
+    const buckets: Record<string, any[]> = {
+      defense_won: [],
+      defense_lost: [],
+      planet_liberated: [],
+      planet_lost: [],
+    };
     for (const [pid, prev] of lastCampaigns) {
       if (currentCampaigns.has(pid)) continue;
       if (prev.defense) {
@@ -348,22 +370,30 @@ export async function runHelldiversWorker(deps: {
           await operatorCommentateOnWarEvent(eventType as any, prev, deps);
         }
       } else {
-        await operatorCommentateOnWarEvent(eventType as any, {
-          planetId: "aggregate",
-          planetName: `${list.length} sectors`,
-          faction: list[0]?.faction || "the enemy",
-          aggregateCount: list.length,
-        }, deps);
+        await operatorCommentateOnWarEvent(
+          eventType as any,
+          {
+            planetId: "aggregate",
+            planetName: `${list.length} sectors`,
+            faction: list[0]?.faction || "the enemy",
+            aggregateCount: list.length,
+          },
+          deps,
+        );
       }
     }
 
     for (const [moId, prev] of lastMajorOrders) {
       if (currentMOs.has(moId)) continue;
       const completed = Date.now() < prev.expiresAt - 60_000;
-      await operatorCommentateOnWarEvent(completed ? "mo_completed" : "mo_failed", {
-        moId,
-        title: prev.title,
-      }, deps);
+      await operatorCommentateOnWarEvent(
+        completed ? "mo_completed" : "mo_failed",
+        {
+          moId,
+          title: prev.title,
+        },
+        deps,
+      );
     }
   }
 
@@ -376,7 +406,11 @@ const STEAM_HD2_APPID = "553850";
 let _steamCache: { ts: number; count: number } | null = null;
 const STEAM_TTL_MS = 60_000;
 
-export async function getHelldiversSteamPlayers(): Promise<{ ok: boolean; count: number; ts: number }> {
+export async function getHelldiversSteamPlayers(): Promise<{
+  ok: boolean;
+  count: number;
+  ts: number;
+}> {
   const now = Date.now();
   if (_steamCache && now - _steamCache.ts < STEAM_TTL_MS) {
     return { ok: true, count: _steamCache.count, ts: _steamCache.ts };

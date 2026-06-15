@@ -1,3 +1,4 @@
+import { log } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 import { fetchWithTimeout } from "../lib/fetchWithTimeout";
 import { prisma } from "../lib/prisma";
@@ -8,7 +9,7 @@ type Opts = {
 
 export default async function twitchRoutes(app: FastifyInstance, opts: Opts = {}) {
   const roomsMap = opts.rooms;
-  const TWITCH_CLIENT_ID     = process.env.TWITCH_CLIENT_ID || "";
+  const TWITCH_CLIENT_ID = process.env.TWITCH_CLIENT_ID || "";
   const TWITCH_CLIENT_SECRET = process.env.TWITCH_CLIENT_SECRET || "";
   let twitchAppToken = "";
   let twitchTokenExp = 0;
@@ -29,10 +30,10 @@ export default async function twitchRoutes(app: FastifyInstance, opts: Opts = {}
       const data = await res.json();
       twitchAppToken = data.access_token || "";
       twitchTokenExp = Date.now() + ((data.expires_in || 3600) - 60) * 1000;
-      console.log("[twitch] app token acquired");
+      log.log("[twitch] app token acquired");
       return twitchAppToken;
     } catch (e) {
-      console.error("[twitch] token error", e);
+      log.error("[twitch] token error", e);
       return "";
     }
   }
@@ -42,12 +43,12 @@ export default async function twitchRoutes(app: FastifyInstance, opts: Opts = {}
     if (!token) return null;
     try {
       const res = await fetchWithTimeout(`https://api.twitch.tv/helix/${path}`, {
-        headers: { "Client-ID": TWITCH_CLIENT_ID, "Authorization": `Bearer ${token}` },
+        headers: { "Client-ID": TWITCH_CLIENT_ID, Authorization: `Bearer ${token}` },
       });
       if (!res.ok) return null;
       return await res.json();
     } catch (e) {
-      console.error("[twitch helix]", path, e);
+      log.error("[twitch helix]", path, e);
       return null;
     }
   }
@@ -109,7 +110,9 @@ export default async function twitchRoutes(app: FastifyInstance, opts: Opts = {}
           select: { id: true },
         });
         return byKeyword?.id || null;
-      } catch { return null; }
+      } catch {
+        return null;
+      }
     }
 
     try {
@@ -118,21 +121,28 @@ export default async function twitchRoutes(app: FastifyInstance, opts: Opts = {}
         select: { id: true, name: true, avatar: true, twitchLogin: true },
         take: 100,
       });
-      const logins = linked.map(u => u.twitchLogin).filter(Boolean) as string[];
+      const logins = linked.map((u) => u.twitchLogin).filter(Boolean) as string[];
       if (logins.length > 0) {
-        const params = logins.slice(0, 100).map(l => `user_login=${encodeURIComponent(l)}`).join("&");
+        const params = logins
+          .slice(0, 100)
+          .map((l) => `user_login=${encodeURIComponent(l)}`)
+          .join("&");
         const data = await helixGet(`streams?${params}&first=100`);
         const streams = data?.data || [];
         if (streams.length > 0) {
           const top = streams.sort((a: any, b: any) => b.viewer_count - a.viewer_count)[0];
-          const weeredUser = linked.find(u => u.twitchLogin?.toLowerCase() === top.user_login?.toLowerCase());
+          const weeredUser = linked.find(
+            (u) => u.twitchLogin?.toLowerCase() === top.user_login?.toLowerCase(),
+          );
           const joinLobbyId = top.game_name ? await resolveLobbyForGame(top.game_name) : null;
           const payload = {
             ok: true,
             stream: {
               ...shapeStream(top),
               source: "user",
-              weeredUser: weeredUser ? { id: weeredUser.id, name: weeredUser.name, avatar: weeredUser.avatar } : null,
+              weeredUser: weeredUser
+                ? { id: weeredUser.id, name: weeredUser.name, avatar: weeredUser.avatar }
+                : null,
               joinLobbyId,
             },
           };
@@ -141,7 +151,7 @@ export default async function twitchRoutes(app: FastifyInstance, opts: Opts = {}
         }
       }
     } catch (e) {
-      console.error("[live/featured] linked-users step", e);
+      log.error("[live/featured] linked-users step", e);
     }
 
     try {
@@ -149,7 +159,10 @@ export default async function twitchRoutes(app: FastifyInstance, opts: Opts = {}
       const featuredId = cfg?.value || null;
       let featuredLobbyName: string | null = null;
       if (featuredId) {
-        const lob = await prisma.lobby.findUnique({ where: { id: featuredId }, select: { name: true } });
+        const lob = await prisma.lobby.findUnique({
+          where: { id: featuredId },
+          select: { name: true },
+        });
         featuredLobbyName = lob?.name || null;
       }
       if (featuredLobbyName) {
@@ -161,7 +174,12 @@ export default async function twitchRoutes(app: FastifyInstance, opts: Opts = {}
           if (top) {
             const payload = {
               ok: true,
-              stream: { ...shapeStream(top), source: "game", gameName: featuredLobbyName, joinLobbyId: featuredId },
+              stream: {
+                ...shapeStream(top),
+                source: "game",
+                gameName: featuredLobbyName,
+                joinLobbyId: featuredId,
+              },
             };
             featuredCache = { ts: Date.now(), payload };
             return reply.send(payload);
@@ -169,7 +187,7 @@ export default async function twitchRoutes(app: FastifyInstance, opts: Opts = {}
         }
       }
     } catch (e) {
-      console.error("[live/featured] featured-game step", e);
+      log.error("[live/featured] featured-game step", e);
     }
 
     try {
@@ -182,14 +200,19 @@ export default async function twitchRoutes(app: FastifyInstance, opts: Opts = {}
           const lolLobbyId = await resolveLobbyForGame("League of Legends");
           const payload = {
             ok: true,
-            stream: { ...shapeStream(top), source: "fallback", gameName: "League of Legends", joinLobbyId: lolLobbyId },
+            stream: {
+              ...shapeStream(top),
+              source: "fallback",
+              gameName: "League of Legends",
+              joinLobbyId: lolLobbyId,
+            },
           };
           featuredCache = { ts: Date.now(), payload };
           return reply.send(payload);
         }
       }
     } catch (e) {
-      console.error("[live/featured] LoL fallback step", e);
+      log.error("[live/featured] LoL fallback step", e);
     }
 
     const empty = { ok: true, stream: null, source: null };
@@ -199,22 +222,28 @@ export default async function twitchRoutes(app: FastifyInstance, opts: Opts = {}
 
   function activityLabel(moduleKey: string | null | undefined): string {
     const k = String(moduleKey || "").toLowerCase();
-    if (k === "youtube" || k === "co_watch")  return "Watching together";
-    if (k === "twitch")                       return "Watching stream";
-    if (k === "voice")                        return "Voice chat";
-    if (k === "feed")                         return "Reading feed";
-    if (k === "trade" || k === "trading")     return "Trading";
-    if (k === "raid" || k === "lfg")          return "Forming party";
+    if (k === "youtube" || k === "co_watch") return "Watching together";
+    if (k === "twitch") return "Watching stream";
+    if (k === "voice") return "Voice chat";
+    if (k === "feed") return "Reading feed";
+    if (k === "trade" || k === "trading") return "Trading";
+    if (k === "raid" || k === "lfg") return "Forming party";
     return "Hanging out";
   }
 
   app.get("/live/rooms", async (_req, reply) => {
     if (!roomsMap) return reply.send({ ok: true, rooms: [] });
 
-    type Active = { id: string; name: string; lobbyId: string | null; userIds: string[]; activeModule: string | null };
+    type Active = {
+      id: string;
+      name: string;
+      lobbyId: string | null;
+      userIds: string[];
+      activeModule: string | null;
+    };
     const active: Active[] = [];
     for (const [rid, r] of roomsMap as any) {
-      const userIds = Array.from((r.users?.keys?.() || [])) as string[];
+      const userIds = Array.from(r.users?.keys?.() || []) as string[];
       if (userIds.length === 0) continue;
       active.push({
         id: rid,
@@ -226,8 +255,8 @@ export default async function twitchRoutes(app: FastifyInstance, opts: Opts = {}
     }
     if (active.length === 0) return reply.send({ ok: true, rooms: [] });
 
-    const lobbyIds = [...new Set(active.map(r => r.lobbyId).filter(Boolean))] as string[];
-    const allUserIds = [...new Set(active.flatMap(r => r.userIds))];
+    const lobbyIds = [...new Set(active.map((r) => r.lobbyId).filter(Boolean))] as string[];
+    const allUserIds = [...new Set(active.flatMap((r) => r.userIds))];
 
     const [lobbies, users] = await Promise.all([
       lobbyIds.length
@@ -245,21 +274,26 @@ export default async function twitchRoutes(app: FastifyInstance, opts: Opts = {}
     ]);
 
     const lobbyMap = new Map(lobbies.map((l: any) => [l.id, l]));
-    const userMap  = new Map((users as any[]).map((u: any) => [u.id, u]));
+    const userMap = new Map((users as any[]).map((u: any) => [u.id, u]));
 
-    const allActiveIds = [...new Set(active.map(r => r.id))];
+    const allActiveIds = [...new Set(active.map((r) => r.id))];
     const lobbyIdSet = new Set(
       allActiveIds.length
-        ? (await prisma.lobby.findMany({ where: { id: { in: allActiveIds } }, select: { id: true } })).map((l: any) => l.id)
-        : []
+        ? (
+            await prisma.lobby.findMany({
+              where: { id: { in: allActiveIds } },
+              select: { id: true },
+            })
+          ).map((l: any) => l.id)
+        : [],
     );
 
     const out = active
       .sort((a, b) => b.userIds.length - a.userIds.length)
       .slice(0, 12)
-      .map(r => {
-        const lobby = r.lobbyId ? lobbyMap.get(r.lobbyId) as any : null;
-        const avatars = r.userIds.slice(0, 5).map(uid => {
+      .map((r) => {
+        const lobby = r.lobbyId ? (lobbyMap.get(r.lobbyId) as any) : null;
+        const avatars = r.userIds.slice(0, 5).map((uid) => {
           const u = userMap.get(uid) as any;
           return {
             id: uid,

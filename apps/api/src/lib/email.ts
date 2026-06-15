@@ -1,3 +1,4 @@
+import { log } from "./logger";
 import nodemailer, { type Transporter } from "nodemailer";
 import { Resend } from "resend";
 
@@ -33,9 +34,16 @@ function getTransporter(): Transporter | null {
   return _transporter;
 }
 
-export type SendMailResult = { ok: true; messageId: string } | { ok: false; error: string; logOnly?: boolean };
+export type SendMailResult =
+  | { ok: true; messageId: string }
+  | { ok: false; error: string; logOnly?: boolean };
 
-export async function sendMail(opts: { to: string; subject: string; html: string; text?: string }): Promise<SendMailResult> {
+export async function sendMail(opts: {
+  to: string;
+  subject: string;
+  html: string;
+  text?: string;
+}): Promise<SendMailResult> {
   const from = process.env.MAIL_FROM || process.env.SMTP_FROM || "Weered <onboarding@resend.dev>";
 
   const resend = getResend();
@@ -49,13 +57,13 @@ export async function sendMail(opts: { to: string; subject: string; html: string
         text: opts.text || stripHtml(opts.html),
       });
       if ((r as any).error) {
-        console.error("[email:resend] send failed:", (r as any).error);
+        log.error("[email:resend] send failed:", (r as any).error);
         return { ok: false, error: String((r as any).error?.message || (r as any).error) };
       }
       const id = (r as any).data?.id || "";
       return { ok: true, messageId: id };
     } catch (e: any) {
-      console.error("[email:resend] send threw:", e?.message || e);
+      log.error("[email:resend] send threw:", e?.message || e);
       return { ok: false, error: e?.message || "resend_send_failed" };
     }
   }
@@ -63,11 +71,13 @@ export async function sendMail(opts: { to: string; subject: string; html: string
   const t = getTransporter();
   if (!t) {
     if (!_warnedMissing) {
-      console.warn("[email] No transport configured (need RESEND_API_KEY or SMTP_HOST/USER/PASS) — emails will be logged only.");
+      log.warn(
+        "[email] No transport configured (need RESEND_API_KEY or SMTP_HOST/USER/PASS) — emails will be logged only.",
+      );
       _warnedMissing = true;
     }
-    console.log(`[email:logOnly] to=${opts.to} subject="${opts.subject}"`);
-    console.log(`[email:logOnly] body:\n${opts.text || opts.html}`);
+    log.log(`[email:logOnly] to=${opts.to} subject="${opts.subject}"`);
+    log.log(`[email:logOnly] body:\n${opts.text || opts.html}`);
     return { ok: false, error: "transport_not_configured", logOnly: true };
   }
   try {
@@ -80,24 +90,34 @@ export async function sendMail(opts: { to: string; subject: string; html: string
     });
     return { ok: true, messageId: info.messageId };
   } catch (e: any) {
-    console.error("[email:smtp] send failed:", e?.message || e);
+    log.error("[email:smtp] send failed:", e?.message || e);
     return { ok: false, error: e?.message || "send_failed" };
   }
 }
 
 function stripHtml(html: string): string {
-  return html.replace(/<style[\s\S]*?<\/style>/gi, "").replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
+  return html
+    .replace(/<style[\s\S]*?<\/style>/gi, "")
+    .replace(/<[^>]+>/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 const BRAND_COLOR = "#5800E5";
 const ACCENT_COLOR = "#f5b700";
 const APP_URL = process.env.APP_URL || "https://weered.ca";
 
-function shellHtml(opts: { heading: string; body: string; ctaLabel?: string; ctaUrl?: string }): string {
-  const cta = opts.ctaLabel && opts.ctaUrl
-    ? `<p style="margin:32px 0 12px"><a href="${opts.ctaUrl}" style="display:inline-block;background:${BRAND_COLOR};color:#fff;padding:14px 28px;border-radius:6px;font-family:monospace;font-weight:800;letter-spacing:1.2px;text-decoration:none;text-transform:uppercase;font-size:13px">${opts.ctaLabel}</a></p>
+function shellHtml(opts: {
+  heading: string;
+  body: string;
+  ctaLabel?: string;
+  ctaUrl?: string;
+}): string {
+  const cta =
+    opts.ctaLabel && opts.ctaUrl
+      ? `<p style="margin:32px 0 12px"><a href="${opts.ctaUrl}" style="display:inline-block;background:${BRAND_COLOR};color:#fff;padding:14px 28px;border-radius:6px;font-family:monospace;font-weight:800;letter-spacing:1.2px;text-decoration:none;text-transform:uppercase;font-size:13px">${opts.ctaLabel}</a></p>
        <p style="margin:8px 0 0;font-size:11px;color:#888;font-family:monospace">If the button doesn't work, copy this link:<br/><span style="color:${BRAND_COLOR}">${opts.ctaUrl}</span></p>`
-    : "";
+      : "";
   return `<!DOCTYPE html><html><body style="margin:0;background:#0c0b0a;font-family:system-ui,sans-serif;color:#e8e8f0;padding:40px 20px">
     <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:560px;margin:0 auto;background:#15131a;border:1px solid #2a2435;border-radius:12px;padding:32px 28px">
       <tr><td>
@@ -115,7 +135,10 @@ function shellHtml(opts: { heading: string; body: string; ctaLabel?: string; cta
   </body></html>`;
 }
 
-export function buildVerifyEmail(opts: { username: string; token: string }): { subject: string; html: string } {
+export function buildVerifyEmail(opts: { username: string; token: string }): {
+  subject: string;
+  html: string;
+} {
   const url = `${APP_URL}/verify-email?token=${encodeURIComponent(opts.token)}`;
   return {
     subject: "Verify your Weered email",
@@ -128,7 +151,10 @@ export function buildVerifyEmail(opts: { username: string; token: string }): { s
   };
 }
 
-export function buildResetEmail(opts: { username: string; token: string }): { subject: string; html: string } {
+export function buildResetEmail(opts: { username: string; token: string }): {
+  subject: string;
+  html: string;
+} {
   const url = `${APP_URL}/reset-password?token=${encodeURIComponent(opts.token)}`;
   return {
     subject: "Reset your Weered password",

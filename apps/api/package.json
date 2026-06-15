@@ -35,6 +35,7 @@
     "livekit-server-sdk": "^2.7.3",
     "nodemailer": "^8.0.6",
     "nsfwjs": "^4.3.0",
+    "pino": "^9.0.0",
     "resend": "^6.12.2",
     "sharp": "^0.34.5",
     "web-push": "^3.6.7",

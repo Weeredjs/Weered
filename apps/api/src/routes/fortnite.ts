@@ -1,3 +1,4 @@
+import { log } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 import { fetchWithTimeout } from "../lib/fetchWithTimeout";
 import { z } from "zod";
@@ -5,13 +6,16 @@ import { prisma } from "../lib/prisma";
 
 type Opts = {
   authFromHeader: (h?: string) => { id: string } | null;
-  sendPush: (userId: string, payload: { title: string; body: string; url?: string; tag?: string }) => Promise<void>;
+  sendPush: (
+    userId: string,
+    payload: { title: string; body: string; url?: string; tag?: string },
+  ) => Promise<void>;
 };
 
 export default async function fortniteRoutes(app: FastifyInstance, opts: Opts) {
   const { authFromHeader, sendPush } = opts;
   const FN_API_BASE = "https://fortnite-api.com";
-  const FN_API_KEY  = process.env.FORTNITE_API_KEY || "";
+  const FN_API_KEY = process.env.FORTNITE_API_KEY || "";
   const fnCache = new Map<string, { data: any; expiresAt: number }>();
 
   function fnCacheGet(key: string) {
@@ -27,9 +31,15 @@ export default async function fortniteRoutes(app: FastifyInstance, opts: Opts) {
     const headers: Record<string, string> = {};
     if (FN_API_KEY) headers["Authorization"] = FN_API_KEY;
     const res = await fetchWithTimeout(`${FN_API_BASE}${path}`, { headers });
-    if (res.status === 429) { console.warn("[fortnite] Rate limited"); return null; }
+    if (res.status === 429) {
+      log.warn("[fortnite] Rate limited");
+      return null;
+    }
     if (res.status === 404) return null;
-    if (!res.ok) { console.error(`[fortnite] ${res.status} — ${path}`); return null; }
+    if (!res.ok) {
+      log.error(`[fortnite] ${res.status} — ${path}`);
+      return null;
+    }
     return res.json();
   }
 
@@ -73,7 +83,7 @@ export default async function fortniteRoutes(app: FastifyInstance, opts: Opts) {
       fnCacheSet(cacheKey, result, 5 * 60 * 1000);
       return reply.send(result);
     } catch (e) {
-      console.error("[fortnite/stats]", e);
+      log.error("[fortnite/stats]", e);
       return reply.send({ ok: false, error: "stats_fetch_failed" });
     }
   });
@@ -115,7 +125,7 @@ export default async function fortniteRoutes(app: FastifyInstance, opts: Opts) {
       fnCacheSet(cacheKey, result, 15 * 60 * 1000);
       return reply.send(result);
     } catch (e) {
-      console.error("[fortnite/shop]", e);
+      log.error("[fortnite/shop]", e);
       return reply.send({ ok: false, error: "shop_fetch_failed" });
     }
   });
@@ -144,7 +154,7 @@ export default async function fortniteRoutes(app: FastifyInstance, opts: Opts) {
       fnCacheSet(cacheKey, result, 30 * 60 * 1000);
       return reply.send(result);
     } catch (e) {
-      console.error("[fortnite/news]", e);
+      log.error("[fortnite/news]", e);
       return reply.send({ ok: false, error: "news_fetch_failed" });
     }
   });
@@ -164,13 +174,16 @@ export default async function fortniteRoutes(app: FastifyInstance, opts: Opts) {
         ok: true,
         images: data.data?.images || {},
         pois: (data.data?.pois || []).map((p: any) => ({
-          id: p.id, name: p.name, x: p.location?.x, y: p.location?.y,
+          id: p.id,
+          name: p.name,
+          x: p.location?.x,
+          y: p.location?.y,
         })),
       };
       fnCacheSet(cacheKey, result, 60 * 60 * 1000);
       return reply.send(result);
     } catch (e) {
-      console.error("[fortnite/map]", e);
+      log.error("[fortnite/map]", e);
       return reply.send({ ok: false, error: "map_fetch_failed" });
     }
   });
@@ -184,7 +197,9 @@ export default async function fortniteRoutes(app: FastifyInstance, opts: Opts) {
     if (cached) return reply.send(cached);
 
     try {
-      const data = await fnGet(`/v2/cosmetics/br/search/all?name=${encodeURIComponent(q)}&matchMethod=contains&language=en`);
+      const data = await fnGet(
+        `/v2/cosmetics/br/search/all?name=${encodeURIComponent(q)}&matchMethod=contains&language=en`,
+      );
       if (!data || data.status !== 200) {
         return reply.send({ ok: true, items: [] });
       }
@@ -207,7 +222,7 @@ export default async function fortniteRoutes(app: FastifyInstance, opts: Opts) {
       fnCacheSet(cacheKey, result, 60 * 60 * 1000);
       return reply.send(result);
     } catch (e) {
-      console.error("[fortnite/cosmetics]", e);
+      log.error("[fortnite/cosmetics]", e);
       return reply.send({ ok: true, items: [] });
     }
   });
@@ -221,10 +236,13 @@ export default async function fortniteRoutes(app: FastifyInstance, opts: Opts) {
       const data = await fnGet("/v2/cosmetics/new");
       if (!data || data.status !== 200) return reply.send({ ok: true, items: [] });
 
-      const raw = Array.isArray(data.data?.items) ? data.data.items : (data.data?.items?.br || []);
+      const raw = Array.isArray(data.data?.items) ? data.data.items : data.data?.items?.br || [];
       const items = raw.slice(0, 24).map((i: any) => ({
-        id: i.id, name: i.name, description: i.description,
-        type: i.type?.displayValue, rarity: i.rarity?.displayValue,
+        id: i.id,
+        name: i.name,
+        description: i.description,
+        type: i.type?.displayValue,
+        rarity: i.rarity?.displayValue,
         rarityColor: i.rarity?.value,
         image: i.images?.icon || i.images?.smallIcon,
         set: i.set?.value || null,
@@ -236,7 +254,7 @@ export default async function fortniteRoutes(app: FastifyInstance, opts: Opts) {
       fnCacheSet(cacheKey, result, 60 * 60 * 1000);
       return reply.send(result);
     } catch (e) {
-      console.error("[fortnite/cosmetics/new]", e);
+      log.error("[fortnite/cosmetics/new]", e);
       return reply.send({ ok: true, items: [] });
     }
   });
@@ -251,51 +269,62 @@ export default async function fortniteRoutes(app: FastifyInstance, opts: Opts) {
     return reply.send({ ok: true, items });
   });
 
-  app.post("/fortnite/wishlist", {
-  schema: { tags: ["fortnite"] },
-}, async (req, reply) => {
-    const u = authFromHeader((req as any).headers?.authorization);
-    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
-    const body: any = (req as any).body || {};
-    const cosmeticId = String(body.cosmeticId || "").trim();
-    if (!cosmeticId) return reply.code(400).send({ ok: false, error: "cosmetic_id_required" });
+  app.post(
+    "/fortnite/wishlist",
+    {
+      schema: { tags: ["fortnite"] },
+    },
+    async (req, reply) => {
+      const u = authFromHeader((req as any).headers?.authorization);
+      if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+      const body: any = (req as any).body || {};
+      const cosmeticId = String(body.cosmeticId || "").trim();
+      if (!cosmeticId) return reply.code(400).send({ ok: false, error: "cosmetic_id_required" });
 
-    const count = await prisma.fortniteWishlist.count({ where: { userId: u.id } });
-    if (count >= 50) return reply.code(400).send({ ok: false, error: "wishlist_full", message: "Maximum 50 items." });
+      const count = await prisma.fortniteWishlist.count({ where: { userId: u.id } });
+      if (count >= 50)
+        return reply
+          .code(400)
+          .send({ ok: false, error: "wishlist_full", message: "Maximum 50 items." });
 
-    try {
-      const item = await prisma.fortniteWishlist.upsert({
-        where: { userId_cosmeticId: { userId: u.id, cosmeticId } },
-        update: { notified: false, notifiedAt: null },
-        create: {
-          userId: u.id,
-          cosmeticId,
-          name: String(body.name || "").slice(0, 100),
-          type: String(body.type || "").slice(0, 50),
-          rarity: String(body.rarity || "").slice(0, 30),
-          image: body.image ? String(body.image).slice(0, 500) : null,
-        },
-      });
-      return reply.send({ ok: true, item });
-    } catch (e: any) {
-      console.error("[fortnite/wishlist] add", e);
-      return reply.send({ ok: false, error: "failed" });
-    }
-  });
+      try {
+        const item = await prisma.fortniteWishlist.upsert({
+          where: { userId_cosmeticId: { userId: u.id, cosmeticId } },
+          update: { notified: false, notifiedAt: null },
+          create: {
+            userId: u.id,
+            cosmeticId,
+            name: String(body.name || "").slice(0, 100),
+            type: String(body.type || "").slice(0, 50),
+            rarity: String(body.rarity || "").slice(0, 30),
+            image: body.image ? String(body.image).slice(0, 500) : null,
+          },
+        });
+        return reply.send({ ok: true, item });
+      } catch (e: any) {
+        log.error("[fortnite/wishlist] add", e);
+        return reply.send({ ok: false, error: "failed" });
+      }
+    },
+  );
 
-  app.delete("/fortnite/wishlist/:cosmeticId", {
-  schema: { tags: ["fortnite"], params: z.object({ cosmeticId: z.string().min(1) }) },
-}, async (req, reply) => {
-    const u = authFromHeader((req as any).headers?.authorization);
-    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
-    const cosmeticId = String((req as any).params?.cosmeticId || "");
-    try {
-      await prisma.fortniteWishlist.delete({
-        where: { userId_cosmeticId: { userId: u.id, cosmeticId } },
-      });
-    } catch {}
-    return reply.send({ ok: true });
-  });
+  app.delete(
+    "/fortnite/wishlist/:cosmeticId",
+    {
+      schema: { tags: ["fortnite"], params: z.object({ cosmeticId: z.string().min(1) }) },
+    },
+    async (req, reply) => {
+      const u = authFromHeader((req as any).headers?.authorization);
+      if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+      const cosmeticId = String((req as any).params?.cosmeticId || "");
+      try {
+        await prisma.fortniteWishlist.delete({
+          where: { userId_cosmeticId: { userId: u.id, cosmeticId } },
+        });
+      } catch {}
+      return reply.send({ ok: true });
+    },
+  );
 
   app.get("/fortnite/wishlist/friends/:cosmeticId", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
@@ -303,10 +332,15 @@ export default async function fortniteRoutes(app: FastifyInstance, opts: Opts) {
     const cosmeticId = String((req as any).params?.cosmeticId || "");
 
     const friendRows = await prisma.friendRequest.findMany({
-      where: { OR: [{ fromId: u.id, status: "ACCEPTED" }, { toId: u.id, status: "ACCEPTED" }] },
+      where: {
+        OR: [
+          { fromId: u.id, status: "ACCEPTED" },
+          { toId: u.id, status: "ACCEPTED" },
+        ],
+      },
       select: { fromId: true, toId: true },
     });
-    const friendIds = friendRows.map((f: any) => f.fromId === u.id ? f.toId : f.fromId);
+    const friendIds = friendRows.map((f: any) => (f.fromId === u.id ? f.toId : f.fromId));
     if (friendIds.length === 0) return reply.send({ ok: true, count: 0, friends: [] });
 
     const matches = await prisma.fortniteWishlist.findMany({
@@ -316,13 +350,16 @@ export default async function fortniteRoutes(app: FastifyInstance, opts: Opts) {
     const matchedIds = matches.map((m: any) => m.userId);
 
     const users = matchedIds.length
-      ? await prisma.user.findMany({ where: { id: { in: matchedIds } }, select: { id: true, name: true } })
+      ? await prisma.user.findMany({
+          where: { id: { in: matchedIds } },
+          select: { id: true, name: true },
+        })
       : [];
 
     return reply.send({
       ok: true,
       count: matchedIds.length,
-      friends: users.map(u => ({ id: u.id, name: u.name })),
+      friends: users.map((u) => ({ id: u.id, name: u.name })),
     });
   });
 
@@ -354,7 +391,7 @@ export default async function fortniteRoutes(app: FastifyInstance, opts: Opts) {
       });
 
       if (matches.length === 0) return;
-      console.log(`[fortnite] Shop check: ${matches.length} wishlist matches found`);
+      log.log(`[fortnite] Shop check: ${matches.length} wishlist matches found`);
 
       const byUser = new Map<string, any[]>();
       for (const m of matches) {
@@ -379,7 +416,7 @@ export default async function fortniteRoutes(app: FastifyInstance, opts: Opts) {
         });
       }
     } catch (e) {
-      console.error("[fortnite] Shop wishlist check error:", e);
+      log.error("[fortnite] Shop wishlist check error:", e);
     }
   }
 
@@ -432,7 +469,7 @@ export default async function fortniteRoutes(app: FastifyInstance, opts: Opts) {
       fnCacheSet(cacheKey, result, 5 * 60 * 1000);
       return reply.send(result);
     } catch (e) {
-      console.error("[fortnite/ranked]", e);
+      log.error("[fortnite/ranked]", e);
       return reply.send({ ok: false, error: "ranked_fetch_failed" });
     }
   });

@@ -1,3 +1,4 @@
+import { log } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
 import { existsSync, mkdirSync, writeFileSync, unlinkSync } from "node:fs";
@@ -35,12 +36,18 @@ async function isRoomMember(roomId: string, userId: string): Promise<boolean> {
 export default async function mapsRoutes(app: FastifyInstance, opts: Opts) {
   const { authFromHeader, broadcastToRoom } = opts;
 
-  app.addContentTypeParser("application/json", { bodyLimit: 12 * 1024 * 1024 }, (_req: any, body: any, done: any) => {
-    try {
-      const txt = typeof body === "string" ? body : body.toString("utf8");
-      done(null, txt ? JSON.parse(txt) : {});
-    } catch (e) { done(e as Error, undefined); }
-  });
+  app.addContentTypeParser(
+    "application/json",
+    { bodyLimit: 12 * 1024 * 1024 },
+    (_req: any, body: any, done: any) => {
+      try {
+        const txt = typeof body === "string" ? body : body.toString("utf8");
+        done(null, txt ? JSON.parse(txt) : {});
+      } catch (e) {
+        done(e as Error, undefined);
+      }
+    },
+  );
 
   app.post("/maps/:roomId/upload", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
@@ -67,7 +74,11 @@ export default async function mapsRoutes(app: FastifyInstance, opts: Opts) {
 
     const map = await prisma.tacticalMap.create({
       data: {
-        roomId, name, imageUrl: "", widthPx, heightPx,
+        roomId,
+        name,
+        imageUrl: "",
+        widthPx,
+        heightPx,
         createdById: u.id,
       },
     });
@@ -77,7 +88,7 @@ export default async function mapsRoutes(app: FastifyInstance, opts: Opts) {
       writeFileSync(filepath, buffer);
     } catch (e) {
       await prisma.tacticalMap.delete({ where: { id: map.id } }).catch(() => {});
-      console.error("[map upload]", e);
+      log.error("[map upload]", e);
       return reply.code(500).send({ error: "write_failed" });
     }
     const imageUrl = `${PUBLIC_BASE}/${filename}`;
@@ -102,10 +113,13 @@ export default async function mapsRoutes(app: FastifyInstance, opts: Opts) {
 
     const isDM = await isRoomDM(roomId, u.id);
     const [tokensRaw, fogReveals] = await Promise.all([
-      prisma.mapToken.findMany({ where: { mapId: map.id }, orderBy: [{ z: "asc" }, { createdAt: "asc" }] }),
+      prisma.mapToken.findMany({
+        where: { mapId: map.id },
+        orderBy: [{ z: "asc" }, { createdAt: "asc" }],
+      }),
       prisma.mapFogReveal.findMany({ where: { mapId: map.id }, select: { x: true, y: true } }),
     ]);
-    const tokens = isDM ? tokensRaw : tokensRaw.filter(t => !t.hidden);
+    const tokens = isDM ? tokensRaw : tokensRaw.filter((t) => !t.hidden);
 
     return reply.send({ ok: true, map, tokens, fogReveals, isDM });
   });
@@ -122,8 +136,10 @@ export default async function mapsRoutes(app: FastifyInstance, opts: Opts) {
     const data: any = {};
     if (typeof b.name === "string") data.name = b.name.slice(0, 80);
     if (Number.isFinite(b.gridSize)) data.gridSize = Math.max(8, Math.min(500, Number(b.gridSize)));
-    if (typeof b.gridColor === "string" && /^#[0-9a-fA-F]{6}$/.test(b.gridColor)) data.gridColor = b.gridColor;
-    if (Number.isFinite(b.gridOpacity)) data.gridOpacity = Math.max(0, Math.min(1, Number(b.gridOpacity)));
+    if (typeof b.gridColor === "string" && /^#[0-9a-fA-F]{6}$/.test(b.gridColor))
+      data.gridColor = b.gridColor;
+    if (Number.isFinite(b.gridOpacity))
+      data.gridOpacity = Math.max(0, Math.min(1, Number(b.gridOpacity)));
     if (typeof b.gridEnabled === "boolean") data.gridEnabled = b.gridEnabled;
     if (typeof b.fogEnabled === "boolean") data.fogEnabled = b.fogEnabled;
 
@@ -141,7 +157,10 @@ export default async function mapsRoutes(app: FastifyInstance, opts: Opts) {
     if (!(await isRoomDM(map.roomId, u.id))) return reply.code(403).send({ error: "dm_only" });
     if (map.imageUrl) {
       const fname = map.imageUrl.split("/").pop();
-      if (fname) try { unlinkSync(join(MAP_PUBLIC_DIR, fname)); } catch {}
+      if (fname)
+        try {
+          unlinkSync(join(MAP_PUBLIC_DIR, fname));
+        } catch {}
     }
     await prisma.tacticalMap.delete({ where: { id: mapId } });
     broadcastToRoom(map.roomId, { type: "map:deleted", roomId: map.roomId, mapId });
@@ -152,7 +171,10 @@ export default async function mapsRoutes(app: FastifyInstance, opts: Opts) {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ error: "unauthorized" });
     const mapId = String((req as any).params?.mapId || "");
-    const map = await prisma.tacticalMap.findUnique({ where: { id: mapId }, select: { id: true, roomId: true } });
+    const map = await prisma.tacticalMap.findUnique({
+      where: { id: mapId },
+      select: { id: true, roomId: true },
+    });
     if (!map) return reply.code(404).send({ error: "not_found" });
     if (!(await isRoomDM(map.roomId, u.id))) return reply.code(403).send({ error: "dm_only" });
 
@@ -163,7 +185,8 @@ export default async function mapsRoutes(app: FastifyInstance, opts: Opts) {
       data: {
         mapId,
         name: String(b.name || "Token").slice(0, 40),
-        color: typeof b.color === "string" && /^#[0-9a-fA-F]{6}$/.test(b.color) ? b.color : "#C4A55A",
+        color:
+          typeof b.color === "string" && /^#[0-9a-fA-F]{6}$/.test(b.color) ? b.color : "#C4A55A",
         imageUrl: typeof b.imageUrl === "string" ? b.imageUrl.slice(0, 500) : null,
         sizeCells,
         x: Number.isFinite(b.x) ? Number(b.x) : 0,
@@ -202,7 +225,8 @@ export default async function mapsRoutes(app: FastifyInstance, opts: Opts) {
     if (isDM) {
       if (typeof b.name === "string") data.name = b.name.slice(0, 40);
       if (typeof b.color === "string" && /^#[0-9a-fA-F]{6}$/.test(b.color)) data.color = b.color;
-      if (typeof b.imageUrl === "string" || b.imageUrl === null) data.imageUrl = b.imageUrl ? b.imageUrl.slice(0, 500) : null;
+      if (typeof b.imageUrl === "string" || b.imageUrl === null)
+        data.imageUrl = b.imageUrl ? b.imageUrl.slice(0, 500) : null;
       if ([1, 2, 3].includes(Number(b.sizeCells))) data.sizeCells = Number(b.sizeCells);
       if (Number.isFinite(b.hp)) data.hp = Number(b.hp);
       if (Number.isFinite(b.hpMax)) data.hpMax = Number(b.hpMax);
@@ -210,10 +234,15 @@ export default async function mapsRoutes(app: FastifyInstance, opts: Opts) {
       if (typeof b.hidden === "boolean") data.hidden = b.hidden;
       if (typeof b.ownerId === "string" || b.ownerId === null) data.ownerId = b.ownerId;
       if (["PC", "NPC", "MONSTER"].includes(b.kind)) data.kind = b.kind;
-      if (typeof b.combatantId === "string" || b.combatantId === null) data.combatantId = b.combatantId;
+      if (typeof b.combatantId === "string" || b.combatantId === null)
+        data.combatantId = b.combatantId;
     }
     const updated = await prisma.mapToken.update({ where: { id: tokenId }, data });
-    broadcastToRoom(token.map.roomId, { type: "map:token-update", roomId: token.map.roomId, token: updated });
+    broadcastToRoom(token.map.roomId, {
+      type: "map:token-update",
+      roomId: token.map.roomId,
+      token: updated,
+    });
     return reply.send({ ok: true, token: updated });
   });
 
@@ -226,10 +255,15 @@ export default async function mapsRoutes(app: FastifyInstance, opts: Opts) {
       include: { map: { select: { roomId: true } } },
     });
     if (!token) return reply.code(404).send({ error: "not_found" });
-    if (!(await isRoomDM(token.map.roomId, u.id))) return reply.code(403).send({ error: "dm_only" });
+    if (!(await isRoomDM(token.map.roomId, u.id)))
+      return reply.code(403).send({ error: "dm_only" });
 
     await prisma.mapToken.delete({ where: { id: tokenId } });
-    broadcastToRoom(token.map.roomId, { type: "map:token-remove", roomId: token.map.roomId, tokenId });
+    broadcastToRoom(token.map.roomId, {
+      type: "map:token-remove",
+      roomId: token.map.roomId,
+      tokenId,
+    });
     return reply.send({ ok: true });
   });
 
@@ -237,27 +271,45 @@ export default async function mapsRoutes(app: FastifyInstance, opts: Opts) {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ error: "unauthorized" });
     const mapId = String((req as any).params?.mapId || "");
-    const map = await prisma.tacticalMap.findUnique({ where: { id: mapId }, select: { id: true, roomId: true } });
+    const map = await prisma.tacticalMap.findUnique({
+      where: { id: mapId },
+      select: { id: true, roomId: true },
+    });
     if (!map) return reply.code(404).send({ error: "not_found" });
     if (!(await isRoomDM(map.roomId, u.id))) return reply.code(403).send({ error: "dm_only" });
 
-    const cells: { x: number; y: number }[] = Array.isArray((req as any).body?.cells) ? (req as any).body.cells : [];
+    const cells: { x: number; y: number }[] = Array.isArray((req as any).body?.cells)
+      ? (req as any).body.cells
+      : [];
     const clean = cells
-      .map(c => ({ x: Math.round(Number(c.x)), y: Math.round(Number(c.y)) }))
-      .filter(c => Number.isFinite(c.x) && Number.isFinite(c.y) && c.x >= 0 && c.y >= 0 && c.x < 1000 && c.y < 1000)
+      .map((c) => ({ x: Math.round(Number(c.x)), y: Math.round(Number(c.y)) }))
+      .filter(
+        (c) =>
+          Number.isFinite(c.x) &&
+          Number.isFinite(c.y) &&
+          c.x >= 0 &&
+          c.y >= 0 &&
+          c.x < 1000 &&
+          c.y < 1000,
+      )
       .slice(0, 5000);
     if (!clean.length) return reply.send({ ok: true, added: 0 });
 
     await prisma.$transaction(
-      clean.map(c =>
+      clean.map((c) =>
         prisma.mapFogReveal.upsert({
           where: { mapId_x_y: { mapId, x: c.x, y: c.y } },
           create: { mapId, x: c.x, y: c.y },
           update: {},
-        })
-      )
+        }),
+      ),
     );
-    broadcastToRoom(map.roomId, { type: "map:fog-reveal", roomId: map.roomId, mapId, cells: clean });
+    broadcastToRoom(map.roomId, {
+      type: "map:fog-reveal",
+      roomId: map.roomId,
+      mapId,
+      cells: clean,
+    });
     return reply.send({ ok: true, added: clean.length });
   });
 
@@ -265,7 +317,10 @@ export default async function mapsRoutes(app: FastifyInstance, opts: Opts) {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ error: "unauthorized" });
     const mapId = String((req as any).params?.mapId || "");
-    const map = await prisma.tacticalMap.findUnique({ where: { id: mapId }, select: { id: true, roomId: true } });
+    const map = await prisma.tacticalMap.findUnique({
+      where: { id: mapId },
+      select: { id: true, roomId: true },
+    });
     if (!map) return reply.code(404).send({ error: "not_found" });
     if (!(await isRoomDM(map.roomId, u.id))) return reply.code(403).send({ error: "dm_only" });
 
@@ -277,13 +332,13 @@ export default async function mapsRoutes(app: FastifyInstance, opts: Opts) {
     }
     const cells: { x: number; y: number }[] = Array.isArray(b.cells) ? b.cells : [];
     const clean = cells
-      .map(c => ({ x: Math.round(Number(c.x)), y: Math.round(Number(c.y)) }))
-      .filter(c => Number.isFinite(c.x) && Number.isFinite(c.y))
+      .map((c) => ({ x: Math.round(Number(c.x)), y: Math.round(Number(c.y)) }))
+      .filter((c) => Number.isFinite(c.x) && Number.isFinite(c.y))
       .slice(0, 5000);
     if (!clean.length) return reply.send({ ok: true, removed: 0 });
 
     await prisma.mapFogReveal.deleteMany({
-      where: { mapId, OR: clean.map(c => ({ x: c.x, y: c.y })) },
+      where: { mapId, OR: clean.map((c) => ({ x: c.x, y: c.y })) },
     });
     broadcastToRoom(map.roomId, { type: "map:fog-clear", roomId: map.roomId, mapId, cells: clean });
     return reply.send({ ok: true, removed: clean.length });

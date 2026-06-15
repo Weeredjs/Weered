@@ -1,3 +1,4 @@
+import { log } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
 import { join } from "path";
@@ -24,7 +25,12 @@ export default async function uploadsRoutes(app: FastifyInstance, opts: Opts) {
     const dbUser = await prisma.user.findUnique({ where: { id: u.id }, select: { tier: true } });
     const tier = String(dbUser?.tier ?? "INNOCENT").toUpperCase();
     if (tier === "INNOCENT") {
-      return reply.code(403).send({ error: "tier_required", message: "Custom avatar uploads require Indicted tier or higher." });
+      return reply
+        .code(403)
+        .send({
+          error: "tier_required",
+          message: "Custom avatar uploads require Indicted tier or higher.",
+        });
     }
 
     const body: any = (req as any).body || {};
@@ -35,7 +41,9 @@ export default async function uploadsRoutes(app: FastifyInstance, opts: Opts) {
 
     const match = dataUrl.match(/^data:image\/(png|jpeg|jpg|webp|gif);base64,(.+)$/);
     if (!match) {
-      return reply.code(400).send({ error: "invalid_format", message: "Image must be PNG, JPEG, WebP, or GIF." });
+      return reply
+        .code(400)
+        .send({ error: "invalid_format", message: "Image must be PNG, JPEG, WebP, or GIF." });
     }
 
     const ext = match[1] === "jpeg" || match[1] === "jpg" ? "jpg" : match[1];
@@ -63,7 +71,7 @@ export default async function uploadsRoutes(app: FastifyInstance, opts: Opts) {
 
       return reply.send({ ok: true, avatar: avatarUrl });
     } catch (e) {
-      console.error("[avatar upload]", e);
+      log.error("[avatar upload]", e);
       return reply.code(500).send({ error: "upload_failed" });
     }
   });
@@ -75,7 +83,14 @@ export default async function uploadsRoutes(app: FastifyInstance, opts: Opts) {
     if (!existsSync(filepath)) return reply.code(404).send("not found");
 
     const ext = filename.split(".").pop()?.toLowerCase();
-    const mime = ext === "png" ? "image/png" : ext === "webp" ? "image/webp" : ext === "gif" ? "image/gif" : "image/jpeg";
+    const mime =
+      ext === "png"
+        ? "image/png"
+        : ext === "webp"
+          ? "image/webp"
+          : ext === "gif"
+            ? "image/gif"
+            : "image/jpeg";
 
     const { readFileSync } = await import("fs");
     const data = readFileSync(filepath);
@@ -95,19 +110,29 @@ export default async function uploadsRoutes(app: FastifyInstance, opts: Opts) {
     const dbUser = await prisma.user.findUnique({ where: { id: u.id }, select: { tier: true } });
     const tier = String(dbUser?.tier ?? "INNOCENT").toUpperCase();
     if (tier === "INNOCENT") {
-      return reply.code(403).send({ error: "tier_required", message: "Custom banner uploads require Indicted tier or higher." });
+      return reply
+        .code(403)
+        .send({
+          error: "tier_required",
+          message: "Custom banner uploads require Indicted tier or higher.",
+        });
     }
 
     const body: any = (req as any).body || {};
     const dataUrl = body.image;
-    if (!dataUrl || typeof dataUrl !== "string") return reply.code(400).send({ error: "missing_image" });
+    if (!dataUrl || typeof dataUrl !== "string")
+      return reply.code(400).send({ error: "missing_image" });
 
     const match = dataUrl.match(/^data:image\/(png|jpeg|jpg|webp|gif);base64,(.+)$/);
-    if (!match) return reply.code(400).send({ error: "invalid_format", message: "Image must be PNG, JPEG, WebP, or GIF." });
+    if (!match)
+      return reply
+        .code(400)
+        .send({ error: "invalid_format", message: "Image must be PNG, JPEG, WebP, or GIF." });
 
     const ext = match[1] === "jpeg" || match[1] === "jpg" ? "jpg" : match[1];
     const buffer = Buffer.from(match[2], "base64");
-    if (buffer.length > BANNER_MAX_BYTES) return reply.code(400).send({ error: "too_large", message: "Image must be under 4MB." });
+    if (buffer.length > BANNER_MAX_BYTES)
+      return reply.code(400).send({ error: "too_large", message: "Image must be under 4MB." });
 
     try {
       const filename = `${u.id}-${Date.now()}.${ext}`;
@@ -117,7 +142,7 @@ export default async function uploadsRoutes(app: FastifyInstance, opts: Opts) {
       await prisma.user.update({ where: { id: u.id }, data: { bannerUrl } as any });
       return reply.send({ ok: true, bannerUrl });
     } catch (e) {
-      console.error("[banner upload]", e);
+      log.error("[banner upload]", e);
       return reply.code(500).send({ error: "upload_failed" });
     }
   });
@@ -125,29 +150,46 @@ export default async function uploadsRoutes(app: FastifyInstance, opts: Opts) {
   app.post("/lobbies/upload-image", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ error: "unauthorized" });
-    const dbUser = await prisma.user.findUnique({ where: { id: u.id }, select: { tier: true, globalRole: true } });
+    const dbUser = await prisma.user.findUnique({
+      where: { id: u.id },
+      select: { tier: true, globalRole: true },
+    });
     const tier = String(dbUser?.tier ?? "INNOCENT").toUpperCase();
     const isStaff = canAccessStaff(dbUser?.globalRole as any);
     if (tier === "INNOCENT" && !isStaff) {
-      return reply.code(403).send({ error: "tier_required", message: "Lobby branding requires Indicted tier or higher." });
+      return reply
+        .code(403)
+        .send({
+          error: "tier_required",
+          message: "Lobby branding requires Indicted tier or higher.",
+        });
     }
     const body: any = (req as any).body || {};
     const dataUrl = body.image;
-    if (!dataUrl || typeof dataUrl !== "string") return reply.code(400).send({ error: "missing_image" });
+    if (!dataUrl || typeof dataUrl !== "string")
+      return reply.code(400).send({ error: "missing_image" });
     const match = dataUrl.match(/^data:image\/(png|jpeg|jpg|webp|gif|svg\+xml);base64,(.+)$/);
-    if (!match) return reply.code(400).send({ error: "invalid_format", message: "Image must be PNG, JPEG, WebP, GIF, or SVG." });
-    const ext = match[1] === "jpeg" || match[1] === "jpg" ? "jpg" : match[1] === "svg+xml" ? "svg" : match[1];
+    if (!match)
+      return reply
+        .code(400)
+        .send({ error: "invalid_format", message: "Image must be PNG, JPEG, WebP, GIF, or SVG." });
+    const ext =
+      match[1] === "jpeg" || match[1] === "jpg" ? "jpg" : match[1] === "svg+xml" ? "svg" : match[1];
     const buffer = Buffer.from(match[2], "base64");
-    if (buffer.length > BANNER_MAX_BYTES) return reply.code(400).send({ error: "too_large", message: "Image must be under 4MB." });
+    if (buffer.length > BANNER_MAX_BYTES)
+      return reply.code(400).send({ error: "too_large", message: "Image must be under 4MB." });
     try {
-      const kind = String(body.kind || "img").replace(/[^a-z]/g, "").slice(0, 8) || "img";
+      const kind =
+        String(body.kind || "img")
+          .replace(/[^a-z]/g, "")
+          .slice(0, 8) || "img";
       const filename = `lobby-${kind}-${u.id}-${Date.now()}.${ext}`;
       const filepath = join(BANNER_DIR, filename);
       writeFileSync(filepath, buffer);
       const url = `${SITE_BASE}/banners/${filename}`;
       return reply.send({ ok: true, url });
     } catch (e) {
-      console.error("[lobby image upload]", e);
+      log.error("[lobby image upload]", e);
       return reply.code(500).send({ error: "upload_failed" });
     }
   });
@@ -158,7 +200,14 @@ export default async function uploadsRoutes(app: FastifyInstance, opts: Opts) {
     const filepath = join(BANNER_DIR, filename);
     if (!existsSync(filepath)) return reply.code(404).send("not found");
     const ext = filename.split(".").pop()?.toLowerCase();
-    const mime = ext === "png" ? "image/png" : ext === "webp" ? "image/webp" : ext === "gif" ? "image/gif" : "image/jpeg";
+    const mime =
+      ext === "png"
+        ? "image/png"
+        : ext === "webp"
+          ? "image/webp"
+          : ext === "gif"
+            ? "image/gif"
+            : "image/jpeg";
     const { readFileSync } = await import("fs");
     const data = readFileSync(filepath);
     reply.header("Content-Type", mime);

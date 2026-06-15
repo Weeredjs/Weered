@@ -1,9 +1,10 @@
+import { log } from "../lib/logger";
 import { fetchWithTimeout } from "../lib/fetchWithTimeout";
 import type { FastifyInstance } from "fastify";
 
 export default async function leagueRoutes(app: FastifyInstance) {
   const RIOT_API_KEY = process.env.RIOT_API_KEY || "";
-  const RIOT_REGION  = "na1";
+  const RIOT_REGION = "na1";
   const RIOT_CLUSTER = "americas";
   const DDRAGON_VER_URL = "https://ddragon.leagueoflegends.com/api/versions.json";
 
@@ -11,20 +12,37 @@ export default async function leagueRoutes(app: FastifyInstance) {
   (async () => {
     try {
       const res = await fetchWithTimeout(DDRAGON_VER_URL);
-      const versions: string[] = await res.json() as string[];
-      if (versions?.[0]) { ddragonVersion = versions[0]; console.log(`[league] Data Dragon version: ${ddragonVersion}`); }
-    } catch (e) { console.warn("[league] Failed to fetch DDragon version, using fallback"); }
+      const versions: string[] = (await res.json()) as string[];
+      if (versions?.[0]) {
+        ddragonVersion = versions[0];
+        log.log(`[league] Data Dragon version: ${ddragonVersion}`);
+      }
+    } catch (e) {
+      log.warn("[league] Failed to fetch DDragon version, using fallback");
+    }
   })();
 
-  function riotPlatformUrl(region: string = RIOT_REGION) { return `https://${region}.api.riotgames.com`; }
-  function riotClusterUrl(cluster: string = RIOT_CLUSTER) { return `https://${cluster}.api.riotgames.com`; }
-  function ddragonImg(path: string) { return `https://ddragon.leagueoflegends.com/cdn/${ddragonVersion}/${path}`; }
+  function riotPlatformUrl(region: string = RIOT_REGION) {
+    return `https://${region}.api.riotgames.com`;
+  }
+  function riotClusterUrl(cluster: string = RIOT_CLUSTER) {
+    return `https://${cluster}.api.riotgames.com`;
+  }
+  function ddragonImg(path: string) {
+    return `https://ddragon.leagueoflegends.com/cdn/${ddragonVersion}/${path}`;
+  }
 
   async function riotGet(url: string) {
     const res = await fetchWithTimeout(url, { headers: { "X-Riot-Token": RIOT_API_KEY } });
-    if (res.status === 429) { console.warn("[riot] Rate limited"); return null; }
+    if (res.status === 429) {
+      log.warn("[riot] Rate limited");
+      return null;
+    }
     if (res.status === 404) return null;
-    if (!res.ok) { console.error(`[riot] ${res.status} ${res.statusText} — ${url}`); return null; }
+    if (!res.ok) {
+      log.error(`[riot] ${res.status} ${res.statusText} — ${url}`);
+      return null;
+    }
     return res.json();
   }
 
@@ -42,25 +60,43 @@ export default async function leagueRoutes(app: FastifyInstance) {
     if (!RIOT_API_KEY) return reply.send({ ok: false, error: "riot_not_configured" });
 
     const gameName = decodeURIComponent(String((req as any).params.gameName));
-    const tagLine  = decodeURIComponent(String((req as any).params.tagLine));
-    const region   = String((req as any).query?.region || RIOT_REGION);
-    const cluster  = region === "kr" || region === "jp1" ? "asia" : region.startsWith("eu") ? "europe" : RIOT_CLUSTER;
+    const tagLine = decodeURIComponent(String((req as any).params.tagLine));
+    const region = String((req as any).query?.region || RIOT_REGION);
+    const cluster =
+      region === "kr" || region === "jp1"
+        ? "asia"
+        : region.startsWith("eu")
+          ? "europe"
+          : RIOT_CLUSTER;
 
     const cacheKey = `summoner:${gameName}#${tagLine}:${region}`;
     const cached = leagueCacheGet(cacheKey);
     if (cached) return reply.send(cached);
 
-    const account = await riotGet(`${riotClusterUrl(cluster)}/riot/account/v1/accounts/by-riot-id/${encodeURIComponent(gameName)}/${encodeURIComponent(tagLine)}`);
+    const account = await riotGet(
+      `${riotClusterUrl(cluster)}/riot/account/v1/accounts/by-riot-id/${encodeURIComponent(gameName)}/${encodeURIComponent(tagLine)}`,
+    );
     if (!account?.puuid) return reply.send({ ok: false, error: "player_not_found" });
 
-    const summoner = await riotGet(`${riotPlatformUrl(region)}/lol/summoner/v4/summoners/by-puuid/${account.puuid}`);
+    const summoner = await riotGet(
+      `${riotPlatformUrl(region)}/lol/summoner/v4/summoners/by-puuid/${account.puuid}`,
+    );
     if (!summoner) return reply.send({ ok: false, error: "summoner_not_found" });
 
-    const ranked = await riotGet(`${riotPlatformUrl(region)}/lol/league/v4/entries/by-summoner/${summoner.id}`) || [];
+    const ranked =
+      (await riotGet(
+        `${riotPlatformUrl(region)}/lol/league/v4/entries/by-summoner/${summoner.id}`,
+      )) || [];
 
-    const masteries = await riotGet(`${riotPlatformUrl(region)}/lol/champion-mastery/v4/champion-masteries/by-puuid/${account.puuid}/top?count=5`) || [];
+    const masteries =
+      (await riotGet(
+        `${riotPlatformUrl(region)}/lol/champion-mastery/v4/champion-masteries/by-puuid/${account.puuid}/top?count=5`,
+      )) || [];
 
-    const matchIds = await riotGet(`${riotClusterUrl(cluster)}/lol/match/v5/matches/by-puuid/${account.puuid}/ids?start=0&count=10`) || [];
+    const matchIds =
+      (await riotGet(
+        `${riotClusterUrl(cluster)}/lol/match/v5/matches/by-puuid/${account.puuid}/ids?start=0&count=10`,
+      )) || [];
     const matches: any[] = [];
     for (const mid of (matchIds as string[]).slice(0, 5)) {
       const m = await riotGet(`${riotClusterUrl(cluster)}/lol/match/v5/matches/${mid}`);
@@ -71,7 +107,9 @@ export default async function leagueRoutes(app: FastifyInstance) {
             matchId: mid,
             championId: me.championId,
             championName: me.championName,
-            kills: me.kills, deaths: me.deaths, assists: me.assists,
+            kills: me.kills,
+            deaths: me.deaths,
+            assists: me.assists,
             cs: (me.totalMinionsKilled || 0) + (me.neutralMinionsKilled || 0),
             win: me.win,
             gameDuration: m.info.gameDuration,
@@ -87,8 +125,8 @@ export default async function leagueRoutes(app: FastifyInstance) {
       }
     }
 
-    const soloQ  = (ranked as any[]).find((r: any) => r.queueType === "RANKED_SOLO_5x5");
-    const flexQ  = (ranked as any[]).find((r: any) => r.queueType === "RANKED_FLEX_SR");
+    const soloQ = (ranked as any[]).find((r: any) => r.queueType === "RANKED_SOLO_5x5");
+    const flexQ = (ranked as any[]).find((r: any) => r.queueType === "RANKED_FLEX_SR");
 
     const result = {
       ok: true,
@@ -101,8 +139,32 @@ export default async function leagueRoutes(app: FastifyInstance) {
         profileIconUrl: ddragonImg(`img/profileicon/${summoner.profileIconId}.png`),
       },
       ranked: {
-        solo: soloQ ? { tier: soloQ.tier, rank: soloQ.rank, lp: soloQ.leaguePoints, wins: soloQ.wins, losses: soloQ.losses, winRate: soloQ.wins + soloQ.losses > 0 ? Math.round(soloQ.wins / (soloQ.wins + soloQ.losses) * 100) : 0 } : null,
-        flex: flexQ ? { tier: flexQ.tier, rank: flexQ.rank, lp: flexQ.leaguePoints, wins: flexQ.wins, losses: flexQ.losses, winRate: flexQ.wins + flexQ.losses > 0 ? Math.round(flexQ.wins / (flexQ.wins + flexQ.losses) * 100) : 0 } : null,
+        solo: soloQ
+          ? {
+              tier: soloQ.tier,
+              rank: soloQ.rank,
+              lp: soloQ.leaguePoints,
+              wins: soloQ.wins,
+              losses: soloQ.losses,
+              winRate:
+                soloQ.wins + soloQ.losses > 0
+                  ? Math.round((soloQ.wins / (soloQ.wins + soloQ.losses)) * 100)
+                  : 0,
+            }
+          : null,
+        flex: flexQ
+          ? {
+              tier: flexQ.tier,
+              rank: flexQ.rank,
+              lp: flexQ.leaguePoints,
+              wins: flexQ.wins,
+              losses: flexQ.losses,
+              winRate:
+                flexQ.wins + flexQ.losses > 0
+                  ? Math.round((flexQ.wins / (flexQ.wins + flexQ.losses)) * 100)
+                  : 0,
+            }
+          : null,
       },
       topChampions: (masteries as any[]).map((m: any) => ({
         championId: m.championId,
@@ -127,7 +189,12 @@ export default async function leagueRoutes(app: FastifyInstance) {
     const rotation = await riotGet(`${riotPlatformUrl(region)}/lol/platform/v3/champion-rotations`);
     if (!rotation) return reply.send({ ok: false, error: "rotation_unavailable" });
 
-    const result = { ok: true, freeChampionIds: rotation.freeChampionIds, freeChampionIdsForNewPlayers: rotation.freeChampionIdsForNewPlayers, ddragonVersion };
+    const result = {
+      ok: true,
+      freeChampionIds: rotation.freeChampionIds,
+      freeChampionIdsForNewPlayers: rotation.freeChampionIdsForNewPlayers,
+      ddragonVersion,
+    };
     leagueCacheSet(cacheKey, result, 60 * 60 * 1000);
     return reply.send(result);
   });
@@ -135,27 +202,39 @@ export default async function leagueRoutes(app: FastifyInstance) {
   app.get("/league/leaderboard", async (req, reply) => {
     if (!RIOT_API_KEY) return reply.send({ ok: false, error: "riot_not_configured" });
     const region = String((req as any).query?.region || RIOT_REGION);
-    const queue  = String((req as any).query?.queue || "RANKED_SOLO_5x5");
+    const queue = String((req as any).query?.queue || "RANKED_SOLO_5x5");
     const cacheKey = `leaderboard:${region}:${queue}`;
     const cached = leagueCacheGet(cacheKey);
     if (cached) return reply.send(cached);
 
-    const challenger = await riotGet(`${riotPlatformUrl(region)}/lol/league/v4/challengerleagues/by-queue/${queue}`);
+    const challenger = await riotGet(
+      `${riotPlatformUrl(region)}/lol/league/v4/challengerleagues/by-queue/${queue}`,
+    );
     if (!challenger?.entries) return reply.send({ ok: false, error: "leaderboard_unavailable" });
 
     const sorted = (challenger.entries as any[])
       .sort((a: any, b: any) => b.leaguePoints - a.leaguePoints)
       .slice(0, 50);
 
-    const cluster = region === "kr" || region === "jp1" ? "asia" : region.startsWith("eu") ? "europe" : RIOT_CLUSTER;
+    const cluster =
+      region === "kr" || region === "jp1"
+        ? "asia"
+        : region.startsWith("eu")
+          ? "europe"
+          : RIOT_CLUSTER;
     const entries: any[] = [];
     for (let i = 0; i < sorted.length; i++) {
       const e = sorted[i];
       let gameName = e.summonerName || "";
       let tagLine = "";
       if (i < 25 && e.puuid) {
-        const acct = await riotGet(`${riotClusterUrl(cluster)}/riot/account/v1/accounts/by-puuid/${e.puuid}`);
-        if (acct?.gameName) { gameName = acct.gameName; tagLine = acct.tagLine || ""; }
+        const acct = await riotGet(
+          `${riotClusterUrl(cluster)}/riot/account/v1/accounts/by-puuid/${e.puuid}`,
+        );
+        if (acct?.gameName) {
+          gameName = acct.gameName;
+          tagLine = acct.tagLine || "";
+        }
       }
       entries.push({
         rank: i + 1,
@@ -165,7 +244,7 @@ export default async function leagueRoutes(app: FastifyInstance) {
         lp: e.leaguePoints,
         wins: e.wins,
         losses: e.losses,
-        winRate: e.wins + e.losses > 0 ? Math.round(e.wins / (e.wins + e.losses) * 100) : 0,
+        winRate: e.wins + e.losses > 0 ? Math.round((e.wins / (e.wins + e.losses)) * 100) : 0,
       });
     }
 
@@ -179,7 +258,9 @@ export default async function leagueRoutes(app: FastifyInstance) {
     const summonerId = String((req as any).params.summonerId);
     const region = String((req as any).query?.region || RIOT_REGION);
 
-    const game = await riotGet(`${riotPlatformUrl(region)}/lol/spectator/v4/active-games/by-summoner/${summonerId}`);
+    const game = await riotGet(
+      `${riotPlatformUrl(region)}/lol/spectator/v4/active-games/by-summoner/${summonerId}`,
+    );
     if (!game) return reply.send({ ok: true, inGame: false });
 
     return reply.send({
@@ -208,7 +289,9 @@ export default async function leagueRoutes(app: FastifyInstance) {
     if (cached) return reply.send(cached);
 
     try {
-      const res = await fetchWithTimeout(`https://ddragon.leagueoflegends.com/cdn/${ddragonVersion}/data/en_US/champion.json`);
+      const res = await fetchWithTimeout(
+        `https://ddragon.leagueoflegends.com/cdn/${ddragonVersion}/data/en_US/champion.json`,
+      );
       const data: any = await res.json();
       const champions = Object.values(data.data || {}).map((c: any) => ({
         id: c.id,
@@ -222,7 +305,7 @@ export default async function leagueRoutes(app: FastifyInstance) {
       leagueCacheSet(cacheKey, result, 24 * 60 * 60 * 1000);
       return reply.send(result);
     } catch (e) {
-      console.error("[league/champions]", e);
+      log.error("[league/champions]", e);
       return reply.send({ ok: false, error: "ddragon_fetch_failed" });
     }
   });

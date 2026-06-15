@@ -1,3 +1,4 @@
+import { log } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 import { fetchWithTimeout } from "../lib/fetchWithTimeout";
 
@@ -13,10 +14,10 @@ export default async function desktopRoutes(app: FastifyInstance) {
   };
 
   const TAURI_TARGET_MATCHERS: Record<string, RegExp> = {
-    "windows-x86_64":  /Weered.*x64-setup\.exe$/i,
-    "darwin-x86_64":   /Weered.*x64\.app\.tar\.gz$/i,
-    "darwin-aarch64":  /Weered.*aarch64\.app\.tar\.gz$/i,
-    "linux-x86_64":    /weered.*amd64\.AppImage$/i,
+    "windows-x86_64": /Weered.*x64-setup\.exe$/i,
+    "darwin-x86_64": /Weered.*x64\.app\.tar\.gz$/i,
+    "darwin-aarch64": /Weered.*aarch64\.app\.tar\.gz$/i,
+    "linux-x86_64": /weered.*amd64\.AppImage$/i,
   };
 
   type GhAsset = { name: string; browser_download_url: string };
@@ -30,7 +31,8 @@ export default async function desktopRoutes(app: FastifyInstance) {
     draft: boolean;
   };
 
-  let desktopReleaseCache: { manifest: DesktopReleaseManifest | null; expiresAt: number } | null = null;
+  let desktopReleaseCache: { manifest: DesktopReleaseManifest | null; expiresAt: number } | null =
+    null;
   const DESKTOP_RELEASE_TTL = 5 * 60 * 1000;
 
   const DESKTOP_RELEASES_REPO = process.env.DESKTOP_RELEASES_REPO || "Weeredjs/Weered";
@@ -52,7 +54,9 @@ export default async function desktopRoutes(app: FastifyInstance) {
       if (!res.ok) throw new Error(`GitHub releases ${res.status}`);
       const releases = (await res.json()) as GhRelease[];
 
-      const latest = releases.find((r) => !r.draft && !r.prerelease && /^desktop-v/.test(r.tag_name));
+      const latest = releases.find(
+        (r) => !r.draft && !r.prerelease && /^desktop-v/.test(r.tag_name),
+      );
       if (!latest) {
         manifest = null;
       } else {
@@ -66,7 +70,9 @@ export default async function desktopRoutes(app: FastifyInstance) {
           let signature = "";
           if (sigAsset) {
             try {
-              const sigRes = await fetchWithTimeout(sigAsset.browser_download_url, { headers: { "User-Agent": "Weered-API/1.0" } });
+              const sigRes = await fetchWithTimeout(sigAsset.browser_download_url, {
+                headers: { "User-Agent": "Weered-API/1.0" },
+              });
               if (sigRes.ok) signature = (await sigRes.text()).trim();
             } catch {}
           }
@@ -83,7 +89,7 @@ export default async function desktopRoutes(app: FastifyInstance) {
         }
       }
     } catch (e) {
-      console.warn("[desktop-updater] fetchLatestDesktopRelease failed:", e);
+      log.warn("[desktop-updater] fetchLatestDesktopRelease failed:", e);
       if (desktopReleaseCache?.manifest) return desktopReleaseCache.manifest;
     }
 

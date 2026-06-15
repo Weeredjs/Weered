@@ -1,4 +1,4 @@
-
+import { log } from "./lib/logger";
 import type { PrismaClient } from "@prisma/client";
 import { pollAndStoreActivities } from "./lib/bungieActivities";
 import { advanceWinner as bracketAdvanceWinner } from "./lib/tournamentBracket";
@@ -38,7 +38,7 @@ export function startTournamentAutoDetect(
   const { notify, createNotification } = opts;
   const lastPullAt = new Map<string, number>();
 
-  console.log("[tournament-autodetect] Worker started — polling every 2m");
+  log.log("[tournament-autodetect] Worker started — polling every 2m");
 
   async function freshPullForMatch(matchId: string) {
     const m = await prisma.tournamentMatch.findUnique({
@@ -47,9 +47,12 @@ export function startTournamentAutoDetect(
     });
     if (!m) return;
     const entryIds = [m.entryAId, m.entryBId].filter(Boolean) as string[];
-    const entries = entryIds.length ? await prisma.tournamentEntry.findMany({
-      where: { id: { in: entryIds } }, select: { userId: true },
-    }) : [];
+    const entries = entryIds.length
+      ? await prisma.tournamentEntry.findMany({
+          where: { id: { in: entryIds } },
+          select: { userId: true },
+        })
+      : [];
     const userIds: string[] = entries.map((e: any) => e.userId).filter(Boolean);
     const now = Date.now();
     for (const uid of userIds) {
@@ -59,7 +62,7 @@ export function startTournamentAutoDetect(
       try {
         await pollAndStoreActivities(prisma, uid, { count: 10 });
       } catch (err) {
-        console.error("[tournament-autodetect] fresh pull failed", uid, err);
+        log.error("[tournament-autodetect] fresh pull failed", uid, err);
       }
     }
   }
@@ -82,9 +85,7 @@ export function startTournamentAutoDetect(
       where: {
         userId: aUserId,
         period: { gte: startBound, lte: endBound },
-        ...(match.expectedActivityHash
-          ? { activityHash: match.expectedActivityHash }
-          : {}),
+        ...(match.expectedActivityHash ? { activityHash: match.expectedActivityHash } : {}),
       },
       select: { activityInstanceId: true, score: true, standing: true, kills: true, period: true },
     });
@@ -141,7 +142,9 @@ export function startTournamentAutoDetect(
     await prisma.tournamentMatch.update({
       where: { id: match.id },
       data: {
-        scoreA, scoreB, winnerEntryId,
+        scoreA,
+        scoreB,
+        winnerEntryId,
         status: "CONFIRMED",
         pgcrInstanceId: instanceId,
         autoDetectedAt: new Date(),
@@ -151,7 +154,7 @@ export function startTournamentAutoDetect(
     try {
       await bracketAdvanceWinner(prisma, match.id, { createNotification });
     } catch (err) {
-      console.error("[tournament-autodetect] advanceWinner failed", err);
+      log.error("[tournament-autodetect] advanceWinner failed", err);
     }
 
     const aWon = winnerEntryId === match.entryAId;
@@ -159,15 +162,21 @@ export function startTournamentAutoDetect(
       try {
         notify(aUserId, {
           type: "tournament:auto_detected",
-          tournamentId: match.tournamentId, matchId: match.id,
+          tournamentId: match.tournamentId,
+          matchId: match.id,
           pgcrInstanceId: instanceId,
-          won: aWon, score: scoreA, opponentScore: scoreB,
+          won: aWon,
+          score: scoreA,
+          opponentScore: scoreB,
         });
         notify(bUserId, {
           type: "tournament:auto_detected",
-          tournamentId: match.tournamentId, matchId: match.id,
+          tournamentId: match.tournamentId,
+          matchId: match.id,
           pgcrInstanceId: instanceId,
-          won: !aWon, score: scoreB, opponentScore: scoreA,
+          won: !aWon,
+          score: scoreB,
+          opponentScore: scoreA,
         });
       } catch {}
     }
@@ -176,7 +185,9 @@ export function startTournamentAutoDetect(
         where: { id: match.tournamentId },
         select: { lobbyId: true, title: true },
       });
-      const url = tournament?.lobbyId ? `/lobby/${encodeURIComponent(tournament.lobbyId)}` : undefined;
+      const url = tournament?.lobbyId
+        ? `/lobby/${encodeURIComponent(tournament.lobbyId)}`
+        : undefined;
       const tag = `${tournament?.title || "Tournament"}`;
       const pgcrUrl = `https://destinytracker.com/destiny-2/pgcr/${instanceId}`;
       await createNotification({
@@ -187,7 +198,12 @@ export function startTournamentAutoDetect(
           : `Verified · Lost ${tag} match ${scoreA}-${scoreB}`,
         body: `Auto-detected from your Crucible history. PGCR: ${pgcrUrl}`,
         actionUrl: url,
-        meta: { kind: "tournament_auto_detected", matchId: match.id, pgcrInstanceId: instanceId, won: aWon },
+        meta: {
+          kind: "tournament_auto_detected",
+          matchId: match.id,
+          pgcrInstanceId: instanceId,
+          won: aWon,
+        },
       }).catch(() => {});
       await createNotification({
         userId: bUserId,
@@ -197,11 +213,16 @@ export function startTournamentAutoDetect(
           : `Verified · Lost ${tag} match ${scoreB}-${scoreA}`,
         body: `Auto-detected from your Crucible history. PGCR: ${pgcrUrl}`,
         actionUrl: url,
-        meta: { kind: "tournament_auto_detected", matchId: match.id, pgcrInstanceId: instanceId, won: !aWon },
+        meta: {
+          kind: "tournament_auto_detected",
+          matchId: match.id,
+          pgcrInstanceId: instanceId,
+          won: !aWon,
+        },
       }).catch(() => {});
     }
 
-    console.log(
+    log.log(
       `[tournament-autodetect] match ${match.id} confirmed via PGCR ${instanceId} (${scoreA}-${scoreB})`,
     );
     return true;
@@ -226,13 +247,15 @@ export function startTournamentAutoDetect(
       });
       if (rawMatches.length === 0) return;
 
-      const entryIds = Array.from(new Set(
-        rawMatches.flatMap((m: any) => [m.entryAId, m.entryBId]).filter(Boolean)
-      )) as string[];
-      const entries = entryIds.length ? await prisma.tournamentEntry.findMany({
-        where: { id: { in: entryIds } },
-        select: { id: true, userId: true },
-      }) : [];
+      const entryIds = Array.from(
+        new Set(rawMatches.flatMap((m: any) => [m.entryAId, m.entryBId]).filter(Boolean)),
+      ) as string[];
+      const entries = entryIds.length
+        ? await prisma.tournamentEntry.findMany({
+            where: { id: { in: entryIds } },
+            select: { id: true, userId: true },
+          })
+        : [];
       const eById: Record<string, any> = {};
       for (const e of entries) eById[e.id] = e;
       const matches = rawMatches.map((m: any) => ({
@@ -249,11 +272,11 @@ export function startTournamentAutoDetect(
         try {
           await detectMatch(m);
         } catch (err) {
-          console.error("[tournament-autodetect] detect failed", m.id, err);
+          log.error("[tournament-autodetect] detect failed", m.id, err);
         }
       }
     } catch (err) {
-      console.error("[tournament-autodetect] cycle failed", err);
+      log.error("[tournament-autodetect] cycle failed", err);
     }
   }
 

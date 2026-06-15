@@ -1,3 +1,4 @@
+import { log } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 
 // Poker HTTP routes (extracted from index.ts): table state view + cash-out.
@@ -12,11 +13,18 @@ type Opts = {
   pokerTables: Map<string, any>;
   buildPokerStateForUser: (table: any, userId?: string) => any;
   broadcastPokerState: (tableId: string) => void;
-  awardPaper: (userId: string, type: string, amount: number, description: string, refId?: string) => Promise<{ balance: number } | null>;
+  awardPaper: (
+    userId: string,
+    type: string,
+    amount: number,
+    description: string,
+    refId?: string,
+  ) => Promise<{ balance: number } | null>;
 };
 
 export default async function pokerRoutes(app: FastifyInstance, opts: Opts) {
-  const { authFromHeader, pokerTables, buildPokerStateForUser, broadcastPokerState, awardPaper } = opts;
+  const { authFromHeader, pokerTables, buildPokerStateForUser, broadcastPokerState, awardPaper } =
+    opts;
 
   app.get("/poker/:tableId", async (req, reply) => {
     const tableId = String((req as any).params?.tableId || "").trim();
@@ -40,12 +48,18 @@ export default async function pokerRoutes(app: FastifyInstance, opts: Opts) {
     if (!table) return reply.code(404).send({ ok: false, error: "Table not found" });
 
     const seatIdx = table.seats.findIndex((s: any) => s && s.userId === u.id);
-    if (seatIdx === -1) return reply.code(400).send({ ok: false, error: "Not seated at this table" });
+    if (seatIdx === -1)
+      return reply.code(400).send({ ok: false, error: "Not seated at this table" });
 
     const seat = table.seats[seatIdx]!;
 
     if (table.handInProgress && !seat.folded) {
-      return reply.code(400).send({ ok: false, error: "Cannot cash out during an active hand. Fold first or wait for the hand to end." });
+      return reply
+        .code(400)
+        .send({
+          ok: false,
+          error: "Cannot cash out during an active hand. Fold first or wait for the hand to end.",
+        });
     }
 
     const chips = seat.chips;
@@ -60,11 +74,17 @@ export default async function pokerRoutes(app: FastifyInstance, opts: Opts) {
     table.seats[seatIdx] = null;
     broadcastPokerState(tableId);
     try {
-      const res = await awardPaper(u.id, "POKER_CASHOUT", chips, `Cashed out ${chips} chips from poker table ${tableId}`, tableId);
+      const res = await awardPaper(
+        u.id,
+        "POKER_CASHOUT",
+        chips,
+        `Cashed out ${chips} chips from poker table ${tableId}`,
+        tableId,
+      );
       if (!res) return reply.code(500).send({ ok: false, error: "Cashout failed" });
       return reply.send({ ok: true, cashed: chips, balance: res.balance });
     } catch (e) {
-      console.error("[poker:cashout] Error:", e);
+      log.error("[poker:cashout] Error:", e);
       return reply.code(500).send({ ok: false, error: "Cashout failed" });
     }
   });

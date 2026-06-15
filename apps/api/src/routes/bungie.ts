@@ -1,13 +1,23 @@
+import { log } from "../lib/logger";
 import { fetchWithTimeout } from "../lib/fetchWithTimeout";
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
 import * as fs from "fs";
 import * as path from "path";
 import {
-  syncManifest, enrichProfile, enrichMilestones, enrichVendorSales,
-  resolveItem, resolveBucket, resolveDamageType, resolveActivity,
-  isLoaded as manifestLoaded, manifestVersion,
-  WEAPON_BUCKETS, ARMOR_BUCKETS, ARMOR_STAT_HASHES,
+  syncManifest,
+  enrichProfile,
+  enrichMilestones,
+  enrichVendorSales,
+  resolveItem,
+  resolveBucket,
+  resolveDamageType,
+  resolveActivity,
+  isLoaded as manifestLoaded,
+  manifestVersion,
+  WEAPON_BUCKETS,
+  ARMOR_BUCKETS,
+  ARMOR_STAT_HASHES,
 } from "../manifest";
 import { signOAuthState, verifyOAuthState } from "../lib/oauthState";
 
@@ -18,17 +28,19 @@ type Opts = {
 
 export default async function bungieRoutes(app: FastifyInstance, opts: Opts) {
   const { authFromHeader, awardNotoriety } = opts;
-  const BUNGIE_API_KEY       = process.env.BUNGIE_API_KEY || "";
-  const BUNGIE_CLIENT_ID     = process.env.BUNGIE_CLIENT_ID || "";
+  const BUNGIE_API_KEY = process.env.BUNGIE_API_KEY || "";
+  const BUNGIE_CLIENT_ID = process.env.BUNGIE_CLIENT_ID || "";
   const BUNGIE_CLIENT_SECRET = process.env.BUNGIE_CLIENT_SECRET || "";
-  const BUNGIE_ROOT          = "https://www.bungie.net/Platform";
-  const SITE_URL             = process.env.SITE_URL || "https://weered.ca";
+  const BUNGIE_ROOT = "https://www.bungie.net/Platform";
+  const SITE_URL = process.env.SITE_URL || "https://weered.ca";
 
   async function bungieGet(path: string, accessToken?: string) {
     const headers: Record<string, string> = { "X-API-Key": BUNGIE_API_KEY };
     if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
     const res = await fetchWithTimeout(`${BUNGIE_ROOT}${path}`, { headers });
-    const j = await res.json(); if (j.error) console.error("[bungie]", path, JSON.stringify(j.error)); return j;
+    const j = await res.json();
+    if (j.error) log.error("[bungie]", path, JSON.stringify(j.error));
+    return j;
   }
 
   async function bungieGetCached(key: string, path: string, ttlMinutes: number) {
@@ -47,12 +59,17 @@ export default async function bungieRoutes(app: FastifyInstance, opts: Opts) {
       });
       return data;
     } catch (e) {
-      console.error(`[bungie cache] ${key}`, e);
+      log.error(`[bungie cache] ${key}`, e);
       return null;
     }
   }
 
-  async function bungieGetCachedAuth(key: string, path: string, ttlMinutes: number, accessToken: string) {
+  async function bungieGetCachedAuth(
+    key: string,
+    path: string,
+    ttlMinutes: number,
+    accessToken: string,
+  ) {
     try {
       const cached = await (prisma as any).bungieCache.findUnique({ where: { key } });
       if (cached && new Date(cached.expiresAt) > new Date()) return cached.data;
@@ -67,18 +84,19 @@ export default async function bungieRoutes(app: FastifyInstance, opts: Opts) {
       });
       return data;
     } catch (e) {
-      console.error(`[bungie cache auth] ${key}`, e);
+      log.error(`[bungie cache auth] ${key}`, e);
       return null;
     }
   }
 
   async function refreshBungieToken(account: any): Promise<string | null> {
-    if (account.tokenExpiry && new Date(account.tokenExpiry) > new Date()) return account.accessToken;
+    if (account.tokenExpiry && new Date(account.tokenExpiry) > new Date())
+      return account.accessToken;
     if (!account.refreshToken) {
-      console.log("[bungie] No refresh token, user must re-link");
+      log.log("[bungie] No refresh token, user must re-link");
       return null;
     }
-    console.log("[bungie] Access token expired, refreshing...");
+    log.log("[bungie] Access token expired, refreshing...");
     try {
       const tokenBody: Record<string, string> = {
         grant_type: "refresh_token",
@@ -89,12 +107,15 @@ export default async function bungieRoutes(app: FastifyInstance, opts: Opts) {
 
       const tokenRes = await fetchWithTimeout("https://www.bungie.net/Platform/App/OAuth/Token/", {
         method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded", "X-API-Key": BUNGIE_API_KEY },
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          "X-API-Key": BUNGIE_API_KEY,
+        },
         body: new URLSearchParams(tokenBody),
       });
       const tokens = await tokenRes.json();
       if (!tokens.access_token) {
-        console.error("[bungie] Token refresh failed:", tokens);
+        log.error("[bungie] Token refresh failed:", tokens);
         return null;
       }
       await (prisma as any).userGameAccount.update({
@@ -105,58 +126,88 @@ export default async function bungieRoutes(app: FastifyInstance, opts: Opts) {
           tokenExpiry: tokens.expires_in ? new Date(Date.now() + tokens.expires_in * 1000) : null,
         },
       });
-      console.log("[bungie] Token refreshed successfully");
+      log.log("[bungie] Token refreshed successfully");
       return tokens.access_token;
     } catch (e) {
-      console.error("[bungie] Token refresh error:", e);
+      log.error("[bungie] Token refresh error:", e);
       return null;
     }
   }
 
   app.get("/bungie/xur", async (req, reply) => {
-    if (!BUNGIE_API_KEY) return reply.send({ ok: true, available: false, error: "bungie_not_configured" });
+    if (!BUNGIE_API_KEY)
+      return reply.send({ ok: true, available: false, error: "bungie_not_configured" });
 
     const milestoneData = await bungieGetCached("xur_milestone", "/Destiny2/Milestones/", 30);
     const xurMilestone = milestoneData?.Response?.["534869653"];
     if (!xurMilestone) return reply.send({ ok: true, available: false });
 
     try {
-      const cached = await (prisma as any).bungieCache.findUnique({ where: { key: "xur_vendor_inventory" } });
+      const cached = await (prisma as any).bungieCache.findUnique({
+        where: { key: "xur_vendor_inventory" },
+      });
       if (cached && new Date(cached.expiresAt) > new Date() && cached.data?.items) {
-        return reply.send({ ok: true, available: true, items: cached.data.items, cachedAt: cached.fetchedAt });
+        return reply.send({
+          ok: true,
+          available: true,
+          items: cached.data.items,
+          cachedAt: cached.fetchedAt,
+        });
       }
     } catch {}
 
     const u = authFromHeader((req as any).headers?.authorization);
-    if (!u) return reply.send({ ok: true, available: true, items: null, message: "Link your Bungie account to see Xur's inventory" });
+    if (!u)
+      return reply.send({
+        ok: true,
+        available: true,
+        items: null,
+        message: "Link your Bungie account to see Xur's inventory",
+      });
 
     const account = await (prisma as any).userGameAccount.findUnique({
       where: { userId_gameType: { userId: u.id, gameType: "BUNGIE" } },
     });
-    if (!account?.accessToken) return reply.send({ ok: true, available: true, items: null, message: "Link your Bungie account to see Xur's inventory" });
+    if (!account?.accessToken)
+      return reply.send({
+        ok: true,
+        available: true,
+        items: null,
+        message: "Link your Bungie account to see Xur's inventory",
+      });
 
     const accessToken = await refreshBungieToken(account);
-    if (!accessToken) return reply.send({ ok: true, available: true, items: null, error: "token_expired" });
+    if (!accessToken)
+      return reply.send({ ok: true, available: true, items: null, error: "token_expired" });
 
     try {
-      const profileRes = await bungieGet(`/Destiny2/${account.platform}/Profile/${account.externalId}/?components=200`, accessToken);
+      const profileRes = await bungieGet(
+        `/Destiny2/${account.platform}/Profile/${account.externalId}/?components=200`,
+        accessToken,
+      );
       const chars = profileRes?.Response?.characters?.data || {};
       const charIds = Object.keys(chars);
-      if (charIds.length === 0) return reply.send({ ok: true, available: true, items: null, error: "no_characters" });
+      if (charIds.length === 0)
+        return reply.send({ ok: true, available: true, items: null, error: "no_characters" });
 
-      const sortedChars = charIds.sort((a, b) => new Date(chars[b].dateLastPlayed).getTime() - new Date(chars[a].dateLastPlayed).getTime());
+      const sortedChars = charIds.sort(
+        (a, b) =>
+          new Date(chars[b].dateLastPlayed).getTime() - new Date(chars[a].dateLastPlayed).getTime(),
+      );
       const charId = sortedChars[0];
 
       const vendorData = await bungieGetCachedAuth(
         "xur_vendor_inventory",
         `/Destiny2/${account.platform}/Profile/${account.externalId}/Character/${charId}/Vendors/2190858386/?components=402,304`,
-        60, accessToken
+        60,
+        accessToken,
       );
 
       const sales = vendorData?.Response?.sales?.data || {};
       const sockets = vendorData?.Response?.itemComponents?.sockets?.data || {};
 
-      if (Object.keys(sales).length === 0) return reply.send({ ok: true, available: true, items: [] });
+      if (Object.keys(sales).length === 0)
+        return reply.send({ ok: true, available: true, items: [] });
 
       const items = manifestLoaded() ? enrichVendorSales(sales, sockets) : [];
 
@@ -165,13 +216,18 @@ export default async function bungieRoutes(app: FastifyInstance, opts: Opts) {
         await (prisma as any).bungieCache.upsert({
           where: { key: "xur_vendor_inventory" },
           update: { data: { items }, fetchedAt: new Date(), expiresAt },
-          create: { key: "xur_vendor_inventory", data: { items }, fetchedAt: new Date(), expiresAt },
+          create: {
+            key: "xur_vendor_inventory",
+            data: { items },
+            fetchedAt: new Date(),
+            expiresAt,
+          },
         });
       }
 
       return reply.send({ ok: true, available: true, items, cachedAt: new Date() });
     } catch (e) {
-      console.error("[bungie/xur vendor]", e);
+      log.error("[bungie/xur vendor]", e);
       return reply.send({ ok: true, available: true, items: null, error: "vendor_fetch_failed" });
     }
   });
@@ -198,8 +254,12 @@ export default async function bungieRoutes(app: FastifyInstance, opts: Opts) {
     const modsPath = path.join(process.cwd(), "manifest-cache", "modifiers.json");
     let skulls: Record<string, any> = {};
     let mods: Record<string, any> = {};
-    try { if (fs.existsSync(skullsPath)) skulls = JSON.parse(fs.readFileSync(skullsPath, "utf-8")); } catch {}
-    try { if (fs.existsSync(modsPath)) mods = JSON.parse(fs.readFileSync(modsPath, "utf-8")); } catch {}
+    try {
+      if (fs.existsSync(skullsPath)) skulls = JSON.parse(fs.readFileSync(skullsPath, "utf-8"));
+    } catch {}
+    try {
+      if (fs.existsSync(modsPath)) mods = JSON.parse(fs.readFileSync(modsPath, "utf-8"));
+    } catch {}
 
     const rows = await (prisma as any).bungieActivityLog.findMany({
       where: { userId: u.id },
@@ -217,7 +277,7 @@ export default async function bungieRoutes(app: FastifyInstance, opts: Opts) {
           hash: h,
           name: def?.name || "(unknown)",
           description: (def?.description || "").replace(/\s+/g, " ").trim().slice(0, 200),
-          source: skull ? "skull" : (mod ? "activity-modifier" : "unknown"),
+          source: skull ? "skull" : mod ? "activity-modifier" : "unknown",
         };
       });
       return {
@@ -245,13 +305,25 @@ export default async function bungieRoutes(app: FastifyInstance, opts: Opts) {
       if (!fs.existsSync(cachePath)) {
         return reply.send({ ok: false, error: "manifest_not_synced" });
       }
-      const raw = JSON.parse(fs.readFileSync(cachePath, "utf-8")) as Record<string, { name: string; icon: string; description: string; lightLevel?: number }>;
+      const raw = JSON.parse(fs.readFileSync(cachePath, "utf-8")) as Record<
+        string,
+        { name: string; icon: string; description: string; lightLevel?: number }
+      >;
 
       function baseName(n: string): string {
         return String(n || "")
-          .replace(/:\s*(Customize|Matchmade|Adept|Hero|Legend|Legendary|Master|Grandmaster|Ultimate|Story|Standard|Normal|Expert)\b.*$/i, "")
-          .replace(/\s*\((Legendary|Master|Grandmaster|Adept|Normal|Heroic|Legend|Expert)\)\s*$/i, "")
-          .replace(/^\s*\((Legendary|Master|Grandmaster|Adept|Normal|Heroic|Legend|Expert)\)\s*/i, "")
+          .replace(
+            /:\s*(Customize|Matchmade|Adept|Hero|Legend|Legendary|Master|Grandmaster|Ultimate|Story|Standard|Normal|Expert)\b.*$/i,
+            "",
+          )
+          .replace(
+            /\s*\((Legendary|Master|Grandmaster|Adept|Normal|Heroic|Legend|Expert)\)\s*$/i,
+            "",
+          )
+          .replace(
+            /^\s*\((Legendary|Master|Grandmaster|Adept|Normal|Heroic|Legend|Expert)\)\s*/i,
+            "",
+          )
           .trim();
       }
 
@@ -263,18 +335,36 @@ export default async function bungieRoutes(app: FastifyInstance, opts: Opts) {
         return true;
       }
 
-      const groups: Record<string, { name: string; hashes: string[]; variants: { hash: string; variant: string }[]; icon: string }> = {};
+      const groups: Record<
+        string,
+        {
+          name: string;
+          hashes: string[];
+          variants: { hash: string; variant: string }[];
+          icon: string;
+        }
+      > = {};
       for (const [hash, def] of Object.entries(raw)) {
         if (!isReal(def.name, def)) continue;
         const base = baseName(def.name);
         if (!base) continue;
-        const variant = def.name === base ? "Standard" : def.name.slice(base.length).replace(/^[:\s]+/, "").trim() || "Variant";
+        const variant =
+          def.name === base
+            ? "Standard"
+            : def.name
+                .slice(base.length)
+                .replace(/^[:\s]+/, "")
+                .trim() || "Variant";
         if (!groups[base]) {
           groups[base] = {
             name: base,
             hashes: [],
             variants: [],
-            icon: def.icon ? (def.icon.startsWith("http") ? def.icon : "https://www.bungie.net" + def.icon) : "",
+            icon: def.icon
+              ? def.icon.startsWith("http")
+                ? def.icon
+                : "https://www.bungie.net" + def.icon
+              : "",
           };
         }
         groups[base].hashes.push(hash);
@@ -282,9 +372,10 @@ export default async function bungieRoutes(app: FastifyInstance, opts: Opts) {
       }
 
       const result = Object.values(groups)
-        .filter(g => g.name && !/^[?:\s]+$/.test(g.name) && g.hashes.length >= 1)
+        .filter((g) => g.name && !/^[?:\s]+$/.test(g.name) && g.hashes.length >= 1)
         .sort((a, b) => {
-          const va = a.variants.length, vb = b.variants.length;
+          const va = a.variants.length,
+            vb = b.variants.length;
           if (va >= 2 && vb < 2) return -1;
           if (vb >= 2 && va < 2) return 1;
           return a.name.localeCompare(b.name);
@@ -307,7 +398,10 @@ export default async function bungieRoutes(app: FastifyInstance, opts: Opts) {
       if (!fs.existsSync(cachePath)) {
         return reply.send({ ok: false, error: "manifest_not_synced" });
       }
-      const raw = JSON.parse(fs.readFileSync(cachePath, "utf-8")) as Record<string, { name: string; icon: string; description: string }>;
+      const raw = JSON.parse(fs.readFileSync(cachePath, "utf-8")) as Record<
+        string,
+        { name: string; icon: string; description: string }
+      >;
 
       function categorize(name: string): string | null {
         const n = name.toLowerCase();
@@ -319,13 +413,17 @@ export default async function bungieRoutes(app: FastifyInstance, opts: Opts) {
         if (/\bsurge\b/i.test(n)) return "surges";
         if (/\bthreat\b/i.test(n)) return "threats";
         if (/\bburn\b/i.test(n)) return "burns";
-        if (/match game|equipment locked|togetherness|epitaph|locked loadout/i.test(name)) return "rules";
+        if (/match game|equipment locked|togetherness|epitaph|locked loadout/i.test(name))
+          return "rules";
         if (/^overcharged/i.test(name)) return "overcharged";
         if (/^shielded foes|shielded combatants/i.test(name)) return "shields";
         return "other";
       }
 
-      const grouped: Record<string, Array<{ hash: string; name: string; icon: string; description: string }>> = {};
+      const grouped: Record<
+        string,
+        Array<{ hash: string; name: string; icon: string; description: string }>
+      > = {};
       for (const [hash, def] of Object.entries(raw)) {
         const cat = categorize(def.name);
         if (!cat) continue;
@@ -333,7 +431,11 @@ export default async function bungieRoutes(app: FastifyInstance, opts: Opts) {
         grouped[cat].push({
           hash,
           name: def.name,
-          icon: def.icon ? (def.icon.startsWith("http") ? def.icon : "https://www.bungie.net" + def.icon) : "",
+          icon: def.icon
+            ? def.icon.startsWith("http")
+              ? def.icon
+              : "https://www.bungie.net" + def.icon
+            : "",
           description: def.description || "",
         });
       }
@@ -341,7 +443,9 @@ export default async function bungieRoutes(app: FastifyInstance, opts: Opts) {
         grouped[k].sort((a, b) => a.name.localeCompare(b.name));
       }
 
-      const flat = Object.values(grouped).flat().sort((a, b) => a.name.localeCompare(b.name));
+      const flat = Object.values(grouped)
+        .flat()
+        .sort((a, b) => a.name.localeCompare(b.name));
 
       return reply.send({
         ok: true,
@@ -350,14 +454,14 @@ export default async function bungieRoutes(app: FastifyInstance, opts: Opts) {
         grouped,
         flat,
         categories: [
-          { key: "rules",       label: "Activity Rules" },
-          { key: "surges",      label: "Damage Surges" },
-          { key: "threats",     label: "Incoming Threats" },
-          { key: "champions",   label: "Champions" },
-          { key: "shields",     label: "Shielded Foes" },
+          { key: "rules", label: "Activity Rules" },
+          { key: "surges", label: "Damage Surges" },
+          { key: "threats", label: "Incoming Threats" },
+          { key: "champions", label: "Champions" },
+          { key: "shields", label: "Shielded Foes" },
           { key: "overcharged", label: "Overcharged Weapons" },
-          { key: "burns",       label: "Burns (legacy)" },
-          { key: "other",       label: "Other Modifiers" },
+          { key: "burns", label: "Burns (legacy)" },
+          { key: "other", label: "Other Modifiers" },
         ],
       });
     } catch (err: any) {
@@ -374,27 +478,44 @@ export default async function bungieRoutes(app: FastifyInstance, opts: Opts) {
     if (manifestLoaded()) {
       const enriched = enrichMilestones(milestonesRaw);
       return reply.send({
-        ok: true, milestones: enriched,
+        ok: true,
+        milestones: enriched,
         totalMilestones: Object.keys(milestonesRaw).length,
         manifestVersion: manifestVersion(),
       });
     }
 
     const KNOWN: Record<string, string> = {
-      "2029743966": "Nightfall", "3603098564": "Crucible Playlist",
-      "534869653": "Xur", "4253138191": "Raid", "1437935813": "Vanguard Ops",
+      "2029743966": "Nightfall",
+      "3603098564": "Crucible Playlist",
+      "534869653": "Xur",
+      "4253138191": "Raid",
+      "1437935813": "Vanguard Ops",
     };
     const summary: any[] = [];
     for (const [hash, ms] of Object.entries(milestonesRaw) as [string, any][]) {
       if (KNOWN[hash]) {
         summary.push({
-          hash, name: KNOWN[hash],
-          activities: ms?.activities?.map((a: any) => ({ hash: a.activityHash, challenges: a.challengeObjectiveHashes, modifiers: a.modifierHashes, phases: a.phaseHashes })) || [],
-          availableQuests: ms?.availableQuests?.length || 0, startDate: ms?.startDate, endDate: ms?.endDate,
+          hash,
+          name: KNOWN[hash],
+          activities:
+            ms?.activities?.map((a: any) => ({
+              hash: a.activityHash,
+              challenges: a.challengeObjectiveHashes,
+              modifiers: a.modifierHashes,
+              phases: a.phaseHashes,
+            })) || [],
+          availableQuests: ms?.availableQuests?.length || 0,
+          startDate: ms?.startDate,
+          endDate: ms?.endDate,
         });
       }
     }
-    return reply.send({ ok: true, milestones: summary, totalMilestones: Object.keys(milestonesRaw).length });
+    return reply.send({
+      ok: true,
+      milestones: summary,
+      totalMilestones: Object.keys(milestonesRaw).length,
+    });
   });
 
   app.get("/bungie/player/:name", async (req, reply) => {
@@ -408,11 +529,14 @@ export default async function bungieRoutes(app: FastifyInstance, opts: Opts) {
       const name = parts[0];
       const code = parts[1] || "0";
 
-      const searchRes = await fetchWithTimeout(`${BUNGIE_ROOT}/Destiny2/SearchDestinyPlayerByBungieName/-1/`, {
-        method: "POST",
-        headers: { "X-API-Key": BUNGIE_API_KEY, "Content-Type": "application/json" },
-        body: JSON.stringify({ displayName: name, displayNameCode: Number(code) }),
-      });
+      const searchRes = await fetchWithTimeout(
+        `${BUNGIE_ROOT}/Destiny2/SearchDestinyPlayerByBungieName/-1/`,
+        {
+          method: "POST",
+          headers: { "X-API-Key": BUNGIE_API_KEY, "Content-Type": "application/json" },
+          body: JSON.stringify({ displayName: name, displayNameCode: Number(code) }),
+        },
+      );
       const searchResult = await searchRes.json();
       const players = searchResult?.Response || [];
 
@@ -423,7 +547,7 @@ export default async function bungieRoutes(app: FastifyInstance, opts: Opts) {
       const memberId = player.membershipId;
 
       const profile = await bungieGet(
-        `/Destiny2/${memberType}/Profile/${memberId}/?components=100,200,205,300,302,304`
+        `/Destiny2/${memberType}/Profile/${memberId}/?components=100,200,205,300,302,304`,
       );
 
       const profileData = profile?.Response;
@@ -445,7 +569,9 @@ export default async function bungieRoutes(app: FastifyInstance, opts: Opts) {
           raceType: c.raceType,
           raceName: ["Human", "Awoken", "Exo"][c.raceType] || "Unknown",
           emblemPath: c.emblemPath ? `https://www.bungie.net${c.emblemPath}` : null,
-          emblemBackgroundPath: c.emblemBackgroundPath ? `https://www.bungie.net${c.emblemBackgroundPath}` : null,
+          emblemBackgroundPath: c.emblemBackgroundPath
+            ? `https://www.bungie.net${c.emblemBackgroundPath}`
+            : null,
           dateLastPlayed: c.dateLastPlayed,
           minutesPlayedTotal: c.minutesPlayedTotal,
           titleRecordHash: c.titleRecordHash,
@@ -464,7 +590,16 @@ export default async function bungieRoutes(app: FastifyInstance, opts: Opts) {
             if (itemSockets && Array.isArray(itemSockets)) {
               perks = itemSockets
                 .filter((s: any) => s.plugHash && s.plugHash !== 0)
-                .map((s: any) => { const pd = resolveItem(s.plugHash); return pd ? { hash: s.plugHash, name: pd.name, icon: pd.icon ? `https://www.bungie.net${pd.icon}` : "" } : null; })
+                .map((s: any) => {
+                  const pd = resolveItem(s.plugHash);
+                  return pd
+                    ? {
+                        hash: s.plugHash,
+                        name: pd.name,
+                        icon: pd.icon ? `https://www.bungie.net${pd.icon}` : "",
+                      }
+                    : null;
+                })
                 .filter(Boolean);
             }
 
@@ -477,17 +612,32 @@ export default async function bungieRoutes(app: FastifyInstance, opts: Opts) {
               const d = Number(stats[ARMOR_STAT_HASHES.DISCIPLINE]?.value || 0);
               const i = Number(stats[ARMOR_STAT_HASHES.INTELLECT]?.value || 0);
               const s = Number(stats[ARMOR_STAT_HASHES.STRENGTH]?.value || 0);
-              armorStats = { mobility: m, resilience: r, recovery: rc, discipline: d, intellect: i, strength: s, total: m + r + rc + d + i + s };
+              armorStats = {
+                mobility: m,
+                resilience: r,
+                recovery: rc,
+                discipline: d,
+                intellect: i,
+                strength: s,
+                total: m + r + rc + d + i + s,
+              };
             }
 
             return {
-              itemHash: item.itemHash, itemInstanceId: item.itemInstanceId,
-              bucketHash: bHash, name: def?.name || `Unknown`, icon: def?.icon ? `https://www.bungie.net${def.icon}` : "",
-              tierName: def?.tierName || "Unknown", tierType: def?.tierType || 0,
+              itemHash: item.itemHash,
+              itemInstanceId: item.itemInstanceId,
+              bucketHash: bHash,
+              name: def?.name || `Unknown`,
+              icon: def?.icon ? `https://www.bungie.net${def.icon}` : "",
+              tierName: def?.tierName || "Unknown",
+              tierType: def?.tierType || 0,
               watermark: def?.watermark ? `https://www.bungie.net${def.watermark}` : "",
               primaryStat: inst.primaryStat?.value || null,
-              damageType: damage?.name || null, damageIcon: damage?.icon ? `https://www.bungie.net${damage.icon}` : null,
-              slotName: bucket?.name || "", perks, armorStats,
+              damageType: damage?.name || null,
+              damageIcon: damage?.icon ? `https://www.bungie.net${damage.icon}` : null,
+              slotName: bucket?.name || "",
+              perks,
+              armorStats,
             };
           });
 
@@ -502,7 +652,9 @@ export default async function bungieRoutes(app: FastifyInstance, opts: Opts) {
       });
 
       return reply.send({
-        ok: true, found: true, privacyRestricted,
+        ok: true,
+        found: true,
+        privacyRestricted,
         player: {
           membershipId: memberId,
           membershipType: memberType,
@@ -514,7 +666,7 @@ export default async function bungieRoutes(app: FastifyInstance, opts: Opts) {
         totalCharacters: charSummary.length,
       });
     } catch (e) {
-      console.error("[bungie player lookup]", e);
+      log.error("[bungie player lookup]", e);
       return reply.code(500).send({ ok: false, error: "lookup_failed" });
     }
   });
@@ -527,11 +679,21 @@ export default async function bungieRoutes(app: FastifyInstance, opts: Opts) {
     try {
       const acct = await prisma.userGameAccount.findFirst({
         where: { userId, gameType: "BUNGIE" },
-        select: { displayName: true, platform: true, externalId: true, cardData: true, cardCachedAt: true },
+        select: {
+          displayName: true,
+          platform: true,
+          externalId: true,
+          cardData: true,
+          cardCachedAt: true,
+        },
       });
       if (!acct || !acct.displayName) return reply.send({ ok: false });
 
-      if (acct.cardData && acct.cardCachedAt && Date.now() - acct.cardCachedAt.getTime() < 300_000) {
+      if (
+        acct.cardData &&
+        acct.cardCachedAt &&
+        Date.now() - acct.cardCachedAt.getTime() < 300_000
+      ) {
         return reply.send({ ok: true, ...(acct.cardData as any) });
       }
 
@@ -539,47 +701,85 @@ export default async function bungieRoutes(app: FastifyInstance, opts: Opts) {
       const memberType = acct.platform;
       const memberId = acct.externalId;
 
-      const profileRes = await bungieGet(`/Destiny2/${memberType}/Profile/${memberId}/?components=100,200,1400`);
+      const profileRes = await bungieGet(
+        `/Destiny2/${memberType}/Profile/${memberId}/?components=100,200,1400`,
+      );
       const profileData = profileRes?.Response?.profile?.data;
       const chars = profileRes?.Response?.characters?.data || {};
       const commendations = profileRes?.Response?.profileCommendations?.data;
 
       const RANK_NAMES: Record<number, string> = {
-        1: "New Light", 2: "Explorer", 3: "Seeker", 4: "Pathfinder",
-        5: "Brave", 6: "Heroic", 7: "Fabled", 8: "Mythic",
-        9: "Vanquisher", 10: "Conqueror", 11: "Paragon",
+        1: "New Light",
+        2: "Explorer",
+        3: "Seeker",
+        4: "Pathfinder",
+        5: "Brave",
+        6: "Heroic",
+        7: "Fabled",
+        8: "Mythic",
+        9: "Vanquisher",
+        10: "Conqueror",
+        11: "Paragon",
       };
       const guardianRank = profileData?.currentGuardianRank ?? null;
-      const guardianRankName = guardianRank ? (RANK_NAMES[guardianRank] || `Rank ${guardianRank}`) : null;
+      const guardianRankName = guardianRank
+        ? RANK_NAMES[guardianRank] || `Rank ${guardianRank}`
+        : null;
 
       const commendationScore = commendations?.totalScore ?? null;
 
       const characters = Object.values(chars).map((c: any) => ({
         characterId: c.characterId,
-        className: ["","Titan","Hunter","Warlock"][c.classType + 1] || "Unknown",
+        className: ["", "Titan", "Hunter", "Warlock"][c.classType + 1] || "Unknown",
         light: c.light,
-        raceName: ["","Human","Awoken","Exo"][c.raceType + 1] || "Unknown",
-        emblemBackgroundPath: c.emblemBackgroundPath ? `https://www.bungie.net${c.emblemBackgroundPath}` : null,
+        raceName: ["", "Human", "Awoken", "Exo"][c.raceType + 1] || "Unknown",
+        emblemBackgroundPath: c.emblemBackgroundPath
+          ? `https://www.bungie.net${c.emblemBackgroundPath}`
+          : null,
         dateLastPlayed: c.dateLastPlayed,
         minutesPlayedTotal: parseInt(c.minutesPlayedTotal) || 0,
       }));
-      characters.sort((a: any, b: any) => new Date(b.dateLastPlayed).getTime() - new Date(a.dateLastPlayed).getTime());
+      characters.sort(
+        (a: any, b: any) =>
+          new Date(b.dateLastPlayed).getTime() - new Date(a.dateLastPlayed).getTime(),
+      );
 
       let lastActivity: { name: string; mode: string; when: string } | null = null;
       const mainChar = characters[0];
       if (mainChar?.characterId) {
         try {
-          const actRes = await bungieGet(`/Destiny2/${memberType}/Account/${memberId}/Character/${mainChar.characterId}/Stats/Activities/?count=1&mode=0`);
+          const actRes = await bungieGet(
+            `/Destiny2/${memberType}/Account/${memberId}/Character/${mainChar.characterId}/Stats/Activities/?count=1&mode=0`,
+          );
           const act = actRes?.Response?.activities?.[0];
           if (act) {
             const actDef = resolveActivity(act.activityDetails?.referenceId);
             const MODE_NAMES: Record<number, string> = {
-              0: "None", 2: "Story", 3: "Strike", 4: "Raid", 5: "PvP", 6: "Patrol",
-              7: "PvE", 10: "Control", 12: "Clash", 16: "Nightfall", 18: "Heroic",
-              19: "Mayhem", 25: "Rumble", 31: "Supremacy", 37: "Survival",
-              38: "Countdown", 39: "Trials", 43: "Iron Banner", 46: "Scorched",
-              48: "Gambit", 63: "Reckoning", 69: "Dungeon", 73: "Offensive",
-              75: "Dares", 84: "Quickplay",
+              0: "None",
+              2: "Story",
+              3: "Strike",
+              4: "Raid",
+              5: "PvP",
+              6: "Patrol",
+              7: "PvE",
+              10: "Control",
+              12: "Clash",
+              16: "Nightfall",
+              18: "Heroic",
+              19: "Mayhem",
+              25: "Rumble",
+              31: "Supremacy",
+              37: "Survival",
+              38: "Countdown",
+              39: "Trials",
+              43: "Iron Banner",
+              46: "Scorched",
+              48: "Gambit",
+              63: "Reckoning",
+              69: "Dungeon",
+              73: "Offensive",
+              75: "Dares",
+              84: "Quickplay",
             };
             const modeId = act.activityDetails?.mode || 0;
             lastActivity = {
@@ -593,18 +793,23 @@ export default async function bungieRoutes(app: FastifyInstance, opts: Opts) {
 
       const card = {
         displayName: acct.displayName,
-        characters, guardianRank, guardianRankName,
-        commendationScore, lastActivity,
+        characters,
+        guardianRank,
+        guardianRankName,
+        commendationScore,
+        lastActivity,
       };
 
-      await prisma.userGameAccount.update({
-        where: { userId_gameType: { userId, gameType: "BUNGIE" } },
-        data: { cardData: card as any, cardCachedAt: new Date() },
-      }).catch(() => {});
+      await prisma.userGameAccount
+        .update({
+          where: { userId_gameType: { userId, gameType: "BUNGIE" } },
+          data: { cardData: card as any, cardCachedAt: new Date() },
+        })
+        .catch(() => {});
 
       return reply.send({ ok: true, ...card });
     } catch (e) {
-      console.error("[bungie card]", e);
+      log.error("[bungie card]", e);
       return reply.send({ ok: false });
     }
   });
@@ -637,22 +842,29 @@ export default async function bungieRoutes(app: FastifyInstance, opts: Opts) {
 
       const tokenRes = await fetchWithTimeout("https://www.bungie.net/Platform/App/OAuth/Token/", {
         method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded", "X-API-Key": BUNGIE_API_KEY },
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          "X-API-Key": BUNGIE_API_KEY,
+        },
         body: new URLSearchParams(tokenBody),
       });
       const tokens = await tokenRes.json();
 
       if (!tokens.access_token) {
-        console.error("[bungie oauth] token error", tokens);
+        log.error("[bungie oauth] token error", tokens);
         return reply.redirect(`${SITE_URL}/lobby/destiny2?bungie=error`);
       }
 
-      const memberRes = await fetchWithTimeout("https://www.bungie.net/Platform/User/GetMembershipsForCurrentUser/", {
-        headers: { "X-API-Key": BUNGIE_API_KEY, "Authorization": `Bearer ${tokens.access_token}` },
-      });
+      const memberRes = await fetchWithTimeout(
+        "https://www.bungie.net/Platform/User/GetMembershipsForCurrentUser/",
+        {
+          headers: { "X-API-Key": BUNGIE_API_KEY, Authorization: `Bearer ${tokens.access_token}` },
+        },
+      );
       const memberData = await memberRes.json();
       const memberships = memberData?.Response?.destinyMemberships || [];
-      const primary = memberships.find((m: any) => m.crossSaveOverride === m.membershipType) || memberships[0];
+      const primary =
+        memberships.find((m: any) => m.crossSaveOverride === m.membershipType) || memberships[0];
 
       await (prisma as any).userGameAccount.upsert({
         where: { userId_gameType: { userId, gameType: "BUNGIE" } },
@@ -679,7 +891,7 @@ export default async function bungieRoutes(app: FastifyInstance, opts: Opts) {
       awardNotoriety(userId, "BUNGIE_LINKED").catch(() => {});
       return reply.redirect(`${SITE_URL}/lobby/destiny2?bungie=success`);
     } catch (e) {
-      console.error("[bungie oauth callback]", e);
+      log.error("[bungie oauth callback]", e);
       return reply.redirect(`${SITE_URL}/lobby/destiny2?bungie=error`);
     }
   });
@@ -695,25 +907,40 @@ export default async function bungieRoutes(app: FastifyInstance, opts: Opts) {
 
     const accessToken = await refreshBungieToken(account);
     if (!accessToken) {
-      return reply.send({ ok: true, linked: true, error: "token_expired", displayName: account.displayName,
-        message: "Your Bungie session expired. Please re-link your account." });
+      return reply.send({
+        ok: true,
+        linked: true,
+        error: "token_expired",
+        displayName: account.displayName,
+        message: "Your Bungie session expired. Please re-link your account.",
+      });
     }
 
     try {
       const profile = await bungieGet(
         `/Destiny2/${account.platform}/Profile/${account.externalId}/?components=100,102,200,201,205,300,302,304,305`,
-        accessToken
+        accessToken,
       );
 
       const profileData = profile?.Response;
-      if (!profileData) return reply.send({ ok: true, linked: true, error: "no_profile_data", displayName: account.displayName });
+      if (!profileData)
+        return reply.send({
+          ok: true,
+          linked: true,
+          error: "no_profile_data",
+          displayName: account.displayName,
+        });
 
       if (manifestLoaded()) {
         const enriched = enrichProfile(profileData);
         return reply.send({
-          ok: true, linked: true,
-          displayName: account.displayName, platform: account.platform, externalId: account.externalId,
-          manifestVersion: manifestVersion(), ...enriched,
+          ok: true,
+          linked: true,
+          displayName: account.displayName,
+          platform: account.platform,
+          externalId: account.externalId,
+          manifestVersion: manifestVersion(),
+          ...enriched,
         });
       }
 
@@ -726,29 +953,50 @@ export default async function bungieRoutes(app: FastifyInstance, opts: Opts) {
         const equipped = (charEquipment[charId]?.items || []).map((item: any) => {
           const inst = instances[item.itemInstanceId] || {};
           return {
-            itemHash: item.itemHash, itemInstanceId: item.itemInstanceId, bucketHash: item.bucketHash,
-            primaryStat: inst.primaryStat?.value || null, name: null, icon: null,
+            itemHash: item.itemHash,
+            itemInstanceId: item.itemInstanceId,
+            bucketHash: item.bucketHash,
+            primaryStat: inst.primaryStat?.value || null,
+            name: null,
+            icon: null,
           };
         });
         return {
-          characterId: charId, classType: c.classType,
+          characterId: charId,
+          classType: c.classType,
           className: ["Titan", "Hunter", "Warlock"][c.classType] || "Unknown",
-          light: c.light, raceType: c.raceType,
+          light: c.light,
+          raceType: c.raceType,
           raceName: ["Human", "Awoken", "Exo"][c.raceType] || "Unknown",
-          emblemPath: c.emblemPath, emblemBackgroundPath: c.emblemBackgroundPath,
-          dateLastPlayed: c.dateLastPlayed, minutesPlayedTotal: c.minutesPlayedTotal,
-          equipped, weapons: [], armor: [], inventory: [],
+          emblemPath: c.emblemPath,
+          emblemBackgroundPath: c.emblemBackgroundPath,
+          dateLastPlayed: c.dateLastPlayed,
+          minutesPlayedTotal: c.minutesPlayedTotal,
+          equipped,
+          weapons: [],
+          armor: [],
+          inventory: [],
         };
       });
 
       return reply.send({
-        ok: true, linked: true,
-        displayName: account.displayName, platform: account.platform, externalId: account.externalId,
-        characters: charSummary, vault: vaultItems.slice(0, 20), vaultCount: vaultItems.length,
+        ok: true,
+        linked: true,
+        displayName: account.displayName,
+        platform: account.platform,
+        externalId: account.externalId,
+        characters: charSummary,
+        vault: vaultItems.slice(0, 20),
+        vaultCount: vaultItems.length,
       });
     } catch (e) {
-      console.error("[bungie/me]", e);
-      return reply.send({ ok: true, linked: true, error: "fetch_failed", displayName: account.displayName });
+      log.error("[bungie/me]", e);
+      return reply.send({
+        ok: true,
+        linked: true,
+        error: "fetch_failed",
+        displayName: account.displayName,
+      });
     }
   });
 
@@ -765,18 +1013,23 @@ export default async function bungieRoutes(app: FastifyInstance, opts: Opts) {
     if (!accessToken) return reply.code(401).send({ ok: false, error: "token_expired" });
 
     const { itemId, characterId } = (req as any).body || {};
-    if (!itemId || !characterId) return reply.code(400).send({ ok: false, error: "missing_fields" });
+    if (!itemId || !characterId)
+      return reply.code(400).send({ ok: false, error: "missing_fields" });
 
     try {
       const result = await fetchWithTimeout(`${BUNGIE_ROOT}/Destiny2/Actions/Items/EquipItem/`, {
         method: "POST",
-        headers: { "X-API-Key": BUNGIE_API_KEY, "Authorization": `Bearer ${accessToken}`, "Content-Type": "application/json" },
+        headers: {
+          "X-API-Key": BUNGIE_API_KEY,
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({ itemId, characterId, membershipType: Number(account.platform) }),
       });
       const data = await result.json();
       return reply.send({ ok: !data.ErrorCode || data.ErrorCode === 1, data });
     } catch (e) {
-      console.error("[bungie/equip]", e);
+      log.error("[bungie/equip]", e);
       return reply.code(500).send({ ok: false, error: "equip_failed" });
     }
   });
@@ -793,23 +1046,32 @@ export default async function bungieRoutes(app: FastifyInstance, opts: Opts) {
     const accessToken = await refreshBungieToken(account);
     if (!accessToken) return reply.code(401).send({ ok: false, error: "token_expired" });
 
-    const { itemReferenceHash, stackSize, transferToVault, itemId, characterId } = (req as any).body || {};
-    if (!itemId || !characterId || !itemReferenceHash) return reply.code(400).send({ ok: false, error: "missing_fields" });
+    const { itemReferenceHash, stackSize, transferToVault, itemId, characterId } =
+      (req as any).body || {};
+    if (!itemId || !characterId || !itemReferenceHash)
+      return reply.code(400).send({ ok: false, error: "missing_fields" });
 
     try {
       const result = await fetchWithTimeout(`${BUNGIE_ROOT}/Destiny2/Actions/Items/TransferItem/`, {
         method: "POST",
-        headers: { "X-API-Key": BUNGIE_API_KEY, "Authorization": `Bearer ${accessToken}`, "Content-Type": "application/json" },
+        headers: {
+          "X-API-Key": BUNGIE_API_KEY,
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({
-          itemReferenceHash, stackSize: stackSize || 1,
+          itemReferenceHash,
+          stackSize: stackSize || 1,
           transferToVault: transferToVault ?? false,
-          itemId, characterId, membershipType: Number(account.platform),
+          itemId,
+          characterId,
+          membershipType: Number(account.platform),
         }),
       });
       const data = await result.json();
       return reply.send({ ok: !data.ErrorCode || data.ErrorCode === 1, data });
     } catch (e) {
-      console.error("[bungie/transfer]", e);
+      log.error("[bungie/transfer]", e);
       return reply.code(500).send({ ok: false, error: "transfer_failed" });
     }
   });

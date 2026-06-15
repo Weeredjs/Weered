@@ -1,3 +1,4 @@
+import { log } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 import { isStaffUser as sharedIsStaffUser } from "../lib/isStaffUser";
 import { existsSync, mkdirSync, writeFileSync, readFileSync, unlinkSync } from "fs";
@@ -14,9 +15,14 @@ type Opts = {
   getLobbyRole?: (userId: string, lobbyId: string) => Promise<"OWNER" | "MOD" | "MEMBER" | null>;
   broadcastToLobby?: (lobbyId: string, event: any) => void;
   createNotification?: (opts: {
-    userId: string; type: string; title: string;
-    body?: string; actionUrl?: string;
-    actorId?: string; actorName?: string; meta?: any;
+    userId: string;
+    type: string;
+    title: string;
+    body?: string;
+    actionUrl?: string;
+    actorId?: string;
+    actorName?: string;
+    meta?: any;
   }) => Promise<any>;
 };
 
@@ -40,13 +46,24 @@ async function processSubmissionImage(
   raw: Buffer,
   userId: string,
   contestId: string,
-): Promise<{ url: string; filename: string; dominantColor: string; width: number; height: number }> {
+): Promise<{
+  url: string;
+  filename: string;
+  dominantColor: string;
+  width: number;
+  height: number;
+}> {
   const ts = Date.now();
   const filename = `${contestId}-${userId}-${ts}.webp`;
   const fullPath = join(FLAIR_DIR, filename);
 
   let pipeline = sharp(raw, { failOn: "none" }).rotate();
-  pipeline = pipeline.resize({ width: MAX_DIM, height: MAX_DIM, fit: "inside", withoutEnlargement: true });
+  pipeline = pipeline.resize({
+    width: MAX_DIM,
+    height: MAX_DIM,
+    fit: "inside",
+    withoutEnlargement: true,
+  });
 
   let out = await pipeline.webp({ quality: 80 }).toBuffer();
   if (out.length > 1_000_000) {
@@ -64,7 +81,10 @@ async function processSubmissionImage(
     const stats = await sharp(out).stats();
     const c = (stats as any).dominant;
     if (c && typeof c.r === "number") {
-      const toHex = (v: number) => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, "0");
+      const toHex = (v: number) =>
+        Math.max(0, Math.min(255, Math.round(v)))
+          .toString(16)
+          .padStart(2, "0");
       dominantColor = `#${toHex(c.r)}${toHex(c.g)}${toHex(c.b)}`;
     }
   } catch {}
@@ -84,11 +104,21 @@ function filenameFromUrl(url: string): string | null {
 }
 
 export default async function flairContestsRoutes(app: FastifyInstance, opts: Opts) {
-  const { authFromHeader, getGlobalRole, canAccessStaff, getLobbyRole, broadcastToLobby, createNotification } = opts;
+  const {
+    authFromHeader,
+    getGlobalRole,
+    canAccessStaff,
+    getLobbyRole,
+    broadcastToLobby,
+    createNotification,
+  } = opts;
 
   const isStaffUser = (userId: string) => sharedIsStaffUser(userId, getGlobalRole, canAccessStaff);
 
-  async function canManageContest(userId: string, contest: { lobbyId: string | null; createdById: string }): Promise<boolean> {
+  async function canManageContest(
+    userId: string,
+    contest: { lobbyId: string | null; createdById: string },
+  ): Promise<boolean> {
     if (await isStaffUser(userId)) return true;
     if (contest.createdById === userId) return true;
     if (contest.lobbyId && getLobbyRole) {
@@ -101,7 +131,11 @@ export default async function flairContestsRoutes(app: FastifyInstance, opts: Op
   app.get("/flair-contests", async (req, reply) => {
     const q = (req as any).query || {};
     const lobbyId = q.lobbyId ? String(q.lobbyId) : null;
-    const statusFilter = q.status ? (Array.isArray(q.status) ? q.status : [q.status]).map(String).filter((s: string) => VALID_STATUSES.has(s)) : null;
+    const statusFilter = q.status
+      ? (Array.isArray(q.status) ? q.status : [q.status])
+          .map(String)
+          .filter((s: string) => VALID_STATUSES.has(s))
+      : null;
     const where: any = {};
     if (lobbyId) where.lobbyId = lobbyId;
     if (statusFilter && statusFilter.length > 0) where.status = { in: statusFilter };
@@ -118,14 +152,16 @@ export default async function flairContestsRoutes(app: FastifyInstance, opts: Op
       const oa = order[a.status] ?? 9;
       const ob = order[b.status] ?? 9;
       if (oa !== ob) return oa - ob;
-      if (a.status === "SUBMISSIONS") return new Date(a.submissionClosesAt).getTime() - new Date(b.submissionClosesAt).getTime();
-      if (a.status === "VOTING") return new Date(a.voteClosesAt).getTime() - new Date(b.voteClosesAt).getTime();
+      if (a.status === "SUBMISSIONS")
+        return new Date(a.submissionClosesAt).getTime() - new Date(b.submissionClosesAt).getTime();
+      if (a.status === "VOTING")
+        return new Date(a.voteClosesAt).getTime() - new Date(b.voteClosesAt).getTime();
       return new Date(b.voteClosesAt).getTime() - new Date(a.voteClosesAt).getTime();
     });
 
     const u = authFromHeader((req as any).headers?.authorization);
-    let mySubByContest: Record<string, any> = {};
-    let myVoteByContest: Record<string, any> = {};
+    const mySubByContest: Record<string, any> = {};
+    const myVoteByContest: Record<string, any> = {};
     if (u && contests.length > 0) {
       const ids = contests.map((c: any) => c.id);
       const subs = await (prisma as any).flairSubmission.findMany({
@@ -156,13 +192,20 @@ export default async function flairContestsRoutes(app: FastifyInstance, opts: Op
 
     const submissions = await (prisma as any).flairSubmission.findMany({
       where: { contestId: id },
-      orderBy: c.status === "COMPLETED" ? [{ voteCount: "desc" }, { createdAt: "asc" }] : [{ createdAt: "asc" }],
+      orderBy:
+        c.status === "COMPLETED"
+          ? [{ voteCount: "desc" }, { createdAt: "asc" }]
+          : [{ createdAt: "asc" }],
     });
 
     const userIds = Array.from(new Set(submissions.map((s: any) => s.userId)));
-    const users = userIds.length > 0
-      ? await prisma.user.findMany({ where: { id: { in: userIds as string[] } }, select: { id: true, name: true, avatar: true, avatarColor: true } })
-      : [];
+    const users =
+      userIds.length > 0
+        ? await prisma.user.findMany({
+            where: { id: { in: userIds as string[] } },
+            select: { id: true, name: true, avatar: true, avatarColor: true },
+          })
+        : [];
     const uById: Record<string, any> = {};
     for (const usr of users) uById[usr.id] = usr;
 
@@ -170,9 +213,11 @@ export default async function flairContestsRoutes(app: FastifyInstance, opts: Op
     let myVote: any = null;
     let mySubmission: any = null;
     if (u) {
-      myVote = await (prisma as any).flairVote.findUnique({
-        where: { contestId_voterId: { contestId: id, voterId: u.id } },
-      }).catch(() => null);
+      myVote = await (prisma as any).flairVote
+        .findUnique({
+          where: { contestId_voterId: { contestId: id, voterId: u.id } },
+        })
+        .catch(() => null);
       mySubmission = submissions.find((s: any) => s.userId === u.id) || null;
     }
 
@@ -180,7 +225,15 @@ export default async function flairContestsRoutes(app: FastifyInstance, opts: Op
     if (c.rewardFlairId) {
       rewardFlair = await (prisma as any).flairItem.findUnique({
         where: { id: c.rewardFlairId },
-        select: { id: true, slug: true, name: true, kind: true, imageUrl: true, rarity: true, createdById: true },
+        select: {
+          id: true,
+          slug: true,
+          name: true,
+          kind: true,
+          imageUrl: true,
+          rarity: true,
+          createdById: true,
+        },
       });
     }
 
@@ -210,7 +263,9 @@ export default async function flairContestsRoutes(app: FastifyInstance, opts: Op
     }
     if (!allowed) return reply.code(403).send({ ok: false, error: "forbidden" });
 
-    const title = String(body.title || "").trim().slice(0, 120);
+    const title = String(body.title || "")
+      .trim()
+      .slice(0, 120);
     if (title.length < 3) return reply.code(400).send({ ok: false, error: "title_too_short" });
     const description = String(body.description || "").slice(0, 2000);
     const theme = String(body.theme || "").slice(0, 200);
@@ -224,21 +279,36 @@ export default async function flairContestsRoutes(app: FastifyInstance, opts: Op
     for (const d of [submissionOpensAt, submissionClosesAt, voteOpensAt, voteClosesAt]) {
       if (isNaN(d.getTime())) return reply.code(400).send({ ok: false, error: "bad_date" });
     }
-    if (!(submissionOpensAt < submissionClosesAt && submissionClosesAt <= voteOpensAt && voteOpensAt < voteClosesAt)) {
+    if (
+      !(
+        submissionOpensAt < submissionClosesAt &&
+        submissionClosesAt <= voteOpensAt &&
+        voteOpensAt < voteClosesAt
+      )
+    ) {
       return reply.code(400).send({ ok: false, error: "bad_date_order" });
     }
 
     const contest = await (prisma as any).flairContest.create({
       data: {
-        lobbyId, title, description, theme, kind,
+        lobbyId,
+        title,
+        description,
+        theme,
+        kind,
         status: "SUBMISSIONS",
-        submissionOpensAt, submissionClosesAt, voteOpensAt, voteClosesAt,
+        submissionOpensAt,
+        submissionClosesAt,
+        voteOpensAt,
+        voteClosesAt,
         createdById: u.id,
       },
     });
 
     if (broadcastToLobby && lobbyId) {
-      try { broadcastToLobby(lobbyId, { type: "flair-contest:created", contestId: contest.id, title }); } catch {}
+      try {
+        broadcastToLobby(lobbyId, { type: "flair-contest:created", contestId: contest.id, title });
+      } catch {}
     }
 
     return reply.send({ ok: true, contest });
@@ -250,7 +320,8 @@ export default async function flairContestsRoutes(app: FastifyInstance, opts: Op
     const id = String((req as any).params?.id || "");
     const c = await (prisma as any).flairContest.findUnique({ where: { id } });
     if (!c) return reply.code(404).send({ ok: false, error: "not_found" });
-    if (!(await canManageContest(u.id, c))) return reply.code(403).send({ ok: false, error: "forbidden" });
+    if (!(await canManageContest(u.id, c)))
+      return reply.code(403).send({ ok: false, error: "forbidden" });
 
     const body: any = (req as any).body || {};
     const data: any = {};
@@ -259,9 +330,11 @@ export default async function flairContestsRoutes(app: FastifyInstance, opts: Op
       if (t.length < 3) return reply.code(400).send({ ok: false, error: "title_too_short" });
       data.title = t;
     }
-    if (typeof body.description === "string") data.description = String(body.description).slice(0, 2000);
+    if (typeof body.description === "string")
+      data.description = String(body.description).slice(0, 2000);
     if (typeof body.theme === "string") data.theme = String(body.theme).slice(0, 200);
-    if (typeof body.status === "string" && VALID_STATUSES.has(body.status)) data.status = body.status;
+    if (typeof body.status === "string" && VALID_STATUSES.has(body.status))
+      data.status = body.status;
     for (const k of ["submissionOpensAt", "submissionClosesAt", "voteOpensAt", "voteClosesAt"]) {
       if (body[k]) {
         const d = new Date(body[k]);
@@ -289,10 +362,14 @@ export default async function flairContestsRoutes(app: FastifyInstance, opts: Op
       include: { _count: { select: { submissions: true } } },
     });
     if (!c) return reply.code(404).send({ ok: false, error: "not_found" });
-    if (!(await canManageContest(u.id, c))) return reply.code(403).send({ ok: false, error: "forbidden" });
+    if (!(await canManageContest(u.id, c)))
+      return reply.code(403).send({ ok: false, error: "forbidden" });
 
     if (c._count.submissions > 0) {
-      const updated = await (prisma as any).flairContest.update({ where: { id }, data: { status: "CANCELED" } });
+      const updated = await (prisma as any).flairContest.update({
+        where: { id },
+        data: { status: "CANCELED" },
+      });
       return reply.send({ ok: true, canceled: true, contest: updated });
     }
     await (prisma as any).flairContest.delete({ where: { id } });
@@ -305,8 +382,10 @@ export default async function flairContestsRoutes(app: FastifyInstance, opts: Op
     const id = String((req as any).params?.id || "");
     const c = await (prisma as any).flairContest.findUnique({ where: { id } });
     if (!c) return reply.code(404).send({ ok: false, error: "not_found" });
-    if (c.status !== "SUBMISSIONS") return reply.code(400).send({ ok: false, error: "submissions_closed" });
-    if (new Date() > new Date(c.submissionClosesAt)) return reply.code(400).send({ ok: false, error: "submissions_closed" });
+    if (c.status !== "SUBMISSIONS")
+      return reply.code(400).send({ ok: false, error: "submissions_closed" });
+    if (new Date() > new Date(c.submissionClosesAt))
+      return reply.code(400).send({ ok: false, error: "submissions_closed" });
 
     const body: any = (req as any).body || {};
     const caption = String(body.caption || "").slice(0, 280);
@@ -317,11 +396,17 @@ export default async function flairContestsRoutes(app: FastifyInstance, opts: Op
       return reply.code(400).send({ ok: false, error: "image_too_large" });
     }
 
-    let processed: { url: string; filename: string; dominantColor: string; width: number; height: number };
+    let processed: {
+      url: string;
+      filename: string;
+      dominantColor: string;
+      width: number;
+      height: number;
+    };
     try {
       processed = await processSubmissionImage(decoded.buffer, u.id, id);
     } catch (e: any) {
-      console.error("[flair-contests] image processing failed:", e?.message || e);
+      log.error("[flair-contests] image processing failed:", e?.message || e);
       return reply.code(400).send({ ok: false, error: "image_processing_failed" });
     }
 
@@ -333,7 +418,9 @@ export default async function flairContestsRoutes(app: FastifyInstance, opts: Op
     if (existing) {
       const oldName = filenameFromUrl(existing.imageUrl);
       if (oldName) {
-        try { unlinkSync(join(FLAIR_DIR, oldName)); } catch {}
+        try {
+          unlinkSync(join(FLAIR_DIR, oldName));
+        } catch {}
       }
       submission = await (prisma as any).flairSubmission.update({
         where: { id: existing.id },
@@ -346,7 +433,14 @@ export default async function flairContestsRoutes(app: FastifyInstance, opts: Op
     }
 
     if (broadcastToLobby && c.lobbyId) {
-      try { broadcastToLobby(c.lobbyId, { type: "flair-contest:submission", contestId: id, submissionId: submission.id, userId: u.id }); } catch {}
+      try {
+        broadcastToLobby(c.lobbyId, {
+          type: "flair-contest:submission",
+          contestId: id,
+          submissionId: submission.id,
+          userId: u.id,
+        });
+      } catch {}
     }
 
     return reply.send({ ok: true, submission });
@@ -359,7 +453,8 @@ export default async function flairContestsRoutes(app: FastifyInstance, opts: Op
     const sid = String((req as any).params?.submissionId || "");
     const c = await (prisma as any).flairContest.findUnique({ where: { id } });
     if (!c) return reply.code(404).send({ ok: false, error: "not_found" });
-    if (c.status !== "SUBMISSIONS") return reply.code(400).send({ ok: false, error: "submissions_closed" });
+    if (c.status !== "SUBMISSIONS")
+      return reply.code(400).send({ ok: false, error: "submissions_closed" });
     const s = await (prisma as any).flairSubmission.findUnique({ where: { id: sid } });
     if (!s || s.contestId !== id) return reply.code(404).send({ ok: false, error: "not_found" });
     const isAuthor = s.userId === u.id;
@@ -368,7 +463,9 @@ export default async function flairContestsRoutes(app: FastifyInstance, opts: Op
 
     const oldName = filenameFromUrl(s.imageUrl);
     if (oldName) {
-      try { unlinkSync(join(FLAIR_DIR, oldName)); } catch {}
+      try {
+        unlinkSync(join(FLAIR_DIR, oldName));
+      } catch {}
     }
     await (prisma as any).flairSubmission.delete({ where: { id: sid } });
     return reply.send({ ok: true });
@@ -384,8 +481,11 @@ export default async function flairContestsRoutes(app: FastifyInstance, opts: Op
 
     const body: any = (req as any).body || {};
     const submissionId = String(body.submissionId || "");
-    const target = await (prisma as any).flairSubmission.findUnique({ where: { id: submissionId } });
-    if (!target || target.contestId !== id) return reply.code(404).send({ ok: false, error: "submission_not_found" });
+    const target = await (prisma as any).flairSubmission.findUnique({
+      where: { id: submissionId },
+    });
+    if (!target || target.contestId !== id)
+      return reply.code(404).send({ ok: false, error: "submission_not_found" });
 
     const existing = await (prisma as any).flairVote.findUnique({
       where: { contestId_voterId: { contestId: id, voterId: u.id } },
@@ -452,9 +552,11 @@ export default async function flairContestsRoutes(app: FastifyInstance, opts: Op
     const id = String((req as any).params?.id || "");
     const c = await (prisma as any).flairContest.findUnique({ where: { id } });
     if (!c) return reply.code(404).send({ ok: false, error: "not_found" });
-    if (!(await canManageContest(u.id, c))) return reply.code(403).send({ ok: false, error: "forbidden" });
+    if (!(await canManageContest(u.id, c)))
+      return reply.code(403).send({ ok: false, error: "forbidden" });
     if (c.status !== "VOTING") return reply.code(400).send({ ok: false, error: "not_in_voting" });
-    if (new Date() < new Date(c.voteClosesAt)) return reply.code(400).send({ ok: false, error: "voting_still_open" });
+    if (new Date() < new Date(c.voteClosesAt))
+      return reply.code(400).send({ ok: false, error: "voting_still_open" });
 
     const result = await finalizeContest(id);
     if (!result.ok) return reply.code(400).send({ ok: false, error: result.error });
@@ -472,9 +574,9 @@ export default async function flairContestsRoutes(app: FastifyInstance, opts: Op
     return reply.send(data);
   });
 
-  async function finalizeContest(contestId: string): Promise<
-    { ok: true; contest: any; rewardFlair: any } | { ok: false; error: string }
-  > {
+  async function finalizeContest(
+    contestId: string,
+  ): Promise<{ ok: true; contest: any; rewardFlair: any } | { ok: false; error: string }> {
     const c = await (prisma as any).flairContest.findUnique({ where: { id: contestId } });
     if (!c) return { ok: false, error: "not_found" };
     if (c.status !== "VOTING") return { ok: false, error: "not_in_voting" };
@@ -485,12 +587,18 @@ export default async function flairContestsRoutes(app: FastifyInstance, opts: Op
     });
 
     if (submissions.length === 0) {
-      const updated = await (prisma as any).flairContest.update({ where: { id: contestId }, data: { status: "CANCELED" } });
+      const updated = await (prisma as any).flairContest.update({
+        where: { id: contestId },
+        data: { status: "CANCELED" },
+      });
       return { ok: true, contest: updated, rewardFlair: null };
     }
 
     const winner = submissions[0];
-    const winnerUser = await prisma.user.findUnique({ where: { id: winner.userId }, select: { id: true, name: true } });
+    const winnerUser = await prisma.user.findUnique({
+      where: { id: winner.userId },
+      select: { id: true, name: true },
+    });
 
     let rewardFlair: any = null;
     try {
@@ -507,7 +615,7 @@ export default async function flairContestsRoutes(app: FastifyInstance, opts: Op
       });
       await grantFlairToUser(prisma as any, winner.userId, rewardFlair.id, `contest:${contestId}`);
     } catch (e: any) {
-      console.error("[flair-contests] mint/grant failed:", e?.message || e);
+      log.error("[flair-contests] mint/grant failed:", e?.message || e);
     }
 
     const updated = await (prisma as any).flairContest.update({
@@ -525,7 +633,9 @@ export default async function flairContestsRoutes(app: FastifyInstance, opts: Op
           userId: winnerUser.id,
           type: "flair_contest_won",
           title: `You won "${c.title}"`,
-          body: rewardFlair ? "Your design was minted as flair and added to your inventory." : "Your design won the contest.",
+          body: rewardFlair
+            ? "Your design was minted as flair and added to your inventory."
+            : "Your design won the contest.",
           actionUrl: c.lobbyId ? `/lobby/${c.lobbyId}` : "/",
           meta: { contestId, submissionId: winner.id, flairItemId: rewardFlair?.id ?? null },
         });
@@ -533,7 +643,13 @@ export default async function flairContestsRoutes(app: FastifyInstance, opts: Op
     }
 
     if (broadcastToLobby && c.lobbyId) {
-      try { broadcastToLobby(c.lobbyId, { type: "flair-contest:completed", contestId, winnerUserId: winner.userId }); } catch {}
+      try {
+        broadcastToLobby(c.lobbyId, {
+          type: "flair-contest:completed",
+          contestId,
+          winnerUserId: winner.userId,
+        });
+      } catch {}
     }
 
     return { ok: true, contest: updated, rewardFlair };
@@ -542,12 +658,15 @@ export default async function flairContestsRoutes(app: FastifyInstance, opts: Op
   (opts as any).__finalizeContest = finalizeContest;
 }
 
-export async function tickContestStates(prismaClient: any, opts: {
-  mintFlairItem: typeof mintFlairItem;
-  grantFlairToUser: typeof grantFlairToUser;
-  createNotification?: (o: any) => Promise<any>;
-  broadcastToLobby?: (lobbyId: string, event: any) => void;
-}) {
+export async function tickContestStates(
+  prismaClient: any,
+  opts: {
+    mintFlairItem: typeof mintFlairItem;
+    grantFlairToUser: typeof grantFlairToUser;
+    createNotification?: (o: any) => Promise<any>;
+    broadcastToLobby?: (lobbyId: string, event: any) => void;
+  },
+) {
   const now = new Date();
   try {
     const ready = await prismaClient.flairContest.findMany({
@@ -558,14 +677,19 @@ export async function tickContestStates(prismaClient: any, opts: {
       try {
         await prismaClient.flairContest.update({ where: { id: c.id }, data: { status: "VOTING" } });
         if (opts.broadcastToLobby && c.lobbyId) {
-          try { opts.broadcastToLobby(c.lobbyId, { type: "flair-contest:voting-open", contestId: c.id }); } catch {}
+          try {
+            opts.broadcastToLobby(c.lobbyId, {
+              type: "flair-contest:voting-open",
+              contestId: c.id,
+            });
+          } catch {}
         }
       } catch (e: any) {
-        console.error("[flair-contests] tick submissions→voting failed:", c.id, e?.message || e);
+        log.error("[flair-contests] tick submissions→voting failed:", c.id, e?.message || e);
       }
     }
   } catch (e: any) {
-    console.error("[flair-contests] tick query (submissions) failed:", e?.message || e);
+    log.error("[flair-contests] tick query (submissions) failed:", e?.message || e);
   }
 
   try {
@@ -580,11 +704,17 @@ export async function tickContestStates(prismaClient: any, opts: {
           orderBy: [{ voteCount: "desc" }, { createdAt: "asc" }],
         });
         if (subs.length === 0) {
-          await prismaClient.flairContest.update({ where: { id: c.id }, data: { status: "CANCELED" } });
+          await prismaClient.flairContest.update({
+            where: { id: c.id },
+            data: { status: "CANCELED" },
+          });
           continue;
         }
         const winner = subs[0];
-        const winnerUser = await prismaClient.user.findUnique({ where: { id: winner.userId }, select: { id: true, name: true } });
+        const winnerUser = await prismaClient.user.findUnique({
+          where: { id: winner.userId },
+          select: { id: true, name: true },
+        });
         let rewardFlair: any = null;
         try {
           rewardFlair = await opts.mintFlairItem(prismaClient, {
@@ -598,9 +728,14 @@ export async function tickContestStates(prismaClient: any, opts: {
             sourceRefId: c.id,
             createdById: winner.userId,
           });
-          await opts.grantFlairToUser(prismaClient, winner.userId, rewardFlair.id, `contest:${c.id}`);
+          await opts.grantFlairToUser(
+            prismaClient,
+            winner.userId,
+            rewardFlair.id,
+            `contest:${c.id}`,
+          );
         } catch (e: any) {
-          console.error("[flair-contests] tick mint/grant failed:", c.id, e?.message || e);
+          log.error("[flair-contests] tick mint/grant failed:", c.id, e?.message || e);
         }
         await prismaClient.flairContest.update({
           where: { id: c.id },
@@ -616,34 +751,51 @@ export async function tickContestStates(prismaClient: any, opts: {
               userId: winnerUser.id,
               type: "flair_contest_won",
               title: `You won "${c.title}"`,
-              body: rewardFlair ? "Your design was minted as flair and added to your inventory." : "Your design won the contest.",
+              body: rewardFlair
+                ? "Your design was minted as flair and added to your inventory."
+                : "Your design won the contest.",
               actionUrl: c.lobbyId ? `/lobby/${c.lobbyId}` : "/",
-              meta: { contestId: c.id, submissionId: winner.id, flairItemId: rewardFlair?.id ?? null },
+              meta: {
+                contestId: c.id,
+                submissionId: winner.id,
+                flairItemId: rewardFlair?.id ?? null,
+              },
             });
           } catch {}
         }
         if (opts.broadcastToLobby && c.lobbyId) {
-          try { opts.broadcastToLobby(c.lobbyId, { type: "flair-contest:completed", contestId: c.id, winnerUserId: winner.userId }); } catch {}
+          try {
+            opts.broadcastToLobby(c.lobbyId, {
+              type: "flair-contest:completed",
+              contestId: c.id,
+              winnerUserId: winner.userId,
+            });
+          } catch {}
         }
       } catch (e: any) {
-        console.error("[flair-contests] tick voting→completed failed:", c.id, e?.message || e);
+        log.error("[flair-contests] tick voting→completed failed:", c.id, e?.message || e);
       }
     }
   } catch (e: any) {
-    console.error("[flair-contests] tick query (voting) failed:", e?.message || e);
+    log.error("[flair-contests] tick query (voting) failed:", e?.message || e);
   }
 }
 
-export function startFlairContestTick(prismaClient: any, opts: {
-  mintFlairItem: typeof mintFlairItem;
-  grantFlairToUser: typeof grantFlairToUser;
-  createNotification?: (o: any) => Promise<any>;
-  broadcastToLobby?: (lobbyId: string, event: any) => void;
-  intervalMs?: number;
-}): { stop: () => void } {
+export function startFlairContestTick(
+  prismaClient: any,
+  opts: {
+    mintFlairItem: typeof mintFlairItem;
+    grantFlairToUser: typeof grantFlairToUser;
+    createNotification?: (o: any) => Promise<any>;
+    broadcastToLobby?: (lobbyId: string, event: any) => void;
+    intervalMs?: number;
+  },
+): { stop: () => void } {
   const interval = opts.intervalMs || 60_000;
   const t = setInterval(() => {
-    tickContestStates(prismaClient, opts).catch((e) => console.error("[flair-contests] tick error:", e?.message || e));
+    tickContestStates(prismaClient, opts).catch((e) =>
+      log.error("[flair-contests] tick error:", e?.message || e),
+    );
   }, interval);
   tickContestStates(prismaClient, opts).catch(() => {});
   return { stop: () => clearInterval(t) };

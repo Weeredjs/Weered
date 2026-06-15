@@ -1,18 +1,19 @@
+import { log } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 import { fetchWithTimeout } from "../lib/fetchWithTimeout";
 import { prisma } from "../lib/prisma";
 import crypto from "node:crypto";
 
-const POE_CLIENT_ID     = process.env.POE_CLIENT_ID     || "";
+const POE_CLIENT_ID = process.env.POE_CLIENT_ID || "";
 const POE_CLIENT_SECRET = process.env.POE_CLIENT_SECRET || "";
-const POE_CONTACT       = process.env.POE_CONTACT_EMAIL || "oauth@weered.ca";
-const SITE_URL          = process.env.SITE_URL          || "https://weered.ca";
-const API_URL           = process.env.API_URL           || "https://api.weered.ca";
+const POE_CONTACT = process.env.POE_CONTACT_EMAIL || "oauth@weered.ca";
+const SITE_URL = process.env.SITE_URL || "https://weered.ca";
+const API_URL = process.env.API_URL || "https://api.weered.ca";
 
 const OAUTH_AUTHORIZE = "https://www.pathofexile.com/oauth/authorize";
-const OAUTH_TOKEN     = "https://www.pathofexile.com/oauth/token";
-const POE_API         = "https://api.pathofexile.com";
-const POE_REDIRECT      = process.env.POE_REDIRECT_URI || "https://weered.ca/auth/poe/callback";
+const OAUTH_TOKEN = "https://www.pathofexile.com/oauth/token";
+const POE_API = "https://api.pathofexile.com";
+const POE_REDIRECT = process.env.POE_REDIRECT_URI || "https://weered.ca/auth/poe/callback";
 
 const POE_SCOPES = "account:characters";
 
@@ -21,26 +22,40 @@ function userAgent(): string {
   return `OAuth ${id}/1.0.0 (contact: ${POE_CONTACT})`;
 }
 
-function b64url(buf: Buffer): string { return buf.toString("base64url"); }
+function b64url(buf: Buffer): string {
+  return buf.toString("base64url");
+}
 
 async function poeAuthedGet<T = any>(path: string, token: string): Promise<T | null> {
   try {
     const r = await fetchWithTimeout(`${POE_API}${path}`, {
-      headers: { Authorization: `Bearer ${token}`, "User-Agent": userAgent(), Accept: "application/json" },
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "User-Agent": userAgent(),
+        Accept: "application/json",
+      },
     });
     if (!r.ok) return null;
     return (await r.json()) as T;
-  } catch { return null; }
+  } catch {
+    return null;
+  }
 }
 
 async function poeFetch(path: string, token: string): Promise<{ status: number; body: any }> {
   try {
     const r = await fetchWithTimeout(`${POE_API}${path}`, {
-      headers: { Authorization: `Bearer ${token}`, "User-Agent": userAgent(), Accept: "application/json" },
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "User-Agent": userAgent(),
+        Accept: "application/json",
+      },
     });
     const body = await r.json().catch(() => null);
     return { status: r.status, body };
-  } catch { return { status: 0, body: null }; }
+  } catch {
+    return { status: 0, body: null };
+  }
 }
 
 async function ensureToken(acct: any): Promise<string | null> {
@@ -57,7 +72,11 @@ async function ensureToken(acct: any): Promise<string | null> {
     });
     const r = await fetchWithTimeout(OAUTH_TOKEN, {
       method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded", "User-Agent": userAgent(), Accept: "application/json" },
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        "User-Agent": userAgent(),
+        Accept: "application/json",
+      },
       body: form.toString(),
     });
     const t: any = await r.json().catch(() => ({}));
@@ -71,7 +90,9 @@ async function ensureToken(acct: any): Promise<string | null> {
       },
     });
     return t.access_token;
-  } catch { return acct.accessToken || null; }
+  } catch {
+    return acct.accessToken || null;
+  }
 }
 
 const pkceStore = new Map<string, { userId: string; verifier: string; exp: number }>();
@@ -96,12 +117,18 @@ async function getAppToken(): Promise<string | null> {
   if (!POE_CLIENT_ID || !POE_CLIENT_SECRET) return null;
   try {
     const form = new URLSearchParams({
-      client_id: POE_CLIENT_ID, client_secret: POE_CLIENT_SECRET,
-      grant_type: "client_credentials", scope: POE_SERVICE_SCOPES,
+      client_id: POE_CLIENT_ID,
+      client_secret: POE_CLIENT_SECRET,
+      grant_type: "client_credentials",
+      scope: POE_SERVICE_SCOPES,
     });
     const r = await fetchWithTimeout(OAUTH_TOKEN, {
       method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded", "User-Agent": userAgent(), Accept: "application/json" },
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        "User-Agent": userAgent(),
+        Accept: "application/json",
+      },
       body: form.toString(),
     });
     const t: any = await r.json().catch(() => ({}));
@@ -109,7 +136,9 @@ async function getAppToken(): Promise<string | null> {
     const ttlMs = (typeof t.expires_in === "number" ? t.expires_in : 3000) * 1000;
     _appToken = { token: t.access_token, exp: Date.now() + Math.max(60_000, ttlMs - 60_000) };
     return t.access_token;
-  } catch { return null; }
+  } catch {
+    return null;
+  }
 }
 
 async function serviceGet(path: string): Promise<{ status: number; body: any }> {
@@ -117,20 +146,31 @@ async function serviceGet(path: string): Promise<{ status: number; body: any }> 
   if (!token) return { status: 0, body: null };
   try {
     const r = await fetchWithTimeout(`${POE_API}${path}`, {
-      headers: { Authorization: `Bearer ${token}`, "User-Agent": userAgent(), Accept: "application/json" },
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "User-Agent": userAgent(),
+        Accept: "application/json",
+      },
     });
     const body = await r.json().catch(() => null);
     return { status: r.status, body };
-  } catch { return { status: 0, body: null }; }
+  } catch {
+    return { status: 0, body: null };
+  }
 }
 
 let _leaguesCache: { data: any[]; exp: number } | null = null;
 const _ladderCache = new Map<string, { data: any; exp: number }>();
 const _cxCache = new Map<string, { data: any; exp: number }>();
-let _cxStatic: { map: Record<string, { name: string; icon: string; cat: string }>; exp: number } | null = null;
+let _cxStatic: {
+  map: Record<string, { name: string; icon: string; cat: string }>;
+  exp: number;
+} | null = null;
 
 // GGG public trade static data: maps currency codes (chaos/divine/...) -> name + icon.
-async function currencyStatic(): Promise<Record<string, { name: string; icon: string; cat: string }>> {
+async function currencyStatic(): Promise<
+  Record<string, { name: string; icon: string; cat: string }>
+> {
   if (_cxStatic && _cxStatic.exp > Date.now()) return _cxStatic.map;
   const map: Record<string, { name: string; icon: string; cat: string }> = {};
   try {
@@ -138,13 +178,18 @@ async function currencyStatic(): Promise<Record<string, { name: string; icon: st
       headers: { "User-Agent": userAgent(), Accept: "application/json" },
     });
     const j: any = await r.json().catch(() => null);
-    for (const cat of (j?.result || [])) {
-      for (const e of (cat.entries || [])) {
+    for (const cat of j?.result || []) {
+      for (const e of cat.entries || []) {
         if (e && e.id && e.text) {
           // Divination cards carry no image in trade-static; fall back to the card back.
           const isCard = cat.id === "Cards";
-          let img = e.image ? (String(e.image).startsWith("http") ? String(e.image) : "https://web.poecdn.com" + e.image) : "";
-          if (!img && isCard) img = "https://web.poecdn.com/image/Art/2DItems/Divination/InventoryIcon.png";
+          let img = e.image
+            ? String(e.image).startsWith("http")
+              ? String(e.image)
+              : "https://web.poecdn.com" + e.image
+            : "";
+          if (!img && isCard)
+            img = "https://web.poecdn.com/image/Art/2DItems/Divination/InventoryIcon.png";
           map[e.id] = { name: e.text, icon: img, cat: cat.id };
         }
       }
@@ -158,18 +203,26 @@ async function currencyStatic(): Promise<Record<string, { name: string; icon: st
 // Node placement uses GGG's orbit geometry. Most orbits are evenly spaced; the
 // 16- and 40-skill orbits use fixed angle tables (same as Path of Building).
 const ANGLES_16 = [0, 30, 45, 60, 90, 120, 135, 150, 180, 210, 225, 240, 270, 300, 315, 330];
-const ANGLES_40 = [0, 10, 20, 30, 40, 45, 50, 60, 70, 80, 90, 100, 110, 120, 130, 135, 140, 150, 160, 170, 180, 190, 200, 210, 220, 225, 230, 240, 250, 260, 270, 280, 290, 300, 310, 315, 320, 330, 340, 350];
+const ANGLES_40 = [
+  0, 10, 20, 30, 40, 45, 50, 60, 70, 80, 90, 100, 110, 120, 130, 135, 140, 150, 160, 170, 180, 190,
+  200, 210, 220, 225, 230, 240, 250, 260, 270, 280, 290, 300, 310, 315, 320, 330, 340, 350,
+];
 let _treeCache: { data: any; exp: number } | null = null;
 
 async function buildPassiveTree(): Promise<any> {
   if (_treeCache && _treeCache.exp > Date.now()) return _treeCache.data;
-  const r = await fetchWithTimeout("https://raw.githubusercontent.com/grindinggear/skilltree-export/master/data.json", {
-    headers: { "User-Agent": userAgent(), Accept: "application/json" },
-  });
+  const r = await fetchWithTimeout(
+    "https://raw.githubusercontent.com/grindinggear/skilltree-export/master/data.json",
+    {
+      headers: { "User-Agent": userAgent(), Accept: "application/json" },
+    },
+  );
   const t: any = await r.json();
   const groups = t.groups || {};
   const spo: number[] = (t.constants && t.constants.skillsPerOrbit) || [1, 6, 16, 16, 40, 72, 72];
-  const radii: number[] = (t.constants && t.constants.orbitRadii) || [0, 82, 162, 335, 493, 662, 846];
+  const radii: number[] = (t.constants && t.constants.orbitRadii) || [
+    0, 82, 162, 335, 493, 662, 846,
+  ];
   const rad = (deg: number) => (deg * Math.PI) / 180;
   const nodeAngle = (orbit: number, idx: number) => {
     const n = spo[orbit] || 1;
@@ -181,7 +234,10 @@ async function buildPassiveTree(): Promise<any> {
   };
 
   const nodes: any[] = [];
-  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  let minX = Infinity,
+    minY = Infinity,
+    maxX = -Infinity,
+    maxY = -Infinity;
   for (const nid of Object.keys(t.nodes)) {
     if (nid === "root") continue;
     const n: any = t.nodes[nid];
@@ -189,7 +245,8 @@ async function buildPassiveTree(): Promise<any> {
     const icon: string = n.icon || "";
     if (icon.indexOf("Atlas") !== -1) continue; // drop atlas-tree nodes
     if (n.group == null || n.orbit == null) continue;
-    const g = groups[n.group]; if (!g) continue;
+    const g = groups[n.group];
+    if (!g) continue;
     const a = nodeAngle(n.orbit, n.orbitIndex || 0);
     const x = g.x + radii[n.orbit] * Math.sin(a);
     const y = g.y - radii[n.orbit] * Math.cos(a);
@@ -202,22 +259,35 @@ async function buildPassiveTree(): Promise<any> {
     if (n.classStartIndex != null) kind = 5;
 
     const node: any = {
-      h: Number(nid), x: Math.round(x), y: Math.round(y), k: kind,
-      n: n.name || "", st: n.stats || [], ic: n.icon || "",
+      h: Number(nid),
+      x: Math.round(x),
+      y: Math.round(y),
+      k: kind,
+      n: n.name || "",
+      st: n.stats || [],
+      ic: n.icon || "",
       o: (n.out || []).map((z: string) => Number(z)),
-      gi: n.group, ob: n.orbit, cx: Math.round(g.x), cy: Math.round(g.y),
+      gi: n.group,
+      ob: n.orbit,
+      cx: Math.round(g.x),
+      cy: Math.round(g.y),
       ang: Math.round((a - Math.PI / 2) * 1000) / 1000,
     };
     if (n.ascendancyName) node.asc = n.ascendancyName;
     if (n.classStartIndex != null) node.cls = n.classStartIndex;
     nodes.push(node);
     if (!n.ascendancyName && n.classStartIndex == null) {
-      if (x < minX) minX = x; if (y < minY) minY = y; if (x > maxX) maxX = x; if (y > maxY) maxY = y;
+      if (x < minX) minX = x;
+      if (y < minY) minY = y;
+      if (x > maxX) maxX = x;
+      if (y > maxY) maxY = y;
     }
   }
 
   const classes = (t.classes || []).map((c: any, i: number) => ({
-    i, name: c.name, base: c.base_str != null ? undefined : undefined,
+    i,
+    name: c.name,
+    base: c.base_str != null ? undefined : undefined,
     ascendancies: (c.ascendancies || []).map((a: any) => a.name),
   }));
 
@@ -225,10 +295,14 @@ async function buildPassiveTree(): Promise<any> {
   const Z = "0.5";
   const sp = t.sprites || {};
   const mergeSprite = (...grps: string[]) => {
-    let url = ""; const coords: any = {};
+    let url = "";
+    const coords: any = {};
     for (const g of grps) {
       const lv = sp[g] && sp[g][Z];
-      if (lv) { if (lv.filename) url = lv.filename; Object.assign(coords, lv.coords || {}); }
+      if (lv) {
+        if (lv.filename) url = lv.filename;
+        Object.assign(coords, lv.coords || {});
+      }
     }
     return { url, coords };
   };
@@ -242,7 +316,12 @@ async function buildPassiveTree(): Promise<any> {
 
   const data = {
     nodes,
-    bounds: { minX: Math.round(minX), minY: Math.round(minY), maxX: Math.round(maxX), maxY: Math.round(maxY) },
+    bounds: {
+      minX: Math.round(minX),
+      minY: Math.round(minY),
+      maxX: Math.round(maxX),
+      maxY: Math.round(maxY),
+    },
     classes,
     sprites,
     orbitRadii: radii,
@@ -264,7 +343,8 @@ export default async function poeRoutes(app: FastifyInstance, opts: Opts) {
   app.get("/auth/poe", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization || (req as any).query?.token);
     if (!u) return reply.code(401).send({ error: "unauthorized" });
-    if (!POE_CLIENT_ID || !POE_CLIENT_SECRET) return reply.code(500).send({ error: "PoE OAuth not configured" });
+    if (!POE_CLIENT_ID || !POE_CLIENT_SECRET)
+      return reply.code(500).send({ error: "PoE OAuth not configured" });
 
     const state = b64url(crypto.randomBytes(24));
     const verifier = b64url(crypto.randomBytes(48));
@@ -272,20 +352,21 @@ export default async function poeRoutes(app: FastifyInstance, opts: Opts) {
     putPkce(state, u.id, verifier);
 
     const redirectUri = POE_REDIRECT;
-    const url = `${OAUTH_AUTHORIZE}?client_id=${encodeURIComponent(POE_CLIENT_ID)}`
-      + `&response_type=code`
-      + `&scope=${encodeURIComponent(POE_SCOPES)}`
-      + `&state=${encodeURIComponent(state)}`
-      + `&redirect_uri=${encodeURIComponent(redirectUri)}`
-      + `&code_challenge=${encodeURIComponent(challenge)}`
-      + `&code_challenge_method=S256`;
+    const url =
+      `${OAUTH_AUTHORIZE}?client_id=${encodeURIComponent(POE_CLIENT_ID)}` +
+      `&response_type=code` +
+      `&scope=${encodeURIComponent(POE_SCOPES)}` +
+      `&state=${encodeURIComponent(state)}` +
+      `&redirect_uri=${encodeURIComponent(redirectUri)}` +
+      `&code_challenge=${encodeURIComponent(challenge)}` +
+      `&code_challenge_method=S256`;
     return reply.redirect(url);
   });
 
   app.get("/auth/poe/callback", async (req, reply) => {
-    const code  = String((req as any).query?.code  || "");
+    const code = String((req as any).query?.code || "");
     const state = String((req as any).query?.state || "");
-    const err   = String((req as any).query?.error || "");
+    const err = String((req as any).query?.error || "");
     if (err) return reply.redirect(`${SITE_URL}/lobby/poe?poe=denied`);
     const pk = takePkce(state);
     if (!pk || !code) return reply.redirect(`${SITE_URL}/lobby/poe?poe=error`);
@@ -304,18 +385,22 @@ export default async function poeRoutes(app: FastifyInstance, opts: Opts) {
       });
       const tokenRes = await fetchWithTimeout(OAUTH_TOKEN, {
         method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded", "User-Agent": userAgent(), Accept: "application/json" },
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          "User-Agent": userAgent(),
+          Accept: "application/json",
+        },
         body: form.toString(),
       });
       const tokens: any = await tokenRes.json().catch(() => ({}));
       if (!tokens.access_token) {
-        console.error("[poe oauth] token error", tokens);
+        log.error("[poe oauth] token error", tokens);
         return reply.redirect(`${SITE_URL}/lobby/poe?poe=error`);
       }
 
       const profile: any = await poeAuthedGet("/profile", tokens.access_token);
-      const uuid  = profile?.uuid || tokens.sub || tokens.username || null;
-      const name  = profile?.name || tokens.username || "Exile";
+      const uuid = profile?.uuid || tokens.sub || tokens.username || null;
+      const name = profile?.name || tokens.username || "Exile";
       const realm = profile?.realm || "pc";
       if (!uuid) return reply.redirect(`${SITE_URL}/lobby/poe?poe=profile_error`);
 
@@ -334,7 +419,8 @@ export default async function poeRoutes(app: FastifyInstance, opts: Opts) {
           cardCachedAt: new Date(),
         },
         create: {
-          userId, gameType: "POE",
+          userId,
+          gameType: "POE",
           accessToken: tokens.access_token,
           refreshToken: tokens.refresh_token || null,
           tokenExpiry: tokens.expires_in ? new Date(Date.now() + tokens.expires_in * 1000) : null,
@@ -349,7 +435,7 @@ export default async function poeRoutes(app: FastifyInstance, opts: Opts) {
       awardNotoriety(userId, "POE_LINKED").catch(() => {});
       return reply.redirect(`${SITE_URL}/lobby/poe?poe=success`);
     } catch (e) {
-      console.error("[poe oauth callback]", e);
+      log.error("[poe oauth callback]", e);
       return reply.redirect(`${SITE_URL}/lobby/poe?poe=error`);
     }
   });
@@ -357,15 +443,24 @@ export default async function poeRoutes(app: FastifyInstance, opts: Opts) {
   app.get("/poe/me", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
-    const acct = await prisma.userGameAccount.findFirst({ where: { userId: u.id, gameType: "POE" } });
+    const acct = await prisma.userGameAccount.findFirst({
+      where: { userId: u.id, gameType: "POE" },
+    });
     if (!acct) return reply.send({ ok: true, linked: false });
-    return reply.send({ ok: true, linked: true, account: acct.cardData, cachedAt: acct.cardCachedAt });
+    return reply.send({
+      ok: true,
+      linked: true,
+      account: acct.cardData,
+      cachedAt: acct.cardCachedAt,
+    });
   });
 
   app.get("/poe/me/characters", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
-    const acct = await prisma.userGameAccount.findFirst({ where: { userId: u.id, gameType: "POE" } });
+    const acct = await prisma.userGameAccount.findFirst({
+      where: { userId: u.id, gameType: "POE" },
+    });
     if (!acct) return reply.send({ ok: true, linked: false, characters: [] });
 
     const card: any = acct.cardData || {};
@@ -380,13 +475,20 @@ export default async function poeRoutes(app: FastifyInstance, opts: Opts) {
     for (const realm of ["pc", "xbox", "sony"]) {
       const qs = new URLSearchParams({ accountName, realm }).toString();
       try {
-        const r = await fetchWithTimeout(`https://www.pathofexile.com/character-window/get-characters?${qs}`, {
-          headers: { "User-Agent": userAgent(), Accept: "application/json" },
-        });
+        const r = await fetchWithTimeout(
+          `https://www.pathofexile.com/character-window/get-characters?${qs}`,
+          {
+            headers: { "User-Agent": userAgent(), Accept: "application/json" },
+          },
+        );
         const body: any = await r.json().catch(() => null);
-        if (Array.isArray(body)) { if (body.length) { chars = body; break; } }
-        else if (body?.error?.code === 6) forbidden = true;
-      } catch { }
+        if (Array.isArray(body)) {
+          if (body.length) {
+            chars = body;
+            break;
+          }
+        } else if (body?.error?.code === 6) forbidden = true;
+      } catch {}
     }
 
     if (chars.length === 0) {
@@ -398,12 +500,19 @@ export default async function poeRoutes(app: FastifyInstance, opts: Opts) {
     }
 
     if (chars.length === 0 && forbidden) {
-      return reply.send({ ok: true, linked: true, private: true, characters: card.characters || [] });
+      return reply.send({
+        ok: true,
+        linked: true,
+        private: true,
+        characters: card.characters || [],
+      });
     }
-    await prisma.userGameAccount.update({
-      where: { id: acct.id },
-      data: { cardData: { ...card, characters: chars, charsCachedAt: new Date().toISOString() } },
-    }).catch(() => {});
+    await prisma.userGameAccount
+      .update({
+        where: { id: acct.id },
+        data: { cardData: { ...card, characters: chars, charsCachedAt: new Date().toISOString() } },
+      })
+      .catch(() => {});
     return reply.send({ ok: true, linked: true, characters: chars });
   });
 
@@ -420,7 +529,7 @@ export default async function poeRoutes(app: FastifyInstance, opts: Opts) {
     }
     const { status, body } = await serviceGet("/league?type=main&realm=pc");
     if (status !== 200) return reply.send({ ok: true, leagues: _leaguesCache?.data || [] });
-    const arr: any[] = Array.isArray(body) ? body : (body?.leagues || []);
+    const arr: any[] = Array.isArray(body) ? body : body?.leagues || [];
     const leagues = arr.map((l: any) => ({
       id: l.id,
       realm: l.realm || "pc",
@@ -432,12 +541,21 @@ export default async function poeRoutes(app: FastifyInstance, opts: Opts) {
   });
 
   app.get("/poe/ladder", async (req, reply) => {
-    const league = String(((req as any).query?.league) || "Standard").slice(0, 60);
+    const league = String((req as any).query?.league || "Standard").slice(0, 60);
     const hit = _ladderCache.get(league);
-    if (hit && hit.exp > Date.now()) return reply.send({ ok: true, league, cached: true, ...hit.data });
-    const { status, body } = await serviceGet(`/league/${encodeURIComponent(league)}/ladder?realm=pc&limit=50`);
+    if (hit && hit.exp > Date.now())
+      return reply.send({ ok: true, league, cached: true, ...hit.data });
+    const { status, body } = await serviceGet(
+      `/league/${encodeURIComponent(league)}/ladder?realm=pc&limit=50`,
+    );
     if (status !== 200) {
-      return reply.send({ ok: true, league, total: 0, entries: [], error: status === 404 ? "no_ladder" : "unavailable" });
+      return reply.send({
+        ok: true,
+        league,
+        total: 0,
+        entries: [],
+        error: status === 404 ? "no_ladder" : "unavailable",
+      });
     }
     const entriesRaw: any[] = (body && body.ladder && body.ladder.entries) || [];
     const entries = entriesRaw.map((e: any) => ({
@@ -460,20 +578,28 @@ export default async function poeRoutes(app: FastifyInstance, opts: Opts) {
   // completed hourly digest, normalizes every chaos-paired market to a chaos
   // price + volume, enriches names/icons. Cached 30 min (data is hourly).
   app.get("/poe/economy", async (req, reply) => {
-    const league = String(((req as any).query?.league) || "Standard").slice(0, 60);
+    const league = String((req as any).query?.league || "Standard").slice(0, 60);
     const hit = _cxCache.get(league);
-    if (hit && hit.exp > Date.now()) return reply.send({ ok: true, league, cached: true, ...hit.data });
+    if (hit && hit.exp > Date.now())
+      return reply.send({ ok: true, league, cached: true, ...hit.data });
 
     const baseHour = Math.floor(Date.now() / 3600000) * 3600;
-    let body: any = null, asOf = 0;
+    let body: any = null,
+      asOf = 0;
     for (const h of [baseHour - 3600, baseHour - 7200, baseHour - 10800]) {
       const res = await serviceGet(`/currency-exchange/${h}`);
-      if (res.status === 200 && res.body && res.body.markets) { body = res.body; asOf = h; break; }
+      if (res.status === 200 && res.body && res.body.markets) {
+        body = res.body;
+        asOf = h;
+        break;
+      }
     }
-    if (!body) return reply.send({ ok: true, league, currencies: [], divineChaos: 0, error: "unavailable" });
+    if (!body)
+      return reply.send({ ok: true, league, currencies: [], divineChaos: 0, error: "unavailable" });
 
     const statics = await currencyStatic();
-    const mid = (lo: any, hi: any, k: string) => ((Number(lo && lo[k]) || 0) + (Number(hi && hi[k]) || 0)) / 2;
+    const mid = (lo: any, hi: any, k: string) =>
+      ((Number(lo && lo[k]) || 0) + (Number(hi && hi[k]) || 0)) / 2;
     const byCur: Record<string, { id: string; chaos: number; volume: number }> = {};
     for (const m of body.markets) {
       if (m.league !== league) continue;
@@ -486,18 +612,21 @@ export default async function poeRoutes(app: FastifyInstance, opts: Opts) {
       if (!rc || !ro) continue;
       const chaos = rc / ro;
       const volume = Number(m.volume_traded && m.volume_traded.chaos) || 0;
-      if (!byCur[other] || volume > byCur[other].volume) byCur[other] = { id: other, chaos, volume };
+      if (!byCur[other] || volume > byCur[other].volume)
+        byCur[other] = { id: other, chaos, volume };
     }
     const divineChaos = byCur["divine"] ? byCur["divine"].chaos : 0;
-    const currencies = Object.values(byCur).map((c) => ({
-      id: c.id,
-      name: (statics[c.id] && statics[c.id].name) || (c.id.charAt(0).toUpperCase() + c.id.slice(1)),
-      icon: (statics[c.id] && statics[c.id].icon) || "",
-      chaos: Math.round(c.chaos * 100) / 100,
-      divine: divineChaos ? Math.round((c.chaos / divineChaos) * 1000) / 1000 : null,
-      volume: c.volume,
-      cat: (statics[c.id] && statics[c.id].cat) || "",
-    })).sort((a, b) => b.chaos - a.chaos);
+    const currencies = Object.values(byCur)
+      .map((c) => ({
+        id: c.id,
+        name: (statics[c.id] && statics[c.id].name) || c.id.charAt(0).toUpperCase() + c.id.slice(1),
+        icon: (statics[c.id] && statics[c.id].icon) || "",
+        chaos: Math.round(c.chaos * 100) / 100,
+        divine: divineChaos ? Math.round((c.chaos / divineChaos) * 1000) / 1000 : null,
+        volume: c.volume,
+        cat: (statics[c.id] && statics[c.id].cat) || "",
+      }))
+      .sort((a, b) => b.chaos - a.chaos);
     const data = {
       asOf: new Date(asOf * 1000).toISOString(),
       divineChaos: Math.round(divineChaos * 100) / 100,
@@ -524,7 +653,9 @@ export default async function poeRoutes(app: FastifyInstance, opts: Opts) {
   app.get("/poe/tree/character", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
-    const acct = await prisma.userGameAccount.findFirst({ where: { userId: u.id, gameType: "POE" } });
+    const acct = await prisma.userGameAccount.findFirst({
+      where: { userId: u.id, gameType: "POE" },
+    });
     if (!acct) return reply.send({ ok: false, error: "not linked" });
     const accountName = acct.displayName || "";
     const q: any = (req as any).query || {};
@@ -533,9 +664,12 @@ export default async function poeRoutes(app: FastifyInstance, opts: Opts) {
     if (!name) return reply.send({ ok: false, error: "character required" });
     try {
       const qs = new URLSearchParams({ accountName, character: name, realm }).toString();
-      const r = await fetchWithTimeout(`https://www.pathofexile.com/character-window/get-passive-skills?${qs}`, {
-        headers: { "User-Agent": userAgent(), Accept: "application/json" },
-      });
+      const r = await fetchWithTimeout(
+        `https://www.pathofexile.com/character-window/get-passive-skills?${qs}`,
+        {
+          headers: { "User-Agent": userAgent(), Accept: "application/json" },
+        },
+      );
       if (!r.ok) return reply.send({ ok: false, error: `poe ${r.status}` });
       const pdata: any = await r.json().catch(() => null);
       if (!pdata || pdata.error) return reply.send({ ok: false, error: "unavailable" });
@@ -557,7 +691,9 @@ export default async function poeRoutes(app: FastifyInstance, opts: Opts) {
     const name = String((req as any).query?.name || "");
     const realm = String((req as any).query?.realm || "pc");
     if (!name) return reply.code(400).send({ ok: false, error: "name_required" });
-    const acct = await prisma.userGameAccount.findFirst({ where: { userId: u.id, gameType: "POE" } });
+    const acct = await prisma.userGameAccount.findFirst({
+      where: { userId: u.id, gameType: "POE" },
+    });
     if (!acct) return reply.send({ ok: true, linked: false, items: [] });
     const accountName = acct.displayName || "";
 
@@ -567,11 +703,18 @@ export default async function poeRoutes(app: FastifyInstance, opts: Opts) {
 
     const qs = new URLSearchParams({ accountName, character: name, realm }).toString();
     try {
-      const r = await fetchWithTimeout(`https://www.pathofexile.com/character-window/get-items?${qs}`, {
-        headers: { "User-Agent": userAgent(), Accept: "application/json" },
-      });
+      const r = await fetchWithTimeout(
+        `https://www.pathofexile.com/character-window/get-items?${qs}`,
+        {
+          headers: { "User-Agent": userAgent(), Accept: "application/json" },
+        },
+      );
       if (r.status !== 200) {
-        return reply.send({ ok: true, items: [], error: r.status === 403 ? "private" : "unavailable" });
+        return reply.send({
+          ok: true,
+          items: [],
+          error: r.status === 403 ? "private" : "unavailable",
+        });
       }
       const body: any = await r.json().catch(() => null);
       const items = ((body && body.items) || []).map((it: any) => ({
@@ -586,7 +729,12 @@ export default async function poeRoutes(app: FastifyInstance, opts: Opts) {
         ilvl: it.ilvl ?? null,
       }));
       const data = {
-        character: { name, realm, class: body?.character?.class || "", level: body?.character?.level ?? null },
+        character: {
+          name,
+          realm,
+          class: body?.character?.class || "",
+          level: body?.character?.level ?? null,
+        },
         items,
       };
       _charCache.set(cacheKey, { data, exp: Date.now() + 5 * 60_000 });

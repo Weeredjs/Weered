@@ -1,9 +1,10 @@
+import { log } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 import { fetchWithTimeout } from "../lib/fetchWithTimeout";
 
 export default async function pubgRoutes(app: FastifyInstance) {
   const PUBG_API_BASE = "https://api.pubg.com";
-  const PUBG_API_KEY  = process.env.PUBG_API_KEY || "";
+  const PUBG_API_KEY = process.env.PUBG_API_KEY || "";
   const pubgCache = new Map<string, { data: any; expiresAt: number }>();
 
   function pubgCacheGet(key: string) {
@@ -16,13 +17,22 @@ export default async function pubgRoutes(app: FastifyInstance) {
   }
 
   async function pubgGet(path: string) {
-    if (!PUBG_API_KEY) { console.warn("[pubg] No API key configured"); return null; }
+    if (!PUBG_API_KEY) {
+      log.warn("[pubg] No API key configured");
+      return null;
+    }
     const res = await fetchWithTimeout(`${PUBG_API_BASE}${path}`, {
       headers: { Authorization: `Bearer ${PUBG_API_KEY}`, Accept: "application/vnd.api+json" },
     });
-    if (res.status === 429) { console.warn("[pubg] Rate limited on", path); return null; }
+    if (res.status === 429) {
+      log.warn("[pubg] Rate limited on", path);
+      return null;
+    }
     if (res.status === 404) return null;
-    if (!res.ok) { console.error(`[pubg] ${res.status} — ${path}`); return null; }
+    if (!res.ok) {
+      log.error(`[pubg] ${res.status} — ${path}`);
+      return null;
+    }
     return res.json();
   }
 
@@ -31,7 +41,9 @@ export default async function pubgRoutes(app: FastifyInstance) {
     const cached = pubgCacheGet(cacheKey);
     if (cached) return cached;
     const seasonsData = await pubgGet(`/shards/${shard}/seasons`);
-    const cur = seasonsData?.data?.find((s: any) => s.attributes?.isCurrentSeason) || seasonsData?.data?.[seasonsData.data.length - 1];
+    const cur =
+      seasonsData?.data?.find((s: any) => s.attributes?.isCurrentSeason) ||
+      seasonsData?.data?.[seasonsData.data.length - 1];
     if (!cur?.id) return null;
     pubgCacheSet(cacheKey, cur.id, 60 * 60 * 1000);
     return cur.id;
@@ -47,7 +59,9 @@ export default async function pubgRoutes(app: FastifyInstance) {
     if (cached) return reply.send(cached);
 
     try {
-      const playerData = await pubgGet(`/shards/${platform}/players?filter[playerNames]=${encodeURIComponent(name)}`);
+      const playerData = await pubgGet(
+        `/shards/${platform}/players?filter[playerNames]=${encodeURIComponent(name)}`,
+      );
       if (!playerData?.data?.length) return reply.send({ ok: false, error: "player_not_found" });
 
       const player = playerData.data[0];
@@ -58,11 +72,15 @@ export default async function pubgRoutes(app: FastifyInstance) {
 
       let seasonStats: any = null;
       if (seasonId) {
-        const statsData = await pubgGet(`/shards/${platform}/players/${accountId}/seasons/${seasonId}`);
+        const statsData = await pubgGet(
+          `/shards/${platform}/players/${accountId}/seasons/${seasonId}`,
+        );
         seasonStats = statsData?.data?.attributes?.gameModeStats || null;
       }
 
-      const lifetimeData = await pubgGet(`/shards/${platform}/players/${accountId}/seasons/lifetime`);
+      const lifetimeData = await pubgGet(
+        `/shards/${platform}/players/${accountId}/seasons/lifetime`,
+      );
       const lifetimeStats = lifetimeData?.data?.attributes?.gameModeStats || null;
 
       const weaponData = await pubgGet(`/shards/${platform}/players/${accountId}/weapon_mastery`);
@@ -79,7 +97,7 @@ export default async function pubgRoutes(app: FastifyInstance) {
             level: d.LevelCurrent || 0,
             xp: d.XPTotal || 0,
           }))
-          .filter(w => w.kills > 0)
+          .filter((w) => w.kills > 0)
           .sort((a, b) => b.kills - a.kills)
           .slice(0, 20);
         weaponSummaries.push(...sorted);
@@ -89,9 +107,13 @@ export default async function pubgRoutes(app: FastifyInstance) {
         if (!stats?.[mode]) return null;
         const s = stats[mode];
         return {
-          wins: s.wins || 0, kills: s.kills || 0, assists: s.assists || 0,
-          losses: s.losses || 0, rounds: s.roundsPlayed || 0,
-          top10s: s.top10s || 0, kd: s.roundsPlayed > 0 ? +(s.kills / Math.max(s.roundsPlayed - s.wins, 1)).toFixed(2) : 0,
+          wins: s.wins || 0,
+          kills: s.kills || 0,
+          assists: s.assists || 0,
+          losses: s.losses || 0,
+          rounds: s.roundsPlayed || 0,
+          top10s: s.top10s || 0,
+          kd: s.roundsPlayed > 0 ? +(s.kills / Math.max(s.roundsPlayed - s.wins, 1)).toFixed(2) : 0,
           avgDmg: s.roundsPlayed > 0 ? Math.round(s.damageDealt / s.roundsPlayed) : 0,
           longestKill: Math.round(s.longestKill || 0),
           headshotKills: s.headshotKills || 0,
@@ -108,7 +130,9 @@ export default async function pubgRoutes(app: FastifyInstance) {
         season: seasonId ? { id: seasonId, name: seasonId } : null,
         stats: { season: {} as any, lifetime: {} as any },
         weapons: weaponSummaries,
-        recentMatchIds: (player.relationships?.matches?.data || []).slice(0, 5).map((m: any) => m.id),
+        recentMatchIds: (player.relationships?.matches?.data || [])
+          .slice(0, 5)
+          .map((m: any) => m.id),
       };
 
       for (const mode of MODES) {
@@ -119,7 +143,7 @@ export default async function pubgRoutes(app: FastifyInstance) {
       pubgCacheSet(cacheKey, result, 10 * 60 * 1000);
       return reply.send(result);
     } catch (e) {
-      console.error("[pubg/stats]", e);
+      log.error("[pubg/stats]", e);
       return reply.send({ ok: false, error: "stats_fetch_failed" });
     }
   });
@@ -160,17 +184,19 @@ export default async function pubgRoutes(app: FastifyInstance) {
         });
       }
 
-      const teams = rosters.map((r: any) => {
-        const members = (r.relationships?.participants?.data || [])
-          .map((ref: any) => participantMap.get(ref.id))
-          .filter(Boolean);
-        return {
-          rank: r.attributes?.stats?.rank || 0,
-          teamId: r.attributes?.stats?.teamId,
-          won: r.attributes?.won === "true",
-          members,
-        };
-      }).sort((a: any, b: any) => a.rank - b.rank);
+      const teams = rosters
+        .map((r: any) => {
+          const members = (r.relationships?.participants?.data || [])
+            .map((ref: any) => participantMap.get(ref.id))
+            .filter(Boolean);
+          return {
+            rank: r.attributes?.stats?.rank || 0,
+            teamId: r.attributes?.stats?.teamId,
+            won: r.attributes?.won === "true",
+            members,
+          };
+        })
+        .sort((a: any, b: any) => a.rank - b.rank);
 
       const result = {
         ok: true,
@@ -189,15 +215,24 @@ export default async function pubgRoutes(app: FastifyInstance) {
       pubgCacheSet(cacheKey, result, 60 * 60 * 1000);
       return reply.send(result);
     } catch (e) {
-      console.error("[pubg/match]", e);
+      log.error("[pubg/match]", e);
       return reply.send({ ok: false, error: "match_fetch_failed" });
     }
   });
 
   const LEADERBOARD_SHARD_MAP: Record<string, string> = {
-    steam: "pc-na", pc: "pc-na", xbox: "xbox-na", psn: "psn-na",
-    "pc-na": "pc-na", "pc-eu": "pc-eu", "pc-as": "pc-as", "pc-oc": "pc-oc",
-    "xbox-na": "xbox-na", "xbox-eu": "xbox-eu", "psn-na": "psn-na", "psn-eu": "psn-eu",
+    steam: "pc-na",
+    pc: "pc-na",
+    xbox: "xbox-na",
+    psn: "psn-na",
+    "pc-na": "pc-na",
+    "pc-eu": "pc-eu",
+    "pc-as": "pc-as",
+    "pc-oc": "pc-oc",
+    "xbox-na": "xbox-na",
+    "xbox-eu": "xbox-eu",
+    "psn-na": "psn-na",
+    "psn-eu": "psn-eu",
   };
 
   app.get("/pubg/leaderboard/:platform/:mode", async (req, reply) => {
@@ -225,9 +260,11 @@ export default async function pubgRoutes(app: FastifyInstance) {
             wins: p.attributes?.stats?.wins || 0,
             kills: p.attributes?.stats?.kills || 0,
             kd: p.attributes?.stats?.kda ? +p.attributes.stats.kda.toFixed(2) : 0,
-            avgDmg: p.attributes?.stats?.averageDamage ? Math.round(p.attributes.stats.averageDamage) : 0,
+            avgDmg: p.attributes?.stats?.averageDamage
+              ? Math.round(p.attributes.stats.averageDamage)
+              : 0,
             games: p.attributes?.stats?.games || 0,
-            winRate: p.attributes?.stats?.winRatio ? +(p.attributes.stats.winRatio).toFixed(4) : 0,
+            winRate: p.attributes?.stats?.winRatio ? +p.attributes.stats.winRatio.toFixed(4) : 0,
             tier: p.attributes?.stats?.tier || null,
             subTier: p.attributes?.stats?.subTier || null,
             rankPoints: p.attributes?.stats?.rankPoints || 0,
@@ -247,7 +284,7 @@ export default async function pubgRoutes(app: FastifyInstance) {
       pubgCacheSet(cacheKey, result, 15 * 60 * 1000);
       return reply.send(result);
     } catch (e) {
-      console.error("[pubg/leaderboard]", e);
+      log.error("[pubg/leaderboard]", e);
       return reply.send({ ok: false, error: "leaderboard_fetch_failed" });
     }
   });

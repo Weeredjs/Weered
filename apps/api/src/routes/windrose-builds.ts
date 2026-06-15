@@ -1,3 +1,4 @@
+import { log } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 import { PrismaClient, Prisma } from "@prisma/client";
 import { existsSync, mkdirSync, writeFileSync, readFileSync } from "fs";
@@ -29,14 +30,28 @@ const PRIMARY_MAX_DIM = 1920;
 const THUMB_MAX_W = 600;
 const THUMB_MAX_H = 400;
 
-const VALID_BIOMES = new Set(["PLAINS","COAST","CLIFFS","SWAMP","CAVE","MOUNTAIN","ISLAND"]);
-const VALID_BUILD_TYPES = new Set(["SHIP","DOCK","FORTRESS","TAVERN","HIDEOUT","OUTPOST","BRIDGE","MISC"]);
-const VALID_DIFFICULTIES = new Set(["BEGINNER","INTERMEDIATE","ADVANCED","MASTERWORK"]);
-const VALID_SHIP_CLASSES = new Set(["SLOOP","BRIG","GALLEON","FRIGATE"]);
-const VALID_REPORT_REASONS = new Set(["SPAM","NSFW","THEFT","OFFENSIVE","OTHER"]);
+const VALID_BIOMES = new Set(["PLAINS", "COAST", "CLIFFS", "SWAMP", "CAVE", "MOUNTAIN", "ISLAND"]);
+const VALID_BUILD_TYPES = new Set([
+  "SHIP",
+  "DOCK",
+  "FORTRESS",
+  "TAVERN",
+  "HIDEOUT",
+  "OUTPOST",
+  "BRIDGE",
+  "MISC",
+]);
+const VALID_DIFFICULTIES = new Set(["BEGINNER", "INTERMEDIATE", "ADVANCED", "MASTERWORK"]);
+const VALID_SHIP_CLASSES = new Set(["SLOOP", "BRIG", "GALLEON", "FRIGATE"]);
+const VALID_REPORT_REASONS = new Set(["SPAM", "NSFW", "THEFT", "OFFENSIVE", "OTHER"]);
 
 function slugify(title: string): string {
-  const base = title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40) || "build";
+  const base =
+    title
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "")
+      .slice(0, 40) || "build";
   const suffix = Math.random().toString(36).slice(2, 7);
   return `${base}-${suffix}`;
 }
@@ -56,8 +71,15 @@ async function processBuildImage(
   userId: string,
   buildId: string,
   index: number,
-  opts: { watermark?: boolean; watermarkText?: string } = {}
-): Promise<{ url: string; thumbUrl: string; width: number; height: number; dominantColor: string; order: number }> {
+  opts: { watermark?: boolean; watermarkText?: string } = {},
+): Promise<{
+  url: string;
+  thumbUrl: string;
+  width: number;
+  height: number;
+  dominantColor: string;
+  order: number;
+}> {
   const ts = Date.now();
   const baseName = `${userId}-${buildId}-${index}-${ts}`;
   const fullName = `${baseName}.webp`;
@@ -95,7 +117,12 @@ async function processBuildImage(
   if (outputBuffer.length > 1_000_000) {
     outputBuffer = await sharp(raw, { failOn: "none" })
       .rotate()
-      .resize({ width: PRIMARY_MAX_DIM, height: PRIMARY_MAX_DIM, fit: "inside", withoutEnlargement: true })
+      .resize({
+        width: PRIMARY_MAX_DIM,
+        height: PRIMARY_MAX_DIM,
+        fit: "inside",
+        withoutEnlargement: true,
+      })
       .webp({ quality: 65 })
       .toBuffer();
   }
@@ -117,7 +144,10 @@ async function processBuildImage(
     const stats = await sharp(outputBuffer).stats();
     const c = (stats as any).dominant;
     if (c && typeof c.r === "number") {
-      const toHex = (v: number) => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, "0");
+      const toHex = (v: number) =>
+        Math.max(0, Math.min(255, Math.round(v)))
+          .toString(16)
+          .padStart(2, "0");
       dominantColor = `#${toHex(c.r)}${toHex(c.g)}${toHex(c.b)}`;
     }
   } catch {}
@@ -137,7 +167,11 @@ function sanitizeTags(input: any): string[] {
   const out: string[] = [];
   for (const raw of input) {
     if (typeof raw !== "string") continue;
-    const t = raw.trim().toLowerCase().replace(/[^a-z0-9 -]/g, "").slice(0, 24);
+    const t = raw
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9 -]/g, "")
+      .slice(0, 24);
     if (t && !out.includes(t)) out.push(t);
     if (out.length >= TAG_MAX) break;
   }
@@ -155,37 +189,52 @@ export default async function windroseBuildsRoutes(app: FastifyInstance, opts: O
     const last = uploadCooldown.get(u.id) || 0;
     if (now - last < UPLOAD_COOLDOWN_MS) {
       return reply.code(429).send({
-        ok: false, error: "rate_limited",
+        ok: false,
+        error: "rate_limited",
         retryAfterMs: UPLOAD_COOLDOWN_MS - (now - last),
       });
     }
 
     const body: any = (req as any).body || {};
-    const title = String(body.title || "").trim().slice(0, TITLE_MAX);
+    const title = String(body.title || "")
+      .trim()
+      .slice(0, TITLE_MAX);
     if (title.length < 3) return reply.code(400).send({ ok: false, error: "title_too_short" });
 
     const description = String(body.description || "").slice(0, DESC_MAX);
     const biome = body.biome ? String(body.biome).toUpperCase() : null;
-    if (biome && !VALID_BIOMES.has(biome)) return reply.code(400).send({ ok: false, error: "bad_biome" });
+    if (biome && !VALID_BIOMES.has(biome))
+      return reply.code(400).send({ ok: false, error: "bad_biome" });
     const buildType = body.buildType ? String(body.buildType).toUpperCase() : null;
-    if (buildType && !VALID_BUILD_TYPES.has(buildType)) return reply.code(400).send({ ok: false, error: "bad_build_type" });
+    if (buildType && !VALID_BUILD_TYPES.has(buildType))
+      return reply.code(400).send({ ok: false, error: "bad_build_type" });
     const difficulty = body.difficulty ? String(body.difficulty).toUpperCase() : null;
-    if (difficulty && !VALID_DIFFICULTIES.has(difficulty)) return reply.code(400).send({ ok: false, error: "bad_difficulty" });
+    if (difficulty && !VALID_DIFFICULTIES.has(difficulty))
+      return reply.code(400).send({ ok: false, error: "bad_difficulty" });
     let shipClass: string | null = body.shipClass ? String(body.shipClass).toUpperCase() : null;
     if (shipClass && (!VALID_SHIP_CLASSES.has(shipClass) || buildType !== "SHIP")) shipClass = null;
     const tags = sanitizeTags(body.tags);
-    const partsCount = body.partsCount && Number.isFinite(Number(body.partsCount))
-      ? Math.max(0, Math.min(100_000, Math.floor(Number(body.partsCount))))
-      : null;
+    const partsCount =
+      body.partsCount && Number.isFinite(Number(body.partsCount))
+        ? Math.max(0, Math.min(100_000, Math.floor(Number(body.partsCount))))
+        : null;
     const inGameLocation = body.inGameLocation ? String(body.inGameLocation).slice(0, 60) : null;
     const watermarked = !!body.watermarked;
 
     const existingCount = await prisma.windroseBuild.count({ where: { authorId: u.id } });
     if (existingCount >= MAX_BUILDS_PER_USER) {
-      return reply.code(403).send({ ok: false, error: "build_limit", message: `Build limit reached (${MAX_BUILDS_PER_USER}). Delete an old one first.` });
+      return reply
+        .code(403)
+        .send({
+          ok: false,
+          error: "build_limit",
+          message: `Build limit reached (${MAX_BUILDS_PER_USER}). Delete an old one first.`,
+        });
     }
 
-    const rawImages: any[] = Array.isArray(body.images) ? body.images.slice(0, MAX_IMAGES_PER_BUILD) : [];
+    const rawImages: any[] = Array.isArray(body.images)
+      ? body.images.slice(0, MAX_IMAGES_PER_BUILD)
+      : [];
     if (rawImages.length === 0) return reply.code(400).send({ ok: false, error: "no_images" });
 
     const slug = slugify(title);
@@ -195,16 +244,28 @@ export default async function windroseBuildsRoutes(app: FastifyInstance, opts: O
       const decoded = decodeDataUrl(String(rawImages[i] || ""));
       if (!decoded) return reply.code(400).send({ ok: false, error: "bad_image_format", index: i });
       if (decoded.buffer.length > 8 * 1024 * 1024) {
-        return reply.code(400).send({ ok: false, error: "image_too_large", index: i, message: "Each upload must be under 8MB before compression." });
+        return reply
+          .code(400)
+          .send({
+            ok: false,
+            error: "image_too_large",
+            index: i,
+            message: "Each upload must be under 8MB before compression.",
+          });
       }
       try {
         const meta = await processBuildImage(
-          decoded.buffer, u.id, slug, i,
-          watermarked ? { watermark: true, watermarkText: `${u.name || "weered"} · weered.ca` } : {}
+          decoded.buffer,
+          u.id,
+          slug,
+          i,
+          watermarked
+            ? { watermark: true, watermarkText: `${u.name || "weered"} · weered.ca` }
+            : {},
         );
         processed.push(meta);
       } catch (e: any) {
-        console.error("[windrose-builds] image processing failed:", e?.message || e);
+        log.error("[windrose-builds] image processing failed:", e?.message || e);
         return reply.code(400).send({ ok: false, error: "image_processing_failed", index: i });
       }
     }
@@ -257,7 +318,9 @@ export default async function windroseBuildsRoutes(app: FastifyInstance, opts: O
     const biome = q.biome ? String(q.biome).toUpperCase() : null;
     const buildType = q.buildType ? String(q.buildType).toUpperCase() : null;
     const sort = String(q.sort || "top");
-    const search = String(q.q || "").slice(0, 60).trim();
+    const search = String(q.q || "")
+      .slice(0, 60)
+      .trim();
     const limit = Math.max(1, Math.min(60, parseInt(q.limit) || 24));
     const offset = Math.max(0, parseInt(q.offset) || 0);
     const authorId = q.authorId ? String(q.authorId) : null;
@@ -287,10 +350,21 @@ export default async function windroseBuildsRoutes(app: FastifyInstance, opts: O
         skip: offset,
         take: limit,
         select: {
-          id: true, slug: true, title: true, thumbnailUrl: true, primaryColor: true,
-          biome: true, buildType: true, difficulty: true, shipClass: true,
-          upvotes: true, downvotes: true, views: true, saveCount: true,
-          featured: true, createdAt: true,
+          id: true,
+          slug: true,
+          title: true,
+          thumbnailUrl: true,
+          primaryColor: true,
+          biome: true,
+          buildType: true,
+          difficulty: true,
+          shipClass: true,
+          upvotes: true,
+          downvotes: true,
+          views: true,
+          saveCount: true,
+          featured: true,
+          createdAt: true,
           author: { select: { id: true, name: true, avatar: true, avatarColor: true } },
           images: true,
         },
@@ -319,8 +393,14 @@ export default async function windroseBuildsRoutes(app: FastifyInstance, opts: O
       orderBy: [{ featuredAt: "desc" }, { upvotes: "desc" }],
       take: 8,
       select: {
-        id: true, slug: true, title: true, thumbnailUrl: true, primaryColor: true,
-        biome: true, buildType: true, upvotes: true,
+        id: true,
+        slug: true,
+        title: true,
+        thumbnailUrl: true,
+        primaryColor: true,
+        biome: true,
+        buildType: true,
+        upvotes: true,
         author: { select: { id: true, name: true, avatar: true, avatarColor: true } },
         images: true,
       },
@@ -329,7 +409,8 @@ export default async function windroseBuildsRoutes(app: FastifyInstance, opts: O
       const imgs: any[] = Array.isArray(b.images) ? b.images : [];
       const primary = imgs[0] || null;
       return {
-        ...b, images: undefined,
+        ...b,
+        images: undefined,
         primaryWidth: primary?.width || null,
         primaryHeight: primary?.height || null,
       };
@@ -345,21 +426,38 @@ export default async function windroseBuildsRoutes(app: FastifyInstance, opts: O
     const b = await prisma.windroseBuild.findUnique({
       where: { slug },
       include: {
-        author: { select: { id: true, name: true, avatar: true, avatarColor: true, steamId: true, tier: true, globalRole: true } },
+        author: {
+          select: {
+            id: true,
+            name: true,
+            avatar: true,
+            avatarColor: true,
+            steamId: true,
+            tier: true,
+            globalRole: true,
+          },
+        },
       },
     });
-    if (!b || (b.moderationStatus === "REMOVED" && !u)) return reply.code(404).send({ ok: false, error: "not_found" });
+    if (!b || (b.moderationStatus === "REMOVED" && !u))
+      return reply.code(404).send({ ok: false, error: "not_found" });
 
     if (!u || u.id !== b.authorId) {
-      prisma.windroseBuild.update({ where: { id: b.id }, data: { views: { increment: 1 } } }).catch(() => {});
+      prisma.windroseBuild
+        .update({ where: { id: b.id }, data: { views: { increment: 1 } } })
+        .catch(() => {});
     }
 
     let myVote = 0;
     let mySave = false;
     if (u) {
       const [v, s] = await Promise.all([
-        prisma.windroseBuildVote.findUnique({ where: { buildId_userId: { buildId: b.id, userId: u.id } } }),
-        prisma.windroseBuildSave.findUnique({ where: { buildId_userId: { buildId: b.id, userId: u.id } } }),
+        prisma.windroseBuildVote.findUnique({
+          where: { buildId_userId: { buildId: b.id, userId: u.id } },
+        }),
+        prisma.windroseBuildSave.findUnique({
+          where: { buildId_userId: { buildId: b.id, userId: u.id } },
+        }),
       ]);
       myVote = v?.value || 0;
       mySave = !!s;
@@ -385,10 +483,15 @@ export default async function windroseBuildsRoutes(app: FastifyInstance, opts: O
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const slug = String((req as any).params?.slug || "");
-    const b = await prisma.windroseBuild.findUnique({ where: { slug }, select: { id: true, authorId: true } });
+    const b = await prisma.windroseBuild.findUnique({
+      where: { slug },
+      select: { id: true, authorId: true },
+    });
     if (!b) return reply.code(404).send({ ok: false, error: "not_found" });
     const body: any = (req as any).body || {};
-    const text = String(body.body || "").trim().slice(0, COMMENT_MAX);
+    const text = String(body.body || "")
+      .trim()
+      .slice(0, COMMENT_MAX);
     if (text.length < 1) return reply.code(400).send({ ok: false, error: "empty" });
     const c = await prisma.windroseBuildComment.create({
       data: { buildId: b.id, userId: u.id, body: text },
@@ -401,7 +504,10 @@ export default async function windroseBuildsRoutes(app: FastifyInstance, opts: O
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const slug = String((req as any).params?.slug || "");
-    const b = await prisma.windroseBuild.findUnique({ where: { slug }, select: { id: true, authorId: true } });
+    const b = await prisma.windroseBuild.findUnique({
+      where: { slug },
+      select: { id: true, authorId: true },
+    });
     if (!b) return reply.code(404).send({ ok: false, error: "not_found" });
     if (b.authorId === u.id) return reply.code(400).send({ ok: false, error: "self_vote" });
 
@@ -426,7 +532,8 @@ export default async function windroseBuildsRoutes(app: FastifyInstance, opts: O
       data: { upvotes: up, downvotes: down },
     });
 
-    if (value === 1 && awardNotoriety) await awardNotoriety(b.authorId, "WINDROSE_BUILD_UPVOTED").catch(() => {});
+    if (value === 1 && awardNotoriety)
+      await awardNotoriety(b.authorId, "WINDROSE_BUILD_UPVOTED").catch(() => {});
 
     return reply.send({ ok: true, upvotes: up, downvotes: down, myVote: value });
   });
@@ -454,7 +561,8 @@ export default async function windroseBuildsRoutes(app: FastifyInstance, opts: O
   app.post("/windrose/builds/:slug/feature", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
-    if (!getGlobalRole || !canAccessStaff) return reply.code(500).send({ ok: false, error: "staff_check_unavailable" });
+    if (!getGlobalRole || !canAccessStaff)
+      return reply.code(500).send({ ok: false, error: "staff_check_unavailable" });
     const role = await getGlobalRole(u.id);
     if (!canAccessStaff(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
 
@@ -476,7 +584,8 @@ export default async function windroseBuildsRoutes(app: FastifyInstance, opts: O
     if (!b) return reply.code(404).send({ ok: false, error: "not_found" });
     const body: any = (req as any).body || {};
     const reason = String(body.reason || "OTHER").toUpperCase();
-    if (!VALID_REPORT_REASONS.has(reason)) return reply.code(400).send({ ok: false, error: "bad_reason" });
+    if (!VALID_REPORT_REASONS.has(reason))
+      return reply.code(400).send({ ok: false, error: "bad_reason" });
     const note = body.note ? String(body.note).slice(0, 500) : null;
     await prisma.windroseBuildReport.create({
       data: { buildId: b.id, userId: u.id, reason, note },
@@ -488,14 +597,18 @@ export default async function windroseBuildsRoutes(app: FastifyInstance, opts: O
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const slug = String((req as any).params?.slug || "");
-    const b = await prisma.windroseBuild.findUnique({ where: { slug }, select: { id: true, authorId: true } });
+    const b = await prisma.windroseBuild.findUnique({
+      where: { slug },
+      select: { id: true, authorId: true },
+    });
     if (!b) return reply.code(404).send({ ok: false, error: "not_found" });
     let isStaff = false;
     if (getGlobalRole && canAccessStaff) {
       const role = await getGlobalRole(u.id);
       isStaff = canAccessStaff(role);
     }
-    if (b.authorId !== u.id && !isStaff) return reply.code(403).send({ ok: false, error: "forbidden" });
+    if (b.authorId !== u.id && !isStaff)
+      return reply.code(403).send({ ok: false, error: "forbidden" });
     await prisma.windroseBuild.delete({ where: { id: b.id } });
     return reply.send({ ok: true });
   });
