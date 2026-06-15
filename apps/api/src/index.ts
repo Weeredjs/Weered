@@ -177,6 +177,7 @@ function isAIAvailable(): boolean {
 
 import { prisma } from "./lib/prisma";
 import { readCookieToken } from "./lib/authCookie";
+import { awardPaper } from "./lib/economy";
 
 const JWT_SECRET = (() => {
   const s = process.env.JWT_SECRET;
@@ -2994,29 +2995,6 @@ async function main() {
   await app.register(lfgRoutes, { authFromHeader, getGlobalRole, canAccessStaff, broadcastToLobby, awardNotoriety, createNotification } as any);
   await app.register(redditRoutes);
   await app.register(helldiversMoRoutes, { authFromHeader, awardPaper } as any);
-
-  async function awardPaper(userId: string, type: string, amount: number, description: string, refId?: string): Promise<{ balance: number } | null> {
-    try {
-      return await prisma.$transaction(async (tx) => {
-        // Race-safe: atomic increment with a WHERE guard so concurrent debits
-        // cannot overdraft (Postgres re-checks the predicate on the locked row).
-        const upd = await tx.user.updateMany({
-          where: amount < 0 ? { id: userId, paper: { gte: -amount } } : { id: userId },
-          data: { paper: { increment: amount } },
-        });
-        if (upd.count === 0) return null;
-        const fresh = await tx.user.findUnique({ where: { id: userId }, select: { paper: true } });
-        const newBalance = (fresh as any)?.paper ?? 0;
-        await (tx as any).paperTransaction.create({
-          data: { userId, type, amount, balance: newBalance, description, refId: refId || null },
-        });
-        return { balance: newBalance };
-      });
-    } catch (e) {
-      console.error("[paper] awardPaper error:", e);
-      return null;
-    }
-  }
 
   await app.register(paperRoutes, { authFromHeader, awardPaper } as any);
 
