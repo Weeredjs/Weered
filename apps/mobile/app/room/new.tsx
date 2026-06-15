@@ -54,7 +54,9 @@ export default function NewRoom() {
         keyboardVerticalOffset={Platform.OS === "ios" ? 88 : 0}
       >
         <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
-          <Text className="text-weered-muted text-xs uppercase tracking-widest mb-2">Room name</Text>
+          <Text className="text-weered-muted text-xs uppercase tracking-widest mb-2">
+            Room name
+          </Text>
           <TextInput
             value={name}
             onChangeText={setName}

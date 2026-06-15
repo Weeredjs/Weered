@@ -9,6 +9,7 @@ labels: bug
 **Expected**
 
 **Steps to reproduce**
+
 1.
 
 **Surface** (web / mobile / desktop) + lobby/module if relevant

@@ -52,8 +52,7 @@ export default async function WindroseModsPublicPage() {
         style={{
           padding: "32px 24px 24px",
           borderBottom: "1px solid rgba(255,255,255,.08)",
-          background:
-            "linear-gradient(180deg, rgba(124,58,237,.10) 0%, transparent 100%)",
+          background: "linear-gradient(180deg, rgba(124,58,237,.10) 0%, transparent 100%)",
         }}
       >
         <div style={{ maxWidth: 1200, margin: "0 auto" }}>
@@ -101,8 +100,7 @@ export default async function WindroseModsPublicPage() {
               letterSpacing: "-1.5px",
               lineHeight: 1.05,
               margin: "0 0 12px",
-              background:
-                "linear-gradient(135deg, #fff 0%, #d8caff 60%, #a78bfa 100%)",
+              background: "linear-gradient(135deg, #fff 0%, #d8caff 60%, #a78bfa 100%)",
               WebkitBackgroundClip: "text",
               WebkitTextFillColor: "transparent",
               backgroundClip: "text",
@@ -121,10 +119,9 @@ export default async function WindroseModsPublicPage() {
               fontFamily: "system-ui, -apple-system, sans-serif",
             }}
           >
-            Public read-only view of the Windrose mods Weered surfaces. Sourced
-            live from the Nexus public API. Metadata only. Every install
-            click-through goes to the mod's Nexus page. We don't host or
-            redistribute mod files.
+            Public read-only view of the Windrose mods Weered surfaces. Sourced live from the Nexus
+            public API. Metadata only. Every install click-through goes to the mod's Nexus page. We
+            don't host or redistribute mod files.
           </p>
 
           <div
@@ -139,7 +136,9 @@ export default async function WindroseModsPublicPage() {
               letterSpacing: "0.04em",
             }}
           >
-            <span>{mods.length} mod{mods.length === 1 ? "" : "s"} indexed</span>
+            <span>
+              {mods.length} mod{mods.length === 1 ? "" : "s"} indexed
+            </span>
             <span style={{ opacity: 0.4 }}>·</span>
             <span>refresh ~5 min</span>
             <span style={{ opacity: 0.4 }}>·</span>
@@ -160,9 +159,8 @@ export default async function WindroseModsPublicPage() {
               maxWidth: 720,
             }}
           >
-            <strong style={{ color: "#d8caff" }}>Mod authors:</strong> if your
-            work shows up wrong, or you'd prefer it not appear in our catalog,
-            email{" "}
+            <strong style={{ color: "#d8caff" }}>Mod authors:</strong> if your work shows up wrong,
+            or you'd prefer it not appear in our catalog, email{" "}
             <a
               href="mailto:support@weered.ca"
               style={{ color: "#d8caff", textDecoration: "underline" }}
@@ -323,8 +321,7 @@ export default async function WindroseModsPublicPage() {
           textAlign: "center",
         }}
       >
-        Weered · Unofficial Windrose community hub · Not affiliated with Kraken
-        Express ·{" "}
+        Weered · Unofficial Windrose community hub · Not affiliated with Kraken Express ·{" "}
         <Link href="/privacy" style={{ color: "inherit" }}>
           privacy
         </Link>{" "}

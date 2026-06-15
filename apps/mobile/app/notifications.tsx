@@ -1,12 +1,5 @@
 import { useCallback } from "react";
-import {
-  View,
-  Text,
-  FlatList,
-  Pressable,
-  ActivityIndicator,
-  RefreshControl,
-} from "react-native";
+import { View, Text, FlatList, Pressable, ActivityIndicator, RefreshControl } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Stack, router } from "expo-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -45,7 +38,8 @@ export default function Notifications() {
   });
 
   const markRead = useMutation({
-    mutationFn: (id: string) => api("/notifications/read", { method: "PATCH", body: { ids: [id] } }),
+    mutationFn: (id: string) =>
+      api("/notifications/read", { method: "PATCH", body: { ids: [id] } }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["notifications"] });
       qc.invalidateQueries({ queryKey: ["notifications-unread"] });
@@ -93,7 +87,9 @@ export default function Notifications() {
                 if (!item.read) markRead.mutate(item.id);
                 if (item.actionUrl) {
                   // expo-router accepts paths; strip leading origin if any.
-                  const path = item.actionUrl.startsWith("http") ? new URL(item.actionUrl).pathname : item.actionUrl;
+                  const path = item.actionUrl.startsWith("http")
+                    ? new URL(item.actionUrl).pathname
+                    : item.actionUrl;
                   router.push(path as any);
                 }
               }}
@@ -125,7 +121,11 @@ function NotificationRow({ n, onPress }: { n: Notification; onPress: () => void 
           {!n.read && (
             <View
               style={{
-                width: 6, height: 6, borderRadius: 3, backgroundColor: "#5800E5", marginRight: 6,
+                width: 6,
+                height: 6,
+                borderRadius: 3,
+                backgroundColor: "#5800E5",
+                marginRight: 6,
               }}
             />
           )}
@@ -157,5 +157,7 @@ function formatRelative(iso: string): string {
     const days = Math.floor(hours / 24);
     if (days < 30) return `${days}d ago`;
     return new Date(iso).toLocaleDateString();
-  } catch { return iso; }
+  } catch {
+    return iso;
+  }
 }

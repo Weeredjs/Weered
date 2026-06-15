@@ -163,7 +163,8 @@ export default function NotFound() {
           <div className="nf-404">404</div>
           <div className="nf-title">Wrong turn, exile.</div>
           <p className="nf-sub">
-            This corner isn&apos;t on the map. Could&apos;ve moved, could&apos;ve been locked, could&apos;ve never existed.
+            This corner isn&apos;t on the map. Could&apos;ve moved, could&apos;ve been locked,
+            could&apos;ve never existed.
           </p>
           <div className="nf-actions">
             <Link href="/home" className="nf-btn nf-btn-primary">

@@ -13,44 +13,82 @@ function VerifyEmailInner() {
 
   useEffect(() => {
     const token = sp?.get("token") || "";
-    if (!token) { setStatus("error"); setErrMsg("No verification token found."); return; }
+    if (!token) {
+      setStatus("error");
+      setErrMsg("No verification token found.");
+      return;
+    }
 
     fetch(`${API}/auth/verify-email`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ token }),
     })
-      .then(async r => {
-        const j = await r.json().catch(() => ({} as any));
+      .then(async (r) => {
+        const j = await r.json().catch(() => ({}) as any);
         if (!r.ok) {
           setStatus("error");
           setErrMsg(j?.error || "Verification failed.");
           return;
         }
         if (j.token) void 0;
-        if (j.user)  localStorage.setItem("weered_user", JSON.stringify(j.user));
+        if (j.user) localStorage.setItem("weered_user", JSON.stringify(j.user));
         setStatus("success");
       })
-      .catch(() => { setStatus("error"); setErrMsg("Network error. Try again."); });
+      .catch(() => {
+        setStatus("error");
+        setErrMsg("Network error. Try again.");
+      });
   }, [sp, API]);
 
   const icon = {
     loading: (
-      <svg width="44" height="44" viewBox="0 0 44 44" fill="none" style={{ animation: "spin 1s linear infinite" }}>
-        <circle cx="22" cy="22" r="18" stroke="rgba(124,58,237,0.25)" strokeWidth="3"/>
-        <path d="M22 4a18 18 0 0118 18" stroke="#a78bfa" strokeWidth="3" strokeLinecap="round"/>
+      <svg
+        width="44"
+        height="44"
+        viewBox="0 0 44 44"
+        fill="none"
+        style={{ animation: "spin 1s linear infinite" }}
+      >
+        <circle cx="22" cy="22" r="18" stroke="rgba(124,58,237,0.25)" strokeWidth="3" />
+        <path d="M22 4a18 18 0 0118 18" stroke="#a78bfa" strokeWidth="3" strokeLinecap="round" />
       </svg>
     ),
     success: (
       <svg width="44" height="44" viewBox="0 0 44 44" fill="none">
-        <circle cx="22" cy="22" r="20" fill="rgba(34,197,94,0.1)" stroke="rgba(34,197,94,0.35)" strokeWidth="1.5"/>
-        <path d="M13 22l7 7 11-13" stroke="#4ade80" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+        <circle
+          cx="22"
+          cy="22"
+          r="20"
+          fill="rgba(34,197,94,0.1)"
+          stroke="rgba(34,197,94,0.35)"
+          strokeWidth="1.5"
+        />
+        <path
+          d="M13 22l7 7 11-13"
+          stroke="#4ade80"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
       </svg>
     ),
     error: (
       <svg width="44" height="44" viewBox="0 0 44 44" fill="none">
-        <circle cx="22" cy="22" r="20" fill="rgba(239,68,68,0.1)" stroke="rgba(239,68,68,0.3)" strokeWidth="1.5"/>
-        <path d="M15 15l14 14M29 15L15 29" stroke="#f87171" strokeWidth="2.5" strokeLinecap="round"/>
+        <circle
+          cx="22"
+          cy="22"
+          r="20"
+          fill="rgba(239,68,68,0.1)"
+          stroke="rgba(239,68,68,0.3)"
+          strokeWidth="1.5"
+        />
+        <path
+          d="M15 15l14 14M29 15L15 29"
+          stroke="#f87171"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+        />
       </svg>
     ),
   }[status];
@@ -58,13 +96,13 @@ function VerifyEmailInner() {
   const title = {
     loading: "Verifying...",
     success: "You're verified.",
-    error:   "Something went wrong.",
+    error: "Something went wrong.",
   }[status];
 
   const sub = {
     loading: "Checking your verification link.",
     success: "Your account is active. Welcome.",
-    error:   errMsg || "The link may have expired.",
+    error: errMsg || "The link may have expired.",
   }[status];
 
   return (
@@ -180,12 +218,23 @@ function VerifyEmailInner() {
             </button>
           )}
           {status === "error" && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 10, alignItems: "center" }}>
-              <a href="/login" className="ve-btn">back_to_login()</a>
+            <div
+              style={{ display: "flex", flexDirection: "column", gap: 10, alignItems: "center" }}
+            >
+              <a href="/login" className="ve-btn">
+                back_to_login()
+              </a>
               <span style={{ fontSize: 11, color: "rgba(255,255,255,0.2)" }}>or</span>
               <span style={{ fontSize: 11, color: "rgba(148,163,184,0.4)" }}>
                 need a new link?{" "}
-                <a href="/contact" style={{ color: "rgba(167,139,250,0.5)", textDecoration: "underline", textUnderlineOffset: 3 }}>
+                <a
+                  href="/contact"
+                  style={{
+                    color: "rgba(167,139,250,0.5)",
+                    textDecoration: "underline",
+                    textUnderlineOffset: 3,
+                  }}
+                >
                   contact us
                 </a>
               </span>

@@ -14,7 +14,9 @@ export default function RoomChatPanel({
     let raw = String(roomId || "").trim();
     if (!raw) return "";
     if (raw.startsWith("room:")) raw = raw.slice(5);
-    try { raw = decodeURIComponent(raw); } catch {}
+    try {
+      raw = decodeURIComponent(raw);
+    } catch {}
     return raw.trim();
   }, [roomId]);
 

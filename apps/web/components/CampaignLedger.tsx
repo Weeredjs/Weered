@@ -9,14 +9,20 @@ function authHeaders(): Record<string, string> {
   try {
     const t = localStorage.getItem("weered_token") || "";
     return t ? { Authorization: `Bearer ${t}` } : {};
-  } catch { return {}; }
+  } catch {
+    return {};
+  }
 }
 async function apiFetch(path: string, opts?: RequestInit) {
   const r = await fetch(`${API}${path}`, {
     ...opts,
     headers: { "Content-Type": "application/json", ...authHeaders(), ...(opts?.headers || {}) },
   });
-  try { return await r.json(); } catch { return { ok: false, error: "bad_json" }; }
+  try {
+    return await r.json();
+  } catch {
+    return { ok: false, error: "bad_json" };
+  }
 }
 
 type Campaign = {
@@ -61,12 +67,12 @@ type WorldNote = {
 
 type SectionId = "ledger" | "party" | "sessions" | "npcs" | "threads" | "notes";
 const SECTIONS: { id: SectionId; label: string }[] = [
-  { id: "ledger",   label: "Ledger" },
-  { id: "party",    label: "Party" },
+  { id: "ledger", label: "Ledger" },
+  { id: "party", label: "Party" },
   { id: "sessions", label: "Sessions" },
-  { id: "npcs",     label: "NPCs" },
-  { id: "threads",  label: "Threads" },
-  { id: "notes",    label: "World" },
+  { id: "npcs", label: "NPCs" },
+  { id: "threads", label: "Threads" },
+  { id: "notes", label: "World" },
 ];
 
 export default function CampaignLedger({ roomId }: { roomId: string }) {
@@ -81,17 +87,27 @@ export default function CampaignLedger({ roomId }: { roomId: string }) {
     setLoading(true);
     setErrMsg("");
     const r = await apiFetch(`/rooms/${roomId}/campaign`);
-    if (!r?.ok) { setErrMsg(r?.error || "failed"); setLoading(false); return; }
+    if (!r?.ok) {
+      setErrMsg(r?.error || "failed");
+      setLoading(false);
+      return;
+    }
     setCampaign(r.campaign || null);
     setMembers(r.members || []);
     setIsDM(!!r.isDM);
     setLoading(false);
   }, [roomId]);
 
-  useEffect(() => { refresh(); }, [refresh]);
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
 
   if (loading) {
-    return <div className="dnd-serif" style={{ padding: 24, textAlign: "center", opacity: .55 }}>Unrolling the chronicle…</div>;
+    return (
+      <div className="dnd-serif" style={{ padding: 24, textAlign: "center", opacity: 0.55 }}>
+        Unrolling the chronicle…
+      </div>
+    );
   }
 
   if (!campaign) {
@@ -101,27 +117,46 @@ export default function CampaignLedger({ roomId }: { roomId: string }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
       <header className="dnd-card" style={{ padding: "12px 14px" }}>
-        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "baseline",
+            justifyContent: "space-between",
+            gap: 12,
+            flexWrap: "wrap",
+          }}
+        >
           <div>
-            <div className="dnd-heading" style={{ fontSize: 22, color: ACCENT, lineHeight: 1.1 }}>{campaign.name}</div>
+            <div className="dnd-heading" style={{ fontSize: 22, color: ACCENT, lineHeight: 1.1 }}>
+              {campaign.name}
+            </div>
             {campaign.description && (
-              <div className="dnd-serif" style={{ fontSize: 13, opacity: .75, marginTop: 4, maxWidth: 520 }}>{campaign.description}</div>
+              <div
+                className="dnd-serif"
+                style={{ fontSize: 13, opacity: 0.75, marginTop: 4, maxWidth: 520 }}
+              >
+                {campaign.description}
+              </div>
             )}
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-            <div className="dnd-section-label" style={{ opacity: .55 }}>Party Coffers</div>
-            <div className="dnd-heading" style={{ fontSize: 22, color: ACCENT }}>{campaign.partyGold.toLocaleString()} gp</div>
+            <div className="dnd-section-label" style={{ opacity: 0.55 }}>
+              Party Coffers
+            </div>
+            <div className="dnd-heading" style={{ fontSize: 22, color: ACCENT }}>
+              {campaign.partyGold.toLocaleString()} gp
+            </div>
           </div>
         </div>
         {!isDM && (
-          <div className="dnd-serif" style={{ fontSize: 12, opacity: .6, marginTop: 8 }}>
+          <div className="dnd-serif" style={{ fontSize: 12, opacity: 0.6, marginTop: 8 }}>
             Read-only — only the DM may amend the chronicle.
           </div>
         )}
       </header>
 
       <nav style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-        {SECTIONS.map(s => (
+        {SECTIONS.map((s) => (
           <button
             key={s.id}
             onClick={() => setSection(s.id)}
@@ -133,48 +168,75 @@ export default function CampaignLedger({ roomId }: { roomId: string }) {
       </nav>
 
       <div style={{ minHeight: 200 }}>
-        {section === "ledger"   && <LedgerSection roomId={roomId} isDM={isDM} members={members} onPartyGoldChange={(g) => setCampaign(c => c ? { ...c, partyGold: g } : c)} />}
-        {section === "party"    && <PartySection roomId={roomId} />}
+        {section === "ledger" && (
+          <LedgerSection
+            roomId={roomId}
+            isDM={isDM}
+            members={members}
+            onPartyGoldChange={(g) => setCampaign((c) => (c ? { ...c, partyGold: g } : c))}
+          />
+        )}
+        {section === "party" && <PartySection roomId={roomId} />}
         {section === "sessions" && <SessionsSection roomId={roomId} isDM={isDM} />}
-        {section === "npcs"     && <NpcsSection roomId={roomId} isDM={isDM} />}
-        {section === "threads"  && <ThreadsSection roomId={roomId} isDM={isDM} />}
-        {section === "notes"    && <NotesSection roomId={roomId} isDM={isDM} />}
+        {section === "npcs" && <NpcsSection roomId={roomId} isDM={isDM} />}
+        {section === "threads" && <ThreadsSection roomId={roomId} isDM={isDM} />}
+        {section === "notes" && <NotesSection roomId={roomId} isDM={isDM} />}
       </div>
     </div>
   );
 }
 
-function CampaignBootstrap({ roomId, onCreated, errMsg }: { roomId: string; onCreated: () => void; errMsg: string }) {
+function CampaignBootstrap({
+  roomId,
+  onCreated,
+  errMsg,
+}: {
+  roomId: string;
+  onCreated: () => void;
+  errMsg: string;
+}) {
   const [name, setName] = useState("");
   const [desc, setDesc] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(errMsg);
 
   async function create() {
-    if (!name.trim()) { setErr("Give the campaign a name."); return; }
-    setBusy(true); setErr("");
+    if (!name.trim()) {
+      setErr("Give the campaign a name.");
+      return;
+    }
+    setBusy(true);
+    setErr("");
     const r = await apiFetch(`/rooms/${roomId}/campaign`, {
       method: "POST",
       body: JSON.stringify({ name: name.trim(), description: desc.trim() }),
     });
     setBusy(false);
-    if (!r?.ok) { setErr(r?.error || "failed"); return; }
+    if (!r?.ok) {
+      setErr(r?.error || "failed");
+      return;
+    }
     onCreated();
   }
 
   return (
-    <div className="dnd-card" style={{ padding: 18, display: "flex", flexDirection: "column", gap: 12 }}>
-      <div className="dnd-heading" style={{ fontSize: 22, color: ACCENT }}>Begin the Chronicle</div>
-      <div className="dnd-serif" style={{ fontSize: 14, opacity: .8 }}>
-        No campaign yet bound to this hall. Christen one and you become its Dungeon Master —
-        keeper of gold, loot, sessions, plot threads and the world itself.
+    <div
+      className="dnd-card"
+      style={{ padding: 18, display: "flex", flexDirection: "column", gap: 12 }}
+    >
+      <div className="dnd-heading" style={{ fontSize: 22, color: ACCENT }}>
+        Begin the Chronicle
+      </div>
+      <div className="dnd-serif" style={{ fontSize: 14, opacity: 0.8 }}>
+        No campaign yet bound to this hall. Christen one and you become its Dungeon Master — keeper
+        of gold, loot, sessions, plot threads and the world itself.
       </div>
       <div>
         <div className="dnd-section-label">Campaign Name</div>
         <input
           className="dnd-parchment-input"
           value={name}
-          onChange={e => setName(e.target.value)}
+          onChange={(e) => setName(e.target.value)}
           placeholder="e.g. The Ashfall Reliquary"
           maxLength={120}
           style={{ width: "100%" }}
@@ -185,19 +247,19 @@ function CampaignBootstrap({ roomId, onCreated, errMsg }: { roomId: string; onCr
         <textarea
           className="dnd-parchment-input"
           value={desc}
-          onChange={e => setDesc(e.target.value)}
+          onChange={(e) => setDesc(e.target.value)}
           rows={3}
           maxLength={2000}
           style={{ width: "100%", resize: "vertical" }}
         />
       </div>
-      {err && <div className="dnd-serif" style={{ fontSize: 12, color: "#d97757" }}>Error: {err}</div>}
+      {err && (
+        <div className="dnd-serif" style={{ fontSize: 12, color: "#d97757" }}>
+          Error: {err}
+        </div>
+      )}
       <div>
-        <button
-          className="dnd-stone-tile"
-          onClick={create}
-          disabled={busy || !name.trim()}
-        >
+        <button className="dnd-stone-tile" onClick={create} disabled={busy || !name.trim()}>
           {busy ? "Founding…" : "Found Campaign"}
         </button>
       </div>
@@ -206,8 +268,16 @@ function CampaignBootstrap({ roomId, onCreated, errMsg }: { roomId: string; onCr
 }
 
 function LedgerSection({
-  roomId, isDM, members, onPartyGoldChange,
-}: { roomId: string; isDM: boolean; members: Member[]; onPartyGoldChange: (g: number) => void }) {
+  roomId,
+  isDM,
+  members,
+  onPartyGoldChange,
+}: {
+  roomId: string;
+  isDM: boolean;
+  members: Member[];
+  onPartyGoldChange: (g: number) => void;
+}) {
   const [entries, setEntries] = useState<LedgerEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [type, setType] = useState<"GOLD" | "ITEM" | "XP">("GOLD");
@@ -226,7 +296,9 @@ function LedgerSection({
     }
     setLoading(false);
   }, [roomId, onPartyGoldChange]);
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+  }, [load]);
 
   async function add() {
     const n = Math.trunc(Number(delta));
@@ -239,20 +311,29 @@ function LedgerSection({
       });
       setBusy(false);
       if (r?.ok && Array.isArray(r.entries)) {
-        setEntries(es => [...r.entries.slice().reverse(), ...es]);
-        setDelta(""); setDesc(""); setAwardedTo("");
+        setEntries((es) => [...r.entries.slice().reverse(), ...es]);
+        setDelta("");
+        setDesc("");
+        setAwardedTo("");
       }
       return;
     }
     const r = await apiFetch(`/rooms/${roomId}/campaign/ledger`, {
       method: "POST",
-      body: JSON.stringify({ type, delta: n, description: desc.trim(), awardedToUserId: awardedTo || null }),
+      body: JSON.stringify({
+        type,
+        delta: n,
+        description: desc.trim(),
+        awardedToUserId: awardedTo || null,
+      }),
     });
     setBusy(false);
     if (r?.ok) {
-      setEntries(es => [r.entry, ...es]);
+      setEntries((es) => [r.entry, ...es]);
       onPartyGoldChange(r.partyGold);
-      setDelta(""); setDesc(""); setAwardedTo("");
+      setDelta("");
+      setDesc("");
+      setAwardedTo("");
     }
   }
 
@@ -260,24 +341,27 @@ function LedgerSection({
     if (!confirm("Strike this entry from the ledger?")) return;
     const r = await apiFetch(`/rooms/${roomId}/campaign/ledger/${id}`, { method: "DELETE" });
     if (r?.ok) {
-      setEntries(es => es.filter(e => e.id !== id));
+      setEntries((es) => es.filter((e) => e.id !== id));
       if (typeof r.partyGold === "number") onPartyGoldChange(r.partyGold);
     }
   }
 
   const memberNameById = useMemo(() => {
     const m = new Map<string, string>();
-    members.forEach(x => m.set(x.userId, x.characterName || x.userId.slice(0, 8)));
+    members.forEach((x) => m.set(x.userId, x.characterName || x.userId.slice(0, 8)));
     return m;
   }, [members]);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
       {isDM && (
-        <div className="dnd-card" style={{ padding: 12, display: "flex", flexDirection: "column", gap: 8 }}>
+        <div
+          className="dnd-card"
+          style={{ padding: 12, display: "flex", flexDirection: "column", gap: 8 }}
+        >
           <div className="dnd-section-label">Record an Entry</div>
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-            {(["GOLD", "ITEM", "XP"] as const).map(t => (
+            {(["GOLD", "ITEM", "XP"] as const).map((t) => (
               <button
                 key={t}
                 onClick={() => setType(t)}
@@ -287,42 +371,53 @@ function LedgerSection({
               </button>
             ))}
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 8 }}>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
+              gap: 8,
+            }}
+          >
             <input
               className="dnd-parchment-input"
               type="number"
               placeholder={type === "ITEM" ? "qty" : "amount"}
               value={delta}
-              onChange={e => setDelta(e.target.value)}
+              onChange={(e) => setDelta(e.target.value)}
             />
             <input
               className="dnd-parchment-input"
               placeholder={type === "ITEM" ? "Item name + notes" : "What for?"}
               value={desc}
-              onChange={e => setDesc(e.target.value)}
+              onChange={(e) => setDesc(e.target.value)}
               maxLength={500}
             />
             <select
               className="dnd-parchment-input"
               value={awardedTo}
-              onChange={e => setAwardedTo(e.target.value)}
+              onChange={(e) => setAwardedTo(e.target.value)}
             >
               <option value="">— Party —</option>
-              {members.map(m => (
-                <option key={m.userId} value={m.userId}>{m.characterName || m.userId.slice(0, 8)}</option>
+              {members.map((m) => (
+                <option key={m.userId} value={m.userId}>
+                  {m.characterName || m.userId.slice(0, 8)}
+                </option>
               ))}
             </select>
           </div>
           {type === "XP" && (
-            <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, opacity: 0.85 }} className="dnd-serif">
+            <label
+              style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, opacity: 0.85 }}
+              className="dnd-serif"
+            >
               <input
                 type="checkbox"
                 checked={distributeXp && !awardedTo}
                 disabled={!!awardedTo}
-                onChange={e => setDistributeXp(e.target.checked)}
+                onChange={(e) => setDistributeXp(e.target.checked)}
               />
               Distribute to whole party (creates one entry per character)
-              {awardedTo && <span style={{ opacity: .6 }}>— targeting individual; ignored</span>}
+              {awardedTo && <span style={{ opacity: 0.6 }}>— targeting individual; ignored</span>}
             </label>
           )}
           <div>
@@ -334,28 +429,60 @@ function LedgerSection({
       )}
 
       <div className="dnd-card" style={{ padding: 12 }}>
-        <div className="dnd-section-label" style={{ marginBottom: 8 }}>Recent Entries</div>
-        {loading && <div className="dnd-serif" style={{ opacity: .5 }}>Loading…</div>}
+        <div className="dnd-section-label" style={{ marginBottom: 8 }}>
+          Recent Entries
+        </div>
+        {loading && (
+          <div className="dnd-serif" style={{ opacity: 0.5 }}>
+            Loading…
+          </div>
+        )}
         {!loading && entries.length === 0 && (
-          <div className="dnd-serif" style={{ opacity: .55, fontStyle: "italic" }}>The ledger is unmarked.</div>
+          <div className="dnd-serif" style={{ opacity: 0.55, fontStyle: "italic" }}>
+            The ledger is unmarked.
+          </div>
         )}
         {!loading && entries.length > 0 && (
-          <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 4 }}>
-            {entries.map(e => (
-              <li key={e.id} style={{ display: "flex", alignItems: "baseline", gap: 10, padding: "6px 4px", borderBottom: "1px solid rgba(196,165,90,.10)" }}>
-                <span className="dnd-section-label" style={{ minWidth: 40, color: ACCENT }}>{e.type}</span>
-                <span className="dnd-heading" style={{ minWidth: 70, color: e.delta >= 0 ? ACCENT : "#d97757", fontSize: 16 }}>
-                  {e.delta >= 0 ? "+" : ""}{e.delta.toLocaleString()}
+          <ul
+            style={{
+              listStyle: "none",
+              padding: 0,
+              margin: 0,
+              display: "flex",
+              flexDirection: "column",
+              gap: 4,
+            }}
+          >
+            {entries.map((e) => (
+              <li
+                key={e.id}
+                style={{
+                  display: "flex",
+                  alignItems: "baseline",
+                  gap: 10,
+                  padding: "6px 4px",
+                  borderBottom: "1px solid rgba(196,165,90,.10)",
+                }}
+              >
+                <span className="dnd-section-label" style={{ minWidth: 40, color: ACCENT }}>
+                  {e.type}
+                </span>
+                <span
+                  className="dnd-heading"
+                  style={{ minWidth: 70, color: e.delta >= 0 ? ACCENT : "#d97757", fontSize: 16 }}
+                >
+                  {e.delta >= 0 ? "+" : ""}
+                  {e.delta.toLocaleString()}
                 </span>
                 <span className="dnd-serif" style={{ flex: 1, fontSize: 13 }}>
-                  {e.description || <em style={{ opacity: .5 }}>— no note —</em>}
+                  {e.description || <em style={{ opacity: 0.5 }}>— no note —</em>}
                   {e.awardedToUserId && (
-                    <span style={{ opacity: .55, marginLeft: 8 }}>
+                    <span style={{ opacity: 0.55, marginLeft: 8 }}>
                       → {memberNameById.get(e.awardedToUserId) || e.awardedToUserId.slice(0, 8)}
                     </span>
                   )}
                 </span>
-                <span className="dnd-serif" style={{ fontSize: 11, opacity: .5 }}>
+                <span className="dnd-serif" style={{ fontSize: 11, opacity: 0.5 }}>
                   {new Date(e.createdAt).toLocaleDateString()}
                 </span>
                 {isDM && (
@@ -363,7 +490,9 @@ function LedgerSection({
                     onClick={() => del(e.id)}
                     className="dnd-stone-tile"
                     style={{ padding: "2px 8px", fontSize: 11 }}
-                  >×</button>
+                  >
+                    ×
+                  </button>
                 )}
               </li>
             ))}
@@ -388,7 +517,9 @@ function SessionsSection({ roomId, isDM }: { roomId: string; isDM: boolean }) {
     if (r?.ok) setSessions(r.sessions || []);
     setLoading(false);
   }, [roomId]);
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+  }, [load]);
 
   async function add() {
     if (!draft.trim()) return;
@@ -399,7 +530,7 @@ function SessionsSection({ roomId, isDM }: { roomId: string; isDM: boolean }) {
     });
     setBusy(false);
     if (r?.ok) {
-      setSessions(s => [r.session, ...s]);
+      setSessions((s) => [r.session, ...s]);
       setDraft("");
     }
   }
@@ -410,7 +541,7 @@ function SessionsSection({ roomId, isDM }: { roomId: string; isDM: boolean }) {
       body: JSON.stringify({ body: editBody }),
     });
     if (r?.ok) {
-      setSessions(ss => ss.map(s => s.id === id ? r.session : s));
+      setSessions((ss) => ss.map((s) => (s.id === id ? r.session : s)));
       setEditingId(null);
     }
   }
@@ -418,18 +549,21 @@ function SessionsSection({ roomId, isDM }: { roomId: string; isDM: boolean }) {
   async function del(id: string) {
     if (!confirm("Erase this session log?")) return;
     const r = await apiFetch(`/rooms/${roomId}/campaign/sessions/${id}`, { method: "DELETE" });
-    if (r?.ok) setSessions(ss => ss.filter(s => s.id !== id));
+    if (r?.ok) setSessions((ss) => ss.filter((s) => s.id !== id));
   }
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
       {isDM && (
-        <div className="dnd-card" style={{ padding: 12, display: "flex", flexDirection: "column", gap: 8 }}>
+        <div
+          className="dnd-card"
+          style={{ padding: 12, display: "flex", flexDirection: "column", gap: 8 }}
+        >
           <div className="dnd-section-label">Tonight's Recap</div>
           <textarea
             className="dnd-parchment-input"
             value={draft}
-            onChange={e => setDraft(e.target.value)}
+            onChange={(e) => setDraft(e.target.value)}
             rows={5}
             placeholder="What happened? Markdown welcome."
             maxLength={20000}
@@ -444,17 +578,33 @@ function SessionsSection({ roomId, isDM }: { roomId: string; isDM: boolean }) {
       )}
 
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        {loading && <div className="dnd-serif" style={{ opacity: .5 }}>Loading…</div>}
-        {!loading && sessions.length === 0 && (
-          <div className="dnd-card" style={{ padding: 12 }}>
-            <div className="dnd-serif" style={{ opacity: .55, fontStyle: "italic" }}>No session logs yet.</div>
+        {loading && (
+          <div className="dnd-serif" style={{ opacity: 0.5 }}>
+            Loading…
           </div>
         )}
-        {sessions.map(s => (
+        {!loading && sessions.length === 0 && (
+          <div className="dnd-card" style={{ padding: 12 }}>
+            <div className="dnd-serif" style={{ opacity: 0.55, fontStyle: "italic" }}>
+              No session logs yet.
+            </div>
+          </div>
+        )}
+        {sessions.map((s) => (
           <article key={s.id} className="dnd-card" style={{ padding: "12px 14px" }}>
-            <header style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8, marginBottom: 6 }}>
-              <div className="dnd-heading" style={{ fontSize: 18, color: ACCENT }}>Session {s.sessionNumber}</div>
-              <div className="dnd-serif" style={{ fontSize: 11, opacity: .55 }}>
+            <header
+              style={{
+                display: "flex",
+                alignItems: "baseline",
+                justifyContent: "space-between",
+                gap: 8,
+                marginBottom: 6,
+              }}
+            >
+              <div className="dnd-heading" style={{ fontSize: 18, color: ACCENT }}>
+                Session {s.sessionNumber}
+              </div>
+              <div className="dnd-serif" style={{ fontSize: 11, opacity: 0.55 }}>
                 {new Date(s.createdAt).toLocaleString()}
               </div>
             </header>
@@ -463,24 +613,46 @@ function SessionsSection({ roomId, isDM }: { roomId: string; isDM: boolean }) {
                 <textarea
                   className="dnd-parchment-input"
                   value={editBody}
-                  onChange={e => setEditBody(e.target.value)}
+                  onChange={(e) => setEditBody(e.target.value)}
                   rows={6}
                   style={{ width: "100%", resize: "vertical" }}
                 />
                 <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
-                  <button className="dnd-stone-tile" onClick={() => save(s.id)}>Save</button>
-                  <button className="dnd-stone-tile" onClick={() => setEditingId(null)}>Cancel</button>
+                  <button className="dnd-stone-tile" onClick={() => save(s.id)}>
+                    Save
+                  </button>
+                  <button className="dnd-stone-tile" onClick={() => setEditingId(null)}>
+                    Cancel
+                  </button>
                 </div>
               </>
             ) : (
               <>
-                <div className="dnd-serif" style={{ fontSize: 14, whiteSpace: "pre-wrap", lineHeight: 1.55 }}>
-                  {s.body || <em style={{ opacity: .5 }}>— no recap —</em>}
+                <div
+                  className="dnd-serif"
+                  style={{ fontSize: 14, whiteSpace: "pre-wrap", lineHeight: 1.55 }}
+                >
+                  {s.body || <em style={{ opacity: 0.5 }}>— no recap —</em>}
                 </div>
                 {isDM && (
                   <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
-                    <button className="dnd-stone-tile" style={{ padding: "2px 10px", fontSize: 12 }} onClick={() => { setEditingId(s.id); setEditBody(s.body); }}>Edit</button>
-                    <button className="dnd-stone-tile" style={{ padding: "2px 10px", fontSize: 12 }} onClick={() => del(s.id)}>Delete</button>
+                    <button
+                      className="dnd-stone-tile"
+                      style={{ padding: "2px 10px", fontSize: 12 }}
+                      onClick={() => {
+                        setEditingId(s.id);
+                        setEditBody(s.body);
+                      }}
+                    >
+                      Edit
+                    </button>
+                    <button
+                      className="dnd-stone-tile"
+                      style={{ padding: "2px 10px", fontSize: 12 }}
+                      onClick={() => del(s.id)}
+                    >
+                      Delete
+                    </button>
                   </div>
                 )}
               </>
@@ -510,7 +682,9 @@ function NpcsSection({ roomId, isDM }: { roomId: string; isDM: boolean }) {
     if (r?.ok) setNpcs(r.npcs || []);
     setLoading(false);
   }, [roomId]);
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+  }, [load]);
 
   async function add() {
     if (!name.trim()) return;
@@ -521,8 +695,11 @@ function NpcsSection({ roomId, isDM }: { roomId: string; isDM: boolean }) {
     });
     setBusy(false);
     if (r?.ok) {
-      setNpcs(n => [r.npc, ...n]);
-      setName(""); setStatus("UNKNOWN"); setNotes(""); setShowAdd(false);
+      setNpcs((n) => [r.npc, ...n]);
+      setName("");
+      setStatus("UNKNOWN");
+      setNotes("");
+      setShowAdd(false);
     }
   }
 
@@ -533,7 +710,7 @@ function NpcsSection({ roomId, isDM }: { roomId: string; isDM: boolean }) {
       body: JSON.stringify({ name: editing.name, status: editing.status, notes: editing.notes }),
     });
     if (r?.ok) {
-      setNpcs(ns => ns.map(x => x.id === editing.id ? r.npc : x));
+      setNpcs((ns) => ns.map((x) => (x.id === editing.id ? r.npc : x)));
       setEditing(null);
     }
   }
@@ -541,62 +718,161 @@ function NpcsSection({ roomId, isDM }: { roomId: string; isDM: boolean }) {
   async function del(id: string) {
     if (!confirm("Strike this NPC from the index?")) return;
     const r = await apiFetch(`/rooms/${roomId}/campaign/npcs/${id}`, { method: "DELETE" });
-    if (r?.ok) setNpcs(ns => ns.filter(n => n.id !== id));
+    if (r?.ok) setNpcs((ns) => ns.filter((n) => n.id !== id));
   }
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
       {isDM && !showAdd && (
         <div>
-          <button className="dnd-stone-tile" onClick={() => setShowAdd(true)}>+ Record NPC</button>
+          <button className="dnd-stone-tile" onClick={() => setShowAdd(true)}>
+            + Record NPC
+          </button>
         </div>
       )}
       {isDM && showAdd && (
-        <div className="dnd-card" style={{ padding: 12, display: "flex", flexDirection: "column", gap: 8 }}>
+        <div
+          className="dnd-card"
+          style={{ padding: 12, display: "flex", flexDirection: "column", gap: 8 }}
+        >
           <div className="dnd-section-label">New NPC</div>
-          <input className="dnd-parchment-input" placeholder="Name" value={name} onChange={e => setName(e.target.value)} maxLength={120} />
-          <select className="dnd-parchment-input" value={status} onChange={e => setStatus(e.target.value as any)}>
-            {NPC_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+          <input
+            className="dnd-parchment-input"
+            placeholder="Name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            maxLength={120}
+          />
+          <select
+            className="dnd-parchment-input"
+            value={status}
+            onChange={(e) => setStatus(e.target.value as any)}
+          >
+            {NPC_STATUSES.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
           </select>
-          <textarea className="dnd-parchment-input" placeholder="Notes" value={notes} onChange={e => setNotes(e.target.value)} rows={3} maxLength={4000} style={{ resize: "vertical" }} />
+          <textarea
+            className="dnd-parchment-input"
+            placeholder="Notes"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            rows={3}
+            maxLength={4000}
+            style={{ resize: "vertical" }}
+          />
           <div style={{ display: "flex", gap: 6 }}>
-            <button className="dnd-stone-tile" disabled={busy || !name.trim()} onClick={add}>Add</button>
-            <button className="dnd-stone-tile" onClick={() => { setShowAdd(false); setName(""); setNotes(""); setStatus("UNKNOWN"); }}>Cancel</button>
+            <button className="dnd-stone-tile" disabled={busy || !name.trim()} onClick={add}>
+              Add
+            </button>
+            <button
+              className="dnd-stone-tile"
+              onClick={() => {
+                setShowAdd(false);
+                setName("");
+                setNotes("");
+                setStatus("UNKNOWN");
+              }}
+            >
+              Cancel
+            </button>
           </div>
         </div>
       )}
 
-      {loading && <div className="dnd-serif" style={{ opacity: .5 }}>Loading…</div>}
-      {!loading && npcs.length === 0 && (
-        <div className="dnd-card" style={{ padding: 12 }}>
-          <div className="dnd-serif" style={{ opacity: .55, fontStyle: "italic" }}>No NPCs catalogued.</div>
+      {loading && (
+        <div className="dnd-serif" style={{ opacity: 0.5 }}>
+          Loading…
         </div>
       )}
-      {npcs.map(n => (
+      {!loading && npcs.length === 0 && (
+        <div className="dnd-card" style={{ padding: 12 }}>
+          <div className="dnd-serif" style={{ opacity: 0.55, fontStyle: "italic" }}>
+            No NPCs catalogued.
+          </div>
+        </div>
+      )}
+      {npcs.map((n) => (
         <div key={n.id} className="dnd-card" style={{ padding: "10px 12px" }}>
           {editing?.id === n.id ? (
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              <input className="dnd-parchment-input" value={editing.name} onChange={e => setEditing({ ...editing, name: e.target.value })} maxLength={120} />
-              <select className="dnd-parchment-input" value={editing.status} onChange={e => setEditing({ ...editing, status: e.target.value as any })}>
-                {NPC_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+              <input
+                className="dnd-parchment-input"
+                value={editing.name}
+                onChange={(e) => setEditing({ ...editing, name: e.target.value })}
+                maxLength={120}
+              />
+              <select
+                className="dnd-parchment-input"
+                value={editing.status}
+                onChange={(e) => setEditing({ ...editing, status: e.target.value as any })}
+              >
+                {NPC_STATUSES.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
               </select>
-              <textarea className="dnd-parchment-input" value={editing.notes} onChange={e => setEditing({ ...editing, notes: e.target.value })} rows={3} maxLength={4000} style={{ resize: "vertical" }} />
+              <textarea
+                className="dnd-parchment-input"
+                value={editing.notes}
+                onChange={(e) => setEditing({ ...editing, notes: e.target.value })}
+                rows={3}
+                maxLength={4000}
+                style={{ resize: "vertical" }}
+              />
               <div style={{ display: "flex", gap: 6 }}>
-                <button className="dnd-stone-tile" onClick={saveEdit}>Save</button>
-                <button className="dnd-stone-tile" onClick={() => setEditing(null)}>Cancel</button>
+                <button className="dnd-stone-tile" onClick={saveEdit}>
+                  Save
+                </button>
+                <button className="dnd-stone-tile" onClick={() => setEditing(null)}>
+                  Cancel
+                </button>
               </div>
             </div>
           ) : (
             <>
-              <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8 }}>
-                <div className="dnd-heading" style={{ fontSize: 17, color: ACCENT }}>{n.name}</div>
-                <div className="dnd-section-label" style={{ color: statusColor(n.status) }}>{n.status}</div>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "baseline",
+                  justifyContent: "space-between",
+                  gap: 8,
+                }}
+              >
+                <div className="dnd-heading" style={{ fontSize: 17, color: ACCENT }}>
+                  {n.name}
+                </div>
+                <div className="dnd-section-label" style={{ color: statusColor(n.status) }}>
+                  {n.status}
+                </div>
               </div>
-              {n.notes && <div className="dnd-serif" style={{ fontSize: 13, marginTop: 4, whiteSpace: "pre-wrap", opacity: .85 }}>{n.notes}</div>}
+              {n.notes && (
+                <div
+                  className="dnd-serif"
+                  style={{ fontSize: 13, marginTop: 4, whiteSpace: "pre-wrap", opacity: 0.85 }}
+                >
+                  {n.notes}
+                </div>
+              )}
               {isDM && (
                 <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
-                  <button className="dnd-stone-tile" style={{ padding: "2px 10px", fontSize: 12 }} onClick={() => setEditing(n)}>Edit</button>
-                  <button className="dnd-stone-tile" style={{ padding: "2px 10px", fontSize: 12 }} onClick={() => del(n.id)}>Delete</button>
+                  <button
+                    className="dnd-stone-tile"
+                    style={{ padding: "2px 10px", fontSize: 12 }}
+                    onClick={() => setEditing(n)}
+                  >
+                    Edit
+                  </button>
+                  <button
+                    className="dnd-stone-tile"
+                    style={{ padding: "2px 10px", fontSize: 12 }}
+                    onClick={() => del(n.id)}
+                  >
+                    Delete
+                  </button>
                 </div>
               )}
             </>
@@ -609,11 +885,16 @@ function NpcsSection({ roomId, isDM }: { roomId: string; isDM: boolean }) {
 
 function statusColor(s: Npc["status"]): string {
   switch (s) {
-    case "ALIVE":   return "#7fb069";
-    case "DEAD":    return "#777";
-    case "HOSTILE": return "#d97757";
-    case "ALLIED":  return ACCENT;
-    default:        return "rgba(243,244,246,.55)";
+    case "ALIVE":
+      return "#7fb069";
+    case "DEAD":
+      return "#777";
+    case "HOSTILE":
+      return "#d97757";
+    case "ALLIED":
+      return ACCENT;
+    default:
+      return "rgba(243,244,246,.55)";
   }
 }
 
@@ -634,7 +915,9 @@ function ThreadsSection({ roomId, isDM }: { roomId: string; isDM: boolean }) {
     if (r?.ok) setThreads(r.threads || []);
     setLoading(false);
   }, [roomId]);
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+  }, [load]);
 
   async function add() {
     if (!title.trim()) return;
@@ -645,8 +928,10 @@ function ThreadsSection({ roomId, isDM }: { roomId: string; isDM: boolean }) {
     });
     setBusy(false);
     if (r?.ok) {
-      setThreads(t => [r.thread, ...t]);
-      setTitle(""); setBody(""); setShowAdd(false);
+      setThreads((t) => [r.thread, ...t]);
+      setTitle("");
+      setBody("");
+      setShowAdd(false);
     }
   }
 
@@ -657,7 +942,7 @@ function ThreadsSection({ roomId, isDM }: { roomId: string; isDM: boolean }) {
       body: JSON.stringify({ title: editing.title, body: editing.body, status: editing.status }),
     });
     if (r?.ok) {
-      setThreads(ts => ts.map(x => x.id === editing.id ? r.thread : x));
+      setThreads((ts) => ts.map((x) => (x.id === editing.id ? r.thread : x)));
       setEditing(null);
     }
   }
@@ -667,66 +952,174 @@ function ThreadsSection({ roomId, isDM }: { roomId: string; isDM: boolean }) {
       method: "PATCH",
       body: JSON.stringify({ status }),
     });
-    if (r?.ok) setThreads(ts => ts.map(x => x.id === t.id ? r.thread : x));
+    if (r?.ok) setThreads((ts) => ts.map((x) => (x.id === t.id ? r.thread : x)));
   }
 
   async function del(id: string) {
     if (!confirm("Sever this thread?")) return;
     const r = await apiFetch(`/rooms/${roomId}/campaign/threads/${id}`, { method: "DELETE" });
-    if (r?.ok) setThreads(ts => ts.filter(x => x.id !== id));
+    if (r?.ok) setThreads((ts) => ts.filter((x) => x.id !== id));
   }
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
       {isDM && !showAdd && (
-        <div><button className="dnd-stone-tile" onClick={() => setShowAdd(true)}>+ Spin Plot Thread</button></div>
+        <div>
+          <button className="dnd-stone-tile" onClick={() => setShowAdd(true)}>
+            + Spin Plot Thread
+          </button>
+        </div>
       )}
       {isDM && showAdd && (
-        <div className="dnd-card" style={{ padding: 12, display: "flex", flexDirection: "column", gap: 8 }}>
+        <div
+          className="dnd-card"
+          style={{ padding: 12, display: "flex", flexDirection: "column", gap: 8 }}
+        >
           <div className="dnd-section-label">New Thread</div>
-          <input className="dnd-parchment-input" placeholder="Title" value={title} onChange={e => setTitle(e.target.value)} maxLength={200} />
-          <textarea className="dnd-parchment-input" placeholder="Body (markdown welcome)" value={body} onChange={e => setBody(e.target.value)} rows={3} maxLength={8000} style={{ resize: "vertical" }} />
+          <input
+            className="dnd-parchment-input"
+            placeholder="Title"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            maxLength={200}
+          />
+          <textarea
+            className="dnd-parchment-input"
+            placeholder="Body (markdown welcome)"
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
+            rows={3}
+            maxLength={8000}
+            style={{ resize: "vertical" }}
+          />
           <div style={{ display: "flex", gap: 6 }}>
-            <button className="dnd-stone-tile" disabled={busy || !title.trim()} onClick={add}>Spin</button>
-            <button className="dnd-stone-tile" onClick={() => { setShowAdd(false); setTitle(""); setBody(""); }}>Cancel</button>
+            <button className="dnd-stone-tile" disabled={busy || !title.trim()} onClick={add}>
+              Spin
+            </button>
+            <button
+              className="dnd-stone-tile"
+              onClick={() => {
+                setShowAdd(false);
+                setTitle("");
+                setBody("");
+              }}
+            >
+              Cancel
+            </button>
           </div>
         </div>
       )}
 
-      {loading && <div className="dnd-serif" style={{ opacity: .5 }}>Loading…</div>}
-      {!loading && threads.length === 0 && (
-        <div className="dnd-card" style={{ padding: 12 }}>
-          <div className="dnd-serif" style={{ opacity: .55, fontStyle: "italic" }}>No plot threads.</div>
+      {loading && (
+        <div className="dnd-serif" style={{ opacity: 0.5 }}>
+          Loading…
         </div>
       )}
-      {threads.map(t => (
-        <div key={t.id} className="dnd-card" style={{ padding: "10px 12px", opacity: t.status === "CLOSED" ? .55 : 1 }}>
+      {!loading && threads.length === 0 && (
+        <div className="dnd-card" style={{ padding: 12 }}>
+          <div className="dnd-serif" style={{ opacity: 0.55, fontStyle: "italic" }}>
+            No plot threads.
+          </div>
+        </div>
+      )}
+      {threads.map((t) => (
+        <div
+          key={t.id}
+          className="dnd-card"
+          style={{ padding: "10px 12px", opacity: t.status === "CLOSED" ? 0.55 : 1 }}
+        >
           {editing?.id === t.id ? (
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              <input className="dnd-parchment-input" value={editing.title} onChange={e => setEditing({ ...editing, title: e.target.value })} maxLength={200} />
-              <select className="dnd-parchment-input" value={editing.status} onChange={e => setEditing({ ...editing, status: e.target.value as any })}>
-                {THREAD_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+              <input
+                className="dnd-parchment-input"
+                value={editing.title}
+                onChange={(e) => setEditing({ ...editing, title: e.target.value })}
+                maxLength={200}
+              />
+              <select
+                className="dnd-parchment-input"
+                value={editing.status}
+                onChange={(e) => setEditing({ ...editing, status: e.target.value as any })}
+              >
+                {THREAD_STATUSES.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
               </select>
-              <textarea className="dnd-parchment-input" value={editing.body} onChange={e => setEditing({ ...editing, body: e.target.value })} rows={3} maxLength={8000} style={{ resize: "vertical" }} />
+              <textarea
+                className="dnd-parchment-input"
+                value={editing.body}
+                onChange={(e) => setEditing({ ...editing, body: e.target.value })}
+                rows={3}
+                maxLength={8000}
+                style={{ resize: "vertical" }}
+              />
               <div style={{ display: "flex", gap: 6 }}>
-                <button className="dnd-stone-tile" onClick={saveEdit}>Save</button>
-                <button className="dnd-stone-tile" onClick={() => setEditing(null)}>Cancel</button>
+                <button className="dnd-stone-tile" onClick={saveEdit}>
+                  Save
+                </button>
+                <button className="dnd-stone-tile" onClick={() => setEditing(null)}>
+                  Cancel
+                </button>
               </div>
             </div>
           ) : (
             <>
-              <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8 }}>
-                <div className="dnd-heading" style={{ fontSize: 17, color: ACCENT, textDecoration: t.status === "CLOSED" ? "line-through" : "none" }}>{t.title}</div>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "baseline",
+                  justifyContent: "space-between",
+                  gap: 8,
+                }}
+              >
+                <div
+                  className="dnd-heading"
+                  style={{
+                    fontSize: 17,
+                    color: ACCENT,
+                    textDecoration: t.status === "CLOSED" ? "line-through" : "none",
+                  }}
+                >
+                  {t.title}
+                </div>
                 <div className="dnd-section-label">{t.status}</div>
               </div>
-              {t.body && <div className="dnd-serif" style={{ fontSize: 13, marginTop: 4, whiteSpace: "pre-wrap", opacity: .85 }}>{t.body}</div>}
+              {t.body && (
+                <div
+                  className="dnd-serif"
+                  style={{ fontSize: 13, marginTop: 4, whiteSpace: "pre-wrap", opacity: 0.85 }}
+                >
+                  {t.body}
+                </div>
+              )}
               {isDM && (
                 <div style={{ display: "flex", gap: 6, marginTop: 8, flexWrap: "wrap" }}>
-                  <button className="dnd-stone-tile" style={{ padding: "2px 10px", fontSize: 12 }} onClick={() => setEditing(t)}>Edit</button>
-                  {THREAD_STATUSES.filter(s => s !== t.status).map(s => (
-                    <button key={s} className="dnd-stone-tile" style={{ padding: "2px 10px", fontSize: 12 }} onClick={() => setStatus(t, s)}>→ {s}</button>
+                  <button
+                    className="dnd-stone-tile"
+                    style={{ padding: "2px 10px", fontSize: 12 }}
+                    onClick={() => setEditing(t)}
+                  >
+                    Edit
+                  </button>
+                  {THREAD_STATUSES.filter((s) => s !== t.status).map((s) => (
+                    <button
+                      key={s}
+                      className="dnd-stone-tile"
+                      style={{ padding: "2px 10px", fontSize: 12 }}
+                      onClick={() => setStatus(t, s)}
+                    >
+                      → {s}
+                    </button>
                   ))}
-                  <button className="dnd-stone-tile" style={{ padding: "2px 10px", fontSize: 12 }} onClick={() => del(t.id)}>Delete</button>
+                  <button
+                    className="dnd-stone-tile"
+                    style={{ padding: "2px 10px", fontSize: 12 }}
+                    onClick={() => del(t.id)}
+                  >
+                    Delete
+                  </button>
                 </div>
               )}
             </>
@@ -754,11 +1147,13 @@ function NotesSection({ roomId, isDM }: { roomId: string; isDM: boolean }) {
     if (r?.ok) setNotes(r.notes || []);
     setLoading(false);
   }, [roomId]);
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+  }, [load]);
 
   const tree = useMemo(() => {
     const byParent = new Map<string | null, WorldNote[]>();
-    notes.forEach(n => {
+    notes.forEach((n) => {
       const k = n.parentId;
       if (!byParent.has(k)) byParent.set(k, []);
       byParent.get(k)!.push(n);
@@ -766,7 +1161,10 @@ function NotesSection({ roomId, isDM }: { roomId: string; isDM: boolean }) {
     return byParent;
   }, [notes]);
 
-  const selected = useMemo(() => notes.find(n => n.id === selectedId) || null, [notes, selectedId]);
+  const selected = useMemo(
+    () => notes.find((n) => n.id === selectedId) || null,
+    [notes, selectedId],
+  );
 
   async function add() {
     if (!title.trim()) return;
@@ -777,8 +1175,11 @@ function NotesSection({ roomId, isDM }: { roomId: string; isDM: boolean }) {
     });
     setBusy(false);
     if (r?.ok) {
-      setNotes(ns => [...ns, r.note]);
-      setTitle(""); setBody(""); setParentId(""); setShowAdd(false);
+      setNotes((ns) => [...ns, r.note]);
+      setTitle("");
+      setBody("");
+      setParentId("");
+      setShowAdd(false);
       setSelectedId(r.note.id);
     }
   }
@@ -790,7 +1191,7 @@ function NotesSection({ roomId, isDM }: { roomId: string; isDM: boolean }) {
       body: JSON.stringify({ title: editing.title, body: editing.body }),
     });
     if (r?.ok) {
-      setNotes(ns => ns.map(x => x.id === editing.id ? r.note : x));
+      setNotes((ns) => ns.map((x) => (x.id === editing.id ? r.note : x)));
       setEditing(null);
     }
   }
@@ -799,7 +1200,7 @@ function NotesSection({ roomId, isDM }: { roomId: string; isDM: boolean }) {
     if (!confirm("Burn this page from the codex?")) return;
     const r = await apiFetch(`/rooms/${roomId}/campaign/notes/${id}`, { method: "DELETE" });
     if (r?.ok) {
-      setNotes(ns => ns.filter(n => n.id !== id));
+      setNotes((ns) => ns.filter((n) => n.id !== id));
       if (selectedId === id) setSelectedId(null);
     }
   }
@@ -809,7 +1210,7 @@ function NotesSection({ roomId, isDM }: { roomId: string; isDM: boolean }) {
     if (kids.length === 0) return null;
     return (
       <ul style={{ listStyle: "none", paddingLeft: depth === 0 ? 0 : 12, margin: 0 }}>
-        {kids.map(n => (
+        {kids.map((n) => (
           <li key={n.id}>
             <button
               onClick={() => setSelectedId(n.id)}
@@ -826,7 +1227,8 @@ function NotesSection({ roomId, isDM }: { roomId: string; isDM: boolean }) {
                 width: "100%",
               }}
             >
-              {depth > 0 && "↳ "}{n.title}
+              {depth > 0 && "↳ "}
+              {n.title}
             </button>
             {renderTree(n.id, depth + 1)}
           </li>
@@ -836,63 +1238,169 @@ function NotesSection({ roomId, isDM }: { roomId: string; isDM: boolean }) {
   }
 
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "minmax(180px, 240px) 1fr", gap: 12, alignItems: "start" }}>
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "minmax(180px, 240px) 1fr",
+        gap: 12,
+        alignItems: "start",
+      }}
+    >
       <aside className="dnd-card" style={{ padding: 10, maxHeight: 480, overflow: "auto" }}>
-        <div className="dnd-section-label" style={{ marginBottom: 6 }}>Codex</div>
-        {loading && <div className="dnd-serif" style={{ opacity: .5 }}>Loading…</div>}
-        {!loading && notes.length === 0 && <div className="dnd-serif" style={{ opacity: .55, fontStyle: "italic" }}>No pages yet.</div>}
+        <div className="dnd-section-label" style={{ marginBottom: 6 }}>
+          Codex
+        </div>
+        {loading && (
+          <div className="dnd-serif" style={{ opacity: 0.5 }}>
+            Loading…
+          </div>
+        )}
+        {!loading && notes.length === 0 && (
+          <div className="dnd-serif" style={{ opacity: 0.55, fontStyle: "italic" }}>
+            No pages yet.
+          </div>
+        )}
         {renderTree(null, 0)}
         {isDM && (
           <div style={{ marginTop: 10 }}>
-            <button className="dnd-stone-tile" style={{ padding: "4px 10px", fontSize: 12 }} onClick={() => setShowAdd(true)}>+ New Page</button>
+            <button
+              className="dnd-stone-tile"
+              style={{ padding: "4px 10px", fontSize: 12 }}
+              onClick={() => setShowAdd(true)}
+            >
+              + New Page
+            </button>
           </div>
         )}
       </aside>
 
       <section style={{ minHeight: 200 }}>
         {showAdd && isDM ? (
-          <div className="dnd-card" style={{ padding: 12, display: "flex", flexDirection: "column", gap: 8 }}>
+          <div
+            className="dnd-card"
+            style={{ padding: 12, display: "flex", flexDirection: "column", gap: 8 }}
+          >
             <div className="dnd-section-label">New Codex Page</div>
-            <input className="dnd-parchment-input" placeholder="Title" value={title} onChange={e => setTitle(e.target.value)} maxLength={160} />
-            <select className="dnd-parchment-input" value={parentId} onChange={e => setParentId(e.target.value)}>
+            <input
+              className="dnd-parchment-input"
+              placeholder="Title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              maxLength={160}
+            />
+            <select
+              className="dnd-parchment-input"
+              value={parentId}
+              onChange={(e) => setParentId(e.target.value)}
+            >
               <option value="">— root —</option>
-              {notes.map(n => <option key={n.id} value={n.id}>{n.title}</option>)}
+              {notes.map((n) => (
+                <option key={n.id} value={n.id}>
+                  {n.title}
+                </option>
+              ))}
             </select>
-            <textarea className="dnd-parchment-input" placeholder="Body (markdown welcome)" value={body} onChange={e => setBody(e.target.value)} rows={6} maxLength={16000} style={{ resize: "vertical" }} />
+            <textarea
+              className="dnd-parchment-input"
+              placeholder="Body (markdown welcome)"
+              value={body}
+              onChange={(e) => setBody(e.target.value)}
+              rows={6}
+              maxLength={16000}
+              style={{ resize: "vertical" }}
+            />
             <div style={{ display: "flex", gap: 6 }}>
-              <button className="dnd-stone-tile" disabled={busy || !title.trim()} onClick={add}>Inscribe</button>
-              <button className="dnd-stone-tile" onClick={() => { setShowAdd(false); setTitle(""); setBody(""); setParentId(""); }}>Cancel</button>
+              <button className="dnd-stone-tile" disabled={busy || !title.trim()} onClick={add}>
+                Inscribe
+              </button>
+              <button
+                className="dnd-stone-tile"
+                onClick={() => {
+                  setShowAdd(false);
+                  setTitle("");
+                  setBody("");
+                  setParentId("");
+                }}
+              >
+                Cancel
+              </button>
             </div>
           </div>
         ) : selected ? (
           editing?.id === selected.id ? (
-            <div className="dnd-card" style={{ padding: 12, display: "flex", flexDirection: "column", gap: 8 }}>
-              <input className="dnd-parchment-input" value={editing.title} onChange={e => setEditing({ ...editing, title: e.target.value })} maxLength={160} />
-              <textarea className="dnd-parchment-input" value={editing.body} onChange={e => setEditing({ ...editing, body: e.target.value })} rows={10} maxLength={16000} style={{ resize: "vertical" }} />
+            <div
+              className="dnd-card"
+              style={{ padding: 12, display: "flex", flexDirection: "column", gap: 8 }}
+            >
+              <input
+                className="dnd-parchment-input"
+                value={editing.title}
+                onChange={(e) => setEditing({ ...editing, title: e.target.value })}
+                maxLength={160}
+              />
+              <textarea
+                className="dnd-parchment-input"
+                value={editing.body}
+                onChange={(e) => setEditing({ ...editing, body: e.target.value })}
+                rows={10}
+                maxLength={16000}
+                style={{ resize: "vertical" }}
+              />
               <div style={{ display: "flex", gap: 6 }}>
-                <button className="dnd-stone-tile" onClick={saveEdit}>Save</button>
-                <button className="dnd-stone-tile" onClick={() => setEditing(null)}>Cancel</button>
+                <button className="dnd-stone-tile" onClick={saveEdit}>
+                  Save
+                </button>
+                <button className="dnd-stone-tile" onClick={() => setEditing(null)}>
+                  Cancel
+                </button>
               </div>
             </div>
           ) : (
             <article className="dnd-card" style={{ padding: "14px 16px" }}>
-              <header style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8, marginBottom: 8 }}>
-                <h3 className="dnd-heading" style={{ fontSize: 22, color: ACCENT, margin: 0 }}>{selected.title}</h3>
+              <header
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "baseline",
+                  gap: 8,
+                  marginBottom: 8,
+                }}
+              >
+                <h3 className="dnd-heading" style={{ fontSize: 22, color: ACCENT, margin: 0 }}>
+                  {selected.title}
+                </h3>
                 {isDM && (
                   <div style={{ display: "flex", gap: 6 }}>
-                    <button className="dnd-stone-tile" style={{ padding: "2px 10px", fontSize: 12 }} onClick={() => setEditing(selected)}>Edit</button>
-                    <button className="dnd-stone-tile" style={{ padding: "2px 10px", fontSize: 12 }} onClick={() => del(selected.id)}>Delete</button>
+                    <button
+                      className="dnd-stone-tile"
+                      style={{ padding: "2px 10px", fontSize: 12 }}
+                      onClick={() => setEditing(selected)}
+                    >
+                      Edit
+                    </button>
+                    <button
+                      className="dnd-stone-tile"
+                      style={{ padding: "2px 10px", fontSize: 12 }}
+                      onClick={() => del(selected.id)}
+                    >
+                      Delete
+                    </button>
                   </div>
                 )}
               </header>
-              <div className="dnd-serif" style={{ fontSize: 14, whiteSpace: "pre-wrap", lineHeight: 1.6 }}>
-                {selected.body || <em style={{ opacity: .5 }}>— blank page —</em>}
+              <div
+                className="dnd-serif"
+                style={{ fontSize: 14, whiteSpace: "pre-wrap", lineHeight: 1.6 }}
+              >
+                {selected.body || <em style={{ opacity: 0.5 }}>— blank page —</em>}
               </div>
             </article>
           )
         ) : (
           <div className="dnd-card" style={{ padding: 14 }}>
-            <div className="dnd-serif" style={{ opacity: .55, fontStyle: "italic" }}>Select a page from the codex.</div>
+            <div className="dnd-serif" style={{ opacity: 0.55, fontStyle: "italic" }}>
+              Select a page from the codex.
+            </div>
           </div>
         )}
       </section>
@@ -910,42 +1418,85 @@ function PartySection({ roomId }: { roomId: string }) {
     if (r?.ok) setParty(r.party || []);
     setLoading(false);
   }, [roomId]);
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+  }, [load]);
 
-  if (loading) return <div className="dnd-serif" style={{ opacity: .55, padding: 16 }}>Mustering the party…</div>;
+  if (loading)
+    return (
+      <div className="dnd-serif" style={{ opacity: 0.55, padding: 16 }}>
+        Mustering the party…
+      </div>
+    );
   if (!party.length) {
     return (
       <div className="dnd-card" style={{ padding: 16 }}>
-        <div className="dnd-serif" style={{ opacity: .65, fontStyle: "italic" }}>
-          No characters are sworn to this campaign yet. Players: open the Sheets tab and create a character — set its Campaign in the editor.
+        <div className="dnd-serif" style={{ opacity: 0.65, fontStyle: "italic" }}>
+          No characters are sworn to this campaign yet. Players: open the Sheets tab and create a
+          character — set its Campaign in the editor.
         </div>
       </div>
     );
   }
   return (
     <div className="dnd-card" style={{ padding: 12 }}>
-      <div className="dnd-section-label" style={{ marginBottom: 8 }}>Party Roll</div>
-      <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 6 }}>
-        {party.map(c => {
+      <div className="dnd-section-label" style={{ marginBottom: 8 }}>
+        Party Roll
+      </div>
+      <ul
+        style={{
+          listStyle: "none",
+          padding: 0,
+          margin: 0,
+          display: "flex",
+          flexDirection: "column",
+          gap: 6,
+        }}
+      >
+        {party.map((c) => {
           const pct = c.hpMax > 0 ? Math.max(0, Math.min(100, (c.hpCurrent / c.hpMax) * 100)) : 0;
           const hpColor = pct > 50 ? "#22C55E" : pct > 25 ? "#F59E0B" : "#EF4444";
           return (
-            <li key={c.id} style={{ display: "grid", gridTemplateColumns: "minmax(110px, 1fr) 80px 70px 64px", gap: 8, alignItems: "center", padding: "6px 4px", borderBottom: "1px solid rgba(196,165,90,.10)" }}>
+            <li
+              key={c.id}
+              style={{
+                display: "grid",
+                gridTemplateColumns: "minmax(110px, 1fr) 80px 70px 64px",
+                gap: 8,
+                alignItems: "center",
+                padding: "6px 4px",
+                borderBottom: "1px solid rgba(196,165,90,.10)",
+              }}
+            >
               <div>
-                <div className="dnd-heading" style={{ fontSize: 15, color: ACCENT }}>{c.name}</div>
-                <div className="dnd-serif" style={{ fontSize: 11, opacity: .6 }}>
-                  {c.race ? `${c.race} ` : ""}{c.className || "Adventurer"} · L{c.level}
+                <div className="dnd-heading" style={{ fontSize: 15, color: ACCENT }}>
+                  {c.name}
+                </div>
+                <div className="dnd-serif" style={{ fontSize: 11, opacity: 0.6 }}>
+                  {c.race ? `${c.race} ` : ""}
+                  {c.className || "Adventurer"} · L{c.level}
                 </div>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <div style={{ flex: 1, height: 6, background: "rgba(255,255,255,.08)", borderRadius: 3, overflow: "hidden" }}>
+                <div
+                  style={{
+                    flex: 1,
+                    height: 6,
+                    background: "rgba(255,255,255,.08)",
+                    borderRadius: 3,
+                    overflow: "hidden",
+                  }}
+                >
                   <div style={{ width: `${pct}%`, height: "100%", background: hpColor }} />
                 </div>
               </div>
               <div className="dnd-serif" style={{ fontSize: 12, textAlign: "right" }}>
                 {c.hpCurrent}/{c.hpMax} HP
               </div>
-              <div className="dnd-heading" style={{ fontSize: 14, color: ACCENT, textAlign: "right" }}>
+              <div
+                className="dnd-heading"
+                style={{ fontSize: 14, color: ACCENT, textAlign: "right" }}
+              >
                 {c.xp.toLocaleString()} xp
               </div>
             </li>

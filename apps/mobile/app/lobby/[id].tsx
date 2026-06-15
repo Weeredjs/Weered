@@ -1,4 +1,14 @@
-import { View, Text, FlatList, Pressable, Image, ActivityIndicator, RefreshControl, Alert, Share } from "react-native";
+import {
+  View,
+  Text,
+  FlatList,
+  Pressable,
+  Image,
+  ActivityIndicator,
+  RefreshControl,
+  Alert,
+  Share,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Stack, useLocalSearchParams, router } from "expo-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -52,7 +62,10 @@ export default function LobbyDetail() {
   }, [lobbyId, me]);
 
   const join = useMutation({
-    mutationFn: () => api<{ ok: boolean; pending?: boolean; error?: string }>(`/lobbies/${lobbyId}/join`, { method: "POST" }),
+    mutationFn: () =>
+      api<{ ok: boolean; pending?: boolean; error?: string }>(`/lobbies/${lobbyId}/join`, {
+        method: "POST",
+      }),
     onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: ["lobby", lobbyId] });
       if (data?.pending) Alert.alert("Request sent", "A moderator will review your request.");
@@ -114,10 +127,14 @@ export default function LobbyDetail() {
                 </Pressable>
               )}
               <Pressable
-                onPress={() => Share.share({
-                  url: `${WEB_BASE}/lobby/${lobbyId}`,
-                  message: lobby ? `Join ${lobby.name} on Weered — ${WEB_BASE}/lobby/${lobbyId}` : `${WEB_BASE}/lobby/${lobbyId}`,
-                }).catch(() => {})}
+                onPress={() =>
+                  Share.share({
+                    url: `${WEB_BASE}/lobby/${lobbyId}`,
+                    message: lobby
+                      ? `Join ${lobby.name} on Weered — ${WEB_BASE}/lobby/${lobbyId}`
+                      : `${WEB_BASE}/lobby/${lobbyId}`,
+                  }).catch(() => {})
+                }
                 hitSlop={8}
                 className="active:opacity-70"
               >
@@ -134,9 +151,7 @@ export default function LobbyDetail() {
         </View>
       ) : lobbyQ.error || !lobby ? (
         <View className="flex-1 items-center justify-center px-8">
-          <Text className="text-red-400 text-sm text-center">
-            Couldn't load this lobby.
-          </Text>
+          <Text className="text-red-400 text-sm text-center">Couldn't load this lobby.</Text>
         </View>
       ) : (
         <FlatList
@@ -155,25 +170,57 @@ export default function LobbyDetail() {
             <View>
               <LobbyBanner url={lobby.bannerUrl} accent={accent} />
 
-              <View style={{ paddingHorizontal: 16, paddingTop: 16, paddingBottom: 20, borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.06)", backgroundColor: "#0c0b0a" }}>
+              <View
+                style={{
+                  paddingHorizontal: 16,
+                  paddingTop: 16,
+                  paddingBottom: 20,
+                  borderBottomWidth: 1,
+                  borderBottomColor: "rgba(255,255,255,0.06)",
+                  backgroundColor: "#0c0b0a",
+                }}
+              >
                 <View style={{ flexDirection: "row", alignItems: "center" }}>
                   <View style={{ marginRight: 12 }}>
                     <LobbyLogo name={lobby.name} url={lobby.logoUrl} accent={accent} size={56} />
                   </View>
                   <View style={{ flex: 1, minWidth: 0 }}>
                     <View style={{ flexDirection: "row", alignItems: "center", flexWrap: "wrap" }}>
-                      <Text numberOfLines={1} style={{ color: "rgba(243,244,246,0.96)", fontFamily: "monospace", fontWeight: "900", fontSize: 18, letterSpacing: 0.3 }}>
+                      <Text
+                        numberOfLines={1}
+                        style={{
+                          color: "rgba(243,244,246,0.96)",
+                          fontFamily: "monospace",
+                          fontWeight: "900",
+                          fontSize: 18,
+                          letterSpacing: 0.3,
+                        }}
+                      >
                         {lobby.name}
                       </Text>
                       {lobby.verified && (
-                        <Text style={{ color: "#5800E5", marginLeft: 6, fontSize: 13, fontWeight: "900" }}>✓</Text>
+                        <Text
+                          style={{
+                            color: "#5800E5",
+                            marginLeft: 6,
+                            fontSize: 13,
+                            fontWeight: "900",
+                          }}
+                        >
+                          ✓
+                        </Text>
                       )}
-                      {lobby.moduleType && lobby.moduleType !== "NONE" && lobby.moduleType !== "FEED" && (
-                        <ModuleBadge type={lobby.moduleType} accent={lobby.accentColor} />
-                      )}
+                      {lobby.moduleType &&
+                        lobby.moduleType !== "NONE" &&
+                        lobby.moduleType !== "FEED" && (
+                          <ModuleBadge type={lobby.moduleType} accent={lobby.accentColor} />
+                        )}
                     </View>
                     {!!lobby.description && (
-                      <Text numberOfLines={2} style={{ color: "rgba(203,213,225,0.75)", fontSize: 12, marginTop: 3 }}>
+                      <Text
+                        numberOfLines={2}
+                        style={{ color: "rgba(203,213,225,0.75)", fontSize: 12, marginTop: 3 }}
+                      >
                         {lobby.description}
                       </Text>
                     )}
@@ -189,10 +236,12 @@ export default function LobbyDetail() {
                       joinMode={lobby.joinMode}
                       pending={join.isPending || leave.isPending}
                       onJoin={() => join.mutate()}
-                      onLeave={() => Alert.alert("Leave lobby?", `You'll lose access to member-only rooms.`, [
-                        { text: "Cancel", style: "cancel" },
-                        { text: "Leave", style: "destructive", onPress: () => leave.mutate() },
-                      ])}
+                      onLeave={() =>
+                        Alert.alert("Leave lobby?", `You'll lose access to member-only rooms.`, [
+                          { text: "Cancel", style: "cancel" },
+                          { text: "Leave", style: "destructive", onPress: () => leave.mutate() },
+                        ])
+                      }
                     />
                   </View>
                 )}
@@ -209,14 +258,42 @@ export default function LobbyDetail() {
               {lobby.moduleType === "PGA" && <PgaPanel lobbyId={lobbyId} />}
               {lobby.moduleType === "WINDROSE" && <WindrosePanel lobbyId={lobbyId} />}
               {lobby.moduleType === "POKER" && <PokerPanel lobbyId={lobbyId} />}
-              {lobby.moduleType === "CS2" && <GenericGamePanel lobbyId={lobbyId} label="Counter-Strike 2" twitchGame="Counter-Strike" />}
-              {lobby.moduleType === "DOTA2" && <GenericGamePanel lobbyId={lobbyId} label="Dota 2" twitchGame="Dota 2" />}
-              {lobby.moduleType === "POE" && <GenericGamePanel lobbyId={lobbyId} label="Path of Exile" twitchGame="Path of Exile" />}
-              {lobby.moduleType === "MARATHON" && <GenericGamePanel lobbyId={lobbyId} label="Marathon" twitchGame="Marathon" />}
-              {lobby.moduleType === "DND" && <GenericGamePanel lobbyId={lobbyId} label="Dungeons & Dragons" twitchGame="Dungeons & Dragons" />}
-              {lobby.moduleType === "STUDY" && <GenericGamePanel lobbyId={lobbyId} label="Study" twitchGame={null} />}
-              {lobby.moduleType === "HEADQUARTERS" && <GenericGamePanel lobbyId={lobbyId} label="Headquarters" twitchGame={null} />}
-              {lobby.moduleType === "CUSTOM" && <GenericGamePanel lobbyId={lobbyId} label="Custom" twitchGame={null} />}
+              {lobby.moduleType === "CS2" && (
+                <GenericGamePanel
+                  lobbyId={lobbyId}
+                  label="Counter-Strike 2"
+                  twitchGame="Counter-Strike"
+                />
+              )}
+              {lobby.moduleType === "DOTA2" && (
+                <GenericGamePanel lobbyId={lobbyId} label="Dota 2" twitchGame="Dota 2" />
+              )}
+              {lobby.moduleType === "POE" && (
+                <GenericGamePanel
+                  lobbyId={lobbyId}
+                  label="Path of Exile"
+                  twitchGame="Path of Exile"
+                />
+              )}
+              {lobby.moduleType === "MARATHON" && (
+                <GenericGamePanel lobbyId={lobbyId} label="Marathon" twitchGame="Marathon" />
+              )}
+              {lobby.moduleType === "DND" && (
+                <GenericGamePanel
+                  lobbyId={lobbyId}
+                  label="Dungeons & Dragons"
+                  twitchGame="Dungeons & Dragons"
+                />
+              )}
+              {lobby.moduleType === "STUDY" && (
+                <GenericGamePanel lobbyId={lobbyId} label="Study" twitchGame={null} />
+              )}
+              {lobby.moduleType === "HEADQUARTERS" && (
+                <GenericGamePanel lobbyId={lobbyId} label="Headquarters" twitchGame={null} />
+              )}
+              {lobby.moduleType === "CUSTOM" && (
+                <GenericGamePanel lobbyId={lobbyId} label="Custom" twitchGame={null} />
+              )}
 
               <LobbyEvents lobbyId={lobbyId} isOwner={isOwner} />
               <LobbyTiers lobbyId={lobbyId} />
@@ -254,7 +331,13 @@ export default function LobbyDetail() {
 }
 
 function JoinButton({
-  membership, joinRequest, isOwner, joinMode, pending, onJoin, onLeave,
+  membership,
+  joinRequest,
+  isOwner,
+  joinMode,
+  pending,
+  onJoin,
+  onLeave,
 }: {
   membership: Membership;
   joinRequest: JoinRequest | null;
@@ -325,9 +408,7 @@ function UserAvatar({ name, url }: { name: string; url?: string }) {
           onError={() => setFailed(true)}
         />
       ) : (
-        <Text className="text-weered-text text-xs font-bold">
-          {name.slice(0, 1).toUpperCase()}
-        </Text>
+        <Text className="text-weered-text text-xs font-bold">{name.slice(0, 1).toUpperCase()}</Text>
       )}
     </View>
   );
@@ -357,7 +438,11 @@ function RoomRow({ room, lobbyId, accent }: { room: Room; lobbyId: string; accen
     >
       <View className="flex-1">
         <View className="flex-row items-center">
-          {room.isEvent && <Text className="mr-1.5 text-xs" style={{ color: accent }}>EVENT</Text>}
+          {room.isEvent && (
+            <Text className="mr-1.5 text-xs" style={{ color: accent }}>
+              EVENT
+            </Text>
+          )}
           {room.pinned && <Text className="text-amber-400 text-xs mr-1.5">★</Text>}
           {room.locked && <Text className="text-weered-muted text-xs mr-1.5">🔒</Text>}
           <Text className="text-weered-text font-semibold text-base" numberOfLines={1}>

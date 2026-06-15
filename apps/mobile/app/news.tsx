@@ -1,5 +1,13 @@
 import { useState } from "react";
-import { View, Text, ScrollView, Pressable, Image, ActivityIndicator, RefreshControl } from "react-native";
+import {
+  View,
+  Text,
+  ScrollView,
+  Pressable,
+  Image,
+  ActivityIndicator,
+  RefreshControl,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Stack, router } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
@@ -24,7 +32,12 @@ export default function News() {
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        style={{ flexGrow: 0, backgroundColor: "#000", borderBottomWidth: 1, borderBottomColor: "rgba(245,183,0,0.25)" }}
+        style={{
+          flexGrow: 0,
+          backgroundColor: "#000",
+          borderBottomWidth: 1,
+          borderBottomColor: "rgba(245,183,0,0.25)",
+        }}
         contentContainerStyle={{ paddingHorizontal: 8 }}
       >
         {CATEGORIES.map((c) => (
@@ -32,19 +45,22 @@ export default function News() {
             key={c}
             onPress={() => setCat(c)}
             style={{
-              paddingHorizontal: 14, paddingVertical: 12,
+              paddingHorizontal: 14,
+              paddingVertical: 12,
               borderBottomWidth: 2,
               borderBottomColor: cat === c ? "#5800E5" : "transparent",
             }}
           >
-            <Text style={{
-              color: cat === c ? "#ffffff" : "rgba(180,180,190,0.65)",
-              fontFamily: "monospace",
-              fontSize: 11,
-              fontWeight: "900",
-              letterSpacing: 1.4,
-              textTransform: "uppercase",
-            }}>
+            <Text
+              style={{
+                color: cat === c ? "#ffffff" : "rgba(180,180,190,0.65)",
+                fontFamily: "monospace",
+                fontSize: 11,
+                fontWeight: "900",
+                letterSpacing: 1.4,
+                textTransform: "uppercase",
+              }}
+            >
               {c}
             </Text>
           </Pressable>
@@ -52,15 +68,32 @@ export default function News() {
       </ScrollView>
 
       {q.isLoading ? (
-        <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}><ActivityIndicator color="#5800E5" /></View>
+        <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+          <ActivityIndicator color="#5800E5" />
+        </View>
       ) : (
         <ScrollView
           style={{ backgroundColor: "#0c0b0a" }}
-          refreshControl={<RefreshControl refreshing={q.isRefetching} onRefresh={() => q.refetch()} tintColor="#5800E5" />}
+          refreshControl={
+            <RefreshControl
+              refreshing={q.isRefetching}
+              onRefresh={() => q.refetch()}
+              tintColor="#5800E5"
+            />
+          }
           contentContainerStyle={{ paddingBottom: 32, backgroundColor: "#0c0b0a" }}
         >
           {(q.data?.articles ?? []).length === 0 && (
-            <Text style={{ color: "rgba(203,213,225,0.6)", fontSize: 13, textAlign: "center", paddingVertical: 48 }}>No articles in {cat}.</Text>
+            <Text
+              style={{
+                color: "rgba(203,213,225,0.6)",
+                fontSize: 13,
+                textAlign: "center",
+                paddingVertical: 48,
+              }}
+            >
+              No articles in {cat}.
+            </Text>
           )}
           {q.data?.articles?.map((a) => (
             <Pressable
@@ -75,22 +108,55 @@ export default function News() {
               }}
             >
               {a.imageUrl ? (
-                <Image source={{ uri: a.imageUrl }} style={{ width: 88, height: 88, borderRadius: 4, backgroundColor: "#1a1a1a" }} />
+                <Image
+                  source={{ uri: a.imageUrl }}
+                  style={{ width: 88, height: 88, borderRadius: 4, backgroundColor: "#1a1a1a" }}
+                />
               ) : null}
               <View style={{ flex: 1, marginLeft: a.imageUrl ? 12 : 0, minWidth: 0 }}>
-                <Text numberOfLines={a.imageUrl ? 3 : 4} style={{ color: "rgba(243,244,246,0.96)", fontSize: 14, fontWeight: "700", lineHeight: 18 }}>
+                <Text
+                  numberOfLines={a.imageUrl ? 3 : 4}
+                  style={{
+                    color: "rgba(243,244,246,0.96)",
+                    fontSize: 14,
+                    fontWeight: "700",
+                    lineHeight: 18,
+                  }}
+                >
                   {a.title}
                 </Text>
                 {!a.imageUrl && !!a.description && (
-                  <Text numberOfLines={2} style={{ color: "rgba(203,213,225,0.65)", fontSize: 12, marginTop: 4, lineHeight: 16 }}>
+                  <Text
+                    numberOfLines={2}
+                    style={{
+                      color: "rgba(203,213,225,0.65)",
+                      fontSize: 12,
+                      marginTop: 4,
+                      lineHeight: 16,
+                    }}
+                  >
                     {a.description}
                   </Text>
                 )}
                 <View style={{ flexDirection: "row", alignItems: "center", marginTop: 6 }}>
                   {a.sourceIcon && (
-                    <Image source={{ uri: a.sourceIcon }} style={{ width: 12, height: 12, borderRadius: 2, marginRight: 6 }} />
+                    <Image
+                      source={{ uri: a.sourceIcon }}
+                      style={{ width: 12, height: 12, borderRadius: 2, marginRight: 6 }}
+                    />
                   )}
-                  <Text numberOfLines={1} style={{ flex: 1, color: "rgba(203,213,225,0.6)", fontFamily: "monospace", fontSize: 10, fontWeight: "700", letterSpacing: 0.6, textTransform: "uppercase" }}>
+                  <Text
+                    numberOfLines={1}
+                    style={{
+                      flex: 1,
+                      color: "rgba(203,213,225,0.6)",
+                      fontFamily: "monospace",
+                      fontSize: 10,
+                      fontWeight: "700",
+                      letterSpacing: 0.6,
+                      textTransform: "uppercase",
+                    }}
+                  >
                     {a.source} · {formatRel(a.publishedAt)}
                   </Text>
                 </View>
@@ -112,5 +178,7 @@ function formatRel(iso: string): string {
     if (hrs < 24) return `${hrs}h`;
     const days = Math.floor(hrs / 24);
     return `${days}d`;
-  } catch { return ""; }
+  } catch {
+    return "";
+  }
 }

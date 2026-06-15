@@ -21,7 +21,9 @@ type Ctx = {
 
 const ActionSheetContext = createContext<Ctx>({ open: () => {}, close: () => {} });
 
-export function useActionSheet() { return useContext(ActionSheetContext); }
+export function useActionSheet() {
+  return useContext(ActionSheetContext);
+}
 
 export function ActionSheetProvider({ children }: { children: React.ReactNode }) {
   const [sheet, setSheet] = useState<SheetState>(null);
@@ -32,21 +34,21 @@ export function ActionSheetProvider({ children }: { children: React.ReactNode })
   return (
     <ActionSheetContext.Provider value={{ open, close }}>
       {children}
-      <Modal
-        transparent
-        animationType="fade"
-        visible={!!sheet}
-        onRequestClose={close}
-      >
+      <Modal transparent animationType="fade" visible={!!sheet} onRequestClose={close}>
         <Pressable onPress={close} className="flex-1 bg-black/70 justify-end">
-          <Pressable onPress={(e) => e.stopPropagation()} className="bg-weered-bg border-t border-border rounded-t-2xl pb-4 pt-3">
+          <Pressable
+            onPress={(e) => e.stopPropagation()}
+            className="bg-weered-bg border-t border-border rounded-t-2xl pb-4 pt-3"
+          >
             {(sheet?.title || sheet?.subtitle) && (
               <View className="px-5 pb-3 border-b border-border/30">
                 {!!sheet?.title && (
                   <Text className="text-weered-text font-bold text-base">{sheet.title}</Text>
                 )}
                 {!!sheet?.subtitle && (
-                  <Text className="text-weered-muted text-xs mt-0.5" numberOfLines={2}>{sheet.subtitle}</Text>
+                  <Text className="text-weered-muted text-xs mt-0.5" numberOfLines={2}>
+                    {sheet.subtitle}
+                  </Text>
                 )}
               </View>
             )}
@@ -63,7 +65,8 @@ export function ActionSheetProvider({ children }: { children: React.ReactNode })
                   className="text-base font-semibold"
                   style={{ color: a.destructive ? "#ef4444" : "rgba(243,244,246,.96)" }}
                 >
-                  {a.icon ? `${a.icon}  ` : ""}{a.label}
+                  {a.icon ? `${a.icon}  ` : ""}
+                  {a.label}
                 </Text>
               </Pressable>
             ))}

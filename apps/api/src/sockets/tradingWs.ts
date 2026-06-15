@@ -32,7 +32,13 @@ export default function setupTradingSocket(wss: WebSocketServer, opts: Opts) {
         symbolSubscribers.get(sym)!.add(ws);
         (ws as any)._tradingSubs.add(sym);
         const p = livePrices.get(sym);
-        if (p) send(ws, { type: "trading:price", symbol: sym.toUpperCase(), price: p.price, time: p.time });
+        if (p)
+          send(ws, {
+            type: "trading:price",
+            symbol: sym.toUpperCase(),
+            price: p.price,
+            time: p.time,
+          });
       }
 
       if (msg.type === "trading:unsubscribe") {

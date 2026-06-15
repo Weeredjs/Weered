@@ -1,10 +1,11 @@
 "use client";
 import React, { useEffect, useState } from "react";
 
-
 export default function AboutContent() {
   const [visible, setVisible] = useState(false);
-  useEffect(() => { setTimeout(() => setVisible(true), 100); }, []);
+  useEffect(() => {
+    setTimeout(() => setVisible(true), 100);
+  }, []);
 
   return (
     <>
@@ -123,10 +124,17 @@ export default function AboutContent() {
 
       <div className="about-root">
         <div className={`about-inner${visible ? " visible" : ""}`}>
-
           <div style={{ marginBottom: 20 }}>
             <a href="/" aria-label="Weered home" style={{ display: "inline-block" }}>
-              <img src="/brand/logo/weered-logo-512.png" alt="Weered" style={{ width: 88, height: 88, filter: "drop-shadow(0 0 24px rgba(88,0,229,0.35))" }} />
+              <img
+                src="/brand/logo/weered-logo-512.png"
+                alt="Weered"
+                style={{
+                  width: 88,
+                  height: 88,
+                  filter: "drop-shadow(0 0 24px rgba(88,0,229,0.35))",
+                }}
+              />
             </a>
           </div>
           <div className="about-wordmark">weered</div>
@@ -135,8 +143,11 @@ export default function AboutContent() {
           <div className="about-block">
             <div className="about-label">origin</div>
             <div className="about-text">
-              Weered came out of a simple problem: the tools gaming communities live in are built for everyone, so they fit no one in particular.<br />
-              We built the opposite. A platform that knows what you&apos;re playing and gives each community the tools it actually needs, wired straight into the games.
+              Weered came out of a simple problem: the tools gaming communities live in are built
+              for everyone, so they fit no one in particular.
+              <br />
+              We built the opposite. A platform that knows what you&apos;re playing and gives each
+              community the tools it actually needs, wired straight into the games.
             </div>
           </div>
 
@@ -146,19 +157,35 @@ export default function AboutContent() {
             <div className="about-label">what this is</div>
             <div className="about-text">
               Weered is a <em>real-time community platform</em>.<br />
-              Think lobbies, not servers. Rooms, not channels. Presence, not status dots.<br /><br />
-              <em>Lobbies</em> are living spaces: communities built around games, trading, studying, business, whatever pulls people in.
-              Each one has its own identity, roles, events, and deep integrations.<br /><br />
-              <em>Rooms</em> are where things happen. Voice chat, video, screen share, watch parties, poker tables, study sessions.
-              Drop into a room and you&apos;re there, not lurking in a sidebar. Actually <em>present</em>.<br /><br />
-              <em>Modules</em> plug directly into the things you care about.
-              Destiny 2 guardian lookup. League of Legends leaderboards. CS2 squad finder. Fortnite stats.
-              Dota 2 player search. Live Twitch streams. Paper trading with real Binance prices.
-              Poker with virtual currency. AI-powered practice tests. Pomodoro focus timers.<br /><br />
-              <em>The Operator</em> (our AI) lives in every chat. Type @operator and ask anything. It knows the platform, and it&apos;s got attitude.<br /><br />
-              <em>Paper</em>: virtual currency. Earn it from trading profits, challenges, daily bonuses. Spend it in the Store, use it at the poker table, trade items with other users.<br /><br />
-              The feed, the chat, the rooms: they all orbit <em>presence</em>.
-              Who is here. What they&apos;re doing. Right now.
+              Think lobbies, not servers. Rooms, not channels. Presence, not status dots.
+              <br />
+              <br />
+              <em>Lobbies</em> are living spaces: communities built around games, trading, studying,
+              business, whatever pulls people in. Each one has its own identity, roles, events, and
+              deep integrations.
+              <br />
+              <br />
+              <em>Rooms</em> are where things happen. Voice chat, video, screen share, watch
+              parties, poker tables, study sessions. Drop into a room and you&apos;re there, not
+              lurking in a sidebar. Actually <em>present</em>.<br />
+              <br />
+              <em>Modules</em> plug directly into the things you care about. Destiny 2 guardian
+              lookup. League of Legends leaderboards. CS2 squad finder. Fortnite stats. Dota 2
+              player search. Live Twitch streams. Paper trading with real Binance prices. Poker with
+              virtual currency. AI-powered practice tests. Pomodoro focus timers.
+              <br />
+              <br />
+              <em>The Operator</em> (our AI) lives in every chat. Type @operator and ask anything.
+              It knows the platform, and it&apos;s got attitude.
+              <br />
+              <br />
+              <em>Paper</em>: virtual currency. Earn it from trading profits, challenges, daily
+              bonuses. Spend it in the Store, use it at the poker table, trade items with other
+              users.
+              <br />
+              <br />
+              The feed, the chat, the rooms: they all orbit <em>presence</em>. Who is here. What
+              they&apos;re doing. Right now.
             </div>
           </div>
 
@@ -167,8 +194,10 @@ export default function AboutContent() {
           <div className="about-block">
             <div className="about-label">how it feels</div>
             <div className="about-text">
-              The look is deliberately dark and cinematic. That&apos;s a choice, not a default.<br />
-              Most platforms settle for the same grey dashboard. We&apos;d rather it felt like a room you walked into than a product you opened.
+              The look is deliberately dark and cinematic. That&apos;s a choice, not a default.
+              <br />
+              Most platforms settle for the same grey dashboard. We&apos;d rather it felt like a
+              room you walked into than a product you opened.
             </div>
           </div>
 
@@ -177,8 +206,10 @@ export default function AboutContent() {
           <div className="about-block">
             <div className="about-label">who runs this</div>
             <div className="about-text">
-              A small team that would rather the work spoke first.<br />
-              We keep our names off the front of it on purpose. Not a gimmick: we&apos;d rather Weered was judged on what it does than on who built it.
+              A small team that would rather the work spoke first.
+              <br />
+              We keep our names off the front of it on purpose. Not a gimmick: we&apos;d rather
+              Weered was judged on what it does than on who built it.
             </div>
           </div>
 
@@ -187,8 +218,11 @@ export default function AboutContent() {
           <div className="about-block">
             <div className="about-label">status</div>
             <div className="about-text">
-              Early access, and moving fast. We ship most days.<br />
-              30+ lobbies. Voice, video, screen share. Poker. Paper trading. AI quiz generator. Focus rooms.<br />
+              Early access, and moving fast. We ship most days.
+              <br />
+              30+ lobbies. Voice, video, screen share. Poker. Paper trading. AI quiz generator.
+              Focus rooms.
+              <br />
               It&apos;s not finished. It&apos;s being built in the open, and you&apos;re early.
             </div>
           </div>
@@ -201,7 +235,6 @@ export default function AboutContent() {
               <a href="/login">enter</a>
             </nav>
           </div>
-
         </div>
       </div>
     </>

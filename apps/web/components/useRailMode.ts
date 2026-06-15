@@ -38,7 +38,9 @@ export function useRailMode(): RailMode {
     return () => window.removeEventListener("resize", onResize);
   }, []);
 
-  useEffect(() => { setOverlay(null); }, [pathname]);
+  useEffect(() => {
+    setOverlay(null);
+  }, [pathname]);
 
   if (!mounted) {
     return { left: "full", right: "full", overlay: null, setOverlay, tier: "wide" };

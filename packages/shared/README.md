@@ -23,14 +23,14 @@ No build step needed — consumers import the TypeScript source directly via the
 
 ## What lives here
 
-| File | Types |
-|---|---|
-| `user.ts` | `User`, `Profile`, `GlobalRole`, `Tier`, `LivePresence` |
-| `lobby.ts` | `Lobby`, `Room`, `ModuleType`, `JoinMode`, `LobbyDetailResponse`, `LobbiesResponse`, `RoomsResponse`, `LobbySearchResponse` |
-| `friend.ts` | `Friend`, `FriendState`, `FriendRequest`, `FriendsResponse`, `FriendRequestsResponse` |
-| `activity.ts` | `ActivityFeedItem`, `ActivityFeedResponse` |
-| `notoriety.ts` | `NOTORIETY_ACTIONS`, `NotorietyAction`, `NOTORIETY_RANKS`, `NotorietyRank` |
-| `news.ts` | `NewsArticle`, `NewsCategory`, `NewsFeedResponse` |
+| File           | Types                                                                                                                       |
+| -------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `user.ts`      | `User`, `Profile`, `GlobalRole`, `Tier`, `LivePresence`                                                                     |
+| `lobby.ts`     | `Lobby`, `Room`, `ModuleType`, `JoinMode`, `LobbyDetailResponse`, `LobbiesResponse`, `RoomsResponse`, `LobbySearchResponse` |
+| `friend.ts`    | `Friend`, `FriendState`, `FriendRequest`, `FriendsResponse`, `FriendRequestsResponse`                                       |
+| `activity.ts`  | `ActivityFeedItem`, `ActivityFeedResponse`                                                                                  |
+| `notoriety.ts` | `NOTORIETY_ACTIONS`, `NotorietyAction`, `NOTORIETY_RANKS`, `NotorietyRank`                                                  |
+| `news.ts`      | `NewsArticle`, `NewsCategory`, `NewsFeedResponse`                                                                           |
 
 ## What does NOT live here
 

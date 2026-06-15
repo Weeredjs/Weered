@@ -289,50 +289,40 @@ export default async function tradingRoutes(app: FastifyInstance, opts: Opts) {
 
       const currentPrice = getLivePrice(symbol);
       if (!currentPrice) {
-        return reply
-          .code(400)
-          .send({
-            ok: false,
-            error: "no_price_data",
-            message: "No live price available for " + symbol,
-          });
+        return reply.code(400).send({
+          ok: false,
+          error: "no_price_data",
+          message: "No live price available for " + symbol,
+        });
       }
 
       if (stopLoss !== null) {
         if (side === "BUY" && stopLoss >= currentPrice)
-          return reply
-            .code(400)
-            .send({
-              ok: false,
-              error: "sl_must_be_below_entry",
-              message: `For a long, stop loss must be below ${currentPrice}.`,
-            });
+          return reply.code(400).send({
+            ok: false,
+            error: "sl_must_be_below_entry",
+            message: `For a long, stop loss must be below ${currentPrice}.`,
+          });
         if (side === "SELL" && stopLoss <= currentPrice)
-          return reply
-            .code(400)
-            .send({
-              ok: false,
-              error: "sl_must_be_above_entry",
-              message: `For a short, stop loss must be above ${currentPrice}.`,
-            });
+          return reply.code(400).send({
+            ok: false,
+            error: "sl_must_be_above_entry",
+            message: `For a short, stop loss must be above ${currentPrice}.`,
+          });
       }
       if (takeProfit !== null) {
         if (side === "BUY" && takeProfit <= currentPrice)
-          return reply
-            .code(400)
-            .send({
-              ok: false,
-              error: "tp_must_be_above_entry",
-              message: `For a long, take profit must be above ${currentPrice}.`,
-            });
+          return reply.code(400).send({
+            ok: false,
+            error: "tp_must_be_above_entry",
+            message: `For a long, take profit must be above ${currentPrice}.`,
+          });
         if (side === "SELL" && takeProfit >= currentPrice)
-          return reply
-            .code(400)
-            .send({
-              ok: false,
-              error: "tp_must_be_below_entry",
-              message: `For a short, take profit must be below ${currentPrice}.`,
-            });
+          return reply.code(400).send({
+            ok: false,
+            error: "tp_must_be_below_entry",
+            message: `For a short, take profit must be below ${currentPrice}.`,
+          });
       }
 
       const cost = currentPrice * quantity;
@@ -345,14 +335,12 @@ export default async function tradingRoutes(app: FastifyInstance, opts: Opts) {
         if (side === "BUY") {
           // Fast-path UX rejection; the authoritative overdraft guard is the conditional debit below.
           if (cost > account.cashBalance) {
-            return reply
-              .code(400)
-              .send({
-                ok: false,
-                error: "insufficient_funds",
-                available: account.cashBalance,
-                required: cost,
-              });
+            return reply.code(400).send({
+              ok: false,
+              error: "insufficient_funds",
+              available: account.cashBalance,
+              required: cost,
+            });
           }
           await (prisma as any).$transaction(async (tx: any) => {
             const existing = account.positions.find((p: any) => p.side === "BUY");
@@ -544,14 +532,12 @@ export default async function tradingRoutes(app: FastifyInstance, opts: Opts) {
         }
       } catch (e: any) {
         if (e && e.message === "INSUFFICIENT_FUNDS") {
-          return reply
-            .code(400)
-            .send({
-              ok: false,
-              error: "insufficient_funds",
-              available: account.cashBalance,
-              required: cost,
-            });
+          return reply.code(400).send({
+            ok: false,
+            error: "insufficient_funds",
+            available: account.cashBalance,
+            required: cost,
+          });
         }
         throw e;
       }
@@ -716,21 +702,17 @@ export default async function tradingRoutes(app: FastifyInstance, opts: Opts) {
         if (!Number.isFinite(sl) || sl <= 0)
           return reply.code(400).send({ ok: false, error: "invalid_stopLoss" });
         if (pos.side === "BUY" && sl >= pos.entryPrice)
-          return reply
-            .code(400)
-            .send({
-              ok: false,
-              error: "sl_must_be_below_entry",
-              message: `For a long, stop loss must be below ${pos.entryPrice}.`,
-            });
+          return reply.code(400).send({
+            ok: false,
+            error: "sl_must_be_below_entry",
+            message: `For a long, stop loss must be below ${pos.entryPrice}.`,
+          });
         if (pos.side === "SELL" && sl <= pos.entryPrice)
-          return reply
-            .code(400)
-            .send({
-              ok: false,
-              error: "sl_must_be_above_entry",
-              message: `For a short, stop loss must be above ${pos.entryPrice}.`,
-            });
+          return reply.code(400).send({
+            ok: false,
+            error: "sl_must_be_above_entry",
+            message: `For a short, stop loss must be above ${pos.entryPrice}.`,
+          });
         data.stopLoss = sl;
       }
     }
@@ -742,21 +724,17 @@ export default async function tradingRoutes(app: FastifyInstance, opts: Opts) {
         if (!Number.isFinite(tp) || tp <= 0)
           return reply.code(400).send({ ok: false, error: "invalid_takeProfit" });
         if (pos.side === "BUY" && tp <= pos.entryPrice)
-          return reply
-            .code(400)
-            .send({
-              ok: false,
-              error: "tp_must_be_above_entry",
-              message: `For a long, take profit must be above ${pos.entryPrice}.`,
-            });
+          return reply.code(400).send({
+            ok: false,
+            error: "tp_must_be_above_entry",
+            message: `For a long, take profit must be above ${pos.entryPrice}.`,
+          });
         if (pos.side === "SELL" && tp >= pos.entryPrice)
-          return reply
-            .code(400)
-            .send({
-              ok: false,
-              error: "tp_must_be_below_entry",
-              message: `For a short, take profit must be below ${pos.entryPrice}.`,
-            });
+          return reply.code(400).send({
+            ok: false,
+            error: "tp_must_be_below_entry",
+            message: `For a short, take profit must be below ${pos.entryPrice}.`,
+          });
         data.takeProfit = tp;
       }
     }

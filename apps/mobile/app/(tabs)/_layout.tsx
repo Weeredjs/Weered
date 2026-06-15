@@ -8,7 +8,9 @@ import { useAuth } from "@/stores/auth";
 
 function TabItem({ label, focused, badge }: { label: string; focused: boolean; badge?: number }) {
   return (
-    <View style={{ alignItems: "center", justifyContent: "center", width: 80, position: "relative" }}>
+    <View
+      style={{ alignItems: "center", justifyContent: "center", width: 80, position: "relative" }}
+    >
       <Text
         numberOfLines={1}
         style={{
@@ -71,7 +73,7 @@ export default function TabsLayout() {
   });
   const me = useAuth((s) => s.user);
   const pendingFriendCount = (friendReqQ.data?.requests ?? []).filter(
-    (r) => r.status === "PENDING" && (!r.toId || r.toId === me?.id)
+    (r) => r.status === "PENDING" && (!r.toId || r.toId === me?.id),
   ).length;
 
   const dmsQ = useQuery({
@@ -93,9 +95,19 @@ export default function TabsLayout() {
     <Tabs
       sceneContainerStyle={{ backgroundColor: "#0c0b0a" }}
       screenOptions={{
-        headerStyle: { backgroundColor: "#000", shadowColor: "transparent", elevation: 0, borderBottomWidth: 1.5, borderBottomColor: "rgba(245,183,0,0.35)" },
+        headerStyle: {
+          backgroundColor: "#000",
+          shadowColor: "transparent",
+          elevation: 0,
+          borderBottomWidth: 1.5,
+          borderBottomColor: "rgba(245,183,0,0.35)",
+        },
         headerTintColor: "rgba(243,244,246,.96)",
-        headerTitleStyle: { fontFamily: "BarlowCondensed_800ExtraBold", letterSpacing: 1.5, fontSize: 20 },
+        headerTitleStyle: {
+          fontFamily: "BarlowCondensed_800ExtraBold",
+          letterSpacing: 1.5,
+          fontSize: 20,
+        },
         headerRight: () => <HeaderActions />,
         tabBarStyle: {
           backgroundColor: "#000",
@@ -120,14 +132,18 @@ export default function TabsLayout() {
         name="friends"
         options={{
           title: "Friends",
-          tabBarIcon: ({ focused }) => <TabItem label="Friends" focused={focused} badge={pendingFriendCount} />,
+          tabBarIcon: ({ focused }) => (
+            <TabItem label="Friends" focused={focused} badge={pendingFriendCount} />
+          ),
         }}
       />
       <Tabs.Screen
         name="inbox"
         options={{
           title: "Inbox",
-          tabBarIcon: ({ focused }) => <TabItem label="Inbox" focused={focused} badge={inboxBadge} />,
+          tabBarIcon: ({ focused }) => (
+            <TabItem label="Inbox" focused={focused} badge={inboxBadge} />
+          ),
         }}
       />
       <Tabs.Screen

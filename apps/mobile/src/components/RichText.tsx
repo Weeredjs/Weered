@@ -98,7 +98,9 @@ function InlineImage({ url }: { url: string }) {
   if (failed) {
     return (
       <Pressable onPress={() => Linking.openURL(url).catch(() => {})} className="mt-1">
-        <Text style={{ color: "#8b5cf6", textDecorationLine: "underline", fontSize: 13 }}>{url}</Text>
+        <Text style={{ color: "#8b5cf6", textDecorationLine: "underline", fontSize: 13 }}>
+          {url}
+        </Text>
       </Pressable>
     );
   }

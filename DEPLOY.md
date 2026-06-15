@@ -63,14 +63,14 @@ Then create the `.env` files manually — see the script output for exact paths.
 
 ## Files
 
-| File | Purpose |
-|------|---------|
+| File                | Purpose                                                                                  |
+| ------------------- | ---------------------------------------------------------------------------------------- |
 | `scripts/deploy.sh` | **The deploy engine.** Guardrails → web build → pm2 restart → smoke. Run on the droplet. |
-| `scripts/check.sh` | Guardrails (tsc gate + file-size tripwire), run by deploy.sh. |
-| `scripts/smoke.sh` | Post-deploy smoke test, run by deploy.sh. |
-| `deploy.sh` | Local convenience: push branch + SSH + run `server-deploy.sh`. |
-| `server-deploy.sh` | On the droplet: git pull, then hand off to `scripts/deploy.sh`. |
-| `server-setup.sh` | Run once on a fresh droplet. |
+| `scripts/check.sh`  | Guardrails (tsc gate + file-size tripwire), run by deploy.sh.                            |
+| `scripts/smoke.sh`  | Post-deploy smoke test, run by deploy.sh.                                                |
+| `deploy.sh`         | Local convenience: push branch + SSH + run `server-deploy.sh`.                           |
+| `server-deploy.sh`  | On the droplet: git pull, then hand off to `scripts/deploy.sh`.                          |
+| `server-setup.sh`   | Run once on a fresh droplet.                                                             |
 
 ---
 

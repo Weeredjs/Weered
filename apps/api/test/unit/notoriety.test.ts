@@ -16,7 +16,10 @@ function prodNotoriety(): { actions: string[]; ranks: { title: string; min: numb
 
   const rStart = src.indexOf("const NOTORIETY_RANKS");
   const rBody = src.slice(rStart, src.indexOf("];", rStart) + 2);
-  const ranks = [...rBody.matchAll(/title:\s*"([^"]+)",\s*min:\s*(\d+)/g)].map((m) => ({ title: m[1], min: Number(m[2]) }));
+  const ranks = [...rBody.matchAll(/title:\s*"([^"]+)",\s*min:\s*(\d+)/g)].map((m) => ({
+    title: m[1],
+    min: Number(m[2]),
+  }));
 
   return { actions, ranks };
 }

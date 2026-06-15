@@ -4,7 +4,11 @@ import React, { useEffect, useState, useCallback } from "react";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 function getToken() {
-  try { return localStorage.getItem("weered_token") || ""; } catch { return ""; }
+  try {
+    return localStorage.getItem("weered_token") || "";
+  } catch {
+    return "";
+  }
 }
 
 interface FeedItem {
@@ -40,7 +44,16 @@ function timeAgo(iso: string): string {
 const TYPE_CFG: Record<string, { icon: React.ReactNode; bg: string; color: string }> = {
   dm: {
     icon: (
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <svg
+        width="14"
+        height="14"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
         <rect x="2" y="4" width="20" height="16" rx="2" />
         <path d="M22 7l-10 7L2 7" />
       </svg>
@@ -50,7 +63,16 @@ const TYPE_CFG: Record<string, { icon: React.ReactNode; bg: string; color: strin
   },
   notification: {
     icon: (
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <svg
+        width="14"
+        height="14"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
         <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" />
         <path d="M13.73 21a2 2 0 01-3.46 0" />
       </svg>
@@ -69,7 +91,16 @@ const TYPE_CFG: Record<string, { icon: React.ReactNode; bg: string; color: strin
   },
   friend: {
     icon: (
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <svg
+        width="14"
+        height="14"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
         <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
         <circle cx="12" cy="7" r="4" />
       </svg>
@@ -86,22 +117,29 @@ export default function ActivityFeed({ initialCount = 10 }: { initialCount?: num
 
   useEffect(() => {
     const tok = getToken();
-    if (!tok) { setLoaded(true); return; }
+    if (!tok) {
+      setLoaded(true);
+      return;
+    }
 
     let cancelled = false;
     fetch(`${API}/activity-feed`, {
       headers: { Authorization: `Bearer ${tok}` },
     })
-      .then(r => r.json())
-      .then(j => {
+      .then((r) => r.json())
+      .then((j) => {
         if (!cancelled && j.ok && Array.isArray(j.feed)) {
           setFeed(j.feed);
         }
       })
       .catch(() => {})
-      .finally(() => { if (!cancelled) setLoaded(true); });
+      .finally(() => {
+        if (!cancelled) setLoaded(true);
+      });
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -118,7 +156,7 @@ export default function ActivityFeed({ initialCount = 10 }: { initialCount?: num
         actorName: detail.actorName,
         read: false,
       };
-      setFeed(prev => [newItem, ...prev].slice(0, 50));
+      setFeed((prev) => [newItem, ...prev].slice(0, 50));
     };
     window.addEventListener("weered:notification", handler);
     return () => window.removeEventListener("weered:notification", handler);
@@ -126,9 +164,14 @@ export default function ActivityFeed({ initialCount = 10 }: { initialCount?: num
 
   const handleClick = useCallback((item: FeedItem) => {
     if (item.type === "dm" && item.fromId) {
-      window.dispatchEvent(new CustomEvent("weered:dock:open", {
-        detail: { mode: "dm", peer: { id: item.fromId, name: item.fromName || item.actorName || "" } },
-      }));
+      window.dispatchEvent(
+        new CustomEvent("weered:dock:open", {
+          detail: {
+            mode: "dm",
+            peer: { id: item.fromId, name: item.fromName || item.actorName || "" },
+          },
+        }),
+      );
       return;
     }
     if (item.actionUrl) {
@@ -144,25 +187,46 @@ export default function ActivityFeed({ initialCount = 10 }: { initialCount?: num
 
   return (
     <div style={{ padding: "0 0 4px" }}>
-      <div style={{
-        display: "flex", alignItems: "center", gap: 7,
-        padding: "0 4px 10px",
-      }}>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(243,244,246,.55)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 7,
+          padding: "0 4px 10px",
+        }}
+      >
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="rgba(243,244,246,.55)"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
           <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
         </svg>
-        <span style={{
-          fontSize: 13, fontWeight: 800, color: "rgba(243,244,246,.95)",
-          letterSpacing: "-.2px",
-        }}>
+        <span
+          style={{
+            fontSize: 13,
+            fontWeight: 800,
+            color: "rgba(243,244,246,.95)",
+            letterSpacing: "-.2px",
+          }}
+        >
           Activity
         </span>
       </div>
 
       {feed.length === 0 ? (
         <div style={{ padding: "28px 16px", textAlign: "center" }}>
-          <div style={{ color: "rgba(243,244,246,.55)", fontSize: 12, fontWeight: 700 }}>Nothing moved recently.</div>
-          <div style={{ color: "rgba(148,163,184,.45)", fontSize: 11, marginTop: 3 }}>When the feed picks up, you'll see it here.</div>
+          <div style={{ color: "rgba(243,244,246,.55)", fontSize: 12, fontWeight: 700 }}>
+            Nothing moved recently.
+          </div>
+          <div style={{ color: "rgba(148,163,184,.45)", fontSize: 11, marginTop: 3 }}>
+            When the feed picks up, you'll see it here.
+          </div>
         </div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
@@ -176,7 +240,9 @@ export default function ActivityFeed({ initialCount = 10 }: { initialCount?: num
                 key={item.id}
                 onClick={() => handleClick(item)}
                 style={{
-                  display: "flex", alignItems: "flex-start", gap: 10,
+                  display: "flex",
+                  alignItems: "flex-start",
+                  gap: 10,
                   padding: "9px 10px",
                   borderRadius: 8,
                   background: isUnread ? "rgba(88,0,229,.04)" : "transparent",
@@ -184,50 +250,72 @@ export default function ActivityFeed({ initialCount = 10 }: { initialCount?: num
                   cursor: isClickable ? "pointer" : "default",
                   transition: "background 0.12s",
                 }}
-                onMouseEnter={e => {
-                  if (isClickable) (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.04)";
+                onMouseEnter={(e) => {
+                  if (isClickable)
+                    (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.04)";
                 }}
-                onMouseLeave={e => {
-                  (e.currentTarget as HTMLElement).style.background = isUnread ? "rgba(88,0,229,.04)" : "transparent";
+                onMouseLeave={(e) => {
+                  (e.currentTarget as HTMLElement).style.background = isUnread
+                    ? "rgba(88,0,229,.04)"
+                    : "transparent";
                 }}
               >
-                <div style={{
-                  width: 28, height: 28, minWidth: 28, borderRadius: 8,
-                  background: cfg.bg,
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  color: cfg.color,
-                  marginTop: 1,
-                }}>
+                <div
+                  style={{
+                    width: 28,
+                    height: 28,
+                    minWidth: 28,
+                    borderRadius: 8,
+                    background: cfg.bg,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: cfg.color,
+                    marginTop: 1,
+                  }}
+                >
                   {cfg.icon}
                 </div>
 
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{
-                    fontSize: 12, fontWeight: 700,
-                    color: "rgba(243,244,246,.90)",
-                    lineHeight: 1.35,
-                  }}>
+                  <div
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 700,
+                      color: "rgba(243,244,246,.90)",
+                      lineHeight: 1.35,
+                    }}
+                  >
                     {formatMainText(item)}
                   </div>
                   {(item.preview || item.body) && (
-                    <div style={{
-                      fontSize: 11, color: "rgba(243,244,246,.40)",
-                      marginTop: 2, lineHeight: 1.3,
-                      overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                    }}>
+                    <div
+                      style={{
+                        fontSize: 11,
+                        color: "rgba(243,244,246,.40)",
+                        marginTop: 2,
+                        lineHeight: 1.3,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
                       {item.preview || item.body}
                     </div>
                   )}
                 </div>
 
-                <div style={{
-                  fontSize: 10, color: "rgba(243,244,246,.25)",
-                  fontFamily: "monospace",
-                  fontVariantNumeric: "tabular-nums",
-                  whiteSpace: "nowrap",
-                  marginTop: 2,
-                  flexShrink: 0,
-                }}>
+                <div
+                  style={{
+                    fontSize: 10,
+                    color: "rgba(243,244,246,.25)",
+                    fontFamily: "monospace",
+                    fontVariantNumeric: "tabular-nums",
+                    whiteSpace: "nowrap",
+                    marginTop: 2,
+                    flexShrink: 0,
+                  }}
+                >
                   {timeAgo(item.ts)}
                 </div>
               </div>
@@ -238,15 +326,22 @@ export default function ActivityFeed({ initialCount = 10 }: { initialCount?: num
             <button
               onClick={() => setExpanded(true)}
               style={{
-                background: "none", border: "none", cursor: "pointer",
+                background: "none",
+                border: "none",
+                cursor: "pointer",
                 padding: "8px 0",
-                fontSize: 11, fontWeight: 700,
+                fontSize: 11,
+                fontWeight: 700,
                 color: "rgba(88,0,229,.7)",
                 textAlign: "center",
                 transition: "color 0.12s",
               }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "rgba(88,0,229,.95)"; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = "rgba(88,0,229,.7)"; }}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLElement).style.color = "rgba(88,0,229,.95)";
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLElement).style.color = "rgba(88,0,229,.7)";
+              }}
             >
               Show more ({feed.length - 10} remaining)
             </button>
@@ -262,8 +357,10 @@ function formatMainText(item: FeedItem): React.ReactNode {
     case "dm":
       return (
         <>
-          <span style={{ color: "rgba(96,165,250,.9)" }}>{item.fromName || item.actorName || "Someone"}</span>
-          {" "}{item.text}
+          <span style={{ color: "rgba(96,165,250,.9)" }}>
+            {item.fromName || item.actorName || "Someone"}
+          </span>{" "}
+          {item.text}
         </>
       );
     case "notoriety":
@@ -278,8 +375,10 @@ function formatMainText(item: FeedItem): React.ReactNode {
     case "friend":
       return (
         <>
-          <span style={{ color: "rgba(34,197,94,.9)" }}>{item.friendName || item.actorName || "Someone"}</span>
-          {" "}{item.text}
+          <span style={{ color: "rgba(34,197,94,.9)" }}>
+            {item.friendName || item.actorName || "Someone"}
+          </span>{" "}
+          {item.text}
         </>
       );
     default:

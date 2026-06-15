@@ -223,13 +223,11 @@ export default async function windroseBuildsRoutes(app: FastifyInstance, opts: O
 
     const existingCount = await prisma.windroseBuild.count({ where: { authorId: u.id } });
     if (existingCount >= MAX_BUILDS_PER_USER) {
-      return reply
-        .code(403)
-        .send({
-          ok: false,
-          error: "build_limit",
-          message: `Build limit reached (${MAX_BUILDS_PER_USER}). Delete an old one first.`,
-        });
+      return reply.code(403).send({
+        ok: false,
+        error: "build_limit",
+        message: `Build limit reached (${MAX_BUILDS_PER_USER}). Delete an old one first.`,
+      });
     }
 
     const rawImages: any[] = Array.isArray(body.images)
@@ -244,14 +242,12 @@ export default async function windroseBuildsRoutes(app: FastifyInstance, opts: O
       const decoded = decodeDataUrl(String(rawImages[i] || ""));
       if (!decoded) return reply.code(400).send({ ok: false, error: "bad_image_format", index: i });
       if (decoded.buffer.length > 8 * 1024 * 1024) {
-        return reply
-          .code(400)
-          .send({
-            ok: false,
-            error: "image_too_large",
-            index: i,
-            message: "Each upload must be under 8MB before compression.",
-          });
+        return reply.code(400).send({
+          ok: false,
+          error: "image_too_large",
+          index: i,
+          message: "Each upload must be under 8MB before compression.",
+        });
       }
       try {
         const meta = await processBuildImage(

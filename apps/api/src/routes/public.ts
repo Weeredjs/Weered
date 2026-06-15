@@ -23,9 +23,24 @@ async function getLobbyNameMap(): Promise<Map<string, string>> {
 }
 
 const FEATURED_ORDER = [
-  "dnd", "fakeout", "windrose", "destiny", "poker", "study",
-  "league", "cs2", "dota2", "fortnite", "pubg", "poe",
-  "mlb", "nhl", "pga", "marathon", "hq", "news",
+  "dnd",
+  "fakeout",
+  "windrose",
+  "destiny",
+  "poker",
+  "study",
+  "league",
+  "cs2",
+  "dota2",
+  "fortnite",
+  "pubg",
+  "poe",
+  "mlb",
+  "nhl",
+  "pga",
+  "marathon",
+  "hq",
+  "news",
 ];
 
 export default async function publicRoutes(app: FastifyInstance, opts: Opts) {
@@ -35,8 +50,15 @@ export default async function publicRoutes(app: FastifyInstance, opts: Opts) {
     const lobbies = await prisma.lobby.findMany({
       where: { OR: [{ pinned: true }, { id: { in: FEATURED_ORDER } }] },
       select: {
-        id: true, name: true, description: true, verified: true, pinned: true,
-        moduleType: true, accentColor: true, logoUrl: true, bannerUrl: true,
+        id: true,
+        name: true,
+        description: true,
+        verified: true,
+        pinned: true,
+        moduleType: true,
+        accentColor: true,
+        logoUrl: true,
+        bannerUrl: true,
         keywords: true,
         _count: { select: { rooms: true, members: true } },
       },
@@ -51,7 +73,9 @@ export default async function publicRoutes(app: FastifyInstance, opts: Opts) {
     });
     const enriched = sorted.map((l: any) => {
       const liveCount = rooms.get(l.id)?.users?.size ?? 0;
-      const reeled = applyWindroseReel ? applyWindroseReel({ ...l, onlineCount: liveCount }) : { ...l, onlineCount: liveCount };
+      const reeled = applyWindroseReel
+        ? applyWindroseReel({ ...l, onlineCount: liveCount })
+        : { ...l, onlineCount: liveCount };
       return {
         id: l.id,
         name: l.name,
@@ -82,12 +106,12 @@ export default async function publicRoutes(app: FastifyInstance, opts: Opts) {
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const raw = getActivity(30);
     const lobbyNames = await getLobbyNameMap();
-    const events = raw.map(e => ({
+    const events = raw.map((e) => ({
       id: e.id,
       ts: e.ts,
       kind: e.kind,
       lobbyId: e.lobbyId || null,
-      lobbyName: e.lobbyId ? (lobbyNames.get(e.lobbyId) || e.lobbyId) : null,
+      lobbyName: e.lobbyId ? lobbyNames.get(e.lobbyId) || e.lobbyId : null,
       userId: e.userId || null,
       userName: e.userName || null,
       text: e.textReal || e.text,

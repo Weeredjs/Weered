@@ -6,8 +6,14 @@ import Link from "next/link";
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
 type ConvItem = {
-  key: string; href: string; name: string; sub: string | null;
-  logo: string | null; accent: string | null; online: number; live: boolean;
+  key: string;
+  href: string;
+  name: string;
+  sub: string | null;
+  logo: string | null;
+  accent: string | null;
+  online: number;
+  live: boolean;
 };
 
 export default function HomeActivityTicker() {
@@ -21,32 +27,48 @@ export default function HomeActivityTicker() {
 
     async function load() {
       try {
-        const tok = (() => { try { return localStorage.getItem("weered_token") || ""; } catch { return ""; } })();
+        const tok = (() => {
+          try {
+            return localStorage.getItem("weered_token") || "";
+          } catch {
+            return "";
+          }
+        })();
         const headers: Record<string, string> = tok ? { Authorization: `Bearer ${tok}` } : {};
         const [liveR, lobR] = await Promise.all([
-          fetch(`${API}/live/rooms`, { cache: "no-store", headers }).then(r => r.json()).catch(() => ({})),
-          fetch(`${API}/lobbies`, { headers }).then(r => r.json()).catch(() => ({})),
+          fetch(`${API}/live/rooms`, { cache: "no-store", headers })
+            .then((r) => r.json())
+            .catch(() => ({})),
+          fetch(`${API}/lobbies`, { headers })
+            .then((r) => r.json())
+            .catch(() => ({})),
         ]);
         if (!aliveRef.current) return;
         const rooms: any[] = Array.isArray(liveR?.rooms) ? liveR.rooms : [];
         const lobbies: any[] = Array.isArray(lobR?.lobbies) ? lobR.lobbies : [];
 
-        const liveItems: ConvItem[] = rooms.map(r => ({
+        const liveItems: ConvItem[] = rooms.map((r) => ({
           key: `r-${r.id}`,
           href: r.roomIsLobby ? `/lobby/${r.lobbyId}` : `/room/${r.id}`,
-          name: r.roomIsLobby ? (r.lobbyName || r.name) : r.name,
-          sub: r.roomIsLobby ? null : (r.lobbyName || null),
+          name: r.roomIsLobby ? r.lobbyName || r.name : r.name,
+          sub: r.roomIsLobby ? null : r.lobbyName || null,
           logo: r.lobbyLogoUrl || null,
           accent: r.lobbyAccentColor || null,
           online: r.onlineCount || 0,
           live: true,
         }));
-        const liveLobbyIds = new Set(rooms.filter(r => r.roomIsLobby).map(r => r.lobbyId));
+        const liveLobbyIds = new Set(rooms.filter((r) => r.roomIsLobby).map((r) => r.lobbyId));
         const lobbyItems: ConvItem[] = lobbies
-          .filter(l => !liveLobbyIds.has(l.id))
-          .map(l => ({
-            key: `l-${l.id}`, href: `/lobby/${l.id}`, name: l.name, sub: null,
-            logo: l.logoUrl || null, accent: l.accentColor || null, online: 0, live: false,
+          .filter((l) => !liveLobbyIds.has(l.id))
+          .map((l) => ({
+            key: `l-${l.id}`,
+            href: `/lobby/${l.id}`,
+            name: l.name,
+            sub: null,
+            logo: l.logoUrl || null,
+            accent: l.accentColor || null,
+            online: 0,
+            live: false,
           }));
 
         setItems([...liveItems, ...lobbyItems].slice(0, 32));
@@ -58,7 +80,10 @@ export default function HomeActivityTicker() {
     }
     load();
 
-    return () => { aliveRef.current = false; if (timer) clearTimeout(timer); };
+    return () => {
+      aliveRef.current = false;
+      if (timer) clearTimeout(timer);
+    };
   }, []);
 
   const belt = items.length > 0 ? [...items, ...items] : [];
@@ -149,13 +174,30 @@ export default function HomeActivityTicker() {
           {belt.length > 0 && (
             <div className="home-ticker-marquee">
               {belt.map((it, i) => (
-                <Link key={`${it.key}-${i}`} href={it.href} className={`conv-item${it.live && it.online > 0 ? " is-live" : ""}`} title={it.sub ? `${it.name} · in ${it.sub}` : it.name}>
-                  {it.logo
-                    ? <img className="conv-logo" src={it.logo} alt="" />
-                    : <span className="conv-dot" style={{ background: it.accent || "linear-gradient(135deg,#7c3aed,#5800e5)" }}>{(it.name || "?").charAt(0).toUpperCase()}</span>}
+                <Link
+                  key={`${it.key}-${i}`}
+                  href={it.href}
+                  className={`conv-item${it.live && it.online > 0 ? " is-live" : ""}`}
+                  title={it.sub ? `${it.name} · in ${it.sub}` : it.name}
+                >
+                  {it.logo ? (
+                    <img className="conv-logo" src={it.logo} alt="" />
+                  ) : (
+                    <span
+                      className="conv-dot"
+                      style={{ background: it.accent || "linear-gradient(135deg,#7c3aed,#5800e5)" }}
+                    >
+                      {(it.name || "?").charAt(0).toUpperCase()}
+                    </span>
+                  )}
                   <span>{it.name}</span>
                   {it.sub && <span className="conv-sub">/{it.sub}</span>}
-                  {it.online > 0 && <span className="conv-online"><span className="d" />{it.online}</span>}
+                  {it.online > 0 && (
+                    <span className="conv-online">
+                      <span className="d" />
+                      {it.online}
+                    </span>
+                  )}
                 </Link>
               ))}
             </div>

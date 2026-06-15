@@ -3,7 +3,8 @@ import WhyNotDiscordContent from "./WhyNotDiscordContent";
 
 export const metadata: Metadata = {
   title: "Why Weered Isn't Discord",
-  description: "Discord won, and gaming communities lost their tools. A manifesto from the builder of Weered.",
+  description:
+    "Discord won, and gaming communities lost their tools. A manifesto from the builder of Weered.",
   openGraph: {
     title: "Why Weered Isn't Discord",
     description: "Lobby-first, not server-first. Built for crews, not the everything-app.",

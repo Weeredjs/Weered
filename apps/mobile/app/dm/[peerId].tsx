@@ -71,7 +71,9 @@ export default function DMConversation() {
   const [gifOpen, setGifOpen] = useState(false);
   const listRef = useRef<FlatList<DM>>(null);
   const sheet = useActionSheet();
-  const [reportTarget, setReportTarget] = useState<{ type: "MESSAGE" | "USER"; id: string } | null>(null);
+  const [reportTarget, setReportTarget] = useState<{ type: "MESSAGE" | "USER"; id: string } | null>(
+    null,
+  );
 
   useEffect(() => {
     if (dmQ.data?.messages) setMessages(dmQ.data.messages);
@@ -90,15 +92,25 @@ export default function DMConversation() {
         }
       } else if (msg.type === "dm:edited") {
         if (msg.fromId === peerId || msg.toId === peerId) {
-          setMessages((prev) => prev.map((m) => m.id === msg.msgId ? { ...m, body: msg.body, editedAt: msg.editedAt } : m));
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === msg.msgId ? { ...m, body: msg.body, editedAt: msg.editedAt } : m,
+            ),
+          );
         }
       } else if (msg.type === "dm:deleted") {
         if (msg.fromId === peerId || msg.toId === peerId) {
-          setMessages((prev) => prev.map((m) => m.id === msg.msgId ? { ...m, deletedAt: msg.deletedAt, body: "" } : m));
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === msg.msgId ? { ...m, deletedAt: msg.deletedAt, body: "" } : m,
+            ),
+          );
         }
       } else if (msg.type === "dm:reaction") {
         if (msg.fromId === peerId || msg.toId === peerId) {
-          setMessages((prev) => prev.map((m) => m.id === msg.msgId ? { ...m, reactions: msg.reactions } : m));
+          setMessages((prev) =>
+            prev.map((m) => (m.id === msg.msgId ? { ...m, reactions: msg.reactions } : m)),
+          );
         }
       }
     });
@@ -121,7 +133,9 @@ export default function DMConversation() {
       api<{ ok: boolean; message: DM }>(`/dm/${peerId}`, { method: "POST", body: vars }),
     onSuccess: (res) => {
       if (res.message) {
-        setMessages((prev) => (prev.some((m) => m.id === res.message.id) ? prev : [...prev, res.message]));
+        setMessages((prev) =>
+          prev.some((m) => m.id === res.message.id) ? prev : [...prev, res.message],
+        );
       }
     },
     onError: (e: any) => Alert.alert("Couldn't send", e?.message || "Unknown error"),
@@ -149,15 +163,31 @@ export default function DMConversation() {
     const mine = me?.id === msg.fromId;
     const withinEditWindow = Date.now() - new Date(msg.createdAt).getTime() < 15 * 60 * 1000;
 
-    const actions: { label: string; icon?: string; onPress: () => void; destructive?: boolean }[] = [];
+    const actions: { label: string; icon?: string; onPress: () => void; destructive?: boolean }[] =
+      [];
     actions.push({ label: "React", icon: "🙂", onPress: () => showReactPicker(msg.id) });
-    actions.push({ label: "Reply", icon: "↩︎", onPress: () => { setReplyTo(msg); setEditingId(null); } });
-    actions.push({ label: "Copy", icon: "⎘", onPress: () => Share.share({ message: msg.body }).catch(() => {}) });
+    actions.push({
+      label: "Reply",
+      icon: "↩︎",
+      onPress: () => {
+        setReplyTo(msg);
+        setEditingId(null);
+      },
+    });
+    actions.push({
+      label: "Copy",
+      icon: "⎘",
+      onPress: () => Share.share({ message: msg.body }).catch(() => {}),
+    });
     if (mine && withinEditWindow) {
       actions.push({
         label: "Edit",
         icon: "✎",
-        onPress: () => { setEditingId(msg.id); setReplyTo(null); setDraft(msg.body); },
+        onPress: () => {
+          setEditingId(msg.id);
+          setReplyTo(null);
+          setDraft(msg.body);
+        },
       });
     }
     if (mine) {
@@ -202,11 +232,16 @@ export default function DMConversation() {
         options={{
           title: peer?.name || "Message",
           headerTitle: () => (
-            <Pressable onPress={() => router.push(`/user/${peerId}`)} className="flex-row items-center">
+            <Pressable
+              onPress={() => router.push(`/user/${peerId}`)}
+              className="flex-row items-center"
+            >
               <View className="mr-2">
                 <Avatar name={peer?.name || "?"} url={peer?.avatar} size={28} />
               </View>
-              <Text className="text-weered-text font-bold text-base">{peer?.name || "Message"}</Text>
+              <Text className="text-weered-text font-bold text-base">
+                {peer?.name || "Message"}
+              </Text>
             </Pressable>
           ),
         }}
@@ -254,7 +289,9 @@ export default function DMConversation() {
               <Text className="text-weered-text text-xs font-semibold">
                 {replyTo.fromId === me?.id ? "You" : peer?.name || "…"}
               </Text>
-              <Text className="text-weered-muted text-xs" numberOfLines={1}>{replyTo.body}</Text>
+              <Text className="text-weered-muted text-xs" numberOfLines={1}>
+                {replyTo.body}
+              </Text>
             </View>
             <Pressable onPress={() => setReplyTo(null)} hitSlop={8} className="ml-2">
               <Text className="text-weered-muted text-xs">Cancel</Text>
@@ -268,7 +305,13 @@ export default function DMConversation() {
             <Text className="text-weered-muted text-xs flex-1" numberOfLines={1}>
               {messages.find((m) => m.id === editingId)?.body}
             </Text>
-            <Pressable onPress={() => { setEditingId(null); setDraft(""); }} hitSlop={8}>
+            <Pressable
+              onPress={() => {
+                setEditingId(null);
+                setDraft("");
+              }}
+              hitSlop={8}
+            >
               <Text className="text-weered-muted text-xs">Cancel</Text>
             </Pressable>
           </View>
@@ -285,7 +328,13 @@ export default function DMConversation() {
           <TextInput
             value={draft}
             onChangeText={setDraft}
-            placeholder={editingId ? "Edit message" : replyTo ? `Reply to ${replyTo.fromId === me?.id ? "yourself" : peer?.name || "…"}` : "Message"}
+            placeholder={
+              editingId
+                ? "Edit message"
+                : replyTo
+                  ? `Reply to ${replyTo.fromId === me?.id ? "yourself" : peer?.name || "…"}`
+                  : "Message"
+            }
             placeholderTextColor="rgba(160,160,170,0.6)"
             multiline
             className="flex-1 text-weered-text text-base px-3 py-2"
@@ -318,9 +367,17 @@ export default function DMConversation() {
 }
 
 function DMRow({
-  dm, mine, meId, onLongPress, onToggleReaction,
+  dm,
+  mine,
+  meId,
+  onLongPress,
+  onToggleReaction,
 }: {
-  dm: DM; mine: boolean; meId: string; onLongPress: () => void; onToggleReaction: (emoji: string) => void;
+  dm: DM;
+  mine: boolean;
+  meId: string;
+  onLongPress: () => void;
+  onToggleReaction: (emoji: string) => void;
 }) {
   const deleted = !!dm.deletedAt;
   return (
@@ -335,7 +392,9 @@ function DMRow({
           }}
         >
           <Text className="text-weered text-xs font-semibold">{dm.replyToUserName}</Text>
-          <Text className="text-weered-muted text-xs" numberOfLines={1}>{dm.replyToBody}</Text>
+          <Text className="text-weered-muted text-xs" numberOfLines={1}>
+            {dm.replyToBody}
+          </Text>
         </View>
       )}
       <Pressable
@@ -352,7 +411,13 @@ function DMRow({
           }}
         >
           {deleted ? (
-            <Text className="italic" style={{ color: mine ? "rgba(255,255,255,0.7)" : "rgba(200,200,210,0.7)", fontSize: 14 }}>
+            <Text
+              className="italic"
+              style={{
+                color: mine ? "rgba(255,255,255,0.7)" : "rgba(200,200,210,0.7)",
+                fontSize: 14,
+              }}
+            >
               [deleted]
             </Text>
           ) : (
@@ -380,7 +445,10 @@ function DMRow({
                 }}
               >
                 <Text className="text-xs">
-                  {r.emoji} <Text className={mineReact ? "text-weered font-bold" : "text-weered-text"}>{r.count}</Text>
+                  {r.emoji}{" "}
+                  <Text className={mineReact ? "text-weered font-bold" : "text-weered-text"}>
+                    {r.count}
+                  </Text>
                 </Text>
               </Pressable>
             );
@@ -388,7 +456,8 @@ function DMRow({
         </View>
       )}
       <Text className="text-weered-muted text-xs mt-0.5">
-        {formatTime(dm.createdAt)}{dm.editedAt ? " · edited" : ""}
+        {formatTime(dm.createdAt)}
+        {dm.editedAt ? " · edited" : ""}
       </Text>
     </View>
   );
@@ -402,5 +471,7 @@ function formatTime(iso: string): string {
     const ampm = h >= 12 ? "pm" : "am";
     const h12 = h % 12 === 0 ? 12 : h % 12;
     return `${h12}:${m} ${ampm}`;
-  } catch { return ""; }
+  } catch {
+    return "";
+  }
 }

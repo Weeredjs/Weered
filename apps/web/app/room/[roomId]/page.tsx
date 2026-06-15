@@ -3,7 +3,9 @@ import RoomCanvas from "../../../components/room/RoomCanvas";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "https://api.weered.ca";
 
-export async function generateMetadata(props: { params: Promise<{ roomId: string }> }): Promise<Metadata> {
+export async function generateMetadata(props: {
+  params: Promise<{ roomId: string }>;
+}): Promise<Metadata> {
   const params = await props.params;
   let name = decodeURIComponent(params.roomId);
   try {
@@ -14,7 +16,7 @@ export async function generateMetadata(props: { params: Promise<{ roomId: string
       const j = await res.json();
       if (j?.room?.name) name = String(j.room.name);
     }
-  } catch { }
+  } catch {}
   return {
     title: `${name} — Weered Room`,
     description: `Join the ${name} room on Weered. Real-time chat, modules, and presence.`,

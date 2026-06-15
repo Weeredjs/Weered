@@ -23,9 +23,14 @@ export default function InstallPrompt() {
     if (installed) return;
 
     const ua = navigator.userAgent;
-    const isiOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    const isiOS =
+      /iPad|iPhone|iPod/.test(ua) ||
+      (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
     if (isiOS) {
-      const timer = setTimeout(() => { setIsIOS(true); setShow(true); }, 3000);
+      const timer = setTimeout(() => {
+        setIsIOS(true);
+        setShow(true);
+      }, 3000);
       return () => clearTimeout(timer);
     }
 
@@ -52,7 +57,7 @@ export default function InstallPrompt() {
   function handleInstall() {
     if (deferredPrompt.current) {
       deferredPrompt.current.prompt();
-      deferredPrompt.current.userChoice.then(choice => {
+      deferredPrompt.current.userChoice.then((choice) => {
         if (choice.outcome === "accepted") {
           localStorage.setItem("weered:install:done", "1");
         }
@@ -179,11 +184,7 @@ export default function InstallPrompt() {
       `}</style>
 
       <div className="install-banner">
-        <img
-          src="/brand/logo/weered-logo-128.png"
-          alt="Weered"
-          className="install-banner-icon"
-        />
+        <img src="/brand/logo/weered-logo-128.png" alt="Weered" className="install-banner-icon" />
         <div className="install-banner-text">
           <div className="install-banner-title">Keep Weered close.</div>
           <div className="install-banner-sub">
@@ -193,15 +194,20 @@ export default function InstallPrompt() {
           </div>
         </div>
         {!isIOS && (
-          <button
-            className="install-banner-btn install-banner-btn-primary"
-            onClick={handleInstall}
-          >
+          <button className="install-banner-btn install-banner-btn-primary" onClick={handleInstall}>
             Pin it
           </button>
         )}
         <button className="install-banner-close" onClick={handleDismiss} aria-label="Dismiss">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
+          <svg
+            width="12"
+            height="12"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="3"
+            strokeLinecap="round"
+          >
             <path d="M18 6L6 18M6 6l12 12" />
           </svg>
         </button>

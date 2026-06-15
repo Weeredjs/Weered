@@ -1,4 +1,3 @@
-
 export type PublicActivity = {
   id: string;
   ts: number;
@@ -17,7 +16,10 @@ const MAX = 100;
 const TTL_MS = 60 * 60 * 1000;
 
 let _seq = 0;
-function nextId() { _seq = (_seq + 1) % 1_000_000; return `act_${Date.now().toString(36)}_${_seq}`; }
+function nextId() {
+  _seq = (_seq + 1) % 1_000_000;
+  return `act_${Date.now().toString(36)}_${_seq}`;
+}
 
 export function pushActivity(ev: Omit<PublicActivity, "id" | "ts"> & { ts?: number }): void {
   const now = Date.now();
@@ -33,24 +35,24 @@ export function getActivity(limit = 30): PublicActivity[] {
 }
 
 const ROLE_BY_LOBBY: Record<string, string[]> = {
-  dnd:       ["a wizard", "a rogue", "a paladin", "a ranger", "a bard", "a cleric"],
-  fakeout:   ["a trader", "a desk", "a whale", "a degen", "a swing trader"],
-  windrose:  ["a hunter", "a bounty seeker"],
-  destiny:   ["a guardian", "a titan", "a hunter"],
-  poker:     ["a card sharp", "a grinder"],
-  study:     ["a scholar", "a study partner"],
-  league:    ["a summoner"],
-  cs2:       ["an operator"],
-  dota2:     ["an ancient"],
-  pubg:      ["a survivor"],
-  fortnite:  ["a builder"],
-  poe:       ["an exile"],
-  mlb:       ["a fan"],
-  nhl:       ["a fan"],
-  pga:       ["a fan"],
-  marathon:  ["a runner"],
-  hq:        ["a regular"],
-  news:      ["a reader"],
+  dnd: ["a wizard", "a rogue", "a paladin", "a ranger", "a bard", "a cleric"],
+  fakeout: ["a trader", "a desk", "a whale", "a degen", "a swing trader"],
+  windrose: ["a hunter", "a bounty seeker"],
+  destiny: ["a guardian", "a titan", "a hunter"],
+  poker: ["a card sharp", "a grinder"],
+  study: ["a scholar", "a study partner"],
+  league: ["a summoner"],
+  cs2: ["an operator"],
+  dota2: ["an ancient"],
+  pubg: ["a survivor"],
+  fortnite: ["a builder"],
+  poe: ["an exile"],
+  mlb: ["a fan"],
+  nhl: ["a fan"],
+  pga: ["a fan"],
+  marathon: ["a runner"],
+  hq: ["a regular"],
+  news: ["a reader"],
 };
 export function anonymousFor(lobbyId?: string): string {
   const key = String(lobbyId || "").toLowerCase();
@@ -69,25 +71,157 @@ export function shouldEmit(key: string, minGapMs: number): boolean {
 }
 
 const SYNTHETIC_POOL: Array<() => Omit<PublicActivity, "id" | "ts">> = [
-  () => { const r = anonymousFor("dnd"); return { kind: "dice", lobbyId: "dnd", text: r + " rolled 1d20+5 → 22", textReal: r + " rolled 1d20+5 → 22", accent: "#D9A942" }; },
-  () => { const r = anonymousFor("dnd"); return { kind: "dice", lobbyId: "dnd", text: r + " rolled a NAT 20 on 1d20", textReal: r + " rolled a NAT 20 on 1d20", accent: "#22c55e" }; },
-  () => { const r = anonymousFor("dnd"); return { kind: "dice", lobbyId: "dnd", text: r + " fumbled a NAT 1 on 1d20", textReal: r + " fumbled a NAT 1 on 1d20", accent: "#ef4444" }; },
-  () => { const r = anonymousFor("dnd"); return { kind: "tavern", lobbyId: "dnd", text: r + " posted to the Tavern Board", textReal: r + " posted to the Tavern Board", accent: "#C4A55A" }; },
-  () => { const r = anonymousFor("dnd"); return { kind: "campaign", lobbyId: "dnd", text: r + "’s party earned 500 XP", textReal: r + "’s party earned 500 XP", accent: "#fde68a" }; },
+  () => {
+    const r = anonymousFor("dnd");
+    return {
+      kind: "dice",
+      lobbyId: "dnd",
+      text: r + " rolled 1d20+5 → 22",
+      textReal: r + " rolled 1d20+5 → 22",
+      accent: "#D9A942",
+    };
+  },
+  () => {
+    const r = anonymousFor("dnd");
+    return {
+      kind: "dice",
+      lobbyId: "dnd",
+      text: r + " rolled a NAT 20 on 1d20",
+      textReal: r + " rolled a NAT 20 on 1d20",
+      accent: "#22c55e",
+    };
+  },
+  () => {
+    const r = anonymousFor("dnd");
+    return {
+      kind: "dice",
+      lobbyId: "dnd",
+      text: r + " fumbled a NAT 1 on 1d20",
+      textReal: r + " fumbled a NAT 1 on 1d20",
+      accent: "#ef4444",
+    };
+  },
+  () => {
+    const r = anonymousFor("dnd");
+    return {
+      kind: "tavern",
+      lobbyId: "dnd",
+      text: r + " posted to the Tavern Board",
+      textReal: r + " posted to the Tavern Board",
+      accent: "#C4A55A",
+    };
+  },
+  () => {
+    const r = anonymousFor("dnd");
+    return {
+      kind: "campaign",
+      lobbyId: "dnd",
+      text: r + "’s party earned 500 XP",
+      textReal: r + "’s party earned 500 XP",
+      accent: "#fde68a",
+    };
+  },
 
-  () => { const r = anonymousFor("fakeout"); const sym = ["BTC","ETH","SOL","DOGE"][Math.floor(Math.random()*4)]; return { kind: "trade", lobbyId: "fakeout", text: r + " opened a long on " + sym, textReal: r + " opened a long on " + sym, accent: "#22c55e" }; },
-  () => { const r = anonymousFor("fakeout"); const sym = ["BTC","ETH","SOL"][Math.floor(Math.random()*3)]; const pnl = (Math.floor(Math.random()*900) + 100); return { kind: "trade", lobbyId: "fakeout", text: r + " closed " + sym + " for +$" + pnl, textReal: r + " closed " + sym + " for +$" + pnl, accent: "#22c55e" }; },
-  () => { const r = anonymousFor("fakeout"); const sym = ["BTC","ETH","SOL"][Math.floor(Math.random()*3)]; const pnl = (Math.floor(Math.random()*600) + 50); return { kind: "trade", lobbyId: "fakeout", text: r + " closed " + sym + " for -$" + pnl, textReal: r + " closed " + sym + " for -$" + pnl, accent: "#ef4444" }; },
+  () => {
+    const r = anonymousFor("fakeout");
+    const sym = ["BTC", "ETH", "SOL", "DOGE"][Math.floor(Math.random() * 4)];
+    return {
+      kind: "trade",
+      lobbyId: "fakeout",
+      text: r + " opened a long on " + sym,
+      textReal: r + " opened a long on " + sym,
+      accent: "#22c55e",
+    };
+  },
+  () => {
+    const r = anonymousFor("fakeout");
+    const sym = ["BTC", "ETH", "SOL"][Math.floor(Math.random() * 3)];
+    const pnl = Math.floor(Math.random() * 900) + 100;
+    return {
+      kind: "trade",
+      lobbyId: "fakeout",
+      text: r + " closed " + sym + " for +$" + pnl,
+      textReal: r + " closed " + sym + " for +$" + pnl,
+      accent: "#22c55e",
+    };
+  },
+  () => {
+    const r = anonymousFor("fakeout");
+    const sym = ["BTC", "ETH", "SOL"][Math.floor(Math.random() * 3)];
+    const pnl = Math.floor(Math.random() * 600) + 50;
+    return {
+      kind: "trade",
+      lobbyId: "fakeout",
+      text: r + " closed " + sym + " for -$" + pnl,
+      textReal: r + " closed " + sym + " for -$" + pnl,
+      accent: "#ef4444",
+    };
+  },
 
-  () => { const r = anonymousFor("poker"); const amt = (Math.floor(Math.random()*9) + 2) * 50; return { kind: "poker", lobbyId: "poker", text: r + " won $" + amt + " Paper at the table", textReal: r + " won $" + amt + " Paper at the table", accent: "#22c55e" }; },
+  () => {
+    const r = anonymousFor("poker");
+    const amt = (Math.floor(Math.random() * 9) + 2) * 50;
+    return {
+      kind: "poker",
+      lobbyId: "poker",
+      text: r + " won $" + amt + " Paper at the table",
+      textReal: r + " won $" + amt + " Paper at the table",
+      accent: "#22c55e",
+    };
+  },
 
-  () => { const r = anonymousFor("windrose"); return { kind: "bounty", lobbyId: "windrose", text: r + " claimed a Crewmate bounty", textReal: r + " claimed a Crewmate bounty", accent: "#b8935a" }; },
-  () => { const r = anonymousFor("windrose"); return { kind: "bounty", lobbyId: "windrose", text: r + " posted a new bounty: hunt the Kraken", textReal: r + " posted a new bounty: hunt the Kraken", accent: "#b8935a" }; },
+  () => {
+    const r = anonymousFor("windrose");
+    return {
+      kind: "bounty",
+      lobbyId: "windrose",
+      text: r + " claimed a Crewmate bounty",
+      textReal: r + " claimed a Crewmate bounty",
+      accent: "#b8935a",
+    };
+  },
+  () => {
+    const r = anonymousFor("windrose");
+    return {
+      kind: "bounty",
+      lobbyId: "windrose",
+      text: r + " posted a new bounty: hunt the Kraken",
+      textReal: r + " posted a new bounty: hunt the Kraken",
+      accent: "#b8935a",
+    };
+  },
 
-  () => { const r = anonymousFor("destiny"); return { kind: "challenge", lobbyId: "destiny2", text: r + " cleared a weekly Nightfall", textReal: r + " cleared a weekly Nightfall", accent: "#f58220" }; },
+  () => {
+    const r = anonymousFor("destiny");
+    return {
+      kind: "challenge",
+      lobbyId: "destiny2",
+      text: r + " cleared a weekly Nightfall",
+      textReal: r + " cleared a weekly Nightfall",
+      accent: "#f58220",
+    };
+  },
 
-  () => { const r = anonymousFor(""); return { kind: "room", lobbyId: "", text: r + " opened a new room", textReal: r + " opened a new room", accent: "#9aa3b2" }; },
-  () => { const r = anonymousFor(""); return { kind: "challenge", lobbyId: "", text: r + " earned a notoriety badge", textReal: r + " earned a notoriety badge", accent: "#fde68a" }; },
+  () => {
+    const r = anonymousFor("");
+    return {
+      kind: "room",
+      lobbyId: "",
+      text: r + " opened a new room",
+      textReal: r + " opened a new room",
+      accent: "#9aa3b2",
+    };
+  },
+  () => {
+    const r = anonymousFor("");
+    return {
+      kind: "challenge",
+      lobbyId: "",
+      text: r + " earned a notoriety badge",
+      textReal: r + " earned a notoriety badge",
+      accent: "#fde68a",
+    };
+  },
 ];
 
 export function seedSyntheticActivity(): void {

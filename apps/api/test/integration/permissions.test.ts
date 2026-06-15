@@ -8,7 +8,8 @@ import { buildTestApp, testToken } from "../helpers/buildTestApp";
 // faithfully mirror index.ts (real DB role lookup + the exact staff role set), so
 // the route's authorization branch is exercised end to end against the test DB.
 const getGlobalRole = async (userId: string) =>
-  (await prisma.user.findUnique({ where: { id: userId }, select: { globalRole: true } }))?.globalRole ?? "USER";
+  (await prisma.user.findUnique({ where: { id: userId }, select: { globalRole: true } }))
+    ?.globalRole ?? "USER";
 const canAccessStaff = (role: any) => ["SUPPORT", "STAFF", "ADMIN", "GOD"].includes(String(role));
 
 describe("staff route authorization gate (/staff/outreach)", () => {
@@ -17,13 +18,23 @@ describe("staff route authorization gate (/staff/outreach)", () => {
 
   beforeEach(async () => {
     app = await buildTestApp((a, { authFromHeader }) =>
-      staffOpsRoutes(a, { authFromHeader, getGlobalRole, canAccessStaff, rooms: new Map() } as any));
+      staffOpsRoutes(a, { authFromHeader, getGlobalRole, canAccessStaff, rooms: new Map() } as any),
+    );
   });
   afterEach(async () => {
-    try { await app?.close(); } catch {}
-    if (created.length) { try { await prisma.user.deleteMany({ where: { id: { in: created } } }); } catch {} created.length = 0; }
+    try {
+      await app?.close();
+    } catch {}
+    if (created.length) {
+      try {
+        await prisma.user.deleteMany({ where: { id: { in: created } } });
+      } catch {}
+      created.length = 0;
+    }
   });
-  afterAll(async () => { await prisma.$disconnect(); });
+  afterAll(async () => {
+    await prisma.$disconnect();
+  });
 
   async function mkUser(role: string): Promise<string> {
     const stamp = Date.now() + "_" + Math.floor(performance.now());
@@ -37,14 +48,22 @@ describe("staff route authorization gate (/staff/outreach)", () => {
 
   it("403s a non-staff (USER) caller", async () => {
     const id = await mkUser("USER");
-    const res = await app.inject({ method: "GET", url: "/staff/outreach", headers: { authorization: `Bearer ${testToken(id)}` } });
+    const res = await app.inject({
+      method: "GET",
+      url: "/staff/outreach",
+      headers: { authorization: `Bearer ${testToken(id)}` },
+    });
     expect(res.statusCode).toBe(403);
     expect(res.json()?.error).toBe("forbidden");
   });
 
   it("allows an elevated (GOD) caller through the gate", async () => {
     const id = await mkUser("GOD");
-    const res = await app.inject({ method: "GET", url: "/staff/outreach", headers: { authorization: `Bearer ${testToken(id)}` } });
+    const res = await app.inject({
+      method: "GET",
+      url: "/staff/outreach",
+      headers: { authorization: `Bearer ${testToken(id)}` },
+    });
     expect(res.statusCode).toBe(200);
     expect(res.json()?.ok).toBe(true);
   });

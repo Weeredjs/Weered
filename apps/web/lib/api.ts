@@ -9,7 +9,9 @@ function authHeaders(): Record<string, string> {
   try {
     const tok = localStorage.getItem("weered_token") || "";
     return tok ? { Authorization: `Bearer ${tok}` } : {};
-  } catch { return {}; }
+  } catch {
+    return {};
+  }
 }
 
 export type ApiFetchOptions = RequestInit & {
@@ -19,7 +21,10 @@ export type ApiFetchOptions = RequestInit & {
 
 export type ApiResult<T = any> = T & { ok?: boolean; error?: string; message?: string };
 
-export async function apiFetch<T = any>(path: string, opts: ApiFetchOptions = {}): Promise<ApiResult<T>> {
+export async function apiFetch<T = any>(
+  path: string,
+  opts: ApiFetchOptions = {},
+): Promise<ApiResult<T>> {
   const { silent, errorLabel, headers: callerHeaders, body, ...rest } = opts;
   const finalHeaders: Record<string, string> = {
     ...(body ? { "Content-Type": "application/json" } : {}),
@@ -32,7 +37,11 @@ export async function apiFetch<T = any>(path: string, opts: ApiFetchOptions = {}
     r = await fetch(`${API}${path}`, { ...rest, headers: finalHeaders, body });
   } catch (e: any) {
     if (!silent) weeredToast.error(errorLabel || "Network error. Try again.");
-    return { ok: false, error: "network_error", message: e?.message || "Network error" } as ApiResult<T>;
+    return {
+      ok: false,
+      error: "network_error",
+      message: e?.message || "Network error",
+    } as ApiResult<T>;
   }
 
   let json: any;
@@ -44,7 +53,8 @@ export async function apiFetch<T = any>(path: string, opts: ApiFetchOptions = {}
 
   const failed = !r.ok || json?.ok === false;
   if (failed && !silent) {
-    const msg = errorLabel || json?.message || prettyError(json?.error) || `Request failed (${r.status})`;
+    const msg =
+      errorLabel || json?.message || prettyError(json?.error) || `Request failed (${r.status})`;
     if (r.status === 401) {
       weeredToast.error("Sign in required.");
     } else {
@@ -55,7 +65,8 @@ export async function apiFetch<T = any>(path: string, opts: ApiFetchOptions = {}
 }
 
 const ERROR_COPY: Record<string, string> = {
-  bungie_not_linked: "Link your Bungie account first — hit the \"Link Bungie\" pill in the destiny2 lobby tab bar, or open My Guardian.",
+  bungie_not_linked:
+    'Link your Bungie account first — hit the "Link Bungie" pill in the destiny2 lobby tab bar, or open My Guardian.',
   challenge_not_active: "This challenge is no longer active.",
   challenge_expired: "This challenge has expired.",
   unauthorized: "Sign in required.",

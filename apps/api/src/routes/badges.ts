@@ -20,35 +20,40 @@ export default async function badgesRoutes(app: FastifyInstance, opts: Opts) {
       where: { userId: uid },
       orderBy: { earnedAt: "desc" },
     });
-    const badgeIds = userBadges.map(ub => ub.badgeId);
-    const badges = badgeIds.length > 0
-      ? await prisma.challengeBadge.findMany({ where: { id: { in: badgeIds } } })
-      : [];
-    const badgeMap = new Map(badges.map(b => [b.id, b]));
-    const result = userBadges.map(ub => ({
+    const badgeIds = userBadges.map((ub) => ub.badgeId);
+    const badges =
+      badgeIds.length > 0
+        ? await prisma.challengeBadge.findMany({ where: { id: { in: badgeIds } } })
+        : [];
+    const badgeMap = new Map(badges.map((b) => [b.id, b]));
+    const result = userBadges.map((ub) => ({
       ...badgeMap.get(ub.badgeId),
       earnedAt: ub.earnedAt,
     }));
     return reply.send({ ok: true, badges: result });
   });
 
-  app.post("/badges", {
-  schema: { tags: ["badges"] },
-}, async (req, reply) => {
-    const u = authFromHeader((req as any).headers?.authorization);
-    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
-    if (!["GOD", "ADMIN", "STAFF"].includes(u.globalRole || "")) {
-      return reply.code(403).send({ ok: false, error: "forbidden" });
-    }
-    const body = req.body as any;
-    const badge = await prisma.challengeBadge.create({
-      data: {
-        name: String(body.name || "").trim(),
-        description: String(body.description || "").trim(),
-        iconUrl: String(body.iconUrl || "").trim(),
-        rarity: parseInt(body.rarity) || 1,
-      },
-    });
-    return reply.send({ ok: true, badge });
-  });
+  app.post(
+    "/badges",
+    {
+      schema: { tags: ["badges"] },
+    },
+    async (req, reply) => {
+      const u = authFromHeader((req as any).headers?.authorization);
+      if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+      if (!["GOD", "ADMIN", "STAFF"].includes(u.globalRole || "")) {
+        return reply.code(403).send({ ok: false, error: "forbidden" });
+      }
+      const body = req.body as any;
+      const badge = await prisma.challengeBadge.create({
+        data: {
+          name: String(body.name || "").trim(),
+          description: String(body.description || "").trim(),
+          iconUrl: String(body.iconUrl || "").trim(),
+          rarity: parseInt(body.rarity) || 1,
+        },
+      });
+      return reply.send({ ok: true, badge });
+    },
+  );
 }

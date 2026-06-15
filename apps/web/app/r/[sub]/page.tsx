@@ -12,7 +12,16 @@ export default function SubredditRoute(props: { params: Promise<{ sub: string }>
   }, [router, params?.sub]);
 
   return (
-    <div style={{ minHeight: "100vh", display: "grid", placeItems: "center", background: "var(--weered-bg,#050816)", color: "rgba(243,244,246,.92)", fontWeight: 900 }}>
+    <div
+      style={{
+        minHeight: "100vh",
+        display: "grid",
+        placeItems: "center",
+        background: "var(--weered-bg,#050816)",
+        color: "rgba(243,244,246,.92)",
+        fontWeight: 900,
+      }}
+    >
       Opening lobby…
     </div>
   );

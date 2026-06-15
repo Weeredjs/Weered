@@ -29,17 +29,31 @@ export function SiteBanner() {
   if (dismissedTs && dismissedTs >= b.ts) return null;
 
   const colors: Record<string, { bg: string; border: string; text: string }> = {
-    info:    { bg: "rgba(88,0,229,0.15)",   border: "rgba(88,0,229,0.5)",   text: "#a78bfa" },
+    info: { bg: "rgba(88,0,229,0.15)", border: "rgba(88,0,229,0.5)", text: "#a78bfa" },
     warning: { bg: "rgba(245,158,11,0.12)", border: "rgba(245,158,11,0.5)", text: "#fbbf24" },
-    urgent:  { bg: "rgba(239,68,68,0.15)",  border: "rgba(239,68,68,0.6)",  text: "#fca5a5" },
+    urgent: { bg: "rgba(239,68,68,0.15)", border: "rgba(239,68,68,0.6)", text: "#fca5a5" },
   };
   const c = colors[b.level] || colors.info;
 
   return (
-    <View style={{ backgroundColor: c.bg, borderBottomWidth: 1, borderBottomColor: c.border, flexDirection: "row", alignItems: "center", paddingHorizontal: 12, paddingVertical: 8 }}>
+    <View
+      style={{
+        backgroundColor: c.bg,
+        borderBottomWidth: 1,
+        borderBottomColor: c.border,
+        flexDirection: "row",
+        alignItems: "center",
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+      }}
+    >
       <View style={{ flex: 1, marginRight: 8, minWidth: 0 }}>
-        <Text style={{ color: c.text, fontSize: 11, fontWeight: "800", letterSpacing: 0.5 }}>{b.from}</Text>
-        <Text style={{ color: c.text, fontSize: 11, lineHeight: 15 }} numberOfLines={3}>{b.message}</Text>
+        <Text style={{ color: c.text, fontSize: 11, fontWeight: "800", letterSpacing: 0.5 }}>
+          {b.from}
+        </Text>
+        <Text style={{ color: c.text, fontSize: 11, lineHeight: 15 }} numberOfLines={3}>
+          {b.message}
+        </Text>
       </View>
       <Pressable
         onPress={() => {

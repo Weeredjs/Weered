@@ -56,7 +56,10 @@ function debug(stage: string, info: any = {}, error: any = null) {
 }
 
 async function obtainToken(N: NonNullable<typeof Notifications>): Promise<string | null> {
-  debug("obtainToken:start", { appOwnership: Constants.appOwnership, executionEnvironment: Constants.executionEnvironment });
+  debug("obtainToken:start", {
+    appOwnership: Constants.appOwnership,
+    executionEnvironment: Constants.executionEnvironment,
+  });
   const existing = await N.getPermissionsAsync();
   let granted = existing.status === "granted";
   debug("obtainToken:permission-initial", { status: existing.status, granted });
@@ -75,10 +78,10 @@ async function obtainToken(N: NonNullable<typeof Notifications>): Promise<string
       (Constants.expoConfig?.extra as any)?.eas?.projectId ||
       (Constants.easConfig as any)?.projectId;
     debug("obtainToken:projectId", { projectId: projectId || null });
-    const token = await N.getExpoPushTokenAsync(
-      projectId ? { projectId } : undefined,
-    );
-    debug("obtainToken:got-token", { tokenPreview: token?.data ? String(token.data).slice(0, 30) : null });
+    const token = await N.getExpoPushTokenAsync(projectId ? { projectId } : undefined);
+    debug("obtainToken:got-token", {
+      tokenPreview: token?.data ? String(token.data).slice(0, 30) : null,
+    });
     return token.data || null;
   } catch (e) {
     debug("obtainToken:exception", {}, e);
@@ -135,7 +138,13 @@ export function attachNotificationTapHandler() {
     const url = typeof data.url === "string" ? data.url : null;
     if (!url || url === "/" || url === "/home") return;
     const path = url.startsWith("http")
-      ? (() => { try { return new URL(url).pathname + new URL(url).search; } catch { return null; } })()
+      ? (() => {
+          try {
+            return new URL(url).pathname + new URL(url).search;
+          } catch {
+            return null;
+          }
+        })()
       : url;
     if (path) router.push(path as any);
   });

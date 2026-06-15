@@ -25,12 +25,10 @@ export default async function uploadsRoutes(app: FastifyInstance, opts: Opts) {
     const dbUser = await prisma.user.findUnique({ where: { id: u.id }, select: { tier: true } });
     const tier = String(dbUser?.tier ?? "INNOCENT").toUpperCase();
     if (tier === "INNOCENT") {
-      return reply
-        .code(403)
-        .send({
-          error: "tier_required",
-          message: "Custom avatar uploads require Indicted tier or higher.",
-        });
+      return reply.code(403).send({
+        error: "tier_required",
+        message: "Custom avatar uploads require Indicted tier or higher.",
+      });
     }
 
     const body: any = (req as any).body || {};
@@ -110,12 +108,10 @@ export default async function uploadsRoutes(app: FastifyInstance, opts: Opts) {
     const dbUser = await prisma.user.findUnique({ where: { id: u.id }, select: { tier: true } });
     const tier = String(dbUser?.tier ?? "INNOCENT").toUpperCase();
     if (tier === "INNOCENT") {
-      return reply
-        .code(403)
-        .send({
-          error: "tier_required",
-          message: "Custom banner uploads require Indicted tier or higher.",
-        });
+      return reply.code(403).send({
+        error: "tier_required",
+        message: "Custom banner uploads require Indicted tier or higher.",
+      });
     }
 
     const body: any = (req as any).body || {};
@@ -157,12 +153,10 @@ export default async function uploadsRoutes(app: FastifyInstance, opts: Opts) {
     const tier = String(dbUser?.tier ?? "INNOCENT").toUpperCase();
     const isStaff = canAccessStaff(dbUser?.globalRole as any);
     if (tier === "INNOCENT" && !isStaff) {
-      return reply
-        .code(403)
-        .send({
-          error: "tier_required",
-          message: "Lobby branding requires Indicted tier or higher.",
-        });
+      return reply.code(403).send({
+        error: "tier_required",
+        message: "Lobby branding requires Indicted tier or higher.",
+      });
     }
     const body: any = (req as any).body || {};
     const dataUrl = body.image;

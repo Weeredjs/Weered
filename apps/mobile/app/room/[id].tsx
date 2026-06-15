@@ -67,13 +67,17 @@ export default function Room() {
   const [gifOpen, setGifOpen] = useState(false);
   const [replyTo, setReplyTo] = useState<ChatMsg | null>(null);
   const [rosterOpen, setRosterOpen] = useState(false);
-  const [accessState, setAccessState] = useState<"joining" | "joined" | "knock_queued" | "password_required" | "denied">("joining");
+  const [accessState, setAccessState] = useState<
+    "joining" | "joined" | "knock_queued" | "password_required" | "denied"
+  >("joining");
   const [passwordInput, setPasswordInput] = useState("");
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [knockers, setKnockers] = useState<{ id: string; name: string }[]>([]);
   const [ownerId, setOwnerId] = useState<string>("");
   const [modIds, setModIds] = useState<Set<string>>(new Set());
-  const [reportTarget, setReportTarget] = useState<{ type: "MESSAGE" | "USER"; id: string } | null>(null);
+  const [reportTarget, setReportTarget] = useState<{ type: "MESSAGE" | "USER"; id: string } | null>(
+    null,
+  );
   const sheet = useActionSheet();
   const listRef = useRef<FlatList<ChatMsg>>(null);
 
@@ -89,7 +93,10 @@ export default function Room() {
 
     const off = wsClient.on((msg) => {
       if (!msg) return;
-      if (msg.type === "auth:ok") { setConnected(true); return; }
+      if (msg.type === "auth:ok") {
+        setConnected(true);
+        return;
+      }
       if (msg.roomId !== roomId) return;
       switch (msg.type) {
         case "presence:state":
@@ -122,13 +129,21 @@ export default function Room() {
           setMessages((prev) => [...prev, msg.msg]);
           break;
         case "chat:edited":
-          setMessages((prev) => prev.map((m) => m.id === msg.msgId ? { ...m, body: msg.body, editedAt: msg.editedAt } : m));
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === msg.msgId ? { ...m, body: msg.body, editedAt: msg.editedAt } : m,
+            ),
+          );
           break;
         case "chat:deleted":
-          setMessages((prev) => prev.map((m) => m.id === msg.msgId ? { ...m, deletedAt: msg.deletedAt } : m));
+          setMessages((prev) =>
+            prev.map((m) => (m.id === msg.msgId ? { ...m, deletedAt: msg.deletedAt } : m)),
+          );
           break;
         case "reaction:changed":
-          setMessages((prev) => prev.map((m) => m.id === msg.msgId ? { ...m, reactions: msg.reactions } : m));
+          setMessages((prev) =>
+            prev.map((m) => (m.id === msg.msgId ? { ...m, reactions: msg.reactions } : m)),
+          );
           break;
         case "room:password:required":
           setAccessState("password_required");
@@ -146,10 +161,17 @@ export default function Room() {
           wsClient.send({ type: "chat:history", roomId, limit: 50 });
           break;
         case "room:knock":
-          if (msg.user) setKnockers((prev) => prev.some((k) => k.id === msg.user.id) ? prev : [...prev, { id: msg.user.id, name: msg.user.name }]);
+          if (msg.user)
+            setKnockers((prev) =>
+              prev.some((k) => k.id === msg.user.id)
+                ? prev
+                : [...prev, { id: msg.user.id, name: msg.user.name }],
+            );
           break;
         case "room:deleted":
-          Alert.alert("Room deleted", "This room no longer exists.", [{ text: "OK", onPress: () => router.back() }]);
+          Alert.alert("Room deleted", "This room no longer exists.", [
+            { text: "OK", onPress: () => router.back() },
+          ]);
           break;
       }
     });
@@ -237,15 +259,40 @@ export default function Room() {
     const isGlobalStaff = staffRoles.has(String(me?.globalRole || ""));
     const isOwner = !!me && (ownerId === me.id || isGlobalStaff);
     const isMod = isOwner || (!!me && modIds.has(me.id));
-    const targetIsOwnerOrStaff = msg.user.id === ownerId || staffRoles.has(String(msg.user.globalRole || ""));
+    const targetIsOwnerOrStaff =
+      msg.user.id === ownerId || staffRoles.has(String(msg.user.globalRole || ""));
 
-    const actions: { label: string; icon?: string; onPress: () => void; destructive?: boolean }[] = [];
+    const actions: { label: string; icon?: string; onPress: () => void; destructive?: boolean }[] =
+      [];
     actions.push({ label: "React", icon: "🙂", onPress: () => showReactPicker(msg.id) });
-    actions.push({ label: "Reply", icon: "↩︎", onPress: () => { setReplyTo(msg); setEditingId(null); } });
-    actions.push({ label: "Copy", icon: "⎘", onPress: () => Share.share({ message: msg.body }).catch(() => {}) });
-    actions.push({ label: "View profile", icon: "👤", onPress: () => router.push(`/user/${msg.user.id}`) });
+    actions.push({
+      label: "Reply",
+      icon: "↩︎",
+      onPress: () => {
+        setReplyTo(msg);
+        setEditingId(null);
+      },
+    });
+    actions.push({
+      label: "Copy",
+      icon: "⎘",
+      onPress: () => Share.share({ message: msg.body }).catch(() => {}),
+    });
+    actions.push({
+      label: "View profile",
+      icon: "👤",
+      onPress: () => router.push(`/user/${msg.user.id}`),
+    });
     if (mine && withinEditWindow) {
-      actions.push({ label: "Edit", icon: "✎", onPress: () => { setEditingId(msg.id); setReplyTo(null); setDraft(msg.body); } });
+      actions.push({
+        label: "Edit",
+        icon: "✎",
+        onPress: () => {
+          setEditingId(msg.id);
+          setReplyTo(null);
+          setDraft(msg.body);
+        },
+      });
     }
     if (mine) {
       actions.push({
@@ -266,19 +313,24 @@ export default function Room() {
         label: "Block user",
         icon: "🚫",
         destructive: true,
-        onPress: () => Alert.alert(
-          `Block ${msg.user.name}?`,
-          "They won't be able to DM you and you won't see their messages.",
-          [
-            { text: "Cancel", style: "cancel" },
-            {
-              text: "Block", style: "destructive",
-              onPress: () => api(`/users/${msg.user.id}/block`, { method: "POST" })
-                .then(() => Alert.alert("Blocked", `${msg.user.name} blocked.`))
-                .catch((e: any) => Alert.alert("Couldn't block", e?.message || "Unknown error")),
-            },
-          ],
-        ),
+        onPress: () =>
+          Alert.alert(
+            `Block ${msg.user.name}?`,
+            "They won't be able to DM you and you won't see their messages.",
+            [
+              { text: "Cancel", style: "cancel" },
+              {
+                text: "Block",
+                style: "destructive",
+                onPress: () =>
+                  api(`/users/${msg.user.id}/block`, { method: "POST" })
+                    .then(() => Alert.alert("Blocked", `${msg.user.name} blocked.`))
+                    .catch((e: any) =>
+                      Alert.alert("Couldn't block", e?.message || "Unknown error"),
+                    ),
+              },
+            ],
+          ),
       });
     }
     if (!mine && isMod && !targetIsOwnerOrStaff) {
@@ -286,25 +338,36 @@ export default function Room() {
         label: "Mute (5 min)",
         icon: "🔇",
         destructive: true,
-        onPress: () => wsClient.send({ type: "mod:mute", roomId, targetId: msg.user.id, duration: 300 }),
+        onPress: () =>
+          wsClient.send({ type: "mod:mute", roomId, targetId: msg.user.id, duration: 300 }),
       });
       actions.push({
         label: "Kick",
         icon: "👢",
         destructive: true,
-        onPress: () => Alert.alert(`Kick ${msg.user.name}?`, "They'll be removed from this room.", [
-          { text: "Cancel", style: "cancel" },
-          { text: "Kick", style: "destructive", onPress: () => wsClient.send({ type: "mod:kick", roomId, targetId: msg.user.id }) },
-        ]),
+        onPress: () =>
+          Alert.alert(`Kick ${msg.user.name}?`, "They'll be removed from this room.", [
+            { text: "Cancel", style: "cancel" },
+            {
+              text: "Kick",
+              style: "destructive",
+              onPress: () => wsClient.send({ type: "mod:kick", roomId, targetId: msg.user.id }),
+            },
+          ]),
       });
       actions.push({
         label: "Ban from room",
         icon: "⛔",
         destructive: true,
-        onPress: () => Alert.alert(`Ban ${msg.user.name}?`, "They won't be able to rejoin.", [
-          { text: "Cancel", style: "cancel" },
-          { text: "Ban", style: "destructive", onPress: () => wsClient.send({ type: "mod:ban", roomId, targetId: msg.user.id }) },
-        ]),
+        onPress: () =>
+          Alert.alert(`Ban ${msg.user.name}?`, "They won't be able to rejoin.", [
+            { text: "Cancel", style: "cancel" },
+            {
+              text: "Ban",
+              style: "destructive",
+              onPress: () => wsClient.send({ type: "mod:ban", roomId, targetId: msg.user.id }),
+            },
+          ]),
       });
     }
 
@@ -335,16 +398,18 @@ export default function Room() {
           headerRight: () => (
             <View className="flex-row items-center mr-2">
               <RoomNpcsButton roomId={roomId} />
-            <Pressable
-              onPress={() => Share.share({
-                url: `${WEB_BASE}/room/${roomId}`,
-                message: `Join ${roomName} on Weered — ${WEB_BASE}/room/${roomId}`,
-              }).catch(() => {})}
-              hitSlop={8}
-              className="active:opacity-70"
-            >
-              <Text className="text-weered font-semibold">Share</Text>
-            </Pressable>
+              <Pressable
+                onPress={() =>
+                  Share.share({
+                    url: `${WEB_BASE}/room/${roomId}`,
+                    message: `Join ${roomName} on Weered — ${WEB_BASE}/room/${roomId}`,
+                  }).catch(() => {})
+                }
+                hitSlop={8}
+                className="active:opacity-70"
+              >
+                <Text className="text-weered font-semibold">Share</Text>
+              </Pressable>
             </View>
           ),
         }}
@@ -357,7 +422,9 @@ export default function Room() {
         {accessState === "password_required" ? (
           <View className="flex-1 items-center justify-center px-8">
             <Text className="text-weered-text font-bold text-lg mb-2">🔒 Locked room</Text>
-            <Text className="text-weered-muted text-sm text-center mb-6">Enter the room password to join.</Text>
+            <Text className="text-weered-muted text-sm text-center mb-6">
+              Enter the room password to join.
+            </Text>
             <TextInput
               value={passwordInput}
               onChangeText={setPasswordInput}
@@ -405,7 +472,9 @@ export default function Room() {
 
             {knockers.length > 0 && (
               <View className="px-3 py-2 bg-amber-500/10 border-b border-amber-500/30">
-                <Text className="text-amber-400 text-xs uppercase font-bold mb-1.5">🚪 Knocking · {knockers.length}</Text>
+                <Text className="text-amber-400 text-xs uppercase font-bold mb-1.5">
+                  🚪 Knocking · {knockers.length}
+                </Text>
                 {knockers.map((k) => (
                   <View key={k.id} className="flex-row items-center py-1.5">
                     <Text className="text-weered-text text-sm flex-1">{k.name}</Text>
@@ -429,38 +498,42 @@ export default function Room() {
         )}
 
         {accessState === "joined" && (
-        <FlatList
-          ref={listRef}
-          data={messages}
-          keyExtractor={(m) => m.id}
-          contentContainerStyle={{ paddingVertical: 8 }}
-          renderItem={({ item, index }) => {
-            const prev = index > 0 ? messages[index - 1] : null;
-            const sameAuthor = prev && prev.user.id === item.user.id && (item.ts - prev.ts) < 60_000 && !item.replyTo;
-            const mine = me?.id === item.user.id;
-            return (
-              <MessageRow
-                msg={item}
-                compact={!!sameAuthor}
-                mine={mine}
-                meId={me?.id || ""}
-                onLongPress={() => onLongPressMessage(item)}
-                onTapUser={() => router.push(`/user/${item.user.id}`)}
-                onToggleReaction={(emoji) => toggleReaction(item.id, emoji)}
-              />
-            );
-          }}
-          onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: false })}
-          ListEmptyComponent={
-            <View className="px-8 py-16 items-center">
-              {connected ? (
-                <Text className="text-weered-muted text-sm">Be the first to say something.</Text>
-              ) : (
-                <ActivityIndicator color="#5800E5" />
-              )}
-            </View>
-          }
-        />
+          <FlatList
+            ref={listRef}
+            data={messages}
+            keyExtractor={(m) => m.id}
+            contentContainerStyle={{ paddingVertical: 8 }}
+            renderItem={({ item, index }) => {
+              const prev = index > 0 ? messages[index - 1] : null;
+              const sameAuthor =
+                prev &&
+                prev.user.id === item.user.id &&
+                item.ts - prev.ts < 60_000 &&
+                !item.replyTo;
+              const mine = me?.id === item.user.id;
+              return (
+                <MessageRow
+                  msg={item}
+                  compact={!!sameAuthor}
+                  mine={mine}
+                  meId={me?.id || ""}
+                  onLongPress={() => onLongPressMessage(item)}
+                  onTapUser={() => router.push(`/user/${item.user.id}`)}
+                  onToggleReaction={(emoji) => toggleReaction(item.id, emoji)}
+                />
+              );
+            }}
+            onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: false })}
+            ListEmptyComponent={
+              <View className="px-8 py-16 items-center">
+                {connected ? (
+                  <Text className="text-weered-muted text-sm">Be the first to say something.</Text>
+                ) : (
+                  <ActivityIndicator color="#5800E5" />
+                )}
+              </View>
+            }
+          />
         )}
 
         {accessState === "joined" && replyTo && (
@@ -468,7 +541,9 @@ export default function Room() {
             <Text className="text-weered text-xs font-bold mr-2">REPLY</Text>
             <View className="flex-1">
               <Text className="text-weered-text text-xs font-semibold">{replyTo.user.name}</Text>
-              <Text className="text-weered-muted text-xs" numberOfLines={1}>{replyTo.body}</Text>
+              <Text className="text-weered-muted text-xs" numberOfLines={1}>
+                {replyTo.body}
+              </Text>
             </View>
             <Pressable onPress={() => setReplyTo(null)} hitSlop={8} className="ml-2">
               <Text className="text-weered-muted text-xs">Cancel</Text>
@@ -482,48 +557,56 @@ export default function Room() {
             <Text className="text-weered-muted text-xs flex-1" numberOfLines={1}>
               {messages.find((m) => m.id === editingId)?.body}
             </Text>
-            <Pressable onPress={() => { setEditingId(null); setDraft(""); }} hitSlop={8}>
+            <Pressable
+              onPress={() => {
+                setEditingId(null);
+                setDraft("");
+              }}
+              hitSlop={8}
+            >
               <Text className="text-weered-muted text-xs">Cancel</Text>
             </Pressable>
           </View>
         )}
 
         {accessState === "joined" && (
-        <>
-        <View className="px-3 py-2 border-t border-border/40 flex-row items-end bg-panel">
-          <Pressable
-            onPress={() => setGifOpen(true)}
-            hitSlop={6}
-            className="mr-1 px-2 py-2 rounded-lg active:opacity-70 bg-panel border border-border"
-          >
-            <Text className="text-weered-text font-bold text-xs">GIF</Text>
-          </Pressable>
-          <TextInput
-            value={draft}
-            onChangeText={setDraft}
-            placeholder={editingId ? "Edit message" : replyTo ? `Reply to ${replyTo.user.name}` : "Message"}
-            placeholderTextColor="rgba(160,160,170,0.6)"
-            multiline
-            className="flex-1 text-weered-text text-base px-3 py-2"
-            style={{ maxHeight: 120, minHeight: 40 }}
-          />
-          <Pressable
-            onPress={send}
-            disabled={!draft.trim() || !connected}
-            className="bg-weered px-4 py-2.5 rounded-xl ml-2 active:opacity-80"
-            style={{ opacity: !draft.trim() || !connected ? 0.4 : 1 }}
-          >
-            <Text className="text-white font-bold">{editingId ? "Save" : "Send"}</Text>
-          </Pressable>
-        </View>
-        <GifPicker
-          visible={gifOpen}
-          onClose={() => setGifOpen(false)}
-          onSelect={(url) => {
-            setDraft((prev) => (prev ? prev.trimEnd() + " " : "") + url);
-          }}
-        />
-        </>
+          <>
+            <View className="px-3 py-2 border-t border-border/40 flex-row items-end bg-panel">
+              <Pressable
+                onPress={() => setGifOpen(true)}
+                hitSlop={6}
+                className="mr-1 px-2 py-2 rounded-lg active:opacity-70 bg-panel border border-border"
+              >
+                <Text className="text-weered-text font-bold text-xs">GIF</Text>
+              </Pressable>
+              <TextInput
+                value={draft}
+                onChangeText={setDraft}
+                placeholder={
+                  editingId ? "Edit message" : replyTo ? `Reply to ${replyTo.user.name}` : "Message"
+                }
+                placeholderTextColor="rgba(160,160,170,0.6)"
+                multiline
+                className="flex-1 text-weered-text text-base px-3 py-2"
+                style={{ maxHeight: 120, minHeight: 40 }}
+              />
+              <Pressable
+                onPress={send}
+                disabled={!draft.trim() || !connected}
+                className="bg-weered px-4 py-2.5 rounded-xl ml-2 active:opacity-80"
+                style={{ opacity: !draft.trim() || !connected ? 0.4 : 1 }}
+              >
+                <Text className="text-white font-bold">{editingId ? "Save" : "Send"}</Text>
+              </Pressable>
+            </View>
+            <GifPicker
+              visible={gifOpen}
+              onClose={() => setGifOpen(false)}
+              onSelect={(url) => {
+                setDraft((prev) => (prev ? prev.trimEnd() + " " : "") + url);
+              }}
+            />
+          </>
         )}
       </KeyboardAvoidingView>
       <ReportModal
@@ -538,9 +621,15 @@ export default function Room() {
 }
 
 function PresenceStrip({
-  users, onlineCount, totalCount, onOpenRoster,
+  users,
+  onlineCount,
+  totalCount,
+  onOpenRoster,
 }: {
-  users: User[]; onlineCount: number; totalCount: number; onOpenRoster: () => void;
+  users: User[];
+  onlineCount: number;
+  totalCount: number;
+  onOpenRoster: () => void;
 }) {
   if (totalCount === 0) return null;
   const preview = users.slice(0, 6);
@@ -566,7 +655,13 @@ function PresenceStrip({
 }
 
 function MessageRow({
-  msg, compact, mine, meId, onLongPress, onTapUser, onToggleReaction,
+  msg,
+  compact,
+  mine,
+  meId,
+  onLongPress,
+  onTapUser,
+  onToggleReaction,
 }: {
   msg: ChatMsg;
   compact: boolean;
@@ -637,7 +732,10 @@ function MessageRow({
                   }}
                 >
                   <Text className="text-xs">
-                    {r.emoji} <Text className={mineReact ? "text-weered font-bold" : "text-weered-text"}>{r.count}</Text>
+                    {r.emoji}{" "}
+                    <Text className={mineReact ? "text-weered font-bold" : "text-weered-text"}>
+                      {r.count}
+                    </Text>
                   </Text>
                 </Pressable>
               );

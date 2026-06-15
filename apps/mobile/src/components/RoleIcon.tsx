@@ -8,21 +8,21 @@ import { WEB_BASE } from "@/lib/config";
  */
 
 const ROLE_MAP: Record<string, { file: string; color: string; name: string }> = {
-  GOD:     { file: "godfather",   color: "#D4A017", name: "Godfather" },
-  ADMIN:   { file: "lieutenant",  color: "#EF4444", name: "Lieutenant" },
-  STAFF:   { file: "enforcer",    color: "#60A5FA", name: "Enforcer" },
-  SUPPORT: { file: "backup",      color: "#5800E5", name: "Backup" },
-  MOD:     { file: "captain",     color: "#5800E5", name: "Captain" },
-  OWNER:   { file: "founder",     color: "#F97316", name: "Founder" },
-  MEMBER:  { file: "member",      color: "#94A3B8", name: "Member" },
-  LEADER:  { file: "leader",      color: "#D4A017", name: "Leader" },
-  OFFICER: { file: "officer",     color: "#60A5FA", name: "Officer" },
+  GOD: { file: "godfather", color: "#D4A017", name: "Godfather" },
+  ADMIN: { file: "lieutenant", color: "#EF4444", name: "Lieutenant" },
+  STAFF: { file: "enforcer", color: "#60A5FA", name: "Enforcer" },
+  SUPPORT: { file: "backup", color: "#5800E5", name: "Backup" },
+  MOD: { file: "captain", color: "#5800E5", name: "Captain" },
+  OWNER: { file: "founder", color: "#F97316", name: "Founder" },
+  MEMBER: { file: "member", color: "#94A3B8", name: "Member" },
+  LEADER: { file: "leader", color: "#D4A017", name: "Leader" },
+  OFFICER: { file: "officer", color: "#60A5FA", name: "Officer" },
 };
 
 const TIER_MAP: Record<string, { file: string; color: string }> = {
-  KINGPIN:  { file: "kingpin",   color: "#D4A017" },
-  FELON:    { file: "felon",     color: "#F97316" },
-  INDICTED: { file: "indicted",  color: "#A78BFA" },
+  KINGPIN: { file: "kingpin", color: "#D4A017" },
+  FELON: { file: "felon", color: "#F97316" },
+  INDICTED: { file: "indicted", color: "#A78BFA" },
 };
 
 function svgUri(file: string) {

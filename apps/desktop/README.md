@@ -11,17 +11,17 @@ Native desktop shell for Weered — built on **Tauri 2 + Rust**.
 
 The shell loads `https://weered.ca` in a native webview — the entire web app runs unchanged. The Rust shell adds:
 
-| Feature | How |
-|---|---|
-| **System tray** | Tray icon with menu: Open Weered, Jump to (Home / Lobbies / DMs / Crews), About, Quit |
-| **Hide to tray** | Closing the window minimizes; quit only via tray menu |
-| **Single instance** | Re-launching the app focuses the existing window instead of opening a second one |
-| **Global hotkey** | `Ctrl+Shift+W` (or `Cmd+Shift+W`) toggles the main window from anywhere |
-| **Deep links** | `weered://lobby/123` opens lobby 123 in the running app (or launches it) |
-| **Auto-launch on boot** | Optional, opt-in toggle (uses launch-agent on macOS, registry on Windows) |
-| **Native notifications** | Routed through OS notification center via Tauri notification plugin |
-| **Window state** | Window size and position remembered between launches |
-| **Auto-updater** | Checks `https://weered.ca/desktop/updates/{target}/{version}` for new builds |
+| Feature                  | How                                                                                   |
+| ------------------------ | ------------------------------------------------------------------------------------- |
+| **System tray**          | Tray icon with menu: Open Weered, Jump to (Home / Lobbies / DMs / Crews), About, Quit |
+| **Hide to tray**         | Closing the window minimizes; quit only via tray menu                                 |
+| **Single instance**      | Re-launching the app focuses the existing window instead of opening a second one      |
+| **Global hotkey**        | `Ctrl+Shift+W` (or `Cmd+Shift+W`) toggles the main window from anywhere               |
+| **Deep links**           | `weered://lobby/123` opens lobby 123 in the running app (or launches it)              |
+| **Auto-launch on boot**  | Optional, opt-in toggle (uses launch-agent on macOS, registry on Windows)             |
+| **Native notifications** | Routed through OS notification center via Tauri notification plugin                   |
+| **Window state**         | Window size and position remembered between launches                                  |
+| **Auto-updater**         | Checks `https://weered.ca/desktop/updates/{target}/{version}` for new builds          |
 
 ## Prerequisites
 
@@ -49,6 +49,7 @@ pnpm build
 ```
 
 Output:
+
 - **Windows:** `src-tauri/target/release/bundle/nsis/Weered_0.1.0_x64-setup.exe` and `bundle/msi/Weered_0.1.0_x64_en-US.msi`
 - **macOS:** `src-tauri/target/release/bundle/dmg/Weered_0.1.0_x64.dmg` and `bundle/macos/Weered.app`
 - **Linux:** `src-tauri/target/release/bundle/deb/weered_0.1.0_amd64.deb` and `bundle/appimage/weered_0.1.0_amd64.AppImage`
@@ -76,7 +77,7 @@ The updater hits `https://weered.ca/desktop/updates/{target}/{current_version}` 
       "url": "https://weered.ca/desktop/Weered_0.2.0_x64-setup.exe"
     },
     "darwin-x86_64": { "signature": "...", "url": "https://..." },
-    "linux-x86_64":  { "signature": "...", "url": "https://..." }
+    "linux-x86_64": { "signature": "...", "url": "https://..." }
   }
 }
 ```
@@ -107,15 +108,18 @@ End-to-end: tag a commit → GitHub Actions builds Mac + Windows + Linux install
 ### One-time setup (you do this, just once)
 
 **1. Generate the Tauri updater signing key:**
+
 ```powershell
 cd C:\Weered\apps\desktop
 pnpm tauri signer generate -w "$env:USERPROFILE\.tauri\weered_updater.key"
 ```
+
 - Choose a password when prompted (you'll need it again — save in 1Password).
 - Outputs the public key string to stdout.
 - Outputs the private key to `~/.tauri/weered_updater.key`.
 
 **2. Add the public key to `src-tauri/tauri.conf.json`:**
+
 ```json
 "plugins": {
   "updater": {
@@ -126,6 +130,7 @@ pnpm tauri signer generate -w "$env:USERPROFILE\.tauri\weered_updater.key"
 ```
 
 **3. Add GitHub Secrets** (https://github.com/Weeredjs/Weered/settings/secrets/actions):
+
 - `TAURI_SIGNING_PRIVATE_KEY` → paste the entire contents of `~/.tauri/weered_updater.key`
 - `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` → the password you chose
 
@@ -162,13 +167,13 @@ If GitHub Releases is down or returns nothing, the API serves whatever was last 
 
 ## Why Tauri (vs Electron)
 
-| | Electron | Tauri 2 |
-|---|---|---|
-| Installer size | ~150 MB | **~5–8 MB** |
-| RAM per instance | ~400 MB | **~80 MB** |
-| Engine | Bundled Chromium | OS-native webview |
-| Backend | Node.js | **Rust** |
-| Security | Loose (full Node by default) | Allowlist permissions |
-| Ship date of v2 | — | Late 2024 |
+|                  | Electron                     | Tauri 2               |
+| ---------------- | ---------------------------- | --------------------- |
+| Installer size   | ~150 MB                      | **~5–8 MB**           |
+| RAM per instance | ~400 MB                      | **~80 MB**            |
+| Engine           | Bundled Chromium             | OS-native webview     |
+| Backend          | Node.js                      | **Rust**              |
+| Security         | Loose (full Node by default) | Allowlist permissions |
+| Ship date of v2  | —                            | Late 2024             |
 
-Brand pitch: *"Built on Rust + Tauri — 30x smaller than Discord."*
+Brand pitch: _"Built on Rust + Tauri — 30x smaller than Discord."_

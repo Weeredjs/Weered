@@ -11,9 +11,11 @@ const CHIME_DEBOUNCE_MS = 1500;
 
 function findFaviconLink(): HTMLLinkElement | null {
   if (typeof document === "undefined") return null;
-  return (document.querySelector('link[rel~="icon"]') as HTMLLinkElement)
-    || (document.querySelector('link[rel="shortcut icon"]') as HTMLLinkElement)
-    || null;
+  return (
+    (document.querySelector('link[rel~="icon"]') as HTMLLinkElement) ||
+    (document.querySelector('link[rel="shortcut icon"]') as HTMLLinkElement) ||
+    null
+  );
 }
 
 function setFavicon(url: string) {
@@ -59,8 +61,7 @@ function playChime() {
     o.start();
     o.stop(ctx.currentTime + 0.2);
     o.onended = () => ctx.close().catch(() => {});
-  } catch {
-  }
+  } catch {}
 }
 
 export function useUnreadIndicator() {
@@ -73,9 +74,17 @@ export function useUnreadIndicator() {
     console.log("[unread] hook mounted; base title:", baseTitleRef.current);
 
     function bump() {
-      console.log("[unread] bump() called; current count:", countRef.current, "focused:", document.hasFocus());
+      console.log(
+        "[unread] bump() called; current count:",
+        countRef.current,
+        "focused:",
+        document.hasFocus(),
+      );
       playChime();
-      const focused = typeof document !== "undefined" && document.visibilityState === "visible" && document.hasFocus();
+      const focused =
+        typeof document !== "undefined" &&
+        document.visibilityState === "visible" &&
+        document.hasFocus();
       if (focused) return;
       countRef.current += 1;
       setTitle(countRef.current, baseTitleRef.current);

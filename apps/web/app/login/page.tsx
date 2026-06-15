@@ -10,12 +10,12 @@ function LoginForm() {
   const sp = useSearchParams();
   const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
-  const [mode, setMode]         = useState<"login" | "register">("login");
+  const [mode, setMode] = useState<"login" | "register">("login");
   const [username, setUsername] = useState("");
-  const [email, setEmail]       = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [busy, setBusy]         = useState(false);
-  const [err, setErr]           = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
   const [pendingEmail, setPendingEmail] = useState("");
   const [captchaToken, setCaptchaToken] = useState("");
   const captchaRef = React.useRef<HTMLDivElement | null>(null);
@@ -53,7 +53,9 @@ function LoginForm() {
     return () => {
       cancelled = true;
       if (captchaWidgetIdRef.current && (window as any).turnstile) {
-        try { (window as any).turnstile.remove(captchaWidgetIdRef.current); } catch {}
+        try {
+          (window as any).turnstile.remove(captchaWidgetIdRef.current);
+        } catch {}
         captchaWidgetIdRef.current = null;
       }
       setCaptchaToken("");
@@ -92,12 +94,14 @@ function LoginForm() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
-      const j = await r.json().catch(() => ({} as any));
+      const j = await r.json().catch(() => ({}) as any);
       if (!r.ok) throw new Error(j?.error || j?.message || `Error ${r.status}`);
       const tok = String(j?.token || "");
       if (!tok) throw new Error("No token returned.");
       void 0;
-      try { document.documentElement.setAttribute("data-weered-authed", "1"); } catch {}
+      try {
+        document.documentElement.setAttribute("data-weered-authed", "1");
+      } catch {}
       if (j?.user) localStorage.setItem("weered_user", JSON.stringify(j.user));
       if (j?.pendingVerification) {
         setPendingEmail(e);
@@ -120,10 +124,12 @@ function LoginForm() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username: username.trim() }),
       });
-      const j = await r.json().catch(() => ({} as any));
+      const j = await r.json().catch(() => ({}) as any);
       if (!r.ok) throw new Error(j?.error || `Error ${r.status}`);
       void 0;
-      try { document.documentElement.setAttribute("data-weered-authed", "1"); } catch {}
+      try {
+        document.documentElement.setAttribute("data-weered-authed", "1");
+      } catch {}
       if (j?.user) localStorage.setItem("weered_user", JSON.stringify(j.user));
       router.replace(nextPath);
     } catch (e: any) {
@@ -332,7 +338,9 @@ function LoginForm() {
       <div className="wl-root">
         <div className="wl-card">
           <div className="wl-brand">
-            <div className="wl-logo"><img src="/brand/logo/weered-logo-128.png" alt="Weered" /></div>
+            <div className="wl-logo">
+              <img src="/brand/logo/weered-logo-128.png" alt="Weered" />
+            </div>
             <div>
               <div className="wl-brand-name">weered</div>
               <div className="wl-brand-sub">enter the portal</div>
@@ -340,32 +348,101 @@ function LoginForm() {
           </div>
 
           <div className="wl-tabs">
-            <button className={`wl-tab${mode === "login" ? " active" : ""}`} onClick={() => { setMode("login"); setErr(""); }}>sign_in</button>
-            <button className={`wl-tab${mode === "register" ? " active" : ""}`} onClick={() => { setMode("register"); setErr(""); }}>register</button>
+            <button
+              className={`wl-tab${mode === "login" ? " active" : ""}`}
+              onClick={() => {
+                setMode("login");
+                setErr("");
+              }}
+            >
+              sign_in
+            </button>
+            <button
+              className={`wl-tab${mode === "register" ? " active" : ""}`}
+              onClick={() => {
+                setMode("register");
+                setErr("");
+              }}
+            >
+              register
+            </button>
           </div>
 
           {pendingEmail ? (
             <div style={{ textAlign: "center", padding: "12px 0 8px" }}>
               <div style={{ fontSize: 32, marginBottom: 16, opacity: 0.9 }}>
-                <svg width="40" height="40" viewBox="0 0 40 40" fill="none" style={{margin:"0 auto",display:"block"}}>
-                  <rect width="40" height="40" rx="10" fill="rgba(124,58,237,0.15)" stroke="rgba(124,58,237,0.3)" strokeWidth="1"/>
-                  <path d="M8 14l12 9 12-9" stroke="#a78bfa" strokeWidth="1.5" strokeLinecap="round"/>
-                  <rect x="8" y="12" width="24" height="17" rx="2" stroke="#a78bfa" strokeWidth="1.5"/>
+                <svg
+                  width="40"
+                  height="40"
+                  viewBox="0 0 40 40"
+                  fill="none"
+                  style={{ margin: "0 auto", display: "block" }}
+                >
+                  <rect
+                    width="40"
+                    height="40"
+                    rx="10"
+                    fill="rgba(124,58,237,0.15)"
+                    stroke="rgba(124,58,237,0.3)"
+                    strokeWidth="1"
+                  />
+                  <path
+                    d="M8 14l12 9 12-9"
+                    stroke="#a78bfa"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                  />
+                  <rect
+                    x="8"
+                    y="12"
+                    width="24"
+                    height="17"
+                    rx="2"
+                    stroke="#a78bfa"
+                    strokeWidth="1.5"
+                  />
                 </svg>
               </div>
-              <div style={{ fontFamily: "var(--font-barlow), 'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 18, color: "rgba(232,232,240,0.95)", marginBottom: 8 }}>
+              <div
+                style={{
+                  fontFamily: "var(--font-barlow), 'Barlow Condensed', sans-serif",
+                  fontWeight: 800,
+                  fontSize: 18,
+                  color: "rgba(232,232,240,0.95)",
+                  marginBottom: 8,
+                }}
+              >
                 Check your email.
               </div>
-              <div style={{ fontSize: 12, color: "rgba(148,163,184,0.6)", lineHeight: 1.8, marginBottom: 20 }}>
-                We sent a verification link to<br/>
+              <div
+                style={{
+                  fontSize: 12,
+                  color: "rgba(148,163,184,0.6)",
+                  lineHeight: 1.8,
+                  marginBottom: 20,
+                }}
+              >
+                We sent a verification link to
+                <br />
                 <span style={{ color: "rgba(167,139,250,0.8)" }}>{pendingEmail}</span>
               </div>
               <div style={{ fontSize: 11, color: "rgba(100,116,139,0.5)", lineHeight: 1.7 }}>
-                Click the link in the email to activate your account.<br/>
+                Click the link in the email to activate your account.
+                <br />
                 You can browse in the meantime.
               </div>
               <button
-                style={{ marginTop: 20, background: "none", border: "none", color: "rgba(167,139,250,0.45)", fontSize: 11, cursor: "pointer", fontFamily: "'DM Mono', monospace", textDecoration: "underline", textUnderlineOffset: 3 }}
+                style={{
+                  marginTop: 20,
+                  background: "none",
+                  border: "none",
+                  color: "rgba(167,139,250,0.45)",
+                  fontSize: 11,
+                  cursor: "pointer",
+                  fontFamily: "'DM Mono', monospace",
+                  textDecoration: "underline",
+                  textUnderlineOffset: 3,
+                }}
                 onClick={() => router.replace(nextPath)}
               >
                 continue to weered →
@@ -373,43 +450,88 @@ function LoginForm() {
             </div>
           ) : (
             <>
-          <label className="wl-label">username</label>
-          <input className="wl-input" value={username} onChange={e => setUsername(e.target.value)}
-            placeholder="your_handle" autoComplete="username" autoFocus />
+              <label className="wl-label">username</label>
+              <input
+                className="wl-input"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="your_handle"
+                autoComplete="username"
+                autoFocus
+              />
 
-          {mode === "register" && (
-            <>
-              <label className="wl-label">email</label>
-              <input className="wl-input" type="email" value={email} onChange={e => setEmail(e.target.value)}
-                placeholder="you@example.com" autoComplete="email" />
-            </>
-          )}
+              {mode === "register" && (
+                <>
+                  <label className="wl-label">email</label>
+                  <input
+                    className="wl-input"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="you@example.com"
+                    autoComplete="email"
+                  />
+                </>
+              )}
 
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-            <label className="wl-label">password</label>
-            {mode === "login" && (
-              <a href="/forgot-password" style={{ fontSize: 10, color: "rgba(167,139,250,0.55)", textDecoration: "underline", textUnderlineOffset: 2, fontFamily: "'DM Mono', monospace" }}>forgot?</a>
-            )}
-          </div>
-          <input className="wl-input" type="password" value={password} onChange={e => setPassword(e.target.value)}
-            placeholder="••••••••••" autoComplete={mode === "login" ? "current-password" : "new-password"}
-            onKeyDown={e => { if (e.key === "Enter") submit(); }} />
+              <div
+                style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}
+              >
+                <label className="wl-label">password</label>
+                {mode === "login" && (
+                  <a
+                    href="/forgot-password"
+                    style={{
+                      fontSize: 10,
+                      color: "rgba(167,139,250,0.55)",
+                      textDecoration: "underline",
+                      textUnderlineOffset: 2,
+                      fontFamily: "'DM Mono', monospace",
+                    }}
+                  >
+                    forgot?
+                  </a>
+                )}
+              </div>
+              <input
+                className="wl-input"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••••"
+                autoComplete={mode === "login" ? "current-password" : "new-password"}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") submit();
+                }}
+              />
 
-          {mode === "register" && TURNSTILE_SITE_KEY && (
-            <div ref={captchaRef} style={{ marginTop: 16, display: "flex", justifyContent: "center" }} />
-          )}
+              {mode === "register" && TURNSTILE_SITE_KEY && (
+                <div
+                  ref={captchaRef}
+                  style={{ marginTop: 16, display: "flex", justifyContent: "center" }}
+                />
+              )}
 
-          {err && <div className="wl-error">{err}</div>}
+              {err && <div className="wl-error">{err}</div>}
 
-          <button className="wl-btn" disabled={busy} onClick={submit}>
-            {busy ? "working..." : mode === "login" ? "sign_in()" : "create_account()"}
-          </button>
+              <button className="wl-btn" disabled={busy} onClick={submit}>
+                {busy ? "working..." : mode === "login" ? "sign_in()" : "create_account()"}
+              </button>
             </>
           )}
 
           <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "18px 0 4px" }}>
             <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.07)" }} />
-            <span style={{ fontSize: 11, color: "rgba(148,163,184,0.35)", letterSpacing: "0.06em", fontFamily: "'DM Mono', monospace" }}>or</span>
+            <span
+              style={{
+                fontSize: 11,
+                color: "rgba(148,163,184,0.35)",
+                letterSpacing: "0.06em",
+                fontFamily: "'DM Mono', monospace",
+              }}
+            >
+              or
+            </span>
             <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.07)" }} />
           </div>
 
@@ -432,38 +554,86 @@ function LoginForm() {
               gap: 10,
               transition: "all 0.15s",
             }}
-            onMouseEnter={e => {
+            onMouseEnter={(e) => {
               (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.09)";
               (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,0.20)";
             }}
-            onMouseLeave={e => {
+            onMouseLeave={(e) => {
               (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.05)";
               (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,0.12)";
             }}
           >
             <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-              <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.716v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/>
-              <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/>
-              <path d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/>
-              <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 6.29C4.672 4.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
+              <path
+                d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.716v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"
+                fill="#4285F4"
+              />
+              <path
+                d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"
+                fill="#34A853"
+              />
+              <path
+                d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z"
+                fill="#FBBC05"
+              />
+              <path
+                d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 6.29C4.672 4.163 6.656 3.58 9 3.58z"
+                fill="#EA4335"
+              />
             </svg>
             continue with Google
           </button>
 
-          {!pendingEmail && <div className="wl-footer">
-            <span className="wl-footer-text">
-              {mode === "login" ? "no account? " : "have an account? "}
-              <span className="wl-switch" onClick={() => { setMode(mode === "login" ? "register" : "login"); setErr(""); }}>
-                {mode === "login" ? "register" : "sign in"}
+          {!pendingEmail && (
+            <div className="wl-footer">
+              <span className="wl-footer-text">
+                {mode === "login" ? "no account? " : "have an account? "}
+                <span
+                  className="wl-switch"
+                  onClick={() => {
+                    setMode(mode === "login" ? "register" : "login");
+                    setErr("");
+                  }}
+                >
+                  {mode === "login" ? "register" : "sign in"}
+                </span>
               </span>
-            </span>
-            {isDev && <button className="wl-dev" onClick={devLogin} disabled={busy}>dev_login()</button>}
-          </div>}
-          <div style={{ marginTop: 16, paddingTop: 14, borderTop: "1px solid rgba(255,255,255,0.05)", display: "flex", justifyContent: "center", gap: 20 }}>
-            {[["about", "/about"], ["premium", "/premium"], ["contact", "/contact"]].map(([label, href]) => (
-              <a key={href} href={href} style={{ fontSize: 10, color: "rgba(167,139,250,0.35)", textDecoration: "none", letterSpacing: "0.08em", fontFamily: "'DM Mono', monospace", transition: "color 0.15s" }}
-                onMouseEnter={e => (e.currentTarget.style.color = "rgba(167,139,250,0.75)")}
-                onMouseLeave={e => (e.currentTarget.style.color = "rgba(167,139,250,0.35)")}>
+              {isDev && (
+                <button className="wl-dev" onClick={devLogin} disabled={busy}>
+                  dev_login()
+                </button>
+              )}
+            </div>
+          )}
+          <div
+            style={{
+              marginTop: 16,
+              paddingTop: 14,
+              borderTop: "1px solid rgba(255,255,255,0.05)",
+              display: "flex",
+              justifyContent: "center",
+              gap: 20,
+            }}
+          >
+            {[
+              ["about", "/about"],
+              ["premium", "/premium"],
+              ["contact", "/contact"],
+            ].map(([label, href]) => (
+              <a
+                key={href}
+                href={href}
+                style={{
+                  fontSize: 10,
+                  color: "rgba(167,139,250,0.35)",
+                  textDecoration: "none",
+                  letterSpacing: "0.08em",
+                  fontFamily: "'DM Mono', monospace",
+                  transition: "color 0.15s",
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = "rgba(167,139,250,0.75)")}
+                onMouseLeave={(e) => (e.currentTarget.style.color = "rgba(167,139,250,0.35)")}
+              >
                 {label}
               </a>
             ))}

@@ -12,11 +12,19 @@ import { useWatchHere, consumePendingStream } from "../lib/useWatchHere";
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
 function authHeaders(): Record<string, string> {
-  try { const t = localStorage.getItem("weered_token") || ""; return t ? { Authorization: `Bearer ${t}` } : {}; } catch { return {}; }
+  try {
+    const t = localStorage.getItem("weered_token") || "";
+    return t ? { Authorization: `Bearer ${t}` } : {};
+  } catch {
+    return {};
+  }
 }
 
 async function apiFetch(path: string, opts?: RequestInit) {
-  const r = await fetch(`${API}${path}`, { ...opts, headers: { "Content-Type": "application/json", ...authHeaders(), ...(opts?.headers || {}) } });
+  const r = await fetch(`${API}${path}`, {
+    ...opts,
+    headers: { "Content-Type": "application/json", ...authHeaders(), ...(opts?.headers || {}) },
+  });
   return r.json();
 }
 
@@ -25,21 +33,78 @@ function currentUserId(): string | null {
     const t = localStorage.getItem("weered_token") || "";
     const p = JSON.parse(atob(t.split(".")[1]));
     return p.sub || p.userId || null;
-  } catch { return null; }
+  } catch {
+    return null;
+  }
 }
 
 const S = {
-  card: { borderRadius: 2, border: "1px solid rgba(255,255,255,.08)", background: "rgba(255,255,255,.03)", padding: "10px 12px" } as React.CSSProperties,
-  btn: { padding: "6px 12px", borderRadius: 2, border: "1px solid rgba(255,255,255,.10)", background: "rgba(255,255,255,.05)", fontSize: 12, cursor: "pointer", color: "rgba(243,244,246,.88)" } as React.CSSProperties,
-  btnPri: { padding: "6px 12px", borderRadius: 2, border: "1px solid rgba(124,58,237,.35)", background: "rgba(124,58,237,.12)", fontSize: 12, cursor: "pointer", color: "rgb(216,180,254)", fontWeight: 600 } as React.CSSProperties,
-  input: { width: "100%", padding: "8px 12px", borderRadius: 2, border: "1px solid rgba(255,255,255,.10)", background: "rgba(0,0,0,.30)", fontSize: 13, color: "rgba(243,244,246,.92)", outline: "none", boxSizing: "border-box" as const },
-  label: { fontSize: 10, fontWeight: 700, opacity: 0.45, letterSpacing: ".7px", textTransform: "uppercase" as const, marginBottom: 6 } as React.CSSProperties,
+  card: {
+    borderRadius: 2,
+    border: "1px solid rgba(255,255,255,.08)",
+    background: "rgba(255,255,255,.03)",
+    padding: "10px 12px",
+  } as React.CSSProperties,
+  btn: {
+    padding: "6px 12px",
+    borderRadius: 2,
+    border: "1px solid rgba(255,255,255,.10)",
+    background: "rgba(255,255,255,.05)",
+    fontSize: 12,
+    cursor: "pointer",
+    color: "rgba(243,244,246,.88)",
+  } as React.CSSProperties,
+  btnPri: {
+    padding: "6px 12px",
+    borderRadius: 2,
+    border: "1px solid rgba(124,58,237,.35)",
+    background: "rgba(124,58,237,.12)",
+    fontSize: 12,
+    cursor: "pointer",
+    color: "rgb(216,180,254)",
+    fontWeight: 600,
+  } as React.CSSProperties,
+  input: {
+    width: "100%",
+    padding: "8px 12px",
+    borderRadius: 2,
+    border: "1px solid rgba(255,255,255,.10)",
+    background: "rgba(0,0,0,.30)",
+    fontSize: 13,
+    color: "rgba(243,244,246,.92)",
+    outline: "none",
+    boxSizing: "border-box" as const,
+  },
+  label: {
+    fontSize: 10,
+    fontWeight: 700,
+    opacity: 0.45,
+    letterSpacing: ".7px",
+    textTransform: "uppercase" as const,
+    marginBottom: 6,
+  } as React.CSSProperties,
 };
 
 const ACCENT_DESTINY = "#4F88C6";
 
-const TIER_COLORS: Record<string, string> = { Exotic: "#ceae33", Legendary: "#522f65", Rare: "#5076a3", Uncommon: "#366e42", Common: "#c3bcb4", Unknown: "rgba(255,255,255,.1)", Currency: "rgba(255,255,255,.1)" };
-const TIER_BORDER: Record<string, string> = { Exotic: "rgba(206,174,51,.6)", Legendary: "rgba(82,47,101,.8)", Rare: "rgba(80,118,163,.6)", Uncommon: "rgba(54,110,66,.6)", Common: "rgba(195,188,180,.4)", Unknown: "rgba(255,255,255,.08)", Currency: "rgba(255,255,255,.08)" };
+const TIER_COLORS: Record<string, string> = {
+  Exotic: "#ceae33",
+  Legendary: "#522f65",
+  Rare: "#5076a3",
+  Uncommon: "#366e42",
+  Common: "#c3bcb4",
+  Unknown: "rgba(255,255,255,.1)",
+  Currency: "rgba(255,255,255,.1)",
+};
+const TIER_BORDER: Record<string, string> = {
+  Exotic: "rgba(206,174,51,.6)",
+  Legendary: "rgba(82,47,101,.8)",
+  Rare: "rgba(80,118,163,.6)",
+  Uncommon: "rgba(54,110,66,.6)",
+  Common: "rgba(195,188,180,.4)",
+  Unknown: "rgba(255,255,255,.08)",
+  Currency: "rgba(255,255,255,.08)",
+};
 
 function PerkRow({ perks, max = 6 }: { perks?: any[]; max?: number }) {
   if (!perks?.length) return null;
@@ -48,8 +113,24 @@ function PerkRow({ perks, max = 6 }: { perks?: any[]; max?: number }) {
   return (
     <div style={{ display: "flex", gap: 2, marginTop: 2 }}>
       {visible.map((p: any, i: number) => (
-        <div key={i} title={p.name} style={{ width: 16, height: 16, borderRadius: 3, overflow: "hidden", background: "rgba(0,0,0,.4)", border: "1px solid rgba(255,255,255,.08)", flexShrink: 0 }}>
-          <img src={p.icon} alt={p.name + " perk icon"} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+        <div
+          key={i}
+          title={p.name}
+          style={{
+            width: 16,
+            height: 16,
+            borderRadius: 3,
+            overflow: "hidden",
+            background: "rgba(0,0,0,.4)",
+            border: "1px solid rgba(255,255,255,.08)",
+            flexShrink: 0,
+          }}
+        >
+          <img
+            src={p.icon}
+            alt={p.name + " perk icon"}
+            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+          />
         </div>
       ))}
     </div>
@@ -69,16 +150,54 @@ function ArmorStatBar({ stats }: { stats: any }) {
   if (!stats) return null;
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-      {STAT_BARS.map(s => (
+      {STAT_BARS.map((s) => (
         <div key={s.key} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 10 }}>
-          <span style={{ width: 24, fontWeight: 700, color: s.color, opacity: 0.8, textAlign: "right" }}>{s.label}</span>
-          <div style={{ flex: 1, height: 6, borderRadius: 3, background: "rgba(255,255,255,.06)", overflow: "hidden" }}>
-            <div style={{ width: `${Math.min((stats[s.key] || 0) / 42 * 100, 100)}%`, height: "100%", borderRadius: 3, background: s.color, opacity: 0.6 }} />
+          <span
+            style={{ width: 24, fontWeight: 700, color: s.color, opacity: 0.8, textAlign: "right" }}
+          >
+            {s.label}
+          </span>
+          <div
+            style={{
+              flex: 1,
+              height: 6,
+              borderRadius: 3,
+              background: "rgba(255,255,255,.06)",
+              overflow: "hidden",
+            }}
+          >
+            <div
+              style={{
+                width: `${Math.min(((stats[s.key] || 0) / 42) * 100, 100)}%`,
+                height: "100%",
+                borderRadius: 3,
+                background: s.color,
+                opacity: 0.6,
+              }}
+            />
           </div>
-          <span style={{ width: 18, fontWeight: 700, color: "rgba(255,255,255,.6)", textAlign: "right" }}>{stats[s.key] || 0}</span>
+          <span
+            style={{
+              width: 18,
+              fontWeight: 700,
+              color: "rgba(255,255,255,.6)",
+              textAlign: "right",
+            }}
+          >
+            {stats[s.key] || 0}
+          </span>
         </div>
       ))}
-      <div style={{ display: "flex", justifyContent: "flex-end", fontSize: 10, fontWeight: 800, color: "rgba(253,230,138,.7)", marginTop: 2 }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "flex-end",
+          fontSize: 10,
+          fontWeight: 800,
+          color: "rgba(253,230,138,.7)",
+          marginTop: 2,
+        }}
+      >
         Total: {stats.total || 0}
       </div>
     </div>
@@ -92,18 +211,41 @@ function PerkDetail({ perk }: { perk: any }) {
   return (
     <div>
       <div
-        onClick={() => hasAlts && setExpanded(v => !v)}
+        onClick={() => hasAlts && setExpanded((v) => !v)}
         style={{
-          display: "flex", alignItems: "flex-start", gap: 8, padding: "6px 8px", borderRadius: 2,
-          background: "rgba(255,255,255,.03)", border: "1px solid rgba(255,255,255,.05)",
+          display: "flex",
+          alignItems: "flex-start",
+          gap: 8,
+          padding: "6px 8px",
+          borderRadius: 2,
+          background: "rgba(255,255,255,.03)",
+          border: "1px solid rgba(255,255,255,.05)",
           cursor: hasAlts ? "pointer" : "default",
         }}
       >
-        <div style={{ width: 28, height: 28, borderRadius: 2, overflow: "hidden", flexShrink: 0, background: "rgba(0,0,0,.4)", border: "1px solid rgba(255,255,255,.08)" }}>
-          {perk.icon && <img src={perk.icon} alt={perk.name + " perk icon"} style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
+        <div
+          style={{
+            width: 28,
+            height: 28,
+            borderRadius: 2,
+            overflow: "hidden",
+            flexShrink: 0,
+            background: "rgba(0,0,0,.4)",
+            border: "1px solid rgba(255,255,255,.08)",
+          }}
+        >
+          {perk.icon && (
+            <img
+              src={perk.icon}
+              alt={perk.name + " perk icon"}
+              style={{ width: "100%", height: "100%", objectFit: "cover" }}
+            />
+          )}
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }}>
+          <div
+            style={{ fontSize: 11, fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }}
+          >
             {perk.name}
             {hasAlts && (
               <span style={{ fontSize: 8, opacity: 0.35, fontWeight: 400 }}>
@@ -120,18 +262,57 @@ function PerkDetail({ perk }: { perk: any }) {
       </div>
 
       {expanded && perk.availablePlugs && (
-        <div style={{ marginLeft: 36, display: "flex", flexDirection: "column", gap: 2, marginTop: 2, marginBottom: 2 }}>
+        <div
+          style={{
+            marginLeft: 36,
+            display: "flex",
+            flexDirection: "column",
+            gap: 2,
+            marginTop: 2,
+            marginBottom: 2,
+          }}
+        >
           {perk.availablePlugs.map((alt: any, j: number) => (
-            <div key={j} style={{
-              display: "flex", alignItems: "flex-start", gap: 6, padding: "4px 6px", borderRadius: 2,
-              background: "rgba(124,58,237,.04)", border: "1px solid rgba(124,58,237,.08)",
-            }}>
-              <div style={{ width: 18, height: 18, borderRadius: 3, overflow: "hidden", flexShrink: 0, background: "rgba(0,0,0,.3)", border: "1px solid rgba(255,255,255,.06)" }}>
-                {alt.icon && <img src={alt.icon} alt={alt.name + " perk icon"} style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
+            <div
+              key={j}
+              style={{
+                display: "flex",
+                alignItems: "flex-start",
+                gap: 6,
+                padding: "4px 6px",
+                borderRadius: 2,
+                background: "rgba(124,58,237,.04)",
+                border: "1px solid rgba(124,58,237,.08)",
+              }}
+            >
+              <div
+                style={{
+                  width: 18,
+                  height: 18,
+                  borderRadius: 3,
+                  overflow: "hidden",
+                  flexShrink: 0,
+                  background: "rgba(0,0,0,.3)",
+                  border: "1px solid rgba(255,255,255,.06)",
+                }}
+              >
+                {alt.icon && (
+                  <img
+                    src={alt.icon}
+                    alt={alt.name + " perk icon"}
+                    style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                  />
+                )}
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 10, fontWeight: 600, color: "rgba(167,139,250,.8)" }}>{alt.name}</div>
-                {alt.description && <div style={{ fontSize: 9, opacity: 0.35, marginTop: 1, lineHeight: 1.3 }}>{alt.description}</div>}
+                <div style={{ fontSize: 10, fontWeight: 600, color: "rgba(167,139,250,.8)" }}>
+                  {alt.name}
+                </div>
+                {alt.description && (
+                  <div style={{ fontSize: 9, opacity: 0.35, marginTop: 1, lineHeight: 1.3 }}>
+                    {alt.description}
+                  </div>
+                )}
               </div>
             </div>
           ))}
@@ -141,81 +322,251 @@ function PerkDetail({ perk }: { perk: any }) {
   );
 }
 
-function ItemDetailPanel({ item, onClose, onEquip, onTransfer, characters, currentCharId }: {
-  item: any; onClose: () => void;
+function ItemDetailPanel({
+  item,
+  onClose,
+  onEquip,
+  onTransfer,
+  characters,
+  currentCharId,
+}: {
+  item: any;
+  onClose: () => void;
   onEquip?: (itemId: string, charId: string) => void;
   onTransfer?: (item: any, toVault: boolean, charId: string) => void;
-  characters?: any[]; currentCharId?: string;
+  characters?: any[];
+  currentCharId?: string;
 }) {
   const tier = item.tierName || "Unknown";
   const borderColor = TIER_BORDER[tier] || "rgba(255,255,255,.08)";
 
   return (
-    <div style={{ position: "absolute", inset: 0, zIndex: 50, background: "rgba(5,8,16,.92)", backdropFilter: "blur(8px)", display: "flex", flexDirection: "column", overflow: "hidden" }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", borderBottom: "1px solid rgba(255,255,255,.06)", flexShrink: 0 }}>
-        <span style={{ fontSize: 11, fontWeight: 700, opacity: 0.5, letterSpacing: ".5px", textTransform: "uppercase" }}>Item Detail</span>
-        <button onClick={onClose} style={{ background: "none", border: "none", color: "rgba(255,255,255,.5)", cursor: "pointer", fontSize: 16, padding: "2px 6px" }}>✕</button>
+    <div
+      style={{
+        position: "absolute",
+        inset: 0,
+        zIndex: 50,
+        background: "rgba(5,8,16,.92)",
+        backdropFilter: "blur(8px)",
+        display: "flex",
+        flexDirection: "column",
+        overflow: "hidden",
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          padding: "10px 14px",
+          borderBottom: "1px solid rgba(255,255,255,.06)",
+          flexShrink: 0,
+        }}
+      >
+        <span
+          style={{
+            fontSize: 11,
+            fontWeight: 700,
+            opacity: 0.5,
+            letterSpacing: ".5px",
+            textTransform: "uppercase",
+          }}
+        >
+          Item Detail
+        </span>
+        <button
+          onClick={onClose}
+          style={{
+            background: "none",
+            border: "none",
+            color: "rgba(255,255,255,.5)",
+            cursor: "pointer",
+            fontSize: 16,
+            padding: "2px 6px",
+          }}
+        >
+          ✕
+        </button>
       </div>
-      <div style={{ flex: 1, overflowY: "auto", padding: 16, display: "flex", flexDirection: "column", gap: 14 }}>
+      <div
+        style={{
+          flex: 1,
+          overflowY: "auto",
+          padding: 16,
+          display: "flex",
+          flexDirection: "column",
+          gap: 14,
+        }}
+      >
         <div style={{ display: "flex", gap: 14, alignItems: "flex-start" }}>
-          <div style={{ width: 80, height: 80, borderRadius: 2, overflow: "hidden", flexShrink: 0, border: `2px solid ${borderColor}`, position: "relative", background: "rgba(0,0,0,.5)" }}>
-            {item.icon && <img src={item.icon} alt={(item.name || "Item") + " icon"} style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
-            {item.watermark && <img src={item.watermark} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", opacity: 0.25, pointerEvents: "none" }} />}
+          <div
+            style={{
+              width: 80,
+              height: 80,
+              borderRadius: 2,
+              overflow: "hidden",
+              flexShrink: 0,
+              border: `2px solid ${borderColor}`,
+              position: "relative",
+              background: "rgba(0,0,0,.5)",
+            }}
+          >
+            {item.icon && (
+              <img
+                src={item.icon}
+                alt={(item.name || "Item") + " icon"}
+                style={{ width: "100%", height: "100%", objectFit: "cover" }}
+              />
+            )}
+            {item.watermark && (
+              <img
+                src={item.watermark}
+                alt=""
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "cover",
+                  opacity: 0.25,
+                  pointerEvents: "none",
+                }}
+              />
+            )}
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontWeight: 800, fontSize: 16, color: tier === "Exotic" ? "#ceae33" : "#fff" }}>{item.name}</div>
-            <div style={{ fontSize: 11, opacity: 0.5, display: "flex", alignItems: "center", gap: 6, marginTop: 2 }}>
-              <span style={{ padding: "1px 6px", borderRadius: 2, background: `${TIER_COLORS[tier] || "rgba(255,255,255,.1)"}40`, border: `1px solid ${borderColor}`, fontSize: 9, fontWeight: 700 }}>{tier}</span>
+            <div
+              style={{
+                fontWeight: 800,
+                fontSize: 16,
+                color: tier === "Exotic" ? "#ceae33" : "#fff",
+              }}
+            >
+              {item.name}
+            </div>
+            <div
+              style={{
+                fontSize: 11,
+                opacity: 0.5,
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                marginTop: 2,
+              }}
+            >
+              <span
+                style={{
+                  padding: "1px 6px",
+                  borderRadius: 2,
+                  background: `${TIER_COLORS[tier] || "rgba(255,255,255,.1)"}40`,
+                  border: `1px solid ${borderColor}`,
+                  fontSize: 9,
+                  fontWeight: 700,
+                }}
+              >
+                {tier}
+              </span>
               {item.slotName && <span>{item.slotName}</span>}
               {item.damageType && item.damageType !== "None" && (
                 <span style={{ display: "flex", alignItems: "center", gap: 3 }}>
-                  {item.damageIcon && <img src={item.damageIcon} alt={item.damageType + " damage icon"} style={{ width: 11, height: 11, opacity: 0.7 }} />}
+                  {item.damageIcon && (
+                    <img
+                      src={item.damageIcon}
+                      alt={item.damageType + " damage icon"}
+                      style={{ width: 11, height: 11, opacity: 0.7 }}
+                    />
+                  )}
                   {item.damageType}
                 </span>
               )}
             </div>
-            {item.primaryStat && <div style={{ fontSize: 24, fontWeight: 900, color: "rgb(253,230,138)", marginTop: 4 }}>{item.primaryStat}</div>}
+            {item.primaryStat && (
+              <div
+                style={{ fontSize: 24, fontWeight: 900, color: "rgb(253,230,138)", marginTop: 4 }}
+              >
+                {item.primaryStat}
+              </div>
+            )}
           </div>
         </div>
 
-        {item.description && <div style={{ fontSize: 12, opacity: 0.5, lineHeight: 1.5 }}>{item.description}</div>}
+        {item.description && (
+          <div style={{ fontSize: 12, opacity: 0.5, lineHeight: 1.5 }}>{item.description}</div>
+        )}
 
-        {item.perks?.length > 0 && (() => {
-          const realPerks = item.perks.filter((p: any) => p.icon && p.name && !p.isJunk);
-          const junkPerks = item.perks.filter((p: any) => p.icon && p.name && p.isJunk);
-          return (
-            <>
-              {realPerks.length > 0 && (
-                <div>
-                  <div style={S.label}>Perks</div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                    {realPerks.map((p: any, i: number) => (
-                      <PerkDetail key={i} perk={p} />
-                    ))}
+        {item.perks?.length > 0 &&
+          (() => {
+            const realPerks = item.perks.filter((p: any) => p.icon && p.name && !p.isJunk);
+            const junkPerks = item.perks.filter((p: any) => p.icon && p.name && p.isJunk);
+            return (
+              <>
+                {realPerks.length > 0 && (
+                  <div>
+                    <div style={S.label}>Perks</div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                      {realPerks.map((p: any, i: number) => (
+                        <PerkDetail key={i} perk={p} />
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
-              {junkPerks.length > 0 && (
-                <div>
-                  <div style={{ ...S.label, opacity: 0.25 }}>Mod Slots</div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-                    {junkPerks.map((p: any, i: number) => (
-                      <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 8px", borderRadius: 2, background: "rgba(255,255,255,.015)", border: "1px solid rgba(255,255,255,.03)" }}>
-                        <div style={{ width: 20, height: 20, borderRadius: 2, overflow: "hidden", flexShrink: 0, background: "rgba(0,0,0,.3)", border: "1px dashed rgba(255,255,255,.08)" }}>
-                          {p.icon && <img src={p.icon} alt={p.name + " perk icon"} style={{ width: "100%", height: "100%", objectFit: "cover", opacity: 0.3 }} />}
+                )}
+                {junkPerks.length > 0 && (
+                  <div>
+                    <div style={{ ...S.label, opacity: 0.25 }}>Mod Slots</div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                      {junkPerks.map((p: any, i: number) => (
+                        <div
+                          key={i}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 8,
+                            padding: "4px 8px",
+                            borderRadius: 2,
+                            background: "rgba(255,255,255,.015)",
+                            border: "1px solid rgba(255,255,255,.03)",
+                          }}
+                        >
+                          <div
+                            style={{
+                              width: 20,
+                              height: 20,
+                              borderRadius: 2,
+                              overflow: "hidden",
+                              flexShrink: 0,
+                              background: "rgba(0,0,0,.3)",
+                              border: "1px dashed rgba(255,255,255,.08)",
+                            }}
+                          >
+                            {p.icon && (
+                              <img
+                                src={p.icon}
+                                alt={p.name + " perk icon"}
+                                style={{
+                                  width: "100%",
+                                  height: "100%",
+                                  objectFit: "cover",
+                                  opacity: 0.3,
+                                }}
+                              />
+                            )}
+                          </div>
+                          <span style={{ fontSize: 10, opacity: 0.3, fontStyle: "italic" }}>
+                            {p.name}
+                          </span>
+                          {p.availablePlugs?.length > 0 && (
+                            <span style={{ fontSize: 9, opacity: 0.35, marginLeft: "auto" }}>
+                              {p.availablePlugs.length} available
+                            </span>
+                          )}
                         </div>
-                        <span style={{ fontSize: 10, opacity: 0.3, fontStyle: "italic" }}>{p.name}</span>
-                        {p.availablePlugs?.length > 0 && (
-                          <span style={{ fontSize: 9, opacity: 0.35, marginLeft: "auto" }}>{p.availablePlugs.length} available</span>
-                        )}
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
-            </>
-          );
-        })()}
+                )}
+              </>
+            );
+          })()}
 
         {item.armorStats && (
           <div>
@@ -227,20 +578,34 @@ function ItemDetailPanel({ item, onClose, onEquip, onTransfer, characters, curre
         {(onEquip || onTransfer) && (
           <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 4 }}>
             {onEquip && currentCharId && !item.isEquipped && (
-              <button onClick={() => onEquip(item.itemInstanceId, currentCharId)} style={{ ...S.btnPri, width: "100%", padding: "10px 0", fontWeight: 800 }}>
+              <button
+                onClick={() => onEquip(item.itemInstanceId, currentCharId)}
+                style={{ ...S.btnPri, width: "100%", padding: "10px 0", fontWeight: 800 }}
+              >
                 Equip
               </button>
             )}
             {onTransfer && currentCharId && (
-              <button onClick={() => onTransfer(item, true, currentCharId)} style={{ ...S.btn, width: "100%", padding: "8px 0", fontSize: 11 }}>
+              <button
+                onClick={() => onTransfer(item, true, currentCharId)}
+                style={{ ...S.btn, width: "100%", padding: "8px 0", fontSize: 11 }}
+              >
                 Send to Vault
               </button>
             )}
-            {onTransfer && characters && characters.filter(c => c.characterId !== currentCharId).map((c: any) => (
-              <button key={c.characterId} onClick={() => onTransfer(item, false, c.characterId)} style={{ ...S.btn, width: "100%", padding: "8px 0", fontSize: 11 }}>
-                Transfer to {c.className}
-              </button>
-            ))}
+            {onTransfer &&
+              characters &&
+              characters
+                .filter((c) => c.characterId !== currentCharId)
+                .map((c: any) => (
+                  <button
+                    key={c.characterId}
+                    onClick={() => onTransfer(item, false, c.characterId)}
+                    style={{ ...S.btn, width: "100%", padding: "8px 0", fontSize: 11 }}
+                  >
+                    Transfer to {c.className}
+                  </button>
+                ))}
           </div>
         )}
       </div>
@@ -248,7 +613,15 @@ function ItemDetailPanel({ item, onClose, onEquip, onTransfer, characters, curre
   );
 }
 
-function ItemTile({ item, compact, onClick }: { item: any; compact?: boolean; onClick?: () => void }) {
+function ItemTile({
+  item,
+  compact,
+  onClick,
+}: {
+  item: any;
+  compact?: boolean;
+  onClick?: () => void;
+}) {
   const tier = item.tierName || "Unknown";
   const borderColor = TIER_BORDER[tier] || "rgba(255,255,255,.08)";
   const bgColor = TIER_COLORS[tier] || "rgba(255,255,255,.03)";
@@ -256,43 +629,183 @@ function ItemTile({ item, compact, onClick }: { item: any; compact?: boolean; on
 
   if (compact) {
     return (
-      <div title={`${item.name || "?"}${item.primaryStat ? ` (${item.primaryStat})` : ""}`} onClick={onClick} style={{
-        width: 44, height: 44, borderRadius: 2, background: item.icon ? "rgba(0,0,0,.5)" : bgColor,
-        border: `1.5px solid ${borderColor}`, overflow: "hidden", position: "relative", ...clickStyle,
-      }}>
-        {item.icon && <img src={item.icon} alt={(item.name || "Item") + " icon"} style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
-        {item.primaryStat && (
-          <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "rgba(0,0,0,.75)", textAlign: "center",
-            fontSize: 9, fontWeight: 800, color: tier === "Exotic" ? "#ceae33" : "#fff", padding: "1px 0" }}>{item.primaryStat}</div>
+      <div
+        title={`${item.name || "?"}${item.primaryStat ? ` (${item.primaryStat})` : ""}`}
+        onClick={onClick}
+        style={{
+          width: 44,
+          height: 44,
+          borderRadius: 2,
+          background: item.icon ? "rgba(0,0,0,.5)" : bgColor,
+          border: `1.5px solid ${borderColor}`,
+          overflow: "hidden",
+          position: "relative",
+          ...clickStyle,
+        }}
+      >
+        {item.icon && (
+          <img
+            src={item.icon}
+            alt={(item.name || "Item") + " icon"}
+            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+          />
         )}
-        {item.watermark && <img src={item.watermark} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", opacity: 0.25, pointerEvents: "none" }} />}
+        {item.primaryStat && (
+          <div
+            style={{
+              position: "absolute",
+              bottom: 0,
+              left: 0,
+              right: 0,
+              background: "rgba(0,0,0,.75)",
+              textAlign: "center",
+              fontSize: 9,
+              fontWeight: 800,
+              color: tier === "Exotic" ? "#ceae33" : "#fff",
+              padding: "1px 0",
+            }}
+          >
+            {item.primaryStat}
+          </div>
+        )}
+        {item.watermark && (
+          <img
+            src={item.watermark}
+            alt=""
+            style={{
+              position: "absolute",
+              inset: 0,
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              opacity: 0.25,
+              pointerEvents: "none",
+            }}
+          />
+        )}
       </div>
     );
   }
 
   return (
-    <div onClick={onClick} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", borderRadius: 2, border: `1px solid ${borderColor}`, background: `${bgColor}18`, ...clickStyle }}>
-      <div style={{ width: 40, height: 40, borderRadius: 2, overflow: "hidden", flexShrink: 0, background: item.icon ? "rgba(0,0,0,.5)" : bgColor, border: `1px solid ${borderColor}`, position: "relative" }}>
-        {item.icon && <img src={item.icon} alt={(item.name || "Item") + " icon"} style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
-        {item.watermark && <img src={item.watermark} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", opacity: 0.3, pointerEvents: "none" }} />}
+    <div
+      onClick={onClick}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 10,
+        padding: "8px 10px",
+        borderRadius: 2,
+        border: `1px solid ${borderColor}`,
+        background: `${bgColor}18`,
+        ...clickStyle,
+      }}
+    >
+      <div
+        style={{
+          width: 40,
+          height: 40,
+          borderRadius: 2,
+          overflow: "hidden",
+          flexShrink: 0,
+          background: item.icon ? "rgba(0,0,0,.5)" : bgColor,
+          border: `1px solid ${borderColor}`,
+          position: "relative",
+        }}
+      >
+        {item.icon && (
+          <img
+            src={item.icon}
+            alt={(item.name || "Item") + " icon"}
+            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+          />
+        )}
+        {item.watermark && (
+          <img
+            src={item.watermark}
+            alt=""
+            style={{
+              position: "absolute",
+              inset: 0,
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              opacity: 0.3,
+              pointerEvents: "none",
+            }}
+          />
+        )}
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontWeight: 700, fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: tier === "Exotic" ? "#ceae33" : "rgba(243,244,246,.9)" }}>{item.name || "Unknown Item"}</div>
+        <div
+          style={{
+            fontWeight: 700,
+            fontSize: 12,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+            color: tier === "Exotic" ? "#ceae33" : "rgba(243,244,246,.9)",
+          }}
+        >
+          {item.name || "Unknown Item"}
+        </div>
         <div style={{ fontSize: 10, opacity: 0.4, display: "flex", alignItems: "center", gap: 6 }}>
           {item.slotName && <span>{item.slotName}</span>}
-          {item.damageType && item.damageType !== "None" && <><span style={{ opacity: 0.3 }}>·</span>{item.damageIcon && <img src={item.damageIcon} alt={item.damageType + " damage icon"} style={{ width: 10, height: 10, opacity: 0.6 }} />}<span>{item.damageType}</span></>}
+          {item.damageType && item.damageType !== "None" && (
+            <>
+              <span style={{ opacity: 0.3 }}>·</span>
+              {item.damageIcon && (
+                <img
+                  src={item.damageIcon}
+                  alt={item.damageType + " damage icon"}
+                  style={{ width: 10, height: 10, opacity: 0.6 }}
+                />
+              )}
+              <span>{item.damageType}</span>
+            </>
+          )}
         </div>
         <PerkRow perks={item.perks} max={5} />
       </div>
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 2, flexShrink: 0 }}>
-        {item.primaryStat && <div style={{ fontSize: 14, fontWeight: 900, color: tier === "Exotic" ? "#ceae33" : "rgba(253,230,138,.9)" }}>{item.primaryStat}</div>}
-        {item.armorStats && <div style={{ fontSize: 9, opacity: 0.35, fontWeight: 600 }}>T{item.armorStats.total}</div>}
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "flex-end",
+          gap: 2,
+          flexShrink: 0,
+        }}
+      >
+        {item.primaryStat && (
+          <div
+            style={{
+              fontSize: 14,
+              fontWeight: 900,
+              color: tier === "Exotic" ? "#ceae33" : "rgba(253,230,138,.9)",
+            }}
+          >
+            {item.primaryStat}
+          </div>
+        )}
+        {item.armorStats && (
+          <div style={{ fontSize: 9, opacity: 0.35, fontWeight: 600 }}>
+            T{item.armorStats.total}
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
-function TwitchStreams({ gameName = "Destiny 2", lobbyId, accentColor }: { gameName?: string; lobbyId?: string; accentColor?: string }) {
+function TwitchStreams({
+  gameName = "Destiny 2",
+  lobbyId,
+  accentColor,
+}: {
+  gameName?: string;
+  lobbyId?: string;
+  accentColor?: string;
+}) {
   const [streams, setStreams] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeStream, setActiveStream] = useState<string | null>(null);
@@ -305,11 +818,19 @@ function TwitchStreams({ gameName = "Destiny 2", lobbyId, accentColor }: { gameN
 
   useEffect(() => {
     apiFetch(`/twitch/streams?game=${encodeURIComponent(gameName)}`)
-      .then(j => { setStreams(j.streams || []); setLoading(false); })
+      .then((j) => {
+        setStreams(j.streams || []);
+        setLoading(false);
+      })
       .catch(() => setLoading(false));
   }, [gameName]);
 
-  if (loading) return <div style={{ padding: 20, textAlign: "center", opacity: 0.4, fontSize: 13 }}>Loading streams...</div>;
+  if (loading)
+    return (
+      <div style={{ padding: 20, textAlign: "center", opacity: 0.4, fontSize: 13 }}>
+        Loading streams...
+      </div>
+    );
 
   function handleCardClick(s: any) {
     setInterceptStream({
@@ -329,7 +850,16 @@ function TwitchStreams({ gameName = "Destiny 2", lobbyId, accentColor }: { gameN
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
       {activeStream && (
-        <div style={{ borderRadius: 2, overflow: "hidden", border: "1px solid rgba(145,70,255,.25)", borderLeft: "2px solid rgba(124,58,237,.5)", background: "#000", marginBottom: 4 }}>
+        <div
+          style={{
+            borderRadius: 2,
+            overflow: "hidden",
+            border: "1px solid rgba(145,70,255,.25)",
+            borderLeft: "2px solid rgba(124,58,237,.5)",
+            background: "#000",
+            marginBottom: 4,
+          }}
+        >
           <iframe
             src={`https://player.twitch.tv/?channel=${activeStream}&parent=${typeof window !== "undefined" ? window.location.hostname : "weered.ca"}&muted=true`}
             width="100%"
@@ -337,15 +867,36 @@ function TwitchStreams({ gameName = "Destiny 2", lobbyId, accentColor }: { gameN
             style={{ border: "none", display: "block" }}
             allowFullScreen
           />
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", background: "rgba(145,70,255,.08)" }}>
-            <span style={{ fontSize: 12, fontWeight: 700, color: "rgba(216,180,254,.9)" }}>{activeStream}</span>
-            <button onClick={() => setActiveStream(null)} style={{ ...S.btn, fontSize: 11, padding: "4px 10px" }}>Close</button>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              padding: "8px 12px",
+              background: "rgba(145,70,255,.08)",
+            }}
+          >
+            <span style={{ fontSize: 12, fontWeight: 700, color: "rgba(216,180,254,.9)" }}>
+              {activeStream}
+            </span>
+            <button
+              onClick={() => setActiveStream(null)}
+              style={{ ...S.btn, fontSize: 11, padding: "4px 10px" }}
+            >
+              Close
+            </button>
           </div>
         </div>
       )}
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 8 }}>
-        {streams.map(s => (
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
+          gap: 8,
+        }}
+      >
+        {streams.map((s) => (
           <div
             key={s.id}
             onClick={() => handleCardClick(s)}
@@ -353,21 +904,62 @@ function TwitchStreams({ gameName = "Destiny 2", lobbyId, accentColor }: { gameN
               ...S.card,
               cursor: "pointer",
               transition: "border-color .15s, background .15s",
-              border: activeStream === s.userLogin ? "1px solid rgba(145,70,255,.40)" : "1px solid rgba(255,255,255,.08)",
-              background: activeStream === s.userLogin ? "rgba(145,70,255,.08)" : "rgba(255,255,255,.03)",
+              border:
+                activeStream === s.userLogin
+                  ? "1px solid rgba(145,70,255,.40)"
+                  : "1px solid rgba(255,255,255,.08)",
+              background:
+                activeStream === s.userLogin ? "rgba(145,70,255,.08)" : "rgba(255,255,255,.03)",
             }}
           >
             {s.thumbnailUrl && (
-              <img src={s.thumbnailUrl} alt={s.userName + " stream thumbnail"} style={{ width: "100%", borderRadius: 2, marginBottom: 6, aspectRatio: "16/9", objectFit: "cover" }} />
+              <img
+                src={s.thumbnailUrl}
+                alt={s.userName + " stream thumbnail"}
+                style={{
+                  width: "100%",
+                  borderRadius: 2,
+                  marginBottom: 6,
+                  aspectRatio: "16/9",
+                  objectFit: "cover",
+                }}
+              />
             )}
-            <div style={{ fontWeight: 700, fontSize: 12, marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            <div
+              style={{
+                fontWeight: 700,
+                fontSize: 12,
+                marginBottom: 2,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
+            >
               {s.userName}
             </div>
-            <div style={{ fontSize: 11, opacity: 0.5, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginBottom: 4 }}>
+            <div
+              style={{
+                fontSize: 11,
+                opacity: 0.5,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+                marginBottom: 4,
+              }}
+            >
               {s.title}
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#22c55e", flexShrink: 0, boxShadow: "0 0 6px rgba(34,197,94,.6)" }} />
+              <span
+                style={{
+                  width: 6,
+                  height: 6,
+                  borderRadius: "50%",
+                  background: "#22c55e",
+                  flexShrink: 0,
+                  boxShadow: "0 0 6px rgba(34,197,94,.6)",
+                }}
+              />
               <span style={{ fontSize: 11, color: "rgba(230,235,240,.75)", fontWeight: 600 }}>
                 {s.viewerCount?.toLocaleString()} viewers
               </span>
@@ -377,7 +969,9 @@ function TwitchStreams({ gameName = "Destiny 2", lobbyId, accentColor }: { gameN
       </div>
 
       {streams.length === 0 && (
-        <div style={{ textAlign: "center", padding: 20, opacity: 0.4, fontSize: 13 }}>No live {gameName} streams right now.</div>
+        <div style={{ textAlign: "center", padding: 20, opacity: 0.4, fontSize: 13 }}>
+          No live {gameName} streams right now.
+        </div>
       )}
 
       <StreamInterceptModal
@@ -392,58 +986,95 @@ function TwitchStreams({ gameName = "Destiny 2", lobbyId, accentColor }: { gameN
 }
 
 const D2_ACTIVITIES = [
-  "Raid: Crota's End", "Raid: Root of Nightmares", "Raid: King's Fall",
-  "Raid: Vow of the Disciple", "Raid: Vault of Glass", "Raid: Garden of Salvation",
-  "Dungeon: Warlord's Ruin", "Dungeon: Ghosts of the Deep", "Dungeon: Spire of the Watcher",
-  "Nightfall: Grandmaster", "Nightfall: Legend", "Nightfall: Hero",
-  "Trials of Osiris", "Iron Banner", "Crucible: Competitive",
-  "Gambit", "Exotic Quest", "Campaign (Legendary)", "Other",
+  "Raid: Crota's End",
+  "Raid: Root of Nightmares",
+  "Raid: King's Fall",
+  "Raid: Vow of the Disciple",
+  "Raid: Vault of Glass",
+  "Raid: Garden of Salvation",
+  "Dungeon: Warlord's Ruin",
+  "Dungeon: Ghosts of the Deep",
+  "Dungeon: Spire of the Watcher",
+  "Nightfall: Grandmaster",
+  "Nightfall: Legend",
+  "Nightfall: Hero",
+  "Trials of Osiris",
+  "Iron Banner",
+  "Crucible: Competitive",
+  "Gambit",
+  "Exotic Quest",
+  "Campaign (Legendary)",
+  "Other",
 ];
 
 const PLATFORMS = ["crossplay", "pc", "xbox", "psn"];
 
 function LfgBoard({ lobbyId }: { lobbyId: string }) {
-  const [posts, setPosts]     = useState<any[]>([]);
+  const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [activity, setActivity]     = useState(D2_ACTIVITIES[0]);
-  const [desc, setDesc]             = useState("");
+  const [activity, setActivity] = useState(D2_ACTIVITIES[0]);
+  const [desc, setDesc] = useState("");
   const [maxPlayers, setMaxPlayers] = useState(6);
-  const [platform, setPlatform]     = useState("crossplay");
+  const [platform, setPlatform] = useState("crossplay");
   const [msg, setMsg] = useState("");
 
   const load = useCallback(() => {
     apiFetch(`/lfg/${encodeURIComponent(lobbyId)}`)
-      .then(j => { setPosts(j.posts || []); setLoading(false); })
+      .then((j) => {
+        setPosts(j.posts || []);
+        setLoading(false);
+      })
       .catch(() => setLoading(false));
   }, [lobbyId]);
 
-  useEffect(() => { load(); const i = setInterval(load, 15000); return () => clearInterval(i); }, [load]);
+  useEffect(() => {
+    load();
+    const i = setInterval(load, 15000);
+    return () => clearInterval(i);
+  }, [load]);
 
   async function create() {
     const j = await apiFetch(`/lfg/${encodeURIComponent(lobbyId)}`, {
       method: "POST",
       body: JSON.stringify({ activity, description: desc, maxPlayers, platform }),
     });
-    if (j.ok) { setShowForm(false); setDesc(""); load(); }
-    else setMsg(j.message || j.error || "Failed");
+    if (j.ok) {
+      setShowForm(false);
+      setDesc("");
+      load();
+    } else setMsg(j.message || j.error || "Failed");
   }
 
   async function join(postId: string) {
     const j = await apiFetch(`/lfg/${postId}/join`, { method: "POST", body: JSON.stringify({}) });
-    if (j.ok) load(); else setMsg(j.message || j.error || "Failed");
+    if (j.ok) load();
+    else setMsg(j.message || j.error || "Failed");
   }
 
   async function leave(postId: string) {
     const j = await apiFetch(`/lfg/${postId}/leave`, { method: "POST", body: JSON.stringify({}) });
-    if (j.ok) load(); else setMsg(j.message || j.error || "Failed");
+    if (j.ok) load();
+    else setMsg(j.message || j.error || "Failed");
   }
 
-  if (loading) return <div style={{ padding: 20, textAlign: "center", opacity: 0.4, fontSize: 13 }}>Loading fireteams...</div>;
+  if (loading)
+    return (
+      <div style={{ padding: 20, textAlign: "center", opacity: 0.4, fontSize: 13 }}>
+        Loading fireteams...
+      </div>
+    );
 
   return (
     <div>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          marginBottom: 12,
+        }}
+      >
         <div style={{ fontSize: 13, opacity: 0.6 }}>{posts.length} active fireteams</div>
         <button style={S.btnPri} onClick={() => setShowForm(!showForm)}>
           {showForm ? "Cancel" : "+ Create Fireteam"}
@@ -452,52 +1083,117 @@ function LfgBoard({ lobbyId }: { lobbyId: string }) {
       {msg && <div style={{ marginBottom: 8, fontSize: 12, opacity: 0.7 }}>{msg}</div>}
 
       {showForm && (
-        <div style={{ ...S.card, marginBottom: 14, border: `1px solid ${ACCENT_DESTINY}35`, background: `${ACCENT_DESTINY}08` }}>
+        <div
+          style={{
+            ...S.card,
+            marginBottom: 14,
+            border: `1px solid ${ACCENT_DESTINY}35`,
+            background: `${ACCENT_DESTINY}08`,
+          }}
+        >
           <div style={S.label}>Activity</div>
           <select
-            value={activity} onChange={e => setActivity(e.target.value)}
+            value={activity}
+            onChange={(e) => setActivity(e.target.value)}
             style={{ ...S.input, marginBottom: 8, cursor: "pointer" }}
           >
-            {D2_ACTIVITIES.map(a => <option key={a} value={a}>{a}</option>)}
+            {D2_ACTIVITIES.map((a) => (
+              <option key={a} value={a}>
+                {a}
+              </option>
+            ))}
           </select>
 
           <div style={S.label}>Description (optional)</div>
-          <input style={{ ...S.input, marginBottom: 8 }} value={desc} onChange={e => setDesc(e.target.value)} placeholder="KWTD, chill run, teaching..." />
+          <input
+            style={{ ...S.input, marginBottom: 8 }}
+            value={desc}
+            onChange={(e) => setDesc(e.target.value)}
+            placeholder="KWTD, chill run, teaching..."
+          />
 
           <div style={{ display: "flex", gap: 10, marginBottom: 8 }}>
             <div style={{ flex: 1 }}>
               <div style={S.label}>Max Players</div>
-              <input type="number" style={S.input} value={maxPlayers} onChange={e => setMaxPlayers(Number(e.target.value))} min={2} max={12} />
+              <input
+                type="number"
+                style={S.input}
+                value={maxPlayers}
+                onChange={(e) => setMaxPlayers(Number(e.target.value))}
+                min={2}
+                max={12}
+              />
             </div>
             <div style={{ flex: 1 }}>
               <div style={S.label}>Platform</div>
-              <select value={platform} onChange={e => setPlatform(e.target.value)} style={{ ...S.input, cursor: "pointer" }}>
-                {PLATFORMS.map(p => <option key={p} value={p}>{p}</option>)}
+              <select
+                value={platform}
+                onChange={(e) => setPlatform(e.target.value)}
+                style={{ ...S.input, cursor: "pointer" }}
+              >
+                {PLATFORMS.map((p) => (
+                  <option key={p} value={p}>
+                    {p}
+                  </option>
+                ))}
               </select>
             </div>
           </div>
 
-          <button style={{ ...S.btnPri, width: "100%", padding: "8px 0" }} onClick={create}>Post Fireteam</button>
+          <button style={{ ...S.btnPri, width: "100%", padding: "8px 0" }} onClick={create}>
+            Post Fireteam
+          </button>
         </div>
       )}
 
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-        {posts.map(p => {
+        {posts.map((p) => {
           const isFull = p.status === "FULL";
           const slots = `${(p.players || []).length}/${p.maxPlayers}`;
           return (
-            <div key={p.id} style={{
-              ...S.card,
-              display: "flex", alignItems: "center", gap: 12,
-              border: isFull ? "1px solid rgba(245,158,11,.20)" : "1px solid rgba(255,255,255,.08)",
-              opacity: isFull ? 0.7 : 1,
-            }}>
+            <div
+              key={p.id}
+              style={{
+                ...S.card,
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
+                border: isFull
+                  ? "1px solid rgba(245,158,11,.20)"
+                  : "1px solid rgba(255,255,255,.08)",
+                opacity: isFull ? 0.7 : 1,
+              }}
+            >
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 2, display: "flex", alignItems: "center", gap: 8 }}>
+                <div
+                  style={{
+                    fontWeight: 700,
+                    fontSize: 13,
+                    marginBottom: 2,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                  }}
+                >
                   {p.activity}
-                  {isFull && <span style={{ fontSize: 9, padding: "1px 5px", borderRadius: 2, background: "rgba(245,158,11,.12)", border: "1px solid rgba(245,158,11,.25)", color: "rgb(253,230,138)" }}>FULL</span>}
+                  {isFull && (
+                    <span
+                      style={{
+                        fontSize: 9,
+                        padding: "1px 5px",
+                        borderRadius: 2,
+                        background: "rgba(245,158,11,.12)",
+                        border: "1px solid rgba(245,158,11,.25)",
+                        color: "rgb(253,230,138)",
+                      }}
+                    >
+                      FULL
+                    </span>
+                  )}
                 </div>
-                {p.description && <div style={{ fontSize: 11, opacity: 0.5, marginBottom: 4 }}>{p.description}</div>}
+                {p.description && (
+                  <div style={{ fontSize: 11, opacity: 0.5, marginBottom: 4 }}>{p.description}</div>
+                )}
                 <div style={{ display: "flex", gap: 8, fontSize: 11, opacity: 0.5 }}>
                   <span>{p.platform}</span>
                   <span>by {p.userName}</span>
@@ -506,16 +1202,32 @@ function LfgBoard({ lobbyId }: { lobbyId: string }) {
                 {(p.playerNames || []).length > 0 && (
                   <div style={{ display: "flex", gap: 4, marginTop: 6, flexWrap: "wrap" }}>
                     {p.playerNames.map((n: string, i: number) => (
-                      <span key={i} style={{ fontSize: 10, padding: "1px 6px", borderRadius: 2, background: "rgba(79,136,198,.12)", border: "1px solid rgba(79,136,198,.25)", color: "rgba(147,197,253,.85)" }}>{n}</span>
+                      <span
+                        key={i}
+                        style={{
+                          fontSize: 10,
+                          padding: "1px 6px",
+                          borderRadius: 2,
+                          background: "rgba(79,136,198,.12)",
+                          border: "1px solid rgba(79,136,198,.25)",
+                          color: "rgba(147,197,253,.85)",
+                        }}
+                      >
+                        {n}
+                      </span>
                     ))}
                   </div>
                 )}
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 4, flexShrink: 0 }}>
                 {!isFull && (
-                  <button style={{ ...S.btnPri, fontSize: 11 }} onClick={() => join(p.id)}>Join</button>
+                  <button style={{ ...S.btnPri, fontSize: 11 }} onClick={() => join(p.id)}>
+                    Join
+                  </button>
                 )}
-                <button style={{ ...S.btn, fontSize: 11 }} onClick={() => leave(p.id)}>Leave</button>
+                <button style={{ ...S.btn, fontSize: 11 }} onClick={() => leave(p.id)}>
+                  Leave
+                </button>
               </div>
             </div>
           );
@@ -531,111 +1243,316 @@ function LfgBoard({ lobbyId }: { lobbyId: string }) {
 function BungieWeekly({ accentColor }: { accentColor?: string }) {
   const accent = accentColor || ACCENT_DESTINY;
   const [data, setData] = useState<any>(null);
-  const [xur, setXur]   = useState<any>(null);
+  const [xur, setXur] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     Promise.all([apiFetch("/bungie/weekly"), apiFetch("/bungie/xur")])
-      .then(([w, x]) => { setData(w); setXur(x); setLoading(false); })
+      .then(([w, x]) => {
+        setData(w);
+        setXur(x);
+        setLoading(false);
+      })
       .catch(() => setLoading(false));
   }, []);
 
-  if (loading) return <div style={{ padding: 20, textAlign: "center", opacity: 0.4, fontSize: 13 }}>Loading Bungie data...</div>;
+  if (loading)
+    return (
+      <div style={{ padding: 20, textAlign: "center", opacity: 0.4, fontSize: 13 }}>
+        Loading Bungie data...
+      </div>
+    );
 
   const milestones = data?.milestones || [];
   const hasManifest = !!data?.manifestVersion;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      <div style={{ ...S.card, border: xur?.available ? "1px solid rgba(245,158,11,.30)" : "1px solid rgba(255,255,255,.08)", background: xur?.available ? "rgba(245,158,11,.06)" : "rgba(255,255,255,.03)" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: xur?.available && xur?.items?.length ? 10 : 0 }}>
+      <div
+        style={{
+          ...S.card,
+          border: xur?.available
+            ? "1px solid rgba(245,158,11,.30)"
+            : "1px solid rgba(255,255,255,.08)",
+          background: xur?.available ? "rgba(245,158,11,.06)" : "rgba(255,255,255,.03)",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            marginBottom: xur?.available && xur?.items?.length ? 10 : 0,
+          }}
+        >
           <span style={{ fontSize: 22 }}>🐍</span>
           <div>
-            <div style={{ fontWeight: 800, fontSize: 14, color: xur?.available ? "rgb(253,230,138)" : "rgba(255,255,255,.6)" }}>Xur {xur?.available ? "is here!" : "is away"}</div>
-            <div style={{ fontSize: 11, opacity: 0.5 }}>{xur?.available ? "Exotic vendor is selling..." : "Returns every Friday at reset"}</div>
+            <div
+              style={{
+                fontWeight: 800,
+                fontSize: 14,
+                color: xur?.available ? "rgb(253,230,138)" : "rgba(255,255,255,.6)",
+              }}
+            >
+              Xur {xur?.available ? "is here!" : "is away"}
+            </div>
+            <div style={{ fontSize: 11, opacity: 0.5 }}>
+              {xur?.available ? "Exotic vendor is selling..." : "Returns every Friday at reset"}
+            </div>
           </div>
         </div>
         {xur?.available && xur?.items?.length > 0 && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 4, borderTop: "1px solid rgba(245,158,11,.12)", paddingTop: 8 }}>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: 4,
+              borderTop: "1px solid rgba(245,158,11,.12)",
+              paddingTop: 8,
+            }}
+          >
             {xur.items.map((item: any, i: number) => (
-              <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 8px", borderRadius: 2, border: `1px solid ${TIER_BORDER[item.tierName] || "rgba(255,255,255,.08)"}`, background: `${TIER_COLORS[item.tierName] || "rgba(255,255,255,.03)"}18` }}>
-                <div style={{ width: 40, height: 40, borderRadius: 2, overflow: "hidden", flexShrink: 0, background: "rgba(0,0,0,.5)", border: `1px solid ${TIER_BORDER[item.tierName] || "rgba(255,255,255,.08)"}`, position: "relative" }}>
-                  {item.icon && <img src={item.icon} alt={(item.name || "Item") + " icon"} style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
+              <div
+                key={i}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                  padding: "6px 8px",
+                  borderRadius: 2,
+                  border: `1px solid ${TIER_BORDER[item.tierName] || "rgba(255,255,255,.08)"}`,
+                  background: `${TIER_COLORS[item.tierName] || "rgba(255,255,255,.03)"}18`,
+                }}
+              >
+                <div
+                  style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 2,
+                    overflow: "hidden",
+                    flexShrink: 0,
+                    background: "rgba(0,0,0,.5)",
+                    border: `1px solid ${TIER_BORDER[item.tierName] || "rgba(255,255,255,.08)"}`,
+                    position: "relative",
+                  }}
+                >
+                  {item.icon && (
+                    <img
+                      src={item.icon}
+                      alt={(item.name || "Item") + " icon"}
+                      style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                    />
+                  )}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 700, fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: item.tierName === "Exotic" ? "#ceae33" : "rgba(243,244,246,.9)" }}>{item.name || "Unknown"}</div>
-                  <div style={{ fontSize: 10, opacity: 0.4 }}>{item.tierName}{item.slotName ? ` · ${item.slotName}` : ""}</div>
+                  <div
+                    style={{
+                      fontWeight: 700,
+                      fontSize: 12,
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                      color: item.tierName === "Exotic" ? "#ceae33" : "rgba(243,244,246,.9)",
+                    }}
+                  >
+                    {item.name || "Unknown"}
+                  </div>
+                  <div style={{ fontSize: 10, opacity: 0.4 }}>
+                    {item.tierName}
+                    {item.slotName ? ` · ${item.slotName}` : ""}
+                  </div>
                   <PerkRow perks={item.perks} max={5} />
                 </div>
-                {item.armorStats && <div style={{ fontSize: 9, opacity: 0.35, fontWeight: 600, flexShrink: 0 }}>T{item.armorStats.total}</div>}
+                {item.armorStats && (
+                  <div style={{ fontSize: 9, opacity: 0.35, fontWeight: 600, flexShrink: 0 }}>
+                    T{item.armorStats.total}
+                  </div>
+                )}
               </div>
             ))}
-            {xur.cachedAt && <div style={{ fontSize: 9, opacity: 0.2, textAlign: "center", marginTop: 2 }}>Cached {new Date(xur.cachedAt).toLocaleTimeString()}</div>}
+            {xur.cachedAt && (
+              <div style={{ fontSize: 9, opacity: 0.2, textAlign: "center", marginTop: 2 }}>
+                Cached {new Date(xur.cachedAt).toLocaleTimeString()}
+              </div>
+            )}
           </div>
         )}
       </div>
 
       {milestones.length > 0 ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {milestones.filter((ms: any) => !ms.name.startsWith("Milestone")).slice(0, 20).map((ms: any) => (
-            <div key={ms.hash} style={{ ...S.card }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: ms.activities?.length ? 8 : 0 }}>
-                {ms.icon ? (
-                  <img src={ms.icon} alt={ms.name + " icon"} style={{ width: 32, height: 32, borderRadius: 2, objectFit: "cover", flexShrink: 0 }} />
-                ) : (
-                  <div style={{ width: 32, height: 32, borderRadius: 2, background: `${accent}20`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, flexShrink: 0 }}>📋</div>
-                )}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 700, fontSize: 13 }}>{ms.name}</div>
-                  {ms.description && <div style={{ fontSize: 10, opacity: 0.4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ms.description}</div>}
-                </div>
-                {ms.activities?.length > 0 && <span style={{ fontSize: 10, opacity: 0.35, flexShrink: 0 }}>{ms.activities.length} activities</span>}
-              </div>
-              {hasManifest && ms.activities?.length > 0 && (
-                <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                  {ms.activities.slice(0, 5).map((act: any, i: number) => (
-                    <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 8px", borderRadius: 2, background: "rgba(255,255,255,.02)", border: "1px solid rgba(255,255,255,.04)" }}>
-                      {act.icon && <img src={act.icon} alt={act.name + " icon"} style={{ width: 24, height: 24, borderRadius: 2, objectFit: "cover", flexShrink: 0 }} />}
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 11, fontWeight: 600 }}>{act.name}</div>
-                        {act.lightLevel > 0 && <span style={{ fontSize: 9, opacity: 0.4 }}>{act.lightLevel} Power</span>}
-                      </div>
-                      {act.modifiers?.length > 0 && (
-                        <div style={{ display: "flex", gap: 3, flexShrink: 0 }}>
-                          {act.modifiers.slice(0, 6).map((mod: any, mi: number) => (
-                            <div key={mi} title={`${mod.name}: ${mod.description || ""}`} style={{ width: 20, height: 20, borderRadius: 2, overflow: "hidden", background: "rgba(0,0,0,.3)", border: "1px solid rgba(255,255,255,.06)" }}>
-                              {mod.icon && <img src={mod.icon} alt={mod.name + " modifier icon"} style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
-                            </div>
-                          ))}
-                        </div>
-                      )}
+          {milestones
+            .filter((ms: any) => !ms.name.startsWith("Milestone"))
+            .slice(0, 20)
+            .map((ms: any) => (
+              <div key={ms.hash} style={{ ...S.card }}>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    marginBottom: ms.activities?.length ? 8 : 0,
+                  }}
+                >
+                  {ms.icon ? (
+                    <img
+                      src={ms.icon}
+                      alt={ms.name + " icon"}
+                      style={{
+                        width: 32,
+                        height: 32,
+                        borderRadius: 2,
+                        objectFit: "cover",
+                        flexShrink: 0,
+                      }}
+                    />
+                  ) : (
+                    <div
+                      style={{
+                        width: 32,
+                        height: 32,
+                        borderRadius: 2,
+                        background: `${accent}20`,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: 14,
+                        flexShrink: 0,
+                      }}
+                    >
+                      📋
                     </div>
-                  ))}
+                  )}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 700, fontSize: 13 }}>{ms.name}</div>
+                    {ms.description && (
+                      <div
+                        style={{
+                          fontSize: 10,
+                          opacity: 0.4,
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {ms.description}
+                      </div>
+                    )}
+                  </div>
+                  {ms.activities?.length > 0 && (
+                    <span style={{ fontSize: 10, opacity: 0.35, flexShrink: 0 }}>
+                      {ms.activities.length} activities
+                    </span>
+                  )}
                 </div>
-              )}
-            </div>
-          ))}
+                {hasManifest && ms.activities?.length > 0 && (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                    {ms.activities.slice(0, 5).map((act: any, i: number) => (
+                      <div
+                        key={i}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 8,
+                          padding: "6px 8px",
+                          borderRadius: 2,
+                          background: "rgba(255,255,255,.02)",
+                          border: "1px solid rgba(255,255,255,.04)",
+                        }}
+                      >
+                        {act.icon && (
+                          <img
+                            src={act.icon}
+                            alt={act.name + " icon"}
+                            style={{
+                              width: 24,
+                              height: 24,
+                              borderRadius: 2,
+                              objectFit: "cover",
+                              flexShrink: 0,
+                            }}
+                          />
+                        )}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 11, fontWeight: 600 }}>{act.name}</div>
+                          {act.lightLevel > 0 && (
+                            <span style={{ fontSize: 9, opacity: 0.4 }}>
+                              {act.lightLevel} Power
+                            </span>
+                          )}
+                        </div>
+                        {act.modifiers?.length > 0 && (
+                          <div style={{ display: "flex", gap: 3, flexShrink: 0 }}>
+                            {act.modifiers.slice(0, 6).map((mod: any, mi: number) => (
+                              <div
+                                key={mi}
+                                title={`${mod.name}: ${mod.description || ""}`}
+                                style={{
+                                  width: 20,
+                                  height: 20,
+                                  borderRadius: 2,
+                                  overflow: "hidden",
+                                  background: "rgba(0,0,0,.3)",
+                                  border: "1px solid rgba(255,255,255,.06)",
+                                }}
+                              >
+                                {mod.icon && (
+                                  <img
+                                    src={mod.icon}
+                                    alt={mod.name + " modifier icon"}
+                                    style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                                  />
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
         </div>
       ) : (
         <div style={{ ...S.card, padding: 0 }}>
-          <EmptyState compact title={data?.error ? "Bungie API's down." : "No milestone data."} hint={data?.error ? "Check back in a bit." : undefined} />
+          <EmptyState
+            compact
+            title={data?.error ? "Bungie API's down." : "No milestone data."}
+            hint={data?.error ? "Check back in a bit." : undefined}
+          />
         </div>
       )}
 
       <div style={{ ...S.card, textAlign: "center" }}>
-        <div style={{ fontSize: 10, fontWeight: 700, opacity: 0.4, letterSpacing: ".7px", textTransform: "uppercase", marginBottom: 4 }}>Weekly Reset</div>
+        <div
+          style={{
+            fontSize: 10,
+            fontWeight: 700,
+            opacity: 0.4,
+            letterSpacing: ".7px",
+            textTransform: "uppercase",
+            marginBottom: 4,
+          }}
+        >
+          Weekly Reset
+        </div>
         <div style={{ fontSize: 13, opacity: 0.7 }}>Every Tuesday at 17:00 UTC</div>
-        {hasManifest && <div style={{ fontSize: 9, opacity: 0.25, marginTop: 4 }}>Manifest v{data.manifestVersion}</div>}
+        {hasManifest && (
+          <div style={{ fontSize: 9, opacity: 0.25, marginTop: 4 }}>
+            Manifest v{data.manifestVersion}
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
 function GuardianLookup() {
-  const [query, setQuery]     = useState("");
-  const [result, setResult]   = useState<any>(null);
+  const [query, setQuery] = useState("");
+  const [result, setResult] = useState<any>(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError]     = useState("");
+  const [error, setError] = useState("");
   const [selectedItem, setSelectedItem] = useState<any>(null);
 
   const CLASS_NAMES: Record<number, string> = { 0: "Titan", 1: "Hunter", 2: "Warlock" };
@@ -643,13 +1560,18 @@ function GuardianLookup() {
 
   async function search() {
     if (!query.trim()) return;
-    setLoading(true); setError(""); setResult(null); setSelectedItem(null);
+    setLoading(true);
+    setError("");
+    setResult(null);
+    setSelectedItem(null);
     try {
       const j = await apiFetch(`/bungie/player/${encodeURIComponent(query.trim())}`);
       if (j.ok && j.found) setResult(j);
       else if (j.ok && !j.found) setError("Guardian not found. Try BungieName#1234 format.");
       else setError(j.error || "Lookup failed");
-    } catch { setError("Network error"); }
+    } catch {
+      setError("Network error");
+    }
     setLoading(false);
   }
 
@@ -660,21 +1582,36 @@ function GuardianLookup() {
           style={{ ...S.input, flex: 1 }}
           placeholder="BungieName#1234"
           value={query}
-          onChange={e => setQuery(e.target.value)}
-          onKeyDown={e => e.key === "Enter" && search()}
+          onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && search()}
         />
         <button style={S.btnPri} onClick={search} disabled={loading}>
           {loading ? "..." : "Search"}
         </button>
       </div>
 
-      {error && <div style={{ fontSize: 12, color: "rgba(252,165,165,.8)", marginBottom: 10 }}>{error}</div>}
+      {error && (
+        <div style={{ fontSize: 12, color: "rgba(252,165,165,.8)", marginBottom: 10 }}>{error}</div>
+      )}
 
       {result && (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          <div style={{ ...S.card, display: "flex", alignItems: "center", gap: 12, border: `1px solid ${ACCENT_DESTINY}30`, background: `${ACCENT_DESTINY}08` }}>
+          <div
+            style={{
+              ...S.card,
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
+              border: `1px solid ${ACCENT_DESTINY}30`,
+              background: `${ACCENT_DESTINY}08`,
+            }}
+          >
             {result.player?.iconPath && (
-              <img src={result.player.iconPath} alt="Player emblem" style={{ width: 44, height: 44, borderRadius: 2, objectFit: "cover" }} />
+              <img
+                src={result.player.iconPath}
+                alt="Player emblem"
+                style={{ width: 44, height: 44, borderRadius: 2, objectFit: "cover" }}
+              />
             )}
             <div>
               <div style={{ fontWeight: 800, fontSize: 15 }}>
@@ -688,30 +1625,47 @@ function GuardianLookup() {
           </div>
 
           {result.privacyRestricted && (
-            <div style={{ ...S.card, textAlign: "center", fontSize: 12, opacity: 0.5 }}>This guardian's equipment is private.</div>
+            <div style={{ ...S.card, textAlign: "center", fontSize: 12, opacity: 0.5 }}>
+              This guardian's equipment is private.
+            </div>
           )}
 
           {(result.characters || []).map((c: any) => (
             <div key={c.characterId} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              <div style={{
-                ...S.card,
-                position: "relative",
-                overflow: "hidden",
-              }}>
+              <div
+                style={{
+                  ...S.card,
+                  position: "relative",
+                  overflow: "hidden",
+                }}
+              >
                 {c.emblemBackgroundPath && (
-                  <div style={{
-                    position: "absolute", inset: 0,
-                    background: `url(${c.emblemBackgroundPath}) center/cover no-repeat`,
-                    opacity: 0.15,
-                  }} />
+                  <div
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      background: `url(${c.emblemBackgroundPath}) center/cover no-repeat`,
+                      opacity: 0.15,
+                    }}
+                  />
                 )}
                 <div style={{ position: "relative" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
                     <span style={{ fontSize: 18 }}>{CLASS_EMOJI[c.classType] || "?"}</span>
                     <div>
-                      <div style={{ fontWeight: 800, fontSize: 14 }}>{CLASS_NAMES[c.classType] || "Unknown"}</div>
-                      <div style={{ fontSize: 20, fontWeight: 900, color: "rgb(253,230,138)", lineHeight: 1.1 }}>
-                        {c.light} <span style={{ fontSize: 10, fontWeight: 600, opacity: 0.5 }}>Power</span>
+                      <div style={{ fontWeight: 800, fontSize: 14 }}>
+                        {CLASS_NAMES[c.classType] || "Unknown"}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: 20,
+                          fontWeight: 900,
+                          color: "rgb(253,230,138)",
+                          lineHeight: 1.1,
+                        }}
+                      >
+                        {c.light}{" "}
+                        <span style={{ fontSize: 10, fontWeight: 600, opacity: 0.5 }}>Power</span>
                       </div>
                     </div>
                   </div>
@@ -722,12 +1676,25 @@ function GuardianLookup() {
               </div>
               {(c.weapons?.length > 0 || c.armor?.length > 0 || c.equipped?.length > 0) && (
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 4, paddingLeft: 4 }}>
-                  {(c.weapons || []).concat(c.armor || []).concat(c.otherEquipped || []).slice(0, 12).map((item: any, i: number) => (
-                    <ItemTile key={i} item={item} compact onClick={() => setSelectedItem(item)} />
-                  ))}
-                  {!c.weapons?.length && !c.armor?.length && (c.equipped || []).slice(0, 12).map((item: any, i: number) => (
-                    <ItemTile key={`e${i}`} item={item} compact onClick={() => setSelectedItem(item)} />
-                  ))}
+                  {(c.weapons || [])
+                    .concat(c.armor || [])
+                    .concat(c.otherEquipped || [])
+                    .slice(0, 12)
+                    .map((item: any, i: number) => (
+                      <ItemTile key={i} item={item} compact onClick={() => setSelectedItem(item)} />
+                    ))}
+                  {!c.weapons?.length &&
+                    !c.armor?.length &&
+                    (c.equipped || [])
+                      .slice(0, 12)
+                      .map((item: any, i: number) => (
+                        <ItemTile
+                          key={`e${i}`}
+                          item={item}
+                          compact
+                          onClick={() => setSelectedItem(item)}
+                        />
+                      ))}
                 </div>
               )}
             </div>
@@ -741,7 +1708,9 @@ function GuardianLookup() {
         </div>
       )}
 
-      {selectedItem && <ItemDetailPanel item={selectedItem} onClose={() => setSelectedItem(null)} />}
+      {selectedItem && (
+        <ItemDetailPanel item={selectedItem} onClose={() => setSelectedItem(null)} />
+      )}
     </div>
   );
 }
@@ -758,137 +1727,394 @@ function MyGuardian({ accentColor }: { accentColor?: string }) {
 
   const fetchProfile = useCallback(() => {
     apiFetch("/bungie/me")
-      .then(j => { setData(j); setLoading(false); })
-      .catch(() => { setError("Failed to load"); setLoading(false); });
+      .then((j) => {
+        setData(j);
+        setLoading(false);
+      })
+      .catch(() => {
+        setError("Failed to load");
+        setLoading(false);
+      });
   }, []);
 
-  useEffect(() => { fetchProfile(); }, [fetchProfile]);
+  useEffect(() => {
+    fetchProfile();
+  }, [fetchProfile]);
 
   async function handleEquip(itemId: string, charId: string) {
     setActionMsg("Equipping...");
     try {
-      const j = await apiFetch("/bungie/equip", { method: "POST", body: JSON.stringify({ itemId, characterId: charId, membershipType: data?.platform }) });
-      if (j.ok) { setActionMsg("Equipped!"); setSelectedItem(null); fetchProfile(); }
-      else setActionMsg(j.error || j.message || "Equip failed");
-    } catch { setActionMsg("Network error"); }
+      const j = await apiFetch("/bungie/equip", {
+        method: "POST",
+        body: JSON.stringify({ itemId, characterId: charId, membershipType: data?.platform }),
+      });
+      if (j.ok) {
+        setActionMsg("Equipped!");
+        setSelectedItem(null);
+        fetchProfile();
+      } else setActionMsg(j.error || j.message || "Equip failed");
+    } catch {
+      setActionMsg("Network error");
+    }
     setTimeout(() => setActionMsg(""), 3000);
   }
 
   async function handleTransfer(item: any, toVault: boolean, charId: string) {
     setActionMsg(toVault ? "Vaulting..." : "Transferring...");
     try {
-      const j = await apiFetch("/bungie/transfer", { method: "POST", body: JSON.stringify({ itemReferenceHash: item.itemHash, stackSize: 1, transferToVault: toVault, itemId: item.itemInstanceId, characterId: charId, membershipType: data?.platform }) });
-      if (j.ok) { setActionMsg(toVault ? "Vaulted!" : "Transferred!"); setSelectedItem(null); fetchProfile(); }
-      else setActionMsg(j.error || j.message || "Transfer failed");
-    } catch { setActionMsg("Network error"); }
+      const j = await apiFetch("/bungie/transfer", {
+        method: "POST",
+        body: JSON.stringify({
+          itemReferenceHash: item.itemHash,
+          stackSize: 1,
+          transferToVault: toVault,
+          itemId: item.itemInstanceId,
+          characterId: charId,
+          membershipType: data?.platform,
+        }),
+      });
+      if (j.ok) {
+        setActionMsg(toVault ? "Vaulted!" : "Transferred!");
+        setSelectedItem(null);
+        fetchProfile();
+      } else setActionMsg(j.error || j.message || "Transfer failed");
+    } catch {
+      setActionMsg("Network error");
+    }
     setTimeout(() => setActionMsg(""), 3000);
   }
 
-  if (loading) return <div style={{ padding: 20, textAlign: "center", opacity: 0.4, fontSize: 13 }}>Loading your Guardian...</div>;
+  if (loading)
+    return (
+      <div style={{ padding: 20, textAlign: "center", opacity: 0.4, fontSize: 13 }}>
+        Loading your Guardian...
+      </div>
+    );
 
   if (!data?.linked) {
     const linkUrl = `${API}/auth/bungie`;
     return (
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "40px 20px", gap: 16 }}>
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "40px 20px",
+          gap: 16,
+        }}
+      >
         <div style={{ fontSize: 48, opacity: 0.3 }}>🔗</div>
-        <div style={{ fontWeight: 800, fontSize: 16, textAlign: "center" }}>Link your Bungie account</div>
-        <div style={{ fontSize: 12, opacity: 0.45, textAlign: "center", maxWidth: 320, lineHeight: 1.5 }}>
-          Connect your Bungie.net account to view your characters, inventory, vault, and loadouts right here on Weered.
+        <div style={{ fontWeight: 800, fontSize: 16, textAlign: "center" }}>
+          Link your Bungie account
         </div>
-        <a href={linkUrl} style={{
-          display: "inline-flex", alignItems: "center", gap: 8, padding: "12px 28px", borderRadius: 2,
-          background: `${accent}20`, border: `1px solid ${accent}50`, color: accent, fontWeight: 800, fontSize: 14,
-          textDecoration: "none", cursor: "pointer",
-        }}>Link Bungie Account</a>
-        <div style={{ fontSize: 10, opacity: 0.25 }}>You will be redirected to Bungie.net to authorize</div>
+        <div
+          style={{
+            fontSize: 12,
+            opacity: 0.45,
+            textAlign: "center",
+            maxWidth: 320,
+            lineHeight: 1.5,
+          }}
+        >
+          Connect your Bungie.net account to view your characters, inventory, vault, and loadouts
+          right here on Weered.
+        </div>
+        <a
+          href={linkUrl}
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 8,
+            padding: "12px 28px",
+            borderRadius: 2,
+            background: `${accent}20`,
+            border: `1px solid ${accent}50`,
+            color: accent,
+            fontWeight: 800,
+            fontSize: 14,
+            textDecoration: "none",
+            cursor: "pointer",
+          }}
+        >
+          Link Bungie Account
+        </a>
+        <div style={{ fontSize: 10, opacity: 0.25 }}>
+          You will be redirected to Bungie.net to authorize
+        </div>
       </div>
     );
   }
 
   if (error || data?.error) {
-    const isExpired = data?.error === "token_expired" || data?.error === "no_profile_data" || data?.error === "fetch_failed";
+    const isExpired =
+      data?.error === "token_expired" ||
+      data?.error === "no_profile_data" ||
+      data?.error === "fetch_failed";
     if (isExpired && data?.linked) {
       const linkUrl = `${API}/auth/bungie`;
       return (
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "40px 20px", gap: 16 }}>
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "40px 20px",
+            gap: 16,
+          }}
+        >
           <div style={{ fontSize: 48, opacity: 0.3 }}>🔄</div>
           <div style={{ fontWeight: 800, fontSize: 16, textAlign: "center" }}>Session expired</div>
-          <div style={{ fontSize: 12, opacity: 0.45, textAlign: "center", maxWidth: 320, lineHeight: 1.5 }}>
-            Your Bungie authorization has expired. Re-link to restore access to your characters, inventory, and vault.
+          <div
+            style={{
+              fontSize: 12,
+              opacity: 0.45,
+              textAlign: "center",
+              maxWidth: 320,
+              lineHeight: 1.5,
+            }}
+          >
+            Your Bungie authorization has expired. Re-link to restore access to your characters,
+            inventory, and vault.
           </div>
-          <a href={linkUrl} style={{
-            display: "inline-flex", alignItems: "center", gap: 8, padding: "12px 28px", borderRadius: 2,
-            background: `${accent}20`, border: `1px solid ${accent}50`, color: accent, fontWeight: 800, fontSize: 14,
-            textDecoration: "none", cursor: "pointer",
-          }}>Re-link Bungie Account</a>
+          <a
+            href={linkUrl}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
+              padding: "12px 28px",
+              borderRadius: 2,
+              background: `${accent}20`,
+              border: `1px solid ${accent}50`,
+              color: accent,
+              fontWeight: 800,
+              fontSize: 14,
+              textDecoration: "none",
+              cursor: "pointer",
+            }}
+          >
+            Re-link Bungie Account
+          </a>
           <div style={{ fontSize: 10, opacity: 0.25 }}>You will be redirected to Bungie.net</div>
         </div>
       );
     }
-    return <div style={{ padding: 20, textAlign: "center", color: "rgba(252,165,165,.8)", fontSize: 13 }}>{error || data?.message || data?.error}</div>;
+    return (
+      <div
+        style={{ padding: 20, textAlign: "center", color: "rgba(252,165,165,.8)", fontSize: 13 }}
+      >
+        {error || data?.message || data?.error}
+      </div>
+    );
   }
 
-  const characters: any[] = Array.isArray(data?.characters) ? data.characters : typeof data?.characters === "object" && data.characters ? Object.values(data.characters) : [];
+  const characters: any[] = Array.isArray(data?.characters)
+    ? data.characters
+    : typeof data?.characters === "object" && data.characters
+      ? Object.values(data.characters)
+      : [];
   const vault: any[] = data?.vault || [];
   const char = characters[selectedChar];
   const hasManifest = !!data?.manifestVersion;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 0, height: "100%", position: "relative" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", borderBottom: "1px solid rgba(255,255,255,.06)", flexShrink: 0 }}>
-        <div style={{ width: 30, height: 30, borderRadius: 2, background: `${accent}25`, border: `1px solid ${accent}40`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, flexShrink: 0 }}>⚔</div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontWeight: 800, fontSize: 13, display: "flex", alignItems: "center", gap: 6 }}>
-            {data.displayName}
-            <span style={{ fontSize: 8, fontWeight: 700, padding: "1px 5px", borderRadius: 2, background: "rgba(34,197,94,.10)", border: "1px solid rgba(34,197,94,.25)", color: "rgba(134,239,172,.9)" }}>LINKED</span>
-          </div>
-          <div style={{ fontSize: 9, opacity: 0.4 }}>Platform {data.platform} · {characters.length} chars{data.vaultCount ? ` · ${data.vaultCount} vault` : ""}</div>
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: 0,
+        height: "100%",
+        position: "relative",
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          padding: "8px 12px",
+          borderBottom: "1px solid rgba(255,255,255,.06)",
+          flexShrink: 0,
+        }}
+      >
+        <div
+          style={{
+            width: 30,
+            height: 30,
+            borderRadius: 2,
+            background: `${accent}25`,
+            border: `1px solid ${accent}40`,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: 14,
+            flexShrink: 0,
+          }}
+        >
+          ⚔
         </div>
-        <button onClick={() => { window.location.href = `${API}/auth/bungie`; }} style={{ ...S.btn, fontSize: 10, padding: "3px 8px" }}>Re-link</button>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div
+            style={{ fontWeight: 800, fontSize: 13, display: "flex", alignItems: "center", gap: 6 }}
+          >
+            {data.displayName}
+            <span
+              style={{
+                fontSize: 8,
+                fontWeight: 700,
+                padding: "1px 5px",
+                borderRadius: 2,
+                background: "rgba(34,197,94,.10)",
+                border: "1px solid rgba(34,197,94,.25)",
+                color: "rgba(134,239,172,.9)",
+              }}
+            >
+              LINKED
+            </span>
+          </div>
+          <div style={{ fontSize: 9, opacity: 0.4 }}>
+            Platform {data.platform} · {characters.length} chars
+            {data.vaultCount ? ` · ${data.vaultCount} vault` : ""}
+          </div>
+        </div>
+        <button
+          onClick={() => {
+            window.location.href = `${API}/auth/bungie`;
+          }}
+          style={{ ...S.btn, fontSize: 10, padding: "3px 8px" }}
+        >
+          Re-link
+        </button>
       </div>
 
       {characters.length > 0 && (
-        <div style={{ display: "flex", gap: 0, borderBottom: "1px solid rgba(255,255,255,.06)", flexShrink: 0, overflow: "hidden" }}>
+        <div
+          style={{
+            display: "flex",
+            gap: 0,
+            borderBottom: "1px solid rgba(255,255,255,.06)",
+            flexShrink: 0,
+            overflow: "hidden",
+          }}
+        >
           {characters.map((c: any, i: number) => (
-            <button key={c.characterId || i} onClick={() => { setSelectedChar(i); if (subTab === "vault") setSubTab("equipped"); }} style={{
-              flex: 1, padding: "6px 4px", border: "none", cursor: "pointer", minWidth: 0,
-              background: selectedChar === i && subTab !== "vault" ? `${accent}18` : "transparent",
-              borderBottom: selectedChar === i && subTab !== "vault" ? `2px solid ${accent}` : "2px solid transparent",
-              color: selectedChar === i && subTab !== "vault" ? "rgba(243,244,246,.92)" : "rgba(148,163,184,.55)",
-              fontWeight: selectedChar === i && subTab !== "vault" ? 700 : 400, fontSize: 11, transition: "all .12s",
-              display: "flex", alignItems: "center", justifyContent: "center", gap: 4,
-              overflow: "hidden", whiteSpace: "nowrap",
-            }}>
-              <span style={{ fontSize: 12 }}>{c.classType === 0 ? "🛡" : c.classType === 1 ? "🗡" : "✨"}</span>
+            <button
+              key={c.characterId || i}
+              onClick={() => {
+                setSelectedChar(i);
+                if (subTab === "vault") setSubTab("equipped");
+              }}
+              style={{
+                flex: 1,
+                padding: "6px 4px",
+                border: "none",
+                cursor: "pointer",
+                minWidth: 0,
+                background:
+                  selectedChar === i && subTab !== "vault" ? `${accent}18` : "transparent",
+                borderBottom:
+                  selectedChar === i && subTab !== "vault"
+                    ? `2px solid ${accent}`
+                    : "2px solid transparent",
+                color:
+                  selectedChar === i && subTab !== "vault"
+                    ? "rgba(243,244,246,.92)"
+                    : "rgba(148,163,184,.55)",
+                fontWeight: selectedChar === i && subTab !== "vault" ? 700 : 400,
+                fontSize: 11,
+                transition: "all .12s",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 4,
+                overflow: "hidden",
+                whiteSpace: "nowrap",
+              }}
+            >
+              <span style={{ fontSize: 12 }}>
+                {c.classType === 0 ? "🛡" : c.classType === 1 ? "🗡" : "✨"}
+              </span>
               {c.className || ["Titan", "Hunter", "Warlock"][c.classType]}
-              <span style={{ fontSize: 13, fontWeight: 900, color: "rgb(253,230,138)" }}>{c.light}</span>
+              <span style={{ fontSize: 13, fontWeight: 900, color: "rgb(253,230,138)" }}>
+                {c.light}
+              </span>
             </button>
           ))}
-          <button onClick={() => setSubTab("vault")} style={{
-            padding: "6px 8px", border: "none", cursor: "pointer", flexShrink: 0,
-            background: subTab === "vault" ? "rgba(245,158,11,.08)" : "transparent",
-            borderBottom: subTab === "vault" ? "2px solid rgba(245,158,11,.6)" : "2px solid transparent",
-            color: subTab === "vault" ? "rgba(253,230,138,.9)" : "rgba(148,163,184,.55)",
-            fontWeight: subTab === "vault" ? 700 : 400, fontSize: 11, transition: "all .12s",
-          }}>🔒 Vault{data.vaultCount ? ` (${data.vaultCount})` : ""}</button>
+          <button
+            onClick={() => setSubTab("vault")}
+            style={{
+              padding: "6px 8px",
+              border: "none",
+              cursor: "pointer",
+              flexShrink: 0,
+              background: subTab === "vault" ? "rgba(245,158,11,.08)" : "transparent",
+              borderBottom:
+                subTab === "vault" ? "2px solid rgba(245,158,11,.6)" : "2px solid transparent",
+              color: subTab === "vault" ? "rgba(253,230,138,.9)" : "rgba(148,163,184,.55)",
+              fontWeight: subTab === "vault" ? 700 : 400,
+              fontSize: 11,
+              transition: "all .12s",
+            }}
+          >
+            🔒 Vault{data.vaultCount ? ` (${data.vaultCount})` : ""}
+          </button>
         </div>
       )}
 
       {subTab !== "vault" && char && (
-        <div style={{ display: "flex", gap: 2, padding: "6px 12px", borderBottom: "1px solid rgba(255,255,255,.04)", flexShrink: 0 }}>
-          {(["equipped", "inventory"] as const).map(st => (
-            <button key={st} onClick={() => setSubTab(st)} style={{
-              padding: "4px 10px", borderRadius: 2, border: "none", fontSize: 11, cursor: "pointer",
-              background: subTab === st ? `${accent}20` : "transparent",
-              color: subTab === st ? "rgba(243,244,246,.9)" : "rgba(148,163,184,.5)",
-              fontWeight: subTab === st ? 700 : 400, textTransform: "capitalize",
-            }}>{st}{st === "inventory" ? ` (${char.inventory?.length || 0})` : ""}</button>
+        <div
+          style={{
+            display: "flex",
+            gap: 2,
+            padding: "6px 12px",
+            borderBottom: "1px solid rgba(255,255,255,.04)",
+            flexShrink: 0,
+          }}
+        >
+          {(["equipped", "inventory"] as const).map((st) => (
+            <button
+              key={st}
+              onClick={() => setSubTab(st)}
+              style={{
+                padding: "4px 10px",
+                borderRadius: 2,
+                border: "none",
+                fontSize: 11,
+                cursor: "pointer",
+                background: subTab === st ? `${accent}20` : "transparent",
+                color: subTab === st ? "rgba(243,244,246,.9)" : "rgba(148,163,184,.5)",
+                fontWeight: subTab === st ? 700 : 400,
+                textTransform: "capitalize",
+              }}
+            >
+              {st}
+              {st === "inventory" ? ` (${char.inventory?.length || 0})` : ""}
+            </button>
           ))}
         </div>
       )}
 
       {actionMsg && (
-        <div style={{ padding: "6px 12px", fontSize: 11, fontWeight: 600, textAlign: "center", color: actionMsg.includes("failed") || actionMsg.includes("error") ? "rgba(252,165,165,.9)" : "rgba(134,239,172,.9)", background: actionMsg.includes("failed") || actionMsg.includes("error") ? "rgba(252,165,165,.06)" : "rgba(34,197,94,.06)", borderBottom: "1px solid rgba(255,255,255,.04)", flexShrink: 0 }}>
+        <div
+          style={{
+            padding: "6px 12px",
+            fontSize: 11,
+            fontWeight: 600,
+            textAlign: "center",
+            color:
+              actionMsg.includes("failed") || actionMsg.includes("error")
+                ? "rgba(252,165,165,.9)"
+                : "rgba(134,239,172,.9)",
+            background:
+              actionMsg.includes("failed") || actionMsg.includes("error")
+                ? "rgba(252,165,165,.06)"
+                : "rgba(34,197,94,.06)",
+            borderBottom: "1px solid rgba(255,255,255,.04)",
+            flexShrink: 0,
+          }}
+        >
           {actionMsg}
         </div>
       )}
@@ -898,12 +2124,25 @@ function MyGuardian({ accentColor }: { accentColor?: string }) {
           <VaultView items={vault} onItemClick={setSelectedItem} />
         ) : char ? (
           subTab === "equipped" ? (
-            <EquippedView char={char} hasManifest={hasManifest} accent={accent} onItemClick={setSelectedItem} />
+            <EquippedView
+              char={char}
+              hasManifest={hasManifest}
+              accent={accent}
+              onItemClick={setSelectedItem}
+            />
           ) : (
-            <InventoryGrid items={char.inventory || []} hasManifest={hasManifest} onItemClick={setSelectedItem} />
+            <InventoryGrid
+              items={char.inventory || []}
+              hasManifest={hasManifest}
+              onItemClick={setSelectedItem}
+            />
           )
         ) : (
-          <EmptyState compact title="No character data." hint="Link your Bungie account to pull it in." />
+          <EmptyState
+            compact
+            title="No character data."
+            hint="Link your Bungie account to pull it in."
+          />
         )}
       </div>
 
@@ -921,7 +2160,17 @@ function MyGuardian({ accentColor }: { accentColor?: string }) {
   );
 }
 
-function EquippedView({ char, hasManifest, accent, onItemClick }: { char: any; hasManifest: boolean; accent: string; onItemClick?: (item: any) => void }) {
+function EquippedView({
+  char,
+  hasManifest,
+  accent,
+  onItemClick,
+}: {
+  char: any;
+  hasManifest: boolean;
+  accent: string;
+  onItemClick?: (item: any) => void;
+}) {
   const weapons = char.weapons || [];
   const armor = char.armor || [];
   const other = char.otherEquipped || [];
@@ -933,9 +2182,20 @@ function EquippedView({ char, hasManifest, accent, onItemClick }: { char: any; h
       <div>
         <div style={S.label}>Equipped</div>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-          {allEquipped.slice(0, 12).map((item: any, i: number) => <ItemTile key={i} item={item} compact onClick={onItemClick ? () => onItemClick(item) : undefined} />)}
+          {allEquipped.slice(0, 12).map((item: any, i: number) => (
+            <ItemTile
+              key={i}
+              item={item}
+              compact
+              onClick={onItemClick ? () => onItemClick(item) : undefined}
+            />
+          ))}
         </div>
-        {!hasManifest && <div style={{ fontSize: 10, opacity: 0.25, marginTop: 12, textAlign: "center" }}>Manifest not synced — item names unavailable</div>}
+        {!hasManifest && (
+          <div style={{ fontSize: 10, opacity: 0.25, marginTop: 12, textAlign: "center" }}>
+            Manifest not synced — item names unavailable
+          </div>
+        )}
       </div>
     );
   }
@@ -943,48 +2203,147 @@ function EquippedView({ char, hasManifest, accent, onItemClick }: { char: any; h
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
       {char.emblemBackgroundPath && (
-        <div style={{ borderRadius: 2, overflow: "hidden", position: "relative", height: 56,
-          background: `url(${char.emblemBackgroundPath?.startsWith("http") ? char.emblemBackgroundPath : "https://www.bungie.net" + char.emblemBackgroundPath}) center/cover` }}>
-          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(90deg, rgba(0,0,0,.7) 0%, transparent 60%)", display: "flex", alignItems: "center", padding: "0 16px", gap: 10 }}>
-            <span style={{ fontSize: 20 }}>{char.classType === 0 ? "🛡" : char.classType === 1 ? "🗡" : "✨"}</span>
+        <div
+          style={{
+            borderRadius: 2,
+            overflow: "hidden",
+            position: "relative",
+            height: 56,
+            background: `url(${char.emblemBackgroundPath?.startsWith("http") ? char.emblemBackgroundPath : "https://www.bungie.net" + char.emblemBackgroundPath}) center/cover`,
+          }}
+        >
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              background: "linear-gradient(90deg, rgba(0,0,0,.7) 0%, transparent 60%)",
+              display: "flex",
+              alignItems: "center",
+              padding: "0 16px",
+              gap: 10,
+            }}
+          >
+            <span style={{ fontSize: 20 }}>
+              {char.classType === 0 ? "🛡" : char.classType === 1 ? "🗡" : "✨"}
+            </span>
             <div>
-              <div style={{ fontWeight: 800, fontSize: 14 }}>{char.className} <span style={{ opacity: 0.4, fontWeight: 400, fontSize: 11 }}>{char.raceName}</span></div>
-              <div style={{ fontSize: 18, fontWeight: 900, color: "rgb(253,230,138)", lineHeight: 1 }}>{char.light} <span style={{ fontSize: 9, fontWeight: 600, opacity: 0.5 }}>POWER</span></div>
+              <div style={{ fontWeight: 800, fontSize: 14 }}>
+                {char.className}{" "}
+                <span style={{ opacity: 0.4, fontWeight: 400, fontSize: 11 }}>{char.raceName}</span>
+              </div>
+              <div
+                style={{ fontSize: 18, fontWeight: 900, color: "rgb(253,230,138)", lineHeight: 1 }}
+              >
+                {char.light}{" "}
+                <span style={{ fontSize: 9, fontWeight: 600, opacity: 0.5 }}>POWER</span>
+              </div>
             </div>
           </div>
         </div>
       )}
       {weapons.length > 0 && (
-        <div><div style={S.label}>Weapons</div><div style={{ display: "flex", flexDirection: "column", gap: 4 }}>{weapons.map((item: any, i: number) => <ItemTile key={i} item={item} onClick={onItemClick ? () => onItemClick(item) : undefined} />)}</div></div>
+        <div>
+          <div style={S.label}>Weapons</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            {weapons.map((item: any, i: number) => (
+              <ItemTile
+                key={i}
+                item={item}
+                onClick={onItemClick ? () => onItemClick(item) : undefined}
+              />
+            ))}
+          </div>
+        </div>
       )}
       {armor.length > 0 && (
-        <div><div style={S.label}>Armor</div><div style={{ display: "flex", flexDirection: "column", gap: 4 }}>{armor.map((item: any, i: number) => <ItemTile key={i} item={item} onClick={onItemClick ? () => onItemClick(item) : undefined} />)}</div></div>
+        <div>
+          <div style={S.label}>Armor</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            {armor.map((item: any, i: number) => (
+              <ItemTile
+                key={i}
+                item={item}
+                onClick={onItemClick ? () => onItemClick(item) : undefined}
+              />
+            ))}
+          </div>
+        </div>
       )}
       {other.length > 0 && (
-        <div><div style={S.label}>Other</div><div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>{other.map((item: any, i: number) => <ItemTile key={i} item={item} compact onClick={onItemClick ? () => onItemClick(item) : undefined} />)}</div></div>
+        <div>
+          <div style={S.label}>Other</div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+            {other.map((item: any, i: number) => (
+              <ItemTile
+                key={i}
+                item={item}
+                compact
+                onClick={onItemClick ? () => onItemClick(item) : undefined}
+              />
+            ))}
+          </div>
+        </div>
       )}
-      <div style={{ fontSize: 10, opacity: 0.2, textAlign: "center" }}>Last played: {char.dateLastPlayed ? new Date(char.dateLastPlayed).toLocaleDateString() : "—"} · {Math.round((char.minutesPlayedTotal || 0) / 60)}h total</div>
+      <div style={{ fontSize: 10, opacity: 0.2, textAlign: "center" }}>
+        Last played:{" "}
+        {char.dateLastPlayed ? new Date(char.dateLastPlayed).toLocaleDateString() : "—"} ·{" "}
+        {Math.round((char.minutesPlayedTotal || 0) / 60)}h total
+      </div>
     </div>
   );
 }
 
-function InventoryGrid({ items, hasManifest, onItemClick }: { items: any[]; hasManifest: boolean; onItemClick?: (item: any) => void }) {
+function InventoryGrid({
+  items,
+  hasManifest,
+  onItemClick,
+}: {
+  items: any[];
+  hasManifest: boolean;
+  onItemClick?: (item: any) => void;
+}) {
   if (!items.length) return <EmptyState compact title="Inventory empty." />;
   const exotics = items.filter((i: any) => i.tierName === "Exotic");
   const legendaries = items.filter((i: any) => i.tierName === "Legendary");
   const rest = items.filter((i: any) => i.tierName !== "Exotic" && i.tierName !== "Legendary");
 
-  const renderGroup = (label: string, group: any[]) => group.length === 0 ? null : (
-    <div>
-      <div style={S.label}>{label} ({group.length})</div>
-      {hasManifest ? (
-        <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>{group.map((item: any, i: number) => <ItemTile key={i} item={item} onClick={onItemClick ? () => onItemClick(item) : undefined} />)}</div>
-      ) : (
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>{group.map((item: any, i: number) => <ItemTile key={i} item={item} compact onClick={onItemClick ? () => onItemClick(item) : undefined} />)}</div>
-      )}
+  const renderGroup = (label: string, group: any[]) =>
+    group.length === 0 ? null : (
+      <div>
+        <div style={S.label}>
+          {label} ({group.length})
+        </div>
+        {hasManifest ? (
+          <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+            {group.map((item: any, i: number) => (
+              <ItemTile
+                key={i}
+                item={item}
+                onClick={onItemClick ? () => onItemClick(item) : undefined}
+              />
+            ))}
+          </div>
+        ) : (
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+            {group.map((item: any, i: number) => (
+              <ItemTile
+                key={i}
+                item={item}
+                compact
+                onClick={onItemClick ? () => onItemClick(item) : undefined}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+      {renderGroup("Exotics", exotics)}
+      {renderGroup("Legendaries", legendaries)}
+      {renderGroup("Other", rest)}
     </div>
   );
-  return <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>{renderGroup("Exotics", exotics)}{renderGroup("Legendaries", legendaries)}{renderGroup("Other", rest)}</div>;
 }
 
 function VaultView({ items, onItemClick }: { items: any[]; onItemClick?: (item: any) => void }) {
@@ -997,34 +2356,78 @@ function VaultView({ items, onItemClick }: { items: any[]; onItemClick?: (item: 
     if (filter === "armor") return armorBuckets.has(i.bucketHash);
     return true;
   });
-  filtered.sort((a: any, b: any) => { const ta = a.tierType || 0, tb = b.tierType || 0; if (ta !== tb) return tb - ta; return (b.primaryStat || 0) - (a.primaryStat || 0); });
+  filtered.sort((a: any, b: any) => {
+    const ta = a.tierType || 0,
+      tb = b.tierType || 0;
+    if (ta !== tb) return tb - ta;
+    return (b.primaryStat || 0) - (a.primaryStat || 0);
+  });
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
       <div style={{ display: "flex", gap: 4 }}>
-        {(["all", "weapons", "armor"] as const).map(f => (
-          <button key={f} onClick={() => setFilter(f)} style={{
-            padding: "4px 10px", borderRadius: 2, border: "none", fontSize: 11, cursor: "pointer",
-            background: filter === f ? "rgba(245,158,11,.15)" : "transparent",
-            color: filter === f ? "rgba(253,230,138,.9)" : "rgba(148,163,184,.5)",
-            fontWeight: filter === f ? 700 : 400, textTransform: "capitalize",
-          }}>{f} ({f === "all" ? items.length : items.filter((i: any) => f === "weapons" ? weaponBuckets.has(i.bucketHash) : armorBuckets.has(i.bucketHash)).length})</button>
+        {(["all", "weapons", "armor"] as const).map((f) => (
+          <button
+            key={f}
+            onClick={() => setFilter(f)}
+            style={{
+              padding: "4px 10px",
+              borderRadius: 2,
+              border: "none",
+              fontSize: 11,
+              cursor: "pointer",
+              background: filter === f ? "rgba(245,158,11,.15)" : "transparent",
+              color: filter === f ? "rgba(253,230,138,.9)" : "rgba(148,163,184,.5)",
+              fontWeight: filter === f ? 700 : 400,
+              textTransform: "capitalize",
+            }}
+          >
+            {f} (
+            {f === "all"
+              ? items.length
+              : items.filter((i: any) =>
+                  f === "weapons"
+                    ? weaponBuckets.has(i.bucketHash)
+                    : armorBuckets.has(i.bucketHash),
+                ).length}
+            )
+          </button>
         ))}
       </div>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-        {filtered.slice(0, 100).map((item: any, i: number) => <ItemTile key={i} item={item} compact onClick={onItemClick ? () => onItemClick(item) : undefined} />)}
+        {filtered.slice(0, 100).map((item: any, i: number) => (
+          <ItemTile
+            key={i}
+            item={item}
+            compact
+            onClick={onItemClick ? () => onItemClick(item) : undefined}
+          />
+        ))}
       </div>
-      {filtered.length > 100 && <div style={{ fontSize: 10, opacity: 0.3, textAlign: "center" }}>Showing first 100 of {filtered.length}</div>}
+      {filtered.length > 100 && (
+        <div style={{ fontSize: 10, opacity: 0.3, textAlign: "center" }}>
+          Showing first 100 of {filtered.length}
+        </div>
+      )}
     </div>
   );
 }
 
 const DIFFICULTY_STARS = ["", "★", "★★", "★★★", "★★★★", "★★★★★"];
 const CATEGORY_COLORS: Record<string, string> = {
-  crucible: "#ef4444", pve: "#22c55e", raid: "#a855f7", seasonal: "#f59e0b", dungeon: "#6366f1",
+  crucible: "#ef4444",
+  pve: "#22c55e",
+  raid: "#a855f7",
+  seasonal: "#f59e0b",
+  dungeon: "#6366f1",
 };
 
-function ChallengeCard({ challenge, enrollment, onEnroll, onAbandon }: {
+function ChallengeCard({
+  challenge,
+  enrollment,
+  onEnroll,
+  onAbandon,
+}: {
   challenge: any;
   enrollment: any;
   onEnroll: () => void;
@@ -1036,24 +2439,52 @@ function ChallengeCard({ challenge, enrollment, onEnroll, onAbandon }: {
   const isEnrolled = enrollment && enrollment.status === "ACTIVE";
   const isCompleted = enrollment?.status === "COMPLETED";
   const catColor = CATEGORY_COLORS[def.category] || ACCENT_DESTINY;
-  const timeLeft = challenge.endsAt ? Math.max(0, new Date(challenge.endsAt).getTime() - Date.now()) : null;
+  const timeLeft = challenge.endsAt
+    ? Math.max(0, new Date(challenge.endsAt).getTime() - Date.now())
+    : null;
   const daysLeft = timeLeft ? Math.ceil(timeLeft / 86400000) : null;
 
   return (
-    <div style={{
-      ...S.card,
-      borderColor: isCompleted ? "rgba(34,197,94,.3)" : isEnrolled ? `${catColor}44` : "rgba(255,255,255,.08)",
-      background: isCompleted ? "rgba(34,197,94,.05)" : isEnrolled ? `${catColor}08` : "rgba(255,255,255,.03)",
-      display: "flex", flexDirection: "column", gap: 8,
-    }}>
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
+    <div
+      style={{
+        ...S.card,
+        borderColor: isCompleted
+          ? "rgba(34,197,94,.3)"
+          : isEnrolled
+            ? `${catColor}44`
+            : "rgba(255,255,255,.08)",
+        background: isCompleted
+          ? "rgba(34,197,94,.05)"
+          : isEnrolled
+            ? `${catColor}08`
+            : "rgba(255,255,255,.03)",
+        display: "flex",
+        flexDirection: "column",
+        gap: 8,
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "flex-start",
+          justifyContent: "space-between",
+          gap: 8,
+        }}
+      >
         <div style={{ flex: 1 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
-            <span style={{
-              fontSize: 8, fontWeight: 800, letterSpacing: "1px", textTransform: "uppercase",
-              padding: "1px 6px", borderRadius: 2,
-              background: `${catColor}20`, color: catColor,
-            }}>
+            <span
+              style={{
+                fontSize: 8,
+                fontWeight: 800,
+                letterSpacing: "1px",
+                textTransform: "uppercase",
+                padding: "1px 6px",
+                borderRadius: 2,
+                background: `${catColor}20`,
+                color: catColor,
+              }}
+            >
               {def.category || "general"}
             </span>
             <span style={{ fontSize: 10, color: "#fcd34d", letterSpacing: "1px" }}>
@@ -1063,17 +2494,32 @@ function ChallengeCard({ challenge, enrollment, onEnroll, onAbandon }: {
           <div style={{ fontSize: 14, fontWeight: 800, color: "rgba(243,244,246,.92)" }}>
             {def.title}
           </div>
-          <div style={{ fontSize: 11, opacity: 0.5, marginTop: 2 }}>
-            {def.description}
-          </div>
+          <div style={{ fontSize: 11, opacity: 0.5, marginTop: 2 }}>{def.description}</div>
         </div>
-        <div style={{
-          textAlign: "center", padding: "6px 10px", borderRadius: 2,
-          background: "rgba(124,58,237,.1)", border: "1px solid rgba(124,58,237,.2)",
-          flexShrink: 0,
-        }}>
-          <div style={{ fontSize: 16, fontWeight: 900, color: "#a78bfa" }}>{def.notorietyReward}</div>
-          <div style={{ fontSize: 8, fontWeight: 700, opacity: 0.5, textTransform: "uppercase", letterSpacing: "0.5px" }}>XP</div>
+        <div
+          style={{
+            textAlign: "center",
+            padding: "6px 10px",
+            borderRadius: 2,
+            background: "rgba(124,58,237,.1)",
+            border: "1px solid rgba(124,58,237,.2)",
+            flexShrink: 0,
+          }}
+        >
+          <div style={{ fontSize: 16, fontWeight: 900, color: "#a78bfa" }}>
+            {def.notorietyReward}
+          </div>
+          <div
+            style={{
+              fontSize: 8,
+              fontWeight: 700,
+              opacity: 0.5,
+              textTransform: "uppercase",
+              letterSpacing: "0.5px",
+            }}
+          >
+            XP
+          </div>
         </div>
       </div>
 
@@ -1082,45 +2528,87 @@ function ChallengeCard({ challenge, enrollment, onEnroll, onAbandon }: {
         const pct = Math.min(100, Math.round((p.current / p.target) * 100));
         return (
           <div key={obj.id}>
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, marginBottom: 3 }}>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                fontSize: 11,
+                marginBottom: 3,
+              }}
+            >
               <span style={{ opacity: 0.7 }}>{obj.description}</span>
               {isEnrolled && (
-                <span style={{ fontWeight: 700, fontFamily: "monospace", color: p.completed ? "#22c55e" : "rgba(255,255,255,.6)" }}>
+                <span
+                  style={{
+                    fontWeight: 700,
+                    fontFamily: "monospace",
+                    color: p.completed ? "#22c55e" : "rgba(255,255,255,.6)",
+                  }}
+                >
                   {p.current}/{p.target}
                 </span>
               )}
             </div>
             {isEnrolled && (
-              <div style={{ height: 4, borderRadius: 2, background: "rgba(255,255,255,.06)", overflow: "hidden" }}>
-                <div style={{
-                  height: "100%", borderRadius: 2,
-                  width: `${pct}%`,
-                  background: p.completed ? "#22c55e" : catColor,
-                  transition: "width .3s ease",
-                }} />
+              <div
+                style={{
+                  height: 4,
+                  borderRadius: 2,
+                  background: "rgba(255,255,255,.06)",
+                  overflow: "hidden",
+                }}
+              >
+                <div
+                  style={{
+                    height: "100%",
+                    borderRadius: 2,
+                    width: `${pct}%`,
+                    background: p.completed ? "#22c55e" : catColor,
+                    transition: "width .3s ease",
+                  }}
+                />
               </div>
             )}
           </div>
         );
       })}
 
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 2 }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          marginTop: 2,
+        }}
+      >
         <div style={{ fontSize: 10, opacity: 0.35 }}>
           {daysLeft != null ? `${daysLeft}d remaining` : "No deadline"}
           {challenge._count?.enrollments > 0 && ` · ${challenge._count.enrollments} enrolled`}
         </div>
         {isCompleted ? (
-          <span style={{
-            padding: "4px 12px", borderRadius: 2, fontSize: 11, fontWeight: 700,
-            background: "rgba(34,197,94,.15)", color: "#86efac",
-          }}>
+          <span
+            style={{
+              padding: "4px 12px",
+              borderRadius: 2,
+              fontSize: 11,
+              fontWeight: 700,
+              background: "rgba(34,197,94,.15)",
+              color: "#86efac",
+            }}
+          >
             ✓ Completed
           </span>
         ) : isEnrolled ? (
-          <button onClick={onAbandon} style={{
-            ...S.btn, fontSize: 10, padding: "3px 10px",
-            borderColor: "rgba(239,68,68,.25)", color: "rgba(252,165,165,.7)",
-          }}>
+          <button
+            onClick={onAbandon}
+            style={{
+              ...S.btn,
+              fontSize: 10,
+              padding: "3px 10px",
+              borderColor: "rgba(239,68,68,.25)",
+              color: "rgba(252,165,165,.7)",
+            }}
+          >
             Abandon
           </button>
         ) : (
@@ -1133,12 +2621,18 @@ function ChallengeCard({ challenge, enrollment, onEnroll, onAbandon }: {
   );
 }
 
-function ChallengeLeaderboard({ instanceId, challengeTitle }: { instanceId: string; challengeTitle: string }) {
+function ChallengeLeaderboard({
+  instanceId,
+  challengeTitle,
+}: {
+  instanceId: string;
+  challengeTitle: string;
+}) {
   const [rows, setRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    apiFetch(`/challenges/${instanceId}/leaderboard`).then(res => {
+    apiFetch(`/challenges/${instanceId}/leaderboard`).then((res) => {
       if (res?.leaderboard) setRows(res.leaderboard);
       setLoading(false);
     });
@@ -1151,28 +2645,50 @@ function ChallengeLeaderboard({ instanceId, challengeTitle }: { instanceId: stri
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-      <div style={{ fontSize: 12, fontWeight: 700, opacity: 0.6, marginBottom: 4 }}>{challengeTitle}</div>
+      <div style={{ fontSize: 12, fontWeight: 700, opacity: 0.6, marginBottom: 4 }}>
+        {challengeTitle}
+      </div>
       {rows.map((r: any) => (
-        <div key={r.rank} style={{
-          display: "flex", alignItems: "center", gap: 10, padding: "6px 10px", borderRadius: 2,
-          background: r.rank <= 3 ? `${RANK_COLORS[r.rank - 1]}08` : "transparent",
-          borderLeft: r.rank <= 3 ? `3px solid ${RANK_COLORS[r.rank - 1]}` : "3px solid transparent",
-        }}>
-          <span style={{
-            width: 22, textAlign: "center", fontWeight: 900, fontSize: 13,
-            color: r.rank <= 3 ? RANK_COLORS[r.rank - 1] : "rgba(255,255,255,.3)",
-            fontFamily: "monospace",
-          }}>
+        <div
+          key={r.rank}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            padding: "6px 10px",
+            borderRadius: 2,
+            background: r.rank <= 3 ? `${RANK_COLORS[r.rank - 1]}08` : "transparent",
+            borderLeft:
+              r.rank <= 3 ? `3px solid ${RANK_COLORS[r.rank - 1]}` : "3px solid transparent",
+          }}
+        >
+          <span
+            style={{
+              width: 22,
+              textAlign: "center",
+              fontWeight: 900,
+              fontSize: 13,
+              color: r.rank <= 3 ? RANK_COLORS[r.rank - 1] : "rgba(255,255,255,.3)",
+              fontFamily: "monospace",
+            }}
+          >
             {r.rank}
           </span>
           <span style={{ flex: 1, fontSize: 12, fontWeight: 600, color: "rgba(243,244,246,.85)" }}>
             {r.name}
           </span>
-          <span style={{
-            fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 2,
-            background: "rgba(124,58,237,.1)", color: "#a78bfa", textTransform: "uppercase",
-            letterSpacing: "0.5px",
-          }}>
+          <span
+            style={{
+              fontSize: 9,
+              fontWeight: 700,
+              padding: "2px 6px",
+              borderRadius: 2,
+              background: "rgba(124,58,237,.1)",
+              color: "#a78bfa",
+              textTransform: "uppercase",
+              letterSpacing: "0.5px",
+            }}
+          >
             {r.tier}
           </span>
           <span style={{ fontSize: 10, opacity: 0.35, fontFamily: "monospace" }}>
@@ -1194,11 +2710,18 @@ const CB_ACTIVITIES: { v: string; label: string }[] = [
   { v: "CRUCIBLE", label: "A Crucible match" },
   { v: "GAMBIT", label: "A Gambit match" },
 ];
-const CB_ACT_LABEL: Record<string, string> = Object.fromEntries(CB_ACTIVITIES.map(a => [a.v, a.label]));
+const CB_ACT_LABEL: Record<string, string> = Object.fromEntries(
+  CB_ACTIVITIES.map((a) => [a.v, a.label]),
+);
 
 type CBStep = { activity: string; count: number; mods: string[] };
 
-function ChallengeBuilder({ lobbyId, myCreated, onClose, onChanged }: {
+function ChallengeBuilder({
+  lobbyId,
+  myCreated,
+  onClose,
+  onChanged,
+}: {
   lobbyId: string;
   myCreated: any[];
   onClose: () => void;
@@ -1212,7 +2735,12 @@ function ChallengeBuilder({ lobbyId, myCreated, onClose, onChanged }: {
 
   useEffect(() => {
     apiFetch("/challenges/modifiers/catalog").then((j: any) => {
-      if (j?.modifiers) setCatalog(j.modifiers.filter((m: any) => m.slotKind === "PLAYER_PICK" && (m.tab === "BOON" || m.tab === "CHALLENGE")));
+      if (j?.modifiers)
+        setCatalog(
+          j.modifiers.filter(
+            (m: any) => m.slotKind === "PLAYER_PICK" && (m.tab === "BOON" || m.tab === "CHALLENGE"),
+          ),
+        );
     });
   }, []);
 
@@ -1222,38 +2750,58 @@ function ChallengeBuilder({ lobbyId, myCreated, onClose, onChanged }: {
   ];
 
   function setStep(i: number, patch: Partial<CBStep>) {
-    setSteps(prev => prev.map((s, idx) => idx === i ? { ...s, ...patch } : s));
+    setSteps((prev) => prev.map((s, idx) => (idx === i ? { ...s, ...patch } : s)));
   }
   function toggleMod(i: number, slug: string) {
-    setSteps(prev => prev.map((s, idx) => {
-      if (idx !== i) return s;
-      const has = s.mods.includes(slug);
-      return { ...s, mods: has ? s.mods.filter(x => x !== slug) : [...s.mods, slug] };
-    }));
+    setSteps((prev) =>
+      prev.map((s, idx) => {
+        if (idx !== i) return s;
+        const has = s.mods.includes(slug);
+        return { ...s, mods: has ? s.mods.filter((x) => x !== slug) : [...s.mods, slug] };
+      }),
+    );
   }
-  function addStep() { if (steps.length < 5) setSteps(prev => [...prev, { activity: "ANY", count: 1, mods: [] }]); }
-  function removeStep(i: number) { setSteps(prev => prev.filter((_, idx) => idx !== i)); }
+  function addStep() {
+    if (steps.length < 5) setSteps((prev) => [...prev, { activity: "ANY", count: 1, mods: [] }]);
+  }
+  function removeStep(i: number) {
+    setSteps((prev) => prev.filter((_, idx) => idx !== i));
+  }
 
-  const modName = (slug: string) => catalog.find(m => m.slug === slug)?.name || slug;
-  const preview = steps.map(s => {
-    const a = (CB_ACT_LABEL[s.activity] || "Any activity").toLowerCase();
-    const m = s.mods.length ? ` with ${s.mods.map(modName).join(" + ")}` : "";
-    return `${s.count}× ${a}${m}`;
-  }).join(", then ");
+  const modName = (slug: string) => catalog.find((m) => m.slug === slug)?.name || slug;
+  const preview = steps
+    .map((s) => {
+      const a = (CB_ACT_LABEL[s.activity] || "Any activity").toLowerCase();
+      const m = s.mods.length ? ` with ${s.mods.map(modName).join(" + ")}` : "";
+      return `${s.count}× ${a}${m}`;
+    })
+    .join(", then ");
 
   const atCap = myCreated.length >= 3;
 
   async function create() {
-    setBusy(true); setError("");
+    setBusy(true);
+    setError("");
     try {
       const j = await apiFetch("/challenges/member-create", {
         method: "POST",
-        body: JSON.stringify({ lobbyId, title: title.trim() || undefined, steps: steps.map(s => ({ activity: s.activity, count: s.count, modifiers: s.mods })) }),
+        body: JSON.stringify({
+          lobbyId,
+          title: title.trim() || undefined,
+          steps: steps.map((s) => ({ activity: s.activity, count: s.count, modifiers: s.mods })),
+        }),
       });
-      if (j?.ok === false || !j?.definition) { setError(j?.message || j?.error || "Could not create challenge."); return; }
-      onChanged(); onClose();
-    } catch (e: any) { setError(e?.message || "Failed"); }
-    finally { setBusy(false); }
+      if (j?.ok === false || !j?.definition) {
+        setError(j?.message || j?.error || "Could not create challenge.");
+        return;
+      }
+      onChanged();
+      onClose();
+    } catch (e: any) {
+      setError(e?.message || "Failed");
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function del(defId: string) {
@@ -1262,25 +2810,92 @@ function ChallengeBuilder({ lobbyId, myCreated, onClose, onChanged }: {
   }
 
   return (
-    <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 300, background: "rgba(6,5,3,.82)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-      <div onClick={e => e.stopPropagation()} style={{ width: 560, maxWidth: "100%", maxHeight: "88vh", overflowY: "auto", background: "#15110b", border: `1px solid ${CB_ACCENT}55`, borderRadius: 6, padding: 18 }}>
+    <div
+      onClick={onClose}
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 300,
+        background: "rgba(6,5,3,.82)",
+        backdropFilter: "blur(4px)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 16,
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          width: 560,
+          maxWidth: "100%",
+          maxHeight: "88vh",
+          overflowY: "auto",
+          background: "#15110b",
+          border: `1px solid ${CB_ACCENT}55`,
+          borderRadius: 6,
+          padding: 18,
+        }}
+      >
         <div style={{ display: "flex", alignItems: "center", marginBottom: 12 }}>
-          <div style={{ fontSize: 15, fontWeight: 800, letterSpacing: 0.5, color: CB_ACCENT, textTransform: "uppercase" }}>Build a Challenge</div>
-          <button onClick={onClose} style={{ marginLeft: "auto", ...S.btn }}>{"✕"}</button>
+          <div
+            style={{
+              fontSize: 15,
+              fontWeight: 800,
+              letterSpacing: 0.5,
+              color: CB_ACCENT,
+              textTransform: "uppercase",
+            }}
+          >
+            Build a Challenge
+          </div>
+          <button onClick={onClose} style={{ marginLeft: "auto", ...S.btn }}>
+            {"✕"}
+          </button>
         </div>
 
-        <div style={{ fontSize: 11, color: "rgba(255,255,255,.5)", marginBottom: 14, lineHeight: 1.5 }}>
-          Pick an activity and the modifiers to enable in Custom Ops. Complete it in-game and it credits automatically. Up to 3 live challenges per member.
+        <div
+          style={{ fontSize: 11, color: "rgba(255,255,255,.5)", marginBottom: 14, lineHeight: 1.5 }}
+        >
+          Pick an activity and the modifiers to enable in Custom Ops. Complete it in-game and it
+          credits automatically. Up to 3 live challenges per member.
         </div>
 
         {myCreated.length > 0 && (
           <div style={{ marginBottom: 14 }}>
             <div style={S.label}>Your challenges ({myCreated.length}/3)</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-              {myCreated.map(c => (
-                <div key={c.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 10px", background: "rgba(255,255,255,.03)", border: "1px solid rgba(255,255,255,.08)", borderRadius: 3 }}>
-                  <span style={{ fontSize: 12, color: "rgba(255,255,255,.85)", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.definition?.title}</span>
-                  <button onClick={() => del(c.definition.id)} style={{ ...S.btn, fontSize: 11, padding: "3px 8px" }}>Delete</button>
+              {myCreated.map((c) => (
+                <div
+                  key={c.id}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    padding: "6px 10px",
+                    background: "rgba(255,255,255,.03)",
+                    border: "1px solid rgba(255,255,255,.08)",
+                    borderRadius: 3,
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: 12,
+                      color: "rgba(255,255,255,.85)",
+                      flex: 1,
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {c.definition?.title}
+                  </span>
+                  <button
+                    onClick={() => del(c.definition.id)}
+                    style={{ ...S.btn, fontSize: 11, padding: "3px 8px" }}
+                  >
+                    Delete
+                  </button>
                 </div>
               ))}
             </div>
@@ -1289,46 +2904,115 @@ function ChallengeBuilder({ lobbyId, myCreated, onClose, onChanged }: {
 
         <div style={{ marginBottom: 12 }}>
           <div style={S.label}>Name (optional)</div>
-          <input value={title} onChange={e => setTitle(e.target.value.slice(0, 80))} placeholder="Auto-named from your picks" style={S.input} />
+          <input
+            value={title}
+            onChange={(e) => setTitle(e.target.value.slice(0, 80))}
+            placeholder="Auto-named from your picks"
+            style={S.input}
+          />
         </div>
 
         {steps.map((s, i) => (
-          <div key={i} style={{ marginBottom: 10, padding: 12, background: "rgba(255,255,255,.025)", border: "1px solid rgba(255,255,255,.08)", borderRadius: 4 }}>
+          <div
+            key={i}
+            style={{
+              marginBottom: 10,
+              padding: 12,
+              background: "rgba(255,255,255,.025)",
+              border: "1px solid rgba(255,255,255,.08)",
+              borderRadius: 4,
+            }}
+          >
             <div style={{ display: "flex", alignItems: "center", marginBottom: 8 }}>
-              <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1, color: CB_ACCENT, textTransform: "uppercase" }}>Step {i + 1}</div>
-              {steps.length > 1 && <button onClick={() => removeStep(i)} style={{ marginLeft: "auto", ...S.btn, fontSize: 11, padding: "2px 8px" }}>Remove</button>}
+              <div
+                style={{
+                  fontSize: 10,
+                  fontWeight: 800,
+                  letterSpacing: 1,
+                  color: CB_ACCENT,
+                  textTransform: "uppercase",
+                }}
+              >
+                Step {i + 1}
+              </div>
+              {steps.length > 1 && (
+                <button
+                  onClick={() => removeStep(i)}
+                  style={{ marginLeft: "auto", ...S.btn, fontSize: 11, padding: "2px 8px" }}
+                >
+                  Remove
+                </button>
+              )}
             </div>
             <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
               <div style={{ flex: 1 }}>
                 <div style={S.label}>Activity</div>
-                <select value={s.activity} onChange={e => setStep(i, { activity: e.target.value })} style={{ ...S.input, cursor: "pointer" }}>
-                  {CB_ACTIVITIES.map(a => <option key={a.v} value={a.v}>{a.label}</option>)}
+                <select
+                  value={s.activity}
+                  onChange={(e) => setStep(i, { activity: e.target.value })}
+                  style={{ ...S.input, cursor: "pointer" }}
+                >
+                  {CB_ACTIVITIES.map((a) => (
+                    <option key={a.v} value={a.v}>
+                      {a.label}
+                    </option>
+                  ))}
                 </select>
               </div>
               <div style={{ width: 90 }}>
                 <div style={S.label}>How many</div>
-                <input type="number" min={1} max={10} value={s.count} onChange={e => setStep(i, { count: Math.max(1, Math.min(10, parseInt(e.target.value) || 1)) })} style={S.input} />
+                <input
+                  type="number"
+                  min={1}
+                  max={10}
+                  value={s.count}
+                  onChange={(e) =>
+                    setStep(i, { count: Math.max(1, Math.min(10, parseInt(e.target.value) || 1)) })
+                  }
+                  style={S.input}
+                />
               </div>
             </div>
             <div style={S.label}>Modifiers to turn on</div>
-            {groups.map(g => {
-              const items = catalog.filter(m => m.tab === g.tab);
+            {groups.map((g) => {
+              const items = catalog.filter((m) => m.tab === g.tab);
               if (!items.length) return null;
               return (
                 <div key={g.tab} style={{ marginBottom: 8 }}>
-                  <div style={{ fontSize: 9, fontWeight: 700, color: "rgba(255,255,255,.4)", marginBottom: 4 }}>{g.label}</div>
+                  <div
+                    style={{
+                      fontSize: 9,
+                      fontWeight: 700,
+                      color: "rgba(255,255,255,.4)",
+                      marginBottom: 4,
+                    }}
+                  >
+                    {g.label}
+                  </div>
                   <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
-                    {items.map(m => {
+                    {items.map((m) => {
                       const on = s.mods.includes(m.slug);
                       return (
-                        <button key={m.slug} onClick={() => toggleMod(i, m.slug)} title={m.description} style={{
-                          display: "inline-flex", alignItems: "center", gap: 5, padding: "4px 9px",
-                          background: on ? `${CB_ACCENT}28` : "rgba(255,255,255,.04)",
-                          border: `1px solid ${on ? CB_ACCENT : "rgba(255,255,255,.12)"}`,
-                          color: on ? "#fff" : "rgba(255,255,255,.7)",
-                          borderRadius: 999, fontSize: 11, fontWeight: 600, cursor: "pointer",
-                        }}>
-                          <span>{m.icon || (on ? "☑" : "☐")}</span>{m.name}
+                        <button
+                          key={m.slug}
+                          onClick={() => toggleMod(i, m.slug)}
+                          title={m.description}
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 5,
+                            padding: "4px 9px",
+                            background: on ? `${CB_ACCENT}28` : "rgba(255,255,255,.04)",
+                            border: `1px solid ${on ? CB_ACCENT : "rgba(255,255,255,.12)"}`,
+                            color: on ? "#fff" : "rgba(255,255,255,.7)",
+                            borderRadius: 999,
+                            fontSize: 11,
+                            fontWeight: 600,
+                            cursor: "pointer",
+                          }}
+                        >
+                          <span>{m.icon || (on ? "☑" : "☐")}</span>
+                          {m.name}
                         </button>
                       );
                     })}
@@ -1339,22 +3023,64 @@ function ChallengeBuilder({ lobbyId, myCreated, onClose, onChanged }: {
           </div>
         ))}
 
-        {steps.length < 5 && <button onClick={addStep} style={{ ...S.btn, width: "100%", marginBottom: 12 }}>+ Add another step</button>}
+        {steps.length < 5 && (
+          <button onClick={addStep} style={{ ...S.btn, width: "100%", marginBottom: 12 }}>
+            + Add another step
+          </button>
+        )}
 
-        <div style={{ padding: "10px 12px", background: "rgba(74,222,128,.07)", border: "1px solid rgba(74,222,128,.25)", borderRadius: 4, marginBottom: 12 }}>
-          <div style={{ fontSize: 9, fontWeight: 700, color: "rgba(134,239,172,.8)", textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 3 }}>Preview</div>
-          <div style={{ fontSize: 12, color: "rgba(255,255,255,.85)" }}>{"✓"} Complete {preview || "…"}</div>
+        <div
+          style={{
+            padding: "10px 12px",
+            background: "rgba(74,222,128,.07)",
+            border: "1px solid rgba(74,222,128,.25)",
+            borderRadius: 4,
+            marginBottom: 12,
+          }}
+        >
+          <div
+            style={{
+              fontSize: 9,
+              fontWeight: 700,
+              color: "rgba(134,239,172,.8)",
+              textTransform: "uppercase",
+              letterSpacing: 0.6,
+              marginBottom: 3,
+            }}
+          >
+            Preview
+          </div>
+          <div style={{ fontSize: 12, color: "rgba(255,255,255,.85)" }}>
+            {"✓"} Complete {preview || "…"}
+          </div>
         </div>
 
         {error && <div style={{ fontSize: 12, color: "#fca5a5", marginBottom: 10 }}>{error}</div>}
 
-        <button onClick={create} disabled={busy || atCap} style={{
-          width: "100%", padding: "11px", borderRadius: 3, border: `1px solid ${CB_ACCENT}`,
-          background: atCap ? "rgba(255,255,255,.06)" : `linear-gradient(135deg, ${CB_ACCENT}, #ff9a40)`,
-          color: atCap ? "rgba(255,255,255,.4)" : "#1a0e04", fontSize: 12, fontWeight: 800, letterSpacing: 1,
-          textTransform: "uppercase", cursor: atCap || busy ? "not-allowed" : "pointer",
-        }}>
-          {atCap ? "You have 3 live challenges — delete one" : busy ? "Creating…" : "Create Challenge"}
+        <button
+          onClick={create}
+          disabled={busy || atCap}
+          style={{
+            width: "100%",
+            padding: "11px",
+            borderRadius: 3,
+            border: `1px solid ${CB_ACCENT}`,
+            background: atCap
+              ? "rgba(255,255,255,.06)"
+              : `linear-gradient(135deg, ${CB_ACCENT}, #ff9a40)`,
+            color: atCap ? "rgba(255,255,255,.4)" : "#1a0e04",
+            fontSize: 12,
+            fontWeight: 800,
+            letterSpacing: 1,
+            textTransform: "uppercase",
+            cursor: atCap || busy ? "not-allowed" : "pointer",
+          }}
+        >
+          {atCap
+            ? "You have 3 live challenges — delete one"
+            : busy
+              ? "Creating…"
+              : "Create Challenge"}
         </button>
       </div>
     </div>
@@ -1381,7 +3107,9 @@ function ChallengeBoard({ lobbyId }: { lobbyId: string }) {
     setLoading(false);
   }, [lobbyId]);
 
-  useEffect(() => { fetchAll(); }, [fetchAll]);
+  useEffect(() => {
+    fetchAll();
+  }, [fetchAll]);
 
   useEffect(() => {
     function onChallengeEvent(e: Event) {
@@ -1389,17 +3117,24 @@ function ChallengeBoard({ lobbyId }: { lobbyId: string }) {
       if (!d?.instanceId) return;
 
       if (d.type === "challenge:progress") {
-        setMyEnrollments(prev => prev.map(en =>
-          en.instanceId === d.instanceId ? { ...en, progress: d.progress } : en
-        ));
+        setMyEnrollments((prev) =>
+          prev.map((en) => (en.instanceId === d.instanceId ? { ...en, progress: d.progress } : en)),
+        );
       }
 
       if (d.type === "challenge:completed") {
-        setMyEnrollments(prev => prev.map(en =>
-          en.instanceId === d.instanceId
-            ? { ...en, progress: d.progress, status: "COMPLETED", completedAt: new Date().toISOString() }
-            : en
-        ));
+        setMyEnrollments((prev) =>
+          prev.map((en) =>
+            en.instanceId === d.instanceId
+              ? {
+                  ...en,
+                  progress: d.progress,
+                  status: "COMPLETED",
+                  completedAt: new Date().toISOString(),
+                }
+              : en,
+          ),
+        );
       }
     }
 
@@ -1408,80 +3143,132 @@ function ChallengeBoard({ lobbyId }: { lobbyId: string }) {
   }, []);
 
   const enroll = async (instanceId: string) => {
-    await apiFetch(`/challenges/${instanceId}/enroll`, { method: "POST", body: JSON.stringify({}) });
+    await apiFetch(`/challenges/${instanceId}/enroll`, {
+      method: "POST",
+      body: JSON.stringify({}),
+    });
     fetchAll();
   };
   const abandon = async (instanceId: string) => {
-    await apiFetch(`/challenges/${instanceId}/enroll`, { method: "DELETE", body: JSON.stringify({}) });
+    await apiFetch(`/challenges/${instanceId}/enroll`, {
+      method: "DELETE",
+      body: JSON.stringify({}),
+    });
     fetchAll();
   };
 
   const enrollMap = new Map<string, any>();
   for (const e of myEnrollments) enrollMap.set(e.instanceId, e);
 
-  const activeChallenges = challenges.filter(c => c.status === "ACTIVE");
-  const myChallenges = myEnrollments.filter(e => e.status === "ACTIVE");
-  const completedChallenges = myEnrollments.filter(e => e.status === "COMPLETED");
+  const activeChallenges = challenges.filter((c) => c.status === "ACTIVE");
+  const myChallenges = myEnrollments.filter((e) => e.status === "ACTIVE");
+  const completedChallenges = myEnrollments.filter((e) => e.status === "COMPLETED");
   const uid = currentUserId();
-  const myCreated = challenges.filter(c => c?.definition?.createdById && c.definition.createdById === uid);
+  const myCreated = challenges.filter(
+    (c) => c?.definition?.createdById && c.definition.createdById === uid,
+  );
 
-  const lbChallenge = leaderboardId ? challenges.find(c => c.id === leaderboardId) : null;
+  const lbChallenge = leaderboardId ? challenges.find((c) => c.id === leaderboardId) : null;
 
-  if (loading) return <div style={{ padding: 20, opacity: 0.4, fontSize: 12 }}>Loading challenges...</div>;
+  if (loading)
+    return <div style={{ padding: 20, opacity: 0.4, fontSize: 12 }}>Loading challenges...</div>;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      {showBuilder && <ChallengeBuilder lobbyId={lobbyId} myCreated={myCreated} onClose={() => setShowBuilder(false)} onChanged={fetchAll} />}
+      {showBuilder && (
+        <ChallengeBuilder
+          lobbyId={lobbyId}
+          myCreated={myCreated}
+          onClose={() => setShowBuilder(false)}
+          onChanged={fetchAll}
+        />
+      )}
       <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-        {(["active", "mine", "completed", "leaderboard"] as const).map(t => (
-          <button key={t} onClick={() => setSubTab(t)} style={{
-            padding: "5px 12px", borderRadius: 2,
-            border: subTab === t ? "1px solid rgba(79,136,198,.4)" : "1px solid rgba(255,255,255,.08)",
-            background: subTab === t ? "rgba(79,136,198,.12)" : "rgba(255,255,255,.03)",
-            color: subTab === t ? "rgba(243,244,246,.9)" : "rgba(148,163,184,.6)",
-            fontSize: 11, fontWeight: subTab === t ? 700 : 400, cursor: "pointer",
-          }}>
-            {t === "active" ? `Challenges (${activeChallenges.length})` :
-             t === "mine" ? `My Active (${myChallenges.length})` :
-             t === "completed" ? `Completed (${completedChallenges.length})` :
-             "🏆 Leaderboard"}
+        {(["active", "mine", "completed", "leaderboard"] as const).map((t) => (
+          <button
+            key={t}
+            onClick={() => setSubTab(t)}
+            style={{
+              padding: "5px 12px",
+              borderRadius: 2,
+              border:
+                subTab === t ? "1px solid rgba(79,136,198,.4)" : "1px solid rgba(255,255,255,.08)",
+              background: subTab === t ? "rgba(79,136,198,.12)" : "rgba(255,255,255,.03)",
+              color: subTab === t ? "rgba(243,244,246,.9)" : "rgba(148,163,184,.6)",
+              fontSize: 11,
+              fontWeight: subTab === t ? 700 : 400,
+              cursor: "pointer",
+            }}
+          >
+            {t === "active"
+              ? `Challenges (${activeChallenges.length})`
+              : t === "mine"
+                ? `My Active (${myChallenges.length})`
+                : t === "completed"
+                  ? `Completed (${completedChallenges.length})`
+                  : "🏆 Leaderboard"}
           </button>
         ))}
-        <button onClick={() => setShowBuilder(true)} style={{ marginLeft: "auto", padding: "5px 12px", borderRadius: 2, border: "1px solid rgba(245,130,32,.5)", background: "rgba(245,130,32,.14)", color: "#f7a64a", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>+ Build a Challenge</button>
+        <button
+          onClick={() => setShowBuilder(true)}
+          style={{
+            marginLeft: "auto",
+            padding: "5px 12px",
+            borderRadius: 2,
+            border: "1px solid rgba(245,130,32,.5)",
+            background: "rgba(245,130,32,.14)",
+            color: "#f7a64a",
+            fontSize: 11,
+            fontWeight: 700,
+            cursor: "pointer",
+          }}
+        >
+          + Build a Challenge
+        </button>
       </div>
 
       {subTab === "active" && (
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {activeChallenges.length === 0 ? (
             <EmptyState compact title="No active challenges." hint="Drops on reset." />
-          ) : activeChallenges.map(c => (
-            <ChallengeCard
-              key={c.id}
-              challenge={c}
-              enrollment={enrollMap.get(c.id)}
-              onEnroll={() => enroll(c.id)}
-              onAbandon={() => abandon(c.id)}
-            />
-          ))}
+          ) : (
+            activeChallenges.map((c) => (
+              <ChallengeCard
+                key={c.id}
+                challenge={c}
+                enrollment={enrollMap.get(c.id)}
+                onEnroll={() => enroll(c.id)}
+                onAbandon={() => abandon(c.id)}
+              />
+            ))
+          )}
         </div>
       )}
 
       {subTab === "mine" && (
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {myChallenges.length === 0 ? (
-            <div style={{ padding: 20, textAlign: "center", opacity: 0.3, fontSize: 12 }}>You haven&apos;t enrolled in any challenges yet.</div>
-          ) : myChallenges.map(e => {
-            const c = challenges.find(ch => ch.id === e.instanceId) || { definition: e.instance?.definition, _count: { enrollments: 0 }, ...e.instance };
-            return (
-              <ChallengeCard
-                key={e.id}
-                challenge={c}
-                enrollment={e}
-                onEnroll={() => {}}
-                onAbandon={() => abandon(e.instanceId)}
-              />
-            );
-          })}
+            <div style={{ padding: 20, textAlign: "center", opacity: 0.3, fontSize: 12 }}>
+              You haven&apos;t enrolled in any challenges yet.
+            </div>
+          ) : (
+            myChallenges.map((e) => {
+              const c = challenges.find((ch) => ch.id === e.instanceId) || {
+                definition: e.instance?.definition,
+                _count: { enrollments: 0 },
+                ...e.instance,
+              };
+              return (
+                <ChallengeCard
+                  key={e.id}
+                  challenge={c}
+                  enrollment={e}
+                  onEnroll={() => {}}
+                  onAbandon={() => abandon(e.instanceId)}
+                />
+              );
+            })
+          )}
         </div>
       )}
 
@@ -1489,18 +3276,24 @@ function ChallengeBoard({ lobbyId }: { lobbyId: string }) {
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {completedChallenges.length === 0 ? (
             <EmptyState compact title="Nothing completed yet." hint="Get grinding." />
-          ) : completedChallenges.map(e => {
-            const c = challenges.find(ch => ch.id === e.instanceId) || { definition: e.instance?.definition, _count: { enrollments: 0 }, ...e.instance };
-            return (
-              <ChallengeCard
-                key={e.id}
-                challenge={c}
-                enrollment={e}
-                onEnroll={() => {}}
-                onAbandon={() => {}}
-              />
-            );
-          })}
+          ) : (
+            completedChallenges.map((e) => {
+              const c = challenges.find((ch) => ch.id === e.instanceId) || {
+                definition: e.instance?.definition,
+                _count: { enrollments: 0 },
+                ...e.instance,
+              };
+              return (
+                <ChallengeCard
+                  key={e.id}
+                  challenge={c}
+                  enrollment={e}
+                  onEnroll={() => {}}
+                  onAbandon={() => {}}
+                />
+              );
+            })
+          )}
         </div>
       )}
 
@@ -1508,28 +3301,50 @@ function ChallengeBoard({ lobbyId }: { lobbyId: string }) {
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           {!leaderboardId ? (
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              <div style={{ fontSize: 11, opacity: 0.5, marginBottom: 4 }}>Select a challenge to view its leaderboard:</div>
-              {activeChallenges.map(c => (
-                <button key={c.id} onClick={() => setLeaderboardId(c.id)} style={{
-                  ...S.card, cursor: "pointer", textAlign: "left",
-                  display: "flex", alignItems: "center", justifyContent: "space-between",
-                }}>
+              <div style={{ fontSize: 11, opacity: 0.5, marginBottom: 4 }}>
+                Select a challenge to view its leaderboard:
+              </div>
+              {activeChallenges.map((c) => (
+                <button
+                  key={c.id}
+                  onClick={() => setLeaderboardId(c.id)}
+                  style={{
+                    ...S.card,
+                    cursor: "pointer",
+                    textAlign: "left",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                  }}
+                >
                   <div>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: "rgba(243,244,246,.9)" }}>{c.definition.title}</div>
-                    <div style={{ fontSize: 10, opacity: 0.4 }}>{c._count?.enrollments || 0} enrolled</div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: "rgba(243,244,246,.9)" }}>
+                      {c.definition.title}
+                    </div>
+                    <div style={{ fontSize: 10, opacity: 0.4 }}>
+                      {c._count?.enrollments || 0} enrolled
+                    </div>
                   </div>
                   <span style={{ fontSize: 16, opacity: 0.3 }}>→</span>
                 </button>
               ))}
               {activeChallenges.length === 0 && (
-                <div style={{ padding: 20, textAlign: "center", opacity: 0.3, fontSize: 12 }}>No challenges available.</div>
+                <div style={{ padding: 20, textAlign: "center", opacity: 0.3, fontSize: 12 }}>
+                  No challenges available.
+                </div>
               )}
             </div>
           ) : (
             <div>
-              <button onClick={() => setLeaderboardId(null)} style={{
-                ...S.btn, fontSize: 10, marginBottom: 8, padding: "3px 10px",
-              }}>
+              <button
+                onClick={() => setLeaderboardId(null)}
+                style={{
+                  ...S.btn,
+                  fontSize: 10,
+                  marginBottom: 8,
+                  padding: "3px 10px",
+                }}
+              >
                 ← Back
               </button>
               <ChallengeLeaderboard
@@ -1544,11 +3359,30 @@ function ChallengeBoard({ lobbyId }: { lobbyId: string }) {
   );
 }
 
-const FORMAT_LABELS: Record<string, string> = { LEADERBOARD: "Leaderboard", BRACKET: "Bracket", ROUND_ROBIN: "Round Robin" };
-const STATUS_COLORS: Record<string, string> = { REGISTRATION: "#22c55e", ACTIVE: "#3b82f6", COMPLETED: "#94a3b8", CANCELED: "#ef4444" };
+const FORMAT_LABELS: Record<string, string> = {
+  LEADERBOARD: "Leaderboard",
+  BRACKET: "Bracket",
+  ROUND_ROBIN: "Round Robin",
+};
+const STATUS_COLORS: Record<string, string> = {
+  REGISTRATION: "#22c55e",
+  ACTIVE: "#3b82f6",
+  COMPLETED: "#94a3b8",
+  CANCELED: "#ef4444",
+};
 
-function TournamentCard({ tournament, myEntry, onRegister, onWithdraw, onView }: {
-  tournament: any; myEntry: any; onRegister: () => void; onWithdraw: () => void; onView: () => void;
+function TournamentCard({
+  tournament,
+  myEntry,
+  onRegister,
+  onWithdraw,
+  onView,
+}: {
+  tournament: any;
+  myEntry: any;
+  onRegister: () => void;
+  onWithdraw: () => void;
+  onView: () => void;
 }) {
   const t = tournament;
   const isRegistered = !!myEntry;
@@ -1560,20 +3394,42 @@ function TournamentCard({ tournament, myEntry, onRegister, onWithdraw, onView }:
   const isOpen = t.status === "REGISTRATION";
 
   return (
-    <div style={{
-      ...S.card,
-      borderColor: isLive ? "rgba(59,130,246,.3)" : isRegistered ? "rgba(34,197,94,.2)" : "rgba(255,255,255,.08)",
-      background: isLive ? "rgba(59,130,246,.05)" : "rgba(255,255,255,.03)",
-      display: "flex", flexDirection: "column", gap: 8,
-    }}>
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
+    <div
+      style={{
+        ...S.card,
+        borderColor: isLive
+          ? "rgba(59,130,246,.3)"
+          : isRegistered
+            ? "rgba(34,197,94,.2)"
+            : "rgba(255,255,255,.08)",
+        background: isLive ? "rgba(59,130,246,.05)" : "rgba(255,255,255,.03)",
+        display: "flex",
+        flexDirection: "column",
+        gap: 8,
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "flex-start",
+          justifyContent: "space-between",
+          gap: 8,
+        }}
+      >
         <div style={{ flex: 1 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
-            <span style={{
-              fontSize: 8, fontWeight: 800, letterSpacing: "1px", textTransform: "uppercase",
-              padding: "1px 6px", borderRadius: 2,
-              background: `${statusColor}20`, color: statusColor,
-            }}>
+            <span
+              style={{
+                fontSize: 8,
+                fontWeight: 800,
+                letterSpacing: "1px",
+                textTransform: "uppercase",
+                padding: "1px 6px",
+                borderRadius: 2,
+                background: `${statusColor}20`,
+                color: statusColor,
+              }}
+            >
               {t.status}
             </span>
             <span style={{ fontSize: 9, opacity: 0.4 }}>{FORMAT_LABELS[t.format] || t.format}</span>
@@ -1582,22 +3438,42 @@ function TournamentCard({ tournament, myEntry, onRegister, onWithdraw, onView }:
           <div style={{ fontSize: 14, fontWeight: 800, color: "rgba(243,244,246,.92)" }}>
             {t.title}
           </div>
-          {t.description && <div style={{ fontSize: 11, opacity: 0.5, marginTop: 2 }}>{t.description}</div>}
+          {t.description && (
+            <div style={{ fontSize: 11, opacity: 0.5, marginTop: 2 }}>{t.description}</div>
+          )}
         </div>
-        <div style={{
-          textAlign: "center", padding: "6px 10px", borderRadius: 2,
-          background: "rgba(59,130,246,.1)", border: "1px solid rgba(59,130,246,.2)",
-          flexShrink: 0,
-        }}>
-          <div style={{ fontSize: 16, fontWeight: 900, color: "#93c5fd" }}>{t._count?.entries || 0}</div>
-          <div style={{ fontSize: 8, fontWeight: 700, opacity: 0.5, textTransform: "uppercase", letterSpacing: "0.5px" }}>
+        <div
+          style={{
+            textAlign: "center",
+            padding: "6px 10px",
+            borderRadius: 2,
+            background: "rgba(59,130,246,.1)",
+            border: "1px solid rgba(59,130,246,.2)",
+            flexShrink: 0,
+          }}
+        >
+          <div style={{ fontSize: 16, fontWeight: 900, color: "#93c5fd" }}>
+            {t._count?.entries || 0}
+          </div>
+          <div
+            style={{
+              fontSize: 8,
+              fontWeight: 700,
+              opacity: 0.5,
+              textTransform: "uppercase",
+              letterSpacing: "0.5px",
+            }}
+          >
             /{t.maxEntries}
           </div>
         </div>
       </div>
 
       <div style={{ display: "flex", gap: 12, fontSize: 10, opacity: 0.4 }}>
-        <span>Starts: {startsAt.toLocaleDateString()} {startsAt.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</span>
+        <span>
+          Starts: {startsAt.toLocaleDateString()}{" "}
+          {startsAt.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
+        </span>
         <span>Ends: {endsAt.toLocaleDateString()}</span>
       </div>
 
@@ -1606,11 +3482,34 @@ function TournamentCard({ tournament, myEntry, onRegister, onWithdraw, onView }:
         const flair = rewards.find((r: any) => r?.kind === "FLAIR" && r?.rank === 1 && r?.item);
         if (!flair) return null;
         return (
-          <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 10px", borderRadius: 2, background: "rgba(124,58,237,.08)", border: "1px solid rgba(124,58,237,.22)" }}>
-            {flair.item.imageUrl
-              ? <img src={flair.item.imageUrl} alt={flair.item.name} style={{ width: 20, height: 20, borderRadius: 2, objectFit: "cover" }} />
-              : <span style={{ fontSize: 12 }}>🏷️</span>}
-            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".4px", color: "rgb(216,180,254)" }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              padding: "5px 10px",
+              borderRadius: 2,
+              background: "rgba(124,58,237,.08)",
+              border: "1px solid rgba(124,58,237,.22)",
+            }}
+          >
+            {flair.item.imageUrl ? (
+              <img
+                src={flair.item.imageUrl}
+                alt={flair.item.name}
+                style={{ width: 20, height: 20, borderRadius: 2, objectFit: "cover" }}
+              />
+            ) : (
+              <span style={{ fontSize: 12 }}>🏷️</span>
+            )}
+            <div
+              style={{
+                fontSize: 10,
+                fontWeight: 700,
+                letterSpacing: ".4px",
+                color: "rgb(216,180,254)",
+              }}
+            >
               WINNER FLAIR
             </div>
             <div style={{ fontSize: 11, fontWeight: 600, color: "rgba(243,244,246,.85)" }}>
@@ -1623,25 +3522,50 @@ function TournamentCard({ tournament, myEntry, onRegister, onWithdraw, onView }:
         );
       })()}
 
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 2 }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          marginTop: 2,
+        }}
+      >
         <button onClick={onView} style={{ ...S.btn, fontSize: 10, padding: "4px 10px" }}>
           View Leaderboard
         </button>
         <div style={{ display: "flex", gap: 6 }}>
           {isOpen && !isRegistered && (
-            <button onClick={onRegister} style={{ ...S.btnPri, fontSize: 11, padding: "5px 14px" }}>Register</button>
+            <button onClick={onRegister} style={{ ...S.btnPri, fontSize: 11, padding: "5px 14px" }}>
+              Register
+            </button>
           )}
           {isOpen && isRegistered && (
-            <button onClick={onWithdraw} style={{
-              ...S.btn, fontSize: 10, padding: "3px 10px",
-              borderColor: "rgba(239,68,68,.25)", color: "rgba(252,165,165,.7)",
-            }}>Withdraw</button>
+            <button
+              onClick={onWithdraw}
+              style={{
+                ...S.btn,
+                fontSize: 10,
+                padding: "3px 10px",
+                borderColor: "rgba(239,68,68,.25)",
+                color: "rgba(252,165,165,.7)",
+              }}
+            >
+              Withdraw
+            </button>
           )}
           {isRegistered && (
-            <span style={{
-              padding: "4px 10px", borderRadius: 2, fontSize: 10, fontWeight: 700,
-              background: "rgba(34,197,94,.12)", color: "#86efac",
-            }}>Registered</span>
+            <span
+              style={{
+                padding: "4px 10px",
+                borderRadius: 2,
+                fontSize: 10,
+                fontWeight: 700,
+                background: "rgba(34,197,94,.12)",
+                color: "#86efac",
+              }}
+            >
+              Registered
+            </span>
           )}
         </div>
       </div>
@@ -1649,12 +3573,20 @@ function TournamentCard({ tournament, myEntry, onRegister, onWithdraw, onView }:
   );
 }
 
-function TournamentLeaderboardView({ tournamentId, title, onBack }: { tournamentId: string; title: string; onBack: () => void }) {
+function TournamentLeaderboardView({
+  tournamentId,
+  title,
+  onBack,
+}: {
+  tournamentId: string;
+  title: string;
+  onBack: () => void;
+}) {
   const [rows, setRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    apiFetch(`/tournaments/${tournamentId}/leaderboard`).then(res => {
+    apiFetch(`/tournaments/${tournamentId}/leaderboard`).then((res) => {
       if (res?.leaderboard) setRows(res.leaderboard);
       setLoading(false);
     });
@@ -1664,7 +3596,10 @@ function TournamentLeaderboardView({ tournamentId, title, onBack }: { tournament
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-      <button onClick={onBack} style={{ ...S.btn, fontSize: 10, padding: "3px 10px", alignSelf: "flex-start" }}>
+      <button
+        onClick={onBack}
+        style={{ ...S.btn, fontSize: 10, padding: "3px 10px", alignSelf: "flex-start" }}
+      >
         ← Back
       </button>
       <div style={{ fontSize: 13, fontWeight: 800, color: "rgba(243,244,246,.9)" }}>{title}</div>
@@ -1672,27 +3607,46 @@ function TournamentLeaderboardView({ tournamentId, title, onBack }: { tournament
         <LoadingState compact label="Loading" />
       ) : rows.length === 0 ? (
         <EmptyState compact title="No entries yet." />
-      ) : rows.map((r: any) => (
-        <div key={r.id} style={{
-          display: "flex", alignItems: "center", gap: 10, padding: "6px 10px", borderRadius: 2,
-          background: r.rank <= 3 ? `${RANK_COLORS[r.rank - 1]}08` : "transparent",
-          borderLeft: r.rank <= 3 ? `3px solid ${RANK_COLORS[r.rank - 1]}` : "3px solid transparent",
-        }}>
-          <span style={{
-            width: 22, textAlign: "center", fontWeight: 900, fontSize: 13,
-            color: r.rank <= 3 ? RANK_COLORS[r.rank - 1] : "rgba(255,255,255,.3)",
-            fontFamily: "monospace",
-          }}>
-            {r.rank}
-          </span>
-          <span style={{ flex: 1, fontSize: 12, fontWeight: 600, color: "rgba(243,244,246,.85)" }}>
-            {r.displayName || "Unknown"}
-          </span>
-          <span style={{ fontSize: 13, fontWeight: 900, color: "#93c5fd", fontFamily: "monospace" }}>
-            {r.score.toLocaleString()}
-          </span>
-        </div>
-      ))}
+      ) : (
+        rows.map((r: any) => (
+          <div
+            key={r.id}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              padding: "6px 10px",
+              borderRadius: 2,
+              background: r.rank <= 3 ? `${RANK_COLORS[r.rank - 1]}08` : "transparent",
+              borderLeft:
+                r.rank <= 3 ? `3px solid ${RANK_COLORS[r.rank - 1]}` : "3px solid transparent",
+            }}
+          >
+            <span
+              style={{
+                width: 22,
+                textAlign: "center",
+                fontWeight: 900,
+                fontSize: 13,
+                color: r.rank <= 3 ? RANK_COLORS[r.rank - 1] : "rgba(255,255,255,.3)",
+                fontFamily: "monospace",
+              }}
+            >
+              {r.rank}
+            </span>
+            <span
+              style={{ flex: 1, fontSize: 12, fontWeight: 600, color: "rgba(243,244,246,.85)" }}
+            >
+              {r.displayName || "Unknown"}
+            </span>
+            <span
+              style={{ fontSize: 13, fontWeight: 900, color: "#93c5fd", fontFamily: "monospace" }}
+            >
+              {r.score.toLocaleString()}
+            </span>
+          </div>
+        ))
+      )}
     </div>
   );
 }
@@ -1708,7 +3662,9 @@ function TournamentBoard({ lobbyId }: { lobbyId: string }) {
     setLoading(false);
   }, [lobbyId]);
 
-  useEffect(() => { fetchAll(); }, [fetchAll]);
+  useEffect(() => {
+    fetchAll();
+  }, [fetchAll]);
 
   const register = async (id: string) => {
     await apiFetch(`/tournaments/${id}/register`, { method: "POST", body: JSON.stringify({}) });
@@ -1719,10 +3675,11 @@ function TournamentBoard({ lobbyId }: { lobbyId: string }) {
     fetchAll();
   };
 
-  if (loading) return <div style={{ padding: 20, opacity: 0.4, fontSize: 12 }}>Loading tournaments...</div>;
+  if (loading)
+    return <div style={{ padding: 20, opacity: 0.4, fontSize: 12 }}>Loading tournaments...</div>;
 
   if (viewId) {
-    const t = tournaments.find(t => t.id === viewId);
+    const t = tournaments.find((t) => t.id === viewId);
     return (
       <TournamentLeaderboardView
         tournamentId={viewId}
@@ -1738,7 +3695,7 @@ function TournamentBoard({ lobbyId }: { lobbyId: string }) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-      {tournaments.map(t => (
+      {tournaments.map((t) => (
         <TournamentCard
           key={t.id}
           tournament={t}
@@ -1753,16 +3710,16 @@ function TournamentBoard({ lobbyId }: { lobbyId: string }) {
 }
 
 const TABS = [
-  { id: "streams",    label: "Live Streams",  icon: "📺" },
-  { id: "lfg",        label: "Fireteams",     icon: "🔥" },
-  { id: "challenges", label: "Challenges",    icon: "🎯" },
-  { id: "tournaments", label: "Tournaments",  icon: "🏆" },
-  { id: "weekly",     label: "Weekly Reset",  icon: "📋" },
-  { id: "guardian",   label: "Guardian Lookup", icon: "🔍" },
-  { id: "myguardian", label: "My Guardian",   icon: "⚔" },
+  { id: "streams", label: "Live Streams", icon: "📺" },
+  { id: "lfg", label: "Fireteams", icon: "🔥" },
+  { id: "challenges", label: "Challenges", icon: "🎯" },
+  { id: "tournaments", label: "Tournaments", icon: "🏆" },
+  { id: "weekly", label: "Weekly Reset", icon: "📋" },
+  { id: "guardian", label: "Guardian Lookup", icon: "🔍" },
+  { id: "myguardian", label: "My Guardian", icon: "⚔" },
 ] as const;
 
-type TabId = typeof TABS[number]["id"];
+type TabId = (typeof TABS)[number]["id"];
 
 export default function LobbyModulesPanel({
   lobbyId,
@@ -1780,25 +3737,64 @@ export default function LobbyModulesPanel({
   isStaff?: boolean;
 }) {
   const [tab, setTab] = useState<TabId>("streams");
-  useWatchHere(useCallback(() => { setTab("streams"); }, []));
+  useWatchHere(
+    useCallback(() => {
+      setTab("streams");
+    }, []),
+  );
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0, ...style }}>
-      <ModuleTabBar tabs={TABS} active={tab} onSelect={(id) => setTab(id as TabId)} accent={accentColor} />
+    <div
+      style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0, ...style }}
+    >
+      <ModuleTabBar
+        tabs={TABS}
+        active={tab}
+        onSelect={(id) => setTab(id as TabId)}
+        accent={accentColor}
+      />
 
-      <div style={{ flex: 1, minHeight: 0, overflowY: tab === "myguardian" ? "hidden" : "auto", padding: tab === "myguardian" ? 0 : "14px 14px 14px", display: "flex", flexDirection: "column" }}>
-        {tab === "streams"    && <TwitchStreams gameName={gameName} lobbyId={lobbyId} accentColor={accentColor} />}
-        {tab === "lfg"        && <LfgBoard lobbyId={lobbyId} />}
-        {tab === "challenges"  && <ChallengeBoard lobbyId={lobbyId} />}
-        {tab === "tournaments" && <TournamentsPanel lobbyId={lobbyId} currentUserId={currentUserId} isStaff={isStaff} />}
-        {tab === "weekly"     && <BungieWeekly accentColor={accentColor} />}
-        {tab === "guardian"   && <GuardianLookup />}
+      <div
+        style={{
+          flex: 1,
+          minHeight: 0,
+          overflowY: tab === "myguardian" ? "hidden" : "auto",
+          padding: tab === "myguardian" ? 0 : "14px 14px 14px",
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
+        {tab === "streams" && (
+          <TwitchStreams gameName={gameName} lobbyId={lobbyId} accentColor={accentColor} />
+        )}
+        {tab === "lfg" && <LfgBoard lobbyId={lobbyId} />}
+        {tab === "challenges" && <ChallengeBoard lobbyId={lobbyId} />}
+        {tab === "tournaments" && (
+          <TournamentsPanel lobbyId={lobbyId} currentUserId={currentUserId} isStaff={isStaff} />
+        )}
+        {tab === "weekly" && <BungieWeekly accentColor={accentColor} />}
+        {tab === "guardian" && <GuardianLookup />}
         {tab === "myguardian" && <MyGuardian accentColor={accentColor} />}
       </div>
 
-      <div style={{ padding: "6px 14px 8px", flexShrink: 0, borderTop: "1px solid rgba(255,255,255,.04)" }}>
-        <p style={{ fontSize: 9, color: "rgba(100,116,139,.35)", lineHeight: 1.4, margin: 0, textAlign: "center" }}>
-          Weered is not affiliated with, endorsed by, or sponsored by Bungie, Inc. Destiny, Destiny 2, and all related logos and trademarks are the property of Bungie, Inc.
+      <div
+        style={{
+          padding: "6px 14px 8px",
+          flexShrink: 0,
+          borderTop: "1px solid rgba(255,255,255,.04)",
+        }}
+      >
+        <p
+          style={{
+            fontSize: 9,
+            color: "rgba(100,116,139,.35)",
+            lineHeight: 1.4,
+            margin: 0,
+            textAlign: "center",
+          }}
+        >
+          Weered is not affiliated with, endorsed by, or sponsored by Bungie, Inc. Destiny, Destiny
+          2, and all related logos and trademarks are the property of Bungie, Inc.
         </p>
       </div>
     </div>

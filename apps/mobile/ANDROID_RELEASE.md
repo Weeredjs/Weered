@@ -31,6 +31,7 @@ eas build --profile preview --platform android
 ```
 
 EAS will:
+
 - Generate an Android keystore (let it manage — answer "yes")
 - Build on Expo's cloud (free tier, ~15-20 min)
 - Print a download URL for the .apk when done
@@ -74,6 +75,7 @@ The first submit goes to **Internal Testing**. Add testers by email in Play Cons
 ## Step 5 — Internal → Closed → Open → Production
 
 Once Internal Testing is stable:
+
 - Promote in Play Console UI: Internal → Closed (small testers) → Open (anyone with the link) → Production
 - First production submission triggers Google review — usually 1-7 days for a new app
 - Subsequent updates auto-publish unless you flag for review

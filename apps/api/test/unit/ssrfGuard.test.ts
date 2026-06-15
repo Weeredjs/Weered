@@ -16,11 +16,21 @@ describe("assertSafeUrl (SSRF guard)", () => {
   });
 
   it("rejects the cloud-metadata endpoint", async () => {
-    await expect(assertSafeUrl("http://169.254.169.254/latest/meta-data/")).rejects.toThrow("private_host");
+    await expect(assertSafeUrl("http://169.254.169.254/latest/meta-data/")).rejects.toThrow(
+      "private_host",
+    );
   });
 
   it("rejects loopback / private / CGNAT IPv4", async () => {
-    for (const ip of ["127.0.0.1", "10.1.2.3", "192.168.0.1", "172.16.0.1", "172.31.255.255", "100.64.0.1", "0.0.0.0"]) {
+    for (const ip of [
+      "127.0.0.1",
+      "10.1.2.3",
+      "192.168.0.1",
+      "172.16.0.1",
+      "172.31.255.255",
+      "100.64.0.1",
+      "0.0.0.0",
+    ]) {
       await expect(assertSafeUrl(`http://${ip}/`), ip).rejects.toThrow("private_host");
     }
   });

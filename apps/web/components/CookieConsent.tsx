@@ -21,12 +21,18 @@ function loadConsent(): Consent | null {
     if (!p || typeof p !== "object") return null;
     if (p.version !== CURRENT_VERSION) return null;
     return p as Consent;
-  } catch { return null; }
+  } catch {
+    return null;
+  }
 }
 
 function saveConsent(c: Consent) {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(c)); } catch {}
-  try { window.dispatchEvent(new CustomEvent("weered:cookie:consent", { detail: c })); } catch {}
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(c));
+  } catch {}
+  try {
+    window.dispatchEvent(new CustomEvent("weered:cookie:consent", { detail: c }));
+  } catch {}
 }
 
 export function getConsent(): Consent | null {
@@ -35,7 +41,9 @@ export function getConsent(): Consent | null {
 }
 
 export function openConsentBanner() {
-  try { window.dispatchEvent(new CustomEvent("weered:cookie:open")); } catch {}
+  try {
+    window.dispatchEvent(new CustomEvent("weered:cookie:open"));
+  } catch {}
 }
 
 export default function CookieConsent() {
@@ -46,13 +54,19 @@ export default function CookieConsent() {
   useEffect(() => {
     const c = loadConsent();
     if (!c) {
-      const t = setTimeout(() => { setShow(true); setTimeout(() => setMount(true), 10); }, 700);
+      const t = setTimeout(() => {
+        setShow(true);
+        setTimeout(() => setMount(true), 10);
+      }, 700);
       return () => clearTimeout(t);
     }
   }, []);
 
   useEffect(() => {
-    function onOpen() { setShow(true); setTimeout(() => setMount(true), 10); }
+    function onOpen() {
+      setShow(true);
+      setTimeout(() => setMount(true), 10);
+    }
     window.addEventListener("weered:cookie:open", onOpen);
     return () => window.removeEventListener("weered:cookie:open", onOpen);
   }, []);
@@ -68,7 +82,10 @@ export default function CookieConsent() {
       acceptedAt: new Date().toISOString(),
     });
     setMount(false);
-    setTimeout(() => { setShow(false); setBusy(false); }, 180);
+    setTimeout(() => {
+      setShow(false);
+      setBusy(false);
+    }, 180);
   }
 
   if (!show) return null;
@@ -97,25 +114,47 @@ export default function CookieConsent() {
           border: "1px solid var(--weered-border2, rgba(148,163,184,0.28))",
           borderRadius: 14,
           padding: "16px 16px 14px",
-          boxShadow: "0 24px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.04), 0 0 40px var(--weered-accent-ring, rgba(124,58,237,0.10))",
+          boxShadow:
+            "0 24px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.04), 0 0 40px var(--weered-accent-ring, rgba(124,58,237,0.10))",
           backdropFilter: "blur(16px)",
           WebkitBackdropFilter: "blur(16px)",
           opacity: mount ? 1 : 0,
           transform: mount ? "translateY(0)" : "translateY(20px)",
-          transition: "opacity 0.22s cubic-bezier(0.22,1,0.36,1), transform 0.26s cubic-bezier(0.22,1,0.36,1)",
+          transition:
+            "opacity 0.22s cubic-bezier(0.22,1,0.36,1), transform 0.26s cubic-bezier(0.22,1,0.36,1)",
           fontFamily: "inherit",
           color: "var(--weered-text, rgba(243,244,246,0.95))",
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
           <span style={{ fontSize: 16 }}>🍪</span>
-          <div style={{ fontSize: 14, fontWeight: 800, letterSpacing: "-0.01em" }}>Cookies & storage</div>
+          <div style={{ fontSize: 14, fontWeight: 800, letterSpacing: "-0.01em" }}>
+            Cookies & storage
+          </div>
         </div>
-        <div style={{ fontSize: 12, lineHeight: 1.55, color: "var(--weered-muted, rgba(148,163,184,0.78))", marginBottom: 12 }}>
-          Weered uses local storage for the essentials — your login session, theme, and settings. Nothing is shared with third parties by default. You can accept functional preferences (theme sync across tabs) and analytics (helps us see what's broken), or just the essentials.{" "}
-          <a href="/privacy" style={{ color: "var(--weered-accent-text, rgba(196,181,253,0.95))", textDecoration: "underline", textUnderlineOffset: 3 }}>
+        <div
+          style={{
+            fontSize: 12,
+            lineHeight: 1.55,
+            color: "var(--weered-muted, rgba(148,163,184,0.78))",
+            marginBottom: 12,
+          }}
+        >
+          Weered uses local storage for the essentials — your login session, theme, and settings.
+          Nothing is shared with third parties by default. You can accept functional preferences
+          (theme sync across tabs) and analytics (helps us see what's broken), or just the
+          essentials.{" "}
+          <a
+            href="/privacy"
+            style={{
+              color: "var(--weered-accent-text, rgba(196,181,253,0.95))",
+              textDecoration: "underline",
+              textUnderlineOffset: 3,
+            }}
+          >
             Privacy policy
-          </a>.
+          </a>
+          .
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <button

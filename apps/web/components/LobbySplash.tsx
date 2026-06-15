@@ -36,7 +36,8 @@ export interface LobbySplashProps {
   forceOpen?: boolean;
 }
 
-const WINDROSE_DEFAULT_EXTRACT = (j: any) => (j?.ok && typeof j?.players === "number" ? j.players : null);
+const WINDROSE_DEFAULT_EXTRACT = (j: any) =>
+  j?.ok && typeof j?.players === "number" ? j.players : null;
 
 export default function LobbySplash({
   lobbyId,
@@ -57,32 +58,49 @@ export default function LobbySplash({
   const cooldownMs = cooldownDays * 24 * 60 * 60 * 1000;
 
   useEffect(() => {
-    if (forceOpen) { setOpen(true); return; }
+    if (forceOpen) {
+      setOpen(true);
+      return;
+    }
     let cancelled = false;
     try {
       const raw = localStorage.getItem(key);
       const last = raw ? Number(raw) : 0;
       if (Number.isFinite(last) && Date.now() - last < cooldownMs) return;
-    } catch { return; }
-    const t = setTimeout(() => { if (!cancelled) setOpen(true); }, 220);
-    return () => { cancelled = true; clearTimeout(t); };
+    } catch {
+      return;
+    }
+    const t = setTimeout(() => {
+      if (!cancelled) setOpen(true);
+    }, 220);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
   }, [key, cooldownMs, forceOpen]);
 
   useEffect(() => {
     if (!open || !liveCount) return;
     let cancelled = false;
     const extract = liveCount.extractor || WINDROSE_DEFAULT_EXTRACT;
-    fetch(`${API}${liveCount.endpoint}`).then(r => r.json()).then(j => {
-      if (cancelled) return;
-      const n = extract(j);
-      if (typeof n === "number") setCount(n);
-    }).catch(() => {});
-    return () => { cancelled = true; };
+    fetch(`${API}${liveCount.endpoint}`)
+      .then((r) => r.json())
+      .then((j) => {
+        if (cancelled) return;
+        const n = extract(j);
+        if (typeof n === "number") setCount(n);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
   }, [open, liveCount]);
 
   const handleClose = useCallback(() => {
     if (!forceOpen) {
-      try { localStorage.setItem(key, String(Date.now())); } catch {}
+      try {
+        localStorage.setItem(key, String(Date.now()));
+      } catch {}
     }
     setClosing(true);
     setTimeout(() => setOpen(false), 260);
@@ -90,7 +108,9 @@ export default function LobbySplash({
 
   useEffect(() => {
     if (!open) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") handleClose(); };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") handleClose();
+    };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [open, handleClose]);
@@ -152,11 +172,15 @@ export default function LobbySplash({
         onClick={handleClose}
         className="weered-lobby-splash-root"
         style={{
-          position: "fixed", inset: 0, zIndex: 9999,
+          position: "fixed",
+          inset: 0,
+          zIndex: 9999,
           background: "rgba(3,5,10,0.92)",
           backdropFilter: "blur(10px)",
           WebkitBackdropFilter: "blur(10px)",
-          display: "flex", alignItems: "center", justifyContent: "center",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
           padding: 40,
           opacity: closing ? 0 : 1,
           transition: "opacity 260ms ease",
@@ -169,8 +193,10 @@ export default function LobbySplash({
           aria-hidden
           style={{
             position: "absolute",
-            top: "50%", left: "50%",
-            width: "min(1400px, 120vw)", height: "min(1400px, 120vw)",
+            top: "50%",
+            left: "50%",
+            width: "min(1400px, 120vw)",
+            height: "min(1400px, 120vw)",
             transform: "translate(-50%, -50%)",
             background: `radial-gradient(circle at 50% 50%, ${palette.accent}38 0%, ${palette.accent}10 30%, transparent 65%)`,
             pointerEvents: "none",
@@ -202,8 +228,10 @@ export default function LobbySplash({
           aria-hidden
           style={{
             position: "absolute",
-            top: "50%", left: "50%",
-            width: "min(1180px, 110vw)", height: "min(1180px, 110vw)",
+            top: "50%",
+            left: "50%",
+            width: "min(1180px, 110vw)",
+            height: "min(1180px, 110vw)",
             transform: "translate(-50%, -50%)",
             background: `conic-gradient(from 0deg, transparent 0deg, ${palette.accent}22 40deg, transparent 80deg, transparent 180deg, ${palette.accent}18 220deg, transparent 260deg, transparent 360deg)`,
             pointerEvents: "none",
@@ -218,17 +246,24 @@ export default function LobbySplash({
           onClick={(e) => e.stopPropagation()}
           style={{
             position: "relative",
-            maxWidth: 960, width: "100%",
-            display: "flex", flexDirection: "column",
-            alignItems: "center", gap: 22,
+            maxWidth: 960,
+            width: "100%",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 22,
             zIndex: 1,
           }}
         >
-          <div style={{
-            position: "relative", width: "100%",
-            borderRadius: 6, overflow: "hidden",
-            boxShadow: `0 24px 70px rgba(0,0,0,0.65), 0 0 0 1px ${palette.frame}, 0 0 60px ${palette.frameGlow}`,
-          }}>
+          <div
+            style={{
+              position: "relative",
+              width: "100%",
+              borderRadius: 6,
+              overflow: "hidden",
+              boxShadow: `0 24px 70px rgba(0,0,0,0.65), 0 0 0 1px ${palette.frame}, 0 0 60px ${palette.frameGlow}`,
+            }}
+          >
             <img
               src={ogImage}
               alt={ariaLabel}
@@ -240,36 +275,70 @@ export default function LobbySplash({
             <div
               className="weered-lobby-splash-count"
               style={{
-                display: "flex", alignItems: "center", gap: 18,
+                display: "flex",
+                alignItems: "center",
+                gap: 18,
                 padding: "12px 22px",
                 background: palette.pillBg,
                 border: `1px solid ${palette.accent}90`,
                 borderRadius: 3,
                 fontFamily: 'Georgia, "Times New Roman", serif',
-                animation: "lobby-count-in 420ms ease 220ms both, lobby-count-pulse 2.6s ease-in-out 700ms infinite",
+                animation:
+                  "lobby-count-in 420ms ease 220ms both, lobby-count-pulse 2.6s ease-in-out 700ms infinite",
                 backdropFilter: "blur(4px)",
                 marginTop: -2,
               }}
             >
               <div style={{ textAlign: "left" }}>
-                <div style={{ fontSize: 9, letterSpacing: 2.5, color: palette.textDim, textTransform: "uppercase", fontWeight: 700, marginBottom: 2 }}>
+                <div
+                  style={{
+                    fontSize: 9,
+                    letterSpacing: 2.5,
+                    color: palette.textDim,
+                    textTransform: "uppercase",
+                    fontWeight: 700,
+                    marginBottom: 2,
+                  }}
+                >
                   {liveCount.label}
                 </div>
-                <div style={{ fontSize: 10, color: palette.textDim, fontStyle: "italic", letterSpacing: 0.5 }}>
+                <div
+                  style={{
+                    fontSize: 10,
+                    color: palette.textDim,
+                    fontStyle: "italic",
+                    letterSpacing: 0.5,
+                  }}
+                >
                   {liveCount.suffix}
                 </div>
               </div>
-              <div style={{
-                fontSize: 38, color: palette.accent, lineHeight: 1, fontWeight: 700,
-                fontVariantNumeric: "tabular-nums", letterSpacing: "-0.5px",
-                paddingLeft: 18, borderLeft: `1px solid ${palette.accent}40`,
-              }}>
+              <div
+                style={{
+                  fontSize: 38,
+                  color: palette.accent,
+                  lineHeight: 1,
+                  fontWeight: 700,
+                  fontVariantNumeric: "tabular-nums",
+                  letterSpacing: "-0.5px",
+                  paddingLeft: 18,
+                  borderLeft: `1px solid ${palette.accent}40`,
+                }}
+              >
                 {count.toLocaleString()}
               </div>
             </div>
           )}
 
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10, marginTop: 4 }}>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 10,
+              marginTop: 4,
+            }}
+          >
             <button
               type="button"
               onClick={handleClose}
@@ -279,9 +348,12 @@ export default function LobbySplash({
                 border: `1px solid ${palette.accentHi}`,
                 color: palette.ink,
                 fontFamily: 'Georgia, "Times New Roman", serif',
-                fontSize: 14, fontWeight: 800,
-                letterSpacing: 3, textTransform: "uppercase",
-                borderRadius: 3, cursor: "pointer",
+                fontSize: 14,
+                fontWeight: 800,
+                letterSpacing: 3,
+                textTransform: "uppercase",
+                borderRadius: 3,
+                cursor: "pointer",
                 boxShadow: `0 4px 20px ${palette.accent}58, inset 0 1px 0 rgba(255,255,255,0.25)`,
                 transition: "transform 0.15s ease, box-shadow 0.15s ease",
               }}
@@ -298,35 +370,43 @@ export default function LobbySplash({
             >
               {ctaLabel}
             </button>
-            <div style={{ fontSize: 10, color: `${palette.accent}72`, letterSpacing: 1.5, fontFamily: 'Georgia, "Times New Roman", serif', textTransform: "uppercase" }}>
+            <div
+              style={{
+                fontSize: 10,
+                color: `${palette.accent}72`,
+                letterSpacing: 1.5,
+                fontFamily: 'Georgia, "Times New Roman", serif',
+                textTransform: "uppercase",
+              }}
+            >
               click anywhere or press ESC
             </div>
           </div>
         </div>
       </div>
     </>,
-    document.body
+    document.body,
   );
 }
 
 export const WINDROSE_SPLASH_PALETTE: LobbySplashPalette = {
-  accent:    "#e8c48a",
-  accentHi:  "#f2d4a1",
+  accent: "#e8c48a",
+  accentHi: "#f2d4a1",
   accentLow: "#8a6b3e",
-  frame:     "rgba(232,196,138,0.35)",
+  frame: "rgba(232,196,138,0.35)",
   frameGlow: "rgba(232,196,138,0.28)",
-  ink:       "#0a1424",
-  pillBg:    "linear-gradient(180deg, rgba(14,24,38,0.95) 0%, rgba(10,18,32,0.95) 100%)",
-  textDim:   "#a89775",
+  ink: "#0a1424",
+  pillBg: "linear-gradient(180deg, rgba(14,24,38,0.95) 0%, rgba(10,18,32,0.95) 100%)",
+  textDim: "#a89775",
 };
 
 export const DESTINY_SPLASH_PALETTE: LobbySplashPalette = {
-  accent:    "#f58220",
-  accentHi:  "#ffb066",
+  accent: "#f58220",
+  accentHi: "#ffb066",
   accentLow: "#a3530f",
-  frame:     "rgba(245,130,32,0.40)",
+  frame: "rgba(245,130,32,0.40)",
   frameGlow: "rgba(245,130,32,0.30)",
-  ink:       "#0a0a12",
-  pillBg:    "linear-gradient(180deg, rgba(8,10,20,0.95) 0%, rgba(4,6,14,0.95) 100%)",
-  textDim:   "#8a9bb0",
+  ink: "#0a0a12",
+  pillBg: "linear-gradient(180deg, rgba(8,10,20,0.95) 0%, rgba(4,6,14,0.95) 100%)",
+  textDim: "#8a9bb0",
 };

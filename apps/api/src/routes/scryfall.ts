@@ -27,12 +27,16 @@ export default async function scryfallRoutes(app: FastifyInstance, _opts: Opts) 
   const cache = new Map<string, { ok: boolean; data: CardLite | null; expiresAt: number }>();
   let lastFetchAt = 0;
 
-  function cacheKey(name: string) { return name.trim().toLowerCase(); }
+  function cacheKey(name: string) {
+    return name.trim().toLowerCase();
+  }
 
   function pickImage(card: any): { normal: string | null; small: string | null } {
-    if (card?.image_uris?.normal) return { normal: card.image_uris.normal, small: card.image_uris.small || null };
+    if (card?.image_uris?.normal)
+      return { normal: card.image_uris.normal, small: card.image_uris.small || null };
     const face = card?.card_faces?.[0];
-    if (face?.image_uris?.normal) return { normal: face.image_uris.normal, small: face.image_uris.small || null };
+    if (face?.image_uris?.normal)
+      return { normal: face.image_uris.normal, small: face.image_uris.small || null };
     return { normal: null, small: null };
   }
 
@@ -48,8 +52,15 @@ export default async function scryfallRoutes(app: FastifyInstance, _opts: Opts) 
       oracle_text: card?.oracle_text ?? face0?.oracle_text ?? null,
       image: img.normal,
       image_small: img.small,
-      scryfall_uri: String(card?.scryfall_uri || `https://scryfall.com/search?q=!${encodeURIComponent(card?.name || "")}`),
-      colors: Array.isArray(card?.colors) ? card.colors : (Array.isArray(face0?.colors) ? face0.colors : []),
+      scryfall_uri: String(
+        card?.scryfall_uri ||
+          `https://scryfall.com/search?q=!${encodeURIComponent(card?.name || "")}`,
+      ),
+      colors: Array.isArray(card?.colors)
+        ? card.colors
+        : Array.isArray(face0?.colors)
+          ? face0.colors
+          : [],
       cmc: Number.isFinite(card?.cmc) ? card.cmc : 0,
     };
   }
@@ -58,7 +69,7 @@ export default async function scryfallRoutes(app: FastifyInstance, _opts: Opts) 
     const now = Date.now();
     const gap = now - lastFetchAt;
     if (gap < MIN_GAP_MS) {
-      await new Promise(r => setTimeout(r, MIN_GAP_MS - gap));
+      await new Promise((r) => setTimeout(r, MIN_GAP_MS - gap));
     }
     lastFetchAt = Date.now();
   }
@@ -71,7 +82,9 @@ export default async function scryfallRoutes(app: FastifyInstance, _opts: Opts) 
     await throttle();
     try {
       const url = `${SCRYFALL_BASE}/cards/named?fuzzy=${encodeURIComponent(name)}`;
-      const res = await fetchWithTimeout(url, { headers: { "User-Agent": SCRYFALL_UA, Accept: "application/json" } });
+      const res = await fetchWithTimeout(url, {
+        headers: { "User-Agent": SCRYFALL_UA, Accept: "application/json" },
+      });
       if (res.status === 404) {
         cache.set(key, { ok: false, data: null, expiresAt: Date.now() + NEGATIVE_CACHE_TTL_MS });
         return { ok: false, data: null };
@@ -87,7 +100,9 @@ export default async function scryfallRoutes(app: FastifyInstance, _opts: Opts) 
   }
 
   app.get("/scryfall/card", async (req, reply) => {
-    const name = String((req.query as any)?.name || "").trim().slice(0, 200);
+    const name = String((req.query as any)?.name || "")
+      .trim()
+      .slice(0, 200);
     if (!name) return reply.code(400).send({ ok: false, error: "missing_name" });
     const { ok, data } = await fetchCard(name);
     if (!ok || !data) return reply.code(404).send({ ok: false, error: "not_found", query: name });
@@ -96,7 +111,11 @@ export default async function scryfallRoutes(app: FastifyInstance, _opts: Opts) 
 
   app.get("/scryfall/cards", async (req, reply) => {
     const raw = String((req.query as any)?.names || "");
-    const names = raw.split(",").map(s => s.trim()).filter(Boolean).slice(0, 10);
+    const names = raw
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .slice(0, 10);
     if (names.length === 0) return reply.code(400).send({ ok: false, error: "missing_names" });
     const out: Record<string, CardLite | null> = {};
     for (const n of names) {

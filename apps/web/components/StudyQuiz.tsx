@@ -68,30 +68,32 @@ const S = {
     textTransform: "uppercase" as const,
     marginBottom: 6,
   } as React.CSSProperties,
-  pill: (active: boolean) => ({
-    padding: "6px 14px",
-    borderRadius: 20,
-    border: `1px solid ${active ? ACCENT : "rgba(255,255,255,.10)"}`,
-    background: active ? `${ACCENT}20` : "rgba(255,255,255,.04)",
-    fontSize: 12,
-    fontWeight: active ? 600 : 400,
-    cursor: "pointer",
-    color: active ? ACCENT : "rgba(243,244,246,.7)",
-    transition: "all .15s",
-  }) as React.CSSProperties,
-  btnPrimary: (disabled?: boolean) => ({
-    padding: "10px 24px",
-    borderRadius: 10,
-    border: "none",
-    background: disabled ? "rgba(99,102,241,.3)" : ACCENT,
-    fontSize: 14,
-    fontWeight: 600,
-    cursor: disabled ? "not-allowed" : "pointer",
-    color: "#fff",
-    opacity: disabled ? 0.6 : 1,
-    transition: "all .15s",
-    width: "100%",
-  }) as React.CSSProperties,
+  pill: (active: boolean) =>
+    ({
+      padding: "6px 14px",
+      borderRadius: 20,
+      border: `1px solid ${active ? ACCENT : "rgba(255,255,255,.10)"}`,
+      background: active ? `${ACCENT}20` : "rgba(255,255,255,.04)",
+      fontSize: 12,
+      fontWeight: active ? 600 : 400,
+      cursor: "pointer",
+      color: active ? ACCENT : "rgba(243,244,246,.7)",
+      transition: "all .15s",
+    }) as React.CSSProperties,
+  btnPrimary: (disabled?: boolean) =>
+    ({
+      padding: "10px 24px",
+      borderRadius: 10,
+      border: "none",
+      background: disabled ? "rgba(99,102,241,.3)" : ACCENT,
+      fontSize: 14,
+      fontWeight: 600,
+      cursor: disabled ? "not-allowed" : "pointer",
+      color: "#fff",
+      opacity: disabled ? 0.6 : 1,
+      transition: "all .15s",
+      width: "100%",
+    }) as React.CSSProperties,
   btnSecondary: {
     padding: "8px 18px",
     borderRadius: 8,
@@ -110,24 +112,31 @@ const S = {
     background: "rgba(255,255,255,.08)",
     overflow: "hidden" as const,
   } as React.CSSProperties,
-  progressFill: (pct: number) => ({
-    width: `${pct}%`,
-    height: "100%",
-    background: ACCENT,
-    borderRadius: 2,
-    transition: "width .3s ease",
-  }) as React.CSSProperties,
+  progressFill: (pct: number) =>
+    ({
+      width: `${pct}%`,
+      height: "100%",
+      background: ACCENT,
+      borderRadius: 2,
+      transition: "width .3s ease",
+    }) as React.CSSProperties,
   optionCard: (state: "default" | "selected" | "correct" | "wrong") => {
     const border =
-      state === "correct" ? GREEN :
-      state === "wrong" ? RED :
-      state === "selected" ? ACCENT :
-      "rgba(255,255,255,.10)";
+      state === "correct"
+        ? GREEN
+        : state === "wrong"
+          ? RED
+          : state === "selected"
+            ? ACCENT
+            : "rgba(255,255,255,.10)";
     const bg =
-      state === "correct" ? `${GREEN}12` :
-      state === "wrong" ? `${RED}12` :
-      state === "selected" ? `${ACCENT}12` :
-      "rgba(255,255,255,.03)";
+      state === "correct"
+        ? `${GREEN}12`
+        : state === "wrong"
+          ? `${RED}12`
+          : state === "selected"
+            ? `${ACCENT}12`
+            : "rgba(255,255,255,.03)";
     return {
       padding: "12px 16px",
       borderRadius: 10,
@@ -138,8 +147,12 @@ const S = {
       alignItems: "center",
       gap: 12,
       transition: "all .2s ease",
-      animation: state === "correct" ? "correctPulse .5s ease" :
-                 state === "wrong" ? "wrongPulse .5s ease" : "none",
+      animation:
+        state === "correct"
+          ? "correctPulse .5s ease"
+          : state === "wrong"
+            ? "wrongPulse .5s ease"
+            : "none",
     } as React.CSSProperties;
   },
   optionLabel: {
@@ -177,29 +190,31 @@ const S = {
     color: "rgba(243,244,246,.6)",
     transition: "all .15s",
   } as React.CSSProperties,
-  explanationBox: (correct: boolean) => ({
-    padding: "10px 14px",
-    borderRadius: 8,
-    background: correct ? `${GREEN}08` : `${RED}08`,
-    border: `1px solid ${correct ? GREEN : RED}20`,
-    fontSize: 12,
-    lineHeight: 1.5,
-    color: "rgba(243,244,246,.8)",
-    marginTop: 10,
-  }) as React.CSSProperties,
+  explanationBox: (correct: boolean) =>
+    ({
+      padding: "10px 14px",
+      borderRadius: 8,
+      background: correct ? `${GREEN}08` : `${RED}08`,
+      border: `1px solid ${correct ? GREEN : RED}20`,
+      fontSize: 12,
+      lineHeight: 1.5,
+      color: "rgba(243,244,246,.8)",
+      marginTop: 10,
+    }) as React.CSSProperties,
   loadingDots: {
     display: "inline-flex",
     gap: 4,
     alignItems: "center",
   } as React.CSSProperties,
-  resultRow: (correct: boolean) => ({
-    padding: "10px 14px",
-    borderRadius: 8,
-    border: `1px solid ${correct ? GREEN : RED}25`,
-    background: correct ? `${GREEN}06` : `${RED}06`,
-    cursor: "pointer",
-    transition: "all .15s",
-  }) as React.CSSProperties,
+  resultRow: (correct: boolean) =>
+    ({
+      padding: "10px 14px",
+      borderRadius: 8,
+      border: `1px solid ${correct ? GREEN : RED}25`,
+      background: correct ? `${GREEN}06` : `${RED}06`,
+      cursor: "pointer",
+      transition: "all .15s",
+    }) as React.CSSProperties,
 };
 
 const KEYFRAMES_ID = "study-quiz-keyframes";
@@ -245,18 +260,35 @@ function ScoreRing({ score, total }: { score: number; total: number }) {
       <svg width="140" height="140" viewBox="0 0 140 140">
         <circle cx="70" cy="70" r="60" fill="none" stroke="rgba(255,255,255,.06)" strokeWidth="8" />
         <circle
-          cx="70" cy="70" r="60" fill="none"
-          stroke={color} strokeWidth="8" strokeLinecap="round"
+          cx="70"
+          cy="70"
+          r="60"
+          fill="none"
+          stroke={color}
+          strokeWidth="8"
+          strokeLinecap="round"
           strokeDasharray={circumference}
           strokeDashoffset={offset}
           transform="rotate(-90 70 70)"
-          style={{ transition: "stroke-dashoffset 1s ease", animation: "scoreReveal 1s ease forwards" }}
+          style={{
+            transition: "stroke-dashoffset 1s ease",
+            animation: "scoreReveal 1s ease forwards",
+          }}
         />
       </svg>
-      <div style={{
-        position: "absolute", top: 0, left: 0, width: "100%", height: "100%",
-        display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-      }}>
+      <div
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          width: "100%",
+          height: "100%",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
         <div style={{ fontSize: 28, fontWeight: 800, color }}>{score}</div>
         <div style={{ fontSize: 11, opacity: 0.5 }}>of {total}</div>
         <div style={{ fontSize: 13, fontWeight: 600, color, marginTop: 2 }}>
@@ -270,13 +302,18 @@ function ScoreRing({ score, total }: { score: number; total: number }) {
 function LoadingDots() {
   return (
     <span style={S.loadingDots}>
-      {[0, 1, 2].map(i => (
-        <span key={i} style={{
-          width: 6, height: 6, borderRadius: "50%",
-          background: ACCENT,
-          animation: `dotBounce .6s ease infinite`,
-          animationDelay: `${i * 0.15}s`,
-        }} />
+      {[0, 1, 2].map((i) => (
+        <span
+          key={i}
+          style={{
+            width: 6,
+            height: 6,
+            borderRadius: "50%",
+            background: ACCENT,
+            animation: `dotBounce .6s ease infinite`,
+            animationDelay: `${i * 0.15}s`,
+          }}
+        />
       ))}
     </span>
   );
@@ -334,11 +371,16 @@ export default function StudyQuiz() {
     setLoading(true);
 
     try {
-      const token = typeof localStorage !== "undefined" ? localStorage.getItem("weered_token") || "" : "";
+      const token =
+        typeof localStorage !== "undefined" ? localStorage.getItem("weered_token") || "" : "";
       const res = await fetch(`${API}/ai/quiz`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ content: content.trim(), numQuestions, questionTypes: questionType }),
+        body: JSON.stringify({
+          content: content.trim(),
+          numQuestions,
+          questionTypes: questionType,
+        }),
       });
       const data = await res.json();
       if (!data.ok || !Array.isArray(data.questions) || data.questions.length === 0) {
@@ -370,8 +412,16 @@ export default function StudyQuiz() {
     const isCorrect = given.toLowerCase() === correct;
 
     setChecked(true);
-    setAnswers(prev => { const n = [...prev]; n[currentIdx] = given; return n; });
-    setResults(prev => { const n = [...prev]; n[currentIdx] = isCorrect; return n; });
+    setAnswers((prev) => {
+      const n = [...prev];
+      n[currentIdx] = given;
+      return n;
+    });
+    setResults((prev) => {
+      const n = [...prev];
+      n[currentIdx] = isCorrect;
+      return n;
+    });
   }, [currentQ, currentIdx, getSelectedForCheck]);
 
   const nextQuestion = useCallback(() => {
@@ -379,7 +429,7 @@ export default function StudyQuiz() {
       setStep("results");
       return;
     }
-    setCurrentIdx(i => i + 1);
+    setCurrentIdx((i) => i + 1);
     setSelectedAnswer(null);
     setFillAnswer("");
     setChecked(false);
@@ -432,16 +482,20 @@ export default function StudyQuiz() {
           <textarea
             style={S.textarea}
             value={content}
-            onChange={e => setContent(e.target.value)}
+            onChange={(e) => setContent(e.target.value)}
             placeholder="Paste your study notes, textbook excerpt, or lecture notes..."
             spellCheck={false}
           />
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 4 }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginTop: 4,
+            }}
+          >
             <div style={S.charCount}>{content.length.toLocaleString()} characters</div>
-            <button
-              style={S.fileBtn}
-              onClick={() => fileRef.current?.click()}
-            >
+            <button style={S.fileBtn} onClick={() => fileRef.current?.click()}>
               Upload .txt file
             </button>
             <input
@@ -457,7 +511,7 @@ export default function StudyQuiz() {
         <div style={S.card}>
           <div style={S.label}>Number of Questions</div>
           <div style={{ display: "flex", gap: 8 }}>
-            {NUM_OPTIONS.map(n => (
+            {NUM_OPTIONS.map((n) => (
               <button key={n} style={S.pill(numQuestions === n)} onClick={() => setNumQuestions(n)}>
                 {n}
               </button>
@@ -468,8 +522,12 @@ export default function StudyQuiz() {
         <div style={S.card}>
           <div style={S.label}>Question Type</div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            {TYPE_OPTIONS.map(t => (
-              <button key={t.value} style={S.pill(questionType === t.value)} onClick={() => setQuestionType(t.value)}>
+            {TYPE_OPTIONS.map((t) => (
+              <button
+                key={t.value}
+                style={S.pill(questionType === t.value)}
+                onClick={() => setQuestionType(t.value)}
+              >
                 {t.label}
               </button>
             ))}
@@ -477,7 +535,15 @@ export default function StudyQuiz() {
         </div>
 
         {error && (
-          <div style={{ fontSize: 12, color: RED, padding: "8px 12px", borderRadius: 8, background: `${RED}10` }}>
+          <div
+            style={{
+              fontSize: 12,
+              color: RED,
+              padding: "8px 12px",
+              borderRadius: 8,
+              background: `${RED}10`,
+            }}
+          >
             {error}
           </div>
         )}
@@ -488,7 +554,9 @@ export default function StudyQuiz() {
           onClick={generateQuiz}
         >
           {loading ? (
-            <span style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
+            <span
+              style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}
+            >
               Generating your practice test <LoadingDots />
             </span>
           ) : (
@@ -501,9 +569,8 @@ export default function StudyQuiz() {
 
   if (step === "quiz" && currentQ) {
     const progress = ((currentIdx + (checked ? 1 : 0)) / questions.length) * 100;
-    const canCheck = currentQ.type === "fill_blank"
-      ? fillAnswer.trim().length > 0
-      : selectedAnswer !== null;
+    const canCheck =
+      currentQ.type === "fill_blank" ? fillAnswer.trim().length > 0 : selectedAnswer !== null;
 
     return (
       <div style={{ ...S.wrap, animation: "fadeIn .3s ease" }}>
@@ -513,8 +580,11 @@ export default function StudyQuiz() {
               Question {currentIdx + 1} of {questions.length}
             </span>
             <span style={{ fontSize: 11, opacity: 0.4 }}>
-              {currentQ.type === "multiple_choice" ? "Multiple Choice" :
-               currentQ.type === "true_false" ? "True / False" : "Fill in the Blank"}
+              {currentQ.type === "multiple_choice"
+                ? "Multiple Choice"
+                : currentQ.type === "true_false"
+                  ? "True / False"
+                  : "Fill in the Blank"}
             </span>
           </div>
           <div style={S.progressBar}>
@@ -523,9 +593,7 @@ export default function StudyQuiz() {
         </div>
 
         <div style={{ ...S.card, paddingTop: 20, paddingBottom: 20 }}>
-          <div style={{ fontSize: 15, fontWeight: 600, lineHeight: 1.6 }}>
-            {currentQ.question}
-          </div>
+          <div style={{ fontSize: 15, fontWeight: 600, lineHeight: 1.6 }}>{currentQ.question}</div>
         </div>
 
         {currentQ.type === "fill_blank" ? (
@@ -533,8 +601,10 @@ export default function StudyQuiz() {
             <input
               type="text"
               value={fillAnswer}
-              onChange={e => !checked && setFillAnswer(e.target.value)}
-              onKeyDown={e => { if (e.key === "Enter" && !checked && fillAnswer.trim()) checkAnswer(); }}
+              onChange={(e) => !checked && setFillAnswer(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !checked && fillAnswer.trim()) checkAnswer();
+              }}
               placeholder="Type your answer..."
               disabled={checked}
               style={{
@@ -543,11 +613,17 @@ export default function StudyQuiz() {
                 borderRadius: 10,
                 border: `1.5px solid ${
                   checked
-                    ? (results[currentIdx] ? GREEN : RED)
-                    : fillAnswer ? ACCENT : "rgba(255,255,255,.10)"
+                    ? results[currentIdx]
+                      ? GREEN
+                      : RED
+                    : fillAnswer
+                      ? ACCENT
+                      : "rgba(255,255,255,.10)"
                 }`,
                 background: checked
-                  ? (results[currentIdx] ? `${GREEN}08` : `${RED}08`)
+                  ? results[currentIdx]
+                    ? `${GREEN}08`
+                    : `${RED}08`
                   : "rgba(0,0,0,.30)",
                 fontSize: 14,
                 color: "rgba(243,244,246,.92)",
@@ -572,15 +648,23 @@ export default function StudyQuiz() {
                   if (!checked) setSelectedAnswer(opt);
                 }}
               >
-                <div style={{
-                  ...S.optionLabel,
-                  ...(getOptionState(opt) === "correct" ? { background: `${GREEN}20`, color: GREEN } :
-                      getOptionState(opt) === "wrong" ? { background: `${RED}20`, color: RED } :
-                      getOptionState(opt) === "selected" ? { background: `${ACCENT}20`, color: ACCENT } : {}),
-                }}>
-                  {getOptionState(opt) === "correct" ? "\u2713" :
-                   getOptionState(opt) === "wrong" ? "\u2717" :
-                   OPTION_LABELS[i] || String(i + 1)}
+                <div
+                  style={{
+                    ...S.optionLabel,
+                    ...(getOptionState(opt) === "correct"
+                      ? { background: `${GREEN}20`, color: GREEN }
+                      : getOptionState(opt) === "wrong"
+                        ? { background: `${RED}20`, color: RED }
+                        : getOptionState(opt) === "selected"
+                          ? { background: `${ACCENT}20`, color: ACCENT }
+                          : {}),
+                  }}
+                >
+                  {getOptionState(opt) === "correct"
+                    ? "\u2713"
+                    : getOptionState(opt) === "wrong"
+                      ? "\u2717"
+                      : OPTION_LABELS[i] || String(i + 1)}
                 </div>
                 <div style={{ fontSize: 13, lineHeight: 1.5, flex: 1 }}>{opt}</div>
               </div>
@@ -590,7 +674,15 @@ export default function StudyQuiz() {
 
         {checked && currentQ.explanation && (
           <div style={S.explanationBox(results[currentIdx])}>
-            <div style={{ fontWeight: 600, marginBottom: 4, fontSize: 11, textTransform: "uppercase", letterSpacing: ".5px" }}>
+            <div
+              style={{
+                fontWeight: 600,
+                marginBottom: 4,
+                fontSize: 11,
+                textTransform: "uppercase",
+                letterSpacing: ".5px",
+              }}
+            >
               {results[currentIdx] ? "Correct!" : "Not quite"}
             </div>
             {currentQ.explanation}
@@ -599,18 +691,11 @@ export default function StudyQuiz() {
 
         <div style={{ display: "flex", gap: 10 }}>
           {!checked ? (
-            <button
-              style={S.btnPrimary(!canCheck)}
-              disabled={!canCheck}
-              onClick={checkAnswer}
-            >
+            <button style={S.btnPrimary(!canCheck)} disabled={!canCheck} onClick={checkAnswer}>
               Check Answer
             </button>
           ) : (
-            <button
-              style={S.btnPrimary(false)}
-              onClick={nextQuestion}
-            >
+            <button style={S.btnPrimary(false)} onClick={nextQuestion}>
               {isLastQuestion ? "See Results" : "Next Question"}
             </button>
           )}
@@ -622,10 +707,13 @@ export default function StudyQuiz() {
   if (step === "results") {
     const pct = questions.length > 0 ? Math.round((score / questions.length) * 100) : 0;
     const encouragement =
-      pct >= 90 ? "Outstanding work!" :
-      pct >= 70 ? "Great job! Keep studying to master it." :
-      pct >= 50 ? "Good effort. Review the ones you missed." :
-      "Keep at it! Review the material and try again.";
+      pct >= 90
+        ? "Outstanding work!"
+        : pct >= 70
+          ? "Great job! Keep studying to master it."
+          : pct >= 50
+            ? "Good effort. Review the ones you missed."
+            : "Keep at it! Review the material and try again.";
 
     return (
       <div style={{ ...S.wrap, animation: "fadeIn .4s ease" }}>
@@ -644,45 +732,59 @@ export default function StudyQuiz() {
                   onClick={() => setExpandedResult(expandedResult === i ? null : i)}
                 >
                   <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <span style={{
-                      width: 22, height: 22, borderRadius: 6,
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      fontSize: 11, fontWeight: 700,
-                      background: results[i] ? `${GREEN}20` : `${RED}20`,
-                      color: results[i] ? GREEN : RED,
-                    }}>
+                    <span
+                      style={{
+                        width: 22,
+                        height: 22,
+                        borderRadius: 6,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: 11,
+                        fontWeight: 700,
+                        background: results[i] ? `${GREEN}20` : `${RED}20`,
+                        color: results[i] ? GREEN : RED,
+                      }}
+                    >
                       {results[i] ? "\u2713" : "\u2717"}
                     </span>
                     <span style={{ fontSize: 13, flex: 1, lineHeight: 1.4 }}>
                       {q.question.length > 80 ? q.question.slice(0, 80) + "..." : q.question}
                     </span>
-                    <span style={{
-                      fontSize: 11, opacity: 0.4,
-                      transform: expandedResult === i ? "rotate(180deg)" : "rotate(0deg)",
-                      transition: "transform .2s",
-                    }}>
+                    <span
+                      style={{
+                        fontSize: 11,
+                        opacity: 0.4,
+                        transform: expandedResult === i ? "rotate(180deg)" : "rotate(0deg)",
+                        transition: "transform .2s",
+                      }}
+                    >
                       {"\u25BC"}
                     </span>
                   </div>
                 </div>
                 {expandedResult === i && (
-                  <div style={{
-                    padding: "12px 14px",
-                    background: "rgba(0,0,0,.15)",
-                    borderRadius: "0 0 8px 8px",
-                    marginTop: -1,
-                    border: "1px solid rgba(255,255,255,.04)",
-                    borderTop: "none",
-                    animation: "fadeIn .2s ease",
-                  }}>
+                  <div
+                    style={{
+                      padding: "12px 14px",
+                      background: "rgba(0,0,0,.15)",
+                      borderRadius: "0 0 8px 8px",
+                      marginTop: -1,
+                      border: "1px solid rgba(255,255,255,.04)",
+                      borderTop: "none",
+                      animation: "fadeIn .2s ease",
+                    }}
+                  >
                     <div style={{ fontSize: 12, opacity: 0.6, marginBottom: 6 }}>
-                      Your answer: <span style={{ color: results[i] ? GREEN : RED, fontWeight: 600 }}>
+                      Your answer:{" "}
+                      <span style={{ color: results[i] ? GREEN : RED, fontWeight: 600 }}>
                         {answers[i] || "(no answer)"}
                       </span>
                     </div>
                     {!results[i] && (
                       <div style={{ fontSize: 12, opacity: 0.6, marginBottom: 6 }}>
-                        Correct answer: <span style={{ color: GREEN, fontWeight: 600 }}>{q.answer}</span>
+                        Correct answer:{" "}
+                        <span style={{ color: GREEN, fontWeight: 600 }}>{q.answer}</span>
                       </div>
                     )}
                     {q.explanation && (

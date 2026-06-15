@@ -21,10 +21,7 @@ export function Avatar({
   const letter = (name || "?").slice(0, 1).toUpperCase();
 
   // Status border: amber (away) > green (online) > muted
-  const borderColor =
-    away ? "#f59e0b"
-      : online ? "#22c55e"
-      : "rgba(120,120,130,0.3)";
+  const borderColor = away ? "#f59e0b" : online ? "#22c55e" : "rgba(120,120,130,0.3)";
 
   return (
     <View style={{ position: "relative" }}>

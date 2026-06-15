@@ -20,40 +20,60 @@ type Opts = {
 };
 
 export default async function voiceRoutes(app: FastifyInstance, opts: Opts) {
-  const { authFromHeader, rooms, ensureRoomLoaded, normalizeRoomId, isModOrOwner, awardNotoriety } = opts;
+  const { authFromHeader, rooms, ensureRoomLoaded, normalizeRoomId, isModOrOwner, awardNotoriety } =
+    opts;
 
-  app.post("/voice/token", {
-  schema: { tags: ["voice"] },
-}, async (req, reply) => {
-    const u = authFromHeader((req as any).headers?.authorization);
-    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
-    if (!LIVEKIT_API_KEY || !LIVEKIT_API_SECRET) return reply.code(500).send({ ok: false, error: "livekit_not_configured" });
-    const body: any = (req as any).body || {};
-    const roomIdRaw = String(body.roomId || body.room || "").trim().slice(0, 64);
-    if (!roomIdRaw) return reply.code(400).send({ ok: false, error: "missing_roomId" });
+  app.post(
+    "/voice/token",
+    {
+      schema: { tags: ["voice"] },
+    },
+    async (req, reply) => {
+      const u = authFromHeader((req as any).headers?.authorization);
+      if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+      if (!LIVEKIT_API_KEY || !LIVEKIT_API_SECRET)
+        return reply.code(500).send({ ok: false, error: "livekit_not_configured" });
+      const body: any = (req as any).body || {};
+      const roomIdRaw = String(body.roomId || body.room || "")
+        .trim()
+        .slice(0, 64);
+      if (!roomIdRaw) return reply.code(400).send({ ok: false, error: "missing_roomId" });
 
-    const cleaned = roomIdRaw.startsWith("room:") ? roomIdRaw.slice(5) : roomIdRaw;
-    const lookup = normalizeRoomId(cleaned);
-    let canPublish = true;
-    try {
-      const room = lookup ? rooms.get(lookup) || (await ensureRoomLoaded(lookup).catch(() => null)) : null;
-      if (room) {
-        const isOwnerOrMod = isModOrOwner(room, u.id, (u as any).globalRole);
-        const mode = room.voiceMode || "OPEN";
-        if (mode === "OPEN") {
-          canPublish = true;
-        } else if (mode === "LISTEN_ONLY") {
-          canPublish = isOwnerOrMod;
-        } else {
-          canPublish = isOwnerOrMod || (room.voiceSpeakers ? room.voiceSpeakers.has(u.id) : false);
+      const cleaned = roomIdRaw.startsWith("room:") ? roomIdRaw.slice(5) : roomIdRaw;
+      const lookup = normalizeRoomId(cleaned);
+      let canPublish = true;
+      try {
+        const room = lookup
+          ? rooms.get(lookup) || (await ensureRoomLoaded(lookup).catch(() => null))
+          : null;
+        if (room) {
+          const isOwnerOrMod = isModOrOwner(room, u.id, (u as any).globalRole);
+          const mode = room.voiceMode || "OPEN";
+          if (mode === "OPEN") {
+            canPublish = true;
+          } else if (mode === "LISTEN_ONLY") {
+            canPublish = isOwnerOrMod;
+          } else {
+            canPublish =
+              isOwnerOrMod || (room.voiceSpeakers ? room.voiceSpeakers.has(u.id) : false);
+          }
         }
-      }
-    } catch {}
+      } catch {}
 
-    const at = new AccessToken(LIVEKIT_API_KEY, LIVEKIT_API_SECRET, { identity: u.id, name: u.name });
-    at.addGrant({ roomJoin: true, room: roomIdRaw, canPublish, canSubscribe: true, canPublishData: true });
-    const token = await at.toJwt();
-    awardNotoriety(u.id, "VOICE_JOINED").catch(() => {});
-    return reply.send({ ok: true, url: LIVEKIT_URL, token, canPublish });
-  });
+      const at = new AccessToken(LIVEKIT_API_KEY, LIVEKIT_API_SECRET, {
+        identity: u.id,
+        name: u.name,
+      });
+      at.addGrant({
+        roomJoin: true,
+        room: roomIdRaw,
+        canPublish,
+        canSubscribe: true,
+        canPublishData: true,
+      });
+      const token = await at.toJwt();
+      awardNotoriety(u.id, "VOICE_JOINED").catch(() => {});
+      return reply.send({ ok: true, url: LIVEKIT_URL, token, canPublish });
+    },
+  );
 }

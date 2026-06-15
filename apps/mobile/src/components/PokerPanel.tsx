@@ -25,7 +25,9 @@ export function PokerPanel({ lobbyId }: { lobbyId: string }) {
             style={{ backgroundColor: t.color + "15", borderWidth: 1, borderColor: t.color + "55" }}
           >
             <View className="flex-1">
-              <Text style={{ color: t.color }} className="font-bold text-base">{t.label}</Text>
+              <Text style={{ color: t.color }} className="font-bold text-base">
+                {t.label}
+              </Text>
               <Text className="text-weered-muted text-xs">Blinds {t.blinds}</Text>
             </View>
             <Text className="text-weered-text font-bold">Open →</Text>

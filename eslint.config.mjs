@@ -6,9 +6,16 @@ import nextPlugin from "@next/eslint-plugin-next";
 export default [
   {
     ignores: [
-      "**/node_modules/**", "**/.next/**", "**/dist/**", "**/build/**",
-      "**/.gradle/**", "**/*.config.*", "apps/desktop/src-tauri/**",
-      "_diagnostics/**", "_snapshots/**", "**/*.d.ts",
+      "**/node_modules/**",
+      "**/.next/**",
+      "**/dist/**",
+      "**/build/**",
+      "**/.gradle/**",
+      "**/*.config.*",
+      "apps/desktop/src-tauri/**",
+      "_diagnostics/**",
+      "_snapshots/**",
+      "**/*.d.ts",
     ],
   },
   js.configs.recommended,
@@ -22,7 +29,10 @@ export default [
       // Warn (non-blocking in CI) on `any` to cap growth of the ~3,300 existing
       // casts without a big-bang burn-down.
       "@typescript-eslint/no-explicit-any": "warn",
-      "@typescript-eslint/no-unused-vars": ["warn", { argsIgnorePattern: "^_", varsIgnorePattern: "^_" }],
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
+      ],
       "@typescript-eslint/no-empty-object-type": "off",
       "@typescript-eslint/ban-ts-comment": "off",
       "@typescript-eslint/no-require-imports": "warn",

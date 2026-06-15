@@ -5,9 +5,14 @@ import { PrismaClient } from "@prisma/client";
 type Opts = {
   authFromHeader: (h?: string) => { id: string; name?: string } | null;
   createNotification?: (opts: {
-    userId: string; type: string; title: string;
-    body?: string; actionUrl?: string;
-    actorId?: string; actorName?: string; meta?: any;
+    userId: string;
+    type: string;
+    title: string;
+    body?: string;
+    actionUrl?: string;
+    actorId?: string;
+    actorName?: string;
+    meta?: any;
   }) => Promise<any>;
 };
 
@@ -23,7 +28,13 @@ const OWNED_TTL_MS = 60 * 60 * 1000;
 const schemaCache = new Map<string, { schema: any; ts: number }>();
 const SCHEMA_TTL_MS = 24 * 60 * 60 * 1000;
 
-type AchievementsRow = { achievements: any[]; gameName: string | null; total: number; unlocked: number; ts: number };
+type AchievementsRow = {
+  achievements: any[];
+  gameName: string | null;
+  total: number;
+  unlocked: number;
+  ts: number;
+};
 const achievementsCache = new Map<string, AchievementsRow>();
 const ACHIEVEMENTS_TTL_MS = 30 * 60 * 1000;
 
@@ -72,20 +83,41 @@ export default async function steamRoutes(app: FastifyInstance, opts: Opts) {
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const appId = String((req as any).params?.appId || "");
     if (!isValidAppId(appId)) return reply.code(400).send({ ok: false, error: "bad_appid" });
-    if (!STEAM_API_KEY) return reply.send({ ok: true, linked: false, owned: false, hoursPlayed: 0, lastPlayed: null });
+    if (!STEAM_API_KEY)
+      return reply.send({
+        ok: true,
+        linked: false,
+        owned: false,
+        hoursPlayed: 0,
+        lastPlayed: null,
+      });
 
     const dbUser = await prisma.user.findUnique({
       where: { id: u.id },
       select: { steamId: true } as any,
     });
     const steamId = (dbUser as any)?.steamId || "";
-    if (!steamId) return reply.send({ ok: true, linked: false, owned: false, hoursPlayed: 0, lastPlayed: null });
+    if (!steamId)
+      return reply.send({
+        ok: true,
+        linked: false,
+        owned: false,
+        hoursPlayed: 0,
+        lastPlayed: null,
+      });
 
     const key = `${u.id}:${appId}`;
     const cached = ownedCache.get(key);
     const now = Date.now();
     if (cached && now - cached.ts < OWNED_TTL_MS) {
-      return reply.send({ ok: true, linked: true, owned: cached.owned, hoursPlayed: cached.hoursPlayed, lastPlayed: cached.lastPlayed, cached: true });
+      return reply.send({
+        ok: true,
+        linked: true,
+        owned: cached.owned,
+        hoursPlayed: cached.hoursPlayed,
+        lastPlayed: cached.lastPlayed,
+        cached: true,
+      });
     }
 
     try {
@@ -94,7 +126,7 @@ export default async function steamRoutes(app: FastifyInstance, opts: Opts) {
       if (!r.ok) throw new Error(String(r.status));
       const j: any = await r.json();
       const games: any[] = j?.response?.games || [];
-      const match = games.find(g => String(g.appid) === appId);
+      const match = games.find((g) => String(g.appid) === appId);
       const owned = !!match;
       const minutes = Number(match?.playtime_forever || 0);
       const hoursPlayed = Math.round(minutes / 60);
@@ -104,9 +136,23 @@ export default async function steamRoutes(app: FastifyInstance, opts: Opts) {
       return reply.send({ ok: true, linked: true, owned, hoursPlayed, lastPlayed });
     } catch (e) {
       if (cached) {
-        return reply.send({ ok: true, linked: true, owned: cached.owned, hoursPlayed: cached.hoursPlayed, lastPlayed: cached.lastPlayed, stale: true });
+        return reply.send({
+          ok: true,
+          linked: true,
+          owned: cached.owned,
+          hoursPlayed: cached.hoursPlayed,
+          lastPlayed: cached.lastPlayed,
+          stale: true,
+        });
       }
-      return reply.send({ ok: true, linked: true, owned: false, hoursPlayed: 0, lastPlayed: null, error: "steam_unavailable" });
+      return reply.send({
+        ok: true,
+        linked: true,
+        owned: false,
+        hoursPlayed: 0,
+        lastPlayed: null,
+        error: "steam_unavailable",
+      });
     }
   });
 
@@ -117,7 +163,7 @@ export default async function steamRoutes(app: FastifyInstance, opts: Opts) {
     if (!isValidAppId(appId)) return reply.code(400).send({ ok: false, error: "bad_appid" });
     if (!STEAM_API_KEY) return reply.send({ ok: true, linked: false, achievements: [] });
 
-    const targetUserId = String(((req as any).query?.userId || u.id));
+    const targetUserId = String((req as any).query?.userId || u.id);
     const dbUser = await prisma.user.findUnique({
       where: { id: targetUserId },
       select: { steamId: true } as any,
@@ -130,9 +176,13 @@ export default async function steamRoutes(app: FastifyInstance, opts: Opts) {
     const now = Date.now();
     if (cached && now - cached.ts < ACHIEVEMENTS_TTL_MS) {
       return reply.send({
-        ok: true, linked: true, gameName: cached.gameName,
-        total: cached.total, unlocked: cached.unlocked,
-        achievements: cached.achievements, cached: true,
+        ok: true,
+        linked: true,
+        gameName: cached.gameName,
+        total: cached.total,
+        unlocked: cached.unlocked,
+        achievements: cached.achievements,
+        cached: true,
       });
     }
 
@@ -157,12 +207,26 @@ export default async function steamRoutes(app: FastifyInstance, opts: Opts) {
       const aj: any = await ar.json();
       const playerStats = aj?.playerstats;
       if (!playerStats?.success) {
-        const row: AchievementsRow = { achievements: [], gameName: null, total: 0, unlocked: 0, ts: now };
+        const row: AchievementsRow = {
+          achievements: [],
+          gameName: null,
+          total: 0,
+          unlocked: 0,
+          ts: now,
+        };
         achievementsCache.set(key, row);
-        return reply.send({ ok: true, linked: true, gameName: null, total: 0, unlocked: 0, achievements: [], reason: playerStats?.error || "no_data" });
+        return reply.send({
+          ok: true,
+          linked: true,
+          gameName: null,
+          total: 0,
+          unlocked: 0,
+          achievements: [],
+          reason: playerStats?.error || "no_data",
+        });
       }
       const list: any[] = playerStats.achievements || [];
-      const merged = list.map(a => {
+      const merged = list.map((a) => {
         const meta = schemaByName.get(String(a.apiname || a.name));
         return {
           name: String(a.apiname || a.name),
@@ -175,23 +239,44 @@ export default async function steamRoutes(app: FastifyInstance, opts: Opts) {
         };
       });
       const total = merged.length;
-      const unlocked = merged.filter(a => a.achieved).length;
+      const unlocked = merged.filter((a) => a.achieved).length;
       const row: AchievementsRow = {
         achievements: merged,
         gameName: playerStats.gameName || null,
-        total, unlocked, ts: now,
+        total,
+        unlocked,
+        ts: now,
       };
       achievementsCache.set(key, row);
-      return reply.send({ ok: true, linked: true, gameName: row.gameName, total, unlocked, achievements: merged });
+      return reply.send({
+        ok: true,
+        linked: true,
+        gameName: row.gameName,
+        total,
+        unlocked,
+        achievements: merged,
+      });
     } catch (e: any) {
       if (cached) {
         return reply.send({
-          ok: true, linked: true, gameName: cached.gameName,
-          total: cached.total, unlocked: cached.unlocked,
-          achievements: cached.achievements, stale: true,
+          ok: true,
+          linked: true,
+          gameName: cached.gameName,
+          total: cached.total,
+          unlocked: cached.unlocked,
+          achievements: cached.achievements,
+          stale: true,
         });
       }
-      return reply.send({ ok: true, linked: true, gameName: null, total: 0, unlocked: 0, achievements: [], error: "steam_unavailable" });
+      return reply.send({
+        ok: true,
+        linked: true,
+        gameName: null,
+        total: 0,
+        unlocked: 0,
+        achievements: [],
+        error: "steam_unavailable",
+      });
     }
   });
 
@@ -210,7 +295,13 @@ export default async function steamRoutes(app: FastifyInstance, opts: Opts) {
     try {
       const candidates = await prisma.user.findMany({
         where: { steamId: { not: null } } as any,
-        select: { id: true, name: true, avatar: true, avatarColor: true, livePresence: true } as any,
+        select: {
+          id: true,
+          name: true,
+          avatar: true,
+          avatarColor: true,
+          livePresence: true,
+        } as any,
       });
       const items = candidates
         .filter((u: any) => {
@@ -223,7 +314,8 @@ export default async function steamRoutes(app: FastifyInstance, opts: Opts) {
           name: u.name,
           avatar: u.avatar,
           avatarColor: u.avatarColor,
-          gameName: u.livePresence?.gameName || u.livePresence?.activity?.replace(/^Playing /, "") || null,
+          gameName:
+            u.livePresence?.gameName || u.livePresence?.activity?.replace(/^Playing /, "") || null,
           detail: u.livePresence?.detail || null,
           since: u.livePresence?.updatedAt || null,
         }));
@@ -238,23 +330,27 @@ export default async function steamRoutes(app: FastifyInstance, opts: Opts) {
   app.post("/steam/squad-invite", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
-    if (!createNotification) return reply.code(500).send({ ok: false, error: "notifications_unavailable" });
+    if (!createNotification)
+      return reply.code(500).send({ ok: false, error: "notifications_unavailable" });
 
     const body: any = (req as any).body || {};
     const targetUserId = String(body.targetUserId || "").trim();
     const lobbyId = String(body.lobbyId || "").trim();
     const appId = String(body.appId || "").trim();
     const note = String(body.message || "").slice(0, 120);
-    if (!targetUserId || !lobbyId) return reply.code(400).send({ ok: false, error: "missing_fields" });
+    if (!targetUserId || !lobbyId)
+      return reply.code(400).send({ ok: false, error: "missing_fields" });
     if (targetUserId === u.id) return reply.code(400).send({ ok: false, error: "self_invite" });
-    if (appId && !isValidAppId(appId)) return reply.code(400).send({ ok: false, error: "bad_appid" });
+    if (appId && !isValidAppId(appId))
+      return reply.code(400).send({ ok: false, error: "bad_appid" });
 
     const now = Date.now();
-    const window = (inviteWindow.get(u.id) || []).filter(t => now - t < INVITE_WINDOW_MS);
+    const window = (inviteWindow.get(u.id) || []).filter((t) => now - t < INVITE_WINDOW_MS);
     if (window.length >= INVITE_LIMIT) {
       const oldest = window[0];
       return reply.code(429).send({
-        ok: false, error: "rate_limited",
+        ok: false,
+        error: "rate_limited",
         retryAfterMs: INVITE_WINDOW_MS - (now - oldest),
       });
     }
@@ -262,8 +358,14 @@ export default async function steamRoutes(app: FastifyInstance, opts: Opts) {
     inviteWindow.set(u.id, window);
 
     const [target, lobby] = await Promise.all([
-      prisma.user.findUnique({ where: { id: targetUserId }, select: { id: true, livePresence: true } as any }),
-      prisma.lobby.findUnique({ where: { id: lobbyId }, select: { id: true, name: true, moduleConfig: true } }),
+      prisma.user.findUnique({
+        where: { id: targetUserId },
+        select: { id: true, livePresence: true } as any,
+      }),
+      prisma.lobby.findUnique({
+        where: { id: lobbyId },
+        select: { id: true, name: true, moduleConfig: true },
+      }),
     ]);
     if (!target) return reply.code(404).send({ ok: false, error: "target_not_found" });
     if (!lobby) return reply.code(404).send({ ok: false, error: "lobby_not_found" });

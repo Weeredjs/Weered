@@ -1,5 +1,15 @@
 import { useState } from "react";
-import { View, Text, FlatList, Pressable, TextInput, Alert, ActivityIndicator, RefreshControl, Share } from "react-native";
+import {
+  View,
+  Text,
+  FlatList,
+  Pressable,
+  TextInput,
+  Alert,
+  ActivityIndicator,
+  RefreshControl,
+  Share,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Stack } from "expo-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -31,15 +41,16 @@ export default function Invites() {
   const [ttlHours, setTtlHours] = useState("24");
 
   const create = useMutation({
-    mutationFn: () => api<{ ok: boolean; invite: Invite }>("/invites", {
-      method: "POST",
-      body: {
-        type: "PLATFORM",
-        note: note.trim() || undefined,
-        maxUses: Number(maxUses) || 1,
-        ttlHours: Number(ttlHours) || 0,
-      },
-    }),
+    mutationFn: () =>
+      api<{ ok: boolean; invite: Invite }>("/invites", {
+        method: "POST",
+        body: {
+          type: "PLATFORM",
+          note: note.trim() || undefined,
+          maxUses: Number(maxUses) || 1,
+          ttlHours: Number(ttlHours) || 0,
+        },
+      }),
     onSuccess: (r) => {
       const url = `${WEB_BASE}/invite/${r.invite.token}`;
       setNote("");
@@ -56,7 +67,9 @@ export default function Invites() {
       <Stack.Screen options={{ title: "Invites" }} />
 
       <View className="px-4 py-4 border-b border-border/30">
-        <Text className="text-weered-muted text-xs uppercase tracking-wide mb-2">Create platform invite</Text>
+        <Text className="text-weered-muted text-xs uppercase tracking-wide mb-2">
+          Create platform invite
+        </Text>
         <TextInput
           value={note}
           onChangeText={setNote}
@@ -78,7 +91,9 @@ export default function Invites() {
             />
           </View>
           <View className="flex-1">
-            <Text className="text-weered-muted text-[10px] uppercase mb-1">TTL hours (0=never)</Text>
+            <Text className="text-weered-muted text-[10px] uppercase mb-1">
+              TTL hours (0=never)
+            </Text>
             <TextInput
               value={ttlHours}
               onChangeText={setTtlHours}
@@ -100,12 +115,20 @@ export default function Invites() {
       </View>
 
       {q.isLoading ? (
-        <View className="flex-1 items-center justify-center"><ActivityIndicator color="#5800E5" /></View>
+        <View className="flex-1 items-center justify-center">
+          <ActivityIndicator color="#5800E5" />
+        </View>
       ) : (
         <FlatList
           data={invites}
           keyExtractor={(i) => i.token}
-          refreshControl={<RefreshControl refreshing={q.isRefetching} onRefresh={() => q.refetch()} tintColor="#5800E5" />}
+          refreshControl={
+            <RefreshControl
+              refreshing={q.isRefetching}
+              onRefresh={() => q.refetch()}
+              tintColor="#5800E5"
+            />
+          }
           contentContainerStyle={{ paddingBottom: 32 }}
           ItemSeparatorComponent={() => <View className="h-px bg-border/30" />}
           ListHeaderComponent={
@@ -114,7 +137,11 @@ export default function Invites() {
             </Text>
           }
           renderItem={({ item }) => <InviteRow invite={item} />}
-          ListEmptyComponent={<Text className="text-weered-muted text-sm text-center py-12">No invites created yet.</Text>}
+          ListEmptyComponent={
+            <Text className="text-weered-muted text-sm text-center py-12">
+              No invites created yet.
+            </Text>
+          }
         />
       )}
     </SafeAreaView>
@@ -128,30 +155,42 @@ function InviteRow({ invite }: { invite: Invite }) {
 
   return (
     <Pressable
-      onPress={() => Share.share({ message: `Join me on Weered — ${invite.url}`, url: invite.url }).catch(() => {})}
+      onPress={() =>
+        Share.share({ message: `Join me on Weered — ${invite.url}`, url: invite.url }).catch(
+          () => {},
+        )
+      }
       className="px-4 py-3 active:bg-panel"
       disabled={!!dead}
       style={{ opacity: dead ? 0.4 : 1 }}
     >
       <View className="flex-row items-center mb-1">
         <Text className="text-weered text-[10px] font-bold uppercase mr-2">{invite.type}</Text>
-        {!!invite.targetId && <Text className="text-weered-muted text-[10px]" numberOfLines={1}>{invite.targetId}</Text>}
+        {!!invite.targetId && (
+          <Text className="text-weered-muted text-[10px]" numberOfLines={1}>
+            {invite.targetId}
+          </Text>
+        )}
         <View className="flex-1" />
         <Text className="text-weered-muted text-xs">
           {invite.uses}/{invite.maxUses} used
         </Text>
       </View>
-      {!!invite.note && (
-        <Text className="text-weered-muted text-xs mb-1">{invite.note}</Text>
-      )}
-      <Text className="text-weered-text text-xs" numberOfLines={1}>{invite.url}</Text>
+      {!!invite.note && <Text className="text-weered-muted text-xs mb-1">{invite.note}</Text>}
+      <Text className="text-weered-text text-xs" numberOfLines={1}>
+        {invite.url}
+      </Text>
       <View className="flex-row mt-1">
         {expired && <Text className="text-red-400 text-[10px] font-bold">EXPIRED</Text>}
-        {!expired && exhausted && <Text className="text-amber-400 text-[10px] font-bold">EXHAUSTED</Text>}
+        {!expired && exhausted && (
+          <Text className="text-amber-400 text-[10px] font-bold">EXHAUSTED</Text>
+        )}
         {!dead && (
           <Text className="text-weered-muted/70 text-[10px]">
             created {new Date(invite.createdAt).toLocaleDateString()}
-            {invite.expiresAt ? ` · expires ${new Date(invite.expiresAt).toLocaleDateString()}` : ""}
+            {invite.expiresAt
+              ? ` · expires ${new Date(invite.expiresAt).toLocaleDateString()}`
+              : ""}
           </Text>
         )}
       </View>

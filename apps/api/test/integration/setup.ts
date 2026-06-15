@@ -8,7 +8,9 @@ export default function () {
   try {
     dbName = new URL(raw).pathname.replace(/^\//, "");
   } catch {
-    throw new Error("[integration] DATABASE_URL is unset or unparseable — set it to the weered_test database.");
+    throw new Error(
+      "[integration] DATABASE_URL is unset or unparseable — set it to the weered_test database.",
+    );
   }
   if (!/test/i.test(dbName)) {
     throw new Error(
@@ -16,6 +18,6 @@ export default function () {
         `Integration tests mutate data — point DATABASE_URL at weered_test (e.g. .../weered_test) first.`,
     );
   }
-  // eslint-disable-next-line no-console
+
   console.log(`[integration] DB safety gate OK — using test database "${dbName}".`);
 }

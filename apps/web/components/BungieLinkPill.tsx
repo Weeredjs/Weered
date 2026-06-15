@@ -4,21 +4,30 @@ import React from "react";
 const API = process.env.NEXT_PUBLIC_API_BASE || "https://api.weered.ca";
 
 export default function BungieLinkPill({ size = "sm" }: { size?: "sm" | "xs" }) {
-  const [state, setState] = React.useState<"loading" | "linked" | "unlinked" | "no-auth">("loading");
+  const [state, setState] = React.useState<"loading" | "linked" | "unlinked" | "no-auth">(
+    "loading",
+  );
 
   React.useEffect(() => {
     const token = typeof window !== "undefined" ? localStorage.getItem("weered_token") || "" : "";
-    if (!token) { setState("no-auth"); return; }
+    if (!token) {
+      setState("no-auth");
+      return;
+    }
     let cancelled = false;
     fetch(`${API}/bungie/me`, { headers: { Authorization: `Bearer ${token}` } })
-      .then(r => r.ok ? r.json() : null)
-      .then(j => {
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => {
         if (cancelled) return;
         if (j && j.ok && Array.isArray(j.characters)) setState("linked");
         else setState("unlinked");
       })
-      .catch(() => { if (!cancelled) setState("unlinked"); });
-    return () => { cancelled = true; };
+      .catch(() => {
+        if (!cancelled) setState("unlinked");
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   if (state !== "unlinked") return null;

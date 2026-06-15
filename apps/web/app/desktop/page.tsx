@@ -3,10 +3,12 @@ import DesktopContent from "./DesktopContent";
 
 export const metadata: Metadata = {
   title: "Weered Desktop | Native app for Mac, Windows, and Linux",
-  description: "Weered for the desktop. Built on Rust + Tauri. ~5MB installer, ~80MB RAM. System tray, global hotkeys, native notifications, deep links.",
+  description:
+    "Weered for the desktop. Built on Rust + Tauri. ~5MB installer, ~80MB RAM. System tray, global hotkeys, native notifications, deep links.",
   openGraph: {
     title: "Weered Desktop | Native app for Mac, Windows, Linux",
-    description: "Built on Rust + Tauri. 30x smaller than Discord. System tray, global hotkeys, native notifications.",
+    description:
+      "Built on Rust + Tauri. 30x smaller than Discord. System tray, global hotkeys, native notifications.",
     url: "https://weered.ca/desktop",
   },
   twitter: {

@@ -24,28 +24,44 @@ describe("social /recents — Zod schema + round-trip", () => {
 
   beforeEach(async () => {
     const stamp = Date.now() + "_" + Math.floor(performance.now());
-    const u = await prisma.user.create({ data: { usernameKey: "itest_soc_" + stamp, name: "soc" }, select: { id: true } });
+    const u = await prisma.user.create({
+      data: { usernameKey: "itest_soc_" + stamp, name: "soc" },
+      select: { id: true },
+    });
     userId = u.id;
     app = await buildTestApp(registerSocial);
   });
   afterEach(async () => {
-    try { await app?.close(); } catch {}
-    try { await prisma.recentVisit.deleteMany({ where: { userId } }); } catch {}
-    try { await prisma.user.deleteMany({ where: { id: userId } }); } catch {}
+    try {
+      await app?.close();
+    } catch {}
+    try {
+      await prisma.recentVisit.deleteMany({ where: { userId } });
+    } catch {}
+    try {
+      await prisma.user.deleteMany({ where: { id: userId } });
+    } catch {}
   });
-  afterAll(async () => { await prisma.$disconnect(); });
+  afterAll(async () => {
+    await prisma.$disconnect();
+  });
 
   it("records + returns a recent visit (valid body -> 200)", async () => {
     const token = testToken(userId);
     const post = await app.inject({
-      method: "POST", url: "/recents",
+      method: "POST",
+      url: "/recents",
       headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
       payload: { lobbyId: "destiny2" },
     });
     expect(post.statusCode).toBe(200);
     expect(post.json()?.ok).toBe(true);
 
-    const get = await app.inject({ method: "GET", url: "/recents", headers: { authorization: `Bearer ${token}` } });
+    const get = await app.inject({
+      method: "GET",
+      url: "/recents",
+      headers: { authorization: `Bearer ${token}` },
+    });
     expect(get.statusCode).toBe(200);
     const recents = get.json()?.recents;
     expect(Array.isArray(recents)).toBe(true);
@@ -54,7 +70,8 @@ describe("social /recents — Zod schema + round-trip", () => {
 
   it("rejects a malformed body via Zod (roomId not a string -> 400)", async () => {
     const res = await app.inject({
-      method: "POST", url: "/recents",
+      method: "POST",
+      url: "/recents",
       headers: { authorization: `Bearer ${testToken(userId)}`, "content-type": "application/json" },
       payload: { roomId: 12345 },
     });

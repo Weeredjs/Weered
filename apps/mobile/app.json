@@ -48,12 +48,7 @@
     "web": {
       "bundler": "metro"
     },
-    "plugins": [
-      "expo-router",
-      "expo-secure-store",
-      "expo-notifications",
-      "expo-updates"
-    ],
+    "plugins": ["expo-router", "expo-secure-store", "expo-notifications", "expo-updates"],
     "experiments": {
       "typedRoutes": true
     },

@@ -16,7 +16,9 @@ const API_BASE = process.env.API_BASE || "https://api.weered.ca";
 async function getJSON(path: string, init?: RequestInit): Promise<{ status: number; body: any }> {
   const res = await fetch(`${API_BASE}${path}`, init);
   let body: any = null;
-  try { body = await res.json(); } catch {}
+  try {
+    body = await res.json();
+  } catch {}
   return { status: res.status, body };
 }
 

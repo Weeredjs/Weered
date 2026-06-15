@@ -32,7 +32,7 @@ export function BadgesSection({ userId }: { userId: string }) {
   // field came back as a non-string and `(b.rarity || "common").toLowerCase()`
   // failed. Belt-and-braces: cast through String() and skip null entries.
   const rawBadges = q.data?.badges;
-  const badges: Badge[] = Array.isArray(rawBadges) ? rawBadges.filter(Boolean) as Badge[] : [];
+  const badges: Badge[] = Array.isArray(rawBadges) ? (rawBadges.filter(Boolean) as Badge[]) : [];
   if (q.isLoading || badges.length === 0) return null;
 
   return (

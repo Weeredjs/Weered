@@ -366,13 +366,11 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
       const mode = lobby.joinMode || "OPEN";
 
       if (mode === "PAID") {
-        return reply
-          .code(403)
-          .send({
-            ok: false,
-            error: "paid_required",
-            message: "Subscribe to a lobby tier to join.",
-          });
+        return reply.code(403).send({
+          ok: false,
+          error: "paid_required",
+          message: "Subscribe to a lobby tier to join.",
+        });
       }
 
       if (mode === "PASSWORD") {
@@ -461,13 +459,11 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
       if (!member) return reply.code(404).send({ ok: false, error: "not_a_member" });
 
       if (member.roleLevel >= 5) {
-        return reply
-          .code(403)
-          .send({
-            ok: false,
-            error: "owner_cannot_leave",
-            message: "Transfer ownership before leaving.",
-          });
+        return reply.code(403).send({
+          ok: false,
+          error: "owner_cannot_leave",
+          message: "Transfer ownership before leaving.",
+        });
       }
 
       await (prisma as any).lobbyMember.delete({ where: { id: member.id } });
@@ -665,24 +661,20 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
         });
         const tier = String(dbUser?.tier ?? "INNOCENT");
         if (tier === "INNOCENT") {
-          return reply
-            .code(403)
-            .send({
-              ok: false,
-              error: "tier_required",
-              message: "Indicted tier or higher required to create lobbies.",
-            });
+          return reply.code(403).send({
+            ok: false,
+            error: "tier_required",
+            message: "Indicted tier or higher required to create lobbies.",
+          });
         }
         const ownedCount = await (prisma as any).lobby.count({ where: { ownerId: u.id } });
         const maxLobbies = tier === "KINGPIN" ? 999 : tier === "FELON" ? 3 : 1;
         if (ownedCount >= maxLobbies) {
-          return reply
-            .code(403)
-            .send({
-              ok: false,
-              error: "lobby_limit",
-              message: `You can own up to ${maxLobbies} lobbies on the ${tier} tier.`,
-            });
+          return reply.code(403).send({
+            ok: false,
+            error: "lobby_limit",
+            message: `You can own up to ${maxLobbies} lobbies on the ${tier} tier.`,
+          });
         }
       }
 
@@ -704,13 +696,11 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
       if (!isStaff) {
         const reserved = await isNameReserved(String(id), "LOBBY");
         if (reserved)
-          return reply
-            .code(403)
-            .send({
-              ok: false,
-              error: "name_reserved",
-              message: "This lobby name is reserved and cannot be used.",
-            });
+          return reply.code(403).send({
+            ok: false,
+            error: "name_reserved",
+            message: "This lobby name is reserved and cannot be used.",
+          });
       }
 
       const shouldPin = isStaff ? Boolean(pinned) : false;
@@ -1466,13 +1456,11 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
       if (!room || room.lobbyId !== ctx.lobby.id)
         return reply.code(404).send({ ok: false, error: "room_not_found_in_lobby" });
       if (room.pinned && !ctx.overrideRole)
-        return reply
-          .code(409)
-          .send({
-            ok: false,
-            error: "cannot_delete_pinned",
-            message: "Pinned house rooms can't be deleted. Unpin first if you really need to.",
-          });
+        return reply.code(409).send({
+          ok: false,
+          error: "cannot_delete_pinned",
+          message: "Pinned house rooms can't be deleted. Unpin first if you really need to.",
+        });
       const liveRoom = rooms.get(roomId);
       if (liveRoom) {
         for (const s of liveRoom.sockets) {

@@ -27,7 +27,8 @@ export default function LandingLobbyCard({
   const [tilt, setTilt] = useState({ rx: 0, ry: 0, px: 50, py: 50 });
 
   function handleMove(e: React.MouseEvent<HTMLButtonElement>) {
-    const el = ref.current; if (!el) return;
+    const el = ref.current;
+    if (!el) return;
     const rect = el.getBoundingClientRect();
     const x = (e.clientX - rect.left) / rect.width;
     const y = (e.clientY - rect.top) / rect.height;
@@ -35,7 +36,9 @@ export default function LandingLobbyCard({
     const ry = (x - 0.5) * 10;
     setTilt({ rx, ry, px: x * 100, py: y * 100 });
   }
-  function handleLeave() { setTilt({ rx: 0, ry: 0, px: 50, py: 50 }); }
+  function handleLeave() {
+    setTilt({ rx: 0, ry: 0, px: 50, py: 50 });
+  }
 
   const accent = lobby.accentColor || "#D9A942";
   const banner = lobby.bannerUrl || "";
@@ -79,9 +82,7 @@ export default function LandingLobbyCard({
           </div>
         </div>
 
-        <div className="lp-wall-card-desc">
-          {(lobby.description || "").slice(0, 110) || "—"}
-        </div>
+        <div className="lp-wall-card-desc">{(lobby.description || "").slice(0, 110) || "—"}</div>
 
         <div className="lp-wall-card-foot">
           <span className="lp-wall-card-live">

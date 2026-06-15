@@ -17,9 +17,10 @@ self.addEventListener("install", () => {
 // then claim all open clients so the new SW is authoritative right away.
 self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)))
-    ).then(() => self.clients.claim())
+    caches
+      .keys()
+      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
+      .then(() => self.clients.claim()),
   );
 });
 
@@ -35,13 +36,15 @@ self.addEventListener("fetch", (event) => {
   // new filenames, so cached entries either match exactly or are unused.
   if (url.pathname.startsWith("/_next/static/") || url.pathname.startsWith("/brand/")) {
     event.respondWith(
-      caches.match(event.request).then((cached) =>
-        cached || fetch(event.request).then((res) => {
-          const clone = res.clone();
-          caches.open(CACHE).then((c) => c.put(event.request, clone));
-          return res;
-        })
-      )
+      caches.match(event.request).then(
+        (cached) =>
+          cached ||
+          fetch(event.request).then((res) => {
+            const clone = res.clone();
+            caches.open(CACHE).then((c) => c.put(event.request, clone));
+            return res;
+          }),
+      ),
     );
     return;
   }
@@ -54,27 +57,31 @@ self.addEventListener("fetch", (event) => {
 // ── Push notification handler ────────────────────────────────────────────
 self.addEventListener("push", (event) => {
   const data = event.data ? event.data.json() : {};
-  event.waitUntil((async () => {
-    // If any client window for this origin is focused, suppress the loud
-    // browser notification — postMessage to all clients so they bump the
-    // tab title / favicon / play chime instead. Quiet UX when the user
-    // is already looking at us; full notification only when they aren't.
-    const clients = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
-    const anyFocused = clients.some((c) => c.focused);
-    if (anyFocused) {
-      for (const c of clients) {
-        try { c.postMessage({ type: "weered:push-suppressed", data }); } catch {}
+  event.waitUntil(
+    (async () => {
+      // If any client window for this origin is focused, suppress the loud
+      // browser notification — postMessage to all clients so they bump the
+      // tab title / favicon / play chime instead. Quiet UX when the user
+      // is already looking at us; full notification only when they aren't.
+      const clients = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+      const anyFocused = clients.some((c) => c.focused);
+      if (anyFocused) {
+        for (const c of clients) {
+          try {
+            c.postMessage({ type: "weered:push-suppressed", data });
+          } catch {}
+        }
+        return;
       }
-      return;
-    }
-    await self.registration.showNotification(data.title || "Weered", {
-      body: data.body || "",
-      icon: "/brand/logo/weered-logo-128.png",
-      badge: "/brand/logo/weered-logo-128.png",
-      tag: data.tag || "weered",
-      data: { url: data.url || "/home" },
-    });
-  })());
+      await self.registration.showNotification(data.title || "Weered", {
+        body: data.body || "",
+        icon: "/brand/logo/weered-logo-128.png",
+        badge: "/brand/logo/weered-logo-128.png",
+        tag: data.tag || "weered",
+        data: { url: data.url || "/home" },
+      });
+    })(),
+  );
 });
 
 // ── Notification click — focus or open window ────────────────────────────
@@ -87,6 +94,6 @@ self.addEventListener("notificationclick", (event) => {
         if (w.url.includes(url) && "focus" in w) return w.focus();
       }
       return self.clients.openWindow(url);
-    })
+    }),
   );
 });

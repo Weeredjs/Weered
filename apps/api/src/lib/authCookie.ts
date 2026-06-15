@@ -5,11 +5,21 @@
 export const AUTH_COOKIE = "weered_token";
 
 export function setAuthCookie(reply: any, token: string) {
-  reply.header("Set-Cookie", AUTH_COOKIE + "=" + token + "; HttpOnly; Secure; SameSite=Lax; Domain=.weered.ca; Path=/; Max-Age=" + (7 * 24 * 3600));
+  reply.header(
+    "Set-Cookie",
+    AUTH_COOKIE +
+      "=" +
+      token +
+      "; HttpOnly; Secure; SameSite=Lax; Domain=.weered.ca; Path=/; Max-Age=" +
+      7 * 24 * 3600,
+  );
 }
 
 export function clearAuthCookie(reply: any) {
-  reply.header("Set-Cookie", AUTH_COOKIE + "=; HttpOnly; Secure; SameSite=Lax; Domain=.weered.ca; Path=/; Max-Age=0");
+  reply.header(
+    "Set-Cookie",
+    AUTH_COOKIE + "=; HttpOnly; Secure; SameSite=Lax; Domain=.weered.ca; Path=/; Max-Age=0",
+  );
 }
 
 // Web clients auth via the httpOnly cookie alone; omitting the body token
@@ -24,7 +34,8 @@ export function readCookieToken(req: any): string | null {
   if (!raw) return null;
   for (const part of String(raw).split(";")) {
     const i = part.indexOf("=");
-    if (i > 0 && part.slice(0, i).trim() === AUTH_COOKIE) return decodeURIComponent(part.slice(i + 1).trim());
+    if (i > 0 && part.slice(0, i).trim() === AUTH_COOKIE)
+      return decodeURIComponent(part.slice(i + 1).trim());
   }
   return null;
 }

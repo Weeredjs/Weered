@@ -12,12 +12,36 @@ type LatestRelease = {
 };
 
 const FEATURES: { icon: string; title: string; body: string }[] = [
-  { icon: "▣", title: "System tray",        body: "Stays online in your tray. One click and you're back in the lobby." },
-  { icon: "⌘", title: "Global hotkeys",     body: "Ctrl+Shift+W toggles the window from anywhere. Push-to-talk soon." },
-  { icon: "✸", title: "Native notifications", body: "OS-level pings. No browser permission popups, no missed DMs." },
-  { icon: "⌬", title: "Deep links",          body: "Click weered:// links in Discord/email/wherever and they open in the app." },
-  { icon: "↑",  title: "Auto-launch",        body: "Optional. Start Weered with your machine. Runs hidden in the tray." },
-  { icon: "⟲", title: "Auto-update",         body: "Background updates, no nagware. Restart and you're on the latest." },
+  {
+    icon: "▣",
+    title: "System tray",
+    body: "Stays online in your tray. One click and you're back in the lobby.",
+  },
+  {
+    icon: "⌘",
+    title: "Global hotkeys",
+    body: "Ctrl+Shift+W toggles the window from anywhere. Push-to-talk soon.",
+  },
+  {
+    icon: "✸",
+    title: "Native notifications",
+    body: "OS-level pings. No browser permission popups, no missed DMs.",
+  },
+  {
+    icon: "⌬",
+    title: "Deep links",
+    body: "Click weered:// links in Discord/email/wherever and they open in the app.",
+  },
+  {
+    icon: "↑",
+    title: "Auto-launch",
+    body: "Optional. Start Weered with your machine. Runs hidden in the tray.",
+  },
+  {
+    icon: "⟲",
+    title: "Auto-update",
+    body: "Background updates, no nagware. Restart and you're on the latest.",
+  },
 ];
 
 type Platform = {
@@ -29,10 +53,34 @@ type Platform = {
 };
 
 const PLATFORMS: Platform[] = [
-  { id: "windows",     label: "Windows",        sub: "Win 10 / 11 · NSIS installer",       target: "windows-x86_64",  detect: (_ua, p) => p.includes("Win") },
-  { id: "macos-arm",   label: "macOS (Apple)",  sub: "Apple Silicon · DMG",                target: "darwin-aarch64",  detect: (ua, p) => p.includes("Mac") && /arm|aarch/i.test(ua) },
-  { id: "macos-intel", label: "macOS (Intel)",  sub: "10.15+ · DMG",                       target: "darwin-x86_64",   detect: (ua, p) => p.includes("Mac") && !/arm|aarch/i.test(ua) },
-  { id: "linux",       label: "Linux",          sub: "AppImage",                            target: "linux-x86_64",    detect: (_ua, p) => /Linux|X11/i.test(p) },
+  {
+    id: "windows",
+    label: "Windows",
+    sub: "Win 10 / 11 · NSIS installer",
+    target: "windows-x86_64",
+    detect: (_ua, p) => p.includes("Win"),
+  },
+  {
+    id: "macos-arm",
+    label: "macOS (Apple)",
+    sub: "Apple Silicon · DMG",
+    target: "darwin-aarch64",
+    detect: (ua, p) => p.includes("Mac") && /arm|aarch/i.test(ua),
+  },
+  {
+    id: "macos-intel",
+    label: "macOS (Intel)",
+    sub: "10.15+ · DMG",
+    target: "darwin-x86_64",
+    detect: (ua, p) => p.includes("Mac") && !/arm|aarch/i.test(ua),
+  },
+  {
+    id: "linux",
+    label: "Linux",
+    sub: "AppImage",
+    target: "linux-x86_64",
+    detect: (_ua, p) => /Linux|X11/i.test(p),
+  },
 ];
 
 export default function DesktopContent() {
@@ -52,7 +100,7 @@ export default function DesktopContent() {
       .then((data) => {
         if (data?.ok && data.release) setRelease(data.release as LatestRelease);
       })
-      .catch(() => { })
+      .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
 
@@ -114,13 +162,18 @@ export default function DesktopContent() {
       `}</style>
       <div className="dt-root">
         <div className="dt-inner">
-          <Link href="/" className="dt-back">← back to weered</Link>
+          <Link href="/" className="dt-back">
+            ← back to weered
+          </Link>
 
           <div className="dt-eyebrow">Weered Desktop</div>
-          <h1 className="dt-h1">Native. Tiny. <em>Always on.</em></h1>
+          <h1 className="dt-h1">
+            Native. Tiny. <em>Always on.</em>
+          </h1>
           <p className="dt-lede">
-            The full Weered experience as a real desktop app. System tray, native notifications, global hotkeys, deep links. Built on Rust + Tauri.
-            30× smaller than Discord. Eats less RAM. Doesn't pretend to be a browser.
+            The full Weered experience as a real desktop app. System tray, native notifications,
+            global hotkeys, deep links. Built on Rust + Tauri. 30× smaller than Discord. Eats less
+            RAM. Doesn't pretend to be a browser.
           </p>
 
           <div className="dt-pitch">
@@ -144,13 +197,37 @@ export default function DesktopContent() {
               const url = release?.downloads?.[p.target] || null;
               const isPrimary = primaryPlatform === p.id;
               return (
-                <div key={p.id} className="dt-plat" style={isPrimary ? { borderColor: "#f5b700", boxShadow: "0 4px 16px rgba(245,183,0,0.3)" } : undefined}>
+                <div
+                  key={p.id}
+                  className="dt-plat"
+                  style={
+                    isPrimary
+                      ? { borderColor: "#f5b700", boxShadow: "0 4px 16px rgba(245,183,0,0.3)" }
+                      : undefined
+                  }
+                >
                   {!url && !loading && <div className="dt-soon">Coming soon</div>}
-                  {isPrimary && url && <div className="dt-soon" style={{ color: "#f5b700", borderColor: "rgba(245,183,0,0.7)", background: "rgba(245,183,0,0.15)" }}>Recommended</div>}
+                  {isPrimary && url && (
+                    <div
+                      className="dt-soon"
+                      style={{
+                        color: "#f5b700",
+                        borderColor: "rgba(245,183,0,0.7)",
+                        background: "rgba(245,183,0,0.15)",
+                      }}
+                    >
+                      Recommended
+                    </div>
+                  )}
                   <div className="dt-plat-name">{p.label}</div>
                   <div className="dt-plat-sub">{p.sub}</div>
                   {url ? (
-                    <a className="dt-plat-cta live" href={url} download style={{ textDecoration: "none", display: "inline-block" }}>
+                    <a
+                      className="dt-plat-cta live"
+                      href={url}
+                      download
+                      style={{ textDecoration: "none", display: "inline-block" }}
+                    >
                       Download
                     </a>
                   ) : (
@@ -161,16 +238,40 @@ export default function DesktopContent() {
             })}
           </div>
           {release && (
-            <div style={{ marginTop: 14, fontSize: 11, color: "rgba(203,213,225,0.5)", letterSpacing: 0.5 }}>
-              Released {new Date(release.pub_date).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })}
+            <div
+              style={{
+                marginTop: 14,
+                fontSize: 11,
+                color: "rgba(203,213,225,0.5)",
+                letterSpacing: 0.5,
+              }}
+            >
+              Released{" "}
+              {new Date(release.pub_date).toLocaleDateString(undefined, {
+                year: "numeric",
+                month: "short",
+                day: "numeric",
+              })}
               {" · "}
-              <a href="https://github.com/Weeredjs/Weered/releases" target="_blank" rel="noreferrer" style={{ color: "#a78bfa", textDecoration: "none" }}>
+              <a
+                href="https://github.com/Weeredjs/Weered/releases"
+                target="_blank"
+                rel="noreferrer"
+                style={{ color: "#a78bfa", textDecoration: "none" }}
+              >
                 All releases →
               </a>
             </div>
           )}
           {!release && !loading && (
-            <div style={{ marginTop: 14, fontSize: 11, color: "rgba(203,213,225,0.5)", letterSpacing: 0.5 }}>
+            <div
+              style={{
+                marginTop: 14,
+                fontSize: 11,
+                color: "rgba(203,213,225,0.5)",
+                letterSpacing: 0.5,
+              }}
+            >
               First public release is in testing. The PWA install (below) works today.
             </div>
           )}
@@ -178,9 +279,13 @@ export default function DesktopContent() {
           <div className="dt-pwa">
             <div className="dt-pwa-h">Want it now? Install as a PWA.</div>
             <div className="dt-pwa-body">
-              Open <Link href="/" style={{ color: "#5800E5", textDecoration: "underline" }}>weered.ca</Link> in Chrome or Edge,
-              click the install icon in the address bar, and Weered runs as a standalone window. No browser tabs, no chrome.
-              Works today, while we finish the native shell.
+              Open{" "}
+              <Link href="/" style={{ color: "#5800E5", textDecoration: "underline" }}>
+                weered.ca
+              </Link>{" "}
+              in Chrome or Edge, click the install icon in the address bar, and Weered runs as a
+              standalone window. No browser tabs, no chrome. Works today, while we finish the native
+              shell.
             </div>
           </div>
 

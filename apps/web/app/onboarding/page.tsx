@@ -8,11 +8,13 @@ function OnboardingForm() {
   const sp = useSearchParams();
   const API = process.env.NEXT_PUBLIC_API_BASE || "https://api.weered.ca";
 
-  const [token, setToken]       = useState("");
+  const [token, setToken] = useState("");
   const [username, setUsername] = useState("");
-  const [status, setStatus]     = useState<"idle" | "checking" | "available" | "taken" | "invalid">("idle");
-  const [busy, setBusy]         = useState(false);
-  const [err, setErr]           = useState("");
+  const [status, setStatus] = useState<"idle" | "checking" | "available" | "taken" | "invalid">(
+    "idle",
+  );
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
 
   useEffect(() => {
     try {
@@ -31,21 +33,30 @@ function OnboardingForm() {
     } catch {}
   }, [sp, router]);
 
-  const checkUsername = useCallback(async (val: string) => {
-    const clean = val.toLowerCase().replace(/[^a-z0-9_]/g, "");
-    if (clean.length < 2) { setStatus("invalid"); return; }
-    setStatus("checking");
-    try {
-      const res = await fetch(`${API}/auth/username-check?username=${encodeURIComponent(clean)}`);
-      const data = await res.json();
-      setStatus(data.available ? "available" : "taken");
-    } catch {
-      setStatus("idle");
-    }
-  }, [API]);
+  const checkUsername = useCallback(
+    async (val: string) => {
+      const clean = val.toLowerCase().replace(/[^a-z0-9_]/g, "");
+      if (clean.length < 2) {
+        setStatus("invalid");
+        return;
+      }
+      setStatus("checking");
+      try {
+        const res = await fetch(`${API}/auth/username-check?username=${encodeURIComponent(clean)}`);
+        const data = await res.json();
+        setStatus(data.available ? "available" : "taken");
+      } catch {
+        setStatus("idle");
+      }
+    },
+    [API],
+  );
 
   useEffect(() => {
-    if (!username) { setStatus("idle"); return; }
+    if (!username) {
+      setStatus("idle");
+      return;
+    }
     const timer = setTimeout(() => checkUsername(username), 400);
     return () => clearTimeout(timer);
   }, [username, checkUsername]);
@@ -186,79 +197,149 @@ function OnboardingForm() {
       <div className="wo-root">
         <div className="wo-card">
           <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 28 }}>
-            <div style={{
-              width: 40, height: 40, borderRadius: 10,
-              background: "linear-gradient(135deg, #7C3AED, #D946EF)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              fontFamily: "var(--font-barlow), 'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 18, color: "white",
-              boxShadow: "0 0 24px rgba(124,58,237,0.35)",
-            }}>w</div>
+            <div
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: 10,
+                background: "linear-gradient(135deg, #7C3AED, #D946EF)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontFamily: "var(--font-barlow), 'Barlow Condensed', sans-serif",
+                fontWeight: 800,
+                fontSize: 18,
+                color: "white",
+                boxShadow: "0 0 24px rgba(124,58,237,0.35)",
+              }}
+            >
+              w
+            </div>
             <div>
-              <div style={{ fontFamily: "var(--font-barlow), 'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 20, color: "rgba(243,244,246,0.98)", letterSpacing: "-0.5px" }}>weered</div>
-              <div style={{ fontSize: 11, color: "rgba(148,163,184,0.55)", marginTop: 3, letterSpacing: "0.04em" }}>claim your handle</div>
+              <div
+                style={{
+                  fontFamily: "var(--font-barlow), 'Barlow Condensed', sans-serif",
+                  fontWeight: 800,
+                  fontSize: 20,
+                  color: "rgba(243,244,246,0.98)",
+                  letterSpacing: "-0.5px",
+                }}
+              >
+                weered
+              </div>
+              <div
+                style={{
+                  fontSize: 11,
+                  color: "rgba(148,163,184,0.55)",
+                  marginTop: 3,
+                  letterSpacing: "0.04em",
+                }}
+              >
+                claim your handle
+              </div>
             </div>
           </div>
 
           <div style={{ marginBottom: 6 }}>
-            <div style={{ fontFamily: "var(--font-barlow), 'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 22, color: "rgba(243,244,246,0.98)", letterSpacing: "-0.5px", lineHeight: 1.2 }}>
+            <div
+              style={{
+                fontFamily: "var(--font-barlow), 'Barlow Condensed', sans-serif",
+                fontWeight: 800,
+                fontSize: 22,
+                color: "rgba(243,244,246,0.98)",
+                letterSpacing: "-0.5px",
+                lineHeight: 1.2,
+              }}
+            >
               Pick your handle.
             </div>
-            <div style={{ fontSize: 12, color: "rgba(148,163,184,0.55)", marginTop: 8, lineHeight: 1.65 }}>
-              This is how you'll show up everywhere: rooms, chat, presence.<br/>
+            <div
+              style={{
+                fontSize: 12,
+                color: "rgba(148,163,184,0.55)",
+                marginTop: 8,
+                lineHeight: 1.65,
+              }}
+            >
+              This is how you'll show up everywhere: rooms, chat, presence.
+              <br />
               Lowercase, numbers, and underscores. Pick something you'll answer to.
             </div>
           </div>
 
           <div style={{ marginTop: 24, position: "relative" }}>
-            <div style={{
-              position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)",
-              fontSize: 15, color: "rgba(124,58,237,0.6)", fontFamily: "'DM Mono', monospace",
-              pointerEvents: "none", userSelect: "none",
-            }}>@</div>
+            <div
+              style={{
+                position: "absolute",
+                left: 14,
+                top: "50%",
+                transform: "translateY(-50%)",
+                fontSize: 15,
+                color: "rgba(124,58,237,0.6)",
+                fontFamily: "'DM Mono', monospace",
+                pointerEvents: "none",
+                userSelect: "none",
+              }}
+            >
+              @
+            </div>
             <input
               className="wo-input"
               style={{ paddingLeft: 28 }}
               value={username}
-              onChange={e => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ""))}
+              onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ""))}
               placeholder="your_handle"
               maxLength={24}
               autoFocus
-              onKeyDown={e => { if (e.key === "Enter") submit(); }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") submit();
+              }}
             />
           </div>
 
-          <div style={{
-            height: 20,
-            marginTop: 8,
-            fontSize: 12,
-            color: statusColor,
-            transition: "color 0.15s",
-            paddingLeft: 2,
-          }}>
+          <div
+            style={{
+              height: 20,
+              marginTop: 8,
+              fontSize: 12,
+              color: statusColor,
+              transition: "color 0.15s",
+              paddingLeft: 2,
+            }}
+          >
             {statusText}
           </div>
 
           {err && (
-            <div style={{
-              padding: "10px 14px",
-              background: "rgba(239,68,68,0.10)",
-              border: "1px solid rgba(239,68,68,0.25)",
-              borderRadius: 10,
-              color: "rgba(254,202,202,0.95)",
-              fontSize: 12,
-              marginTop: 4,
-            }}>{err}</div>
+            <div
+              style={{
+                padding: "10px 14px",
+                background: "rgba(239,68,68,0.10)",
+                border: "1px solid rgba(239,68,68,0.25)",
+                borderRadius: 10,
+                color: "rgba(254,202,202,0.95)",
+                fontSize: 12,
+                marginTop: 4,
+              }}
+            >
+              {err}
+            </div>
           )}
 
-          <button
-            className="wo-btn"
-            disabled={status !== "available" || busy}
-            onClick={submit}
-          >
+          <button className="wo-btn" disabled={status !== "available" || busy} onClick={submit}>
             {busy ? "setting up..." : "claim_handle()"}
           </button>
 
-          <div style={{ marginTop: 16, fontSize: 11, color: "rgba(100,116,139,0.45)", textAlign: "center", lineHeight: 1.6, letterSpacing: "0.02em" }}>
+          <div
+            style={{
+              marginTop: 16,
+              fontSize: 11,
+              color: "rgba(100,116,139,0.45)",
+              textAlign: "center",
+              lineHeight: 1.6,
+              letterSpacing: "0.02em",
+            }}
+          >
             You can change this later in your profile.
           </div>
         </div>

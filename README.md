@@ -47,19 +47,19 @@ For the deliberate single-node scaling posture (and why horizontal WS scaling is
 
 Each lobby can opt into a module that wires it to a specific game or activity:
 
-| Module | What it adds |
-|---|---|
-| `BUNGIE` (Destiny 2) | Bungie OAuth, Guardian/loadout lookup, raid LFG, API-verified tournaments (PGCR scoring) |
-| `RIOT` (League of Legends) | Summoner lookup, ranked leaderboards, rotation tracker |
-| `EVE` (EVE Online) | Capsuleer sheet, killboard, sovereignty, market, new-pilot tools |
-| `POE` (Path of Exile) | Live Currency Exchange economy, ladder, rendered passive tree, build inspector |
-| `HELLDIVERS2` | Galactic-war tracker, Major Orders, war map, stratagem + loadout tools, squad finder |
-| `CHESS` | Lichess + Chess.com account linking, API-credited challenges, co-watch board |
-| `TRADING` (FakeOut) | Paper trading on a live Binance feed, TradingView charts, leaderboards |
-| `WINDROSE` | Bounty board (PvE objectives), hunter dossiers, crew tools |
-| `POKER` | LiveKit table, Texas Hold'em with paper buy-ins |
-| `MINECRAFT` | Weered Connect Fabric mod links in-game state to the lobby |
-| `FORTNITE` | Item shop, stats, news |
+| Module                     | What it adds                                                                             |
+| -------------------------- | ---------------------------------------------------------------------------------------- |
+| `BUNGIE` (Destiny 2)       | Bungie OAuth, Guardian/loadout lookup, raid LFG, API-verified tournaments (PGCR scoring) |
+| `RIOT` (League of Legends) | Summoner lookup, ranked leaderboards, rotation tracker                                   |
+| `EVE` (EVE Online)         | Capsuleer sheet, killboard, sovereignty, market, new-pilot tools                         |
+| `POE` (Path of Exile)      | Live Currency Exchange economy, ladder, rendered passive tree, build inspector           |
+| `HELLDIVERS2`              | Galactic-war tracker, Major Orders, war map, stratagem + loadout tools, squad finder     |
+| `CHESS`                    | Lichess + Chess.com account linking, API-credited challenges, co-watch board             |
+| `TRADING` (FakeOut)        | Paper trading on a live Binance feed, TradingView charts, leaderboards                   |
+| `WINDROSE`                 | Bounty board (PvE objectives), hunter dossiers, crew tools                               |
+| `POKER`                    | LiveKit table, Texas Hold'em with paper buy-ins                                          |
+| `MINECRAFT`                | Weered Connect Fabric mod links in-game state to the lobby                               |
+| `FORTNITE`                 | Item shop, stats, news                                                                   |
 
 Plus lighter topic/content modules: `CS2`, `DOTA2`, `PUBG`, `MLB`, `PGA`, `MTG`, `MARATHON`, `DND`, `STUDY`, `NEWS`, `REDDIT`, `TWITCH`, `YOUTUBE`, `HEADQUARTERS`, and `CUSTOM`.
 

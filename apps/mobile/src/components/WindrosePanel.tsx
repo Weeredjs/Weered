@@ -18,11 +18,24 @@ import { LfgPanel } from "@/components/LfgPanel";
 
 type Tab = "live" | "bounties" | "ports" | "mods" | "streams" | "news" | "lfg";
 
-type Stream = { userLogin: string; userName: string; title: string; viewerCount: number; thumbnailUrl: string };
+type Stream = {
+  userLogin: string;
+  userName: string;
+  title: string;
+  viewerCount: number;
+  thumbnailUrl: string;
+};
 type StreamsResp = { ok: boolean; streams?: Stream[] };
 
 type LiveResp = { ok: boolean; players?: number; checkedAt?: string };
-type News = { id: string; title: string; url: string; date: string | null; feedlabel: string; contents: string };
+type News = {
+  id: string;
+  title: string;
+  url: string;
+  date: string | null;
+  feedlabel: string;
+  contents: string;
+};
 type NewsResp = { ok: boolean; news?: News[] };
 
 type Bounty = {
@@ -85,9 +98,17 @@ export function WindrosePanel({ lobbyId }: { lobbyId: string }) {
   return (
     <View className="border-t border-border/40 pt-3">
       <Text className="text-weered-muted text-xs uppercase tracking-wide px-4 pb-2">Windrose</Text>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 12 }}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ paddingHorizontal: 12 }}
+      >
         <TabBtn label="🎮 Live" active={tab === "live"} onPress={() => setTab("live")} />
-        <TabBtn label="💀 Bounties" active={tab === "bounties"} onPress={() => setTab("bounties")} />
+        <TabBtn
+          label="💀 Bounties"
+          active={tab === "bounties"}
+          onPress={() => setTab("bounties")}
+        />
         <TabBtn label="⚓ Ports" active={tab === "ports"} onPress={() => setTab("ports")} />
         <TabBtn label="🪝 Mods" active={tab === "mods"} onPress={() => setTab("mods")} />
         <TabBtn label="📺 Streams" active={tab === "streams"} onPress={() => setTab("streams")} />
@@ -107,10 +128,20 @@ export function WindrosePanel({ lobbyId }: { lobbyId: string }) {
   );
 }
 
-function TabBtn({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
+function TabBtn({
+  label,
+  active,
+  onPress,
+}: {
+  label: string;
+  active: boolean;
+  onPress: () => void;
+}) {
   return (
     <Pressable onPress={onPress} className="px-3 py-2.5 active:opacity-70">
-      <Text className={`text-xs font-bold ${active ? "text-weered" : "text-weered-muted"}`}>{label}</Text>
+      <Text className={`text-xs font-bold ${active ? "text-weered" : "text-weered-muted"}`}>
+        {label}
+      </Text>
     </Pressable>
   );
 }
@@ -129,20 +160,29 @@ function LiveTab() {
   return (
     <View className="py-4 px-4">
       <View className="bg-panel border border-border rounded-xl p-4 items-center mb-3">
-        <Text className="text-weered-muted text-xs uppercase tracking-widest">Live players (Steam)</Text>
+        <Text className="text-weered-muted text-xs uppercase tracking-widest">
+          Live players (Steam)
+        </Text>
         <Text className="text-weered-text font-black text-3xl mt-1">
           {liveQ.isLoading ? "…" : (liveQ.data?.players ?? 0).toLocaleString()}
         </Text>
         <Text className="text-weered-muted text-[10px] mt-1">
-          {liveQ.data?.checkedAt ? `checked ${new Date(liveQ.data.checkedAt).toLocaleTimeString()}` : ""}
+          {liveQ.data?.checkedAt
+            ? `checked ${new Date(liveQ.data.checkedAt).toLocaleTimeString()}`
+            : ""}
         </Text>
       </View>
 
       {launchQ.data?.ok && (
         <>
-          <Text className="text-weered-muted text-xs uppercase tracking-wide mb-1">Launch snapshot</Text>
+          <Text className="text-weered-muted text-xs uppercase tracking-wide mb-1">
+            Launch snapshot
+          </Text>
           {(launchQ.data.milestones || []).map((m: any) => (
-            <View key={m.label} className="bg-panel border border-border rounded-lg px-3 py-2 mb-1.5 flex-row items-center">
+            <View
+              key={m.label}
+              className="bg-panel border border-border rounded-lg px-3 py-2 mb-1.5 flex-row items-center"
+            >
               <View className="flex-1">
                 <Text className="text-weered-muted text-xs">{m.label}</Text>
                 <Text className="text-weered-text font-bold">{m.value}</Text>
@@ -187,7 +227,8 @@ function BountiesTab() {
   });
 
   const settle = useMutation({
-    mutationFn: (id: string) => api(`/windrose/bounties/${id}/settle`, { method: "POST", body: {} }),
+    mutationFn: (id: string) =>
+      api(`/windrose/bounties/${id}/settle`, { method: "POST", body: {} }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["windrose-bounties"] });
       qc.invalidateQueries({ queryKey: ["paper-wallet"] });
@@ -195,12 +236,14 @@ function BountiesTab() {
     onError: (e: any) => Alert.alert("Couldn't settle", e?.message || "Unknown error"),
   });
   const reject = useMutation({
-    mutationFn: (id: string) => api(`/windrose/bounties/${id}/reject`, { method: "POST", body: {} }),
+    mutationFn: (id: string) =>
+      api(`/windrose/bounties/${id}/reject`, { method: "POST", body: {} }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["windrose-bounties"] }),
     onError: (e: any) => Alert.alert("Couldn't reject", e?.message || "Unknown error"),
   });
   const cancel = useMutation({
-    mutationFn: (id: string) => api(`/windrose/bounties/${id}/cancel`, { method: "POST", body: {} }),
+    mutationFn: (id: string) =>
+      api(`/windrose/bounties/${id}/cancel`, { method: "POST", body: {} }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["windrose-bounties"] });
       qc.invalidateQueries({ queryKey: ["paper-wallet"] });
@@ -215,14 +258,24 @@ function BountiesTab() {
     <View className="py-3">
       <View className="flex-row items-center px-4 pb-2">
         <Pressable onPress={() => setFilter("OPEN")} className="mr-2">
-          <Text className={`text-xs font-bold ${filter === "OPEN" ? "text-weered" : "text-weered-muted"}`}>Open</Text>
+          <Text
+            className={`text-xs font-bold ${filter === "OPEN" ? "text-weered" : "text-weered-muted"}`}
+          >
+            Open
+          </Text>
         </Pressable>
         <Pressable onPress={() => setFilter("MINE")}>
-          <Text className={`text-xs font-bold ${filter === "MINE" ? "text-weered" : "text-weered-muted"}`}>Mine</Text>
+          <Text
+            className={`text-xs font-bold ${filter === "MINE" ? "text-weered" : "text-weered-muted"}`}
+          >
+            Mine
+          </Text>
         </Pressable>
         <View className="flex-1" />
         {balance !== undefined && (
-          <Text className="text-amber-300 text-xs font-bold mr-3">{balance.toLocaleString()} ¢</Text>
+          <Text className="text-amber-300 text-xs font-bold mr-3">
+            {balance.toLocaleString()} ¢
+          </Text>
         )}
         {me && (
           <Pressable onPress={() => setComposeOpen(true)} hitSlop={6} className="active:opacity-70">
@@ -231,11 +284,17 @@ function BountiesTab() {
         )}
       </View>
 
-      {listQ.isLoading && <View className="py-6 items-center"><ActivityIndicator color="#5800E5" /></View>}
+      {listQ.isLoading && (
+        <View className="py-6 items-center">
+          <ActivityIndicator color="#5800E5" />
+        </View>
+      )}
 
       {!listQ.isLoading && bounties.length === 0 && (
         <Text className="text-weered-muted text-sm text-center py-6">
-          {filter === "MINE" ? "No bounties under your name yet." : "No open bounties. Post the first one!"}
+          {filter === "MINE"
+            ? "No bounties under your name yet."
+            : "No open bounties. Post the first one!"}
         </Text>
       )}
 
@@ -246,15 +305,23 @@ function BountiesTab() {
           <View key={b.id} className="px-4 py-3 border-b border-border/30">
             <View className="flex-row items-start mb-1">
               <View className="flex-1 mr-2">
-                <Text className="text-weered-text font-bold" numberOfLines={1}>💀 {b.targetHandle}</Text>
+                <Text className="text-weered-text font-bold" numberOfLines={1}>
+                  💀 {b.targetHandle}
+                </Text>
                 {b.targetServer && (
-                  <Text className="text-weered-muted text-[11px]" numberOfLines={1}>on {b.targetServer}</Text>
+                  <Text className="text-weered-muted text-[11px]" numberOfLines={1}>
+                    on {b.targetServer}
+                  </Text>
                 )}
               </View>
-              <Text className="text-amber-300 font-black text-base">{b.amount.toLocaleString()} ¢</Text>
+              <Text className="text-amber-300 font-black text-base">
+                {b.amount.toLocaleString()} ¢
+              </Text>
             </View>
             {!!b.reason && (
-              <Text className="text-weered-muted text-xs mb-1.5" numberOfLines={3}>{b.reason}</Text>
+              <Text className="text-weered-muted text-xs mb-1.5" numberOfLines={3}>
+                {b.reason}
+              </Text>
             )}
             <View className="flex-row items-center mb-1.5">
               <StatusPill status={b.status} />
@@ -265,7 +332,9 @@ function BountiesTab() {
             </View>
             {b.status === "CLAIMED" && b.proofNote && (
               <View className="bg-panel border border-border rounded-md px-2.5 py-2 mb-1.5">
-                <Text className="text-weered-muted text-[10px] uppercase tracking-wide mb-0.5">Proof</Text>
+                <Text className="text-weered-muted text-[10px] uppercase tracking-wide mb-0.5">
+                  Proof
+                </Text>
                 <Text className="text-weered-text text-xs">{b.proofNote}</Text>
               </View>
             )}
@@ -336,10 +405,10 @@ function BountiesTab() {
 
 function StatusPill({ status }: { status: Bounty["status"] }) {
   const palette: Record<Bounty["status"], { bg: string; text: string; label: string }> = {
-    OPEN:      { bg: "bg-amber-700/30", text: "text-amber-300", label: "OPEN" },
-    CLAIMED:   { bg: "bg-blue-700/30",  text: "text-blue-300",  label: "CLAIMED" },
-    SETTLED:   { bg: "bg-green-700/30", text: "text-green-300", label: "SETTLED" },
-    CANCELLED: { bg: "bg-panel",        text: "text-weered-muted", label: "CANCELLED" },
+    OPEN: { bg: "bg-amber-700/30", text: "text-amber-300", label: "OPEN" },
+    CLAIMED: { bg: "bg-blue-700/30", text: "text-blue-300", label: "CLAIMED" },
+    SETTLED: { bg: "bg-green-700/30", text: "text-green-300", label: "SETTLED" },
+    CANCELLED: { bg: "bg-panel", text: "text-weered-muted", label: "CANCELLED" },
   };
   const p = palette[status];
   return (
@@ -356,15 +425,16 @@ function BountyForm({ onClose, onCreated }: { onClose: () => void; onCreated: ()
   const [reason, setReason] = useState("");
 
   const create = useMutation({
-    mutationFn: () => api("/windrose/bounties", {
-      method: "POST",
-      body: {
-        targetHandle: target.trim(),
-        targetServer: server.trim() || undefined,
-        amount: Number(amount) || 0,
-        reason: reason.trim(),
-      },
-    }),
+    mutationFn: () =>
+      api("/windrose/bounties", {
+        method: "POST",
+        body: {
+          targetHandle: target.trim(),
+          targetServer: server.trim() || undefined,
+          amount: Number(amount) || 0,
+          reason: reason.trim(),
+        },
+      }),
     onSuccess: onCreated,
     onError: (e: any) => Alert.alert("Couldn't post bounty", e?.message || "Unknown error"),
   });
@@ -377,10 +447,17 @@ function BountyForm({ onClose, onCreated }: { onClose: () => void; onCreated: ()
         <View className="bg-weered-bg border border-border rounded-2xl p-5 max-h-[85%]">
           <ScrollView>
             <Text className="text-weered-text font-bold text-lg mb-1">Post a bounty</Text>
-            <Text className="text-weered-muted text-xs mb-4">Stake's escrowed when you post — refunded only on cancel.</Text>
+            <Text className="text-weered-muted text-xs mb-4">
+              Stake's escrowed when you post — refunded only on cancel.
+            </Text>
 
             <Field label="Mark *">
-              <Input value={target} onChangeText={setTarget} placeholder="BlackbeardXL · Kraken tooth · Rum run…" maxLength={60} />
+              <Input
+                value={target}
+                onChangeText={setTarget}
+                placeholder="BlackbeardXL · Kraken tooth · Rum run…"
+                maxLength={60}
+              />
             </Field>
             <Field label="Server (optional)">
               <Input value={server} onChangeText={setServer} placeholder="server name or IP" />
@@ -389,11 +466,19 @@ function BountyForm({ onClose, onCreated }: { onClose: () => void; onCreated: ()
               <Input value={amount} onChangeText={setAmount} keyboardType="number-pad" />
             </Field>
             <Field label="Why">
-              <Input value={reason} onChangeText={setReason} placeholder="What does the hunter need to deliver?" multiline />
+              <Input
+                value={reason}
+                onChangeText={setReason}
+                placeholder="What does the hunter need to deliver?"
+                multiline
+              />
             </Field>
 
             <View className="flex-row mt-4">
-              <Pressable onPress={onClose} className="flex-1 mr-2 px-3 py-3 rounded-lg bg-panel border border-border active:opacity-70">
+              <Pressable
+                onPress={onClose}
+                className="flex-1 mr-2 px-3 py-3 rounded-lg bg-panel border border-border active:opacity-70"
+              >
                 <Text className="text-weered-muted text-center font-bold">Cancel</Text>
               </Pressable>
               <Pressable
@@ -401,7 +486,9 @@ function BountyForm({ onClose, onCreated }: { onClose: () => void; onCreated: ()
                 disabled={create.isPending || !canPost}
                 className={`flex-1 px-3 py-3 rounded-lg active:opacity-80 ${canPost ? "bg-weered" : "bg-weered/40"}`}
               >
-                <Text className="text-white text-center font-bold">{create.isPending ? "Posting…" : "Post bounty"}</Text>
+                <Text className="text-white text-center font-bold">
+                  {create.isPending ? "Posting…" : "Post bounty"}
+                </Text>
               </Pressable>
             </View>
           </ScrollView>
@@ -411,14 +498,23 @@ function BountyForm({ onClose, onCreated }: { onClose: () => void; onCreated: ()
   );
 }
 
-function ClaimForm({ bounty, onClose, onClaimed }: { bounty: Bounty; onClose: () => void; onClaimed: () => void }) {
+function ClaimForm({
+  bounty,
+  onClose,
+  onClaimed,
+}: {
+  bounty: Bounty;
+  onClose: () => void;
+  onClaimed: () => void;
+}) {
   const [proofNote, setProofNote] = useState("");
 
   const claim = useMutation({
-    mutationFn: () => api(`/windrose/bounties/${bounty.id}/claim`, {
-      method: "POST",
-      body: { proofNote: proofNote.trim() },
-    }),
+    mutationFn: () =>
+      api(`/windrose/bounties/${bounty.id}/claim`, {
+        method: "POST",
+        body: { proofNote: proofNote.trim() },
+      }),
     onSuccess: onClaimed,
     onError: (e: any) => Alert.alert("Couldn't claim", e?.message || "Unknown error"),
   });
@@ -431,7 +527,8 @@ function ClaimForm({ bounty, onClose, onClaimed }: { bounty: Bounty; onClose: ()
         <View className="bg-weered-bg border border-border rounded-2xl p-5">
           <Text className="text-weered-text font-bold text-lg mb-1">Claim bounty</Text>
           <Text className="text-weered-muted text-xs mb-3">
-            💀 {bounty.targetHandle} · <Text className="text-amber-300 font-bold">{bounty.amount.toLocaleString()} ¢</Text>
+            💀 {bounty.targetHandle} ·{" "}
+            <Text className="text-amber-300 font-bold">{bounty.amount.toLocaleString()} ¢</Text>
           </Text>
           <Field label="Proof note">
             <Input
@@ -442,7 +539,10 @@ function ClaimForm({ bounty, onClose, onClaimed }: { bounty: Bounty; onClose: ()
             />
           </Field>
           <View className="flex-row mt-3">
-            <Pressable onPress={onClose} className="flex-1 mr-2 px-3 py-3 rounded-lg bg-panel border border-border active:opacity-70">
+            <Pressable
+              onPress={onClose}
+              className="flex-1 mr-2 px-3 py-3 rounded-lg bg-panel border border-border active:opacity-70"
+            >
               <Text className="text-weered-muted text-center font-bold">Cancel</Text>
             </Pressable>
             <Pressable
@@ -450,7 +550,9 @@ function ClaimForm({ bounty, onClose, onClaimed }: { bounty: Bounty; onClose: ()
               disabled={claim.isPending || !canClaim}
               className={`flex-1 px-3 py-3 rounded-lg active:opacity-80 ${canClaim ? "bg-weered" : "bg-weered/40"}`}
             >
-              <Text className="text-white text-center font-bold">{claim.isPending ? "Claiming…" : "Submit claim"}</Text>
+              <Text className="text-white text-center font-bold">
+                {claim.isPending ? "Claiming…" : "Submit claim"}
+              </Text>
             </Pressable>
           </View>
         </View>
@@ -545,7 +647,11 @@ function PortsTab() {
   }, [regQ.data, pubQ.data]);
 
   const filtered = query.trim()
-    ? rows.filter((r) => `${r.name} ${r.addr} ${(r.tags || []).join(" ")}`.toLowerCase().includes(query.trim().toLowerCase()))
+    ? rows.filter((r) =>
+        `${r.name} ${r.addr} ${(r.tags || []).join(" ")}`
+          .toLowerCase()
+          .includes(query.trim().toLowerCase()),
+      )
     : rows;
 
   const loading = regQ.isLoading || pubQ.isLoading;
@@ -556,10 +662,16 @@ function PortsTab() {
       <View className="px-4 pb-2">
         <Input value={query} onChangeText={setQuery} placeholder="Search ports of call…" />
       </View>
-      {loading && <View className="py-6 items-center"><ActivityIndicator color="#5800E5" /></View>}
+      {loading && (
+        <View className="py-6 items-center">
+          <ActivityIndicator color="#5800E5" />
+        </View>
+      )}
       {!loading && filtered.length === 0 && (
         <Text className="text-weered-muted text-sm text-center py-6">
-          {pubError ? "Steam discovery unavailable. Registered servers will still appear here." : "No ports of call yet."}
+          {pubError
+            ? "Steam discovery unavailable. Registered servers will still appear here."
+            : "No ports of call yet."}
         </Text>
       )}
       {filtered.map((s) => (
@@ -567,26 +679,37 @@ function PortsTab() {
           <View className="flex-row items-center mb-1">
             <View
               style={{
-                width: 8, height: 8, borderRadius: 4, marginRight: 6,
+                width: 8,
+                height: 8,
+                borderRadius: 4,
+                marginRight: 6,
                 backgroundColor: s.players > 0 ? "#22c55e" : "#94a3b8",
               }}
             />
-            <Text className="text-weered-text font-bold flex-1" numberOfLines={1}>{s.name}</Text>
+            <Text className="text-weered-text font-bold flex-1" numberOfLines={1}>
+              {s.name}
+            </Text>
             <Text className="text-weered-muted text-xs">
               {s.players}/{s.maxPlayers || "?"}
             </Text>
           </View>
           {!!s.description && (
-            <Text className="text-weered-muted text-xs mb-1" numberOfLines={2}>{s.description}</Text>
+            <Text className="text-weered-muted text-xs mb-1" numberOfLines={2}>
+              {s.description}
+            </Text>
           )}
           <View className="flex-row items-center flex-wrap">
             {s.source !== "public" && (
               <View className="bg-amber-700/30 px-1.5 py-0.5 rounded mr-1.5">
-                <Text className="text-amber-300 text-[9px] font-bold tracking-wide">REGISTERED</Text>
+                <Text className="text-amber-300 text-[9px] font-bold tracking-wide">
+                  REGISTERED
+                </Text>
               </View>
             )}
             {s.region && <Text className="text-weered-muted text-[10px] mr-2">{s.region}</Text>}
-            {s.framework && <Text className="text-weered-muted text-[10px] mr-2 uppercase">{s.framework}</Text>}
+            {s.framework && (
+              <Text className="text-weered-muted text-[10px] mr-2 uppercase">{s.framework}</Text>
+            )}
             {s.passworded && <Text className="text-weered-muted text-[10px] mr-2">🔒</Text>}
             {s.ownerName && <Text className="text-weered-muted text-[10px]">by {s.ownerName}</Text>}
           </View>
@@ -620,19 +743,31 @@ function ModsTab() {
       <View className="px-4 pb-2">
         <Input value={search} onChangeText={setSearch} placeholder="Search mods, authors…" />
       </View>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 12, paddingBottom: 6 }}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ paddingHorizontal: 12, paddingBottom: 6 }}
+      >
         {(["endorsed", "downloads", "updated", "new"] as const).map((s) => (
           <Pressable
             key={s}
             onPress={() => setSort(s)}
             className={`mr-2 px-2.5 py-1 rounded-md border ${sort === s ? "bg-weered border-weered" : "bg-panel border-border"}`}
           >
-            <Text className={`text-[10px] font-bold uppercase tracking-wide ${sort === s ? "text-white" : "text-weered-muted"}`}>{s}</Text>
+            <Text
+              className={`text-[10px] font-bold uppercase tracking-wide ${sort === s ? "text-white" : "text-weered-muted"}`}
+            >
+              {s}
+            </Text>
           </Pressable>
         ))}
       </ScrollView>
 
-      {q.isLoading && <View className="py-6 items-center"><ActivityIndicator color="#5800E5" /></View>}
+      {q.isLoading && (
+        <View className="py-6 items-center">
+          <ActivityIndicator color="#5800E5" />
+        </View>
+      )}
       {!q.isLoading && mods.length === 0 && (
         <Text className="text-weered-muted text-sm text-center py-6">
           {search ? "No mods match that search." : "Catalog hasn't surfaced any Windrose mods yet."}
@@ -654,13 +789,21 @@ function ModsTab() {
             <View style={{ width: 64, height: 36, borderRadius: 4, backgroundColor: "#1a0a25" }} />
           )}
           <View className="flex-1 ml-3">
-            <Text className="text-weered-text font-semibold text-sm" numberOfLines={1}>{m.name}</Text>
+            <Text className="text-weered-text font-semibold text-sm" numberOfLines={1}>
+              {m.name}
+            </Text>
             {m.author && (
-              <Text className="text-weered-muted text-[11px] italic" numberOfLines={1}>by {m.author}</Text>
+              <Text className="text-weered-muted text-[11px] italic" numberOfLines={1}>
+                by {m.author}
+              </Text>
             )}
             <View className="flex-row mt-0.5">
-              <Text className="text-weered-muted text-[10px] mr-3">👍 {m.endorsements.toLocaleString()}</Text>
-              <Text className="text-weered-muted text-[10px]">⬇ {m.downloads.toLocaleString()}</Text>
+              <Text className="text-weered-muted text-[10px] mr-3">
+                👍 {m.endorsements.toLocaleString()}
+              </Text>
+              <Text className="text-weered-muted text-[10px]">
+                ⬇ {m.downloads.toLocaleString()}
+              </Text>
             </View>
           </View>
         </Pressable>
@@ -672,10 +815,16 @@ function ModsTab() {
 function StreamsTab() {
   const q = useQuery({
     queryKey: ["twitch-streams", "Windrose"],
-    queryFn: () => api<StreamsResp>(`/twitch/streams?game=${encodeURIComponent("Windrose")}&first=20`),
+    queryFn: () =>
+      api<StreamsResp>(`/twitch/streams?game=${encodeURIComponent("Windrose")}&first=20`),
     staleTime: 5 * 60 * 1000,
   });
-  if (q.isLoading) return <View className="py-8 items-center"><ActivityIndicator color="#5800E5" /></View>;
+  if (q.isLoading)
+    return (
+      <View className="py-8 items-center">
+        <ActivityIndicator color="#5800E5" />
+      </View>
+    );
   if (!q.data?.ok || !q.data.streams?.length) {
     return <Text className="text-weered-muted text-sm text-center py-6">No live streams.</Text>;
   }
@@ -692,9 +841,15 @@ function StreamsTab() {
             style={{ width: 80, height: 45, borderRadius: 4, backgroundColor: "#111" }}
           />
           <View className="flex-1 ml-3">
-            <Text className="text-weered-text font-semibold text-sm" numberOfLines={1}>{s.userName}</Text>
-            <Text className="text-weered-muted text-xs mt-0.5" numberOfLines={1}>{s.title}</Text>
-            <Text className="text-red-400 text-xs mt-0.5">● {s.viewerCount.toLocaleString()} viewers</Text>
+            <Text className="text-weered-text font-semibold text-sm" numberOfLines={1}>
+              {s.userName}
+            </Text>
+            <Text className="text-weered-muted text-xs mt-0.5" numberOfLines={1}>
+              {s.title}
+            </Text>
+            <Text className="text-red-400 text-xs mt-0.5">
+              ● {s.viewerCount.toLocaleString()} viewers
+            </Text>
           </View>
         </Pressable>
       ))}
@@ -708,9 +863,15 @@ function NewsTab() {
     queryFn: () => api<NewsResp>("/windrose/news"),
     staleTime: 10 * 60_000,
   });
-  if (q.isLoading) return <View className="py-6 items-center"><ActivityIndicator color="#5800E5" /></View>;
+  if (q.isLoading)
+    return (
+      <View className="py-6 items-center">
+        <ActivityIndicator color="#5800E5" />
+      </View>
+    );
   const rows = q.data?.news ?? [];
-  if (rows.length === 0) return <Text className="text-weered-muted text-sm text-center py-6">No news.</Text>;
+  if (rows.length === 0)
+    return <Text className="text-weered-muted text-sm text-center py-6">No news.</Text>;
   return (
     <View className="py-2">
       {rows.map((n) => (
@@ -719,9 +880,16 @@ function NewsTab() {
           onPress={() => Linking.openURL(n.url).catch(() => {})}
           className="px-4 py-2.5 border-b border-border/20 active:bg-panel"
         >
-          <Text className="text-weered-text font-semibold text-sm" numberOfLines={2}>{n.title}</Text>
-          <Text className="text-weered-muted text-xs mt-0.5" numberOfLines={2}>{n.contents}</Text>
-          <Text className="text-weered-muted/70 text-[10px] mt-0.5">{n.feedlabel}{n.date ? ` · ${new Date(n.date).toLocaleDateString()}` : ""}</Text>
+          <Text className="text-weered-text font-semibold text-sm" numberOfLines={2}>
+            {n.title}
+          </Text>
+          <Text className="text-weered-muted text-xs mt-0.5" numberOfLines={2}>
+            {n.contents}
+          </Text>
+          <Text className="text-weered-muted/70 text-[10px] mt-0.5">
+            {n.feedlabel}
+            {n.date ? ` · ${new Date(n.date).toLocaleDateString()}` : ""}
+          </Text>
         </Pressable>
       ))}
     </View>
@@ -743,7 +911,10 @@ function Input(props: React.ComponentProps<typeof TextInput>) {
       {...props}
       placeholderTextColor="rgba(160,160,170,0.6)"
       className="bg-panel border border-border text-weered-text px-3 py-2.5 rounded-lg"
-      style={[{ fontSize: 14, minHeight: 42 }, props.multiline ? { minHeight: 64, textAlignVertical: "top" } : null]}
+      style={[
+        { fontSize: 14, minHeight: 42 },
+        props.multiline ? { minHeight: 64, textAlignVertical: "top" } : null,
+      ]}
     />
   );
 }

@@ -17,7 +17,13 @@ type Invite = {
   note: string | null;
 };
 type ResolveResp = { ok: boolean; invite?: Invite; error?: string };
-type AcceptResp = { ok: boolean; redirect?: string; type?: string; targetId?: string | null; error?: string };
+type AcceptResp = {
+  ok: boolean;
+  redirect?: string;
+  type?: string;
+  targetId?: string | null;
+  error?: string;
+};
 
 export default function InviteAccept() {
   const { token } = useLocalSearchParams<{ token: string }>();
@@ -32,7 +38,8 @@ export default function InviteAccept() {
   });
 
   const accept = useMutation({
-    mutationFn: () => api<AcceptResp>(`/invites/${encodeURIComponent(t)}/accept`, { method: "POST" }),
+    mutationFn: () =>
+      api<AcceptResp>(`/invites/${encodeURIComponent(t)}/accept`, { method: "POST" }),
     onSuccess: (r) => {
       if (!r.ok) {
         Alert.alert("Couldn't accept", r.error || "Unknown error");
@@ -54,7 +61,10 @@ export default function InviteAccept() {
         <Text className="text-weered-muted text-sm text-center mb-4">
           You need a Weered account to use this invite.
         </Text>
-        <Pressable onPress={() => router.replace("/login")} className="bg-weered px-6 py-3 rounded-lg active:opacity-80">
+        <Pressable
+          onPress={() => router.replace("/login")}
+          className="bg-weered px-6 py-3 rounded-lg active:opacity-80"
+        >
           <Text className="text-white font-bold">Sign in</Text>
         </Pressable>
       </SafeAreaView>
@@ -75,11 +85,16 @@ export default function InviteAccept() {
       <SafeAreaView className="flex-1 bg-weered-bg items-center justify-center px-8">
         <Stack.Screen options={{ title: "Invite" }} />
         <Text className="text-red-400 text-sm text-center mb-4">
-          {q.data?.error === "expired" ? "This invite has expired."
-            : q.data?.error === "exhausted" ? "This invite has been used up."
-            : "Invite not found."}
+          {q.data?.error === "expired"
+            ? "This invite has expired."
+            : q.data?.error === "exhausted"
+              ? "This invite has been used up."
+              : "Invite not found."}
         </Text>
-        <Pressable onPress={() => router.replace("/(tabs)/lobbies")} className="bg-panel border border-border px-4 py-2 rounded-lg active:opacity-70">
+        <Pressable
+          onPress={() => router.replace("/(tabs)/lobbies")}
+          className="bg-panel border border-border px-4 py-2 rounded-lg active:opacity-70"
+        >
           <Text className="text-weered-muted font-bold">Back</Text>
         </Pressable>
       </SafeAreaView>
@@ -92,7 +107,9 @@ export default function InviteAccept() {
     <SafeAreaView edges={["bottom"]} className="flex-1 bg-weered-bg">
       <Stack.Screen options={{ title: "Invite" }} />
       <View className="flex-1 items-center justify-center px-8">
-        <Text className="text-weered text-xs uppercase tracking-widest mb-2">You've been invited to</Text>
+        <Text className="text-weered text-xs uppercase tracking-widest mb-2">
+          You've been invited to
+        </Text>
         <Text className="text-weered-text text-3xl font-black mb-1 text-center">
           {inv.type === "PLATFORM" ? "Weered" : inv.targetName || inv.type.toLowerCase()}
         </Text>
@@ -114,7 +131,11 @@ export default function InviteAccept() {
           className="bg-weered px-8 py-4 rounded-xl active:opacity-80 w-full max-w-sm"
         >
           <Text className="text-white font-bold text-center text-base">
-            {accept.isPending ? "Accepting…" : inv.type === "PLATFORM" ? "Accept invite" : `Join ${inv.type.toLowerCase()}`}
+            {accept.isPending
+              ? "Accepting…"
+              : inv.type === "PLATFORM"
+                ? "Accept invite"
+                : `Join ${inv.type.toLowerCase()}`}
           </Text>
         </Pressable>
       </View>

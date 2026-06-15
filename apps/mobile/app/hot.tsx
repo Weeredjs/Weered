@@ -1,5 +1,13 @@
 import { useState } from "react";
-import { View, Text, ScrollView, Pressable, Image, ActivityIndicator, RefreshControl } from "react-native";
+import {
+  View,
+  Text,
+  ScrollView,
+  Pressable,
+  Image,
+  ActivityIndicator,
+  RefreshControl,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Stack, router } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
@@ -43,24 +51,43 @@ export default function Hot() {
       >
         {CATEGORIES.map((c) => (
           <Pressable key={c} onPress={() => setCat(c)} className="px-3 py-3 active:opacity-70">
-            <Text className={`text-xs uppercase tracking-wide font-bold ${cat === c ? "text-weered" : "text-weered-muted"}`}>{c}</Text>
+            <Text
+              className={`text-xs uppercase tracking-wide font-bold ${cat === c ? "text-weered" : "text-weered-muted"}`}
+            >
+              {c}
+            </Text>
           </Pressable>
         ))}
         <View style={{ flex: 1 }} />
-        <Pressable onPress={() => setSort(sort === "hot" ? "new" : "hot")} className="px-3 py-3 active:opacity-70">
-          <Text className="text-weered-muted text-xs uppercase tracking-wide font-bold">{sort === "hot" ? "🔥 Hot" : "🕒 New"}</Text>
+        <Pressable
+          onPress={() => setSort(sort === "hot" ? "new" : "hot")}
+          className="px-3 py-3 active:opacity-70"
+        >
+          <Text className="text-weered-muted text-xs uppercase tracking-wide font-bold">
+            {sort === "hot" ? "🔥 Hot" : "🕒 New"}
+          </Text>
         </Pressable>
       </ScrollView>
 
       {q.isLoading ? (
-        <View className="flex-1 items-center justify-center"><ActivityIndicator color="#5800E5" /></View>
+        <View className="flex-1 items-center justify-center">
+          <ActivityIndicator color="#5800E5" />
+        </View>
       ) : (
         <ScrollView
-          refreshControl={<RefreshControl refreshing={q.isRefetching} onRefresh={() => q.refetch()} tintColor="#5800E5" />}
+          refreshControl={
+            <RefreshControl
+              refreshing={q.isRefetching}
+              onRefresh={() => q.refetch()}
+              tintColor="#5800E5"
+            />
+          }
           contentContainerStyle={{ paddingBottom: 32 }}
         >
           {(q.data?.items ?? []).length === 0 && (
-            <Text className="text-weered-muted text-sm text-center py-12">Nothing hot here yet.</Text>
+            <Text className="text-weered-muted text-sm text-center py-12">
+              Nothing hot here yet.
+            </Text>
           )}
           {q.data?.items?.map((it) => (
             <Pressable
@@ -70,12 +97,19 @@ export default function Hot() {
             >
               <View className="flex-row">
                 {it.thumbnail ? (
-                  <Image source={{ uri: it.thumbnail }} style={{ width: 100, height: 75, borderRadius: 8, backgroundColor: "#1a1a1a" }} />
+                  <Image
+                    source={{ uri: it.thumbnail }}
+                    style={{ width: 100, height: 75, borderRadius: 8, backgroundColor: "#1a1a1a" }}
+                  />
                 ) : (
-                  <View style={{ width: 100, height: 75, borderRadius: 8, backgroundColor: "#1a1a1a" }} />
+                  <View
+                    style={{ width: 100, height: 75, borderRadius: 8, backgroundColor: "#1a1a1a" }}
+                  />
                 )}
                 <View className="flex-1 ml-3">
-                  <Text className="text-weered-text font-semibold text-sm" numberOfLines={3}>{it.title}</Text>
+                  <Text className="text-weered-text font-semibold text-sm" numberOfLines={3}>
+                    {it.title}
+                  </Text>
                   <View className="flex-row items-center mt-1 flex-wrap">
                     <Text className="text-weered-muted text-xs">{it.sourceName || it.domain}</Text>
                     <Text className="text-weered-muted text-xs mx-1">·</Text>

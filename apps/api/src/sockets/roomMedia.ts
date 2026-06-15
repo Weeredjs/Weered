@@ -25,9 +25,13 @@ export function handleLaunch(ws: any, msg: any, opts: Opts): void {
   if (msg.type === "launch:set") {
     if (!userIsOwner) return;
     const appid = Number(msg.appid);
-    const connect = String(msg.connect || "").trim().slice(0, 200);
-    const display = String(msg.display || connect || "").trim().slice(0, 80);
-    const note    = msg.note ? String(msg.note).trim().slice(0, 300) : undefined;
+    const connect = String(msg.connect || "")
+      .trim()
+      .slice(0, 200);
+    const display = String(msg.display || connect || "")
+      .trim()
+      .slice(0, 80);
+    const note = msg.note ? String(msg.note).trim().slice(0, 300) : undefined;
     if (!appid || !connect) return;
     launch.target = { appid, connect, display, note, setBy: ws.user.id, setAt: Date.now() };
     launch.ready.clear();
@@ -67,7 +71,7 @@ export function handleLaunch(ws: any, msg: any, opts: Opts): void {
 
   if (msg.type === "launch:fire") {
     if (!userIsOwner || !launch.target) return;
-    const anyPlayer = Array.from(launch.slots.values()).some(s => s === "player");
+    const anyPlayer = Array.from(launch.slots.values()).some((s) => s === "player");
     if (!anyPlayer) return;
     launch.firedAt = Date.now();
     launch.firedBy = ws.user.id;
@@ -105,14 +109,27 @@ export function handleYoutube(
   const { send } = opts;
   if (!room.users.has(ws.user.id)) return;
   if (msg.type === "youtube:load" && msg.videoId) {
-    room.ytState = { videoId: String(msg.videoId), playing: false, position: 0, updatedAt: Date.now() };
+    room.ytState = {
+      videoId: String(msg.videoId),
+      playing: false,
+      position: 0,
+      updatedAt: Date.now(),
+    };
     if (room.activeModule && room.activeModule.mode === "youtube") {
       room.activeModule.url = String(msg.videoId);
     }
   } else if (msg.type === "youtube:play") {
-    if (room.ytState) { room.ytState.playing = true; room.ytState.position = Number(msg.position ?? 0); room.ytState.updatedAt = Date.now(); }
+    if (room.ytState) {
+      room.ytState.playing = true;
+      room.ytState.position = Number(msg.position ?? 0);
+      room.ytState.updatedAt = Date.now();
+    }
   } else if (msg.type === "youtube:pause") {
-    if (room.ytState) { room.ytState.playing = false; room.ytState.position = Number(msg.position ?? 0); room.ytState.updatedAt = Date.now(); }
+    if (room.ytState) {
+      room.ytState.playing = false;
+      room.ytState.position = Number(msg.position ?? 0);
+      room.ytState.updatedAt = Date.now();
+    }
   } else if (msg.type === "youtube:stop") {
     room.ytState = null;
   }

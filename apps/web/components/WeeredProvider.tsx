@@ -8,25 +8,61 @@ import SystemBroadcast from "./SystemBroadcast";
 import { weeredToast } from "../lib/toast";
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 
-const API    = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
-const WS_URL = process.env.NEXT_PUBLIC_WS_URL   || "ws://127.0.0.1:4001";
+const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
+const WS_URL = process.env.NEXT_PUBLIC_WS_URL || "ws://127.0.0.1:4001";
 const SETTINGS_KEY = "weered:settings:v0";
 
-type Role       = "owner" | "mod" | "member" | "none";
-type RoomUser   = { id: string; name: string; role?: Role; globalRole?: string; avatarColor?: string };
-type ChatMsg    = { id: string; user: RoomUser; body: string; ts: number; kind?: "trade" | "dice" | "system" | "poker" | "poker-winner"; meta?: any };
-type Knock      = { userId: string; name: string; ts: number };
+type Role = "owner" | "mod" | "member" | "none";
+type RoomUser = {
+  id: string;
+  name: string;
+  role?: Role;
+  globalRole?: string;
+  avatarColor?: string;
+};
+type ChatMsg = {
+  id: string;
+  user: RoomUser;
+  body: string;
+  ts: number;
+  kind?: "trade" | "dice" | "system" | "poker" | "poker-winner";
+  meta?: any;
+};
+type Knock = { userId: string; name: string; ts: number };
 type JoinStatus = "idle" | "joining" | "joined" | "knocking" | "banned" | "denied";
 
 type AuditItem = {
-  id: string; ts: number; type: string;
-  actorId: string; actorName: string;
-  targetId?: string; targetName?: string; note?: string;
+  id: string;
+  ts: number;
+  type: string;
+  actorId: string;
+  actorName: string;
+  targetId?: string;
+  targetName?: string;
+  note?: string;
 };
 
-type RoomMeta   = { name: string; locked: boolean; chatDisabled: boolean; thumbnail?: string; ownerId: string; mods: string[]; description?: string; iconUrl?: string; bannerUrl?: string; accentColor?: string; disabledModules?: string[] };
+type RoomMeta = {
+  name: string;
+  locked: boolean;
+  chatDisabled: boolean;
+  thumbnail?: string;
+  ownerId: string;
+  mods: string[];
+  description?: string;
+  iconUrl?: string;
+  bannerUrl?: string;
+  accentColor?: string;
+  disabledModules?: string[];
+};
 type AdminState = { knocks: Knock[]; banned: string[]; muted: string[]; audit: AuditItem[] };
-type ModuleState = { mode: string; url?: string; channel?: string; setBy?: string; setAt?: number } | null;
+type ModuleState = {
+  mode: string;
+  url?: string;
+  channel?: string;
+  setBy?: string;
+  setAt?: number;
+} | null;
 
 export type LaunchTarget = {
   appid: number;
@@ -45,21 +81,37 @@ export type LaunchSnapshot = {
 };
 
 type Ctx = {
-  apiBase: string; wsUrl: string;
-  token: string; me: any; authed: boolean; globalRole: string;
-  wsReady: boolean; wsState: number;
-  activeRoomId: string; joinedRoomId: string; currentLobbyId: string;
+  apiBase: string;
+  wsUrl: string;
+  token: string;
+  me: any;
+  authed: boolean;
+  globalRole: string;
+  wsReady: boolean;
+  wsState: number;
+  activeRoomId: string;
+  joinedRoomId: string;
+  currentLobbyId: string;
   setActiveRoomId: (id: string) => void;
   metaByRoom: Record<string, RoomMeta>;
   adminByRoom: Record<string, AdminState>;
   moduleByRoom: Record<string, ModuleState>;
-  ytStateByRoom: Record<string, { videoId: string; playing: boolean; position: number; updatedAt: number }>;
+  ytStateByRoom: Record<
+    string,
+    { videoId: string; playing: boolean; position: number; updatedAt: number }
+  >;
   launchByRoom: Record<string, LaunchSnapshot | null>;
-  voiceByRoom: Record<string, { mode: "OPEN" | "QUEUED" | "LISTEN_ONLY"; queue: string[]; speakers: string[] }>;
+  voiceByRoom: Record<
+    string,
+    { mode: "OPEN" | "QUEUED" | "LISTEN_ONLY"; queue: string[]; speakers: string[] }
+  >;
   pinnedByRoom: Record<string, string[]>;
-  meta: RoomMeta | null; admin: AdminState | null;
+  meta: RoomMeta | null;
+  admin: AdminState | null;
   moduleState: ModuleState;
-  role: Role; joinStatus: JoinStatus; statusByRoom: Record<string, JoinStatus>;
+  role: Role;
+  joinStatus: JoinStatus;
+  statusByRoom: Record<string, JoinStatus>;
   rooms: any[];
   join: (roomId: string) => void;
   leave: () => void;
@@ -74,14 +126,21 @@ type Ctx = {
   lowerHand: () => void;
   approveSpeaker: (userId: string) => void;
   revokeSpeaker: (userId: string) => void;
-  lockRoom: () => void; unlockRoom: () => void;
+  lockRoom: () => void;
+  unlockRoom: () => void;
   joinWithPassword: (roomId: string, password: string) => void;
-  passwordRoomId: string; passwordError: string;
+  passwordRoomId: string;
+  passwordError: string;
   setPasswordRoomId: (id: string) => void;
-  promote: (userId: string) => void; demote: (userId: string) => void;
-  kick: (userId: string) => void; ban: (userId: string) => void;
-  unban: (userId: string) => void; mute: (userId: string) => void; unmute: (userId: string) => void;
-  admit: (userId: string) => void; deny: (userId: string) => void;
+  promote: (userId: string) => void;
+  demote: (userId: string) => void;
+  kick: (userId: string) => void;
+  ban: (userId: string) => void;
+  unban: (userId: string) => void;
+  mute: (userId: string) => void;
+  unmute: (userId: string) => void;
+  admit: (userId: string) => void;
+  deny: (userId: string) => void;
   sendRaw: (msg: object) => void;
   isAway: boolean;
   setAway: (away: boolean) => void;
@@ -96,7 +155,7 @@ function applySettingsToDom(s: any) {
   if (typeof document === "undefined") return;
   const root = document.documentElement;
   root.setAttribute("data-weered-theme", String(s?.theme || "press"));
-  root.setAttribute("data-weered-density",      String(s?.density      ?? "comfortable"));
+  root.setAttribute("data-weered-density", String(s?.density ?? "comfortable"));
   root.setAttribute("data-weered-reduce-motion", s?.reduceMotion ? "1" : "0");
 }
 
@@ -104,7 +163,9 @@ function readSettings(): any {
   try {
     const raw = typeof window !== "undefined" ? localStorage.getItem(SETTINGS_KEY) : null;
     return raw ? JSON.parse(raw) : null;
-  } catch { return null; }
+  } catch {
+    return null;
+  }
 }
 
 // ── Hot-path store (presence / chat / typing) ────────────────────────────────
@@ -124,12 +185,22 @@ const hotStore = {
   subs: new Set<() => void>(),
   set<K extends keyof HotMaps>(key: K, updater: React.SetStateAction<HotMaps[K]>) {
     const prev = hotStore.state[key];
-    const next = typeof updater === "function" ? (updater as (p: HotMaps[K]) => HotMaps[K])(prev) : updater;
+    const next =
+      typeof updater === "function" ? (updater as (p: HotMaps[K]) => HotMaps[K])(prev) : updater;
     if (next === prev) return;
     hotStore.state = { ...hotStore.state, [key]: next };
-    hotStore.subs.forEach((fn) => { try { fn(); } catch {} });
+    hotStore.subs.forEach((fn) => {
+      try {
+        fn();
+      } catch {}
+    });
   },
-  subscribe(fn: () => void) { hotStore.subs.add(fn); return () => { hotStore.subs.delete(fn); }; },
+  subscribe(fn: () => void) {
+    hotStore.subs.add(fn);
+    return () => {
+      hotStore.subs.delete(fn);
+    };
+  },
 };
 export function useRoomUsers(roomId?: string): RoomUser[] {
   return React.useSyncExternalStore(
@@ -139,7 +210,11 @@ export function useRoomUsers(roomId?: string): RoomUser[] {
   );
 }
 export function useUsersByRoom(): Record<string, RoomUser[]> {
-  return React.useSyncExternalStore(hotStore.subscribe, () => hotStore.state.usersByRoom, () => hotStore.state.usersByRoom);
+  return React.useSyncExternalStore(
+    hotStore.subscribe,
+    () => hotStore.state.usersByRoom,
+    () => hotStore.state.usersByRoom,
+  );
 }
 export function useRoomMsgs(roomId?: string): ChatMsg[] {
   return React.useSyncExternalStore(
@@ -158,8 +233,16 @@ export function useRoomTyping(roomId?: string): { userId: string; name: string; 
 
 const WeeredContext = createContext<Ctx | null>(null);
 
-function PasswordPromptInput({ roomId, error, onSubmit, onCancel }: {
-  roomId: string; error: string; onSubmit: (pw: string) => void; onCancel: () => void;
+function PasswordPromptInput({
+  roomId,
+  error,
+  onSubmit,
+  onCancel,
+}: {
+  roomId: string;
+  error: string;
+  onSubmit: (pw: string) => void;
+  onCancel: () => void;
 }) {
   const [pw, setPw] = React.useState("");
   return (
@@ -169,23 +252,38 @@ function PasswordPromptInput({ roomId, error, onSubmit, onCancel }: {
         type="password"
         placeholder="Enter room password…"
         value={pw}
-        onChange={e => setPw(e.target.value)}
-        onKeyDown={e => { if (e.key === "Enter" && pw.trim()) onSubmit(pw.trim()); }}
+        onChange={(e) => setPw(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && pw.trim()) onSubmit(pw.trim());
+        }}
         style={{
-          width: "100%", padding: "9px 12px", borderRadius: 10, fontSize: 13,
+          width: "100%",
+          padding: "9px 12px",
+          borderRadius: 10,
+          fontSize: 13,
           border: error ? "1px solid rgba(239,68,68,.50)" : "1px solid rgba(88,0,229,.30)",
-          background: "rgba(0,0,0,.35)", color: "rgba(243,244,246,.92)",
-          outline: "none", boxSizing: "border-box",
+          background: "rgba(0,0,0,.35)",
+          color: "rgba(243,244,246,.92)",
+          outline: "none",
+          boxSizing: "border-box",
         }}
       />
-      {error && <div style={{ fontSize: 11, color: "rgba(252,165,165,.85)", marginTop: 6 }}>{error}</div>}
+      {error && (
+        <div style={{ fontSize: 11, color: "rgba(252,165,165,.85)", marginTop: 6 }}>{error}</div>
+      )}
       <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
         <button
           onClick={onCancel}
           style={{
-            flex: 1, padding: "8px", borderRadius: 9, fontSize: 12, fontWeight: 600,
-            border: "1px solid rgba(255,255,255,.10)", background: "rgba(255,255,255,.05)",
-            color: "rgba(243,244,246,.70)", cursor: "pointer",
+            flex: 1,
+            padding: "8px",
+            borderRadius: 9,
+            fontSize: 12,
+            fontWeight: 600,
+            border: "1px solid rgba(255,255,255,.10)",
+            background: "rgba(255,255,255,.05)",
+            color: "rgba(243,244,246,.70)",
+            cursor: "pointer",
           }}
         >
           Cancel
@@ -194,9 +292,15 @@ function PasswordPromptInput({ roomId, error, onSubmit, onCancel }: {
           onClick={() => pw.trim() && onSubmit(pw.trim())}
           disabled={!pw.trim()}
           style={{
-            flex: 1, padding: "8px", borderRadius: 9, fontSize: 12, fontWeight: 700,
-            border: "1px solid rgba(88,0,229,.45)", background: "rgba(88,0,229,.18)",
-            color: "rgba(167,139,250,.95)", cursor: pw.trim() ? "pointer" : "default",
+            flex: 1,
+            padding: "8px",
+            borderRadius: 9,
+            fontSize: 12,
+            fontWeight: 700,
+            border: "1px solid rgba(88,0,229,.45)",
+            background: "rgba(88,0,229,.18)",
+            color: "rgba(167,139,250,.95)",
+            cursor: pw.trim() ? "pointer" : "default",
             opacity: pw.trim() ? 1 : 0.5,
           }}
         >
@@ -208,48 +312,65 @@ function PasswordPromptInput({ roomId, error, onSubmit, onCancel }: {
 }
 
 export function WeeredProvider({ children }: { children: React.ReactNode }) {
-  const router   = useRouter();
+  const router = useRouter();
   const pathname = usePathname();
 
   const [token, setToken] = useState<string>(() => {
     if (typeof window === "undefined") return "";
-    try { return localStorage.getItem("weered_user") ? "authed" : ""; } catch { return ""; }
+    try {
+      return localStorage.getItem("weered_user") ? "authed" : "";
+    } catch {
+      return "";
+    }
   });
-  const [me,    setMe   ] = useState<any>(() => {
+  const [me, setMe] = useState<any>(() => {
     if (typeof window === "undefined") return null;
-    try { const u = localStorage.getItem("weered_user"); return u ? JSON.parse(u) : null; } catch { return null; }
+    try {
+      const u = localStorage.getItem("weered_user");
+      return u ? JSON.parse(u) : null;
+    } catch {
+      return null;
+    }
   });
   const [globalRole, setGlobalRole] = useState("");
 
   const [wsState, setWsState] = useState<number>(WebSocket.CLOSED);
   const [wsReady, setWsReady] = useState(false);
-  const wsRef            = useRef<WebSocket | null>(null);
+  const wsRef = useRef<WebSocket | null>(null);
   const lastAuthTokenRef = useRef("");
   const lastJoinedRidRef = useRef("");
-  const activeRoomIdRef  = useRef("");
+  const activeRoomIdRef = useRef("");
 
-  const [activeRoomId,  setActiveRoomId ] = useState("");
-  const [joinedRoomId,  setJoinedRoomId ] = useState("");
+  const [activeRoomId, setActiveRoomId] = useState("");
+  const [joinedRoomId, setJoinedRoomId] = useState("");
   const [currentLobbyId, setCurrentLobbyId] = useState("");
-  const setUsersByRoom: React.Dispatch<React.SetStateAction<Record<string, RoomUser[]>>> = (u) => hotStore.set("usersByRoom", u);
-  const setMsgsByRoom:  React.Dispatch<React.SetStateAction<Record<string, ChatMsg[]>>>  = (u) => hotStore.set("msgsByRoom", u);
-  const [metaByRoom,    setMetaByRoom   ] = useState<Record<string, RoomMeta>>({});
-  const [adminByRoom,   setAdminByRoom  ] = useState<Record<string, AdminState>>({});
-  const [statusByRoom,  setStatusByRoom ] = useState<Record<string, JoinStatus>>({});
-  const [moduleByRoom,  setModuleByRoom ] = useState<Record<string, ModuleState>>({});
-  const [ytStateByRoom, setYtStateByRoom] = useState<Record<string, { videoId: string; playing: boolean; position: number; updatedAt: number }>>({});
-  const [launchByRoom,  setLaunchByRoom ] = useState<Record<string, LaunchSnapshot | null>>({});
-  const [voiceByRoom,   setVoiceByRoom  ] = useState<Record<string, { mode: "OPEN" | "QUEUED" | "LISTEN_ONLY"; queue: string[]; speakers: string[] }>>({});
-  const setTypingByRoom: React.Dispatch<React.SetStateAction<Record<string, { userId: string; name: string; ts: number }[]>>> = (u) => hotStore.set("typingByRoom", u);
-  const [pinnedByRoom,  setPinnedByRoom ] = useState<Record<string, string[]>>({});
-  const [rooms,         setRooms        ] = useState<any[]>([]);
+  const setUsersByRoom: React.Dispatch<React.SetStateAction<Record<string, RoomUser[]>>> = (u) =>
+    hotStore.set("usersByRoom", u);
+  const setMsgsByRoom: React.Dispatch<React.SetStateAction<Record<string, ChatMsg[]>>> = (u) =>
+    hotStore.set("msgsByRoom", u);
+  const [metaByRoom, setMetaByRoom] = useState<Record<string, RoomMeta>>({});
+  const [adminByRoom, setAdminByRoom] = useState<Record<string, AdminState>>({});
+  const [statusByRoom, setStatusByRoom] = useState<Record<string, JoinStatus>>({});
+  const [moduleByRoom, setModuleByRoom] = useState<Record<string, ModuleState>>({});
+  const [ytStateByRoom, setYtStateByRoom] = useState<
+    Record<string, { videoId: string; playing: boolean; position: number; updatedAt: number }>
+  >({});
+  const [launchByRoom, setLaunchByRoom] = useState<Record<string, LaunchSnapshot | null>>({});
+  const [voiceByRoom, setVoiceByRoom] = useState<
+    Record<string, { mode: "OPEN" | "QUEUED" | "LISTEN_ONLY"; queue: string[]; speakers: string[] }>
+  >({});
+  const setTypingByRoom: React.Dispatch<
+    React.SetStateAction<Record<string, { userId: string; name: string; ts: number }[]>>
+  > = (u) => hotStore.set("typingByRoom", u);
+  const [pinnedByRoom, setPinnedByRoom] = useState<Record<string, string[]>>({});
+  const [rooms, setRooms] = useState<any[]>([]);
   const [passwordRoomId, setPasswordRoomId] = useState("");
-  const [passwordError,  setPasswordError ] = useState("");
+  const [passwordError, setPasswordError] = useState("");
 
-  const authed     = useMemo(() => Boolean(token), [token]);
-  const meta       = activeRoomId ? (metaByRoom[activeRoomId]   || null)    : null;
-  const admin      = activeRoomId ? (adminByRoom[activeRoomId]  || null)    : null;
-  const joinStatus = activeRoomId ? (statusByRoom[activeRoomId] || "idle")  : "idle";
+  const authed = useMemo(() => Boolean(token), [token]);
+  const meta = activeRoomId ? metaByRoom[activeRoomId] || null : null;
+  const admin = activeRoomId ? adminByRoom[activeRoomId] || null : null;
+  const joinStatus = activeRoomId ? statusByRoom[activeRoomId] || "idle" : "idle";
   const moduleState: ModuleState = activeRoomId ? (moduleByRoom[activeRoomId] ?? null) : null;
 
   const role: Role = useMemo(() => {
@@ -260,10 +381,15 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
   }, [meta, me]);
 
   useEffect(() => {
-    if (!token) { setGlobalRole(""); return; }
+    if (!token) {
+      setGlobalRole("");
+      return;
+    }
     fetch(`${API}/staff/me`, { headers: { Authorization: `Bearer ${token}` } })
-      .then(r => r.json())
-      .then(j => { if (j?.globalRole) setGlobalRole(j.globalRole); })
+      .then((r) => r.json())
+      .then((j) => {
+        if (j?.globalRole) setGlobalRole(j.globalRole);
+      })
       .catch(() => {});
   }, [token]);
 
@@ -280,21 +406,31 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     try {
-      const uRaw = localStorage.getItem("weered_user")  || "";
-      if (uRaw) { setToken("authed"); try { setMe(JSON.parse(uRaw)); } catch {} }
+      const uRaw = localStorage.getItem("weered_user") || "";
+      if (uRaw) {
+        setToken("authed");
+        try {
+          setMe(JSON.parse(uRaw));
+        } catch {}
+      }
     } catch {}
   }, []);
 
   useEffect(() => {
     try {
-      const uRaw = localStorage.getItem("weered_user")  || "";
+      const uRaw = localStorage.getItem("weered_user") || "";
       if (uRaw && !token) {
         setToken("authed");
-        try { setMe(JSON.parse(uRaw)); } catch {}
+        try {
+          setMe(JSON.parse(uRaw));
+        } catch {}
       }
-      if (!uRaw && token) { setToken(""); setMe(null); }
+      if (!uRaw && token) {
+        setToken("");
+        setMe(null);
+      }
     } catch {}
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname]);
 
   useEffect(() => {
@@ -303,25 +439,28 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
       const roomMatch = pathname.match(/^\/room\/([^/]+)/);
       if (roomMatch) {
         const rid = decodeURIComponent(roomMatch[1]);
-        if (rid && rid !== "@me") { activeRoomIdRef.current = rid; setActiveRoomId(rid); return; }
+        if (rid && rid !== "@me") {
+          activeRoomIdRef.current = rid;
+          setActiveRoomId(rid);
+          return;
+        }
       }
-    if (pathname.startsWith("/lobby")) {
-      const seg = pathname.replace("/lobby/", "").replace("/lobby", "").trim();
-      const staticRoutes = ["create", "admin", "settings"];
-      if (seg && staticRoutes.includes(seg.split("/")[0])) return;
-      const rid = seg ? decodeURIComponent(seg) : "lobby";
-      activeRoomIdRef.current = rid;
-      setActiveRoomId(rid);
-      if (seg) setCurrentLobbyId(decodeURIComponent(seg));
-      return;
-    }
-    if (pathname === "/home" || pathname.startsWith("/home/")) {
-      activeRoomIdRef.current = "lobby";
-      setActiveRoomId("lobby");
-      return;
-    }
+      if (pathname.startsWith("/lobby")) {
+        const seg = pathname.replace("/lobby/", "").replace("/lobby", "").trim();
+        const staticRoutes = ["create", "admin", "settings"];
+        if (seg && staticRoutes.includes(seg.split("/")[0])) return;
+        const rid = seg ? decodeURIComponent(seg) : "lobby";
+        activeRoomIdRef.current = rid;
+        setActiveRoomId(rid);
+        if (seg) setCurrentLobbyId(decodeURIComponent(seg));
+        return;
+      }
+      if (pathname === "/home" || pathname.startsWith("/home/")) {
+        activeRoomIdRef.current = "lobby";
+        setActiveRoomId("lobby");
+        return;
+      }
     } catch {}
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname]);
 
   useEffect(() => {
@@ -335,20 +474,28 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
       return;
     }
     if (existing?.readyState === WebSocket.CONNECTING) return;
-    if (existing) { try { existing.close(); } catch {} wsRef.current = null; }
+    if (existing) {
+      try {
+        existing.close();
+      } catch {}
+      wsRef.current = null;
+    }
 
     const ws = new WebSocket(WS_URL);
     wsRef.current = ws;
 
     ws.onopen = () => {
       setWsState(ws.readyState);
-      fetch(`${API}/auth/ws-ticket`).then(r => r.json()).then(j => {
-        const tk = j && j.ticket;
-        if (tk && wsRef.current === ws && ws.readyState === WebSocket.OPEN) {
-          lastAuthTokenRef.current = tk;
-          ws.send(JSON.stringify({ type: "auth:hello", token: tk }));
-        }
-      }).catch(() => {});
+      fetch(`${API}/auth/ws-ticket`)
+        .then((r) => r.json())
+        .then((j) => {
+          const tk = j && j.ticket;
+          if (tk && wsRef.current === ws && ws.readyState === WebSocket.OPEN) {
+            lastAuthTokenRef.current = tk;
+            ws.send(JSON.stringify({ type: "auth:hello", token: tk }));
+          }
+        })
+        .catch(() => {});
     };
 
     ws.onclose = () => {
@@ -356,57 +503,111 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
       setWsReady(false);
       if (wsRef.current === ws) wsRef.current = null;
     };
-    ws.onerror = () => { setWsState(ws.readyState); };
+    ws.onerror = () => {
+      setWsState(ws.readyState);
+    };
 
     ws.onmessage = (ev) => {
       let msg: any = null;
-      try { msg = JSON.parse(String(ev.data || "")); } catch { return; }
+      try {
+        msg = JSON.parse(String(ev.data || ""));
+      } catch {
+        return;
+      }
       msg = normalizeInbound(msg);
       if (!msg || typeof msg.type !== "string") return;
       if (msg.type === "dm:message") {
-        try { window.dispatchEvent(new CustomEvent("weered:dm:message", { detail: msg })); } catch {}
-        try { window.dispatchEvent(new CustomEvent("weered:unread-tick")); } catch {}
+        try {
+          window.dispatchEvent(new CustomEvent("weered:dm:message", { detail: msg }));
+        } catch {}
+        try {
+          window.dispatchEvent(new CustomEvent("weered:unread-tick"));
+        } catch {}
       }
       if (msg.type === "dm:edited") {
-        try { window.dispatchEvent(new CustomEvent("weered:dm:edited", { detail: msg })); } catch {}
+        try {
+          window.dispatchEvent(new CustomEvent("weered:dm:edited", { detail: msg }));
+        } catch {}
       }
       if (msg.type === "dm:deleted") {
-        try { window.dispatchEvent(new CustomEvent("weered:dm:deleted", { detail: msg })); } catch {}
+        try {
+          window.dispatchEvent(new CustomEvent("weered:dm:deleted", { detail: msg }));
+        } catch {}
       }
       if (msg.type === "dm:reaction") {
-        try { window.dispatchEvent(new CustomEvent("weered:dm:reaction", { detail: msg })); } catch {}
+        try {
+          window.dispatchEvent(new CustomEvent("weered:dm:reaction", { detail: msg }));
+        } catch {}
       }
-      if (msg.type === "group:created" || msg.type === "group:message" ||
-          msg.type === "group:edited" || msg.type === "group:deleted" ||
-          msg.type === "group:renamed" || msg.type === "group:members:added" ||
-          msg.type === "group:members:removed") {
-        try { window.dispatchEvent(new CustomEvent(`weered:${msg.type}`, { detail: msg })); } catch {}
+      if (
+        msg.type === "group:created" ||
+        msg.type === "group:message" ||
+        msg.type === "group:edited" ||
+        msg.type === "group:deleted" ||
+        msg.type === "group:renamed" ||
+        msg.type === "group:members:added" ||
+        msg.type === "group:members:removed"
+      ) {
+        try {
+          window.dispatchEvent(new CustomEvent(`weered:${msg.type}`, { detail: msg }));
+        } catch {}
       }
       if (msg.type === "notification:new") {
         console.log("[ws] notification:new received", msg.notification?.type);
-        try { window.dispatchEvent(new CustomEvent("weered:notification", { detail: msg.notification })); } catch {}
-        try { window.dispatchEvent(new CustomEvent("weered:unread-tick")); } catch {}
+        try {
+          window.dispatchEvent(
+            new CustomEvent("weered:notification", { detail: msg.notification }),
+          );
+        } catch {}
+        try {
+          window.dispatchEvent(new CustomEvent("weered:unread-tick"));
+        } catch {}
       }
-      if (msg && msg.type && !msg.type.startsWith("presence:") && !msg.type.startsWith("chat:typing")) {
+      if (
+        msg &&
+        msg.type &&
+        !msg.type.startsWith("presence:") &&
+        !msg.type.startsWith("chat:typing")
+      ) {
         console.log("[ws] msg type:", msg.type);
       }
       if (msg.type === "crew:message") {
-        try { window.dispatchEvent(new CustomEvent("weered:crew:message", { detail: { crewId: msg.crewId, message: msg.message } })); } catch {}
+        try {
+          window.dispatchEvent(
+            new CustomEvent("weered:crew:message", {
+              detail: { crewId: msg.crewId, message: msg.message },
+            }),
+          );
+        } catch {}
       }
       if (msg.type === "crew:edited") {
-        try { window.dispatchEvent(new CustomEvent("weered:crew:edited", { detail: msg })); } catch {}
+        try {
+          window.dispatchEvent(new CustomEvent("weered:crew:edited", { detail: msg }));
+        } catch {}
       }
       if (msg.type === "crew:deleted") {
-        try { window.dispatchEvent(new CustomEvent("weered:crew:deleted", { detail: msg })); } catch {}
+        try {
+          window.dispatchEvent(new CustomEvent("weered:crew:deleted", { detail: msg }));
+        } catch {}
       }
       if (msg.type === "crew:reaction") {
-        try { window.dispatchEvent(new CustomEvent("weered:crew:reaction", { detail: msg })); } catch {}
+        try {
+          window.dispatchEvent(new CustomEvent("weered:crew:reaction", { detail: msg }));
+        } catch {}
       }
       if (msg.type === "crew:presence") {
-        try { window.dispatchEvent(new CustomEvent("weered:crew:presence", { detail: { userId: msg.userId, name: msg.name, online: msg.online } })); } catch {}
+        try {
+          window.dispatchEvent(
+            new CustomEvent("weered:crew:presence", {
+              detail: { userId: msg.userId, name: msg.name, online: msg.online },
+            }),
+          );
+        } catch {}
       }
       if (msg.type === "poker:state") {
-        try { window.dispatchEvent(new CustomEvent("weered:poker:state", { detail: msg })); } catch {}
+        try {
+          window.dispatchEvent(new CustomEvent("weered:poker:state", { detail: msg }));
+        } catch {}
       }
       if (
         msg.type === "dnd:initiative" ||
@@ -414,25 +615,61 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
         msg.type === "dnd:combatant:damage" ||
         msg.type === "dnd:combatant:select"
       ) {
-        try { window.dispatchEvent(new CustomEvent(`weered:${msg.type}`, { detail: msg })); } catch {}
+        try {
+          window.dispatchEvent(new CustomEvent(`weered:${msg.type}`, { detail: msg }));
+        } catch {}
       }
       if (msg.type?.startsWith("map:")) {
-        try { window.dispatchEvent(new CustomEvent(`weered:${msg.type}`, { detail: msg })); } catch {}
+        try {
+          window.dispatchEvent(new CustomEvent(`weered:${msg.type}`, { detail: msg }));
+        } catch {}
       }
       if (msg.type?.startsWith("youtube:")) {
         const rid = String(msg.roomId || "");
         if (rid) {
           if (msg.type === "youtube:state" || msg.type === "youtube:load") {
-            setYtStateByRoom(prev => ({ ...prev, [rid]: { videoId: msg.videoId, playing: Boolean(msg.playing), position: Number(msg.position ?? 0), updatedAt: Date.now() } }));
+            setYtStateByRoom((prev) => ({
+              ...prev,
+              [rid]: {
+                videoId: msg.videoId,
+                playing: Boolean(msg.playing),
+                position: Number(msg.position ?? 0),
+                updatedAt: Date.now(),
+              },
+            }));
           } else if (msg.type === "youtube:play") {
-            setYtStateByRoom(prev => ({ ...prev, [rid]: { ...(prev[rid] || { videoId: "", playing: false, position: 0, updatedAt: 0 }), playing: true, position: Number(msg.position ?? 0), updatedAt: Date.now() } }));
+            setYtStateByRoom((prev) => ({
+              ...prev,
+              [rid]: {
+                ...(prev[rid] || { videoId: "", playing: false, position: 0, updatedAt: 0 }),
+                playing: true,
+                position: Number(msg.position ?? 0),
+                updatedAt: Date.now(),
+              },
+            }));
           } else if (msg.type === "youtube:pause") {
-            setYtStateByRoom(prev => ({ ...prev, [rid]: { ...(prev[rid] || { videoId: "", playing: false, position: 0, updatedAt: 0 }), playing: false, position: Number(msg.position ?? 0), updatedAt: Date.now() } }));
+            setYtStateByRoom((prev) => ({
+              ...prev,
+              [rid]: {
+                ...(prev[rid] || { videoId: "", playing: false, position: 0, updatedAt: 0 }),
+                playing: false,
+                position: Number(msg.position ?? 0),
+                updatedAt: Date.now(),
+              },
+            }));
           } else if (msg.type === "youtube:stop") {
-            setYtStateByRoom(prev => { const n = { ...prev }; delete n[rid]; return n; });
+            setYtStateByRoom((prev) => {
+              const n = { ...prev };
+              delete n[rid];
+              return n;
+            });
           }
         }
-        try { window.dispatchEvent(new CustomEvent("weered:youtube", { detail: { ...msg, updatedAt: Date.now() } })); } catch {}
+        try {
+          window.dispatchEvent(
+            new CustomEvent("weered:youtube", { detail: { ...msg, updatedAt: Date.now() } }),
+          );
+        } catch {}
       }
       if (Array.isArray(msg.rooms)) setRooms(msg.rooms);
 
@@ -442,10 +679,15 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
         const u = msg.user ?? msg.payload?.user ?? null;
         if (u) {
           setMe(u);
-          try { localStorage.setItem("weered_user", JSON.stringify(u)); } catch {}
+          try {
+            localStorage.setItem("weered_user", JSON.stringify(u));
+          } catch {}
           if (u.globalRole) setGlobalRole(String(u.globalRole));
         } else {
-          try { const raw = localStorage.getItem("weered_user"); if (raw) setMe(JSON.parse(raw)); } catch {}
+          try {
+            const raw = localStorage.getItem("weered_user");
+            if (raw) setMe(JSON.parse(raw));
+          } catch {}
         }
         sendJoin(ws);
         requestRoomsList(ws);
@@ -459,15 +701,27 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (msg.type === "presence:state") {
-        const rid  = String(msg.roomId || "");
+        const rid = String(msg.roomId || "");
         const list = Array.isArray(msg.users) ? msg.users : [];
-        setUsersByRoom(prev => ({ ...prev, [rid]: list }));
-        const myId = String(((): any => { try { return (JSON.parse(localStorage.getItem("weered_user") || "{}") || {}).id || ""; } catch { return ""; } })());
+        setUsersByRoom((prev) => ({ ...prev, [rid]: list }));
+        const myId = String(
+          ((): any => {
+            try {
+              return (JSON.parse(localStorage.getItem("weered_user") || "{}") || {}).id || "";
+            } catch {
+              return "";
+            }
+          })(),
+        );
         if (myId) {
           const meEntry = list.find((u: any) => String(u?.id || "") === myId);
-          myLivePresenceActiveRef.current = !!(meEntry && meEntry.livePresence && meEntry.livePresence.activity);
+          myLivePresenceActiveRef.current = !!(
+            meEntry &&
+            meEntry.livePresence &&
+            meEntry.livePresence.activity
+          );
         }
-        setMetaByRoom(prev => ({
+        setMetaByRoom((prev) => ({
           ...prev,
           [rid]: {
             name: String(msg.name || rid),
@@ -480,33 +734,40 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
             iconUrl: msg.iconUrl || undefined,
             bannerUrl: msg.bannerUrl || undefined,
             accentColor: msg.accentColor || undefined,
-            disabledModules: Array.isArray(msg.disabledModules) ? msg.disabledModules.map(String) : [],
+            disabledModules: Array.isArray(msg.disabledModules)
+              ? msg.disabledModules.map(String)
+              : [],
           },
         }));
-        setStatusByRoom(prev => ({ ...prev, [rid]: "joined" }));
+        setStatusByRoom((prev) => ({ ...prev, [rid]: "joined" }));
         if (msg.activeModule) {
-          setModuleByRoom(prev => ({ ...prev, [rid]: msg.activeModule }));
+          setModuleByRoom((prev) => ({ ...prev, [rid]: msg.activeModule }));
         }
         if (msg.voiceMode || Array.isArray(msg.voiceQueue) || Array.isArray(msg.voiceSpeakers)) {
-          setVoiceByRoom(prev => ({
+          setVoiceByRoom((prev) => ({
             ...prev,
             [rid]: {
-              mode: (msg.voiceMode === "QUEUED" || msg.voiceMode === "LISTEN_ONLY") ? msg.voiceMode : "OPEN",
+              mode:
+                msg.voiceMode === "QUEUED" || msg.voiceMode === "LISTEN_ONLY"
+                  ? msg.voiceMode
+                  : "OPEN",
               queue: Array.isArray(msg.voiceQueue) ? msg.voiceQueue.map(String) : [],
               speakers: Array.isArray(msg.voiceSpeakers) ? msg.voiceSpeakers.map(String) : [],
             },
           }));
         }
         if (msg.launch !== undefined) {
-          setLaunchByRoom(prev => ({ ...prev, [rid]: msg.launch as LaunchSnapshot | null }));
+          setLaunchByRoom((prev) => ({ ...prev, [rid]: msg.launch as LaunchSnapshot | null }));
         }
         if (Array.isArray(msg.pinned)) {
-          setPinnedByRoom(prev => ({ ...prev, [rid]: msg.pinned.map(String) }));
+          setPinnedByRoom((prev) => ({ ...prev, [rid]: msg.pinned.map(String) }));
         }
         if (msg.lobbyId) setCurrentLobbyId(String(msg.lobbyId));
-        setJoinedRoomId(prev => {
+        setJoinedRoomId((prev) => {
           if (prev && prev !== rid) {
-            try { ws.send(JSON.stringify({ type: "presence:leave", roomId: prev })); } catch {}
+            try {
+              ws.send(JSON.stringify({ type: "presence:leave", roomId: prev }));
+            } catch {}
           }
           return rid;
         });
@@ -517,12 +778,14 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
         const rid = String(msg.roomId || "");
         if (!rid) return;
         const pins = Array.isArray(msg.pinned) ? msg.pinned.map(String) : [];
-        setPinnedByRoom(prev => ({ ...prev, [rid]: pins }));
+        setPinnedByRoom((prev) => ({ ...prev, [rid]: pins }));
         return;
       }
 
       if (msg.type === "chat:pin:error") {
-        try { weeredToast.error(String((msg as any).reason || "Pin failed.")); } catch {}
+        try {
+          weeredToast.error(String((msg as any).reason || "Pin failed."));
+        } catch {}
         return;
       }
 
@@ -531,8 +794,8 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
         const u = msg.user as { id: string; name: string } | undefined;
         if (!rid || !u?.id) return;
         if (me?.id && u.id === me.id) return;
-        setTypingByRoom(prev => {
-          const cur = prev[rid] ? prev[rid].filter(e => e.userId !== u.id) : [];
+        setTypingByRoom((prev) => {
+          const cur = prev[rid] ? prev[rid].filter((e) => e.userId !== u.id) : [];
           cur.push({ userId: u.id, name: u.name, ts: Date.now() });
           return { ...prev, [rid]: cur };
         });
@@ -542,15 +805,15 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
       if (msg.type === "launch:state") {
         const rid = String(msg.roomId || "");
         if (!rid) return;
-        setLaunchByRoom(prev => ({ ...prev, [rid]: (msg.launch as LaunchSnapshot) ?? null }));
+        setLaunchByRoom((prev) => ({ ...prev, [rid]: (msg.launch as LaunchSnapshot) ?? null }));
         return;
       }
 
       if (msg.type === "presence:join") {
-        const rid  = String(msg.roomId || "");
+        const rid = String(msg.roomId || "");
         const user = msg.user as RoomUser | null;
         if (!rid || !user?.id) return;
-        setUsersByRoom(prev => {
+        setUsersByRoom((prev) => {
           const cur = prev[rid] || [];
           const idx = cur.findIndex((u: RoomUser) => u.id === user.id);
           if (idx === -1) return { ...prev, [rid]: [...cur, user] };
@@ -562,10 +825,10 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (msg.type === "presence:leave") {
-        const rid    = String(msg.roomId || "");
+        const rid = String(msg.roomId || "");
         const userId = String(msg.userId || "");
         if (!rid || !userId) return;
-        setUsersByRoom(prev => {
+        setUsersByRoom((prev) => {
           const cur = prev[rid];
           if (!cur) return prev;
           return { ...prev, [rid]: cur.filter((u: RoomUser) => u.id !== userId) };
@@ -575,16 +838,16 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
 
       if (msg.type === "room:adminState") {
         const rid = String(msg.roomId || "");
-        setAdminByRoom(prev => ({
+        setAdminByRoom((prev) => ({
           ...prev,
           [rid]: {
-            knocks:  Array.isArray(msg.knocks)  ? msg.knocks                  : [],
-            banned:  Array.isArray(msg.banned)  ? msg.banned.map(String)      : [],
-            muted:   Array.isArray(msg.muted)   ? msg.muted.map(String)       : [],
-            audit:   Array.isArray(msg.audit)   ? msg.audit                   : [],
+            knocks: Array.isArray(msg.knocks) ? msg.knocks : [],
+            banned: Array.isArray(msg.banned) ? msg.banned.map(String) : [],
+            muted: Array.isArray(msg.muted) ? msg.muted.map(String) : [],
+            audit: Array.isArray(msg.audit) ? msg.audit : [],
           },
         }));
-        setMetaByRoom(prev => ({
+        setMetaByRoom((prev) => ({
           ...prev,
           [rid]: {
             ...(prev[rid] || {}),
@@ -600,10 +863,10 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (msg.type === "room:audit") {
-        const rid  = String(msg.roomId || "");
+        const rid = String(msg.roomId || "");
         const item = msg.item as AuditItem;
         if (!item?.id) return;
-        setAdminByRoom(prev => {
+        setAdminByRoom((prev) => {
           const cur = prev[rid] || { knocks: [], banned: [], muted: [], audit: [] };
           return { ...prev, [rid]: { ...cur, audit: [...cur.audit, item].slice(-80) } };
         });
@@ -611,24 +874,29 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (msg.type === "chat:history") {
-        const rid  = String(msg.roomId || "");
+        const rid = String(msg.roomId || "");
         const list = Array.isArray(msg.msgs) ? (msg.msgs as ChatMsg[]) : [];
-        setMsgsByRoom(prev => ({ ...prev, [rid]: list.slice(-200) }));
+        setMsgsByRoom((prev) => ({ ...prev, [rid]: list.slice(-200) }));
         return;
       }
 
       if (msg.type === "chat:new") {
         const rid = String(msg.roomId || "");
-        const m   = msg.msg as ChatMsg;
+        const m = msg.msg as ChatMsg;
         if (!m?.id) return;
-        setMsgsByRoom(prev => ({ ...prev, [rid]: [...(prev[rid] || []), m].slice(-200) }));
+        setMsgsByRoom((prev) => ({ ...prev, [rid]: [...(prev[rid] || []), m].slice(-200) }));
         const authorId = (m as any)?.user?.id;
-        if (authorId) setTypingByRoom(prev => {
-          const cur = prev[rid];
-          if (!cur || !cur.some(e => e.userId === authorId)) return prev;
-          return { ...prev, [rid]: cur.filter(e => e.userId !== authorId) };
-        });
-        try { window.dispatchEvent(new CustomEvent("weered:chat:new", { detail: { roomId: rid, msg: m } })); } catch {}
+        if (authorId)
+          setTypingByRoom((prev) => {
+            const cur = prev[rid];
+            if (!cur || !cur.some((e) => e.userId === authorId)) return prev;
+            return { ...prev, [rid]: cur.filter((e) => e.userId !== authorId) };
+          });
+        try {
+          window.dispatchEvent(
+            new CustomEvent("weered:chat:new", { detail: { roomId: rid, msg: m } }),
+          );
+        } catch {}
         return;
       }
 
@@ -643,8 +911,12 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
           ts,
         };
         if (!opMsg.body) return;
-        setMsgsByRoom(prev => ({ ...prev, [rid]: [...(prev[rid] || []), opMsg].slice(-200) }));
-        try { window.dispatchEvent(new CustomEvent("weered:chat:new", { detail: { roomId: rid, msg: opMsg } })); } catch {}
+        setMsgsByRoom((prev) => ({ ...prev, [rid]: [...(prev[rid] || []), opMsg].slice(-200) }));
+        try {
+          window.dispatchEvent(
+            new CustomEvent("weered:chat:new", { detail: { roomId: rid, msg: opMsg } }),
+          );
+        } catch {}
         return;
       }
 
@@ -665,8 +937,15 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
             price: Number(msg.price || 0),
           },
         };
-        setMsgsByRoom(prev => ({ ...prev, [rid]: [...(prev[rid] || []), synthetic].slice(-200) }));
-        try { window.dispatchEvent(new CustomEvent("weered:chat:new", { detail: { roomId: rid, msg: synthetic } })); } catch {}
+        setMsgsByRoom((prev) => ({
+          ...prev,
+          [rid]: [...(prev[rid] || []), synthetic].slice(-200),
+        }));
+        try {
+          window.dispatchEvent(
+            new CustomEvent("weered:chat:new", { detail: { roomId: rid, msg: synthetic } }),
+          );
+        } catch {}
         return;
       }
 
@@ -694,8 +973,15 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
             isNat1: !!msg.isNat1,
           },
         };
-        setMsgsByRoom(prev => ({ ...prev, [rid]: [...(prev[rid] || []), synthetic].slice(-200) }));
-        try { window.dispatchEvent(new CustomEvent("weered:chat:new", { detail: { roomId: rid, msg: synthetic } })); } catch {}
+        setMsgsByRoom((prev) => ({
+          ...prev,
+          [rid]: [...(prev[rid] || []), synthetic].slice(-200),
+        }));
+        try {
+          window.dispatchEvent(
+            new CustomEvent("weered:chat:new", { detail: { roomId: rid, msg: synthetic } }),
+          );
+        } catch {}
         return;
       }
 
@@ -715,8 +1001,15 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
             tableId: String(msg.tableId || ""),
           },
         };
-        setMsgsByRoom(prev => ({ ...prev, [rid]: [...(prev[rid] || []), synthetic].slice(-200) }));
-        try { window.dispatchEvent(new CustomEvent("weered:chat:new", { detail: { roomId: rid, msg: synthetic } })); } catch {}
+        setMsgsByRoom((prev) => ({
+          ...prev,
+          [rid]: [...(prev[rid] || []), synthetic].slice(-200),
+        }));
+        try {
+          window.dispatchEvent(
+            new CustomEvent("weered:chat:new", { detail: { roomId: rid, msg: synthetic } }),
+          );
+        } catch {}
         return;
       }
 
@@ -739,20 +1032,29 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
             tableId: String(msg.tableId || ""),
           },
         };
-        setMsgsByRoom(prev => ({ ...prev, [rid]: [...(prev[rid] || []), synthetic].slice(-200) }));
-        try { window.dispatchEvent(new CustomEvent("weered:chat:new", { detail: { roomId: rid, msg: synthetic } })); } catch {}
+        setMsgsByRoom((prev) => ({
+          ...prev,
+          [rid]: [...(prev[rid] || []), synthetic].slice(-200),
+        }));
+        try {
+          window.dispatchEvent(
+            new CustomEvent("weered:chat:new", { detail: { roomId: rid, msg: synthetic } }),
+          );
+        } catch {}
         return;
       }
 
-            if (msg.type === "chat:edited") {
+      if (msg.type === "chat:edited") {
         const rid = String(msg.roomId || "");
         const msgId = String(msg.msgId || "");
         const newBody = String(msg.body || "");
         const editedAt = Number(msg.editedAt || Date.now());
         if (!rid || !msgId) return;
-        setMsgsByRoom(prev => ({
+        setMsgsByRoom((prev) => ({
           ...prev,
-          [rid]: (prev[rid] || []).map(m => m.id === msgId ? { ...m, body: newBody, editedAt } as any : m),
+          [rid]: (prev[rid] || []).map((m) =>
+            m.id === msgId ? ({ ...m, body: newBody, editedAt } as any) : m,
+          ),
         }));
         return;
       }
@@ -762,9 +1064,11 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
         const msgId = String(msg.msgId || "");
         const deletedAt = Number(msg.deletedAt || Date.now());
         if (!rid || !msgId) return;
-        setMsgsByRoom(prev => ({
+        setMsgsByRoom((prev) => ({
           ...prev,
-          [rid]: (prev[rid] || []).map(m => m.id === msgId ? { ...m, body: "", deletedAt } as any : m),
+          [rid]: (prev[rid] || []).map((m) =>
+            m.id === msgId ? ({ ...m, body: "", deletedAt } as any) : m,
+          ),
         }));
         return;
       }
@@ -774,9 +1078,9 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
         const msgId = String(msg.msgId || "");
         const reactions = Array.isArray(msg.reactions) ? msg.reactions : [];
         if (!rid || !msgId) return;
-        setMsgsByRoom(prev => ({
+        setMsgsByRoom((prev) => ({
           ...prev,
-          [rid]: (prev[rid] || []).map(m => m.id === msgId ? { ...m, reactions } as any : m),
+          [rid]: (prev[rid] || []).map((m) => (m.id === msgId ? ({ ...m, reactions } as any) : m)),
         }));
         return;
       }
@@ -786,7 +1090,11 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      if (msg.type === "chat:rejected" || msg.type === "dm:rejected" || msg.type === "crew:rejected") {
+      if (
+        msg.type === "chat:rejected" ||
+        msg.type === "dm:rejected" ||
+        msg.type === "crew:rejected"
+      ) {
         const reason = String(msg.reason || "Message blocked.");
         weeredToast.warn(reason);
         return;
@@ -795,97 +1103,153 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
       if (msg.type === "room:locked") {
         const rid = String(msg.roomId || "");
         const isLocked = typeof msg.locked === "boolean" ? msg.locked : true;
-        setMetaByRoom(prev => ({
+        setMetaByRoom((prev) => ({
           ...prev,
-          [rid]: { ...(prev[rid] || { name: rid, ownerId: "", mods: [], chatDisabled: false }), locked: isLocked }
+          [rid]: {
+            ...(prev[rid] || { name: rid, ownerId: "", mods: [], chatDisabled: false }),
+            locked: isLocked,
+          },
         }));
         return;
       }
 
       if (msg.type === "room:unlocked") {
         const rid = String(msg.roomId || "");
-        setMetaByRoom(prev => ({
+        setMetaByRoom((prev) => ({
           ...prev,
-          [rid]: { ...(prev[rid] || { name: rid, ownerId: "", mods: [], chatDisabled: false }), locked: false }
+          [rid]: {
+            ...(prev[rid] || { name: rid, ownerId: "", mods: [], chatDisabled: false }),
+            locked: false,
+          },
         }));
         return;
       }
 
       if (msg.type === "room:chat:disable") {
         const rid = String(msg.roomId || "");
-        setMetaByRoom(prev => ({
+        setMetaByRoom((prev) => ({
           ...prev,
-          [rid]: { ...(prev[rid] || { name: rid, ownerId: "", mods: [], locked: false, chatDisabled: false }), chatDisabled: true }
+          [rid]: {
+            ...(prev[rid] || {
+              name: rid,
+              ownerId: "",
+              mods: [],
+              locked: false,
+              chatDisabled: false,
+            }),
+            chatDisabled: true,
+          },
         }));
         return;
       }
 
       if (msg.type === "room:chat:enable") {
         const rid = String(msg.roomId || "");
-        setMetaByRoom(prev => ({
+        setMetaByRoom((prev) => ({
           ...prev,
-          [rid]: { ...(prev[rid] || { name: rid, ownerId: "", mods: [], locked: false, chatDisabled: false }), chatDisabled: false }
+          [rid]: {
+            ...(prev[rid] || {
+              name: rid,
+              ownerId: "",
+              mods: [],
+              locked: false,
+              chatDisabled: false,
+            }),
+            chatDisabled: false,
+          },
         }));
         return;
       }
 
       if (msg.type === "chat:cleared") {
         const rid = String(msg.roomId || "");
-        setMsgsByRoom(prev => ({ ...prev, [rid]: [] }));
+        setMsgsByRoom((prev) => ({ ...prev, [rid]: [] }));
         return;
       }
 
-      if (msg.type === "room:knock:queued") { setStatusByRoom(prev => ({ ...prev, [String(msg.roomId || "")]: "knocking" })); return; }
-      if (msg.type === "room:banned")       { setStatusByRoom(prev => ({ ...prev, [String(msg.roomId || "")]: "banned"   })); return; }
-      if (msg.type === "room:password:required") { setPasswordRoomId(String(msg.roomId || "")); setPasswordError(""); return; }
-      if (msg.type === "room:password:wrong")    { setPasswordError("Wrong password."); return; }
-      if (msg.type === "room:denied")       { setStatusByRoom(prev => ({ ...prev, [String(msg.roomId || "")]: "denied"   })); return; }
+      if (msg.type === "room:knock:queued") {
+        setStatusByRoom((prev) => ({ ...prev, [String(msg.roomId || "")]: "knocking" }));
+        return;
+      }
+      if (msg.type === "room:banned") {
+        setStatusByRoom((prev) => ({ ...prev, [String(msg.roomId || "")]: "banned" }));
+        return;
+      }
+      if (msg.type === "room:password:required") {
+        setPasswordRoomId(String(msg.roomId || ""));
+        setPasswordError("");
+        return;
+      }
+      if (msg.type === "room:password:wrong") {
+        setPasswordError("Wrong password.");
+        return;
+      }
+      if (msg.type === "room:denied") {
+        setStatusByRoom((prev) => ({ ...prev, [String(msg.roomId || "")]: "denied" }));
+        return;
+      }
       if (msg.type === "staff:kicked") {
         const rid = String(msg.roomId || "");
-        if (rid) setStatusByRoom(prev => ({ ...prev, [rid]: "idle" }));
+        if (rid) setStatusByRoom((prev) => ({ ...prev, [rid]: "idle" }));
         setActiveRoomId("");
         setJoinedRoomId("");
-        try { router.replace("/lobby"); } catch {}
+        try {
+          router.replace("/lobby");
+        } catch {}
         return;
       }
       if (msg.type === "room:closed") {
         const rid = String(msg.roomId || "");
-        if (rid) setStatusByRoom(prev => ({ ...prev, [rid]: "idle" }));
+        if (rid) setStatusByRoom((prev) => ({ ...prev, [rid]: "idle" }));
         setActiveRoomId("");
         setJoinedRoomId("");
-        try { router.replace("/lobby"); } catch {}
+        try {
+          router.replace("/lobby");
+        } catch {}
         return;
       }
       if (msg.type === "room:admitted") {
         const rid = String(msg.roomId || "");
-        if (rid) setStatusByRoom(prev => ({ ...prev, [rid]: "joined" }));
+        if (rid) setStatusByRoom((prev) => ({ ...prev, [rid]: "joined" }));
         return;
       }
 
       if (msg.type === "notoriety:award") {
-        window.dispatchEvent(new CustomEvent("weered:notoriety:award", {
-          detail: { action: msg.action, points: msg.points },
-        }));
+        window.dispatchEvent(
+          new CustomEvent("weered:notoriety:award", {
+            detail: { action: msg.action, points: msg.points },
+          }),
+        );
         return;
       }
 
       if (msg.type === "notoriety:rankup") {
-        window.dispatchEvent(new CustomEvent("weered:notoriety:rankup", {
-          detail: { oldRank: msg.oldRank, newRank: msg.newRank, score: msg.score },
-        }));
+        window.dispatchEvent(
+          new CustomEvent("weered:notoriety:rankup", {
+            detail: { oldRank: msg.oldRank, newRank: msg.newRank, score: msg.score },
+          }),
+        );
         return;
       }
 
       if (msg.type === "challenge:progress" || msg.type === "challenge:completed") {
-        try { window.dispatchEvent(new CustomEvent("weered:challenge", { detail: msg })); } catch {}
+        try {
+          window.dispatchEvent(new CustomEvent("weered:challenge", { detail: msg }));
+        } catch {}
         return;
       }
 
       if (msg.type === "module:state") {
         const rid = String(msg.roomId || "");
         if (!rid) return;
-        setModuleByRoom(prev => ({ ...prev, [rid]: msg.activeModule ?? null }));
-        try { window.dispatchEvent(new CustomEvent("weered:module:state", { detail: { roomId: rid, activeModule: msg.activeModule ?? null } })); } catch {}
+        setModuleByRoom((prev) => ({ ...prev, [rid]: msg.activeModule ?? null }));
+        try {
+          window.dispatchEvent(
+            new CustomEvent("weered:module:state", {
+              detail: { roomId: rid, activeModule: msg.activeModule ?? null },
+            }),
+          );
+        } catch {}
         return;
       }
 
@@ -894,9 +1258,18 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
         if (!rid) return;
         if (Array.isArray(msg.disabledModules)) {
           const list = msg.disabledModules.map(String);
-          setMetaByRoom(prev => ({
+          setMetaByRoom((prev) => ({
             ...prev,
-            [rid]: { ...(prev[rid] || { name: rid, locked: false, chatDisabled: false, ownerId: "", mods: [] }), disabledModules: list },
+            [rid]: {
+              ...(prev[rid] || {
+                name: rid,
+                locked: false,
+                chatDisabled: false,
+                ownerId: "",
+                mods: [],
+              }),
+              disabledModules: list,
+            },
           }));
         }
         return;
@@ -914,41 +1287,63 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
       if (msg.type === "voice:state") {
         const rid = String(msg.roomId || "");
         if (!rid) return;
-        setVoiceByRoom(prev => ({
+        setVoiceByRoom((prev) => ({
           ...prev,
           [rid]: {
-            mode: (msg.mode === "QUEUED" || msg.mode === "LISTEN_ONLY") ? msg.mode : "OPEN",
+            mode: msg.mode === "QUEUED" || msg.mode === "LISTEN_ONLY" ? msg.mode : "OPEN",
             queue: Array.isArray(msg.queue) ? msg.queue.map(String) : [],
             speakers: Array.isArray(msg.speakers) ? msg.speakers.map(String) : [],
           },
         }));
-        try { window.dispatchEvent(new CustomEvent("weered:voice:state", { detail: { roomId: rid, mode: msg.mode, queue: msg.queue, speakers: msg.speakers } })); } catch {}
+        try {
+          window.dispatchEvent(
+            new CustomEvent("weered:voice:state", {
+              detail: { roomId: rid, mode: msg.mode, queue: msg.queue, speakers: msg.speakers },
+            }),
+          );
+        } catch {}
         return;
       }
 
       if (msg.type === "voice:permission") {
         const rid = String(msg.roomId || "");
         const userId = String(msg.userId || "");
-        try { window.dispatchEvent(new CustomEvent("weered:voice:permission", { detail: { roomId: rid, userId } })); } catch {}
+        try {
+          window.dispatchEvent(
+            new CustomEvent("weered:voice:permission", { detail: { roomId: rid, userId } }),
+          );
+        } catch {}
         return;
       }
 
       if (msg.type === "system:broadcast") {
-        try { window.dispatchEvent(new CustomEvent("weered:system:broadcast", { detail: { message: msg.message, level: msg.level, from: msg.from, ts: msg.ts } })); } catch {}
+        try {
+          window.dispatchEvent(
+            new CustomEvent("weered:system:broadcast", {
+              detail: { message: msg.message, level: msg.level, from: msg.from, ts: msg.ts },
+            }),
+          );
+        } catch {}
         return;
       }
 
       if (msg.type === "staff:banned") {
-        try { window.dispatchEvent(new CustomEvent("weered:staff:banned", { detail: { reason: msg.reason } })); } catch {}
+        try {
+          window.dispatchEvent(
+            new CustomEvent("weered:staff:banned", { detail: { reason: msg.reason } }),
+          );
+        } catch {}
         setActiveRoomId("");
         setJoinedRoomId("");
-        try { router.replace("/login?error=account_suspended"); } catch {}
+        try {
+          router.replace("/login?error=account_suspended");
+        } catch {}
         return;
       }
     };
 
-    return () => { };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    return () => {};
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
   useEffect(() => {
@@ -957,8 +1352,10 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
     if (!ws || ws.readyState !== WebSocket.OPEN) return;
     const rid = activeRoomId.trim();
     if (!rid) return;
-    setStatusByRoom(prev => ({ ...prev, [rid]: "joining" }));
-    try { ws.send(JSON.stringify({ type: "presence:join", roomId: rid })); } catch {}
+    setStatusByRoom((prev) => ({ ...prev, [rid]: "joining" }));
+    try {
+      ws.send(JSON.stringify({ type: "presence:join", roomId: rid }));
+    } catch {}
   }, [activeRoomId, wsReady]);
 
   useEffect(() => {
@@ -969,9 +1366,11 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
     lastJoinedRidRef.current = "";
     const rid = activeRoomId.trim();
     if (rid) {
-      try { ws.send(JSON.stringify({ type: "presence:join", roomId: rid })); } catch {}
+      try {
+        ws.send(JSON.stringify({ type: "presence:join", roomId: rid }));
+      } catch {}
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [wsReady]);
 
   function sendJoin(ws: WebSocket) {
@@ -979,28 +1378,39 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
     if (!ridRaw) return;
     let rid = ridRaw;
     if (rid.startsWith("room:")) rid = rid.slice(5);
-    try { rid = decodeURIComponent(rid); } catch {}
+    try {
+      rid = decodeURIComponent(rid);
+    } catch {}
     if (lastJoinedRidRef.current === rid) return;
     lastJoinedRidRef.current = rid;
     try {
-      ws.send(JSON.stringify({ type: "presence:join",  roomId: rid }));
-      ws.send(JSON.stringify({ type: "chat:history",   roomId: rid, limit: 50 }));
+      ws.send(JSON.stringify({ type: "presence:join", roomId: rid }));
+      ws.send(JSON.stringify({ type: "chat:history", roomId: rid, limit: 50 }));
     } catch {}
   }
 
   function requestRoomsList(ws: WebSocket) {
-    try { ws.send(JSON.stringify({ type: "rooms:list" })); } catch {}
+    try {
+      ws.send(JSON.stringify({ type: "rooms:list" }));
+    } catch {}
   }
 
   function canChat() {
-    return Boolean(activeRoomId && joinedRoomId && activeRoomId === joinedRoomId && statusByRoom[activeRoomId] === "joined");
+    return Boolean(
+      activeRoomId &&
+      joinedRoomId &&
+      activeRoomId === joinedRoomId &&
+      statusByRoom[activeRoomId] === "joined",
+    );
   }
 
   useEffect(() => {
     const handler = (e: Event) => {
       const msg = (e as CustomEvent).detail;
       if (msg && wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-        try { wsRef.current.send(JSON.stringify(msg)); } catch {}
+        try {
+          wsRef.current.send(JSON.stringify(msg));
+        } catch {}
       }
     };
     window.addEventListener("weered:ws:send", handler);
@@ -1011,11 +1421,11 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
     const TYPING_TTL_MS = 5000;
     const t = setInterval(() => {
       const now = Date.now();
-      setTypingByRoom(prev => {
+      setTypingByRoom((prev) => {
         let changed = false;
         const next: Record<string, { userId: string; name: string; ts: number }[]> = {};
         for (const [rid, list] of Object.entries(prev)) {
-          const fresh = list.filter(e => now - e.ts < TYPING_TTL_MS);
+          const fresh = list.filter((e) => now - e.ts < TYPING_TTL_MS);
           if (fresh.length !== list.length) changed = true;
           if (fresh.length > 0) next[rid] = fresh;
           else if (list.length > 0) changed = true;
@@ -1038,7 +1448,9 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
     lastSentAwayRef.current = away;
     const ws = wsRef.current;
     if (!ws || ws.readyState !== WebSocket.OPEN) return;
-    try { ws.send(JSON.stringify({ type: "presence:idle", away })); } catch {}
+    try {
+      ws.send(JSON.stringify({ type: "presence:idle", away }));
+    } catch {}
   }, []);
 
   const armIdleTimer = React.useCallback(() => {
@@ -1054,12 +1466,18 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
     }, IDLE_MS);
   }, [sendAwayStatus]);
 
-  const setAway = React.useCallback((away: boolean) => {
-    manualAwayRef.current = away;
-    sendAwayStatus(away, true);
-    if (!away) armIdleTimer();
-    else if (idleTimerRef.current) { clearTimeout(idleTimerRef.current); idleTimerRef.current = null; }
-  }, [sendAwayStatus, armIdleTimer]);
+  const setAway = React.useCallback(
+    (away: boolean) => {
+      manualAwayRef.current = away;
+      sendAwayStatus(away, true);
+      if (!away) armIdleTimer();
+      else if (idleTimerRef.current) {
+        clearTimeout(idleTimerRef.current);
+        idleTimerRef.current = null;
+      }
+    },
+    [sendAwayStatus, armIdleTimer],
+  );
 
   useEffect(() => {
     const onActivity = () => {
@@ -1068,10 +1486,16 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
       armIdleTimer();
     };
     armIdleTimer();
-    const events: (keyof WindowEventMap)[] = ["mousemove", "mousedown", "keydown", "touchstart", "scroll"];
-    events.forEach(e => window.addEventListener(e, onActivity, { passive: true }));
+    const events: (keyof WindowEventMap)[] = [
+      "mousemove",
+      "mousedown",
+      "keydown",
+      "touchstart",
+      "scroll",
+    ];
+    events.forEach((e) => window.addEventListener(e, onActivity, { passive: true }));
     return () => {
-      events.forEach(e => window.removeEventListener(e, onActivity));
+      events.forEach((e) => window.removeEventListener(e, onActivity));
       if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
     };
   }, [armIdleTimer, sendAwayStatus]);
@@ -1084,27 +1508,48 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
     });
     const j = await r.json();
     if (j?.token) {
-      try { wsRef.current?.close(); } catch {}
+      try {
+        wsRef.current?.close();
+      } catch {}
       wsRef.current = null;
       setWsReady(false);
       setWsState(WebSocket.CLOSED);
       setToken("authed");
       setMe(j.user || null);
-      try { document.documentElement.setAttribute("data-weered-authed", "1"); } catch {}
-      try { localStorage.setItem("weered_user",  JSON.stringify(j.user || null)); } catch {}
+      try {
+        document.documentElement.setAttribute("data-weered-authed", "1");
+      } catch {}
+      try {
+        localStorage.setItem("weered_user", JSON.stringify(j.user || null));
+      } catch {}
     }
   }
 
   function logout() {
-    try { fetch(`${API}/auth/logout`, { method: "POST" }).catch(() => {}); } catch {}
-    try { localStorage.removeItem("weered_token"); localStorage.removeItem("weered_user"); document.documentElement.removeAttribute("data-weered-authed"); } catch {}
-    try { router.replace("/"); } catch {}
-    setToken(""); setMe(null);
-    setUsersByRoom({}); setMsgsByRoom({});
-    setMetaByRoom({}); setAdminByRoom({});
-    setStatusByRoom({}); setModuleByRoom({});
-    setActiveRoomId(""); setJoinedRoomId("");
-    try { wsRef.current?.close(); } catch {}
+    try {
+      fetch(`${API}/auth/logout`, { method: "POST" }).catch(() => {});
+    } catch {}
+    try {
+      localStorage.removeItem("weered_token");
+      localStorage.removeItem("weered_user");
+      document.documentElement.removeAttribute("data-weered-authed");
+    } catch {}
+    try {
+      router.replace("/");
+    } catch {}
+    setToken("");
+    setMe(null);
+    setUsersByRoom({});
+    setMsgsByRoom({});
+    setMetaByRoom({});
+    setAdminByRoom({});
+    setStatusByRoom({});
+    setModuleByRoom({});
+    setActiveRoomId("");
+    setJoinedRoomId("");
+    try {
+      wsRef.current?.close();
+    } catch {}
     wsRef.current = null;
   }
 
@@ -1115,9 +1560,16 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
     setActiveRoomId(id);
     const ws = wsRef.current;
     if (ws?.readyState === WebSocket.OPEN) {
-      let rid = id; try { rid = decodeURIComponent(id); } catch {}
-      try { ws.send(JSON.stringify({ type: "presence:join",  roomId: rid })); } catch {}
-      try { ws.send(JSON.stringify({ type: "chat:history",   roomId: rid, limit: 50 })); } catch {}
+      let rid = id;
+      try {
+        rid = decodeURIComponent(id);
+      } catch {}
+      try {
+        ws.send(JSON.stringify({ type: "presence:join", roomId: rid }));
+      } catch {}
+      try {
+        ws.send(JSON.stringify({ type: "chat:history", roomId: rid, limit: 50 }));
+      } catch {}
     }
   }
 
@@ -1128,8 +1580,13 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
     setActiveRoomId(id);
     const ws = wsRef.current;
     if (ws?.readyState === WebSocket.OPEN) {
-      let rid = id; try { rid = decodeURIComponent(id); } catch {}
-      try { ws.send(JSON.stringify({ type: "room:knock", roomId: rid })); } catch {}
+      let rid = id;
+      try {
+        rid = decodeURIComponent(id);
+      } catch {}
+      try {
+        ws.send(JSON.stringify({ type: "room:knock", roomId: rid }));
+      } catch {}
     }
   }
 
@@ -1138,8 +1595,13 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
     if (rid) {
       const ws = wsRef.current;
       if (ws?.readyState === WebSocket.OPEN) {
-        let decoded = rid; try { decoded = decodeURIComponent(rid); } catch {}
-        try { ws.send(JSON.stringify({ type: "presence:leave", roomId: decoded })); } catch {}
+        let decoded = rid;
+        try {
+          decoded = decodeURIComponent(rid);
+        } catch {}
+        try {
+          ws.send(JSON.stringify({ type: "presence:leave", roomId: decoded }));
+        } catch {}
       }
     }
     setActiveRoomId("");
@@ -1154,7 +1616,10 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
     if ((!b && !opts?.attachmentId) || !canChat()) return;
     const ws = wsRef.current;
     if (!ws || ws.readyState !== WebSocket.OPEN) return;
-    let rid = activeRoomId; try { rid = decodeURIComponent(activeRoomId); } catch {}
+    let rid = activeRoomId;
+    try {
+      rid = decodeURIComponent(activeRoomId);
+    } catch {}
     const env: any = { type: "chat:send", roomId: rid, body: b };
     if (opts?.replyToId) env.replyToId = opts.replyToId;
     if (opts?.attachmentId) env.attachmentId = opts.attachmentId;
@@ -1174,7 +1639,7 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
     if (!ws || ws.readyState !== WebSocket.OPEN || !rid) return;
     if (!mode) {
       ws.send(JSON.stringify({ type: "module:clear", roomId: rid }));
-      setModuleByRoom(prev => ({ ...prev, [rid]: null }));
+      setModuleByRoom((prev) => ({ ...prev, [rid]: null }));
     } else {
       const meta = metaByRoom[rid];
       const disabled = Array.isArray(meta?.disabledModules) ? meta!.disabledModules! : [];
@@ -1182,30 +1647,43 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
         weeredToast.error(`The "${mode}" module is disabled in this room.`);
         return;
       }
-      ws.send(JSON.stringify({ type: "module:set", roomId: rid, mode, url: opts?.url, channel: opts?.channel }));
-      setModuleByRoom(prev => ({ ...prev, [rid]: { mode, url: opts?.url, channel: opts?.channel, setBy: me?.id, setAt: Date.now() } }));
+      ws.send(
+        JSON.stringify({
+          type: "module:set",
+          roomId: rid,
+          mode,
+          url: opts?.url,
+          channel: opts?.channel,
+        }),
+      );
+      setModuleByRoom((prev) => ({
+        ...prev,
+        [rid]: { mode, url: opts?.url, channel: opts?.channel, setBy: me?.id, setAt: Date.now() },
+      }));
     }
   }
 
-const renameRoom = (name: string)   => sendAdmin("room:rename",  { name });
-  const lockRoom   = ()               => sendAdmin("room:lock");
-  const unlockRoom = ()               => sendAdmin("room:unlock");
+  const renameRoom = (name: string) => sendAdmin("room:rename", { name });
+  const lockRoom = () => sendAdmin("room:lock");
+  const unlockRoom = () => sendAdmin("room:unlock");
   const joinWithPassword = (roomId: string, password: string) => {
     const ws = wsRef.current;
     if (!ws || ws.readyState !== WebSocket.OPEN) return;
-    try { ws.send(JSON.stringify({ type: "presence:join", roomId, password })); } catch {}
+    try {
+      ws.send(JSON.stringify({ type: "presence:join", roomId, password }));
+    } catch {}
     setPasswordRoomId("");
     setPasswordError("");
   };
-  const promote    = (userId: string) => sendAdmin("mod:promote",  { userId });
-  const demote     = (userId: string) => sendAdmin("mod:demote",   { userId });
-  const kick       = (userId: string) => sendAdmin("mod:kick",     { userId });
-  const ban        = (userId: string) => sendAdmin("mod:ban",      { userId });
-  const unban      = (userId: string) => sendAdmin("mod:unban",    { userId });
-  const mute       = (userId: string) => sendAdmin("mod:mute",     { userId });
-  const unmute     = (userId: string) => sendAdmin("mod:unmute",   { userId });
-  const admit      = (userId: string) => sendAdmin("room:admit",   { userId });
-  const deny       = (userId: string) => sendAdmin("room:deny",    { userId });
+  const promote = (userId: string) => sendAdmin("mod:promote", { userId });
+  const demote = (userId: string) => sendAdmin("mod:demote", { userId });
+  const kick = (userId: string) => sendAdmin("mod:kick", { userId });
+  const ban = (userId: string) => sendAdmin("mod:ban", { userId });
+  const unban = (userId: string) => sendAdmin("mod:unban", { userId });
+  const mute = (userId: string) => sendAdmin("mod:mute", { userId });
+  const unmute = (userId: string) => sendAdmin("mod:unmute", { userId });
+  const admit = (userId: string) => sendAdmin("room:admit", { userId });
+  const deny = (userId: string) => sendAdmin("room:deny", { userId });
 
   const sendRaw = React.useCallback((msg: object) => {
     try {
@@ -1214,48 +1692,131 @@ const renameRoom = (name: string)   => sendAdmin("room:rename",  { name });
     } catch {}
   }, []);
 
-  const setVoiceMode      = (mode: "OPEN" | "QUEUED" | "LISTEN_ONLY") => sendAdmin("voice:mode",    { mode });
-  const raiseHand         = ()                                        => sendAdmin("voice:raise");
-  const lowerHand         = ()                                        => sendAdmin("voice:lower");
-  const approveSpeaker    = (userId: string)                          => sendAdmin("voice:approve", { userId });
-  const revokeSpeaker     = (userId: string)                          => sendAdmin("voice:revoke",  { userId });
+  const setVoiceMode = (mode: "OPEN" | "QUEUED" | "LISTEN_ONLY") =>
+    sendAdmin("voice:mode", { mode });
+  const raiseHand = () => sendAdmin("voice:raise");
+  const lowerHand = () => sendAdmin("voice:lower");
+  const approveSpeaker = (userId: string) => sendAdmin("voice:approve", { userId });
+  const revokeSpeaker = (userId: string) => sendAdmin("voice:revoke", { userId });
 
-  const value: Ctx = React.useMemo(() => ({
-    apiBase: API, wsUrl: WS_URL,
-    token, me, authed, globalRole,
-    wsReady, wsState,
-    activeRoomId, joinedRoomId, currentLobbyId, setActiveRoomId,
-    meta, admin, role, joinStatus, statusByRoom,
-    metaByRoom, adminByRoom, moduleByRoom, ytStateByRoom, launchByRoom, voiceByRoom,
-    pinnedByRoom,
-    moduleState, setModuleState,
-    setVoiceMode, raiseHand, lowerHand, approveSpeaker, revokeSpeaker,
-    rooms, join, leave, knock,
-    devLogin, logout,
-    sendChat, renameRoom,
-    lockRoom, unlockRoom, joinWithPassword,
-    passwordRoomId, passwordError, setPasswordRoomId,
-    promote, demote, kick, ban, unban, mute, unmute, admit, deny,
-    sendRaw,
-    isAway,
-    setAway,
-  }), [
-    token, me, authed, globalRole,
-    wsReady, wsState,
-    activeRoomId, joinedRoomId, currentLobbyId,
-    meta, admin, role, joinStatus, statusByRoom,
-    metaByRoom, adminByRoom, moduleByRoom, ytStateByRoom, launchByRoom, voiceByRoom,
-    pinnedByRoom,
-    moduleState,
-    rooms,
-    passwordRoomId, passwordError,
-    sendRaw, isAway, setAway,
-    join, leave, knock, sendChat, renameRoom, lockRoom, unlockRoom,
-    joinWithPassword, setPasswordRoomId, devLogin, logout,
-    promote, demote, kick, ban, unban, mute, unmute, admit, deny,
-    setActiveRoomId, setModuleState,
-    setVoiceMode, raiseHand, lowerHand, approveSpeaker, revokeSpeaker,
-  ]);
+  const value: Ctx = React.useMemo(
+    () => ({
+      apiBase: API,
+      wsUrl: WS_URL,
+      token,
+      me,
+      authed,
+      globalRole,
+      wsReady,
+      wsState,
+      activeRoomId,
+      joinedRoomId,
+      currentLobbyId,
+      setActiveRoomId,
+      meta,
+      admin,
+      role,
+      joinStatus,
+      statusByRoom,
+      metaByRoom,
+      adminByRoom,
+      moduleByRoom,
+      ytStateByRoom,
+      launchByRoom,
+      voiceByRoom,
+      pinnedByRoom,
+      moduleState,
+      setModuleState,
+      setVoiceMode,
+      raiseHand,
+      lowerHand,
+      approveSpeaker,
+      revokeSpeaker,
+      rooms,
+      join,
+      leave,
+      knock,
+      devLogin,
+      logout,
+      sendChat,
+      renameRoom,
+      lockRoom,
+      unlockRoom,
+      joinWithPassword,
+      passwordRoomId,
+      passwordError,
+      setPasswordRoomId,
+      promote,
+      demote,
+      kick,
+      ban,
+      unban,
+      mute,
+      unmute,
+      admit,
+      deny,
+      sendRaw,
+      isAway,
+      setAway,
+    }),
+    [
+      token,
+      me,
+      authed,
+      globalRole,
+      wsReady,
+      wsState,
+      activeRoomId,
+      joinedRoomId,
+      currentLobbyId,
+      meta,
+      admin,
+      role,
+      joinStatus,
+      statusByRoom,
+      metaByRoom,
+      adminByRoom,
+      moduleByRoom,
+      ytStateByRoom,
+      launchByRoom,
+      voiceByRoom,
+      pinnedByRoom,
+      moduleState,
+      rooms,
+      passwordRoomId,
+      passwordError,
+      sendRaw,
+      isAway,
+      setAway,
+      join,
+      leave,
+      knock,
+      sendChat,
+      renameRoom,
+      lockRoom,
+      unlockRoom,
+      joinWithPassword,
+      setPasswordRoomId,
+      devLogin,
+      logout,
+      promote,
+      demote,
+      kick,
+      ban,
+      unban,
+      mute,
+      unmute,
+      admit,
+      deny,
+      setActiveRoomId,
+      setModuleState,
+      setVoiceMode,
+      raiseHand,
+      lowerHand,
+      approveSpeaker,
+      revokeSpeaker,
+    ],
+  );
 
   return (
     <WeeredContext.Provider value={value}>
@@ -1265,20 +1826,38 @@ const renameRoom = (name: string)   => sendAdmin("room:rename",  { name });
         <NotorietyToast />
         <RankUpCelebration />
         {passwordRoomId && (
-          <div style={{
-            position: "fixed", inset: 0, zIndex: 99999,
-            background: "rgba(0,0,0,.65)", backdropFilter: "blur(6px)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-          }} onClick={() => setPasswordRoomId("")}>
+          <div
+            style={{
+              position: "fixed",
+              inset: 0,
+              zIndex: 99999,
+              background: "rgba(0,0,0,.65)",
+              backdropFilter: "blur(6px)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+            onClick={() => setPasswordRoomId("")}
+          >
             <div
-              onClick={e => e.stopPropagation()}
+              onClick={(e) => e.stopPropagation()}
               style={{
-                background: "rgba(18,18,24,.97)", border: "1px solid rgba(88,0,229,.35)",
-                borderRadius: 16, padding: "28px 24px", width: 340,
+                background: "rgba(18,18,24,.97)",
+                border: "1px solid rgba(88,0,229,.35)",
+                borderRadius: 16,
+                padding: "28px 24px",
+                width: 340,
                 boxShadow: "0 8px 40px rgba(0,0,0,.5)",
               }}
             >
-              <div style={{ fontSize: 14, fontWeight: 900, color: "rgba(243,244,246,.95)", marginBottom: 4 }}>
+              <div
+                style={{
+                  fontSize: 14,
+                  fontWeight: 900,
+                  color: "rgba(243,244,246,.95)",
+                  marginBottom: 4,
+                }}
+              >
                 🔑 Password Required
               </div>
               <div style={{ fontSize: 11, color: "rgba(255,255,255,.45)", marginBottom: 16 }}>

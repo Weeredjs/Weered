@@ -1,5 +1,17 @@
 import { useEffect, useRef, useState } from "react";
-import { View, Text, Pressable, Modal, ScrollView, TextInput, Alert, ActivityIndicator, FlatList, KeyboardAvoidingView, Platform } from "react-native";
+import {
+  View,
+  Text,
+  Pressable,
+  Modal,
+  ScrollView,
+  TextInput,
+  Alert,
+  ActivityIndicator,
+  FlatList,
+  KeyboardAvoidingView,
+  Platform,
+} from "react-native";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 
@@ -12,7 +24,14 @@ type Npc = {
   createdAt: string;
 };
 type NpcListResp = { ok: boolean; npcs: Npc[] };
-type NpcMsg = { id: string; role: "user" | "assistant"; content: string; userName: string; userId?: string | null; createdAt: string };
+type NpcMsg = {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  userName: string;
+  userId?: string | null;
+  createdAt: string;
+};
 type NpcMsgsResp = { ok: boolean; messages: NpcMsg[] };
 
 type RoomMeta = { ok: boolean; room?: { lobbyModuleType?: string | null } };
@@ -51,10 +70,19 @@ export function RoomNpcsButton({ roomId }: { roomId: string }) {
       {open && (
         <Modal transparent animationType="slide" onRequestClose={() => setOpen(false)}>
           <View className="flex-1 bg-black/70 justify-end">
-            <View className="bg-weered-bg border-t border-border rounded-t-2xl" style={{ height: "70%" }}>
+            <View
+              className="bg-weered-bg border-t border-border rounded-t-2xl"
+              style={{ height: "70%" }}
+            >
               <View className="px-4 pt-4 pb-2 flex-row items-center">
-                <Text className="text-weered-text font-bold text-lg flex-1">NPCs · {npcs.length}</Text>
-                <Pressable onPress={() => setCreateOpen(true)} hitSlop={6} className="mr-4 active:opacity-70">
+                <Text className="text-weered-text font-bold text-lg flex-1">
+                  NPCs · {npcs.length}
+                </Text>
+                <Pressable
+                  onPress={() => setCreateOpen(true)}
+                  hitSlop={6}
+                  className="mr-4 active:opacity-70"
+                >
                   <Text className="text-weered font-bold">+ New</Text>
                 </Pressable>
                 <Pressable onPress={() => setOpen(false)} hitSlop={10}>
@@ -63,22 +91,31 @@ export function RoomNpcsButton({ roomId }: { roomId: string }) {
               </View>
 
               {q.isLoading ? (
-                <View className="py-8 items-center"><ActivityIndicator color="#5800E5" /></View>
+                <View className="py-8 items-center">
+                  <ActivityIndicator color="#5800E5" />
+                </View>
               ) : npcs.length === 0 ? (
-                <Text className="text-weered-muted text-sm text-center py-8 px-4">No NPCs yet. Create one to bring AI characters into this room.</Text>
+                <Text className="text-weered-muted text-sm text-center py-8 px-4">
+                  No NPCs yet. Create one to bring AI characters into this room.
+                </Text>
               ) : (
                 <ScrollView>
                   {npcs.map((n) => (
                     <Pressable
                       key={n.id}
-                      onPress={() => { setOpen(false); setActiveNpc(n); }}
+                      onPress={() => {
+                        setOpen(false);
+                        setActiveNpc(n);
+                      }}
                       className="flex-row items-center px-4 py-3 border-b border-border/20 active:bg-panel"
                     >
                       <Text className="text-3xl mr-3">{n.portrait || "🧙"}</Text>
                       <View className="flex-1">
                         <Text className="text-weered-text font-semibold">{n.name}</Text>
                         {!!n.config?.persona && (
-                          <Text className="text-weered-muted text-xs" numberOfLines={2}>{n.config.persona}</Text>
+                          <Text className="text-weered-muted text-xs" numberOfLines={2}>
+                            {n.config.persona}
+                          </Text>
                         )}
                       </View>
                     </Pressable>
@@ -94,7 +131,10 @@ export function RoomNpcsButton({ roomId }: { roomId: string }) {
         <NpcChat
           npc={activeNpc}
           roomId={roomId}
-          onClose={() => { setActiveNpc(null); setOpen(true); }}
+          onClose={() => {
+            setActiveNpc(null);
+            setOpen(true);
+          }}
         />
       )}
 
@@ -102,7 +142,10 @@ export function RoomNpcsButton({ roomId }: { roomId: string }) {
         <CreateNpc
           roomId={roomId}
           onClose={() => setCreateOpen(false)}
-          onCreated={() => { setCreateOpen(false); q.refetch(); }}
+          onCreated={() => {
+            setCreateOpen(false);
+            q.refetch();
+          }}
         />
       )}
     </>
@@ -120,13 +163,18 @@ function NpcChat({ npc, roomId, onClose }: { npc: Npc; roomId: string; onClose: 
   });
 
   const send = useMutation({
-    mutationFn: (content: string) => api<{ ok: boolean; message: NpcMsg; error?: string }>(`/rooms/${roomId}/npcs/${npc.id}/messages`, {
-      method: "POST",
-      body: { content },
-    }),
+    mutationFn: (content: string) =>
+      api<{ ok: boolean; message: NpcMsg; error?: string }>(
+        `/rooms/${roomId}/npcs/${npc.id}/messages`,
+        {
+          method: "POST",
+          body: { content },
+        },
+      ),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["npc-msgs", npc.id] }),
     onError: (e: any) => {
-      if (e?.message?.includes("slow_down")) Alert.alert("Easy now", "Wait 3 seconds between messages.");
+      if (e?.message?.includes("slow_down"))
+        Alert.alert("Easy now", "Wait 3 seconds between messages.");
       else Alert.alert("Couldn't send", e?.message || "Unknown error");
     },
   });
@@ -134,13 +182,17 @@ function NpcChat({ npc, roomId, onClose }: { npc: Npc; roomId: string; onClose: 
   const messages = msgsQ.data?.messages ?? [];
 
   useEffect(() => {
-    if (messages.length) requestAnimationFrame(() => listRef.current?.scrollToEnd({ animated: true }));
+    if (messages.length)
+      requestAnimationFrame(() => listRef.current?.scrollToEnd({ animated: true }));
   }, [messages.length]);
 
   return (
     <Modal transparent animationType="slide" onRequestClose={onClose}>
       <View className="flex-1 bg-weered-bg">
-        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          style={{ flex: 1 }}
+        >
           <View className="px-4 py-3 border-b border-border/40 flex-row items-center">
             <Text className="text-3xl mr-2">{npc.portrait || "🧙"}</Text>
             <View className="flex-1">
@@ -164,7 +216,9 @@ function NpcChat({ npc, roomId, onClose }: { npc: Npc; roomId: string; onClose: 
                     <View className="bg-weered px-3 py-2 rounded-2xl max-w-[80%]">
                       <Text className="text-white text-sm">{item.content}</Text>
                     </View>
-                    <Text className="text-weered-muted text-[10px] mt-0.5">{item.userName || "You"}</Text>
+                    <Text className="text-weered-muted text-[10px] mt-0.5">
+                      {item.userName || "You"}
+                    </Text>
                   </View>
                 ) : (
                   <View className="items-start">
@@ -178,9 +232,13 @@ function NpcChat({ npc, roomId, onClose }: { npc: Npc; roomId: string; onClose: 
             )}
             ListEmptyComponent={
               msgsQ.isLoading ? (
-                <View className="py-8 items-center"><ActivityIndicator color="#5800E5" /></View>
+                <View className="py-8 items-center">
+                  <ActivityIndicator color="#5800E5" />
+                </View>
               ) : (
-                <Text className="text-weered-muted text-sm text-center py-8">Start the conversation.</Text>
+                <Text className="text-weered-muted text-sm text-center py-8">
+                  Start the conversation.
+                </Text>
               )
             }
           />
@@ -216,29 +274,53 @@ function NpcChat({ npc, roomId, onClose }: { npc: Npc; roomId: string; onClose: 
   );
 }
 
-function CreateNpc({ roomId, onClose, onCreated }: { roomId: string; onClose: () => void; onCreated: () => void }) {
+function CreateNpc({
+  roomId,
+  onClose,
+  onCreated,
+}: {
+  roomId: string;
+  onClose: () => void;
+  onCreated: () => void;
+}) {
   const [name, setName] = useState("");
   const [portrait, setPortrait] = useState("🧙");
   const [persona, setPersona] = useState("");
   const [greeting, setGreeting] = useState("");
 
   const create = useMutation({
-    mutationFn: () => api(`/rooms/${roomId}/npcs`, {
-      method: "POST",
-      body: {
-        name: name.trim(),
-        portrait,
-        config: {
-          persona: persona.trim(),
-          greeting: greeting.trim(),
+    mutationFn: () =>
+      api(`/rooms/${roomId}/npcs`, {
+        method: "POST",
+        body: {
+          name: name.trim(),
+          portrait,
+          config: {
+            persona: persona.trim(),
+            greeting: greeting.trim(),
+          },
         },
-      },
-    }),
+      }),
     onSuccess: onCreated,
     onError: (e: any) => Alert.alert("Couldn't create", e?.message || "Unknown error"),
   });
 
-  const EMOJIS = ["🧙", "🧝", "🧛", "🧟", "🤖", "👻", "🦹", "🦸", "🧜", "🐉", "👺", "🧞", "🕵", "🥷"];
+  const EMOJIS = [
+    "🧙",
+    "🧝",
+    "🧛",
+    "🧟",
+    "🤖",
+    "👻",
+    "🦹",
+    "🦸",
+    "🧜",
+    "🐉",
+    "👺",
+    "🧞",
+    "🕵",
+    "🥷",
+  ];
 
   return (
     <Modal transparent animationType="fade" onRequestClose={onClose}>
@@ -271,7 +353,9 @@ function CreateNpc({ roomId, onClose, onCreated }: { roomId: string; onClose: ()
               maxLength={64}
             />
 
-            <Text className="text-weered-muted text-xs uppercase tracking-wide mb-1">Persona / system prompt</Text>
+            <Text className="text-weered-muted text-xs uppercase tracking-wide mb-1">
+              Persona / system prompt
+            </Text>
             <TextInput
               value={persona}
               onChangeText={setPersona}
@@ -282,7 +366,9 @@ function CreateNpc({ roomId, onClose, onCreated }: { roomId: string; onClose: ()
               style={{ fontSize: 14, minHeight: 80, textAlignVertical: "top" }}
             />
 
-            <Text className="text-weered-muted text-xs uppercase tracking-wide mb-1">Greeting (optional)</Text>
+            <Text className="text-weered-muted text-xs uppercase tracking-wide mb-1">
+              Greeting (optional)
+            </Text>
             <TextInput
               value={greeting}
               onChangeText={setGreeting}
@@ -294,7 +380,10 @@ function CreateNpc({ roomId, onClose, onCreated }: { roomId: string; onClose: ()
             />
 
             <View className="flex-row">
-              <Pressable onPress={onClose} className="flex-1 mr-2 px-3 py-3 rounded-lg bg-panel border border-border active:opacity-70">
+              <Pressable
+                onPress={onClose}
+                className="flex-1 mr-2 px-3 py-3 rounded-lg bg-panel border border-border active:opacity-70"
+              >
                 <Text className="text-weered-muted text-center font-bold">Cancel</Text>
               </Pressable>
               <Pressable
@@ -302,7 +391,9 @@ function CreateNpc({ roomId, onClose, onCreated }: { roomId: string; onClose: ()
                 disabled={!name.trim() || create.isPending}
                 className="flex-1 px-3 py-3 rounded-lg bg-weered active:opacity-80"
               >
-                <Text className="text-white text-center font-bold">{create.isPending ? "Creating…" : "Create NPC"}</Text>
+                <Text className="text-white text-center font-bold">
+                  {create.isPending ? "Creating…" : "Create NPC"}
+                </Text>
               </Pressable>
             </View>
           </ScrollView>

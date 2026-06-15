@@ -1,4 +1,3 @@
-
 import type { PrismaClient } from "@prisma/client";
 
 export type FlairKind = "BADGE" | "BANNER" | "NAMEPLATE";
@@ -38,7 +37,15 @@ export async function grantFlairToUser(
 export async function getEquippedFlair(
   prisma: PrismaClient,
   userId: string,
-): Promise<{ id: string; slug: string; name: string; kind: FlairKind; imageUrl: string | null; color: string | null; rarity: string } | null> {
+): Promise<{
+  id: string;
+  slug: string;
+  name: string;
+  kind: FlairKind;
+  imageUrl: string | null;
+  color: string | null;
+  rarity: string;
+} | null> {
   const u = await (prisma as any).user.findUnique({
     where: { id: userId },
     select: { equippedFlairId: true },
@@ -46,7 +53,15 @@ export async function getEquippedFlair(
   if (!u?.equippedFlairId) return null;
   const f = await (prisma as any).flairItem.findUnique({
     where: { id: u.equippedFlairId },
-    select: { id: true, slug: true, name: true, kind: true, imageUrl: true, color: true, rarity: true },
+    select: {
+      id: true,
+      slug: true,
+      name: true,
+      kind: true,
+      imageUrl: true,
+      color: true,
+      rarity: true,
+    },
   });
   return f || null;
 }
@@ -54,7 +69,20 @@ export async function getEquippedFlair(
 export async function getEquippedFlairBatch(
   prisma: PrismaClient,
   userIds: string[],
-): Promise<Record<string, { id: string; slug: string; name: string; kind: FlairKind; imageUrl: string | null; color: string | null; rarity: string }>> {
+): Promise<
+  Record<
+    string,
+    {
+      id: string;
+      slug: string;
+      name: string;
+      kind: FlairKind;
+      imageUrl: string | null;
+      color: string | null;
+      rarity: string;
+    }
+  >
+> {
   if (userIds.length === 0) return {};
   const users = await (prisma as any).user.findMany({
     where: { id: { in: userIds }, equippedFlairId: { not: null } },
@@ -64,7 +92,15 @@ export async function getEquippedFlairBatch(
   if (flairIds.length === 0) return {};
   const flairs = await (prisma as any).flairItem.findMany({
     where: { id: { in: flairIds } },
-    select: { id: true, slug: true, name: true, kind: true, imageUrl: true, color: true, rarity: true },
+    select: {
+      id: true,
+      slug: true,
+      name: true,
+      kind: true,
+      imageUrl: true,
+      color: true,
+      rarity: true,
+    },
   });
   const fById: Record<string, any> = {};
   for (const f of flairs) fById[f.id] = f;

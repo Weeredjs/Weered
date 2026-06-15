@@ -21,7 +21,13 @@ describe("POST /store/buy — concurrency / overdraft guard", () => {
     });
     userId = user.id;
     const item = await prisma.storeItem.create({
-      data: { name: "itest_item_" + stamp, category: "CONSUMABLE", price: PRICE, maxSupply: null, available: true },
+      data: {
+        name: "itest_item_" + stamp,
+        category: "CONSUMABLE",
+        price: PRICE,
+        maxSupply: null,
+        available: true,
+      },
       select: { id: true },
     });
     itemId = item.id;
@@ -29,14 +35,26 @@ describe("POST /store/buy — concurrency / overdraft guard", () => {
   });
 
   afterEach(async () => {
-    try { await app?.close(); } catch {}
-    try { await prisma.paperTransaction.deleteMany({ where: { refId: itemId } }); } catch {}
-    try { await prisma.userItem.deleteMany({ where: { itemId } }); } catch {}
-    try { await prisma.storeItem.deleteMany({ where: { id: itemId } }); } catch {}
-    try { await prisma.user.deleteMany({ where: { id: userId } }); } catch {}
+    try {
+      await app?.close();
+    } catch {}
+    try {
+      await prisma.paperTransaction.deleteMany({ where: { refId: itemId } });
+    } catch {}
+    try {
+      await prisma.userItem.deleteMany({ where: { itemId } });
+    } catch {}
+    try {
+      await prisma.storeItem.deleteMany({ where: { id: itemId } });
+    } catch {}
+    try {
+      await prisma.user.deleteMany({ where: { id: userId } });
+    } catch {}
   });
 
-  afterAll(async () => { await prisma.$disconnect(); });
+  afterAll(async () => {
+    await prisma.$disconnect();
+  });
 
   it("credits exactly one purchase and never overdrafts under concurrent buys", async () => {
     const token = testToken(userId);
@@ -53,10 +71,16 @@ describe("POST /store/buy — concurrency / overdraft guard", () => {
     );
 
     const successes = results.filter((r: any) => r.statusCode === 200 && r.json()?.ok).length;
-    const insufficient = results.filter((r: any) => r.statusCode === 400 && r.json()?.error === "insufficient_paper").length;
+    const insufficient = results.filter(
+      (r: any) => r.statusCode === 400 && r.json()?.error === "insufficient_paper",
+    ).length;
 
-    const finalPaper = (await prisma.user.findUnique({ where: { id: userId }, select: { paper: true } }))?.paper;
-    const spendRows = await prisma.paperTransaction.count({ where: { userId, refId: itemId, type: "SPEND_STORE" } });
+    const finalPaper = (
+      await prisma.user.findUnique({ where: { id: userId }, select: { paper: true } })
+    )?.paper;
+    const spendRows = await prisma.paperTransaction.count({
+      where: { userId, refId: itemId, type: "SPEND_STORE" },
+    });
     const owned = await prisma.userItem.count({ where: { userId, itemId } });
 
     expect(successes).toBe(1);

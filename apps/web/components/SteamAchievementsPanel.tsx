@@ -17,7 +17,13 @@ type Achievement = {
 type State =
   | { status: "loading" }
   | { status: "no-data" }
-  | { status: "ok"; gameName: string | null; total: number; unlocked: number; achievements: Achievement[] };
+  | {
+      status: "ok";
+      gameName: string | null;
+      total: number;
+      unlocked: number;
+      achievements: Achievement[];
+    };
 
 export default function SteamAchievementsPanel({
   appId,
@@ -37,13 +43,25 @@ export default function SteamAchievementsPanel({
     let alive = true;
     (async () => {
       try {
-        const tok = (() => { try { return localStorage.getItem("weered_token") || ""; } catch { return ""; } })();
-        if (!tok) { if (alive) setState({ status: "no-data" }); return; }
+        const tok = (() => {
+          try {
+            return localStorage.getItem("weered_token") || "";
+          } catch {
+            return "";
+          }
+        })();
+        if (!tok) {
+          if (alive) setState({ status: "no-data" });
+          return;
+        }
         const url = userId
           ? `${API}/steam/achievements/${encodeURIComponent(appId)}?userId=${encodeURIComponent(userId)}`
           : `${API}/steam/achievements/${encodeURIComponent(appId)}`;
         const r = await fetch(url, { headers: { Authorization: `Bearer ${tok}` } });
-        if (!r.ok) { if (alive) setState({ status: "no-data" }); return; }
+        if (!r.ok) {
+          if (alive) setState({ status: "no-data" });
+          return;
+        }
         const j = await r.json();
         if (!alive) return;
         if (!j?.ok || !j.linked || !Array.isArray(j.achievements) || j.achievements.length === 0) {
@@ -61,7 +79,9 @@ export default function SteamAchievementsPanel({
         if (alive) setState({ status: "no-data" });
       }
     })();
-    return () => { alive = false; };
+    return () => {
+      alive = false;
+    };
   }, [appId, userId, gameDisplayName]);
 
   if (state.status === "loading") return null;
@@ -77,32 +97,52 @@ export default function SteamAchievementsPanel({
   const visible = expanded ? sorted : sorted.slice(0, 6);
 
   return (
-    <div style={{
-      borderRadius: 10,
-      border: `1px solid ${accentColor}1f`,
-      background: "rgba(255,255,255,.02)",
-      padding: 12,
-      marginBottom: 12,
-    }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 10 }}>
+    <div
+      style={{
+        borderRadius: 10,
+        border: `1px solid ${accentColor}1f`,
+        background: "rgba(255,255,255,.02)",
+        padding: 12,
+        marginBottom: 12,
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 10,
+          marginBottom: 10,
+        }}
+      >
         <div>
-          <div style={{
-            fontSize: 9, fontWeight: 800, letterSpacing: "1.4px",
-            textTransform: "uppercase", color: accentColor,
-            opacity: 0.7,
-          }}>
+          <div
+            style={{
+              fontSize: 9,
+              fontWeight: 800,
+              letterSpacing: "1.4px",
+              textTransform: "uppercase",
+              color: accentColor,
+              opacity: 0.7,
+            }}
+          >
             Achievements
           </div>
-          <div style={{
-            fontSize: 13, fontWeight: 700, color: "rgba(243,244,246,.95)",
-            marginTop: 2,
-          }}>
+          <div
+            style={{
+              fontSize: 13,
+              fontWeight: 700,
+              color: "rgba(243,244,246,.95)",
+              marginTop: 2,
+            }}
+          >
             {gameName || "Steam game"}
           </div>
         </div>
         <div style={{ textAlign: "right", flexShrink: 0 }}>
           <div style={{ fontSize: 18, fontWeight: 900, color: accentColor, lineHeight: 1 }}>
-            {unlocked}<span style={{ fontSize: 11, opacity: 0.55, fontWeight: 700 }}>/{total}</span>
+            {unlocked}
+            <span style={{ fontSize: 11, opacity: 0.55, fontWeight: 700 }}>/{total}</span>
           </div>
           <div style={{ fontSize: 9, fontWeight: 700, opacity: 0.5, marginTop: 2 }}>
             {pct}% complete
@@ -110,25 +150,34 @@ export default function SteamAchievementsPanel({
         </div>
       </div>
 
-      <div style={{
-        height: 4, borderRadius: 2,
-        background: "rgba(255,255,255,.06)",
-        overflow: "hidden", marginBottom: 12,
-      }}>
-        <div style={{
-          width: `${pct}%`, height: "100%",
-          background: accentColor,
-          boxShadow: `0 0 8px ${accentColor}55`,
-          transition: "width .4s",
-        }} />
+      <div
+        style={{
+          height: 4,
+          borderRadius: 2,
+          background: "rgba(255,255,255,.06)",
+          overflow: "hidden",
+          marginBottom: 12,
+        }}
+      >
+        <div
+          style={{
+            width: `${pct}%`,
+            height: "100%",
+            background: accentColor,
+            boxShadow: `0 0 8px ${accentColor}55`,
+            transition: "width .4s",
+          }}
+        />
       </div>
 
-      <div style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(auto-fill, minmax(56px, 1fr))",
-        gap: 6,
-      }}>
-        {visible.map(a => (
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fill, minmax(56px, 1fr))",
+          gap: 6,
+        }}
+      >
+        {visible.map((a) => (
           <div
             key={a.name}
             title={`${a.displayName}${a.description ? "\n" + a.description : ""}${a.unlockTime ? "\nUnlocked " + new Date(a.unlockTime).toLocaleDateString() : ""}`}
@@ -153,25 +202,43 @@ export default function SteamAchievementsPanel({
                 loading="lazy"
               />
             ) : (
-              <div style={{
-                width: "100%", height: "100%",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: 18, fontWeight: 900,
-                color: a.achieved ? accentColor : "rgba(255,255,255,.25)",
-              }}>
+              <div
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 18,
+                  fontWeight: 900,
+                  color: a.achieved ? accentColor : "rgba(255,255,255,.25)",
+                }}
+              >
                 ★
               </div>
             )}
             {a.achieved && (
-              <span style={{
-                position: "absolute", bottom: 2, right: 2,
-                width: 10, height: 10, borderRadius: 5,
-                background: accentColor,
-                boxShadow: "0 0 4px rgba(0,0,0,.6)",
-                fontSize: 7, fontWeight: 900, color: "#000",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                lineHeight: 1,
-              }}>✓</span>
+              <span
+                style={{
+                  position: "absolute",
+                  bottom: 2,
+                  right: 2,
+                  width: 10,
+                  height: 10,
+                  borderRadius: 5,
+                  background: accentColor,
+                  boxShadow: "0 0 4px rgba(0,0,0,.6)",
+                  fontSize: 7,
+                  fontWeight: 900,
+                  color: "#000",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  lineHeight: 1,
+                }}
+              >
+                ✓
+              </span>
             )}
           </div>
         ))}
@@ -180,15 +247,19 @@ export default function SteamAchievementsPanel({
       {achievements.length > 6 && (
         <button
           type="button"
-          onClick={() => setExpanded(v => !v)}
+          onClick={() => setExpanded((v) => !v)}
           style={{
-            marginTop: 10, padding: "5px 10px",
+            marginTop: 10,
+            padding: "5px 10px",
             background: "transparent",
             border: `1px solid ${accentColor}33`,
             color: accentColor,
-            fontSize: 10, fontWeight: 700, letterSpacing: "0.06em",
+            fontSize: 10,
+            fontWeight: 700,
+            letterSpacing: "0.06em",
             textTransform: "uppercase",
-            borderRadius: 4, cursor: "pointer",
+            borderRadius: 4,
+            cursor: "pointer",
             width: "100%",
           }}
         >

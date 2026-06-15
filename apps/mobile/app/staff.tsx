@@ -1,5 +1,15 @@
 import { useState } from "react";
-import { View, Text, ScrollView, Pressable, TextInput, Alert, ActivityIndicator, RefreshControl, FlatList } from "react-native";
+import {
+  View,
+  Text,
+  ScrollView,
+  Pressable,
+  TextInput,
+  Alert,
+  ActivityIndicator,
+  RefreshControl,
+  FlatList,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Stack, router } from "expo-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -9,17 +19,31 @@ import { useAuth } from "@/stores/auth";
 type Tab = "broadcast" | "reports" | "audit";
 
 type Report = {
-  id: string; targetType: string; targetId: string; reason: string;
-  context: string | null; note: string | null; bodySnapshot: string | null;
-  status: string; createdAt: string; reviewedAt: string | null;
-  reporterName: string; targetName: string | null; reviewerName: string | null;
+  id: string;
+  targetType: string;
+  targetId: string;
+  reason: string;
+  context: string | null;
+  note: string | null;
+  bodySnapshot: string | null;
+  status: string;
+  createdAt: string;
+  reviewedAt: string | null;
+  reporterName: string;
+  targetName: string | null;
+  reviewerName: string | null;
 };
 type ReportsResp = { reports: Report[] };
 
 type AuditRow = {
-  id: string; actorId: string; actorName: string;
-  action: string; targetId?: string | null; targetName?: string | null;
-  detail?: any; ts: string;
+  id: string;
+  actorId: string;
+  actorName: string;
+  action: string;
+  targetId?: string | null;
+  targetName?: string | null;
+  detail?: any;
+  ts: string;
 };
 type AuditResp = { ok: boolean; entries: AuditRow[] };
 
@@ -44,7 +68,11 @@ export default function Staff() {
       <Stack.Screen options={{ title: "Staff console" }} />
 
       <View className="flex-row border-b border-border/40">
-        <TabBtn label="Broadcast" active={tab === "broadcast"} onPress={() => setTab("broadcast")} />
+        <TabBtn
+          label="Broadcast"
+          active={tab === "broadcast"}
+          onPress={() => setTab("broadcast")}
+        />
         <TabBtn label="Reports" active={tab === "reports"} onPress={() => setTab("reports")} />
         <TabBtn label="Audit" active={tab === "audit"} onPress={() => setTab("audit")} />
       </View>
@@ -56,10 +84,24 @@ export default function Staff() {
   );
 }
 
-function TabBtn({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
+function TabBtn({
+  label,
+  active,
+  onPress,
+}: {
+  label: string;
+  active: boolean;
+  onPress: () => void;
+}) {
   return (
-    <Pressable onPress={onPress} className="flex-1 py-3 items-center active:opacity-70" style={{ borderBottomWidth: 2, borderBottomColor: active ? "#5800E5" : "transparent" }}>
-      <Text className={`text-sm font-bold ${active ? "text-weered" : "text-weered-muted"}`}>{label}</Text>
+    <Pressable
+      onPress={onPress}
+      className="flex-1 py-3 items-center active:opacity-70"
+      style={{ borderBottomWidth: 2, borderBottomColor: active ? "#5800E5" : "transparent" }}
+    >
+      <Text className={`text-sm font-bold ${active ? "text-weered" : "text-weered-muted"}`}>
+        {label}
+      </Text>
     </Pressable>
   );
 }
@@ -69,10 +111,11 @@ function BroadcastTab() {
   const [level, setLevel] = useState<"info" | "warning" | "urgent">("info");
 
   const send = useMutation({
-    mutationFn: () => api<{ ok: boolean; sent?: number }>("/staff/broadcast", {
-      method: "POST",
-      body: { message: message.trim(), level },
-    }),
+    mutationFn: () =>
+      api<{ ok: boolean; sent?: number }>("/staff/broadcast", {
+        method: "POST",
+        body: { message: message.trim(), level },
+      }),
     onSuccess: (r) => {
       Alert.alert("Sent", `Broadcast delivered to ${r.sent ?? 0} connected users.`);
       setMessage("");
@@ -90,7 +133,11 @@ function BroadcastTab() {
             onPress={() => setLevel(l)}
             className={`mr-2 px-3 py-2 rounded-lg border ${level === l ? "bg-weered border-weered" : "bg-panel border-border"}`}
           >
-            <Text className={`text-xs font-bold uppercase ${level === l ? "text-white" : "text-weered-muted"}`}>{l}</Text>
+            <Text
+              className={`text-xs font-bold uppercase ${level === l ? "text-white" : "text-weered-muted"}`}
+            >
+              {l}
+            </Text>
           </Pressable>
         ))}
       </View>
@@ -114,7 +161,9 @@ function BroadcastTab() {
         className="bg-weered px-4 py-3 rounded-lg active:opacity-80"
         style={{ opacity: !message.trim() || send.isPending ? 0.5 : 1 }}
       >
-        <Text className="text-white text-center font-bold">{send.isPending ? "Sending…" : "Broadcast to all online"}</Text>
+        <Text className="text-white text-center font-bold">
+          {send.isPending ? "Sending…" : "Broadcast to all online"}
+        </Text>
       </Pressable>
 
       <Text className="text-weered-muted text-xs mt-4 text-center">
@@ -144,8 +193,14 @@ function ReportsTab() {
     <View className="flex-1">
       <View className="flex-row px-2 py-2 border-b border-border/30">
         {["OPEN", "REVIEWED", "ACTIONED", "DISMISSED", "ALL"].map((s) => (
-          <Pressable key={s} onPress={() => setStatusFilter(s)} className="px-2 py-1 active:opacity-70">
-            <Text className={`text-xs font-bold uppercase ${statusFilter === s ? "text-weered" : "text-weered-muted"}`}>
+          <Pressable
+            key={s}
+            onPress={() => setStatusFilter(s)}
+            className="px-2 py-1 active:opacity-70"
+          >
+            <Text
+              className={`text-xs font-bold uppercase ${statusFilter === s ? "text-weered" : "text-weered-muted"}`}
+            >
               {s}
             </Text>
           </Pressable>
@@ -153,12 +208,20 @@ function ReportsTab() {
       </View>
 
       {q.isLoading ? (
-        <View className="flex-1 items-center justify-center"><ActivityIndicator color="#5800E5" /></View>
+        <View className="flex-1 items-center justify-center">
+          <ActivityIndicator color="#5800E5" />
+        </View>
       ) : (
         <FlatList
           data={q.data?.reports ?? []}
           keyExtractor={(r) => r.id}
-          refreshControl={<RefreshControl refreshing={q.isRefetching} onRefresh={() => q.refetch()} tintColor="#5800E5" />}
+          refreshControl={
+            <RefreshControl
+              refreshing={q.isRefetching}
+              onRefresh={() => q.refetch()}
+              tintColor="#5800E5"
+            />
+          }
           contentContainerStyle={{ paddingBottom: 32 }}
           renderItem={({ item }) => (
             <View className="px-4 py-3 border-b border-border/20">
@@ -166,30 +229,46 @@ function ReportsTab() {
                 <Text className="text-red-400 text-xs font-bold mr-2">{item.reason}</Text>
                 <Text className="text-weered-muted text-xs uppercase mr-2">{item.targetType}</Text>
                 <Text className="text-weered-muted text-xs flex-1">by {item.reporterName}</Text>
-                <Text className="text-weered-muted text-[10px]">{new Date(item.createdAt).toLocaleDateString()}</Text>
+                <Text className="text-weered-muted text-[10px]">
+                  {new Date(item.createdAt).toLocaleDateString()}
+                </Text>
               </View>
               {item.bodySnapshot && (
                 <View className="bg-panel border border-border rounded-md px-3 py-2 my-1">
-                  <Text className="text-weered-muted text-xs italic" numberOfLines={4}>"{item.bodySnapshot}"</Text>
+                  <Text className="text-weered-muted text-xs italic" numberOfLines={4}>
+                    "{item.bodySnapshot}"
+                  </Text>
                 </View>
               )}
               {item.note && (
                 <Text className="text-weered-text text-xs my-1">Note: {item.note}</Text>
               )}
               {item.targetType === "USER" && item.targetName && (
-                <Pressable onPress={() => router.push(`/user/${item.targetId}`)} className="mt-1 active:opacity-70">
+                <Pressable
+                  onPress={() => router.push(`/user/${item.targetId}`)}
+                  className="mt-1 active:opacity-70"
+                >
                   <Text className="text-weered text-xs font-bold">View {item.targetName} →</Text>
                 </Pressable>
               )}
               {item.status === "OPEN" ? (
                 <View className="flex-row mt-2">
-                  <Pressable onPress={() => act.mutate({ id: item.id, status: "ACTIONED" })} className="bg-red-500 px-3 py-1 rounded-md mr-2 active:opacity-80">
+                  <Pressable
+                    onPress={() => act.mutate({ id: item.id, status: "ACTIONED" })}
+                    className="bg-red-500 px-3 py-1 rounded-md mr-2 active:opacity-80"
+                  >
                     <Text className="text-white text-xs font-bold">Actioned</Text>
                   </Pressable>
-                  <Pressable onPress={() => act.mutate({ id: item.id, status: "DISMISSED" })} className="bg-panel border border-border px-3 py-1 rounded-md mr-2 active:opacity-70">
+                  <Pressable
+                    onPress={() => act.mutate({ id: item.id, status: "DISMISSED" })}
+                    className="bg-panel border border-border px-3 py-1 rounded-md mr-2 active:opacity-70"
+                  >
                     <Text className="text-weered-muted text-xs font-bold">Dismiss</Text>
                   </Pressable>
-                  <Pressable onPress={() => act.mutate({ id: item.id, status: "REVIEWED" })} className="bg-panel border border-border px-3 py-1 rounded-md active:opacity-70">
+                  <Pressable
+                    onPress={() => act.mutate({ id: item.id, status: "REVIEWED" })}
+                    className="bg-panel border border-border px-3 py-1 rounded-md active:opacity-70"
+                  >
                     <Text className="text-weered-muted text-xs font-bold">Reviewed</Text>
                   </Pressable>
                 </View>
@@ -200,7 +279,11 @@ function ReportsTab() {
               )}
             </View>
           )}
-          ListEmptyComponent={<Text className="text-weered-muted text-sm text-center py-12">No reports with status {statusFilter}.</Text>}
+          ListEmptyComponent={
+            <Text className="text-weered-muted text-sm text-center py-12">
+              No reports with status {statusFilter}.
+            </Text>
+          }
         />
       )}
     </View>
@@ -213,24 +296,41 @@ function AuditTab() {
     queryFn: () => api<AuditResp>("/staff/audit"),
   });
 
-  if (q.isLoading) return <View className="flex-1 items-center justify-center"><ActivityIndicator color="#5800E5" /></View>;
+  if (q.isLoading)
+    return (
+      <View className="flex-1 items-center justify-center">
+        <ActivityIndicator color="#5800E5" />
+      </View>
+    );
   return (
     <FlatList
       data={q.data?.entries ?? []}
       keyExtractor={(e) => e.id}
-      refreshControl={<RefreshControl refreshing={q.isRefetching} onRefresh={() => q.refetch()} tintColor="#5800E5" />}
+      refreshControl={
+        <RefreshControl
+          refreshing={q.isRefetching}
+          onRefresh={() => q.refetch()}
+          tintColor="#5800E5"
+        />
+      }
       contentContainerStyle={{ paddingBottom: 32 }}
       renderItem={({ item }) => (
         <View className="px-4 py-2.5 border-b border-border/20">
           <Text className="text-weered-text text-sm">
-            <Text className="font-bold">{item.actorName}</Text>
-            {" "}<Text className="text-weered-muted">{item.action.replace(/_/g, " ")}</Text>
-            {item.targetName ? <Text className="text-weered-muted"> → {item.targetName}</Text> : null}
+            <Text className="font-bold">{item.actorName}</Text>{" "}
+            <Text className="text-weered-muted">{item.action.replace(/_/g, " ")}</Text>
+            {item.targetName ? (
+              <Text className="text-weered-muted"> → {item.targetName}</Text>
+            ) : null}
           </Text>
-          <Text className="text-weered-muted text-xs mt-0.5">{new Date(item.ts).toLocaleString()}</Text>
+          <Text className="text-weered-muted text-xs mt-0.5">
+            {new Date(item.ts).toLocaleString()}
+          </Text>
         </View>
       )}
-      ListEmptyComponent={<Text className="text-weered-muted text-sm text-center py-12">No audit entries.</Text>}
+      ListEmptyComponent={
+        <Text className="text-weered-muted text-sm text-center py-12">No audit entries.</Text>
+      }
     />
   );
 }

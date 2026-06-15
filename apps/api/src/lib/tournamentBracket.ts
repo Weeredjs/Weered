@@ -1,4 +1,3 @@
-
 import type { PrismaClient } from "@prisma/client";
 
 type CreateNotification = (n: {
@@ -45,7 +44,9 @@ export async function notifyMatchReady(
         type: "LOBBY_EVENT",
         title: `Your ${m.tournament.title} match is ready`,
         body: `vs. ${opponentName(e.userId)} — Round ${m.round}${m.bracketSide ? ` (${m.bracketSide})` : ""}.`,
-        actionUrl: m.tournament.lobbyId ? `/lobby/${encodeURIComponent(m.tournament.lobbyId)}` : undefined,
+        actionUrl: m.tournament.lobbyId
+          ? `/lobby/${encodeURIComponent(m.tournament.lobbyId)}`
+          : undefined,
         meta: { kind: "tournament_match_ready", tournamentId: m.tournament.id, matchId },
       });
     }

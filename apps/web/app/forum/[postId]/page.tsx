@@ -15,11 +15,15 @@ async function fetchPost(postId: string): Promise<any | null> {
   return null;
 }
 
-export async function generateMetadata(props: { params: Promise<{ postId: string }> }): Promise<Metadata> {
+export async function generateMetadata(props: {
+  params: Promise<{ postId: string }>;
+}): Promise<Metadata> {
   const params = await props.params;
   const post = await fetchPost(params.postId);
   const title = post?.title || "Post | Weered Forum";
-  const description = post?.body ? String(post.body).slice(0, 160).replace(/\n/g, " ") : "A discussion on the Weered community forum.";
+  const description = post?.body
+    ? String(post.body).slice(0, 160).replace(/\n/g, " ")
+    : "A discussion on the Weered community forum.";
   return {
     title,
     description,
@@ -51,24 +55,36 @@ export default async function ForumPostPage(props: { params: Promise<{ postId: s
       { "@type": "ListItem", position: 3, name: post?.title || "Post", item: url },
     ],
   };
-  const posting = post ? {
-    "@context": "https://schema.org",
-    "@type": "DiscussionForumPosting",
-    headline: post.title || "Forum post",
-    articleBody: post.body || "",
-    url,
-    datePublished: post.createdAt || undefined,
-    dateModified: post.updatedAt || post.createdAt || undefined,
-    author: post.author?.usernameKey ? {
-      "@type": "Person",
-      name: post.author.usernameKey,
-      url: `${SITE}/u/${post.author.usernameKey}`,
-    } : undefined,
-    interactionStatistic: [
-      { "@type": "InteractionCounter", interactionType: "https://schema.org/LikeAction", userInteractionCount: Number(post.score || 0) },
-      { "@type": "InteractionCounter", interactionType: "https://schema.org/CommentAction", userInteractionCount: Number(post.commentCount || 0) },
-    ],
-  } : null;
+  const posting = post
+    ? {
+        "@context": "https://schema.org",
+        "@type": "DiscussionForumPosting",
+        headline: post.title || "Forum post",
+        articleBody: post.body || "",
+        url,
+        datePublished: post.createdAt || undefined,
+        dateModified: post.updatedAt || post.createdAt || undefined,
+        author: post.author?.usernameKey
+          ? {
+              "@type": "Person",
+              name: post.author.usernameKey,
+              url: `${SITE}/u/${post.author.usernameKey}`,
+            }
+          : undefined,
+        interactionStatistic: [
+          {
+            "@type": "InteractionCounter",
+            interactionType: "https://schema.org/LikeAction",
+            userInteractionCount: Number(post.score || 0),
+          },
+          {
+            "@type": "InteractionCounter",
+            interactionType: "https://schema.org/CommentAction",
+            userInteractionCount: Number(post.commentCount || 0),
+          },
+        ],
+      }
+    : null;
   return (
     <>
       <script

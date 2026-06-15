@@ -449,13 +449,11 @@ export default async function profileRoutes(app: FastifyInstance, opts: Opts) {
         .toLowerCase();
       const twitchLogin = raw === "" ? null : /^[a-z0-9_]{3,25}$/.test(raw) ? raw : null;
       if (raw !== "" && !twitchLogin) {
-        return reply
-          .code(400)
-          .send({
-            ok: false,
-            error: "invalid_twitch_login",
-            message: "Twitch login is 3-25 chars: letters, numbers, underscores.",
-          });
+        return reply.code(400).send({
+          ok: false,
+          error: "invalid_twitch_login",
+          message: "Twitch login is 3-25 chars: letters, numbers, underscores.",
+        });
       }
       await prisma.user.update({
         where: { id: u.id },
@@ -494,24 +492,20 @@ export default async function profileRoutes(app: FastifyInstance, opts: Opts) {
       }
 
       if (!OPENXBL_API_KEY) {
-        return reply
-          .code(503)
-          .send({
-            ok: false,
-            error: "xbl_unconfigured",
-            message: "Xbox integration is not configured on the server.",
-          });
+        return reply.code(503).send({
+          ok: false,
+          error: "xbl_unconfigured",
+          message: "Xbox integration is not configured on the server.",
+        });
       }
 
       const resolved = await resolveXboxGamertag(raw);
       if (!resolved) {
-        return reply
-          .code(400)
-          .send({
-            ok: false,
-            error: "invalid_gamertag",
-            message: "Could not find that Xbox gamertag. Double-check spelling and try again.",
-          });
+        return reply.code(400).send({
+          ok: false,
+          error: "invalid_gamertag",
+          message: "Could not find that Xbox gamertag. Double-check spelling and try again.",
+        });
       }
 
       await prisma.user.update({

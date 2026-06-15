@@ -3,7 +3,15 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import * as WebBrowser from "expo-web-browser";
 import { api } from "@/lib/api";
 
-type Tier = { id: string; name: string; description: string; priceMonthly: number; grantLevel: number; color: string | null; sortOrder: number };
+type Tier = {
+  id: string;
+  name: string;
+  description: string;
+  priceMonthly: number;
+  grantLevel: number;
+  color: string | null;
+  sortOrder: number;
+};
 type TiersResp = { ok: boolean; tiers: Tier[] };
 type MyTier = { ok: boolean; tier: { id: string; name: string; color: string | null } | null };
 
@@ -19,7 +27,10 @@ export function LobbyTiers({ lobbyId }: { lobbyId: string }) {
 
   const checkout = useMutation({
     mutationFn: async (tierId: string) => {
-      const r = await api<{ ok: boolean; url?: string; error?: string }>(`/lobbies/${lobbyId}/tiers/${tierId}/checkout`, { method: "POST" });
+      const r = await api<{ ok: boolean; url?: string; error?: string }>(
+        `/lobbies/${lobbyId}/tiers/${tierId}/checkout`,
+        { method: "POST" },
+      );
       if (!r.ok || !r.url) throw new Error(r.error || "no_url");
       await WebBrowser.openBrowserAsync(r.url, { showTitle: true });
     },
@@ -28,7 +39,10 @@ export function LobbyTiers({ lobbyId }: { lobbyId: string }) {
 
   const portal = useMutation({
     mutationFn: async () => {
-      const r = await api<{ ok: boolean; url?: string; error?: string }>(`/lobbies/${lobbyId}/tiers/portal`, { method: "POST" });
+      const r = await api<{ ok: boolean; url?: string; error?: string }>(
+        `/lobbies/${lobbyId}/tiers/portal`,
+        { method: "POST" },
+      );
       if (!r.ok || !r.url) throw new Error(r.error || "no_url");
       await WebBrowser.openBrowserAsync(r.url, { showTitle: true });
     },
@@ -41,19 +55,31 @@ export function LobbyTiers({ lobbyId }: { lobbyId: string }) {
 
   return (
     <View className="border-t border-border/40 pt-3 pb-2">
-      <Text className="text-weered-muted text-xs uppercase tracking-wide px-4 pb-2">Supporter tiers</Text>
+      <Text className="text-weered-muted text-xs uppercase tracking-wide px-4 pb-2">
+        Supporter tiers
+      </Text>
       {tiers.map((t) => {
         const accent = t.color || "#5800E5";
         const isMine = t.id === myTierId;
         return (
-          <View key={t.id} className="px-4 py-3 border-b border-border/20" style={isMine ? { backgroundColor: `${accent}10` } : undefined}>
+          <View
+            key={t.id}
+            className="px-4 py-3 border-b border-border/20"
+            style={isMine ? { backgroundColor: `${accent}10` } : undefined}
+          >
             <View className="flex-row items-center mb-1">
-              <Text style={{ color: accent }} className="font-bold text-sm flex-1">{t.name}</Text>
-              <Text className="text-weered-text font-black">${(t.priceMonthly / 100).toFixed(2)}</Text>
+              <Text style={{ color: accent }} className="font-bold text-sm flex-1">
+                {t.name}
+              </Text>
+              <Text className="text-weered-text font-black">
+                ${(t.priceMonthly / 100).toFixed(2)}
+              </Text>
               <Text className="text-weered-muted text-xs ml-1">/mo</Text>
             </View>
             {!!t.description && (
-              <Text className="text-weered-muted text-xs mb-2" numberOfLines={3}>{t.description}</Text>
+              <Text className="text-weered-muted text-xs mb-2" numberOfLines={3}>
+                {t.description}
+              </Text>
             )}
             {isMine ? (
               <Pressable
@@ -61,7 +87,9 @@ export function LobbyTiers({ lobbyId }: { lobbyId: string }) {
                 disabled={portal.isPending}
                 className="bg-panel border border-border px-3 py-1.5 rounded-md self-start active:opacity-70"
               >
-                <Text className="text-weered-muted text-xs font-bold">{portal.isPending ? "Opening…" : "Manage"}</Text>
+                <Text className="text-weered-muted text-xs font-bold">
+                  {portal.isPending ? "Opening…" : "Manage"}
+                </Text>
               </Pressable>
             ) : (
               <Pressable
@@ -70,7 +98,9 @@ export function LobbyTiers({ lobbyId }: { lobbyId: string }) {
                 className="px-3 py-1.5 rounded-md self-start active:opacity-80"
                 style={{ backgroundColor: accent }}
               >
-                <Text className="text-white text-xs font-bold">{checkout.isPending ? "Opening…" : "Subscribe"}</Text>
+                <Text className="text-white text-xs font-bold">
+                  {checkout.isPending ? "Opening…" : "Subscribe"}
+                </Text>
               </Pressable>
             )}
           </View>

@@ -5,27 +5,36 @@ import SyncAuthedAttribute from "./SyncAuthedAttribute";
 const API = process.env.NEXT_PUBLIC_API_BASE || "https://api.weered.ca";
 const SITE = "https://weered.ca";
 
-const LOBBY_OG_OVERRIDES: Record<string, { ogImage: string; twitterImage?: string; description?: string; title?: string }> = {
+const LOBBY_OG_OVERRIDES: Record<
+  string,
+  { ogImage: string; twitterImage?: string; description?: string; title?: string }
+> = {
   windrose: {
     ogImage: `${SITE}/brand/lobbies/windrose-og-v3.png`,
-    description: "The unofficial Windrose community hub. Live Steam player count, Kraken Express dispatches, crew finder, and Captain's Log. Build. Sail. Survive the storm.",
+    description:
+      "The unofficial Windrose community hub. Live Steam player count, Kraken Express dispatches, crew finder, and Captain's Log. Build. Sail. Survive the storm.",
     title: "Windrose — unofficial community hub · Weered",
   },
   destiny2: {
     ogImage: `${SITE}/brand/lobbies/destiny2-og-v1.png`,
-    description: "The unofficial Guardian hub. Verified-via-Bungie-API tournaments, race brackets for Pantheon 2.0, Trials and Crucible competitions, and Hall-of-Fame champion flair. Hosting community races into Shadow & Order (June 9, 2026). Find your fireteam.",
+    description:
+      "The unofficial Guardian hub. Verified-via-Bungie-API tournaments, race brackets for Pantheon 2.0, Trials and Crucible competitions, and Hall-of-Fame champion flair. Hosting community races into Shadow & Order (June 9, 2026). Find your fireteam.",
     title: "Destiny 2 community hub — Pantheon 2.0 races, verified tournaments · Weered",
   },
 };
 
-export async function generateMetadata(props: { params: Promise<{ id: string }> }): Promise<Metadata> {
+export async function generateMetadata(props: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
   const params = await props.params;
   const id = decodeURIComponent(params.id);
   let name = id;
   let description = `Join the ${id} lobby on Weered. Live rooms, real-time chat, and community presence.`;
 
   try {
-    const res = await fetch(`${API}/lobbies/${encodeURIComponent(id)}`, { next: { revalidate: 300 } });
+    const res = await fetch(`${API}/lobbies/${encodeURIComponent(id)}`, {
+      next: { revalidate: 300 },
+    });
     if (res.ok) {
       const data = await res.json();
       const lobby = data?.lobby ?? data;
@@ -64,7 +73,9 @@ export async function generateMetadata(props: { params: Promise<{ id: string }> 
 
 async function fetchLobbyName(id: string): Promise<string> {
   try {
-    const res = await fetch(`${API}/lobbies/${encodeURIComponent(id)}`, { next: { revalidate: 600 } });
+    const res = await fetch(`${API}/lobbies/${encodeURIComponent(id)}`, {
+      next: { revalidate: 600 },
+    });
     if (res.ok) {
       const data = await res.json();
       const lobby = data?.lobby ?? data;
@@ -74,17 +85,13 @@ async function fetchLobbyName(id: string): Promise<string> {
   return id;
 }
 
-export default async function LobbyIdLayout(
-  props: {
-    children: React.ReactNode;
-    params: Promise<{ id: string }>;
-  }
-) {
+export default async function LobbyIdLayout(props: {
+  children: React.ReactNode;
+  params: Promise<{ id: string }>;
+}) {
   const params = await props.params;
 
-  const {
-    children
-  } = props;
+  const { children } = props;
 
   const id = decodeURIComponent(params.id);
   const name = await fetchLobbyName(id);

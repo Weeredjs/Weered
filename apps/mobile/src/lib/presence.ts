@@ -16,7 +16,10 @@ function setAway(away: boolean) {
 }
 
 function onChange(state: AppStateStatus) {
-  if (idleTimer) { clearTimeout(idleTimer); idleTimer = null; }
+  if (idleTimer) {
+    clearTimeout(idleTimer);
+    idleTimer = null;
+  }
   if (state === "active") {
     setAway(false);
   } else {
@@ -34,6 +37,9 @@ export function attachPresenceIdle() {
   return () => {
     attached = false;
     sub.remove();
-    if (idleTimer) { clearTimeout(idleTimer); idleTimer = null; }
+    if (idleTimer) {
+      clearTimeout(idleTimer);
+      idleTimer = null;
+    }
   };
 }

@@ -68,14 +68,12 @@ export default async function storeRoutes(app: FastifyInstance, opts: Opts) {
 
       const user = await prisma.user.findUnique({ where: { id: u.id }, select: { paper: true } });
       if (!user || (user as any).paper < item.price) {
-        return reply
-          .code(400)
-          .send({
-            ok: false,
-            error: "insufficient_paper",
-            need: item.price,
-            have: (user as any)?.paper || 0,
-          });
+        return reply.code(400).send({
+          ok: false,
+          error: "insufficient_paper",
+          need: item.price,
+          have: (user as any)?.paper || 0,
+        });
       }
 
       if (item.category !== "CONSUMABLE" && item.category !== "COLLECTIBLE") {
@@ -142,14 +140,12 @@ export default async function storeRoutes(app: FastifyInstance, opts: Opts) {
         });
 
         if (result?.error === "insufficient_paper") {
-          return reply
-            .code(400)
-            .send({
-              ok: false,
-              error: "insufficient_paper",
-              need: item.price,
-              have: (user as any)?.paper || 0,
-            });
+          return reply.code(400).send({
+            ok: false,
+            error: "insufficient_paper",
+            need: item.price,
+            have: (user as any)?.paper || 0,
+          });
         }
 
         return reply.send({

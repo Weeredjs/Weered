@@ -2,24 +2,33 @@
 import React, { useEffect, useState } from "react";
 
 export default function ContactContent() {
-  const [visible,   setVisible]   = useState(false);
-  const [name,      setName]      = useState("");
-  const [email,     setEmail]     = useState("");
-  const [msg,       setMsg]       = useState("");
-  const [sending,   setSending]   = useState(false);
-  const [sent,      setSent]      = useState(false);
-  const [err,       setErr]       = useState("");
+  const [visible, setVisible] = useState(false);
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [msg, setMsg] = useState("");
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
+  const [err, setErr] = useState("");
 
-  useEffect(() => { setTimeout(() => setVisible(true), 100); }, []);
+  useEffect(() => {
+    setTimeout(() => setVisible(true), 100);
+  }, []);
 
   async function send() {
-    if (!name.trim() || !email.trim() || !msg.trim()) { setErr("All fields required."); return; }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { setErr("Valid email required."); return; }
-    setSending(true); setErr("");
+    if (!name.trim() || !email.trim() || !msg.trim()) {
+      setErr("All fields required.");
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setErr("Valid email required.");
+      return;
+    }
+    setSending(true);
+    setErr("");
     try {
       const res = await fetch("https://formsubmit.co/ajax/james@weered.ca", {
         method: "POST",
-        headers: { "Content-Type": "application/json", "Accept": "application/json" },
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
         body: JSON.stringify({
           name,
           email,
@@ -29,8 +38,9 @@ export default function ContactContent() {
         }),
       });
       const j = await res.json();
-      if (j.success === "true" || j.success === true) { setSent(true); }
-      else throw new Error("Delivery failed.");
+      if (j.success === "true" || j.success === true) {
+        setSent(true);
+      } else throw new Error("Delivery failed.");
     } catch (e: any) {
       setErr("Something broke. Try again.");
     } finally {
@@ -200,17 +210,26 @@ export default function ContactContent() {
 
       <div className="ct-root">
         <div className={`ct-inner${visible ? " visible" : ""}`}>
-
           <div style={{ marginBottom: 20 }}>
             <a href="/" aria-label="Weered home" style={{ display: "inline-block" }}>
-              <img src="/brand/logo/weered-logo-512.png" alt="Weered" style={{ width: 72, height: 72, filter: "drop-shadow(0 0 20px rgba(88,0,229,0.35))" }} />
+              <img
+                src="/brand/logo/weered-logo-512.png"
+                alt="Weered"
+                style={{
+                  width: 72,
+                  height: 72,
+                  filter: "drop-shadow(0 0 20px rgba(88,0,229,0.35))",
+                }}
+              />
             </a>
           </div>
           <div className="ct-eyebrow">reach out</div>
           <div className="ct-title">Say something.</div>
           <div className="ct-sub">
-            We don&apos;t have a support ticket system.<br />
-            We don&apos;t have a chatbot.<br />
+            We don&apos;t have a support ticket system.
+            <br />
+            We don&apos;t have a chatbot.
+            <br />
             It&apos;s just a message. Send one.
           </div>
 
@@ -220,23 +239,40 @@ export default function ContactContent() {
                 <div className="ct-sent-icon">&#10022;</div>
                 <div className="ct-sent-title">Received.</div>
                 <div className="ct-sent-sub">
-                  We got it.<br />
+                  We got it.
+                  <br />
                   If it warrants a reply, you&apos;ll get one.
                 </div>
               </div>
             ) : (
               <>
                 <label className="ct-label">your name</label>
-                <input className="ct-input" value={name} onChange={e => setName(e.target.value)}
-                  placeholder="what to call you" autoComplete="name" />
+                <input
+                  className="ct-input"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="what to call you"
+                  autoComplete="name"
+                />
 
                 <label className="ct-label">your email</label>
-                <input className="ct-input" type="email" value={email} onChange={e => setEmail(e.target.value)}
-                  placeholder="where to reply" autoComplete="email" />
+                <input
+                  className="ct-input"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="where to reply"
+                  autoComplete="email"
+                />
 
                 <label className="ct-label">message</label>
-                <textarea className="ct-input" value={msg} onChange={e => setMsg(e.target.value)}
-                  placeholder="say what you need to say..." rows={5} />
+                <textarea
+                  className="ct-input"
+                  value={msg}
+                  onChange={(e) => setMsg(e.target.value)}
+                  placeholder="say what you need to say..."
+                  rows={5}
+                />
 
                 {err && <div className="ct-err">{err}</div>}
 
@@ -255,7 +291,6 @@ export default function ContactContent() {
               <a href="/login">enter</a>
             </nav>
           </div>
-
         </div>
       </div>
     </>

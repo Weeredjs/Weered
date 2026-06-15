@@ -7,14 +7,17 @@ import type { Profile } from "@/components/ProfileBody";
 
 type Platform = "steam" | "twitch" | "xbox";
 
-const META: Record<Platform, {
-  label: string;
-  hint: string;
-  placeholder: string;
-  endpoint: string;
-  fieldIn: string;
-  fieldOut: keyof Profile;
-}> = {
+const META: Record<
+  Platform,
+  {
+    label: string;
+    hint: string;
+    placeholder: string;
+    endpoint: string;
+    fieldIn: string;
+    fieldOut: keyof Profile;
+  }
+> = {
   steam: {
     label: "Steam",
     hint: "Steam 17-digit ID or vanity URL",
@@ -84,10 +87,16 @@ export function PlatformLinks({ profile, meId }: { profile: Profile; meId: strin
                   <Text className="text-weered text-xs font-semibold">Change</Text>
                 </Pressable>
                 <Pressable
-                  onPress={() => Alert.alert(`Unlink ${META[p].label}?`, undefined, [
-                    { text: "Cancel", style: "cancel" },
-                    { text: "Unlink", style: "destructive", onPress: () => mutate.mutate({ platform: p, value: "" }) },
-                  ])}
+                  onPress={() =>
+                    Alert.alert(`Unlink ${META[p].label}?`, undefined, [
+                      { text: "Cancel", style: "cancel" },
+                      {
+                        text: "Unlink",
+                        style: "destructive",
+                        onPress: () => mutate.mutate({ platform: p, value: "" }),
+                      },
+                    ])
+                  }
                   hitSlop={6}
                   className="px-2 active:opacity-70 ml-1"
                 >
@@ -117,7 +126,10 @@ export function PlatformLinks({ profile, meId }: { profile: Profile; meId: strin
           initialValue={currentValue(editing)}
           onSubmit={(value) => {
             const trimmed = value.trim();
-            if (!trimmed) { setEditing(null); return; }
+            if (!trimmed) {
+              setEditing(null);
+              return;
+            }
             mutate.mutate({ platform: editing, value: trimmed });
             setEditing(null);
           }}

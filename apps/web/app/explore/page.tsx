@@ -2,7 +2,8 @@ import { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Explore Weered | Lobbies, Guides & Comparisons",
-  description: "Browse every Weered game lobby, LFG guide, and platform comparison. The full directory of communities and resources on weered.ca.",
+  description:
+    "Browse every Weered game lobby, LFG guide, and platform comparison. The full directory of communities and resources on weered.ca.",
   alternates: { canonical: "https://weered.ca/explore" },
 };
 
@@ -13,31 +14,50 @@ const isRedditMirror = (id: string) => id.startsWith("r/") || id.startsWith("r%2
 
 type LinkItem = { href: string; label: string };
 
-async function getData(): Promise<{ lobbies: LinkItem[]; guides: LinkItem[]; compare: LinkItem[]; lfg: LinkItem[] }> {
+async function getData(): Promise<{
+  lobbies: LinkItem[];
+  guides: LinkItem[];
+  compare: LinkItem[];
+  lfg: LinkItem[];
+}> {
   let lobbies: LinkItem[] = [];
   let guides: LinkItem[] = [];
   try {
     const res = await fetch(`${API}/lobbies`, { next: { revalidate: 3600 } });
     const data = await res.json();
     if (data?.ok && Array.isArray(data.lobbies)) {
-      const usable = data.lobbies.filter((l: any) => l?.id && !SKIP_LOBBIES.has(l.id) && !isRedditMirror(l.id));
-      lobbies = usable.map((l: any) => ({ href: `/lobby/${encodeURIComponent(l.id)}`, label: l.name || l.id }));
+      const usable = data.lobbies.filter(
+        (l: any) => l?.id && !SKIP_LOBBIES.has(l.id) && !isRedditMirror(l.id),
+      );
+      lobbies = usable.map((l: any) => ({
+        href: `/lobby/${encodeURIComponent(l.id)}`,
+        label: l.name || l.id,
+      }));
       guides = usable
         .filter((l: any) => typeof l?.description === "string" && l.description.length >= 500)
-        .map((l: any) => ({ href: `/about/lobby/${encodeURIComponent(l.id)}`, label: `${l.name || l.id}: overview` }));
+        .map((l: any) => ({
+          href: `/about/lobby/${encodeURIComponent(l.id)}`,
+          label: `${l.name || l.id}: overview`,
+        }));
     }
   } catch {}
 
   let compare: LinkItem[] = [];
   try {
     const competitors = require("../../data/competitors.json")?.competitors ?? [];
-    compare = competitors.map((c: any) => ({ href: `/compare/weered-vs/${c.id}`, label: `Weered vs ${c.name || c.id}` }));
+    compare = competitors.map((c: any) => ({
+      href: `/compare/weered-vs/${c.id}`,
+      label: `Weered vs ${c.name || c.id}`,
+    }));
   } catch {}
 
   let lfg: LinkItem[] = [];
   try {
     const g = require("../../data/lfg-guides.json")?.guides ?? [];
-    lfg = g.map((x: any) => ({ href: `/lfg/${x.lobby_id}`, label: `${x.game || x.lobby_id} LFG guide` }));
+    lfg = g.map((x: any) => ({
+      href: `/lfg/${x.lobby_id}`,
+      label: `${x.game || x.lobby_id} LFG guide`,
+    }));
   } catch {}
 
   return { lobbies, guides, compare, lfg };
@@ -65,8 +85,10 @@ function Section({ title, items }: { title: string; items: LinkItem[] }) {
     <section className="ex-section">
       <h2 className="ex-h2">{title}</h2>
       <ul className="ex-list">
-        {items.map(i => (
-          <li key={i.href}><a href={i.href}>{i.label}</a></li>
+        {items.map((i) => (
+          <li key={i.href}>
+            <a href={i.href}>{i.label}</a>
+          </li>
         ))}
       </ul>
     </section>
@@ -102,7 +124,9 @@ export default async function ExplorePage() {
       `}</style>
       <div className="ex-inner">
         <h1 className="ex-title">Explore Weered</h1>
-        <p className="ex-sub">Every lobby, guide, and comparison on the platform. The full directory.</p>
+        <p className="ex-sub">
+          Every lobby, guide, and comparison on the platform. The full directory.
+        </p>
 
         <Section title="Game Lobbies" items={lobbies} />
         <Section title="Compare" items={compare} />

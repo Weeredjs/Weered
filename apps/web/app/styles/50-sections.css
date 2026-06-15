@@ -22,7 +22,7 @@
 .weered-left-title,
 .weered-presence-head {
   padding: 16px 16px 14px !important;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.10);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.1);
   box-sizing: border-box;
   min-height: 46px;
 }
@@ -50,7 +50,9 @@
   color: var(--weered-text);
   font-weight: 850;
   text-decoration: none;
-  transition: background 0.15s, border-color 0.15s;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
 }
 .weered-left-link:hover {
   background: rgba(255, 255, 255, 0.08);
@@ -102,7 +104,7 @@
 }
 .weered-chip-purple {
   border-color: rgba(88, 0, 229, 0.34);
-  background: rgba(124, 58, 237, 0.20);
+  background: rgba(124, 58, 237, 0.2);
 }
 .weered-chip-green {
   border-color: rgba(34, 197, 94, 0.38);
@@ -168,7 +170,7 @@
   overflow-y: auto;
   padding: 6px;
   scrollbar-width: thin;
-  scrollbar-color: rgba(148,163,184,.2) transparent;
+  scrollbar-color: rgba(148, 163, 184, 0.2) transparent;
 }
 .weered-presence-list::-webkit-scrollbar {
   width: 4px;
@@ -178,11 +180,11 @@
   margin: 4px 0;
 }
 .weered-presence-list::-webkit-scrollbar-thumb {
-  background: rgba(148,163,184,.2);
+  background: rgba(148, 163, 184, 0.2);
   border-radius: 99px;
 }
 .weered-presence-list::-webkit-scrollbar-thumb:hover {
-  background: rgba(148,163,184,.38);
+  background: rgba(148, 163, 184, 0.38);
 }
 .weered-presence-row {
   /* PresenceRow component renders its own layout/padding/hover.
@@ -222,18 +224,42 @@
 }
 .weered-presence-foot {
   padding: 8px 10px 10px;
-  border-top: 1px solid rgba(148, 163, 184, 0.10);
+  border-top: 1px solid rgba(148, 163, 184, 0.1);
   font-size: 11px;
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
   align-items: center;
 }
-.weered-legend { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-.weered-legend-item { display: flex; align-items: center; gap: 5px; opacity: 0.75; font-size: 10px; }
-.weered-legend-item svg { flex-shrink: 0; }
-.weered-you { font-size: 10px; font-weight: 700; opacity: 0.55; margin-left: 2px; }
-.weered-flairicon { display: inline-flex; align-items: center; margin-left: 4px; opacity: 0.88; line-height: 1; }
+.weered-legend {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.weered-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  opacity: 0.75;
+  font-size: 10px;
+}
+.weered-legend-item svg {
+  flex-shrink: 0;
+}
+.weered-you {
+  font-size: 10px;
+  font-weight: 700;
+  opacity: 0.55;
+  margin-left: 2px;
+}
+.weered-flairicon {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 4px;
+  opacity: 0.88;
+  line-height: 1;
+}
 
 /* =============================================
    FLAIR DOTS
@@ -247,21 +273,59 @@
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.28);
   flex: 0 0 auto;
 }
-.weered-mark-none    { background: rgba(203, 213, 225, 0.12); }
-.weered-mark-paid    { background: var(--weered-accent-grad); border-color: rgba(88,0,229,.38); box-shadow: 0 0 16px rgba(88,0,229,.22); }
-.weered-mark-owner   { background: rgba(167,139,250,.95); border-color: rgba(167,139,250,.45); box-shadow: 0 0 16px rgba(167,139,250,.18); }
-.weered-mark-mod     { background: rgba(34,197,94,.90);  border-color: rgba(34,197,94,.42);  box-shadow: 0 0 16px rgba(34,197,94,.18); }
-.weered-mark-admin   { background: rgba(249,115,22,.92); border-color: rgba(249,115,22,.42); box-shadow: 0 0 16px rgba(249,115,22,.18); }
-.weered-mark-staff   { background: rgba(56,189,248,.92); border-color: rgba(56,189,248,.42); box-shadow: 0 0 16px rgba(56,189,248,.18); }
-.weered-mark-god     { background: var(--weered-accent-grad); border-color: rgba(88,0,229,.50); box-shadow: 0 0 20px rgba(88,0,229,.28); }
+.weered-mark-none {
+  background: rgba(203, 213, 225, 0.12);
+}
+.weered-mark-paid {
+  background: var(--weered-accent-grad);
+  border-color: rgba(88, 0, 229, 0.38);
+  box-shadow: 0 0 16px rgba(88, 0, 229, 0.22);
+}
+.weered-mark-owner {
+  background: rgba(167, 139, 250, 0.95);
+  border-color: rgba(167, 139, 250, 0.45);
+  box-shadow: 0 0 16px rgba(167, 139, 250, 0.18);
+}
+.weered-mark-mod {
+  background: rgba(34, 197, 94, 0.9);
+  border-color: rgba(34, 197, 94, 0.42);
+  box-shadow: 0 0 16px rgba(34, 197, 94, 0.18);
+}
+.weered-mark-admin {
+  background: rgba(249, 115, 22, 0.92);
+  border-color: rgba(249, 115, 22, 0.42);
+  box-shadow: 0 0 16px rgba(249, 115, 22, 0.18);
+}
+.weered-mark-staff {
+  background: rgba(56, 189, 248, 0.92);
+  border-color: rgba(56, 189, 248, 0.42);
+  box-shadow: 0 0 16px rgba(56, 189, 248, 0.18);
+}
+.weered-mark-god {
+  background: var(--weered-accent-grad);
+  border-color: rgba(88, 0, 229, 0.5);
+  box-shadow: 0 0 20px rgba(88, 0, 229, 0.28);
+}
 
 /* Name tints */
-.weered-name-paid   { color: rgba(232,213,255,.98); }
-.weered-name-owner  { color: rgba(233,213,255,.98); }
-.weered-name-mod    { color: rgba(187,247,208,.98); }
-.weered-name-admin  { color: rgba(255,237,213,.98); }
-.weered-name-staff  { color: rgba(186,230,253,.98); }
-.weered-name-god    { color: rgba(243,244,246,.98); }
+.weered-name-paid {
+  color: rgba(232, 213, 255, 0.98);
+}
+.weered-name-owner {
+  color: rgba(233, 213, 255, 0.98);
+}
+.weered-name-mod {
+  color: rgba(187, 247, 208, 0.98);
+}
+.weered-name-admin {
+  color: rgba(255, 237, 213, 0.98);
+}
+.weered-name-staff {
+  color: rgba(186, 230, 253, 0.98);
+}
+.weered-name-god {
+  color: rgba(243, 244, 246, 0.98);
+}
 
 /* Flair badges */
 .weered-badge {
@@ -269,16 +333,31 @@
   font-weight: 1000;
   padding: 3px 8px;
   border-radius: 999px;
-  border: 1px solid rgba(148,163,184,.22);
-  background: rgba(255,255,255,.06);
-  color: rgba(243,244,246,.96);
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(243, 244, 246, 0.96);
   flex: 0 0 auto;
 }
-.weered-badge-owner { border-color: rgba(167,139,250,.40); background: rgba(167,139,250,.14); }
-.weered-badge-mod   { border-color: rgba(34,197,94,.38);   background: rgba(34,197,94,.14); }
-.weered-badge-admin { border-color: rgba(249,115,22,.38);  background: rgba(249,115,22,.14); }
-.weered-badge-staff { border-color: rgba(56,189,248,.38);  background: rgba(56,189,248,.14); }
-.weered-badge-god   { border-color: rgba(88,0,229,.44);  background: rgba(124,58,237,.20); }
+.weered-badge-owner {
+  border-color: rgba(167, 139, 250, 0.4);
+  background: rgba(167, 139, 250, 0.14);
+}
+.weered-badge-mod {
+  border-color: rgba(34, 197, 94, 0.38);
+  background: rgba(34, 197, 94, 0.14);
+}
+.weered-badge-admin {
+  border-color: rgba(249, 115, 22, 0.38);
+  background: rgba(249, 115, 22, 0.14);
+}
+.weered-badge-staff {
+  border-color: rgba(56, 189, 248, 0.38);
+  background: rgba(56, 189, 248, 0.14);
+}
+.weered-badge-god {
+  border-color: rgba(88, 0, 229, 0.44);
+  background: rgba(124, 58, 237, 0.2);
+}
 
 /* =============================================
    PANEL / CARD COMPONENTS
@@ -296,26 +375,34 @@
   padding: 12px;
 }
 .weered-panel *,
-.weered-panel2 * { min-width: 0; }
+.weered-panel2 * {
+  min-width: 0;
+}
 .weered-panel,
-.weered-panel2 { overflow-x: hidden; }
+.weered-panel2 {
+  overflow-x: hidden;
+}
 
-.weered-muted { color: var(--weered-muted); }
+.weered-muted {
+  color: var(--weered-muted);
+}
 
 .weered-row {
   padding: 10px 12px;
   border-radius: 12px;
-  border: 1px solid rgba(148,163,184,.14);
-  background: rgba(255,255,255,.03);
-  transition: background 0.12s, border-color 0.12s;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  background: rgba(255, 255, 255, 0.03);
+  transition:
+    background 0.12s,
+    border-color 0.12s;
 }
 .weered-row:hover {
-  background: rgba(124,58,237,.10);
-  border-color: rgba(88,0,229,.28);
+  background: rgba(124, 58, 237, 0.1);
+  border-color: rgba(88, 0, 229, 0.28);
 }
 .weered-row-active {
-  background: rgba(124,58,237,.16) !important;
-  border-color: rgba(88,0,229,.38) !important;
+  background: rgba(124, 58, 237, 0.16) !important;
+  border-color: rgba(88, 0, 229, 0.38) !important;
 }
 
 /* =============================================
@@ -331,14 +418,14 @@
   width: 100%;
 }
 .weered-input:focus {
-  border-color: rgba(88,0,229,.55);
-  box-shadow: 0 0 0 3px rgba(124,58,237,.18);
+  border-color: rgba(88, 0, 229, 0.55);
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.18);
 }
 .weered-btn {
   padding: 8px 12px;
   border-radius: 10px;
   border: 1px solid var(--weered-border);
-  background: rgba(255,255,255,.06);
+  background: rgba(255, 255, 255, 0.06);
   color: var(--weered-text);
   cursor: pointer;
   font-weight: 900;
@@ -346,8 +433,8 @@
   white-space: nowrap;
 }
 .weered-btn:hover {
-  background: rgba(255,255,255,.10);
-  border-color: rgba(148,163,184,.32);
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(148, 163, 184, 0.32);
 }
 .weered-btn:disabled {
   opacity: 0.45;
@@ -356,8 +443,8 @@
 .weered-btnX {
   padding: 7px 12px;
   border-radius: 10px;
-  border: 1px solid rgba(148,163,184,.24);
-  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  background: rgba(255, 255, 255, 0.06);
   color: var(--weered-text);
   cursor: pointer;
   font-weight: 900;
@@ -374,11 +461,11 @@ a[href^="/room/"] {
   padding: 12px 14px;
   border-radius: var(--weered-radius);
   border: 1px solid var(--weered-border);
-  background: rgba(255,255,255,.03);
+  background: rgba(255, 255, 255, 0.03);
 }
 a[href^="/room/"]:hover {
-  border-color: rgba(88,0,229,.55);
-  background: rgba(124,58,237,.10);
+  border-color: rgba(88, 0, 229, 0.55);
+  background: rgba(124, 58, 237, 0.1);
 }
 
 /* =============================================
@@ -388,7 +475,9 @@ a[href^="/room/"]:hover {
   padding: 8px 10px;
   border-radius: 14px;
 }
-[data-chat-message]:hover { background: rgba(255,255,255,.035); }
+[data-chat-message]:hover {
+  background: rgba(255, 255, 255, 0.035);
+}
 [data-chat-username] {
   font-size: 12px;
   line-height: 1.2;
@@ -412,8 +501,14 @@ a[href^="/room/"]:hover {
   scrollbar-color: var(--weered-scrollbar-thumb) var(--weered-scrollbar-track);
   scrollbar-width: thin;
 }
-*::-webkit-scrollbar { width: 10px; height: 10px; }
-*::-webkit-scrollbar-track { background: var(--weered-scrollbar-track); border-radius: 999px; }
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-track {
+  background: var(--weered-scrollbar-track);
+  border-radius: 999px;
+}
 *::-webkit-scrollbar-thumb {
   background: var(--weered-scrollbar-thumb);
   border-radius: 999px;
@@ -425,8 +520,6 @@ a[href^="/room/"]:hover {
   border: 2px solid transparent;
   background-clip: padding-box;
 }
-
-
 
 /* =============================================
    TRADEMARK FOOTER
@@ -455,4 +548,3 @@ a[href^="/room/"]:hover {
 .weered-trademark-footer a:hover {
   color: rgba(148, 163, 184, 0.45);
 }
-

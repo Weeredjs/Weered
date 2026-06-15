@@ -15,17 +15,63 @@ type Vertical = {
 };
 
 const VERTICALS: Vertical[] = [
-  { id: "gaming",    label: "Gaming",       tagline: "Lobbies, clans, game integrations.", theme: "ishimura",  emoji: "🎮", accent: "#f97316" },
-  { id: "streaming", label: "Streamer",     tagline: "Live presence, overlays, chat.",      theme: "broadcast", emoji: "📡", accent: "#eab308" },
-  { id: "business",  label: "Business",     tagline: "Editorial, professional, focused.",   theme: "press",     emoji: "📰", accent: "#c0a062" },
-  { id: "social",    label: "Casual",       tagline: "Hang out, chat, discover.",           theme: "slate",     emoji: "👥", accent: "#5800E5" },
-  { id: "creative",  label: "Creative",     tagline: "Writers, musicians, makers.",         theme: "stone",     emoji: "🎨", accent: "#a78bfa" },
-  { id: "trading",   label: "Markets",      tagline: "Charts, paper-trading, crypto.",      theme: "zinc",      emoji: "📈", accent: "#22c55e" },
+  {
+    id: "gaming",
+    label: "Gaming",
+    tagline: "Lobbies, clans, game integrations.",
+    theme: "ishimura",
+    emoji: "🎮",
+    accent: "#f97316",
+  },
+  {
+    id: "streaming",
+    label: "Streamer",
+    tagline: "Live presence, overlays, chat.",
+    theme: "broadcast",
+    emoji: "📡",
+    accent: "#eab308",
+  },
+  {
+    id: "business",
+    label: "Business",
+    tagline: "Editorial, professional, focused.",
+    theme: "press",
+    emoji: "📰",
+    accent: "#c0a062",
+  },
+  {
+    id: "social",
+    label: "Casual",
+    tagline: "Hang out, chat, discover.",
+    theme: "slate",
+    emoji: "👥",
+    accent: "#5800E5",
+  },
+  {
+    id: "creative",
+    label: "Creative",
+    tagline: "Writers, musicians, makers.",
+    theme: "stone",
+    emoji: "🎨",
+    accent: "#a78bfa",
+  },
+  {
+    id: "trading",
+    label: "Markets",
+    tagline: "Charts, paper-trading, crypto.",
+    theme: "zinc",
+    emoji: "📈",
+    accent: "#22c55e",
+  },
 ];
 
 function hasSeen(): boolean {
   if (typeof window === "undefined") return true;
-  try { return !!localStorage.getItem(STORAGE_KEY); } catch { return true; }
+  try {
+    return !!localStorage.getItem(STORAGE_KEY);
+  } catch {
+    return true;
+  }
 }
 
 function applyVertical(v: Vertical) {
@@ -38,8 +84,12 @@ function applyVertical(v: Vertical) {
     parsed.theme = v.theme;
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(parsed));
   } catch {}
-  try { document.documentElement.setAttribute("data-weered-theme", v.theme); } catch {}
-  try { window.dispatchEvent(new CustomEvent("weered:theme:changed", { detail: { theme: v.theme } })); } catch {}
+  try {
+    document.documentElement.setAttribute("data-weered-theme", v.theme);
+  } catch {}
+  try {
+    window.dispatchEvent(new CustomEvent("weered:theme:changed", { detail: { theme: v.theme } }));
+  } catch {}
 }
 
 export default function VerticalPicker() {
@@ -60,7 +110,9 @@ export default function VerticalPicker() {
   }
 
   function skip() {
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ id: "skipped", at: Date.now() })); } catch {}
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ id: "skipped", at: Date.now() }));
+    } catch {}
     setOpen(false);
   }
 
@@ -69,11 +121,18 @@ export default function VerticalPicker() {
       role="dialog"
       aria-modal="true"
       aria-label="What are you into?"
-      onClick={(e) => { if (e.target === e.currentTarget) skip(); }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) skip();
+      }}
       style={{
-        position: "fixed", inset: 0, zIndex: 9500,
-        background: "rgba(5,5,10,.72)", backdropFilter: "blur(8px)",
-        display: "flex", alignItems: "center", justifyContent: "center",
+        position: "fixed",
+        inset: 0,
+        zIndex: 9500,
+        background: "rgba(5,5,10,.72)",
+        backdropFilter: "blur(8px)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
         padding: 20,
       }}
     >
@@ -88,14 +147,33 @@ export default function VerticalPicker() {
         }}
       >
         <div style={{ textAlign: "center", marginBottom: 24 }}>
-          <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: "2px", textTransform: "uppercase", color: "var(--w-muted, rgba(255,255,255,.35))", marginBottom: 8 }}>
+          <div
+            style={{
+              fontSize: 10,
+              fontWeight: 800,
+              letterSpacing: "2px",
+              textTransform: "uppercase",
+              color: "var(--w-muted, rgba(255,255,255,.35))",
+              marginBottom: 8,
+            }}
+          >
             One quick thing
           </div>
           <div style={{ fontSize: 26, fontWeight: 900, letterSpacing: "-0.5px", lineHeight: 1.2 }}>
             What are you into?
           </div>
-          <div style={{ fontSize: 13, color: "var(--w-muted, rgba(255,255,255,.5))", marginTop: 8, maxWidth: 440, margin: "8px auto 0", lineHeight: 1.5 }}>
-            Weered is one platform for a lot of audiences. Pick what fits — we&apos;ll dress up the rest to match.
+          <div
+            style={{
+              fontSize: 13,
+              color: "var(--w-muted, rgba(255,255,255,.5))",
+              marginTop: 8,
+              maxWidth: 440,
+              margin: "8px auto 0",
+              lineHeight: 1.5,
+            }}
+          >
+            Weered is one platform for a lot of audiences. Pick what fits — we&apos;ll dress up the
+            rest to match.
           </div>
         </div>
 
@@ -106,7 +184,7 @@ export default function VerticalPicker() {
             gap: 10,
           }}
         >
-          {VERTICALS.map(v => (
+          {VERTICALS.map((v) => (
             <button
               key={v.id}
               type="button"
@@ -138,23 +216,44 @@ export default function VerticalPicker() {
             >
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <span style={{ fontSize: 22 }}>{v.emoji}</span>
-                <span style={{ fontWeight: 800, fontSize: 14, letterSpacing: "-0.2px" }}>{v.label}</span>
+                <span style={{ fontWeight: 800, fontSize: 14, letterSpacing: "-0.2px" }}>
+                  {v.label}
+                </span>
               </div>
-              <div style={{ fontSize: 11, color: "var(--w-muted, rgba(255,255,255,.45))", lineHeight: 1.4 }}>
+              <div
+                style={{
+                  fontSize: 11,
+                  color: "var(--w-muted, rgba(255,255,255,.45))",
+                  lineHeight: 1.4,
+                }}
+              >
                 {v.tagline}
               </div>
-              <div style={{
-                marginTop: 4,
-                fontSize: 9, fontFamily: "monospace", letterSpacing: ".5px",
-                color: v.accent, textTransform: "uppercase", fontWeight: 700,
-              }}>
+              <div
+                style={{
+                  marginTop: 4,
+                  fontSize: 9,
+                  fontFamily: "monospace",
+                  letterSpacing: ".5px",
+                  color: v.accent,
+                  textTransform: "uppercase",
+                  fontWeight: 700,
+                }}
+              >
                 theme: {v.theme}
               </div>
             </button>
           ))}
         </div>
 
-        <div style={{ marginTop: 20, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div
+          style={{
+            marginTop: 20,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
           <div style={{ fontSize: 11, color: "var(--w-muted, rgba(255,255,255,.35))" }}>
             You can change this anytime in Profile &rarr; Themes.
           </div>
@@ -167,7 +266,9 @@ export default function VerticalPicker() {
               borderRadius: 8,
               padding: "7px 14px",
               color: "var(--w-muted, rgba(255,255,255,.55))",
-              fontFamily: "inherit", fontSize: 12, fontWeight: 600,
+              fontFamily: "inherit",
+              fontSize: 12,
+              fontWeight: 600,
               cursor: "pointer",
             }}
           >

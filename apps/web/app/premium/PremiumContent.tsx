@@ -87,7 +87,9 @@ const tiers = [
 
 export default function PremiumContent() {
   const [visible, setVisible] = useState(false);
-  useEffect(() => { setTimeout(() => setVisible(true), 100); }, []);
+  useEffect(() => {
+    setTimeout(() => setVisible(true), 100);
+  }, []);
 
   return (
     <>
@@ -266,69 +268,110 @@ export default function PremiumContent() {
 
       <div className="prem-root">
         <div className={`prem-inner${visible ? " visible" : ""}`}>
-
           <div className="prem-header">
             <div style={{ marginBottom: 20, display: "flex", justifyContent: "center" }}>
               <a href="/" aria-label="Weered home" style={{ display: "inline-block" }}>
-                <img src="/brand/logo/weered-logo-512.png" alt="Weered" style={{ width: 120, height: 120, filter: "drop-shadow(0 0 32px rgba(88,0,229,0.35))" }} />
+                <img
+                  src="/brand/logo/weered-logo-512.png"
+                  alt="Weered"
+                  style={{
+                    width: 120,
+                    height: 120,
+                    filter: "drop-shadow(0 0 32px rgba(88,0,229,0.35))",
+                  }}
+                />
               </a>
             </div>
             <div className="prem-eyebrow">access levels</div>
             <div className="prem-title">Choose your status.</div>
-            <div className="prem-sub">Some things cost money. Most things don&apos;t. One thing can&apos;t be bought.</div>
+            <div className="prem-sub">
+              Some things cost money. Most things don&apos;t. One thing can&apos;t be bought.
+            </div>
           </div>
 
           <div className="prem-grid">
             {tiers.map((tier, i) => (
-              <div key={tier.id} className="prem-card" style={{
-                background: `rgba(12,12,20,0.85)`,
-                border: `1px solid ${tier.border}`,
-                boxShadow: `0 0 40px ${tier.glow}, inset 0 1px 0 rgba(255,255,255,0.04)`,
-                animationDelay: `${i * 0.1}s`,
-              }}>
+              <div
+                key={tier.id}
+                className="prem-card"
+                style={{
+                  background: `rgba(12,12,20,0.85)`,
+                  border: `1px solid ${tier.border}`,
+                  boxShadow: `0 0 40px ${tier.glow}, inset 0 1px 0 rgba(255,255,255,0.04)`,
+                  animationDelay: `${i * 0.1}s`,
+                }}
+              >
                 {tier.badge && (
-                  <div className="prem-badge" style={{
-                    background: tier.id === "kingpin" ? "rgba(252,211,77,0.15)" : "rgba(88,0,229,0.2)",
-                    border: `1px solid ${tier.border}`,
-                    color: tier.color,
-                  }}>{tier.badge}</div>
+                  <div
+                    className="prem-badge"
+                    style={{
+                      background:
+                        tier.id === "kingpin" ? "rgba(252,211,77,0.15)" : "rgba(88,0,229,0.2)",
+                      border: `1px solid ${tier.border}`,
+                      color: tier.color,
+                    }}
+                  >
+                    {tier.badge}
+                  </div>
                 )}
 
-                <div className="prem-tier-name" style={{ color: tier.color }}>{tier.name}</div>
-                <div className="prem-price" style={{ color: "rgba(255,255,255,0.9)" }}>{tier.price}</div>
+                <div className="prem-tier-name" style={{ color: tier.color }}>
+                  {tier.name}
+                </div>
+                <div className="prem-price" style={{ color: "rgba(255,255,255,0.9)" }}>
+                  {tier.price}
+                </div>
                 <div className="prem-price-sub">{tier.sub || "\u00a0"}</div>
 
                 <ul className="prem-features">
                   {tier.features.map((f, fi) => (
-                    <li key={fi} className={f === "\u2014\u2014\u2014" ? "muted" : ""}>{f}</li>
+                    <li key={fi} className={f === "\u2014\u2014\u2014" ? "muted" : ""}>
+                      {f}
+                    </li>
                   ))}
                 </ul>
 
                 {tier.ctaLink ? (
-                  <a href={tier.ctaLink} className="prem-cta" style={
-                    tier.ctaStyle === "primary" ? {
-                      background: "linear-gradient(135deg, rgba(88,0,229,0.85), rgba(217,70,239,0.75))",
-                      border: "1px solid rgba(88,0,229,0.45)",
-                      color: "#fff",
-                      boxShadow: "0 4px 20px rgba(88,0,229,0.25)",
-                    } : tier.ctaStyle === "orange" ? {
-                      background: "rgba(249,115,22,0.12)",
-                      border: "1px solid rgba(249,115,22,0.3)",
-                      color: "rgba(253,186,116,0.9)",
-                    } : {
-                      background: "rgba(255,255,255,0.04)",
-                      border: "1px solid rgba(255,255,255,0.1)",
-                      color: "rgba(255,255,255,0.4)",
+                  <a
+                    href={tier.ctaLink}
+                    className="prem-cta"
+                    style={
+                      tier.ctaStyle === "primary"
+                        ? {
+                            background:
+                              "linear-gradient(135deg, rgba(88,0,229,0.85), rgba(217,70,239,0.75))",
+                            border: "1px solid rgba(88,0,229,0.45)",
+                            color: "#fff",
+                            boxShadow: "0 4px 20px rgba(88,0,229,0.25)",
+                          }
+                        : tier.ctaStyle === "orange"
+                          ? {
+                              background: "rgba(249,115,22,0.12)",
+                              border: "1px solid rgba(249,115,22,0.3)",
+                              color: "rgba(253,186,116,0.9)",
+                            }
+                          : {
+                              background: "rgba(255,255,255,0.04)",
+                              border: "1px solid rgba(255,255,255,0.1)",
+                              color: "rgba(255,255,255,0.4)",
+                            }
                     }
-                  }>{tier.cta}</a>
+                  >
+                    {tier.cta}
+                  </a>
                 ) : (
-                  <div className="prem-cta" style={{
-                    background: "rgba(252,211,77,0.05)",
-                    border: "1px solid rgba(252,211,77,0.15)",
-                    color: "rgba(252,211,77,0.35)",
-                    cursor: "default",
-                    fontStyle: "italic",
-                  }}>{tier.cta}</div>
+                  <div
+                    className="prem-cta"
+                    style={{
+                      background: "rgba(252,211,77,0.05)",
+                      border: "1px solid rgba(252,211,77,0.15)",
+                      color: "rgba(252,211,77,0.35)",
+                      cursor: "default",
+                      fontStyle: "italic",
+                    }}
+                  >
+                    {tier.cta}
+                  </div>
                 )}
               </div>
             ))}
@@ -342,7 +385,6 @@ export default function PremiumContent() {
               <a href="/login">enter</a>
             </nav>
           </div>
-
         </div>
       </div>
     </>

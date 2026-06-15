@@ -1,6 +1,12 @@
 import "./globals.css";
 import React from "react";
-import { Pirata_One, Cormorant_Garamond, Rajdhani, Barlow_Condensed, Saira_Stencil_One } from "next/font/google";
+import {
+  Pirata_One,
+  Cormorant_Garamond,
+  Rajdhani,
+  Barlow_Condensed,
+  Saira_Stencil_One,
+} from "next/font/google";
 
 const pirataOne = Pirata_One({
   weight: "400",
@@ -60,19 +66,19 @@ export const metadata = {
     default: "Weered: Real-Time Community Platform",
     template: "%s | Weered",
   },
-  description: "Weered is a real-time community platform. Lobbies, rooms, presence, and modules, built for gaming communities and beyond.",
+  description:
+    "Weered is a real-time community platform. Lobbies, rooms, presence, and modules, built for gaming communities and beyond.",
   metadataBase: new URL("https://weered.ca"),
   icons: {
-    icon: [
-      { url: "/brand/logo/weered-logo-32.png", sizes: "32x32", type: "image/png" },
-    ],
+    icon: [{ url: "/brand/logo/weered-logo-32.png", sizes: "32x32", type: "image/png" }],
     apple: "/brand/logo/weered-logo-128.png",
     shortcut: "/brand/logo/weered-logo-32.png",
   },
   manifest: "/manifest.json",
   openGraph: {
     title: "Weered: Real-Time Community Platform",
-    description: "Lobbies, rooms, presence, and modules. A community platform that feels like a place, not a product.",
+    description:
+      "Lobbies, rooms, presence, and modules. A community platform that feels like a place, not a product.",
     url: "https://weered.ca",
     siteName: "Weered",
     images: [
@@ -103,7 +109,9 @@ export const metadata = {
   verification: {
     google: process.env.GOOGLE_SITE_VERIFICATION,
     yandex: process.env.YANDEX_VERIFICATION,
-    other: process.env.BING_SITE_VERIFICATION ? { "msvalidate.01": process.env.BING_SITE_VERIFICATION } : undefined,
+    other: process.env.BING_SITE_VERIFICATION
+      ? { "msvalidate.01": process.env.BING_SITE_VERIFICATION }
+      : undefined,
   },
   robots: {
     index: true,
@@ -129,7 +137,8 @@ const jsonLd = {
   "@type": "WebApplication",
   name: "Weered",
   url: "https://weered.ca",
-  description: "Real-time community platform with lobbies, rooms, presence, and gaming integrations.",
+  description:
+    "Real-time community platform with lobbies, rooms, presence, and gaming integrations.",
   applicationCategory: "SocialNetworkingApplication",
   operatingSystem: "Web",
   offers: {
@@ -153,12 +162,10 @@ const orgJsonLd = {
   name: "Weered",
   url: "https://weered.ca",
   logo: "https://weered.ca/brand/logo/weered-logo-512.png",
-  description: "Weered is a real-time community platform for gaming and beyond: lobbies, rooms, presence, and modules.",
+  description:
+    "Weered is a real-time community platform for gaming and beyond: lobbies, rooms, presence, and modules.",
   foundingDate: "2024",
-  sameAs: [
-    "https://twitter.com/weered",
-    "https://www.reddit.com/r/weered",
-  ],
+  sameAs: ["https://twitter.com/weered", "https://www.reddit.com/r/weered"],
   contactPoint: {
     "@type": "ContactPoint",
     contactType: "customer support",
@@ -228,10 +235,18 @@ try {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning className={`${pirataOne.variable} ${cormorant.variable} ${rajdhani.variable} ${barlow.variable} ${sairaStencil.variable}`}>
+    <html
+      lang="en"
+      suppressHydrationWarning
+      className={`${pirataOne.variable} ${cormorant.variable} ${rajdhani.variable} ${barlow.variable} ${sairaStencil.variable}`}
+    >
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeBootScript }} />
-        <script dangerouslySetInnerHTML={{ __html: `(function(){try{if(localStorage.getItem('weered_token')){localStorage.removeItem('weered_token');}}catch(e){}if(typeof window==='undefined'||window.__wfp)return;window.__wfp=1;var _f=window.fetch;window.fetch=function(i,o){o=o||{};var u=typeof i==='string'?i:(i&&i.url)||'';if(u.indexOf('api.weered.ca')!==-1){o.credentials='include';try{var h=new Headers(o.headers||{});h.delete('authorization');h.set('x-client','web');o.headers=h;}catch(e){}}return _f.call(this,i,o);};})();` }} />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{if(localStorage.getItem('weered_token')){localStorage.removeItem('weered_token');}}catch(e){}if(typeof window==='undefined'||window.__wfp)return;window.__wfp=1;var _f=window.fetch;window.fetch=function(i,o){o=o||{};var u=typeof i==='string'?i:(i&&i.url)||'';if(u.indexOf('api.weered.ca')!==-1){o.credentials='include';try{var h=new Headers(o.headers||{});h.delete('authorization');h.set('x-client','web');o.headers=h;}catch(e){}}return _f.call(this,i,o);};})();`,
+          }}
+        />
       </head>
       <body>
         <ThemeRestore />
@@ -249,10 +264,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
         <OverlayProvider>
           <WeeredProvider>
-            <ShellGate
-              left={<LeftRail />}
-              right={<RightRailSwitch />}
-            >
+            <ShellGate left={<LeftRail />} right={<RightRailSwitch />}>
               {children}
             </ShellGate>
             <DockDrawer />
@@ -266,7 +278,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <CookieConsent />
             <BugReportButton />
             <div className="weered-trademark-footer">
-              Game names, logos, and trademarks are the property of their respective owners. Weered is not affiliated with or endorsed by any game publisher or platform.
+              Game names, logos, and trademarks are the property of their respective owners. Weered
+              is not affiliated with or endorsed by any game publisher or platform.
             </div>
           </WeeredProvider>
         </OverlayProvider>

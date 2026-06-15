@@ -1,17 +1,38 @@
 import { useState } from "react";
-import { View, Text, TextInput, Pressable, ActivityIndicator, ScrollView, Image, Linking } from "react-native";
+import {
+  View,
+  Text,
+  TextInput,
+  Pressable,
+  ActivityIndicator,
+  ScrollView,
+  Image,
+  Linking,
+} from "react-native";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { LfgPanel } from "@/components/LfgPanel";
 
 type Tab = "streams" | "stats" | "lfg";
 
-type Stream = { userLogin: string; userName: string; title: string; viewerCount: number; thumbnailUrl: string };
+type Stream = {
+  userLogin: string;
+  userName: string;
+  title: string;
+  viewerCount: number;
+  thumbnailUrl: string;
+};
 type StreamsResp = { ok: boolean; streams?: Stream[] };
 
 type ModeStats = {
-  wins: number; kills: number; rounds: number; top10s: number;
-  kd: number; avgDmg: number; longestKill: number; winRate: number;
+  wins: number;
+  kills: number;
+  rounds: number;
+  top10s: number;
+  kd: number;
+  avgDmg: number;
+  longestKill: number;
+  winRate: number;
 };
 type StatsResp = {
   ok: boolean;
@@ -29,7 +50,11 @@ export function PubgPanel({ lobbyId }: { lobbyId: string }) {
   return (
     <View className="border-t border-border/40 pt-3">
       <Text className="text-weered-muted text-xs uppercase tracking-wide px-4 pb-2">PUBG</Text>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 12 }}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ paddingHorizontal: 12 }}
+      >
         <TabBtn label="📺 Streams" active={tab === "streams"} onPress={() => setTab("streams")} />
         <TabBtn label="🔍 Stats" active={tab === "stats"} onPress={() => setTab("stats")} />
         <TabBtn label="🤝 LFG" active={tab === "lfg"} onPress={() => setTab("lfg")} />
@@ -43,10 +68,20 @@ export function PubgPanel({ lobbyId }: { lobbyId: string }) {
   );
 }
 
-function TabBtn({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
+function TabBtn({
+  label,
+  active,
+  onPress,
+}: {
+  label: string;
+  active: boolean;
+  onPress: () => void;
+}) {
   return (
     <Pressable onPress={onPress} className="px-3 py-2.5 active:opacity-70">
-      <Text className={`text-xs font-bold ${active ? "text-weered" : "text-weered-muted"}`}>{label}</Text>
+      <Text className={`text-xs font-bold ${active ? "text-weered" : "text-weered-muted"}`}>
+        {label}
+      </Text>
     </Pressable>
   );
 }
@@ -57,7 +92,12 @@ function StreamsTab({ game }: { game: string }) {
     queryFn: () => api<StreamsResp>(`/twitch/streams?game=${encodeURIComponent(game)}&first=20`),
     staleTime: 5 * 60 * 1000,
   });
-  if (q.isLoading) return <View className="py-8 items-center"><ActivityIndicator color="#5800E5" /></View>;
+  if (q.isLoading)
+    return (
+      <View className="py-8 items-center">
+        <ActivityIndicator color="#5800E5" />
+      </View>
+    );
   if (!q.data?.ok || !q.data.streams?.length) {
     return <Text className="text-weered-muted text-sm text-center py-6">No live streams.</Text>;
   }
@@ -74,9 +114,15 @@ function StreamsTab({ game }: { game: string }) {
             style={{ width: 80, height: 45, borderRadius: 4, backgroundColor: "#111" }}
           />
           <View className="flex-1 ml-3">
-            <Text className="text-weered-text font-semibold text-sm" numberOfLines={1}>{s.userName}</Text>
-            <Text className="text-weered-muted text-xs mt-0.5" numberOfLines={1}>{s.title}</Text>
-            <Text className="text-red-400 text-xs mt-0.5">● {s.viewerCount.toLocaleString()} viewers</Text>
+            <Text className="text-weered-text font-semibold text-sm" numberOfLines={1}>
+              {s.userName}
+            </Text>
+            <Text className="text-weered-muted text-xs mt-0.5" numberOfLines={1}>
+              {s.title}
+            </Text>
+            <Text className="text-red-400 text-xs mt-0.5">
+              ● {s.viewerCount.toLocaleString()} viewers
+            </Text>
           </View>
         </Pressable>
       ))}
@@ -91,7 +137,10 @@ function StatsTab() {
 
   const q = useQuery({
     queryKey: ["pubg-stats", submitted?.platform, submitted?.name],
-    queryFn: () => api<StatsResp>(`/pubg/stats/${encodeURIComponent(submitted!.name)}?platform=${submitted!.platform}`),
+    queryFn: () =>
+      api<StatsResp>(
+        `/pubg/stats/${encodeURIComponent(submitted!.name)}?platform=${submitted!.platform}`,
+      ),
     enabled: !!submitted,
   });
 
@@ -131,23 +180,33 @@ function StatsTab() {
               onPress={() => setPlatform(p)}
               className={`mr-2 px-3 py-1.5 rounded-md border ${platform === p ? "bg-weered border-weered" : "bg-panel border-border"}`}
             >
-              <Text className={`text-xs font-bold uppercase ${platform === p ? "text-white" : "text-weered-muted"}`}>{p}</Text>
+              <Text
+                className={`text-xs font-bold uppercase ${platform === p ? "text-white" : "text-weered-muted"}`}
+              >
+                {p}
+              </Text>
             </Pressable>
           ))}
         </View>
       </View>
 
       {submitted && q.isLoading && (
-        <View className="py-6 items-center"><ActivityIndicator color="#5800E5" /></View>
+        <View className="py-6 items-center">
+          <ActivityIndicator color="#5800E5" />
+        </View>
       )}
       {q.data && !q.data.ok && (
-        <Text className="text-red-400 text-sm text-center px-4 pb-3">{q.data.error || "Player not found."}</Text>
+        <Text className="text-red-400 text-sm text-center px-4 pb-3">
+          {q.data.error || "Player not found."}
+        </Text>
       )}
       {q.data?.ok && q.data.account && (
         <View className="px-4 pb-4">
           <Text className="text-weered-text font-bold text-lg mb-2">{q.data.account.name}</Text>
 
-          <Text className="text-weered-muted text-xs uppercase tracking-wide mt-2 mb-1">Lifetime</Text>
+          <Text className="text-weered-muted text-xs uppercase tracking-wide mt-2 mb-1">
+            Lifetime
+          </Text>
           {MODES.map((m) => {
             const s = q.data?.stats?.lifetime?.[m.id];
             if (!s) return null;
@@ -168,13 +227,22 @@ function StatsTab() {
 
           {(q.data.weapons?.length ?? 0) > 0 && (
             <>
-              <Text className="text-weered-muted text-xs uppercase tracking-wide mt-3 mb-1">Top weapons</Text>
+              <Text className="text-weered-muted text-xs uppercase tracking-wide mt-3 mb-1">
+                Top weapons
+              </Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                 {q.data.weapons!.slice(0, 10).map((w) => (
-                  <View key={w.weapon} className="bg-panel border border-border rounded-lg px-3 py-2 mr-2 min-w-[120px]">
-                    <Text className="text-weered-text font-bold text-sm" numberOfLines={1}>{w.weapon}</Text>
+                  <View
+                    key={w.weapon}
+                    className="bg-panel border border-border rounded-lg px-3 py-2 mr-2 min-w-[120px]"
+                  >
+                    <Text className="text-weered-text font-bold text-sm" numberOfLines={1}>
+                      {w.weapon}
+                    </Text>
                     <Text className="text-weered-muted text-xs">Lv {w.level}</Text>
-                    <Text className="text-weered-muted text-xs">{w.kills.toLocaleString()} kills</Text>
+                    <Text className="text-weered-muted text-xs">
+                      {w.kills.toLocaleString()} kills
+                    </Text>
                   </View>
                 ))}
               </ScrollView>

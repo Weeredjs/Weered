@@ -179,13 +179,11 @@ export default async function roomsRoutes(app: FastifyInstance, opts: Opts) {
         where: { lobbyId, name: { equals: name, mode: "insensitive" } },
       });
       if (existing)
-        return reply
-          .code(409)
-          .send({
-            ok: false,
-            error: "room_name_taken",
-            message: `A room named "${name}" already exists in this lobby.`,
-          });
+        return reply.code(409).send({
+          ok: false,
+          error: "room_name_taken",
+          message: `A room named "${name}" already exists in this lobby.`,
+        });
 
       let wanted = (typeof body.roomId === "string" ? body.roomId : "").trim();
       if (wanted) wanted = wanted.replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 32);

@@ -88,9 +88,13 @@ export default function GroupChat() {
         setMessages((prev) => (prev.some((x) => x.id === msg.id) ? prev : [...prev, msg]));
         qc.invalidateQueries({ queryKey: ["groups"] });
       } else if (m.type === "group:edited" && m.threadId === id) {
-        setMessages((prev) => prev.map((x) => x.id === m.msgId ? { ...x, body: m.body, editedAt: m.editedAt } : x));
+        setMessages((prev) =>
+          prev.map((x) => (x.id === m.msgId ? { ...x, body: m.body, editedAt: m.editedAt } : x)),
+        );
       } else if (m.type === "group:deleted" && m.threadId === id) {
-        setMessages((prev) => prev.map((x) => x.id === m.msgId ? { ...x, deletedAt: m.deletedAt, body: "" } : x));
+        setMessages((prev) =>
+          prev.map((x) => (x.id === m.msgId ? { ...x, deletedAt: m.deletedAt, body: "" } : x)),
+        );
       }
     });
     return off;
@@ -120,10 +124,15 @@ export default function GroupChat() {
 
   const sendMut = useMutation({
     mutationFn: (vars: { body: string; replyToId?: string }) =>
-      api<{ ok: boolean; message: Message }>(`/groups/${id}/messages`, { method: "POST", body: vars }),
+      api<{ ok: boolean; message: Message }>(`/groups/${id}/messages`, {
+        method: "POST",
+        body: vars,
+      }),
     onSuccess: (res) => {
       if (res.message) {
-        setMessages((prev) => (prev.some((m) => m.id === res.message.id) ? prev : [...prev, res.message]));
+        setMessages((prev) =>
+          prev.some((m) => m.id === res.message.id) ? prev : [...prev, res.message],
+        );
       }
     },
     onError: (e: any) => Alert.alert("Couldn't send", e?.message || "Unknown error"),
@@ -187,9 +196,13 @@ export default function GroupChat() {
             <Text className="text-weered text-xs font-bold mr-2">REPLY</Text>
             <View className="flex-1">
               <Text className="text-weered-text text-xs font-semibold">
-                {replyTo.senderId === me?.id ? "You" : (thread?.members.find((m) => m.id === replyTo.senderId)?.name || "…")}
+                {replyTo.senderId === me?.id
+                  ? "You"
+                  : thread?.members.find((m) => m.id === replyTo.senderId)?.name || "…"}
               </Text>
-              <Text className="text-weered-muted text-xs" numberOfLines={1}>{replyTo.body}</Text>
+              <Text className="text-weered-muted text-xs" numberOfLines={1}>
+                {replyTo.body}
+              </Text>
             </View>
             <Pressable onPress={() => setReplyTo(null)} hitSlop={8} className="ml-2">
               <Text className="text-weered-muted text-xs">Cancel</Text>
@@ -265,17 +278,16 @@ function GroupRow({
         {msg.replyToId && (
           <View className="px-2 py-1 mb-1 rounded-lg bg-bg/40 border-l-2 border-weered">
             <Text className="text-weered text-xs font-bold">{msg.replyToUserName || "…"}</Text>
-            <Text className="text-weered-muted text-xs" numberOfLines={2}>{msg.replyToBody}</Text>
+            <Text className="text-weered-muted text-xs" numberOfLines={2}>
+              {msg.replyToBody}
+            </Text>
           </View>
         )}
         <View
           className="px-3 py-2 rounded-2xl"
           style={{ backgroundColor: mine ? "#5800E5" : "#1f2030" }}
         >
-          <RichText
-            body={msg.body}
-            style={{ color: mine ? "#ffffff" : "#e5e7eb", fontSize: 15 }}
-          />
+          <RichText body={msg.body} style={{ color: mine ? "#ffffff" : "#e5e7eb", fontSize: 15 }} />
         </View>
       </View>
     </Pressable>

@@ -54,12 +54,10 @@ export default async function pokerRoutes(app: FastifyInstance, opts: Opts) {
     const seat = table.seats[seatIdx]!;
 
     if (table.handInProgress && !seat.folded) {
-      return reply
-        .code(400)
-        .send({
-          ok: false,
-          error: "Cannot cash out during an active hand. Fold first or wait for the hand to end.",
-        });
+      return reply.code(400).send({
+        ok: false,
+        error: "Cannot cash out during an active hand. Fold first or wait for the hand to end.",
+      });
     }
 
     const chips = seat.chips;

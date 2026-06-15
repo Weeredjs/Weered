@@ -4,7 +4,14 @@ import React, { useEffect, useRef, useState } from "react";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
-type Event = { id: string; ts: number; kind: string; lobbyId?: string; text: string; accent?: string };
+type Event = {
+  id: string;
+  ts: number;
+  kind: string;
+  lobbyId?: string;
+  text: string;
+  accent?: string;
+};
 
 export default function LandingActivityTicker() {
   const [events, setEvents] = useState<Event[]>([]);
@@ -46,21 +53,14 @@ export default function LandingActivityTicker() {
       </div>
       <div className="lp-ticker-track">
         {display.length === 0 && hasFetched && (
-          <div className="lp-ticker-empty">
-            quiet right now, be the first to make some noise
-          </div>
+          <div className="lp-ticker-empty">quiet right now, be the first to make some noise</div>
         )}
-        {display.length === 0 && !hasFetched && (
-          <div className="lp-ticker-empty">connecting…</div>
-        )}
+        {display.length === 0 && !hasFetched && <div className="lp-ticker-empty">connecting…</div>}
         {display.length > 0 && (
           <div className="lp-ticker-marquee">
             {[...display, ...display].map((ev, i) => (
               <span key={`${ev.id}-${i}`} className="lp-ticker-item">
-                <span
-                  className="lp-ticker-dot"
-                  style={{ background: ev.accent || "#D9A942" }}
-                />
+                <span className="lp-ticker-dot" style={{ background: ev.accent || "#D9A942" }} />
                 <span className="lp-ticker-text">{ev.text}</span>
                 <span className="lp-ticker-ts">{timeAgo(ev.ts)}</span>
                 <span className="lp-ticker-sep">·</span>

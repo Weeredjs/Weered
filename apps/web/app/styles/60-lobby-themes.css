@@ -69,40 +69,40 @@ html[data-weered-lobby] .weered-rr-section-title {
 }
 
 html[data-weered-lobby="windrose"] {
-  --weered-bg:              #0e1826;
-  --weered-panel:           rgba(25, 40, 62, 0.85);
-  --weered-panel2:          rgba(20, 34, 56, 0.92);
-  --weered-border:          rgba(201, 160, 102, 0.25);
-  --weered-border2:         rgba(232, 196, 138, 0.45);
-  --weered-text:            #e4d4b0;
-  --weered-muted:           rgba(168, 151, 117, 0.85);
-  --weered-accent-1:        #c9a066;
-  --weered-accent-2:        #e8c48a;
-  --weered-accent-bg:       rgba(201, 160, 102, 0.18);
-  --weered-accent-ring:     rgba(232, 196, 138, 0.50);
-  --weered-accent-grad:     linear-gradient(135deg, #c9a066 0%, #e8c48a 100%);
+  --weered-bg: #0e1826;
+  --weered-panel: rgba(25, 40, 62, 0.85);
+  --weered-panel2: rgba(20, 34, 56, 0.92);
+  --weered-border: rgba(201, 160, 102, 0.25);
+  --weered-border2: rgba(232, 196, 138, 0.45);
+  --weered-text: #e4d4b0;
+  --weered-muted: rgba(168, 151, 117, 0.85);
+  --weered-accent-1: #c9a066;
+  --weered-accent-2: #e8c48a;
+  --weered-accent-bg: rgba(201, 160, 102, 0.18);
+  --weered-accent-ring: rgba(232, 196, 138, 0.5);
+  --weered-accent-grad: linear-gradient(135deg, #c9a066 0%, #e8c48a 100%);
   --weered-scrollbar-track: rgba(10, 18, 32, 0.6);
   --weered-scrollbar-thumb: rgba(201, 160, 102, 0.35);
   --weered-scrollbar-thumb-hover: rgba(232, 196, 138, 0.55);
 
-  --wr-brass:      #c9a066;
-  --wr-brass-hi:   #e8c48a;
-  --wr-brass-low:  #8a6b3e;
-  --wr-parchment:  #e4d4b0;
-  --wr-parch-dim:  #a89775;
-  --wr-sea-abyss:  #0a1424;
-  --wr-sea-deep:   #0e1826;
-  --wr-sea-mid:    #19283e;
-  --wr-sea-foam:   #243752;
-  --wr-ink:        #05080f;
-  --wr-blood:      #a33d3d;
+  --wr-brass: #c9a066;
+  --wr-brass-hi: #e8c48a;
+  --wr-brass-low: #8a6b3e;
+  --wr-parchment: #e4d4b0;
+  --wr-parch-dim: #a89775;
+  --wr-sea-abyss: #0a1424;
+  --wr-sea-deep: #0e1826;
+  --wr-sea-mid: #19283e;
+  --wr-sea-foam: #243752;
+  --wr-ink: #05080f;
+  --wr-blood: #a33d3d;
 }
 
 html[data-weered-lobby="windrose"] body {
   background:
-    radial-gradient(ellipse 90% 60% at 50% -10%, rgba(232,196,138,0.05) 0%, transparent 60%),
-    radial-gradient(ellipse 70% 50% at 10% 100%, rgba(74,138,157,0.06) 0%, transparent 55%),
-    radial-gradient(ellipse 50% 40% at 90% 100%, rgba(163,61,61,0.03) 0%, transparent 50%),
+    radial-gradient(ellipse 90% 60% at 50% -10%, rgba(232, 196, 138, 0.05) 0%, transparent 60%),
+    radial-gradient(ellipse 70% 50% at 10% 100%, rgba(74, 138, 157, 0.06) 0%, transparent 55%),
+    radial-gradient(ellipse 50% 40% at 90% 100%, rgba(163, 61, 61, 0.03) 0%, transparent 50%),
     linear-gradient(180deg, #0e1826 0%, #07101c 100%) !important;
   color: var(--wr-parchment);
   font-family: var(--font-cormorant), Georgia, serif !important;
@@ -134,7 +134,7 @@ html[data-weered-lobby="windrose"] body::before {
   pointer-events: none;
   z-index: 0;
   animation: windrose-compass-spin 360s linear infinite !important;
-  filter: drop-shadow(0 0 18px rgba(232,196,138,0.08));
+  filter: drop-shadow(0 0 18px rgba(232, 196, 138, 0.08));
   mix-blend-mode: normal !important;
 }
 
@@ -157,7 +157,9 @@ html[data-weered-lobby="windrose"] body::after {
 html[data-weered-lobby="windrose"] .weered-shell::after {
   content: "" !important;
   position: fixed;
-  bottom: 0; left: 0; right: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
   height: 80px;
   background: url("/brand/lobbies/windrose-waves.svg") bottom left/2400px 80px repeat-x !important;
   opacity: 0.22 !important;
@@ -167,26 +169,63 @@ html[data-weered-lobby="windrose"] .weered-shell::after {
 }
 
 @keyframes windrose-compass-spin {
-  from { transform: rotate(0deg); }
-  to   { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 @keyframes windrose-tentacle-sway {
-  0%, 100% { transform: rotate(-2deg) translateY(0); }
-  50%      { transform: rotate(2.5deg) translateY(-4px); }
+  0%,
+  100% {
+    transform: rotate(-2deg) translateY(0);
+  }
+  50% {
+    transform: rotate(2.5deg) translateY(-4px);
+  }
 }
 @keyframes windrose-waves-drift {
-  from { background-position-x: 0; }
-  to   { background-position-x: -2400px; }
+  from {
+    background-position-x: 0;
+  }
+  to {
+    background-position-x: -2400px;
+  }
 }
 @keyframes windrose-seal-pulse {
-  0%, 100% { opacity: 0.75; box-shadow: 0 0 6px rgba(230,57,70,0.6); }
-  50%      { opacity: 1;    box-shadow: 0 0 10px rgba(230,57,70,0.9); }
+  0%,
+  100% {
+    opacity: 0.75;
+    box-shadow: 0 0 6px rgba(230, 57, 70, 0.6);
+  }
+  50% {
+    opacity: 1;
+    box-shadow: 0 0 10px rgba(230, 57, 70, 0.9);
+  }
 }
 @keyframes windrose-lantern-flicker {
-  0%, 100% { box-shadow: 0 0 16px rgba(232,196,138,0.18), inset 0 0 8px rgba(232,196,138,0.06); }
-  47%      { box-shadow: 0 0 22px rgba(232,196,138,0.28), inset 0 0 10px rgba(232,196,138,0.10); }
-  50%      { box-shadow: 0 0 14px rgba(232,196,138,0.12), inset 0 0 6px rgba(232,196,138,0.04); }
-  53%      { box-shadow: 0 0 22px rgba(232,196,138,0.26), inset 0 0 10px rgba(232,196,138,0.10); }
+  0%,
+  100% {
+    box-shadow:
+      0 0 16px rgba(232, 196, 138, 0.18),
+      inset 0 0 8px rgba(232, 196, 138, 0.06);
+  }
+  47% {
+    box-shadow:
+      0 0 22px rgba(232, 196, 138, 0.28),
+      inset 0 0 10px rgba(232, 196, 138, 0.1);
+  }
+  50% {
+    box-shadow:
+      0 0 14px rgba(232, 196, 138, 0.12),
+      inset 0 0 6px rgba(232, 196, 138, 0.04);
+  }
+  53% {
+    box-shadow:
+      0 0 22px rgba(232, 196, 138, 0.26),
+      inset 0 0 10px rgba(232, 196, 138, 0.1);
+  }
 }
 
 /* Shell stays position: fixed so the layout stays pinned to viewport
@@ -211,8 +250,12 @@ html[data-weered-lobby="windrose"] video {
 
 html[data-weered-lobby="windrose"] .weered-left,
 html[data-weered-lobby="windrose"] .weered-right {
-  background: linear-gradient(180deg, rgba(25,40,62,0.70) 0%, rgba(14,24,38,0.88) 100%) !important;
-  border-color: rgba(201,160,102,0.22) !important;
+  background: linear-gradient(
+    180deg,
+    rgba(25, 40, 62, 0.7) 0%,
+    rgba(14, 24, 38, 0.88) 100%
+  ) !important;
+  border-color: rgba(201, 160, 102, 0.22) !important;
 }
 
 html[data-weered-lobby="windrose"] .weered-rr-section,
@@ -220,12 +263,12 @@ html[data-weered-lobby="windrose"] .weered-left-section,
 html[data-weered-lobby="windrose"] .weered-presence,
 html[data-weered-lobby="windrose"] .weered-usercorner {
   background: linear-gradient(180deg, #1a2a42 0%, #142238 100%) !important;
-  border: 1px solid rgba(201,160,102,0.32) !important;
+  border: 1px solid rgba(201, 160, 102, 0.32) !important;
   border-radius: 4px !important;
   box-shadow:
-    inset 0 0 0 1px rgba(201,160,102,0.10),
-    inset 0 1px 0 rgba(232,196,138,0.12),
-    0 4px 18px rgba(0,0,0,0.45) !important;
+    inset 0 0 0 1px rgba(201, 160, 102, 0.1),
+    inset 0 1px 0 rgba(232, 196, 138, 0.12),
+    0 4px 18px rgba(0, 0, 0, 0.45) !important;
   position: relative;
 }
 
@@ -239,21 +282,30 @@ html[data-weered-lobby="windrose"] .weered-usercorner::before,
 html[data-weered-lobby="windrose"] .weered-usercorner::after {
   content: "";
   position: absolute;
-  width: 5px; height: 5px;
+  width: 5px;
+  height: 5px;
   border-radius: 50%;
   background: radial-gradient(circle at 30% 30%, #e8c48a 0%, #8a6b3e 70%, #3d2d1a 100%);
-  box-shadow: inset 0 1px 1px rgba(0,0,0,0.5), 0 1px 2px rgba(0,0,0,0.7);
+  box-shadow:
+    inset 0 1px 1px rgba(0, 0, 0, 0.5),
+    0 1px 2px rgba(0, 0, 0, 0.7);
   pointer-events: none;
   z-index: 2;
 }
 html[data-weered-lobby="windrose"] .weered-rr-section::before,
 html[data-weered-lobby="windrose"] .weered-left-section::before,
 html[data-weered-lobby="windrose"] .weered-presence::before,
-html[data-weered-lobby="windrose"] .weered-usercorner::before { top: 5px; left: 5px; }
+html[data-weered-lobby="windrose"] .weered-usercorner::before {
+  top: 5px;
+  left: 5px;
+}
 html[data-weered-lobby="windrose"] .weered-rr-section::after,
 html[data-weered-lobby="windrose"] .weered-left-section::after,
 html[data-weered-lobby="windrose"] .weered-presence::after,
-html[data-weered-lobby="windrose"] .weered-usercorner::after { top: 5px; right: 5px; }
+html[data-weered-lobby="windrose"] .weered-usercorner::after {
+  top: 5px;
+  right: 5px;
+}
 
 html[data-weered-lobby="windrose"] .weered-left-title,
 html[data-weered-lobby="windrose"] .weered-rr-section-title,
@@ -262,7 +314,9 @@ html[data-weered-lobby="windrose"] .weered-presence-title {
   letter-spacing: 2.5px !important;
   color: #e8c48a !important;
   text-transform: uppercase;
-  text-shadow: 0 1px 2px rgba(0,0,0,0.7), 0 0 8px rgba(232,196,138,0.15) !important;
+  text-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.7),
+    0 0 8px rgba(232, 196, 138, 0.15) !important;
   font-weight: 400 !important;
 }
 
@@ -281,40 +335,46 @@ html[data-weered-lobby="windrose"] .weered-left-link {
   transition: all 0.15s ease;
 }
 html[data-weered-lobby="windrose"] .weered-left-link:hover {
-  background: rgba(201,160,102,0.08);
-  border-color: rgba(201,160,102,0.32);
+  background: rgba(201, 160, 102, 0.08);
+  border-color: rgba(201, 160, 102, 0.32);
   color: #e8c48a;
-  box-shadow: 0 0 18px rgba(232,196,138,0.12), inset 0 0 10px rgba(232,196,138,0.05);
+  box-shadow:
+    0 0 18px rgba(232, 196, 138, 0.12),
+    inset 0 0 10px rgba(232, 196, 138, 0.05);
 }
 html[data-weered-lobby="windrose"] .weered-left-link-active {
-  background: linear-gradient(180deg, rgba(201,160,102,0.22), rgba(138,107,62,0.12)) !important;
-  border-color: rgba(232,196,138,0.60) !important;
+  background: linear-gradient(
+    180deg,
+    rgba(201, 160, 102, 0.22),
+    rgba(138, 107, 62, 0.12)
+  ) !important;
+  border-color: rgba(232, 196, 138, 0.6) !important;
   color: #e8c48a !important;
   box-shadow:
-    inset 0 0 14px rgba(232,196,138,0.10),
-    0 0 24px rgba(232,196,138,0.18) !important;
+    inset 0 0 14px rgba(232, 196, 138, 0.1),
+    0 0 24px rgba(232, 196, 138, 0.18) !important;
   animation: windrose-lantern-flicker 7s ease-in-out infinite;
 }
 
 html[data-weered-lobby="windrose"] .weered-rr-room-card {
-  background: rgba(25,40,62,0.42) !important;
-  border: 1px solid rgba(201,160,102,0.18) !important;
+  background: rgba(25, 40, 62, 0.42) !important;
+  border: 1px solid rgba(201, 160, 102, 0.18) !important;
   border-radius: 3px !important;
   transition: all 0.15s ease;
   color: var(--wr-parchment) !important;
 }
 html[data-weered-lobby="windrose"] .weered-rr-room-card:hover {
-  border-color: rgba(232,196,138,0.40) !important;
-  background: rgba(201,160,102,0.08) !important;
-  box-shadow: 0 0 14px rgba(232,196,138,0.14);
+  border-color: rgba(232, 196, 138, 0.4) !important;
+  background: rgba(201, 160, 102, 0.08) !important;
+  box-shadow: 0 0 14px rgba(232, 196, 138, 0.14);
   transform: translateY(-1px);
 }
 html[data-weered-lobby="windrose"] .weered-rr-room-card-active {
-  border-color: rgba(232,196,138,0.70) !important;
-  background: rgba(201,160,102,0.18) !important;
+  border-color: rgba(232, 196, 138, 0.7) !important;
+  background: rgba(201, 160, 102, 0.18) !important;
   box-shadow:
-    inset 0 0 14px rgba(232,196,138,0.12),
-    0 0 22px rgba(232,196,138,0.18) !important;
+    inset 0 0 14px rgba(232, 196, 138, 0.12),
+    0 0 22px rgba(232, 196, 138, 0.18) !important;
   animation: windrose-lantern-flicker 6s ease-in-out infinite;
 }
 html[data-weered-lobby="windrose"] .weered-rr-room-card-live {
@@ -323,8 +383,10 @@ html[data-weered-lobby="windrose"] .weered-rr-room-card-live {
 html[data-weered-lobby="windrose"] .weered-rr-room-card-live::before {
   content: "";
   position: absolute;
-  top: 6px; right: 6px;
-  width: 8px; height: 8px;
+  top: 6px;
+  right: 6px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   background: radial-gradient(circle at 30% 30%, #e63946 0%, #6b0f0f 85%);
   animation: windrose-seal-pulse 2s ease-in-out infinite;
@@ -337,7 +399,7 @@ html[data-weered-lobby="windrose"] .weered-rr-primary-solid,
 html[data-weered-lobby="windrose"] .weered-uc-action,
 html[data-weered-lobby="windrose"] .weered-rr-join {
   background: linear-gradient(180deg, #243752 0%, #15233a 100%) !important;
-  border: 1px solid rgba(201,160,102,0.50) !important;
+  border: 1px solid rgba(201, 160, 102, 0.5) !important;
   color: #e8c48a !important;
   font-family: var(--font-cormorant), Georgia, serif !important;
   font-weight: 700 !important;
@@ -346,26 +408,32 @@ html[data-weered-lobby="windrose"] .weered-rr-join {
   font-size: 11px !important;
   border-radius: 3px !important;
   transition: all 0.15s ease !important;
-  box-shadow: inset 0 1px 0 rgba(232,196,138,0.10), 0 2px 8px rgba(0,0,0,0.5);
+  box-shadow:
+    inset 0 1px 0 rgba(232, 196, 138, 0.1),
+    0 2px 8px rgba(0, 0, 0, 0.5);
 }
 html[data-weered-lobby="windrose"] .weered-rr-primary:hover,
 html[data-weered-lobby="windrose"] .weered-rr-primary-solid:hover,
 html[data-weered-lobby="windrose"] .weered-uc-action:hover,
 html[data-weered-lobby="windrose"] .weered-rr-join:hover {
-  background: linear-gradient(180deg, rgba(201,160,102,0.22) 0%, rgba(138,107,62,0.12) 100%) !important;
-  border-color: rgba(232,196,138,0.75) !important;
+  background: linear-gradient(
+    180deg,
+    rgba(201, 160, 102, 0.22) 0%,
+    rgba(138, 107, 62, 0.12) 100%
+  ) !important;
+  border-color: rgba(232, 196, 138, 0.75) !important;
   box-shadow:
-    0 0 18px rgba(232,196,138,0.35),
-    inset 0 0 10px rgba(232,196,138,0.10),
-    inset 0 1px 0 rgba(232,196,138,0.20);
+    0 0 18px rgba(232, 196, 138, 0.35),
+    inset 0 0 10px rgba(232, 196, 138, 0.1),
+    inset 0 1px 0 rgba(232, 196, 138, 0.2);
 }
 
 /* Chips that were defaulting to purple now read as Windrose brass.
    Covers the context-ID pill ("windrose"), the small create-room panel,
    the mod controls panel, and the right-rail status chip (CHAT OPEN/LOCKED). */
 html[data-weered-lobby="windrose"] .weered-rr-id-chip {
-  background: rgba(201,160,102,0.14) !important;
-  border: 1px solid rgba(201,160,102,0.40) !important;
+  background: rgba(201, 160, 102, 0.14) !important;
+  border: 1px solid rgba(201, 160, 102, 0.4) !important;
   color: #e8c48a !important;
   border-radius: 3px !important;
   font-family: var(--font-cormorant), Georgia, serif !important;
@@ -373,8 +441,12 @@ html[data-weered-lobby="windrose"] .weered-rr-id-chip {
   text-transform: uppercase;
 }
 html[data-weered-lobby="windrose"] .weered-rr-create-panel {
-  background: linear-gradient(180deg, rgba(36,55,82,0.70) 0%, rgba(20,34,56,0.82) 100%) !important;
-  border: 1px solid rgba(201,160,102,0.35) !important;
+  background: linear-gradient(
+    180deg,
+    rgba(36, 55, 82, 0.7) 0%,
+    rgba(20, 34, 56, 0.82) 100%
+  ) !important;
+  border: 1px solid rgba(201, 160, 102, 0.35) !important;
   border-radius: 3px !important;
 }
 html[data-weered-lobby="windrose"] .weered-rr-create-title {
@@ -383,8 +455,12 @@ html[data-weered-lobby="windrose"] .weered-rr-create-title {
   letter-spacing: 1.8px !important;
 }
 html[data-weered-lobby="windrose"] .weered-rr-mod-panel {
-  background: linear-gradient(180deg, rgba(36,55,82,0.60) 0%, rgba(20,34,56,0.78) 100%) !important;
-  border: 1px solid rgba(201,160,102,0.30) !important;
+  background: linear-gradient(
+    180deg,
+    rgba(36, 55, 82, 0.6) 0%,
+    rgba(20, 34, 56, 0.78) 100%
+  ) !important;
+  border: 1px solid rgba(201, 160, 102, 0.3) !important;
   border-radius: 3px !important;
 }
 html[data-weered-lobby="windrose"] .weered-rr-mod-panel button {
@@ -405,8 +481,8 @@ html[data-weered-lobby="windrose"] .weered-rr-status-chip {
 html[data-weered-lobby="windrose"] .weered-rr-search,
 html[data-weered-lobby="windrose"] .weered-presence-search,
 html[data-weered-lobby="windrose"] .weered-input {
-  background: rgba(10,20,36,0.70) !important;
-  border: 1px solid rgba(201,160,102,0.32) !important;
+  background: rgba(10, 20, 36, 0.7) !important;
+  border: 1px solid rgba(201, 160, 102, 0.32) !important;
   color: #e4d4b0 !important;
   font-family: var(--font-cormorant), Georgia, serif !important;
   border-radius: 3px !important;
@@ -415,50 +491,59 @@ html[data-weered-lobby="windrose"] .weered-input {
 html[data-weered-lobby="windrose"] .weered-rr-search:focus,
 html[data-weered-lobby="windrose"] .weered-presence-search:focus,
 html[data-weered-lobby="windrose"] .weered-input:focus {
-  border-color: rgba(232,196,138,0.65) !important;
-  box-shadow: 0 0 0 2px rgba(232,196,138,0.18), inset 0 0 6px rgba(232,196,138,0.06) !important;
+  border-color: rgba(232, 196, 138, 0.65) !important;
+  box-shadow:
+    0 0 0 2px rgba(232, 196, 138, 0.18),
+    inset 0 0 6px rgba(232, 196, 138, 0.06) !important;
   outline: none;
 }
 html[data-weered-lobby="windrose"] .weered-rr-search::placeholder,
 html[data-weered-lobby="windrose"] .weered-presence-search::placeholder,
 html[data-weered-lobby="windrose"] .weered-input::placeholder {
-  color: rgba(168,151,117,0.6) !important;
+  color: rgba(168, 151, 117, 0.6) !important;
   font-style: italic;
 }
 
 html[data-weered-lobby="windrose"] .weered-lobby-header-row {
   background: linear-gradient(180deg, #1a2a42 0%, #142238 100%) !important;
-  border: 1px solid rgba(201,160,102,0.35) !important;
+  border: 1px solid rgba(201, 160, 102, 0.35) !important;
   border-radius: 4px !important;
   box-shadow:
-    inset 0 1px 0 rgba(232,196,138,0.12),
-    0 4px 18px rgba(0,0,0,0.45);
+    inset 0 1px 0 rgba(232, 196, 138, 0.12),
+    0 4px 18px rgba(0, 0, 0, 0.45);
   position: relative;
 }
 html[data-weered-lobby="windrose"] .weered-lobby-header-row::before,
 html[data-weered-lobby="windrose"] .weered-lobby-header-row::after {
   content: "";
   position: absolute;
-  width: 6px; height: 6px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
   background: radial-gradient(circle at 30% 30%, #e8c48a 0%, #8a6b3e 70%, #3d2d1a 100%);
-  box-shadow: inset 0 1px 1px rgba(0,0,0,0.5), 0 1px 2px rgba(0,0,0,0.7);
+  box-shadow:
+    inset 0 1px 1px rgba(0, 0, 0, 0.5),
+    0 1px 2px rgba(0, 0, 0, 0.7);
   top: 8px;
   pointer-events: none;
 }
-html[data-weered-lobby="windrose"] .weered-lobby-header-row::before { left: 8px; }
-html[data-weered-lobby="windrose"] .weered-lobby-header-row::after  { right: 8px; }
+html[data-weered-lobby="windrose"] .weered-lobby-header-row::before {
+  left: 8px;
+}
+html[data-weered-lobby="windrose"] .weered-lobby-header-row::after {
+  right: 8px;
+}
 
 /* Square off the tab container to match the brass-button visual language */
 html[data-weered-lobby="windrose"] .weered-lobby-tabs {
   border-radius: 3px !important;
-  border-color: rgba(201,160,102,0.25) !important;
-  background: rgba(10,20,36,0.55) !important;
+  border-color: rgba(201, 160, 102, 0.25) !important;
+  background: rgba(10, 20, 36, 0.55) !important;
   padding: 3px !important;
 }
 html[data-weered-lobby="windrose"] .weered-lobby-tab {
   background: transparent !important;
-  border: 1px solid rgba(201,160,102,0.25) !important;
+  border: 1px solid rgba(201, 160, 102, 0.25) !important;
   border-radius: 2px !important;
   color: var(--wr-parch-dim) !important;
   font-family: var(--font-pirata), var(--font-cormorant), Georgia, serif !important;
@@ -474,39 +559,43 @@ html[data-weered-lobby="windrose"] .weered-btn {
   letter-spacing: 3px !important;
   text-transform: uppercase !important;
   border-radius: 3px !important;
-  border: 1px solid rgba(201,160,102,0.35) !important;
-  background: rgba(10,20,36,0.55) !important;
+  border: 1px solid rgba(201, 160, 102, 0.35) !important;
+  background: rgba(10, 20, 36, 0.55) !important;
   color: #e8c48a !important;
   font-weight: 400 !important;
 }
 html[data-weered-lobby="windrose"] .weered-btn:hover {
-  border-color: rgba(232,196,138,0.65) !important;
-  box-shadow: 0 0 12px rgba(232,196,138,0.22) !important;
+  border-color: rgba(232, 196, 138, 0.65) !important;
+  box-shadow: 0 0 12px rgba(232, 196, 138, 0.22) !important;
   color: #f2d4a1 !important;
 }
 html[data-weered-lobby="windrose"] .weered-lobby-tab:hover {
-  border-color: rgba(232,196,138,0.55) !important;
+  border-color: rgba(232, 196, 138, 0.55) !important;
   color: #e8c48a !important;
-  box-shadow: 0 0 14px rgba(232,196,138,0.18);
+  box-shadow: 0 0 14px rgba(232, 196, 138, 0.18);
 }
 html[data-weered-lobby="windrose"] .weered-lobby-tab-active {
-  background: linear-gradient(180deg, rgba(201,160,102,0.22), rgba(138,107,62,0.10)) !important;
-  border-color: rgba(232,196,138,0.75) !important;
+  background: linear-gradient(
+    180deg,
+    rgba(201, 160, 102, 0.22),
+    rgba(138, 107, 62, 0.1)
+  ) !important;
+  border-color: rgba(232, 196, 138, 0.75) !important;
   color: #e8c48a !important;
   box-shadow:
-    inset 0 0 12px rgba(232,196,138,0.10),
-    0 0 18px rgba(232,196,138,0.22) !important;
+    inset 0 0 12px rgba(232, 196, 138, 0.1),
+    0 0 18px rgba(232, 196, 138, 0.22) !important;
 }
 
 html[data-weered-lobby="windrose"] .weered-hero-content {
   background: transparent !important;
-  border: 1px solid rgba(201,160,102,0.30);
+  border: 1px solid rgba(201, 160, 102, 0.3);
   border-radius: 4px;
   box-shadow:
-    inset 0 1px 0 rgba(232,196,138,0.12),
-    inset 0 -40px 60px rgba(10,20,36,0.55),
-    0 6px 24px rgba(0,0,0,0.5);
-  text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+    inset 0 1px 0 rgba(232, 196, 138, 0.12),
+    inset 0 -40px 60px rgba(10, 20, 36, 0.55),
+    0 6px 24px rgba(0, 0, 0, 0.5);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
 }
 /* Let the custom pirate banner actually shine through */
 html[data-weered-lobby="windrose"] .weered-hero-bg {
@@ -514,7 +603,11 @@ html[data-weered-lobby="windrose"] .weered-hero-bg {
   background-position: center center !important;
 }
 html[data-weered-lobby="windrose"] .weered-hero-scrim {
-  background: linear-gradient(180deg, rgba(14,24,38,0.10) 0%, rgba(14,24,38,0.35) 100%) !important;
+  background: linear-gradient(
+    180deg,
+    rgba(14, 24, 38, 0.1) 0%,
+    rgba(14, 24, 38, 0.35) 100%
+  ) !important;
 }
 
 /* ── EVENT ROOM CARD: the solo flex ──────────────────────────────
@@ -524,21 +617,21 @@ html[data-weered-lobby="windrose"] .weered-hero-scrim {
    wax-seal corners, ornament flourish, aggressive hover glow. */
 
 html[data-weered-lobby="windrose"] .weered-room-card.weered-room-card-event {
-  border: 1.5px solid rgba(232,196,138,0.55) !important;
+  border: 1.5px solid rgba(232, 196, 138, 0.55) !important;
   border-radius: 4px !important;
   overflow: visible !important;
   position: relative;
   transition: all 0.25s ease !important;
   background:
-    radial-gradient(ellipse 80% 60% at 50% 0%, rgba(232,196,138,0.10) 0%, transparent 55%),
-    radial-gradient(ellipse 70% 50% at 50% 100%, rgba(163,61,61,0.12) 0%, transparent 55%),
-    linear-gradient(180deg, rgba(35,22,28,0.70) 0%, rgba(20,30,50,0.85) 100%) !important;
+    radial-gradient(ellipse 80% 60% at 50% 0%, rgba(232, 196, 138, 0.1) 0%, transparent 55%),
+    radial-gradient(ellipse 70% 50% at 50% 100%, rgba(163, 61, 61, 0.12) 0%, transparent 55%),
+    linear-gradient(180deg, rgba(35, 22, 28, 0.7) 0%, rgba(20, 30, 50, 0.85) 100%) !important;
   box-shadow:
-    inset 0 0 0 1px rgba(232,196,138,0.18),
-    inset 0 1px 0 rgba(232,196,138,0.30),
-    0 0 24px rgba(232,196,138,0.22),
-    0 0 54px rgba(163,61,61,0.18),
-    0 6px 26px rgba(0,0,0,0.55) !important;
+    inset 0 0 0 1px rgba(232, 196, 138, 0.18),
+    inset 0 1px 0 rgba(232, 196, 138, 0.3),
+    0 0 24px rgba(232, 196, 138, 0.22),
+    0 0 54px rgba(163, 61, 61, 0.18),
+    0 6px 26px rgba(0, 0, 0, 0.55) !important;
   animation: windrose-event-lantern 5.5s ease-in-out infinite;
 }
 
@@ -547,112 +640,152 @@ html[data-weered-lobby="windrose"] .weered-room-card.weered-room-card-event::bef
 html[data-weered-lobby="windrose"] .weered-room-card.weered-room-card-event::after {
   content: "";
   position: absolute;
-  width: 7px; height: 7px; border-radius: 50%;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
   background: radial-gradient(circle at 30% 30%, #f2d4a1 0%, #c9a066 55%, #5a3f1c 100%);
   box-shadow:
-    inset 0 1px 1px rgba(0,0,0,0.5),
-    0 1px 3px rgba(0,0,0,0.8),
-    0 0 8px rgba(232,196,138,0.5);
+    inset 0 1px 1px rgba(0, 0, 0, 0.5),
+    0 1px 3px rgba(0, 0, 0, 0.8),
+    0 0 8px rgba(232, 196, 138, 0.5);
   pointer-events: none;
   z-index: 4;
 }
-html[data-weered-lobby="windrose"] .weered-room-card.weered-room-card-event::before { top: 8px; left: 8px; }
-html[data-weered-lobby="windrose"] .weered-room-card.weered-room-card-event::after  { top: 8px; right: 8px; }
+html[data-weered-lobby="windrose"] .weered-room-card.weered-room-card-event::before {
+  top: 8px;
+  left: 8px;
+}
+html[data-weered-lobby="windrose"] .weered-room-card.weered-room-card-event::after {
+  top: 8px;
+  right: 8px;
+}
 
 /* Bottom-rivets + ornament diamond + wax-seal live dot, injected via
    two small pseudo layers on child divs */
-html[data-weered-lobby="windrose"] .weered-room-card.weered-room-card-event > div:nth-child(2)::before {
+html[data-weered-lobby="windrose"]
+  .weered-room-card.weered-room-card-event
+  > div:nth-child(2)::before {
   content: "";
   position: absolute;
-  bottom: 8px; left: 8px;
-  width: 7px; height: 7px; border-radius: 50%;
+  bottom: 8px;
+  left: 8px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
   background: radial-gradient(circle at 30% 30%, #f2d4a1 0%, #c9a066 55%, #5a3f1c 100%);
-  box-shadow: inset 0 1px 1px rgba(0,0,0,0.5), 0 1px 3px rgba(0,0,0,0.8), 0 0 8px rgba(232,196,138,0.5);
+  box-shadow:
+    inset 0 1px 1px rgba(0, 0, 0, 0.5),
+    0 1px 3px rgba(0, 0, 0, 0.8),
+    0 0 8px rgba(232, 196, 138, 0.5);
   pointer-events: none;
   z-index: 4;
 }
-html[data-weered-lobby="windrose"] .weered-room-card.weered-room-card-event > div:nth-child(2)::after {
+html[data-weered-lobby="windrose"]
+  .weered-room-card.weered-room-card-event
+  > div:nth-child(2)::after {
   content: "";
   position: absolute;
-  bottom: 8px; right: 8px;
-  width: 7px; height: 7px; border-radius: 50%;
+  bottom: 8px;
+  right: 8px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
   background: radial-gradient(circle at 30% 30%, #f2d4a1 0%, #c9a066 55%, #5a3f1c 100%);
-  box-shadow: inset 0 1px 1px rgba(0,0,0,0.5), 0 1px 3px rgba(0,0,0,0.8), 0 0 8px rgba(232,196,138,0.5);
+  box-shadow:
+    inset 0 1px 1px rgba(0, 0, 0, 0.5),
+    0 1px 3px rgba(0, 0, 0, 0.8),
+    0 0 8px rgba(232, 196, 138, 0.5);
   pointer-events: none;
   z-index: 4;
 }
 
 /* Brass ornament — diamond at top-center of the frame */
-html[data-weered-lobby="windrose"] .weered-room-card.weered-room-card-event > div:nth-child(3)::before {
+html[data-weered-lobby="windrose"]
+  .weered-room-card.weered-room-card-event
+  > div:nth-child(3)::before {
   content: "";
   position: absolute;
-  top: -6px; left: 50%;
-  width: 12px; height: 12px;
+  top: -6px;
+  left: 50%;
+  width: 12px;
+  height: 12px;
   transform: translateX(-50%) rotate(45deg);
   background: linear-gradient(135deg, #f2d4a1 0%, #c9a066 60%, #7e6239 100%);
-  box-shadow: 0 0 12px rgba(232,196,138,0.55), inset 0 1px 0 rgba(255,255,255,0.25);
+  box-shadow:
+    0 0 12px rgba(232, 196, 138, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
   pointer-events: none;
   z-index: 5;
 }
 
 /* Top brass rim flourish line */
-html[data-weered-lobby="windrose"] .weered-room-card.weered-room-card-event > div:nth-child(3)::after {
+html[data-weered-lobby="windrose"]
+  .weered-room-card.weered-room-card-event
+  > div:nth-child(3)::after {
   content: "";
   position: absolute;
-  top: 4px; left: 26px; right: 26px;
+  top: 4px;
+  left: 26px;
+  right: 26px;
   height: 1px;
-  background: linear-gradient(90deg, transparent 0%, rgba(232,196,138,0.75) 50%, transparent 100%);
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(232, 196, 138, 0.75) 50%,
+    transparent 100%
+  );
   pointer-events: none;
   z-index: 3;
 }
 
 /* Animated lantern-flicker pulse */
 @keyframes windrose-event-lantern {
-  0%, 100% {
+  0%,
+  100% {
     box-shadow:
-      inset 0 0 0 1px rgba(232,196,138,0.18),
-      inset 0 1px 0 rgba(232,196,138,0.30),
-      0 0 24px rgba(232,196,138,0.22),
-      0 0 54px rgba(163,61,61,0.18),
-      0 6px 26px rgba(0,0,0,0.55);
+      inset 0 0 0 1px rgba(232, 196, 138, 0.18),
+      inset 0 1px 0 rgba(232, 196, 138, 0.3),
+      0 0 24px rgba(232, 196, 138, 0.22),
+      0 0 54px rgba(163, 61, 61, 0.18),
+      0 6px 26px rgba(0, 0, 0, 0.55);
   }
   47% {
     box-shadow:
-      inset 0 0 0 1px rgba(232,196,138,0.26),
-      inset 0 1px 0 rgba(232,196,138,0.40),
-      0 0 34px rgba(232,196,138,0.35),
-      0 0 68px rgba(163,61,61,0.25),
-      0 6px 26px rgba(0,0,0,0.55);
+      inset 0 0 0 1px rgba(232, 196, 138, 0.26),
+      inset 0 1px 0 rgba(232, 196, 138, 0.4),
+      0 0 34px rgba(232, 196, 138, 0.35),
+      0 0 68px rgba(163, 61, 61, 0.25),
+      0 6px 26px rgba(0, 0, 0, 0.55);
   }
   50% {
     box-shadow:
-      inset 0 0 0 1px rgba(232,196,138,0.14),
-      inset 0 1px 0 rgba(232,196,138,0.22),
-      0 0 20px rgba(232,196,138,0.16),
-      0 0 46px rgba(163,61,61,0.14),
-      0 6px 26px rgba(0,0,0,0.55);
+      inset 0 0 0 1px rgba(232, 196, 138, 0.14),
+      inset 0 1px 0 rgba(232, 196, 138, 0.22),
+      0 0 20px rgba(232, 196, 138, 0.16),
+      0 0 46px rgba(163, 61, 61, 0.14),
+      0 6px 26px rgba(0, 0, 0, 0.55);
   }
   53% {
     box-shadow:
-      inset 0 0 0 1px rgba(232,196,138,0.26),
-      inset 0 1px 0 rgba(232,196,138,0.40),
-      0 0 34px rgba(232,196,138,0.35),
-      0 0 68px rgba(163,61,61,0.25),
-      0 6px 26px rgba(0,0,0,0.55);
+      inset 0 0 0 1px rgba(232, 196, 138, 0.26),
+      inset 0 1px 0 rgba(232, 196, 138, 0.4),
+      0 0 34px rgba(232, 196, 138, 0.35),
+      0 0 68px rgba(163, 61, 61, 0.25),
+      0 6px 26px rgba(0, 0, 0, 0.55);
   }
 }
 
 /* Hover: card lifts, lantern blazes */
 html[data-weered-lobby="windrose"] .weered-room-card.weered-room-card-event:hover {
-  border-color: rgba(242,212,161,0.95) !important;
+  border-color: rgba(242, 212, 161, 0.95) !important;
   transform: translateY(-4px) !important;
   box-shadow:
-    inset 0 0 0 1px rgba(242,212,161,0.45),
-    inset 0 1px 0 rgba(242,212,161,0.55),
-    0 0 48px rgba(232,196,138,0.50),
-    0 0 100px rgba(232,196,138,0.20),
-    0 0 70px rgba(163,61,61,0.30),
-    0 14px 36px rgba(0,0,0,0.65) !important;
+    inset 0 0 0 1px rgba(242, 212, 161, 0.45),
+    inset 0 1px 0 rgba(242, 212, 161, 0.55),
+    0 0 48px rgba(232, 196, 138, 0.5),
+    0 0 100px rgba(232, 196, 138, 0.2),
+    0 0 70px rgba(163, 61, 61, 0.3),
+    0 14px 36px rgba(0, 0, 0, 0.65) !important;
   animation-play-state: paused;
   z-index: 5;
 }
@@ -664,11 +797,13 @@ html[data-weered-lobby="windrose"] .weered-event-badge {
   text-transform: uppercase !important;
   font-family: var(--font-pirata), var(--font-cormorant), Georgia, serif !important;
   letter-spacing: 2.5px !important;
-  box-shadow: 0 0 12px rgba(163,61,61,0.35), inset 0 1px 0 rgba(232,196,138,0.2) !important;
+  box-shadow:
+    0 0 12px rgba(163, 61, 61, 0.35),
+    inset 0 1px 0 rgba(232, 196, 138, 0.2) !important;
 }
 
 html[data-weered-lobby="windrose"] .weered-presence-head {
-  border-bottom: 1px solid rgba(201,160,102,0.25);
+  border-bottom: 1px solid rgba(201, 160, 102, 0.25);
 }
 html[data-weered-lobby="windrose"] .weered-presence-row {
   background: transparent;
@@ -676,13 +811,17 @@ html[data-weered-lobby="windrose"] .weered-presence-row {
   transition: all 0.15s ease;
 }
 html[data-weered-lobby="windrose"] .weered-presence-row:hover {
-  background: rgba(201,160,102,0.05);
-  border-color: rgba(201,160,102,0.22);
+  background: rgba(201, 160, 102, 0.05);
+  border-color: rgba(201, 160, 102, 0.22);
 }
 
 html[data-weered-lobby="windrose"] .weered-usercorner {
-  background: linear-gradient(180deg, rgba(25,40,62,0.80) 0%, rgba(14,24,38,0.92) 100%) !important;
-  border: 1px solid rgba(201,160,102,0.40) !important;
+  background: linear-gradient(
+    180deg,
+    rgba(25, 40, 62, 0.8) 0%,
+    rgba(14, 24, 38, 0.92) 100%
+  ) !important;
+  border: 1px solid rgba(201, 160, 102, 0.4) !important;
   border-radius: 4px !important;
 }
 
@@ -691,31 +830,40 @@ html[data-weered-lobby="windrose"] .weered-burner-hot {
   animation: windrose-burner-brass 2.5s ease-in-out infinite !important;
 }
 @keyframes windrose-burner-brass {
-  0%, 100% { box-shadow: 0 0 8px rgba(232,196,138,0.20), inset 0 0 12px rgba(232,196,138,0.06); }
-  50%      { box-shadow: 0 0 20px rgba(232,196,138,0.40), inset 0 0 20px rgba(232,196,138,0.10); }
+  0%,
+  100% {
+    box-shadow:
+      0 0 8px rgba(232, 196, 138, 0.2),
+      inset 0 0 12px rgba(232, 196, 138, 0.06);
+  }
+  50% {
+    box-shadow:
+      0 0 20px rgba(232, 196, 138, 0.4),
+      inset 0 0 20px rgba(232, 196, 138, 0.1);
+  }
 }
 /* Brass the amber unread pill on the BURNER button */
 html[data-weered-lobby="windrose"] .weered-burner-hot > span:last-child {
   background: linear-gradient(180deg, #e8c48a, #c9a066) !important;
   color: #0a1424 !important;
-  border-color: rgba(10,20,36,0.9) !important;
-  box-shadow: 0 0 8px rgba(232,196,138,0.55) !important;
+  border-color: rgba(10, 20, 36, 0.9) !important;
+  box-shadow: 0 0 8px rgba(232, 196, 138, 0.55) !important;
 }
 
 html[data-weered-lobby="windrose"] ::-webkit-scrollbar-track {
-  background: rgba(10,18,32,0.6);
+  background: rgba(10, 18, 32, 0.6);
 }
 html[data-weered-lobby="windrose"] ::-webkit-scrollbar-thumb {
   background: linear-gradient(180deg, #c9a066, #8a6b3e);
   border-radius: 2px;
-  border: 1px solid rgba(14,24,38,0.6);
+  border: 1px solid rgba(14, 24, 38, 0.6);
 }
 html[data-weered-lobby="windrose"] ::-webkit-scrollbar-thumb:hover {
   background: linear-gradient(180deg, #e8c48a, #c9a066);
 }
 
 html[data-weered-lobby="windrose"] ::selection {
-  background: rgba(232,196,138,0.35);
+  background: rgba(232, 196, 138, 0.35);
   color: #0a1424;
 }
 
@@ -737,42 +885,42 @@ html[data-weered-lobby="windrose"] ::selection {
    ===================================================================== */
 
 html[data-weered-lobby="destiny2"] {
-  --weered-bg:              #050810;
-  --weered-panel:           rgba(10, 14, 28, 0.88);
-  --weered-panel2:          rgba(8, 10, 22, 0.92);
-  --weered-border:          rgba(245, 130, 32, 0.22);
-  --weered-border2:         rgba(245, 130, 32, 0.45);
-  --weered-text:            #cfd6e0;
-  --weered-muted:           rgba(138, 155, 176, 0.85);
-  --weered-accent-1:        #f58220;
-  --weered-accent-2:        #ffb066;
-  --weered-accent-bg:       rgba(245, 130, 32, 0.16);
-  --weered-accent-ring:     rgba(255, 176, 102, 0.50);
-  --weered-accent-grad:     linear-gradient(135deg, #f58220 0%, #ffb066 100%);
+  --weered-bg: #050810;
+  --weered-panel: rgba(10, 14, 28, 0.88);
+  --weered-panel2: rgba(8, 10, 22, 0.92);
+  --weered-border: rgba(245, 130, 32, 0.22);
+  --weered-border2: rgba(245, 130, 32, 0.45);
+  --weered-text: #cfd6e0;
+  --weered-muted: rgba(138, 155, 176, 0.85);
+  --weered-accent-1: #f58220;
+  --weered-accent-2: #ffb066;
+  --weered-accent-bg: rgba(245, 130, 32, 0.16);
+  --weered-accent-ring: rgba(255, 176, 102, 0.5);
+  --weered-accent-grad: linear-gradient(135deg, #f58220 0%, #ffb066 100%);
   --weered-scrollbar-track: rgba(5, 8, 16, 0.7);
   --weered-scrollbar-thumb: rgba(245, 130, 32, 0.35);
   --weered-scrollbar-thumb-hover: rgba(255, 176, 102, 0.55);
 
-  --d2-space:    #050810;
-  --d2-deep:     #0a0e1c;
-  --d2-mid:      #121830;
-  --d2-rim:      #1e2948;
-  --d2-solar:    #f58220;
-  --d2-solarHi:  #ffb066;
+  --d2-space: #050810;
+  --d2-deep: #0a0e1c;
+  --d2-mid: #121830;
+  --d2-rim: #1e2948;
+  --d2-solar: #f58220;
+  --d2-solarHi: #ffb066;
   --d2-solarLow: #a3530f;
-  --d2-void:     #6f3aa0;
-  --d2-arc:      #4a9eff;
-  --d2-text:     #cfd6e0;
-  --d2-textDim:  #8a9bb0;
+  --d2-void: #6f3aa0;
+  --d2-arc: #4a9eff;
+  --d2-text: #cfd6e0;
+  --d2-textDim: #8a9bb0;
   --d2-traveler: #e4e8f0;
 }
 
 /* Body — deep space with solar + void nebulae */
 html[data-weered-lobby="destiny2"] body {
   background:
-    radial-gradient(ellipse 85% 60% at 55% -10%, rgba(245,130,32,0.08) 0%, transparent 60%),
-    radial-gradient(ellipse 70% 55% at 12% 100%, rgba(111,58,160,0.12) 0%, transparent 55%),
-    radial-gradient(ellipse 55% 45% at 88% 100%, rgba(74,158,255,0.06) 0%, transparent 50%),
+    radial-gradient(ellipse 85% 60% at 55% -10%, rgba(245, 130, 32, 0.08) 0%, transparent 60%),
+    radial-gradient(ellipse 70% 55% at 12% 100%, rgba(111, 58, 160, 0.12) 0%, transparent 55%),
+    radial-gradient(ellipse 55% 45% at 88% 100%, rgba(74, 158, 255, 0.06) 0%, transparent 50%),
     linear-gradient(180deg, #050810 0%, #020308 100%) !important;
   color: var(--d2-text);
   font-family: var(--font-rajdhani), Inter, "Segoe UI", system-ui, sans-serif !important;
@@ -792,7 +940,7 @@ html[data-weered-lobby="destiny2"] select {
 
 /* Giant Traveler watermark, bottom-right, drifting in */
 html[data-weered-lobby="destiny2"] body::before {
-  content: '' !important;
+  content: "" !important;
   position: fixed;
   bottom: -8%;
   right: -6%;
@@ -802,14 +950,14 @@ html[data-weered-lobby="destiny2"] body::before {
   opacity: 0.08 !important;
   pointer-events: none;
   z-index: 0;
-  filter: drop-shadow(0 0 28px rgba(245,130,32,0.06));
+  filter: drop-shadow(0 0 28px rgba(245, 130, 32, 0.06));
   animation: d2-traveler-drift 24s ease-in-out infinite !important;
   mix-blend-mode: normal !important;
 }
 
 /* Ghost companion, bottom-left, slow float */
 html[data-weered-lobby="destiny2"] body::after {
-  content: '' !important;
+  content: "" !important;
   position: fixed;
   bottom: 3%;
   left: 1%;
@@ -825,20 +973,30 @@ html[data-weered-lobby="destiny2"] body::after {
 
 /* Starfield drift across bottom */
 html[data-weered-lobby="destiny2"] .weered-shell::after {
-  content: '' !important;
+  content: "" !important;
   position: fixed;
-  bottom: 0; left: 0; right: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
   height: 100%;
   background-image:
-    radial-gradient(1px 1px at 15% 18%,  rgba(228,232,240,0.6), transparent 2px),
-    radial-gradient(1px 1px at 32% 72%,  rgba(228,232,240,0.5), transparent 2px),
-    radial-gradient(1.2px 1.2px at 48% 28%, rgba(228,232,240,0.7), transparent 2px),
-    radial-gradient(1px 1px at 62% 84%,  rgba(228,232,240,0.5), transparent 2px),
-    radial-gradient(1.4px 1.4px at 78% 44%, rgba(228,232,240,0.75), transparent 2px),
-    radial-gradient(1px 1px at 88% 62%,  rgba(228,232,240,0.5), transparent 2px),
-    radial-gradient(1px 1px at 5%  52%,  rgba(228,232,240,0.6), transparent 2px),
-    radial-gradient(1.2px 1.2px at 25% 40%, rgba(228,232,240,0.6), transparent 2px) !important;
-  background-size: 600px 600px, 600px 600px, 600px 600px, 600px 600px, 600px 600px, 600px 600px, 600px 600px, 600px 600px !important;
+    radial-gradient(1px 1px at 15% 18%, rgba(228, 232, 240, 0.6), transparent 2px),
+    radial-gradient(1px 1px at 32% 72%, rgba(228, 232, 240, 0.5), transparent 2px),
+    radial-gradient(1.2px 1.2px at 48% 28%, rgba(228, 232, 240, 0.7), transparent 2px),
+    radial-gradient(1px 1px at 62% 84%, rgba(228, 232, 240, 0.5), transparent 2px),
+    radial-gradient(1.4px 1.4px at 78% 44%, rgba(228, 232, 240, 0.75), transparent 2px),
+    radial-gradient(1px 1px at 88% 62%, rgba(228, 232, 240, 0.5), transparent 2px),
+    radial-gradient(1px 1px at 5% 52%, rgba(228, 232, 240, 0.6), transparent 2px),
+    radial-gradient(1.2px 1.2px at 25% 40%, rgba(228, 232, 240, 0.6), transparent 2px) !important;
+  background-size:
+    600px 600px,
+    600px 600px,
+    600px 600px,
+    600px 600px,
+    600px 600px,
+    600px 600px,
+    600px 600px,
+    600px 600px !important;
   opacity: 0.55 !important;
   pointer-events: none;
   z-index: 0;
@@ -846,25 +1004,88 @@ html[data-weered-lobby="destiny2"] .weered-shell::after {
 }
 
 @keyframes d2-traveler-drift {
-  0%, 100% { transform: translate(0, 0); opacity: 0.08; }
-  50%      { transform: translate(-6px, -10px); opacity: 0.10; }
+  0%,
+  100% {
+    transform: translate(0, 0);
+    opacity: 0.08;
+  }
+  50% {
+    transform: translate(-6px, -10px);
+    opacity: 0.1;
+  }
 }
 @keyframes d2-ghost-float {
-  0%, 100% { transform: translate(0, 0) rotate(-1deg); }
-  50%      { transform: translate(6px, -10px) rotate(2deg); }
+  0%,
+  100% {
+    transform: translate(0, 0) rotate(-1deg);
+  }
+  50% {
+    transform: translate(6px, -10px) rotate(2deg);
+  }
 }
 @keyframes d2-star-drift {
-  from { background-position: 0 0, 0 0, 0 0, 0 0, 0 0, 0 0, 0 0, 0 0; }
-  to   { background-position: 600px 300px, -600px 300px, 300px -600px, -300px -600px, 400px 500px, -400px 500px, 200px -400px, -200px -400px; }
+  from {
+    background-position:
+      0 0,
+      0 0,
+      0 0,
+      0 0,
+      0 0,
+      0 0,
+      0 0,
+      0 0;
+  }
+  to {
+    background-position:
+      600px 300px,
+      -600px 300px,
+      300px -600px,
+      -300px -600px,
+      400px 500px,
+      -400px 500px,
+      200px -400px,
+      -200px -400px;
+  }
 }
 @keyframes d2-solar-pulse {
-  0%, 100% { box-shadow: 0 0 14px rgba(245,130,32,0.15), inset 0 0 10px rgba(245,130,32,0.05); }
-  50%      { box-shadow: 0 0 22px rgba(245,130,32,0.30), inset 0 0 14px rgba(245,130,32,0.10); }
+  0%,
+  100% {
+    box-shadow:
+      0 0 14px rgba(245, 130, 32, 0.15),
+      inset 0 0 10px rgba(245, 130, 32, 0.05);
+  }
+  50% {
+    box-shadow:
+      0 0 22px rgba(245, 130, 32, 0.3),
+      inset 0 0 14px rgba(245, 130, 32, 0.1);
+  }
 }
 @keyframes d2-legendary-shimmer {
-  0%, 100% { box-shadow: inset 0 0 0 1px rgba(245,130,32,0.20), inset 0 1px 0 rgba(255,176,102,0.30), 0 0 22px rgba(245,130,32,0.25), 0 0 52px rgba(111,58,160,0.18), 0 6px 26px rgba(0,0,0,0.55); }
-  33%      { box-shadow: inset 0 0 0 1px rgba(245,130,32,0.28), inset 0 1px 0 rgba(255,176,102,0.40), 0 0 32px rgba(245,130,32,0.35), 0 0 62px rgba(111,58,160,0.22), 0 6px 26px rgba(0,0,0,0.55); }
-  66%      { box-shadow: inset 0 0 0 1px rgba(111,58,160,0.28), inset 0 1px 0 rgba(255,176,102,0.35), 0 0 30px rgba(111,58,160,0.30), 0 0 62px rgba(245,130,32,0.22), 0 6px 26px rgba(0,0,0,0.55); }
+  0%,
+  100% {
+    box-shadow:
+      inset 0 0 0 1px rgba(245, 130, 32, 0.2),
+      inset 0 1px 0 rgba(255, 176, 102, 0.3),
+      0 0 22px rgba(245, 130, 32, 0.25),
+      0 0 52px rgba(111, 58, 160, 0.18),
+      0 6px 26px rgba(0, 0, 0, 0.55);
+  }
+  33% {
+    box-shadow:
+      inset 0 0 0 1px rgba(245, 130, 32, 0.28),
+      inset 0 1px 0 rgba(255, 176, 102, 0.4),
+      0 0 32px rgba(245, 130, 32, 0.35),
+      0 0 62px rgba(111, 58, 160, 0.22),
+      0 6px 26px rgba(0, 0, 0, 0.55);
+  }
+  66% {
+    box-shadow:
+      inset 0 0 0 1px rgba(111, 58, 160, 0.28),
+      inset 0 1px 0 rgba(255, 176, 102, 0.35),
+      0 0 30px rgba(111, 58, 160, 0.3),
+      0 0 62px rgba(245, 130, 32, 0.22),
+      0 6px 26px rgba(0, 0, 0, 0.55);
+  }
 }
 
 /* Rails + shell */
@@ -885,8 +1106,12 @@ html[data-weered-lobby="destiny2"] .weered-center {
 }
 html[data-weered-lobby="destiny2"] .weered-left,
 html[data-weered-lobby="destiny2"] .weered-right {
-  background: linear-gradient(180deg, rgba(10,14,28,0.72) 0%, rgba(5,8,16,0.90) 100%) !important;
-  border-color: rgba(245,130,32,0.18) !important;
+  background: linear-gradient(
+    180deg,
+    rgba(10, 14, 28, 0.72) 0%,
+    rgba(5, 8, 16, 0.9) 100%
+  ) !important;
+  border-color: rgba(245, 130, 32, 0.18) !important;
 }
 
 /* Panels: deep navy with hex-tile inset subtle pattern + solar rim */
@@ -894,14 +1119,17 @@ html[data-weered-lobby="destiny2"] .weered-rr-section,
 html[data-weered-lobby="destiny2"] .weered-left-section,
 html[data-weered-lobby="destiny2"] .weered-presence,
 html[data-weered-lobby="destiny2"] .weered-usercorner {
-  background:
-    linear-gradient(180deg, rgba(18,24,48,0.75) 0%, rgba(10,14,28,0.90) 100%) !important;
-  border: 1px solid rgba(245,130,32,0.28) !important;
+  background: linear-gradient(
+    180deg,
+    rgba(18, 24, 48, 0.75) 0%,
+    rgba(10, 14, 28, 0.9) 100%
+  ) !important;
+  border: 1px solid rgba(245, 130, 32, 0.28) !important;
   border-radius: 3px !important;
   box-shadow:
-    inset 0 0 0 1px rgba(245,130,32,0.08),
-    inset 0 1px 0 rgba(255,176,102,0.10),
-    0 4px 18px rgba(0,0,0,0.55) !important;
+    inset 0 0 0 1px rgba(245, 130, 32, 0.08),
+    inset 0 1px 0 rgba(255, 176, 102, 0.1),
+    0 4px 18px rgba(0, 0, 0, 0.55) !important;
   position: relative;
 }
 
@@ -916,11 +1144,12 @@ html[data-weered-lobby="destiny2"] .weered-usercorner::before,
 html[data-weered-lobby="destiny2"] .weered-usercorner::after {
   content: "";
   position: absolute;
-  width: 9px; height: 10px;
+  width: 9px;
+  height: 10px;
   background: #f58220;
   clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
   opacity: 0.65;
-  box-shadow: 0 0 6px rgba(245,130,32,0.5);
+  box-shadow: 0 0 6px rgba(245, 130, 32, 0.5);
   pointer-events: none;
   z-index: 2;
 }
@@ -930,14 +1159,26 @@ html[data-weered-lobby="destiny2"] .weered-usercorner::after {
 html[data-weered-lobby="destiny2"] .weered-rr-section::before,
 html[data-weered-lobby="destiny2"] .weered-left-section::before,
 html[data-weered-lobby="destiny2"] .weered-presence::before,
-html[data-weered-lobby="destiny2"] .weered-usercorner::before { top: -4px; left: -4px; }
+html[data-weered-lobby="destiny2"] .weered-usercorner::before {
+  top: -4px;
+  left: -4px;
+}
 html[data-weered-lobby="destiny2"] .weered-rr-section::after,
 html[data-weered-lobby="destiny2"] .weered-left-section::after,
 html[data-weered-lobby="destiny2"] .weered-presence::after,
-html[data-weered-lobby="destiny2"] .weered-usercorner::after { top: -4px; right: -4px; }
+html[data-weered-lobby="destiny2"] .weered-usercorner::after {
+  top: -4px;
+  right: -4px;
+}
 /* Same for the lobby-header-row ornaments (INVITE button area). */
-html[data-weered-lobby="destiny2"] .weered-lobby-header-row::before { left: -4px !important; top: -4px !important; }
-html[data-weered-lobby="destiny2"] .weered-lobby-header-row::after  { right: -4px !important; top: -4px !important; }
+html[data-weered-lobby="destiny2"] .weered-lobby-header-row::before {
+  left: -4px !important;
+  top: -4px !important;
+}
+html[data-weered-lobby="destiny2"] .weered-lobby-header-row::after {
+  right: -4px !important;
+  top: -4px !important;
+}
 /* Ensure sections clip nothing at the corners so the protruding hexes render. */
 html[data-weered-lobby="destiny2"] .weered-rr-section,
 html[data-weered-lobby="destiny2"] .weered-left-section,
@@ -955,7 +1196,9 @@ html[data-weered-lobby="destiny2"] .weered-presence-title {
   letter-spacing: 3.5px !important;
   color: #ffb066 !important;
   text-transform: uppercase;
-  text-shadow: 0 1px 2px rgba(0,0,0,0.7), 0 0 10px rgba(245,130,32,0.25) !important;
+  text-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.7),
+    0 0 10px rgba(245, 130, 32, 0.25) !important;
   font-weight: 700 !important;
 }
 html[data-weered-lobby="destiny2"] .weered-left-link,
@@ -974,41 +1217,43 @@ html[data-weered-lobby="destiny2"] .weered-left-link {
   transition: all 0.15s ease;
 }
 html[data-weered-lobby="destiny2"] .weered-left-link:hover {
-  background: rgba(245,130,32,0.08);
-  border-color: rgba(245,130,32,0.30);
+  background: rgba(245, 130, 32, 0.08);
+  border-color: rgba(245, 130, 32, 0.3);
   color: #ffb066;
-  box-shadow: 0 0 16px rgba(245,130,32,0.14), inset 0 0 10px rgba(245,130,32,0.05);
+  box-shadow:
+    0 0 16px rgba(245, 130, 32, 0.14),
+    inset 0 0 10px rgba(245, 130, 32, 0.05);
 }
 html[data-weered-lobby="destiny2"] .weered-left-link-active {
-  background: linear-gradient(180deg, rgba(245,130,32,0.22), rgba(163,83,15,0.12)) !important;
-  border-color: rgba(255,176,102,0.60) !important;
+  background: linear-gradient(180deg, rgba(245, 130, 32, 0.22), rgba(163, 83, 15, 0.12)) !important;
+  border-color: rgba(255, 176, 102, 0.6) !important;
   color: #ffb066 !important;
   box-shadow:
-    inset 0 0 14px rgba(245,130,32,0.10),
-    0 0 22px rgba(245,130,32,0.22) !important;
+    inset 0 0 14px rgba(245, 130, 32, 0.1),
+    0 0 22px rgba(245, 130, 32, 0.22) !important;
   animation: d2-solar-pulse 6s ease-in-out infinite;
 }
 
 /* Right rail room cards */
 html[data-weered-lobby="destiny2"] .weered-rr-room-card {
-  background: rgba(18,24,48,0.45) !important;
-  border: 1px solid rgba(245,130,32,0.18) !important;
+  background: rgba(18, 24, 48, 0.45) !important;
+  border: 1px solid rgba(245, 130, 32, 0.18) !important;
   border-radius: 3px !important;
   transition: all 0.15s ease;
   color: var(--d2-text) !important;
 }
 html[data-weered-lobby="destiny2"] .weered-rr-room-card:hover {
-  border-color: rgba(255,176,102,0.45) !important;
-  background: rgba(245,130,32,0.08) !important;
-  box-shadow: 0 0 14px rgba(245,130,32,0.16);
+  border-color: rgba(255, 176, 102, 0.45) !important;
+  background: rgba(245, 130, 32, 0.08) !important;
+  box-shadow: 0 0 14px rgba(245, 130, 32, 0.16);
   transform: translateY(-1px);
 }
 html[data-weered-lobby="destiny2"] .weered-rr-room-card-active {
-  border-color: rgba(255,176,102,0.72) !important;
-  background: rgba(245,130,32,0.17) !important;
+  border-color: rgba(255, 176, 102, 0.72) !important;
+  background: rgba(245, 130, 32, 0.17) !important;
   box-shadow:
-    inset 0 0 14px rgba(245,130,32,0.12),
-    0 0 22px rgba(245,130,32,0.20) !important;
+    inset 0 0 14px rgba(245, 130, 32, 0.12),
+    0 0 22px rgba(245, 130, 32, 0.2) !important;
   animation: d2-solar-pulse 5s ease-in-out infinite;
 }
 html[data-weered-lobby="destiny2"] .weered-rr-room-card-live {
@@ -1017,11 +1262,13 @@ html[data-weered-lobby="destiny2"] .weered-rr-room-card-live {
 html[data-weered-lobby="destiny2"] .weered-rr-room-card-live::before {
   content: "";
   position: absolute;
-  top: 6px; right: 6px;
-  width: 8px; height: 8px;
+  top: 6px;
+  right: 6px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   background: radial-gradient(circle at 30% 30%, #ffe8c0 0%, #f58220 60%, #7a3a08 100%);
-  box-shadow: 0 0 10px rgba(245,130,32,0.85);
+  box-shadow: 0 0 10px rgba(245, 130, 32, 0.85);
   animation: d2-solar-pulse 2s ease-in-out infinite;
   z-index: 3;
   pointer-events: none;
@@ -1032,8 +1279,12 @@ html[data-weered-lobby="destiny2"] .weered-rr-primary,
 html[data-weered-lobby="destiny2"] .weered-rr-primary-solid,
 html[data-weered-lobby="destiny2"] .weered-uc-action,
 html[data-weered-lobby="destiny2"] .weered-rr-join {
-  background: linear-gradient(180deg, rgba(18,24,48,0.95) 0%, rgba(10,14,28,0.98) 100%) !important;
-  border: 1px solid rgba(245,130,32,0.55) !important;
+  background: linear-gradient(
+    180deg,
+    rgba(18, 24, 48, 0.95) 0%,
+    rgba(10, 14, 28, 0.98) 100%
+  ) !important;
+  border: 1px solid rgba(245, 130, 32, 0.55) !important;
   color: #ffb066 !important;
   font-family: var(--font-rajdhani), "Bank Gothic", "Arial Narrow", sans-serif !important;
   font-weight: 700 !important;
@@ -1049,26 +1300,32 @@ html[data-weered-lobby="destiny2"] .weered-rr-join {
   font-size: 11px !important;
   border-radius: 2px !important;
   transition: all 0.15s ease !important;
-  box-shadow: inset 0 1px 0 rgba(255,176,102,0.15), 0 2px 8px rgba(0,0,0,0.55);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 176, 102, 0.15),
+    0 2px 8px rgba(0, 0, 0, 0.55);
 }
 html[data-weered-lobby="destiny2"] .weered-rr-primary:hover,
 html[data-weered-lobby="destiny2"] .weered-rr-primary-solid:hover,
 html[data-weered-lobby="destiny2"] .weered-uc-action:hover,
 html[data-weered-lobby="destiny2"] .weered-rr-join:hover {
-  background: linear-gradient(180deg, rgba(245,130,32,0.22) 0%, rgba(163,83,15,0.14) 100%) !important;
-  border-color: rgba(255,176,102,0.80) !important;
+  background: linear-gradient(
+    180deg,
+    rgba(245, 130, 32, 0.22) 0%,
+    rgba(163, 83, 15, 0.14) 100%
+  ) !important;
+  border-color: rgba(255, 176, 102, 0.8) !important;
   box-shadow:
-    0 0 18px rgba(245,130,32,0.38),
-    inset 0 0 10px rgba(245,130,32,0.10),
-    inset 0 1px 0 rgba(255,176,102,0.26);
+    0 0 18px rgba(245, 130, 32, 0.38),
+    inset 0 0 10px rgba(245, 130, 32, 0.1),
+    inset 0 1px 0 rgba(255, 176, 102, 0.26);
 }
 
 /* Inputs */
 html[data-weered-lobby="destiny2"] .weered-rr-search,
 html[data-weered-lobby="destiny2"] .weered-presence-search,
 html[data-weered-lobby="destiny2"] .weered-input {
-  background: rgba(5,8,16,0.70) !important;
-  border: 1px solid rgba(245,130,32,0.30) !important;
+  background: rgba(5, 8, 16, 0.7) !important;
+  border: 1px solid rgba(245, 130, 32, 0.3) !important;
   color: #cfd6e0 !important;
   font-family: var(--font-rajdhani), Inter, "Segoe UI", system-ui, sans-serif !important;
   border-radius: 2px !important;
@@ -1078,50 +1335,61 @@ html[data-weered-lobby="destiny2"] .weered-input {
 html[data-weered-lobby="destiny2"] .weered-rr-search:focus,
 html[data-weered-lobby="destiny2"] .weered-presence-search:focus,
 html[data-weered-lobby="destiny2"] .weered-input:focus {
-  border-color: rgba(255,176,102,0.70) !important;
-  box-shadow: 0 0 0 2px rgba(245,130,32,0.22), inset 0 0 6px rgba(245,130,32,0.06) !important;
+  border-color: rgba(255, 176, 102, 0.7) !important;
+  box-shadow:
+    0 0 0 2px rgba(245, 130, 32, 0.22),
+    inset 0 0 6px rgba(245, 130, 32, 0.06) !important;
   outline: none;
 }
 html[data-weered-lobby="destiny2"] .weered-rr-search::placeholder,
 html[data-weered-lobby="destiny2"] .weered-presence-search::placeholder,
 html[data-weered-lobby="destiny2"] .weered-input::placeholder {
-  color: rgba(138,155,176,0.55) !important;
+  color: rgba(138, 155, 176, 0.55) !important;
   font-style: italic;
 }
 
 /* Lobby header bar with hex corners */
 html[data-weered-lobby="destiny2"] .weered-lobby-header-row {
-  background: linear-gradient(180deg, rgba(18,24,48,0.85) 0%, rgba(10,14,28,0.95) 100%) !important;
-  border: 1px solid rgba(245,130,32,0.38) !important;
+  background: linear-gradient(
+    180deg,
+    rgba(18, 24, 48, 0.85) 0%,
+    rgba(10, 14, 28, 0.95) 100%
+  ) !important;
+  border: 1px solid rgba(245, 130, 32, 0.38) !important;
   border-radius: 3px !important;
   box-shadow:
-    inset 0 1px 0 rgba(255,176,102,0.14),
-    0 4px 18px rgba(0,0,0,0.55);
+    inset 0 1px 0 rgba(255, 176, 102, 0.14),
+    0 4px 18px rgba(0, 0, 0, 0.55);
   position: relative;
 }
 html[data-weered-lobby="destiny2"] .weered-lobby-header-row::before,
 html[data-weered-lobby="destiny2"] .weered-lobby-header-row::after {
   content: "";
   position: absolute;
-  width: 10px; height: 11px;
+  width: 10px;
+  height: 11px;
   background: #f58220;
   clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
-  box-shadow: 0 0 8px rgba(245,130,32,0.55);
+  box-shadow: 0 0 8px rgba(245, 130, 32, 0.55);
   top: 7px;
   pointer-events: none;
 }
-html[data-weered-lobby="destiny2"] .weered-lobby-header-row::before { left: 8px; }
-html[data-weered-lobby="destiny2"] .weered-lobby-header-row::after  { right: 8px; }
+html[data-weered-lobby="destiny2"] .weered-lobby-header-row::before {
+  left: 8px;
+}
+html[data-weered-lobby="destiny2"] .weered-lobby-header-row::after {
+  right: 8px;
+}
 
 html[data-weered-lobby="destiny2"] .weered-lobby-tabs {
   border-radius: 3px !important;
-  border-color: rgba(245,130,32,0.25) !important;
-  background: rgba(5,8,16,0.55) !important;
+  border-color: rgba(245, 130, 32, 0.25) !important;
+  background: rgba(5, 8, 16, 0.55) !important;
   padding: 3px !important;
 }
 html[data-weered-lobby="destiny2"] .weered-lobby-tab {
   background: transparent !important;
-  border: 1px solid rgba(245,130,32,0.25) !important;
+  border: 1px solid rgba(245, 130, 32, 0.25) !important;
   border-radius: 2px !important;
   color: var(--d2-textDim) !important;
   font-family: var(--font-rajdhani), "Bank Gothic", "Arial Narrow", sans-serif !important;
@@ -1137,47 +1405,47 @@ html[data-weered-lobby="destiny2"] .weered-btn {
   letter-spacing: 2.5px !important;
   text-transform: uppercase !important;
   border-radius: 2px !important;
-  border: 1px solid rgba(245,130,32,0.35) !important;
-  background: rgba(5,8,16,0.55) !important;
+  border: 1px solid rgba(245, 130, 32, 0.35) !important;
+  background: rgba(5, 8, 16, 0.55) !important;
   color: #ffb066 !important;
   font-weight: 700 !important;
 }
 html[data-weered-lobby="destiny2"] .weered-btn:hover {
-  border-color: rgba(255,176,102,0.75) !important;
-  box-shadow: 0 0 14px rgba(245,130,32,0.28) !important;
+  border-color: rgba(255, 176, 102, 0.75) !important;
+  box-shadow: 0 0 14px rgba(245, 130, 32, 0.28) !important;
   color: #ffe8c0 !important;
 }
 html[data-weered-lobby="destiny2"] .weered-lobby-tab:hover {
-  border-color: rgba(255,176,102,0.55) !important;
+  border-color: rgba(255, 176, 102, 0.55) !important;
   color: #ffb066 !important;
-  box-shadow: 0 0 14px rgba(245,130,32,0.20);
+  box-shadow: 0 0 14px rgba(245, 130, 32, 0.2);
 }
 html[data-weered-lobby="destiny2"] .weered-lobby-tab-active {
-  background: linear-gradient(180deg, rgba(245,130,32,0.22), rgba(163,83,15,0.12)) !important;
-  border-color: rgba(255,176,102,0.80) !important;
+  background: linear-gradient(180deg, rgba(245, 130, 32, 0.22), rgba(163, 83, 15, 0.12)) !important;
+  border-color: rgba(255, 176, 102, 0.8) !important;
   color: #ffb066 !important;
   box-shadow:
-    inset 0 0 12px rgba(245,130,32,0.10),
-    0 0 18px rgba(245,130,32,0.24) !important;
+    inset 0 0 12px rgba(245, 130, 32, 0.1),
+    0 0 18px rgba(245, 130, 32, 0.24) !important;
 }
 
 /* Hero banner transparent so banner SVG shines through */
 html[data-weered-lobby="destiny2"] .weered-hero-content {
   background: transparent !important;
-  border: 1px solid rgba(245,130,32,0.28);
+  border: 1px solid rgba(245, 130, 32, 0.28);
   border-radius: 3px;
   box-shadow:
-    inset 0 1px 0 rgba(255,176,102,0.15),
-    inset 0 -40px 60px rgba(5,8,16,0.55),
-    0 6px 24px rgba(0,0,0,0.55);
-  text-shadow: 0 1px 3px rgba(0,0,0,0.85);
+    inset 0 1px 0 rgba(255, 176, 102, 0.15),
+    inset 0 -40px 60px rgba(5, 8, 16, 0.55),
+    0 6px 24px rgba(0, 0, 0, 0.55);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85);
 }
 html[data-weered-lobby="destiny2"] .weered-hero-bg {
   opacity: 1 !important;
   background-position: center center !important;
 }
 html[data-weered-lobby="destiny2"] .weered-hero-scrim {
-  background: linear-gradient(180deg, rgba(5,8,16,0.10) 0%, rgba(5,8,16,0.40) 100%) !important;
+  background: linear-gradient(180deg, rgba(5, 8, 16, 0.1) 0%, rgba(5, 8, 16, 0.4) 100%) !important;
 }
 
 /* Event badge — legendary engram vibe (solar+void) */
@@ -1188,13 +1456,19 @@ html[data-weered-lobby="destiny2"] .weered-event-badge {
   text-transform: uppercase !important;
   font-family: var(--font-rajdhani), "Bank Gothic", "Arial Narrow", sans-serif !important;
   letter-spacing: 2.5px !important;
-  box-shadow: 0 0 12px rgba(245,130,32,0.45), inset 0 1px 0 rgba(255,255,255,0.2) !important;
+  box-shadow:
+    0 0 12px rgba(245, 130, 32, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
 }
 
 /* User corner */
 html[data-weered-lobby="destiny2"] .weered-usercorner {
-  background: linear-gradient(180deg, rgba(18,24,48,0.85) 0%, rgba(5,8,16,0.95) 100%) !important;
-  border: 1px solid rgba(245,130,32,0.40) !important;
+  background: linear-gradient(
+    180deg,
+    rgba(18, 24, 48, 0.85) 0%,
+    rgba(5, 8, 16, 0.95) 100%
+  ) !important;
+  border: 1px solid rgba(245, 130, 32, 0.4) !important;
   border-radius: 3px !important;
 }
 
@@ -1205,70 +1479,77 @@ html[data-weered-lobby="destiny2"] .weered-burner-hot {
 html[data-weered-lobby="destiny2"] .weered-burner-hot > span:last-child {
   background: linear-gradient(180deg, #ffb066, #f58220) !important;
   color: #0a0e1c !important;
-  border-color: rgba(5,8,16,0.9) !important;
-  box-shadow: 0 0 8px rgba(245,130,32,0.65) !important;
+  border-color: rgba(5, 8, 16, 0.9) !important;
+  box-shadow: 0 0 8px rgba(245, 130, 32, 0.65) !important;
 }
 
 /* Scrollbars */
 html[data-weered-lobby="destiny2"] ::-webkit-scrollbar-track {
-  background: rgba(5,8,16,0.7);
+  background: rgba(5, 8, 16, 0.7);
 }
 html[data-weered-lobby="destiny2"] ::-webkit-scrollbar-thumb {
   background: linear-gradient(180deg, #f58220, #a3530f);
   border-radius: 1px;
-  border: 1px solid rgba(5,8,16,0.6);
+  border: 1px solid rgba(5, 8, 16, 0.6);
 }
 html[data-weered-lobby="destiny2"] ::-webkit-scrollbar-thumb:hover {
   background: linear-gradient(180deg, #ffb066, #f58220);
 }
 
 html[data-weered-lobby="destiny2"] ::selection {
-  background: rgba(245,130,32,0.35);
+  background: rgba(245, 130, 32, 0.35);
   color: #050810;
 }
 
 /* ── DESTINY 2 EVENT CARD: legendary engram treatment ─── */
 html[data-weered-lobby="destiny2"] .weered-room-card.weered-room-card-event {
-  border: 1.5px solid rgba(255,176,102,0.55) !important;
+  border: 1.5px solid rgba(255, 176, 102, 0.55) !important;
   border-radius: 3px !important;
   overflow: visible !important;
   position: relative;
   transition: all 0.25s ease !important;
   background:
-    radial-gradient(ellipse 80% 60% at 50% 0%, rgba(245,130,32,0.12) 0%, transparent 55%),
-    radial-gradient(ellipse 70% 50% at 50% 100%, rgba(111,58,160,0.14) 0%, transparent 55%),
-    linear-gradient(180deg, rgba(18,24,48,0.72) 0%, rgba(8,10,22,0.88) 100%) !important;
+    radial-gradient(ellipse 80% 60% at 50% 0%, rgba(245, 130, 32, 0.12) 0%, transparent 55%),
+    radial-gradient(ellipse 70% 50% at 50% 100%, rgba(111, 58, 160, 0.14) 0%, transparent 55%),
+    linear-gradient(180deg, rgba(18, 24, 48, 0.72) 0%, rgba(8, 10, 22, 0.88) 100%) !important;
   box-shadow:
-    inset 0 0 0 1px rgba(255,176,102,0.20),
-    inset 0 1px 0 rgba(255,176,102,0.35),
-    0 0 24px rgba(245,130,32,0.22),
-    0 0 54px rgba(111,58,160,0.18),
-    0 6px 26px rgba(0,0,0,0.55) !important;
+    inset 0 0 0 1px rgba(255, 176, 102, 0.2),
+    inset 0 1px 0 rgba(255, 176, 102, 0.35),
+    0 0 24px rgba(245, 130, 32, 0.22),
+    0 0 54px rgba(111, 58, 160, 0.18),
+    0 6px 26px rgba(0, 0, 0, 0.55) !important;
   animation: d2-legendary-shimmer 9s ease-in-out infinite;
 }
 html[data-weered-lobby="destiny2"] .weered-room-card.weered-room-card-event::before,
 html[data-weered-lobby="destiny2"] .weered-room-card.weered-room-card-event::after {
   content: "";
   position: absolute;
-  width: 11px; height: 12px;
+  width: 11px;
+  height: 12px;
   background: #f58220;
   clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
-  box-shadow: 0 0 10px rgba(245,130,32,0.70);
+  box-shadow: 0 0 10px rgba(245, 130, 32, 0.7);
   pointer-events: none;
   z-index: 4;
 }
-html[data-weered-lobby="destiny2"] .weered-room-card.weered-room-card-event::before { top: 8px; left: 8px; }
-html[data-weered-lobby="destiny2"] .weered-room-card.weered-room-card-event::after  { top: 8px; right: 8px; }
+html[data-weered-lobby="destiny2"] .weered-room-card.weered-room-card-event::before {
+  top: 8px;
+  left: 8px;
+}
+html[data-weered-lobby="destiny2"] .weered-room-card.weered-room-card-event::after {
+  top: 8px;
+  right: 8px;
+}
 html[data-weered-lobby="destiny2"] .weered-room-card.weered-room-card-event:hover {
-  border-color: rgba(255,232,192,0.95) !important;
+  border-color: rgba(255, 232, 192, 0.95) !important;
   transform: translateY(-4px) !important;
   box-shadow:
-    inset 0 0 0 1px rgba(255,232,192,0.40),
-    inset 0 1px 0 rgba(255,232,192,0.55),
-    0 0 48px rgba(245,130,32,0.50),
-    0 0 100px rgba(245,130,32,0.22),
-    0 0 70px rgba(111,58,160,0.32),
-    0 14px 36px rgba(0,0,0,0.65) !important;
+    inset 0 0 0 1px rgba(255, 232, 192, 0.4),
+    inset 0 1px 0 rgba(255, 232, 192, 0.55),
+    0 0 48px rgba(245, 130, 32, 0.5),
+    0 0 100px rgba(245, 130, 32, 0.22),
+    0 0 70px rgba(111, 58, 160, 0.32),
+    0 14px 36px rgba(0, 0, 0, 0.65) !important;
   animation-play-state: paused;
   z-index: 5;
 }
@@ -1296,17 +1577,19 @@ html[data-weered-lobby="destiny2"] .weered-room-card.weered-room-card-event:hove
   font-family: inherit;
   font-size: 12px;
   font-weight: 600;
-  color: rgba(148,163,184,.7);
+  color: rgba(148, 163, 184, 0.7);
   cursor: pointer;
   margin-bottom: -1px;
-  transition: color .15s ease, border-color .15s ease;
+  transition:
+    color 0.15s ease,
+    border-color 0.15s ease;
 }
 .weered-tab-btn:hover {
-  color: rgba(243,244,246,.88);
+  color: rgba(243, 244, 246, 0.88);
 }
 .weered-tab-btn.is-active {
-  color: rgba(243,244,246,.96);
-  border-bottom-color: rgba(167,139,250,.7);
+  color: rgba(243, 244, 246, 0.96);
+  border-bottom-color: rgba(167, 139, 250, 0.7);
 }
 
 /* Modules tab — same shape as TabBtn, gold accent for the underline + chip. */
@@ -1322,24 +1605,26 @@ html[data-weered-lobby="destiny2"] .weered-room-card.weered-room-card-event:hove
   font-family: inherit;
   font-size: 12px;
   font-weight: 600;
-  color: rgba(148,163,184,.75);
+  color: rgba(148, 163, 184, 0.75);
   cursor: pointer;
   margin-bottom: -1px;
-  transition: color .15s ease, border-color .15s ease;
+  transition:
+    color 0.15s ease,
+    border-color 0.15s ease;
 }
 .weered-modules-tab:hover {
-  color: rgba(253, 224, 71, .85);
+  color: rgba(253, 224, 71, 0.85);
 }
 .weered-modules-tab.is-active {
-  color: rgba(253, 224, 71, .98);
-  border-bottom-color: rgba(250, 204, 21, .7);
+  color: rgba(253, 224, 71, 0.98);
+  border-bottom-color: rgba(250, 204, 21, 0.7);
 }
 .weered-modules-sparkle {
   display: inline-flex;
   vertical-align: middle;
   margin-right: 5px;
-  opacity: .8;
-  filter: drop-shadow(0 0 2px rgba(250, 204, 21, .35));
+  opacity: 0.8;
+  filter: drop-shadow(0 0 2px rgba(250, 204, 21, 0.35));
 }
 .weered-modules-chip {
   display: inline-flex;
@@ -1349,11 +1634,11 @@ html[data-weered-lobby="destiny2"] .weered-room-card.weered-room-card-event:hove
   border-radius: 999px;
   font-size: 8.5px;
   font-weight: 700;
-  letter-spacing: .06em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  background: rgba(250, 204, 21, .08);
-  border: 1px solid rgba(250, 204, 21, .22);
-  color: rgba(253, 224, 71, .85);
+  background: rgba(250, 204, 21, 0.08);
+  border: 1px solid rgba(250, 204, 21, 0.22);
+  color: rgba(253, 224, 71, 0.85);
   vertical-align: middle;
 }
 
@@ -1363,16 +1648,16 @@ html[data-weered-lobby="destiny2"] .weered-room-card.weered-room-card-event:hove
    (a dark "moon" face with a bright accent crack tracing the chamfer + a tight
    inner glow), and perf-light — no animated corona. Mirrors the EVE flagship. */
 .wmt-tabbar {
-  --wmt-accent: #7C3AED;
+  --wmt-accent: #7c3aed;
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
-  padding: 14px 12px;     /* vertical room so the active halo can bloom uncut */
+  padding: 14px 12px; /* vertical room so the active halo can bloom uncut */
   flex-shrink: 0;
 }
 .wmt-tab {
   position: relative;
-  isolation: isolate;          /* contain the glow/face pseudo-layers */
+  isolation: isolate; /* contain the glow/face pseudo-layers */
   display: inline-flex;
   align-items: center;
   gap: 7px;
@@ -1380,18 +1665,26 @@ html[data-weered-lobby="destiny2"] .weered-room-card.weered-room-card-event:hove
   border: none;
   background: transparent;
   cursor: pointer;
-  font-family: var(--font-rajdhani), 'Bank Gothic', 'Arial Narrow', sans-serif;
+  font-family: var(--font-rajdhani), "Bank Gothic", "Arial Narrow", sans-serif;
   text-transform: uppercase;
   font-size: 13px;
   font-weight: 700;
-  letter-spacing: .06em;
-  color: rgba(148, 163, 184, .6);
-  transition: color .15s ease;
+  letter-spacing: 0.06em;
+  color: rgba(148, 163, 184, 0.6);
+  transition: color 0.15s ease;
 }
 .wmt-tab > svg,
-.wmt-tab > span { flex-shrink: 0; position: relative; z-index: 1; }
-.wmt-tab:hover { color: rgba(226, 232, 240, .85); }
-.wmt-tab.is-active { color: #fff; }
+.wmt-tab > span {
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+}
+.wmt-tab:hover {
+  color: rgba(226, 232, 240, 0.85);
+}
+.wmt-tab.is-active {
+  color: #fff;
+}
 
 /* The NOTE on structure: the button itself is NOT clipped (clip-path would eat
    the glow). The chamfer + crack live on ::after; the exterior halo on ::before,
@@ -1407,7 +1700,7 @@ html[data-weered-lobby="destiny2"] .weered-room-card.weered-room-card-event:hove
   z-index: -2;
   background: radial-gradient(ellipse at 50% 55%, var(--wmt-accent) 0%, transparent 66%);
   filter: blur(8px);
-  opacity: .72;
+  opacity: 0.72;
   pointer-events: none;
 }
 /* the dark chamfered "moon" face. Three stacked inset layers read as depth:
@@ -1422,9 +1715,9 @@ html[data-weered-lobby="destiny2"] .weered-room-card.weered-room-card-event:hove
   clip-path: polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%);
   background: #0a0813;
   box-shadow:
-    inset 0 0 0 1px var(--wmt-accent),       /* the crack: bright accent edge */
-    inset 0 0 0 3px rgba(0,0,0,.62),         /* the jamb: dark recess behind it */
-    inset 0 0 15px -3px var(--wmt-accent);   /* soft inner spill from the crack */
+    inset 0 0 0 1px var(--wmt-accent),
+    /* the crack: bright accent edge */ inset 0 0 0 3px rgba(0, 0, 0, 0.62),
+    /* the jamb: dark recess behind it */ inset 0 0 15px -3px var(--wmt-accent); /* soft inner spill from the crack */
   pointer-events: none;
 }
 
@@ -1435,24 +1728,24 @@ html[data-weered-lobby="destiny2"] .weered-room-card.weered-room-card-event:hove
    headings, Cormorant Garamond for body where the texture warrants.
 */
 .weered-dnd-modules {
-  --dnd-fire-1:        #D4602A;
-  --dnd-fire-2:        #E8A04A;
-  --dnd-fire-3:        #F5D58A;
-  --dnd-wood-1:        #3A1C0E;
-  --dnd-wood-2:        #5D2F18;
-  --dnd-wood-3:        #7F4422;
-  --dnd-parchment-1:   #C9A878;
-  --dnd-parchment-2:   #A88556;
-  --dnd-parchment-ink: #2A1810;
-  --dnd-night-1:       #16100A;
-  --dnd-night-2:       #2A1810;
-  --dnd-accent:        #C4A55A;
+  --dnd-fire-1: #d4602a;
+  --dnd-fire-2: #e8a04a;
+  --dnd-fire-3: #f5d58a;
+  --dnd-wood-1: #3a1c0e;
+  --dnd-wood-2: #5d2f18;
+  --dnd-wood-3: #7f4422;
+  --dnd-parchment-1: #c9a878;
+  --dnd-parchment-2: #a88556;
+  --dnd-parchment-ink: #2a1810;
+  --dnd-night-1: #16100a;
+  --dnd-night-2: #2a1810;
+  --dnd-accent: #c4a55a;
 
   /* Firelight glow at top + secondary candle warmth at bottom */
   background:
     radial-gradient(ellipse 120% 55% at 50% -8%, rgba(212, 96, 42, 0.16), transparent 65%),
     radial-gradient(ellipse 70% 35% at 18% 105%, rgba(232, 160, 74, 0.08), transparent 65%),
-    linear-gradient(180deg, #19100A 0%, #100905 100%);
+    linear-gradient(180deg, #19100a 0%, #100905 100%);
 }
 
 /* Tabs — parchment-pill with firelight active state. */
@@ -1462,17 +1755,19 @@ html[data-weered-lobby="destiny2"] .weered-room-card.weered-room-card-event:hove
   gap: 7px;
   padding: 8px 16px;
   border-radius: 9px;
-  border: 1px solid rgba(196, 165, 90, 0.20);
+  border: 1px solid rgba(196, 165, 90, 0.2);
   background: linear-gradient(180deg, rgba(58, 28, 14, 0.55), rgba(22, 16, 10, 0.75));
   color: rgba(201, 168, 120, 0.65);
-  font-family: var(--font-pirata), 'Pirata One', 'IM Fell English', serif;
+  font-family: var(--font-pirata), "Pirata One", "IM Fell English", serif;
   font-size: 14px;
   font-weight: 400;
   letter-spacing: 0.4px;
   cursor: pointer;
   transition: all 0.18s ease;
-  box-shadow: 0 1px 0 rgba(0,0,0,0.4), inset 0 1px 0 rgba(196,165,90,0.04);
-  text-shadow: 0 1px 1px rgba(0,0,0,0.6);
+  box-shadow:
+    0 1px 0 rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(196, 165, 90, 0.04);
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.6);
 }
 .weered-dnd-modules .weered-dnd-tab:hover {
   border-color: rgba(232, 160, 74, 0.45);
@@ -1482,11 +1777,13 @@ html[data-weered-lobby="destiny2"] .weered-room-card.weered-room-card-event:hove
 .weered-dnd-modules .weered-dnd-tab.is-active {
   border-color: rgba(232, 160, 74, 0.7);
   background: linear-gradient(180deg, rgba(212, 96, 42, 0.32), rgba(127, 68, 34, 0.55));
-  color: #F5D58A;
+  color: #f5d58a;
   box-shadow:
     0 0 16px rgba(232, 160, 74, 0.32),
     inset 0 1px 0 rgba(245, 213, 138, 0.18);
-  text-shadow: 0 0 8px rgba(232, 160, 74, 0.6), 0 1px 1px rgba(0,0,0,0.6);
+  text-shadow:
+    0 0 8px rgba(232, 160, 74, 0.6),
+    0 1px 1px rgba(0, 0, 0, 0.6);
 }
 .weered-dnd-modules .weered-dnd-tab--small {
   padding: 5px 11px;
@@ -1496,15 +1793,15 @@ html[data-weered-lobby="destiny2"] .weered-room-card.weered-room-card-event:hove
 
 /* Section headings inside D&D — Pirata One. */
 .weered-dnd-modules .dnd-heading {
-  font-family: var(--font-pirata), 'Pirata One', serif;
+  font-family: var(--font-pirata), "Pirata One", serif;
   letter-spacing: 0.6px;
   color: rgba(245, 213, 138, 0.95);
-  text-shadow: 0 1px 2px rgba(0,0,0,0.6);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
 }
 
 /* Body serif — descriptive copy. */
 .weered-dnd-modules .dnd-serif {
-  font-family: var(--font-cormorant), 'Cormorant Garamond', 'EB Garamond', serif;
+  font-family: var(--font-cormorant), "Cormorant Garamond", "EB Garamond", serif;
 }
 
 /* Wooden-table card. */
@@ -1512,7 +1809,9 @@ html[data-weered-lobby="destiny2"] .weered-room-card.weered-room-card-event:hove
   background: linear-gradient(180deg, rgba(58, 28, 14, 0.65), rgba(22, 16, 10, 0.8));
   border: 1px solid rgba(196, 165, 90, 0.18);
   border-radius: 8px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(196, 165, 90, 0.06);
+  box-shadow:
+    0 2px 12px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(196, 165, 90, 0.06);
 }
 
 /* Tavern Board corkboard backdrop + scroll cards. Scrolls have a faint
@@ -1530,29 +1829,38 @@ html[data-weered-lobby="destiny2"] .weered-room-card.weered-room-card-event:hove
   position: relative;
   margin: 14px 8px;
   padding: 14px 16px;
-  background: linear-gradient(180deg, #D6B689 0%, #B59465 100%);
+  background: linear-gradient(180deg, #d6b689 0%, #b59465 100%);
   color: var(--dnd-parchment-ink);
   border-radius: 4px;
   border: 1px solid rgba(107, 79, 45, 0.6);
   box-shadow:
     0 4px 14px rgba(0, 0, 0, 0.55),
-    inset 0 0 24px rgba(107, 79, 45, 0.30);
-  font-family: var(--font-cormorant), 'Cormorant Garamond', serif;
+    inset 0 0 24px rgba(107, 79, 45, 0.3);
+  font-family: var(--font-cormorant), "Cormorant Garamond", serif;
 }
-.weered-dnd-modules .dnd-scroll:nth-child(odd)  { transform: rotate(-0.4deg); }
-.weered-dnd-modules .dnd-scroll:nth-child(even) { transform: rotate( 0.5deg); }
+.weered-dnd-modules .dnd-scroll:nth-child(odd) {
+  transform: rotate(-0.4deg);
+}
+.weered-dnd-modules .dnd-scroll:nth-child(even) {
+  transform: rotate(0.5deg);
+}
 .weered-dnd-modules .dnd-scroll::before,
 .weered-dnd-modules .dnd-scroll::after {
   content: "";
   position: absolute;
   top: -5px;
-  width: 9px; height: 9px;
-  background: radial-gradient(circle, #8B4A1F 0%, #3A1C0E 70%);
+  width: 9px;
+  height: 9px;
+  background: radial-gradient(circle, #8b4a1f 0%, #3a1c0e 70%);
   border-radius: 50%;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.7);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
 }
-.weered-dnd-modules .dnd-scroll::before { left: 16%; }
-.weered-dnd-modules .dnd-scroll::after  { right: 16%; }
+.weered-dnd-modules .dnd-scroll::before {
+  left: 16%;
+}
+.weered-dnd-modules .dnd-scroll::after {
+  right: 16%;
+}
 
 /* ── D&D Lectern — carved wooden bar that frames the four tools (Compendium,
    Tavern Board, Dice Tower, Streams) as deeply-sunken alcoves with brass
@@ -1567,16 +1875,15 @@ html[data-weered-lobby="destiny2"] .weered-room-card.weered-room-card-event:hove
   padding: 8px 24px;
   margin-bottom: 14px;
   border-radius: 12px;
-  border: 1px solid rgba(196,165,90,0.30);
+  border: 1px solid rgba(196, 165, 90, 0.3);
   background:
     /* Faint vertical plank streaks */
-    repeating-linear-gradient(90deg, rgba(196,165,90,0.05) 0 1px, transparent 1px 22px),
-    /* Wood grain */
-    linear-gradient(180deg, rgba(127,68,34,0.55), rgba(58,28,14,0.85));
+    repeating-linear-gradient(90deg, rgba(196, 165, 90, 0.05) 0 1px, transparent 1px 22px),
+    /* Wood grain */ linear-gradient(180deg, rgba(127, 68, 34, 0.55), rgba(58, 28, 14, 0.85));
   box-shadow:
-    inset 0 1px 0 rgba(196,165,90,0.18),
-    inset 0 -2px 0 rgba(0,0,0,0.55),
-    0 5px 16px rgba(0,0,0,0.45);
+    inset 0 1px 0 rgba(196, 165, 90, 0.18),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.55),
+    0 5px 16px rgba(0, 0, 0, 0.45);
   flex-wrap: wrap;
 }
 /* Brass corner-pieces — left and right vertical strips */
@@ -1584,17 +1891,23 @@ html[data-weered-lobby="destiny2"] .weered-room-card.weered-room-card-event:hove
 .weered-dnd-modules .dnd-lectern::after {
   content: "";
   position: absolute;
-  top: 6px; bottom: 6px;
+  top: 6px;
+  bottom: 6px;
   width: 8px;
-  background:
-    linear-gradient(180deg, #E8C672 0%, #8B6F3D 50%, #C4A55A 100%);
+  background: linear-gradient(180deg, #e8c672 0%, #8b6f3d 50%, #c4a55a 100%);
   border-radius: 2px;
-  box-shadow: 0 0 4px rgba(0,0,0,0.5), inset 1px 0 0 rgba(255,224,140,0.4);
+  box-shadow:
+    0 0 4px rgba(0, 0, 0, 0.5),
+    inset 1px 0 0 rgba(255, 224, 140, 0.4);
   opacity: 0.55;
   pointer-events: none;
 }
-.weered-dnd-modules .dnd-lectern::before { left: 6px; }
-.weered-dnd-modules .dnd-lectern::after  { right: 6px; }
+.weered-dnd-modules .dnd-lectern::before {
+  left: 6px;
+}
+.weered-dnd-modules .dnd-lectern::after {
+  right: 6px;
+}
 
 .weered-dnd-modules .dnd-lectern-tool {
   flex: 1 1 130px;
@@ -1603,45 +1916,54 @@ html[data-weered-lobby="destiny2"] .weered-room-card.weered-room-card-event:hove
   justify-content: center;
   gap: 9px;
   padding: 12px 14px;
-  border: 1px solid rgba(0,0,0,0.4);
+  border: 1px solid rgba(0, 0, 0, 0.4);
   border-radius: 8px;
   background:
-    radial-gradient(ellipse at 50% -20%, rgba(0,0,0,0.55), transparent 70%),
-    linear-gradient(180deg, rgba(58,28,14,0.85), rgba(28,18,10,0.95));
-  color: rgba(201,168,120,0.55);
-  font-family: var(--font-pirata), 'Pirata One', serif;
+    radial-gradient(ellipse at 50% -20%, rgba(0, 0, 0, 0.55), transparent 70%),
+    linear-gradient(180deg, rgba(58, 28, 14, 0.85), rgba(28, 18, 10, 0.95));
+  color: rgba(201, 168, 120, 0.55);
+  font-family: var(--font-pirata), "Pirata One", serif;
   font-size: 15px;
   letter-spacing: 0.4px;
   cursor: pointer;
   transition: all 0.2s ease;
-  text-shadow: 0 1px 2px rgba(0,0,0,0.7);
-  box-shadow: inset 0 1px 0 rgba(196,165,90,0.04), inset 0 -1px 0 rgba(0,0,0,0.6);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
+  box-shadow:
+    inset 0 1px 0 rgba(196, 165, 90, 0.04),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.6);
 }
 .weered-dnd-modules .dnd-lectern-tool:hover {
-  color: rgba(245,213,138,0.88);
-  border-color: rgba(196,165,90,0.30);
+  color: rgba(245, 213, 138, 0.88);
+  border-color: rgba(196, 165, 90, 0.3);
   background:
-    radial-gradient(ellipse at 50% -20%, rgba(232,160,74,0.20), transparent 70%),
-    linear-gradient(180deg, rgba(127,68,34,0.55), rgba(58,28,14,0.85));
+    radial-gradient(ellipse at 50% -20%, rgba(232, 160, 74, 0.2), transparent 70%),
+    linear-gradient(180deg, rgba(127, 68, 34, 0.55), rgba(58, 28, 14, 0.85));
 }
 .weered-dnd-modules .dnd-lectern-tool.is-active {
-  color: #F5D58A;
-  border-color: rgba(232,160,74,0.65);
+  color: #f5d58a;
+  border-color: rgba(232, 160, 74, 0.65);
   background:
-    radial-gradient(ellipse at 50% -10%, rgba(245,213,138,0.32), rgba(212,96,42,0.20) 50%, transparent 80%),
-    linear-gradient(180deg, rgba(127,68,34,0.65), rgba(58,28,14,0.85));
+    radial-gradient(
+      ellipse at 50% -10%,
+      rgba(245, 213, 138, 0.32),
+      rgba(212, 96, 42, 0.2) 50%,
+      transparent 80%
+    ),
+    linear-gradient(180deg, rgba(127, 68, 34, 0.65), rgba(58, 28, 14, 0.85));
   box-shadow:
-    inset 0 2px 0 rgba(245,213,138,0.22),
-    inset 0 -1px 0 rgba(0,0,0,0.5),
-    0 0 18px rgba(232,160,74,0.30);
-  text-shadow: 0 0 8px rgba(232,160,74,0.6), 0 1px 1px rgba(0,0,0,0.6);
+    inset 0 2px 0 rgba(245, 213, 138, 0.22),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.5),
+    0 0 18px rgba(232, 160, 74, 0.3);
+  text-shadow:
+    0 0 8px rgba(232, 160, 74, 0.6),
+    0 1px 1px rgba(0, 0, 0, 0.6);
 }
 .weered-dnd-modules .dnd-lectern-icon {
   font-size: 19px;
-  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.7));
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.7));
 }
 .weered-dnd-modules .dnd-lectern-tool.is-active .dnd-lectern-icon {
-  filter: drop-shadow(0 0 6px rgba(232,160,74,0.55));
+  filter: drop-shadow(0 0 6px rgba(232, 160, 74, 0.55));
 }
 
 /* Quill bookmark — Session Zero. Sits as a small italic accent on the right. */
@@ -1651,10 +1973,10 @@ html[data-weered-lobby="destiny2"] .weered-room-card.weered-room-card-event:hove
   gap: 6px;
   padding: 8px 12px;
   border-radius: 6px;
-  border: 1px solid rgba(196,165,90,0.20);
-  background: linear-gradient(180deg, rgba(58,28,14,0.65), rgba(28,18,10,0.85));
-  color: rgba(201,168,120,0.7);
-  font-family: var(--font-cormorant), 'Cormorant Garamond', serif;
+  border: 1px solid rgba(196, 165, 90, 0.2);
+  background: linear-gradient(180deg, rgba(58, 28, 14, 0.65), rgba(28, 18, 10, 0.85));
+  color: rgba(201, 168, 120, 0.7);
+  font-family: var(--font-cormorant), "Cormorant Garamond", serif;
   font-size: 13px;
   font-style: italic;
   cursor: pointer;
@@ -1662,9 +1984,9 @@ html[data-weered-lobby="destiny2"] .weered-room-card.weered-room-card-event:hove
   flex: 0 0 auto;
 }
 .weered-dnd-modules .dnd-lectern-quill:hover {
-  color: #F5D58A;
-  border-color: rgba(232,160,74,0.5);
-  box-shadow: 0 0 10px rgba(232,160,74,0.20);
+  color: #f5d58a;
+  border-color: rgba(232, 160, 74, 0.5);
+  box-shadow: 0 0 10px rgba(232, 160, 74, 0.2);
 }
 
 /* ── D&D Codex — chapter ribbons hanging from a leather tome-spine. Each
@@ -1679,14 +2001,15 @@ html[data-weered-lobby="destiny2"] .weered-room-card.weered-room-card-event:hove
   /* The leather spine */
   content: "";
   position: absolute;
-  top: 0; left: 8px; right: 8px;
+  top: 0;
+  left: 8px;
+  right: 8px;
   height: 5px;
-  background:
-    linear-gradient(180deg, #5D2F18 0%, #3A1C0E 100%);
+  background: linear-gradient(180deg, #5d2f18 0%, #3a1c0e 100%);
   border-radius: 0 0 3px 3px;
   box-shadow:
-    0 1px 0 rgba(0,0,0,0.55),
-    inset 0 1px 0 rgba(196,165,90,0.10);
+    0 1px 0 rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(196, 165, 90, 0.1);
 }
 .weered-dnd-modules .dnd-codex-ribbons {
   display: flex;
@@ -1702,24 +2025,26 @@ html[data-weered-lobby="destiny2"] .weered-room-card.weered-room-card-event:hove
   align-items: center;
   gap: 6px;
   padding: 5px 14px 14px;
-  background: linear-gradient(180deg,
+  background: linear-gradient(
+    180deg,
     rgba(var(--ribbon-rgb, 90, 60, 30), 0.45) 0%,
-    rgba(var(--ribbon-rgb, 90, 60, 30), 0.85) 100%);
+    rgba(var(--ribbon-rgb, 90, 60, 30), 0.85) 100%
+  );
   color: rgba(255, 245, 220, 0.62);
-  font-family: var(--font-pirata), 'Pirata One', serif;
+  font-family: var(--font-pirata), "Pirata One", serif;
   font-size: 12px;
   letter-spacing: 0.4px;
   cursor: pointer;
   border: none;
-  border-bottom: 1px solid rgba(0,0,0,0.4);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.4);
   transition: all 0.18s ease;
-  text-shadow: 0 1px 2px rgba(0,0,0,0.85);
-  box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.85);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
   /* Tasseled bottom edge */
   clip-path: polygon(0 0, 100% 0, 100% 70%, 50% 100%, 0 70%);
 }
 .weered-dnd-modules .dnd-codex-ribbon:hover {
-  color: rgba(255,245,220,0.95);
+  color: rgba(255, 245, 220, 0.95);
   filter: brightness(1.25);
   transform: translateY(2px);
 }
@@ -1729,8 +2054,8 @@ html[data-weered-lobby="destiny2"] .weered-room-card.weered-room-card-event:hove
   filter: brightness(1.15);
   transform: translateY(4px);
   box-shadow:
-    0 4px 10px rgba(0,0,0,0.6),
-    0 0 14px rgba(232,160,74,0.30);
+    0 4px 10px rgba(0, 0, 0, 0.6),
+    0 0 14px rgba(232, 160, 74, 0.3);
   z-index: 2;
 }
 
@@ -1740,27 +2065,39 @@ html[data-weered-lobby="destiny2"] .weered-room-card.weered-room-card-event:hove
    amber halo (or green / red on crits).
 */
 @keyframes dndCoalPulse {
-  0%, 100% { opacity: 0.65; transform: scaleY(1); }
-  50%      { opacity: 1.00; transform: scaleY(1.05); }
+  0%,
+  100% {
+    opacity: 0.65;
+    transform: scaleY(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scaleY(1.05);
+  }
 }
 @keyframes dndDieFloat {
-  0%, 100% { transform: rotate(-6deg) translateY(0); }
-  50%      { transform: rotate(-4deg) translateY(-3px); }
+  0%,
+  100% {
+    transform: rotate(-6deg) translateY(0);
+  }
+  50% {
+    transform: rotate(-4deg) translateY(-3px);
+  }
 }
 .weered-dnd-modules .dnd-brazier {
   position: relative;
   padding: 32px 24px 38px;
   border-radius: 14px;
-  border: 1px solid rgba(196,165,90,0.30);
+  border: 1px solid rgba(196, 165, 90, 0.3);
   background:
-    radial-gradient(ellipse 80% 40% at 50% 100%, rgba(212,96,42,0.32), transparent 70%),
-    linear-gradient(180deg, rgba(74,59,46,0.45) 0%, rgba(42,24,16,0.85) 100%);
+    radial-gradient(ellipse 80% 40% at 50% 100%, rgba(212, 96, 42, 0.32), transparent 70%),
+    linear-gradient(180deg, rgba(74, 59, 46, 0.45) 0%, rgba(42, 24, 16, 0.85) 100%);
   box-shadow:
-    inset 0 2px 0 rgba(196,165,90,0.10),
-    inset 0 -1px 0 rgba(0,0,0,0.6),
-    inset 8px 0 18px -8px rgba(0,0,0,0.55),
-    inset -8px 0 18px -8px rgba(0,0,0,0.55),
-    0 6px 22px rgba(0,0,0,0.55);
+    inset 0 2px 0 rgba(196, 165, 90, 0.1),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.6),
+    inset 8px 0 18px -8px rgba(0, 0, 0, 0.55),
+    inset -8px 0 18px -8px rgba(0, 0, 0, 0.55),
+    0 6px 22px rgba(0, 0, 0, 0.55);
   overflow: hidden;
   text-align: center;
 }
@@ -1768,80 +2105,92 @@ html[data-weered-lobby="destiny2"] .weered-room-card.weered-room-card-event:hove
 .weered-dnd-modules .dnd-brazier::after {
   content: "";
   position: absolute;
-  bottom: 0; left: 8%; right: 8%;
+  bottom: 0;
+  left: 8%;
+  right: 8%;
   height: 22px;
   pointer-events: none;
   background:
-    radial-gradient(ellipse 50% 100% at 30% 50%, rgba(245,213,138,0.55), transparent 70%),
-    radial-gradient(ellipse 50% 100% at 70% 50%, rgba(212,96,42,0.55), transparent 70%);
+    radial-gradient(ellipse 50% 100% at 30% 50%, rgba(245, 213, 138, 0.55), transparent 70%),
+    radial-gradient(ellipse 50% 100% at 70% 50%, rgba(212, 96, 42, 0.55), transparent 70%);
   filter: blur(3px);
   animation: dndCoalPulse 3.4s ease-in-out infinite;
   transform-origin: 50% 100%;
 }
 .weered-dnd-modules .dnd-brazier-result {
-  font-family: var(--font-pirata), 'Pirata One', serif;
+  font-family: var(--font-pirata), "Pirata One", serif;
   font-size: 78px;
   font-weight: 400;
   line-height: 1;
-  color: #F5D58A;
+  color: #f5d58a;
   text-shadow:
-    0 0 28px rgba(232,160,74,0.55),
-    0 0 10px rgba(212,96,42,0.40),
-    0 2px 4px rgba(0,0,0,0.7);
+    0 0 28px rgba(232, 160, 74, 0.55),
+    0 0 10px rgba(212, 96, 42, 0.4),
+    0 2px 4px rgba(0, 0, 0, 0.7);
   letter-spacing: 1px;
   position: relative;
   z-index: 1;
 }
 .weered-dnd-modules .dnd-brazier-result.is-nat20 {
-  color: #C8E886;
+  color: #c8e886;
   text-shadow:
-    0 0 32px rgba(184,230,107,0.65),
-    0 0 14px rgba(122,209,88,0.45),
-    0 2px 4px rgba(0,0,0,0.7);
+    0 0 32px rgba(184, 230, 107, 0.65),
+    0 0 14px rgba(122, 209, 88, 0.45),
+    0 2px 4px rgba(0, 0, 0, 0.7);
 }
 .weered-dnd-modules .dnd-brazier-result.is-nat1 {
-  color: #FF8A7A;
+  color: #ff8a7a;
   text-shadow:
-    0 0 26px rgba(239,68,68,0.55),
-    0 0 10px rgba(239,68,68,0.40),
-    0 2px 4px rgba(0,0,0,0.7);
+    0 0 26px rgba(239, 68, 68, 0.55),
+    0 0 10px rgba(239, 68, 68, 0.4),
+    0 2px 4px rgba(0, 0, 0, 0.7);
 }
 .weered-dnd-modules .dnd-brazier-tag {
   font-family: var(--font-pirata), serif;
   font-size: 13px;
   letter-spacing: 2.5px;
   margin-top: 6px;
-  position: relative; z-index: 1;
+  position: relative;
+  z-index: 1;
 }
-.weered-dnd-modules .dnd-brazier-tag.is-nat20 { color: #C8E886; text-shadow: 0 0 10px rgba(184,230,107,0.65); }
-.weered-dnd-modules .dnd-brazier-tag.is-nat1  { color: #FF8A7A; text-shadow: 0 0 10px rgba(239,68,68,0.6); }
+.weered-dnd-modules .dnd-brazier-tag.is-nat20 {
+  color: #c8e886;
+  text-shadow: 0 0 10px rgba(184, 230, 107, 0.65);
+}
+.weered-dnd-modules .dnd-brazier-tag.is-nat1 {
+  color: #ff8a7a;
+  text-shadow: 0 0 10px rgba(239, 68, 68, 0.6);
+}
 .weered-dnd-modules .dnd-brazier-expr {
   font-family: var(--font-cormorant), serif;
   font-size: 14px;
   font-style: italic;
-  color: rgba(245,213,138,0.62);
+  color: rgba(245, 213, 138, 0.62);
   margin-top: 12px;
-  position: relative; z-index: 1;
+  position: relative;
+  z-index: 1;
 }
 .weered-dnd-modules .dnd-brazier-rolls {
-  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
   font-size: 11px;
-  color: rgba(201,168,120,0.5);
+  color: rgba(201, 168, 120, 0.5);
   margin-top: 4px;
-  position: relative; z-index: 1;
+  position: relative;
+  z-index: 1;
 }
 .weered-dnd-modules .dnd-brazier-d20 {
   display: inline-block;
   animation: dndDieFloat 4s ease-in-out infinite;
-  filter: drop-shadow(0 4px 12px rgba(212,96,42,0.30));
+  filter: drop-shadow(0 4px 12px rgba(212, 96, 42, 0.3));
 }
 .weered-dnd-modules .dnd-brazier-prompt {
   font-family: var(--font-cormorant), serif;
   font-size: 15px;
   font-style: italic;
-  color: rgba(201,168,120,0.55);
+  color: rgba(201, 168, 120, 0.55);
   margin-top: 14px;
-  position: relative; z-index: 1;
+  position: relative;
+  z-index: 1;
 }
 
 /* Carved-stone dice tiles — quick-roll buttons. */
@@ -1850,51 +2199,72 @@ html[data-weered-lobby="destiny2"] .weered-room-card.weered-room-card-event:hove
   min-width: 58px;
   padding: 12px 8px;
   border-radius: 8px;
-  border: 1px solid rgba(196,165,90,0.30);
-  background:
-    linear-gradient(180deg, rgba(127,68,34,0.45) 0%, rgba(58,28,14,0.65) 55%, rgba(42,24,16,0.85) 100%);
-  color: #F5D58A;
+  border: 1px solid rgba(196, 165, 90, 0.3);
+  background: linear-gradient(
+    180deg,
+    rgba(127, 68, 34, 0.45) 0%,
+    rgba(58, 28, 14, 0.65) 55%,
+    rgba(42, 24, 16, 0.85) 100%
+  );
+  color: #f5d58a;
   font-family: var(--font-pirata), serif;
   font-size: 17px;
   letter-spacing: 0.5px;
   cursor: pointer;
   text-align: center;
-  text-shadow: 0 1px 2px rgba(0,0,0,0.7);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
   box-shadow:
-    inset 0 1px 0 rgba(245,213,138,0.10),
-    inset 0 -1px 0 rgba(0,0,0,0.5),
-    0 2px 4px rgba(0,0,0,0.45);
+    inset 0 1px 0 rgba(245, 213, 138, 0.1),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.5),
+    0 2px 4px rgba(0, 0, 0, 0.45);
   transition: all 0.15s ease;
 }
 .weered-dnd-modules .dnd-stone-tile:hover {
-  border-color: rgba(232,160,74,0.65);
-  background:
-    linear-gradient(180deg, rgba(212,96,42,0.45) 0%, rgba(127,68,34,0.6) 50%, rgba(58,28,14,0.85) 100%);
+  border-color: rgba(232, 160, 74, 0.65);
+  background: linear-gradient(
+    180deg,
+    rgba(212, 96, 42, 0.45) 0%,
+    rgba(127, 68, 34, 0.6) 50%,
+    rgba(58, 28, 14, 0.85) 100%
+  );
   box-shadow:
-    inset 0 1px 0 rgba(245,213,138,0.22),
-    inset 0 -1px 0 rgba(0,0,0,0.5),
-    0 0 14px rgba(232,160,74,0.35),
-    0 2px 4px rgba(0,0,0,0.45);
+    inset 0 1px 0 rgba(245, 213, 138, 0.22),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.5),
+    0 0 14px rgba(232, 160, 74, 0.35),
+    0 2px 4px rgba(0, 0, 0, 0.45);
 }
-.weered-dnd-modules .dnd-stone-tile:active { transform: translateY(1px); }
-.weered-dnd-modules .dnd-stone-tile:disabled { opacity: 0.5; cursor: not-allowed; }
+.weered-dnd-modules .dnd-stone-tile:active {
+  transform: translateY(1px);
+}
+.weered-dnd-modules .dnd-stone-tile:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
 .weered-dnd-modules .dnd-stone-tile--adv {
-  color: #C8E886;
-  border-color: rgba(122,209,88,0.30);
-  background: linear-gradient(180deg, rgba(58,103,46,0.40) 0%, rgba(42,24,16,0.85) 100%);
+  color: #c8e886;
+  border-color: rgba(122, 209, 88, 0.3);
+  background: linear-gradient(180deg, rgba(58, 103, 46, 0.4) 0%, rgba(42, 24, 16, 0.85) 100%);
 }
 .weered-dnd-modules .dnd-stone-tile--adv:hover {
-  border-color: rgba(122,209,88,0.6);
-  box-shadow: inset 0 1px 0 rgba(184,230,107,0.20), inset 0 -1px 0 rgba(0,0,0,0.5), 0 0 14px rgba(122,209,88,0.30), 0 2px 4px rgba(0,0,0,0.45);
+  border-color: rgba(122, 209, 88, 0.6);
+  box-shadow:
+    inset 0 1px 0 rgba(184, 230, 107, 0.2),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.5),
+    0 0 14px rgba(122, 209, 88, 0.3),
+    0 2px 4px rgba(0, 0, 0, 0.45);
 }
 .weered-dnd-modules .dnd-stone-tile--dis {
-  color: #FF8A7A;
-  border-color: rgba(239,68,68,0.30);
-  background: linear-gradient(180deg, rgba(155,40,30,0.40) 0%, rgba(42,24,16,0.85) 100%);
+  color: #ff8a7a;
+  border-color: rgba(239, 68, 68, 0.3);
+  background: linear-gradient(180deg, rgba(155, 40, 30, 0.4) 0%, rgba(42, 24, 16, 0.85) 100%);
 }
 .weered-dnd-modules .dnd-stone-tile--dis:hover {
-  border-color: rgba(239,68,68,0.6);
-  box-shadow: inset 0 1px 0 rgba(255,138,122,0.20), inset 0 -1px 0 rgba(0,0,0,0.5), 0 0 14px rgba(239,68,68,0.30), 0 2px 4px rgba(0,0,0,0.45);
+  border-color: rgba(239, 68, 68, 0.6);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 138, 122, 0.2),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.5),
+    0 0 14px rgba(239, 68, 68, 0.3),
+    0 2px 4px rgba(0, 0, 0, 0.45);
 }
 
 /* Section label — small Pirata heading. */
@@ -1902,7 +2272,7 @@ html[data-weered-lobby="destiny2"] .weered-room-card.weered-room-card-event:hove
   font-family: var(--font-pirata), serif;
   font-size: 12px;
   letter-spacing: 1.5px;
-  color: rgba(232,160,74,0.75);
+  color: rgba(232, 160, 74, 0.75);
   text-transform: uppercase;
   margin-bottom: 8px;
 }
@@ -1912,45 +2282,59 @@ html[data-weered-lobby="destiny2"] .weered-room-card.weered-room-card-event:hove
   flex: 1;
   padding: 10px 14px;
   border-radius: 8px;
-  border: 1px solid rgba(196,165,90,0.25);
-  background: rgba(28,18,10,0.55);
-  color: #F5D58A;
+  border: 1px solid rgba(196, 165, 90, 0.25);
+  background: rgba(28, 18, 10, 0.55);
+  color: #f5d58a;
   font-family: var(--font-cormorant), serif;
   font-size: 15px;
   outline: none;
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
 }
 .weered-dnd-modules .dnd-parchment-input:focus {
-  border-color: rgba(232,160,74,0.6);
-  box-shadow: 0 0 0 1px rgba(232,160,74,0.20);
+  border-color: rgba(232, 160, 74, 0.6);
+  box-shadow: 0 0 0 1px rgba(232, 160, 74, 0.2);
 }
 .weered-dnd-modules .dnd-parchment-input::placeholder {
-  color: rgba(201,168,120,0.42);
+  color: rgba(201, 168, 120, 0.42);
   font-style: italic;
 }
 
 /* Roll history — wooden plank entries. */
 .weered-dnd-modules .dnd-history-row {
-  display: flex; align-items: center; gap: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
   padding: 7px 12px;
   border-radius: 6px;
-  border-left: 3px solid rgba(196,165,90,0.45);
-  background: linear-gradient(90deg, rgba(58,28,14,0.45), rgba(22,16,10,0.55));
+  border-left: 3px solid rgba(196, 165, 90, 0.45);
+  background: linear-gradient(90deg, rgba(58, 28, 14, 0.45), rgba(22, 16, 10, 0.55));
 }
-.weered-dnd-modules .dnd-history-row.is-nat20 { border-left-color: rgba(122,209,88,0.75); }
-.weered-dnd-modules .dnd-history-row.is-nat1  { border-left-color: rgba(239,68,68,0.75); }
+.weered-dnd-modules .dnd-history-row.is-nat20 {
+  border-left-color: rgba(122, 209, 88, 0.75);
+}
+.weered-dnd-modules .dnd-history-row.is-nat1 {
+  border-left-color: rgba(239, 68, 68, 0.75);
+}
 .weered-dnd-modules .dnd-history-total {
   font-family: var(--font-pirata), serif;
-  font-size: 18px; min-width: 40px; text-align: center;
-  color: #F5D58A;
-  text-shadow: 0 1px 2px rgba(0,0,0,0.6);
+  font-size: 18px;
+  min-width: 40px;
+  text-align: center;
+  color: #f5d58a;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
 }
-.weered-dnd-modules .dnd-history-row.is-nat20 .dnd-history-total { color: #C8E886; }
-.weered-dnd-modules .dnd-history-row.is-nat1  .dnd-history-total { color: #FF8A7A; }
+.weered-dnd-modules .dnd-history-row.is-nat20 .dnd-history-total {
+  color: #c8e886;
+}
+.weered-dnd-modules .dnd-history-row.is-nat1 .dnd-history-total {
+  color: #ff8a7a;
+}
 .weered-dnd-modules .dnd-history-expr {
   font-family: var(--font-cormorant), serif;
   font-size: 13px;
-  color: rgba(245,213,138,0.78);
+  color: rgba(245, 213, 138, 0.78);
   font-style: italic;
 }
 
@@ -1962,49 +2346,49 @@ html[data-weered-lobby="destiny2"] .weered-room-card.weered-room-card-event:hove
 
 /* Section header — bigger Pirata heading, brass-tack divider */
 html[data-weered-lobby="dnd"] .weered-room-directory-header {
-  font-family: var(--font-pirata), 'Pirata One', serif !important;
+  font-family: var(--font-pirata), "Pirata One", serif !important;
 }
 
 /* Card frame — warm-leather hover state, default border in parchment-amber */
 html[data-weered-lobby="dnd"] .weered-room-card {
-  border-color: rgba(196, 165, 90, 0.20) !important;
+  border-color: rgba(196, 165, 90, 0.2) !important;
   background:
     radial-gradient(ellipse 100% 50% at 50% 0%, rgba(212, 96, 42, 0.06), transparent 60%),
-    linear-gradient(180deg, rgba(58, 28, 14, 0.20), rgba(22, 16, 10, 0.30)) !important;
+    linear-gradient(180deg, rgba(58, 28, 14, 0.2), rgba(22, 16, 10, 0.3)) !important;
   transition: all 0.22s ease !important;
 }
 html[data-weered-lobby="dnd"] .weered-room-card:hover {
   border-color: rgba(232, 160, 74, 0.55) !important;
   box-shadow:
     0 0 0 1px rgba(232, 160, 74, 0.25),
-    0 0 22px rgba(232, 160, 74, 0.20),
+    0 0 22px rgba(232, 160, 74, 0.2),
     0 6px 18px rgba(0, 0, 0, 0.45) !important;
   transform: translateY(-1px);
 }
 
 /* Pinned/house room cards get a slight extra warmth */
 html[data-weered-lobby="dnd"] .weered-room-card[data-pinned="true"] {
-  border-color: rgba(232, 160, 74, 0.30) !important;
+  border-color: rgba(232, 160, 74, 0.3) !important;
   background:
     radial-gradient(ellipse 100% 60% at 50% 0%, rgba(245, 213, 138, 0.07), transparent 60%),
-    linear-gradient(180deg, rgba(74, 41, 20, 0.30), rgba(28, 18, 10, 0.40)) !important;
+    linear-gradient(180deg, rgba(74, 41, 20, 0.3), rgba(28, 18, 10, 0.4)) !important;
 }
 
 /* Room name — Pirata One. Override the inline 800-weight for the medieval
    display face. Bumped to 19px so the difference reads at a glance. */
 html[data-weered-lobby="dnd"] .weered-room-card .weered-room-name,
 html[data-weered-lobby="dnd"] .weered-room-card-name {
-  font-family: var(--font-pirata), 'Pirata One', serif !important;
+  font-family: var(--font-pirata), "Pirata One", serif !important;
   font-weight: 400 !important;
   font-size: 19px !important;
   letter-spacing: 0.5px !important;
-  color: #F5D58A !important;
+  color: #f5d58a !important;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
 }
 html[data-weered-lobby="dnd"] .weered-room-card .weered-room-subtitle {
-  font-family: var(--font-cormorant), 'Cormorant Garamond', serif !important;
+  font-family: var(--font-cormorant), "Cormorant Garamond", serif !important;
   font-style: italic !important;
-  color: rgba(201, 168, 120, 0.70) !important;
+  color: rgba(201, 168, 120, 0.7) !important;
   font-size: 13px !important;
 }
 
@@ -2012,21 +2396,22 @@ html[data-weered-lobby="dnd"] .weered-room-card .weered-room-subtitle {
    "ROOMS" label + brass divider line. The bar is rendered inline in JSX
    so we override via attribute targeting on the existing structure. */
 html[data-weered-lobby="dnd"] .weered-rooms-section-label {
-  font-family: var(--font-pirata), 'Pirata One', serif !important;
+  font-family: var(--font-pirata), "Pirata One", serif !important;
   font-size: 18px !important;
   font-weight: 400 !important;
   letter-spacing: 1.2px !important;
-  color: #F5D58A !important;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6), 0 0 12px rgba(232, 160, 74, 0.25);
+  color: #f5d58a !important;
+  text-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.6),
+    0 0 12px rgba(232, 160, 74, 0.25);
   text-transform: none !important;
 }
 
 html[data-weered-lobby="dnd"] .weered-rooms-section-count {
   font-family: var(--font-pirata), serif !important;
-  background:
-    radial-gradient(circle at 30% 30%, #E8C672 0%, #C4A55A 45%, #6B4F2D 100%) !important;
+  background: radial-gradient(circle at 30% 30%, #e8c672 0%, #c4a55a 45%, #6b4f2d 100%) !important;
   border: 1px solid rgba(58, 28, 14, 0.5) !important;
-  color: #2A1810 !important;
+  color: #2a1810 !important;
   font-weight: 700 !important;
   box-shadow:
     inset 0 1px 0 rgba(255, 224, 140, 0.5),
@@ -2034,21 +2419,25 @@ html[data-weered-lobby="dnd"] .weered-rooms-section-count {
 }
 
 html[data-weered-lobby="dnd"] .weered-rooms-section-divider {
-  background: linear-gradient(90deg, rgba(196, 165, 90, 0.30), rgba(196, 165, 90, 0.06)) !important;
+  background: linear-gradient(90deg, rgba(196, 165, 90, 0.3), rgba(196, 165, 90, 0.06)) !important;
   height: 1px !important;
 }
 
 /* Create Room button — stone tile */
 html[data-weered-lobby="dnd"] .weered-rooms-create-btn {
   border: 1px solid rgba(196, 165, 90, 0.35) !important;
-  background:
-    linear-gradient(180deg, rgba(127, 68, 34, 0.45) 0%, rgba(58, 28, 14, 0.65) 55%, rgba(42, 24, 16, 0.85) 100%) !important;
-  color: #F5D58A !important;
+  background: linear-gradient(
+    180deg,
+    rgba(127, 68, 34, 0.45) 0%,
+    rgba(58, 28, 14, 0.65) 55%,
+    rgba(42, 24, 16, 0.85) 100%
+  ) !important;
+  color: #f5d58a !important;
   font-family: var(--font-pirata), serif !important;
   letter-spacing: 0.4px !important;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7) !important;
   box-shadow:
-    inset 0 1px 0 rgba(245, 213, 138, 0.10),
+    inset 0 1px 0 rgba(245, 213, 138, 0.1),
     inset 0 -1px 0 rgba(0, 0, 0, 0.5),
     0 2px 4px rgba(0, 0, 0, 0.45) !important;
 }
@@ -2064,13 +2453,12 @@ html[data-weered-lobby="dnd"] .weered-rooms-create-btn:hover {
 /* Create form — parchment input + stone Go button */
 html[data-weered-lobby="dnd"] .weered-rooms-create-form {
   border: 1px solid rgba(196, 165, 90, 0.25) !important;
-  background:
-    linear-gradient(180deg, rgba(58, 28, 14, 0.55), rgba(28, 18, 10, 0.70)) !important;
+  background: linear-gradient(180deg, rgba(58, 28, 14, 0.55), rgba(28, 18, 10, 0.7)) !important;
 }
 html[data-weered-lobby="dnd"] .weered-rooms-create-form input {
   border: 1px solid rgba(196, 165, 90, 0.25) !important;
   background: rgba(28, 18, 10, 0.55) !important;
-  color: #F5D58A !important;
+  color: #f5d58a !important;
   font-family: var(--font-cormorant), serif !important;
   font-size: 14px !important;
 }
@@ -2080,21 +2468,25 @@ html[data-weered-lobby="dnd"] .weered-rooms-create-form input::placeholder {
 }
 html[data-weered-lobby="dnd"] .weered-rooms-create-form button {
   border: 1px solid rgba(196, 165, 90, 0.35) !important;
-  background:
-    linear-gradient(180deg, rgba(127, 68, 34, 0.45) 0%, rgba(58, 28, 14, 0.65) 55%, rgba(42, 24, 16, 0.85) 100%) !important;
-  color: #F5D58A !important;
+  background: linear-gradient(
+    180deg,
+    rgba(127, 68, 34, 0.45) 0%,
+    rgba(58, 28, 14, 0.65) 55%,
+    rgba(42, 24, 16, 0.85) 100%
+  ) !important;
+  color: #f5d58a !important;
   font-family: var(--font-pirata), serif !important;
 }
 
 /* Empty state — when no rooms */
 html[data-weered-lobby="dnd"] .weered-rooms-empty-title {
   font-family: var(--font-pirata), serif !important;
-  color: #F5D58A !important;
+  color: #f5d58a !important;
 }
 html[data-weered-lobby="dnd"] .weered-rooms-empty-hint {
   font-family: var(--font-cormorant), serif !important;
   font-style: italic !important;
-  color: rgba(201, 168, 120, 0.70) !important;
+  color: rgba(201, 168, 120, 0.7) !important;
 }
 
 /* ── D&D Body — full-page tavern atmosphere. Warm hearth glow from top,
@@ -2103,13 +2495,30 @@ html[data-weered-lobby="dnd"] .weered-rooms-empty-hint {
    bottom-left for ambient detail. Mirrors the Windrose body treatment.
 */
 @keyframes dnd-candle-flicker {
-  0%, 100% { opacity: 0.13; transform: translateY(0) scale(1); }
-  35%      { opacity: 0.18; transform: translateY(-1px) scale(1.02); }
-  65%      { opacity: 0.10; transform: translateY(0.5px) scale(0.98); }
+  0%,
+  100% {
+    opacity: 0.13;
+    transform: translateY(0) scale(1);
+  }
+  35% {
+    opacity: 0.18;
+    transform: translateY(-1px) scale(1.02);
+  }
+  65% {
+    opacity: 0.1;
+    transform: translateY(0.5px) scale(0.98);
+  }
 }
 @keyframes dnd-dragon-breathe {
-  0%, 100% { opacity: 0.05; transform: translateY(0); }
-  50%      { opacity: 0.08; transform: translateY(-3px); }
+  0%,
+  100% {
+    opacity: 0.05;
+    transform: translateY(0);
+  }
+  50% {
+    opacity: 0.08;
+    transform: translateY(-3px);
+  }
 }
 
 html[data-weered-lobby="dnd"] body {
@@ -2133,7 +2542,7 @@ html[data-weered-lobby="dnd"] body::before {
   opacity: 0.05 !important;
   pointer-events: none;
   z-index: 0;
-  filter: drop-shadow(0 0 18px rgba(212, 96, 42, 0.10)) sepia(1) hue-rotate(330deg) saturate(1.4);
+  filter: drop-shadow(0 0 18px rgba(212, 96, 42, 0.1)) sepia(1) hue-rotate(330deg) saturate(1.4);
   animation: dnd-dragon-breathe 12s ease-in-out infinite !important;
 }
 
@@ -2146,7 +2555,7 @@ html[data-weered-lobby="dnd"] body::after {
   width: 380px;
   height: 480px;
   background:
-    radial-gradient(ellipse 60% 40% at 30% 70%, rgba(245, 213, 138, 0.10) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 30% 70%, rgba(245, 213, 138, 0.1) 0%, transparent 60%),
     radial-gradient(ellipse 50% 50% at 25% 60%, rgba(212, 96, 42, 0.08) 0%, transparent 55%);
   opacity: 0.13 !important;
   pointer-events: none;
@@ -2193,12 +2602,16 @@ html[data-weered-lobby="dnd"] .weered-rr-section,
 html[data-weered-lobby="dnd"] .weered-left-section,
 html[data-weered-lobby="dnd"] .weered-presence,
 html[data-weered-lobby="dnd"] .weered-usercorner {
-  background: linear-gradient(180deg, rgba(58, 28, 14, 0.45) 0%, rgba(28, 16, 10, 0.55) 100%) !important;
-  border: 1px solid rgba(196, 165, 90, 0.30) !important;
+  background: linear-gradient(
+    180deg,
+    rgba(58, 28, 14, 0.45) 0%,
+    rgba(28, 16, 10, 0.55) 100%
+  ) !important;
+  border: 1px solid rgba(196, 165, 90, 0.3) !important;
   border-radius: 4px !important;
   box-shadow:
     inset 0 0 0 1px rgba(196, 165, 90, 0.08),
-    inset 0 1px 0 rgba(245, 213, 138, 0.10),
+    inset 0 1px 0 rgba(245, 213, 138, 0.1),
     0 4px 16px rgba(0, 0, 0, 0.45) !important;
   position: relative;
 }
@@ -2214,22 +2627,31 @@ html[data-weered-lobby="dnd"] .weered-usercorner::before,
 html[data-weered-lobby="dnd"] .weered-usercorner::after {
   content: "";
   position: absolute;
-  width: 5px; height: 5px;
+  width: 5px;
+  height: 5px;
   border-radius: 50%;
   background: radial-gradient(circle at 30% 30%, #f2d4a1 0%, #c9a066 60%, #5a3f1c 100%);
-  box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.5), 0 1px 2px rgba(0, 0, 0, 0.7);
+  box-shadow:
+    inset 0 1px 1px rgba(0, 0, 0, 0.5),
+    0 1px 2px rgba(0, 0, 0, 0.7);
   pointer-events: none;
   z-index: 2;
 }
 html[data-weered-lobby="dnd"] .weered-rr-section::before,
 html[data-weered-lobby="dnd"] .weered-left-section::before,
 html[data-weered-lobby="dnd"] .weered-presence::before,
-html[data-weered-lobby="dnd"] .weered-usercorner::before { top: 5px; left: 5px; }
+html[data-weered-lobby="dnd"] .weered-usercorner::before {
+  top: 5px;
+  left: 5px;
+}
 
 html[data-weered-lobby="dnd"] .weered-rr-section::after,
 html[data-weered-lobby="dnd"] .weered-left-section::after,
 html[data-weered-lobby="dnd"] .weered-presence::after,
-html[data-weered-lobby="dnd"] .weered-usercorner::after { top: 5px; right: 5px; }
+html[data-weered-lobby="dnd"] .weered-usercorner::after {
+  top: 5px;
+  right: 5px;
+}
 
 /* ── D&D Rails — left + right rail theming when in the D&D lobby. Pirata
    One section headers, parchment-amber hover on rows, warm wooden tiles on
@@ -2239,7 +2661,7 @@ html[data-weered-lobby="dnd"] .weered-usercorner::after { top: 5px; right: 5px; 
 html[data-weered-lobby="dnd"] .weered-left-title,
 html[data-weered-lobby="dnd"] .weered-presence-title,
 html[data-weered-lobby="dnd"] .weered-rr-section-title {
-  font-family: var(--font-pirata), 'Pirata One', serif !important;
+  font-family: var(--font-pirata), "Pirata One", serif !important;
   font-size: 13px !important;
   letter-spacing: 1.2px !important;
   color: rgba(232, 160, 74, 0.85) !important;
@@ -2266,7 +2688,7 @@ html[data-weered-lobby="dnd"] .weered-rr-room-card {
 }
 html[data-weered-lobby="dnd"] .weered-rr-room-card:hover {
   border-color: rgba(232, 160, 74, 0.45) !important;
-  background: linear-gradient(180deg, rgba(127, 68, 34, 0.20), rgba(58, 28, 14, 0.30)) !important;
+  background: linear-gradient(180deg, rgba(127, 68, 34, 0.2), rgba(58, 28, 14, 0.3)) !important;
   box-shadow: 0 0 14px rgba(232, 160, 74, 0.18) !important;
 }
 html[data-weered-lobby="dnd"] .weered-rr-room-card-active {
@@ -2279,14 +2701,18 @@ html[data-weered-lobby="dnd"] .weered-rr-room-card-active {
 html[data-weered-lobby="dnd"] .weered-rr-primary,
 html[data-weered-lobby="dnd"] .weered-rr-join {
   border: 1px solid rgba(196, 165, 90, 0.35) !important;
-  background:
-    linear-gradient(180deg, rgba(127, 68, 34, 0.50) 0%, rgba(58, 28, 14, 0.65) 55%, rgba(42, 24, 16, 0.85) 100%) !important;
-  color: #F5D58A !important;
+  background: linear-gradient(
+    180deg,
+    rgba(127, 68, 34, 0.5) 0%,
+    rgba(58, 28, 14, 0.65) 55%,
+    rgba(42, 24, 16, 0.85) 100%
+  ) !important;
+  color: #f5d58a !important;
   font-family: var(--font-pirata), serif !important;
   letter-spacing: 0.4px !important;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7) !important;
   box-shadow:
-    inset 0 1px 0 rgba(245, 213, 138, 0.10),
+    inset 0 1px 0 rgba(245, 213, 138, 0.1),
     inset 0 -1px 0 rgba(0, 0, 0, 0.5),
     0 2px 4px rgba(0, 0, 0, 0.4) !important;
   transition: all 0.15s ease !important;
@@ -2295,9 +2721,9 @@ html[data-weered-lobby="dnd"] .weered-rr-primary:hover,
 html[data-weered-lobby="dnd"] .weered-rr-join:hover {
   border-color: rgba(232, 160, 74, 0.65) !important;
   box-shadow:
-    inset 0 1px 0 rgba(245, 213, 138, 0.20),
+    inset 0 1px 0 rgba(245, 213, 138, 0.2),
     inset 0 -1px 0 rgba(0, 0, 0, 0.5),
-    0 0 14px rgba(232, 160, 74, 0.30),
+    0 0 14px rgba(232, 160, 74, 0.3),
     0 2px 4px rgba(0, 0, 0, 0.4) !important;
 }
 
@@ -2305,7 +2731,7 @@ html[data-weered-lobby="dnd"] .weered-rr-join:hover {
 html[data-weered-lobby="dnd"] .weered-rr-search {
   border: 1px solid rgba(196, 165, 90, 0.25) !important;
   background: rgba(28, 18, 10, 0.55) !important;
-  color: #F5D58A !important;
+  color: #f5d58a !important;
   font-family: var(--font-cormorant), serif !important;
   font-size: 13px !important;
 }
@@ -2316,7 +2742,7 @@ html[data-weered-lobby="dnd"] .weered-rr-search::placeholder {
 
 /* Right rail: module buttons (ON/OFF inside Lobby Controls) */
 html[data-weered-lobby="dnd"] .weered-rr-module-btn {
-  border: 1px solid rgba(196, 165, 90, 0.20) !important;
+  border: 1px solid rgba(196, 165, 90, 0.2) !important;
   color: rgba(201, 168, 120, 0.7) !important;
   font-family: var(--font-pirata), serif !important;
   letter-spacing: 0.3px !important;
@@ -2324,7 +2750,7 @@ html[data-weered-lobby="dnd"] .weered-rr-module-btn {
 html[data-weered-lobby="dnd"] .weered-rr-module-btn-active {
   border-color: rgba(232, 160, 74, 0.55) !important;
   background: linear-gradient(180deg, rgba(212, 96, 42, 0.25), rgba(127, 68, 34, 0.45)) !important;
-  color: #F5D58A !important;
+  color: #f5d58a !important;
   text-shadow: 0 0 6px rgba(232, 160, 74, 0.45) !important;
 }
 
@@ -2335,7 +2761,7 @@ html[data-weered-lobby="dnd"] .weered-rr-crew-row {
 }
 html[data-weered-lobby="dnd"] .weered-rr-friend-row:hover,
 html[data-weered-lobby="dnd"] .weered-rr-crew-row:hover {
-  background: linear-gradient(90deg, rgba(127, 68, 34, 0.18), rgba(58, 28, 14, 0.10)) !important;
+  background: linear-gradient(90deg, rgba(127, 68, 34, 0.18), rgba(58, 28, 14, 0.1)) !important;
 }
 
 /* Status chips (LOCK CHAT pill, OPEN, etc.) — neutral but warmer */
@@ -2347,15 +2773,15 @@ html[data-weered-lobby="dnd"] .weered-rr-status-chip {
 /* Mod panel containers (LOBBY CONTROLS box wrapping LOCK CHAT etc.) */
 html[data-weered-lobby="dnd"] .weered-rr-mod-panel {
   border-color: rgba(196, 165, 90, 0.18) !important;
-  background: linear-gradient(180deg, rgba(58, 28, 14, 0.30), rgba(28, 18, 10, 0.40)) !important;
+  background: linear-gradient(180deg, rgba(58, 28, 14, 0.3), rgba(28, 18, 10, 0.4)) !important;
 }
 
 /* Create room panel inside the right rail */
 html[data-weered-lobby="dnd"] .weered-rr-create-panel {
-  border-color: rgba(196, 165, 90, 0.30) !important;
+  border-color: rgba(196, 165, 90, 0.3) !important;
   background:
-    radial-gradient(ellipse 100% 50% at 50% 0%, rgba(212, 96, 42, 0.10), transparent 60%),
-    linear-gradient(180deg, rgba(58, 28, 14, 0.55), rgba(28, 18, 10, 0.70)) !important;
+    radial-gradient(ellipse 100% 50% at 50% 0%, rgba(212, 96, 42, 0.1), transparent 60%),
+    linear-gradient(180deg, rgba(58, 28, 14, 0.55), rgba(28, 18, 10, 0.7)) !important;
 }
 html[data-weered-lobby="dnd"] .weered-rr-create-title {
   font-family: var(--font-pirata), serif !important;
@@ -2368,18 +2794,18 @@ html[data-weered-lobby="dnd"] .weered-rr-create-title {
    Section labels (MODERATION / VOICE / MODULES / APPEARANCE) get Pirata
    One amber, the action buttons turn into wooden tiles. */
 html[data-weered-lobby="dnd"] .weered-rrr-title {
-  font-family: var(--font-pirata), 'Pirata One', serif !important;
+  font-family: var(--font-pirata), "Pirata One", serif !important;
   font-size: 16px !important;
   letter-spacing: 0.6px !important;
-  color: #F5D58A !important;
+  color: #f5d58a !important;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
 }
 html[data-weered-lobby="dnd"] .weered-rrr-section-label {
-  font-family: var(--font-pirata), 'Pirata One', serif !important;
+  font-family: var(--font-pirata), "Pirata One", serif !important;
   font-size: 13px !important;
   font-weight: 400 !important;
   letter-spacing: 1.2px !important;
-  color: rgba(232, 160, 74, 0.90) !important;
+  color: rgba(232, 160, 74, 0.9) !important;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
   text-transform: none !important;
 }
@@ -2393,17 +2819,17 @@ html[data-weered-lobby="dnd"] .weered-rrr button {
 
 /* ── Session Zero modal — parchment palette on top of the base modal. */
 .weered-session-zero-modal {
-  --sz-fire: #E8A04A;
-  --sz-fire-glow: #D4602A;
-  --sz-parchment: #C9A878;
-  --sz-ink: #2A1810;
+  --sz-fire: #e8a04a;
+  --sz-fire-glow: #d4602a;
+  --sz-parchment: #c9a878;
+  --sz-ink: #2a1810;
 }
 .weered-session-zero-modal .sz-heading {
-  font-family: var(--font-pirata), 'Pirata One', serif;
+  font-family: var(--font-pirata), "Pirata One", serif;
   letter-spacing: 0.6px;
 }
 .weered-session-zero-modal .sz-serif {
-  font-family: var(--font-cormorant), 'Cormorant Garamond', serif;
+  font-family: var(--font-cormorant), "Cormorant Garamond", serif;
 }
 
 /* Logo menu — W mark in the rail-stack and Control Panel header doubles
@@ -2417,14 +2843,13 @@ html[data-weered-lobby="dnd"] .weered-rrr button {
   position: relative;
 }
 @keyframes weeredLogoBellPulse {
-  0%, 100% {
-    filter:
-      drop-shadow(0 0 12px rgba(124, 58, 237, 0.45))
+  0%,
+  100% {
+    filter: drop-shadow(0 0 12px rgba(124, 58, 237, 0.45))
       drop-shadow(0 0 8px rgba(245, 158, 11, 0.45));
   }
   50% {
-    filter:
-      drop-shadow(0 0 18px rgba(124, 58, 237, 0.65))
+    filter: drop-shadow(0 0 18px rgba(124, 58, 237, 0.65))
       drop-shadow(0 0 14px rgba(245, 158, 11, 0.75));
   }
 }
@@ -2443,12 +2868,12 @@ html[data-weered-lobby="dnd"] .weered-rrr button {
   color: #fff;
   font-size: 10px;
   font-weight: 900;
-  letter-spacing: .02em;
+  letter-spacing: 0.02em;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 1.5px solid rgba(10, 10, 18, .9);
-  box-shadow: 0 2px 6px rgba(239, 68, 68, .4);
+  border: 1.5px solid rgba(10, 10, 18, 0.9);
+  box-shadow: 0 2px 6px rgba(239, 68, 68, 0.4);
   pointer-events: none;
 }
 .weered-logo-menu-panel {
@@ -2456,12 +2881,12 @@ html[data-weered-lobby="dnd"] .weered-rrr button {
   min-width: 220px;
   padding: 6px;
   border-radius: 12px;
-  background: rgba(15, 17, 27, .97);
-  border: 1px solid rgba(148, 163, 184, .18);
+  background: rgba(15, 17, 27, 0.97);
+  border: 1px solid rgba(148, 163, 184, 0.18);
   box-shadow:
-    0 12px 32px rgba(0, 0, 0, .55),
-    0 0 0 1px rgba(124, 58, 237, .15),
-    inset 0 1px 0 rgba(255, 255, 255, .04);
+    0 12px 32px rgba(0, 0, 0, 0.55),
+    0 0 0 1px rgba(124, 58, 237, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
   backdrop-filter: blur(12px);
   display: flex;
   flex-direction: column;
@@ -2481,12 +2906,14 @@ html[data-weered-lobby="dnd"] .weered-rrr button {
   font-family: inherit;
   font-size: 12px;
   font-weight: 600;
-  color: rgba(243, 244, 246, .85);
+  color: rgba(243, 244, 246, 0.85);
   text-align: left;
-  transition: background .12s, color .12s;
+  transition:
+    background 0.12s,
+    color 0.12s;
 }
 .weered-logo-menu-item:hover {
-  background: rgba(255, 255, 255, .06);
+  background: rgba(255, 255, 255, 0.06);
   color: rgba(243, 244, 246, 1);
 }
 .weered-logo-menu-label {
@@ -2494,10 +2921,10 @@ html[data-weered-lobby="dnd"] .weered-rrr button {
   text-align: left;
 }
 .weered-logo-menu-item.is-danger {
-  color: rgba(239, 68, 68, .75);
+  color: rgba(239, 68, 68, 0.75);
 }
 .weered-logo-menu-item.is-danger:hover {
-  background: rgba(239, 68, 68, .12);
+  background: rgba(239, 68, 68, 0.12);
   color: rgba(252, 165, 165, 1);
 }
 .weered-logo-menu-pill {
@@ -2512,19 +2939,19 @@ html[data-weered-lobby="dnd"] .weered-rrr button {
   color: #fff;
   font-size: 9px;
   font-weight: 900;
-  letter-spacing: .02em;
+  letter-spacing: 0.02em;
 }
 .weered-logo-menu-status {
   font-size: 9px;
   font-weight: 800;
-  letter-spacing: .08em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: rgba(148, 163, 184, .7);
+  color: rgba(148, 163, 184, 0.7);
 }
 .weered-logo-menu-divider {
   height: 1px;
   margin: 4px 6px;
-  background: rgba(148, 163, 184, .12);
+  background: rgba(148, 163, 184, 0.12);
 }
 
 /* DM unread badge on the rail-stack DMs button. Same visual language as
@@ -2541,25 +2968,36 @@ html[data-weered-lobby="dnd"] .weered-rrr button {
   color: #fff;
   font-size: 10px;
   font-weight: 900;
-  letter-spacing: .02em;
+  letter-spacing: 0.02em;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 2px solid rgba(10, 10, 18, .92);
-  box-shadow: 0 2px 6px rgba(239, 68, 68, .45);
+  border: 2px solid rgba(10, 10, 18, 0.92);
+  box-shadow: 0 2px 6px rgba(239, 68, 68, 0.45);
   pointer-events: none;
   z-index: 2;
 }
 @keyframes weeredQuickBadgePulse {
-  0%, 100% { box-shadow: 0 0 0 1px rgba(239,68,68,.35), 0 0 12px rgba(239,68,68,.35); }
-  50%      { box-shadow: 0 0 0 1px rgba(239,68,68,.55), 0 0 18px rgba(239,68,68,.55); }
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 1px rgba(239, 68, 68, 0.35),
+      0 0 12px rgba(239, 68, 68, 0.35);
+  }
+  50% {
+    box-shadow:
+      0 0 0 1px rgba(239, 68, 68, 0.55),
+      0 0 18px rgba(239, 68, 68, 0.55);
+  }
 }
 .weered-rail-quick.is-hot {
   animation: weeredQuickBadgePulse 2.4s ease-in-out infinite;
 }
 @media (prefers-reduced-motion: reduce) {
   .weered-logo-menu-btn.is-hot,
-  .weered-rail-quick.is-hot { animation: none; }
+  .weered-rail-quick.is-hot {
+    animation: none;
+  }
 }
 
 /* ──────────────────────────────────────────────────────────────────────────
@@ -2583,9 +3021,9 @@ html .weered-usercorner[data-custom-accent="1"] {
    picked their own bg colour, so the choice reads cleanly. */
 html .weered-usercorner[data-custom-bg="1"] {
   box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.08),
-    inset 0 -1px 0 rgba(0,0,0,0.25),
-    0 4px 12px rgba(0,0,0,0.25) !important;
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.25),
+    0 4px 12px rgba(0, 0, 0, 0.25) !important;
 }
 
 /* ──────────────────────────────────────────────────────────────────────
@@ -2596,22 +3034,47 @@ html .weered-usercorner[data-custom-bg="1"] {
 /* /home top bar — wraps to two rows, secondary buttons collapse below
    600px, search input becomes a full-width row. */
 @media (max-width: 600px) {
-  .home-topbar { gap: 8px !important; padding: 14px 14px 10px !important; }
-  .home-topbar-greet { flex-basis: 100% !important; min-width: 0 !important; }
-  .home-topbar-greet > div:nth-child(2) { font-size: 18px !important; }
-  .home-topbar-secondary { display: none !important; }
-  .home-topbar-search { flex: 1 1 100% !important; }
-  .home-topbar-search input { width: 100% !important; }
+  .home-topbar {
+    gap: 8px !important;
+    padding: 14px 14px 10px !important;
+  }
+  .home-topbar-greet {
+    flex-basis: 100% !important;
+    min-width: 0 !important;
+  }
+  .home-topbar-greet > div:nth-child(2) {
+    font-size: 18px !important;
+  }
+  .home-topbar-secondary {
+    display: none !important;
+  }
+  .home-topbar-search {
+    flex: 1 1 100% !important;
+  }
+  .home-topbar-search input {
+    width: 100% !important;
+  }
 }
 
 /* The activity ticker on /home — the marquee already scrolls and the
    track has overflow:hidden, but tighten the outer padding + label
    spacing on narrow widths so the chip + label don't take half the row. */
 @media (max-width: 600px) {
-  .home-ticker { padding: 8px 12px !important; gap: 10px !important; }
-  .home-ticker-label { font-size: 8px !important; padding: 3px 7px !important; letter-spacing: 0.14em !important; }
-  .home-ticker-item { font-size: 12px !important; }
-  .home-ticker-sep { padding: 0 10px !important; }
+  .home-ticker {
+    padding: 8px 12px !important;
+    gap: 10px !important;
+  }
+  .home-ticker-label {
+    font-size: 8px !important;
+    padding: 3px 7px !important;
+    letter-spacing: 0.14em !important;
+  }
+  .home-ticker-item {
+    font-size: 12px !important;
+  }
+  .home-ticker-sep {
+    padding: 0 10px !important;
+  }
 }
 
 /* Landing lobby-preview modal close button — bump tap target from 28px
@@ -2622,28 +3085,60 @@ html .weered-usercorner[data-custom-bg="1"] {
     height: 40px !important;
     font-size: 22px !important;
   }
-  .lp-modal-card { max-height: calc(100vh - 32px) !important; }
-  .lp-modal-back { padding: 16px 12px !important; }
-  .lp-modal-head { padding: 14px 16px 6px !important; gap: 10px !important; flex-wrap: wrap !important; }
-  .lp-modal-counts { margin-left: 0 !important; }
-  .lp-modal-desc { padding: 4px 16px 10px !important; }
-  .lp-modal-feed { padding: 0 16px 12px !important; }
-  .lp-modal-cta-row { padding: 10px 16px 16px !important; }
+  .lp-modal-card {
+    max-height: calc(100vh - 32px) !important;
+  }
+  .lp-modal-back {
+    padding: 16px 12px !important;
+  }
+  .lp-modal-head {
+    padding: 14px 16px 6px !important;
+    gap: 10px !important;
+    flex-wrap: wrap !important;
+  }
+  .lp-modal-counts {
+    margin-left: 0 !important;
+  }
+  .lp-modal-desc {
+    padding: 4px 16px 10px !important;
+  }
+  .lp-modal-feed {
+    padding: 0 16px 12px !important;
+  }
+  .lp-modal-cta-row {
+    padding: 10px 16px 16px !important;
+  }
 }
 
 /* DnD lectern — at 375px, four 130px tools wrap to two rows of two,
    which is fine but the padding 8px 24px wastes space. Tighten it
    so the alcoves get more width. */
 @media (max-width: 600px) {
-  .weered-dnd-modules .dnd-lectern { padding: 6px 12px !important; gap: 6px !important; }
-  .weered-dnd-modules .dnd-lectern-tool { flex: 1 1 110px !important; padding: 10px 8px !important; font-size: 13px !important; }
-  .weered-dnd-modules .dnd-lectern-quill { padding: 6px 10px !important; font-size: 12px !important; }
+  .weered-dnd-modules .dnd-lectern {
+    padding: 6px 12px !important;
+    gap: 6px !important;
+  }
+  .weered-dnd-modules .dnd-lectern-tool {
+    flex: 1 1 110px !important;
+    padding: 10px 8px !important;
+    font-size: 13px !important;
+  }
+  .weered-dnd-modules .dnd-lectern-quill {
+    padding: 6px 10px !important;
+    font-size: 12px !important;
+  }
 }
 
 /* DnD stage tabs — already wrap; just bump tap-target spacing on touch. */
 @media (max-width: 600px) {
-  .weered-dnd-modules .weered-dnd-tab { padding: 8px 12px !important; font-size: 13px !important; }
-  .weered-dnd-modules .weered-dnd-tab--small { padding: 6px 10px !important; font-size: 11px !important; }
+  .weered-dnd-modules .weered-dnd-tab {
+    padding: 8px 12px !important;
+    font-size: 13px !important;
+  }
+  .weered-dnd-modules .weered-dnd-tab--small {
+    padding: 6px 10px !important;
+    font-size: 11px !important;
+  }
 }
 
 /* ════════════════════════════════════════════════════════════════════════════
@@ -2654,28 +3149,28 @@ html .weered-usercorner[data-custom-bg="1"] {
    ──────────────────────────────────────────────────────────────────────── */
 
 html[data-weered-lobby="helldivers2"] {
-  --weered-bg:              #0d0d0a;
-  --weered-panel:           rgba(20, 18, 12, 0.92);
-  --weered-panel2:          rgba(14, 12, 8, 0.95);
-  --weered-border:          rgba(255, 215, 0, 0.18);
-  --weered-border2:         rgba(255, 215, 0, 0.45);
-  --weered-text:            #f4e9c8;
-  --weered-muted:           rgba(255, 215, 0, 0.55);
-  --weered-accent-1:        #FFD700;
-  --weered-accent-2:        #FFB800;
-  --weered-accent-bg:       rgba(255, 215, 0, 0.14);
-  --weered-accent-ring:     rgba(255, 215, 0, 0.55);
-  --weered-accent-grad:     linear-gradient(135deg, #FFD700 0%, #FFB800 100%);
+  --weered-bg: #0d0d0a;
+  --weered-panel: rgba(20, 18, 12, 0.92);
+  --weered-panel2: rgba(14, 12, 8, 0.95);
+  --weered-border: rgba(255, 215, 0, 0.18);
+  --weered-border2: rgba(255, 215, 0, 0.45);
+  --weered-text: #f4e9c8;
+  --weered-muted: rgba(255, 215, 0, 0.55);
+  --weered-accent-1: #ffd700;
+  --weered-accent-2: #ffb800;
+  --weered-accent-bg: rgba(255, 215, 0, 0.14);
+  --weered-accent-ring: rgba(255, 215, 0, 0.55);
+  --weered-accent-grad: linear-gradient(135deg, #ffd700 0%, #ffb800 100%);
   --weered-scrollbar-track: rgba(10, 10, 6, 0.6);
-  --weered-scrollbar-thumb: rgba(255, 215, 0, 0.30);
+  --weered-scrollbar-thumb: rgba(255, 215, 0, 0.3);
   --weered-scrollbar-thumb-hover: rgba(255, 215, 0, 0.55);
 
-  --hd2-gold:      #FFD700;
-  --hd2-gold-hi:   #FFEC88;
-  --hd2-gold-dim:  rgba(255, 215, 0, 0.55);
-  --hd2-charcoal:  #0d0d0a;
-  --hd2-olive:     #1a1810;
-  --hd2-blood:     #b91c1c;
+  --hd2-gold: #ffd700;
+  --hd2-gold-hi: #ffec88;
+  --hd2-gold-dim: rgba(255, 215, 0, 0.55);
+  --hd2-charcoal: #0d0d0a;
+  --hd2-olive: #1a1810;
+  --hd2-blood: #b91c1c;
 }
 
 /* Body background — scorched-earth charcoal with two faint warmth pools
@@ -2699,7 +3194,8 @@ html[data-weered-lobby="helldivers2"] body::before {
   bottom: 24px;
   width: 220px;
   height: 220px;
-  background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120' fill='%23FFD700'><circle cx='60' cy='60' r='58' fill='none' stroke='%23FFD700' stroke-width='1.2'/><path d='M60 22 L52 40 L36 36 L46 50 L30 54 L48 60 L34 70 L52 68 L48 84 L60 74 L72 84 L68 68 L86 70 L72 60 L90 54 L74 50 L84 36 L68 40 Z'/><circle cx='60' cy='60' r='4' fill='%230d0d0a'/></svg>") center / contain no-repeat;
+  background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120' fill='%23FFD700'><circle cx='60' cy='60' r='58' fill='none' stroke='%23FFD700' stroke-width='1.2'/><path d='M60 22 L52 40 L36 36 L46 50 L30 54 L48 60 L34 70 L52 68 L48 84 L60 74 L72 84 L68 68 L86 70 L72 60 L90 54 L74 50 L84 36 L68 40 Z'/><circle cx='60' cy='60' r='4' fill='%230d0d0a'/></svg>")
+    center / contain no-repeat;
   opacity: 0.05;
   pointer-events: none;
   z-index: 0;
@@ -2724,13 +3220,17 @@ html[data-weered-lobby="helldivers2"] *:focus-visible {
 }
 
 /* Scrollbars — gold track-thumb */
-html[data-weered-lobby="helldivers2"] ::-webkit-scrollbar-track { background: var(--weered-scrollbar-track); }
+html[data-weered-lobby="helldivers2"] ::-webkit-scrollbar-track {
+  background: var(--weered-scrollbar-track);
+}
 html[data-weered-lobby="helldivers2"] ::-webkit-scrollbar-thumb {
   background: var(--weered-scrollbar-thumb);
   border-radius: 0 !important;
   border: 1px solid rgba(255, 215, 0, 0.18);
 }
-html[data-weered-lobby="helldivers2"] ::-webkit-scrollbar-thumb:hover { background: var(--weered-scrollbar-thumb-hover); }
+html[data-weered-lobby="helldivers2"] ::-webkit-scrollbar-thumb:hover {
+  background: var(--weered-scrollbar-thumb-hover);
+}
 
 /* Panel chrome — square corners, mil-spec borders. The platform default
    uses 12-16px border-radius; in HD2 it goes to 4px so panels read as
@@ -2775,8 +3275,12 @@ html[data-weered-lobby="helldivers2"] .weered-center {
 }
 html[data-weered-lobby="helldivers2"] .weered-left,
 html[data-weered-lobby="helldivers2"] .weered-right {
-  background: linear-gradient(180deg, rgba(20,18,12,0.78) 0%, rgba(10,10,6,0.92) 100%) !important;
-  border-color: rgba(255,215,0,0.18) !important;
+  background: linear-gradient(
+    180deg,
+    rgba(20, 18, 12, 0.78) 0%,
+    rgba(10, 10, 6, 0.92) 100%
+  ) !important;
+  border-color: rgba(255, 215, 0, 0.18) !important;
 }
 
 /* Section panels — stamped metal plates with gold rim */
@@ -2784,14 +3288,17 @@ html[data-weered-lobby="helldivers2"] .weered-rr-section,
 html[data-weered-lobby="helldivers2"] .weered-left-section,
 html[data-weered-lobby="helldivers2"] .weered-presence,
 html[data-weered-lobby="helldivers2"] .weered-usercorner {
-  background:
-    linear-gradient(180deg, rgba(28,24,14,0.55) 0%, rgba(14,12,8,0.78) 100%) !important;
-  border: 1px solid rgba(255,215,0,0.30) !important;
+  background: linear-gradient(
+    180deg,
+    rgba(28, 24, 14, 0.55) 0%,
+    rgba(14, 12, 8, 0.78) 100%
+  ) !important;
+  border: 1px solid rgba(255, 215, 0, 0.3) !important;
   border-radius: 3px !important;
   box-shadow:
-    inset 0 0 0 1px rgba(255,215,0,0.06),
-    inset 0 1px 0 rgba(255,236,136,0.10),
-    0 3px 10px rgba(0,0,0,0.45) !important;
+    inset 0 0 0 1px rgba(255, 215, 0, 0.06),
+    inset 0 1px 0 rgba(255, 236, 136, 0.1),
+    0 3px 10px rgba(0, 0, 0, 0.45) !important;
   position: relative;
   margin: 3px !important;
 }
@@ -2808,10 +3315,11 @@ html[data-weered-lobby="helldivers2"] .weered-usercorner::before,
 html[data-weered-lobby="helldivers2"] .weered-usercorner::after {
   content: "";
   position: absolute;
-  width: 6px; height: 6px;
-  background: #FFD700;
+  width: 6px;
+  height: 6px;
+  background: #ffd700;
   opacity: 0.9;
-  box-shadow: 0 0 7px rgba(255,215,0,0.7);
+  box-shadow: 0 0 7px rgba(255, 215, 0, 0.7);
   pointer-events: none;
   z-index: 3;
 }
@@ -2820,19 +3328,21 @@ html[data-weered-lobby="helldivers2"] .weered-rr-section::before,
 html[data-weered-lobby="helldivers2"] .weered-left-section::before,
 html[data-weered-lobby="helldivers2"] .weered-presence::before,
 html[data-weered-lobby="helldivers2"] .weered-usercorner::before {
-  top: -3px; left: -3px;
+  top: -3px;
+  left: -3px;
 }
 html[data-weered-lobby="helldivers2"] .weered-rr-section::after,
 html[data-weered-lobby="helldivers2"] .weered-left-section::after,
 html[data-weered-lobby="helldivers2"] .weered-presence::after,
 html[data-weered-lobby="helldivers2"] .weered-usercorner::after {
-  bottom: -3px; right: -3px;
+  bottom: -3px;
+  right: -3px;
 }
 
 /* Section titles — gold mil-stencil look without the heavy stencil font */
 html[data-weered-lobby="helldivers2"] .weered-left-title,
 html[data-weered-lobby="helldivers2"] .weered-rr-title {
-  color: rgba(255,215,0,0.85) !important;
+  color: rgba(255, 215, 0, 0.85) !important;
   letter-spacing: 1.5px !important;
   text-transform: uppercase !important;
   font-weight: 800 !important;
@@ -2844,64 +3354,66 @@ html[data-weered-lobby="helldivers2"] .weered-rr-title::after {
   content: "";
   display: block;
   height: 1px;
-  background: linear-gradient(90deg, rgba(255,215,0,0.4) 0%, rgba(255,215,0,0.05) 70%, transparent 100%);
+  background: linear-gradient(
+    90deg,
+    rgba(255, 215, 0, 0.4) 0%,
+    rgba(255, 215, 0, 0.05) 70%,
+    transparent 100%
+  );
   margin-top: 4px;
 }
 
 /* Left rail nav links */
 html[data-weered-lobby="helldivers2"] .weered-left-link {
   border-radius: 3px !important;
-  border-color: rgba(255,255,255,0.04) !important;
+  border-color: rgba(255, 255, 255, 0.04) !important;
 }
 html[data-weered-lobby="helldivers2"] .weered-left-link:hover {
-  background: rgba(255,215,0,0.06) !important;
-  border-color: rgba(255,215,0,0.22) !important;
-  color: rgba(255,236,136,0.95) !important;
+  background: rgba(255, 215, 0, 0.06) !important;
+  border-color: rgba(255, 215, 0, 0.22) !important;
+  color: rgba(255, 236, 136, 0.95) !important;
 }
 html[data-weered-lobby="helldivers2"] .weered-left-link-active {
-  background: rgba(255,215,0,0.10) !important;
-  border-color: rgba(255,215,0,0.4) !important;
-  color: #FFEC88 !important;
+  background: rgba(255, 215, 0, 0.1) !important;
+  border-color: rgba(255, 215, 0, 0.4) !important;
+  color: #ffec88 !important;
   box-shadow:
-    inset 3px 0 0 #FFD700,
-    inset 0 0 0 1px rgba(255,215,0,0.18),
-    0 0 12px rgba(255,215,0,0.10) !important;
+    inset 3px 0 0 #ffd700,
+    inset 0 0 0 1px rgba(255, 215, 0, 0.18),
+    0 0 12px rgba(255, 215, 0, 0.1) !important;
 }
 
 /* Right rail: presence row hover + join button accent */
 html[data-weered-lobby="helldivers2"] .weered-rr-friend-row:hover,
 html[data-weered-lobby="helldivers2"] .weered-rr-crew-row:hover {
-  background: rgba(255,215,0,0.05) !important;
-  border-color: rgba(255,215,0,0.18) !important;
+  background: rgba(255, 215, 0, 0.05) !important;
+  border-color: rgba(255, 215, 0, 0.18) !important;
 }
 html[data-weered-lobby="helldivers2"] .weered-rr-join {
-  background: rgba(255,215,0,0.12) !important;
-  border-color: rgba(255,215,0,0.4) !important;
-  color: rgba(255,236,136,0.95) !important;
+  background: rgba(255, 215, 0, 0.12) !important;
+  border-color: rgba(255, 215, 0, 0.4) !important;
+  color: rgba(255, 236, 136, 0.95) !important;
 }
 html[data-weered-lobby="helldivers2"] .weered-rr-join:hover {
-  background: rgba(255,215,0,0.22) !important;
-  border-color: rgba(255,215,0,0.65) !important;
-  color: #FFD700 !important;
+  background: rgba(255, 215, 0, 0.22) !important;
+  border-color: rgba(255, 215, 0, 0.65) !important;
+  color: #ffd700 !important;
 }
 
 /* Burner button — gold theme override (HD2 calls it "Comms" via JS swap) */
 html[data-weered-lobby="helldivers2"] .weered-uc-action {
-  background: linear-gradient(135deg, rgba(255,215,0,0.16), rgba(255,184,0,0.10)) !important;
-  border-color: rgba(255,215,0,0.42) !important;
-  color: rgba(255,236,136,0.95) !important;
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.16), rgba(255, 184, 0, 0.1)) !important;
+  border-color: rgba(255, 215, 0, 0.42) !important;
+  color: rgba(255, 236, 136, 0.95) !important;
   border-radius: 4px !important;
 }
 html[data-weered-lobby="helldivers2"] .weered-uc-action:hover {
-  background: linear-gradient(135deg, rgba(255,215,0,0.28), rgba(255,184,0,0.18)) !important;
-  border-color: rgba(255,215,0,0.65) !important;
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.28), rgba(255, 184, 0, 0.18)) !important;
+  border-color: rgba(255, 215, 0, 0.65) !important;
 }
 
 /* User corner accent ring (avatar) → gold when in HD2 */
 html[data-weered-lobby="helldivers2"] .weered-usercorner [data-custom-accent="1"],
 html[data-weered-lobby="helldivers2"] .weered-usercorner {
-  border-color: rgba(255,215,0,0.30) !important;
+  border-color: rgba(255, 215, 0, 0.3) !important;
 }
-
-
-

@@ -14,24 +14,40 @@ export default function Onboarding() {
   const [reason, setReason] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const clean = username.toLowerCase().replace(/[^a-z0-9_]/g, "").slice(0, 32);
+  const clean = username
+    .toLowerCase()
+    .replace(/[^a-z0-9_]/g, "")
+    .slice(0, 32);
 
   useEffect(() => {
-    if (clean.length < 2) { setAvailable(null); setReason("too short"); return; }
+    if (clean.length < 2) {
+      setAvailable(null);
+      setReason("too short");
+      return;
+    }
     setReason(null);
     let cancelled = false;
     setChecking(true);
     const timer = setTimeout(() => {
-      api<{ available: boolean; reason?: string }>(`/auth/username-check?username=${encodeURIComponent(clean)}`)
+      api<{ available: boolean; reason?: string }>(
+        `/auth/username-check?username=${encodeURIComponent(clean)}`,
+      )
         .then((r) => {
           if (cancelled) return;
           setAvailable(r.available);
           if (!r.available) setReason(r.reason || "taken");
         })
-        .catch(() => { if (!cancelled) setAvailable(null); })
-        .finally(() => { if (!cancelled) setChecking(false); });
+        .catch(() => {
+          if (!cancelled) setAvailable(null);
+        })
+        .finally(() => {
+          if (!cancelled) setChecking(false);
+        });
     }, 300);
-    return () => { cancelled = true; clearTimeout(timer); };
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
   }, [clean]);
 
   const submit = async () => {
@@ -51,7 +67,9 @@ export default function Onboarding() {
     <SafeAreaView className="flex-1 bg-weered-bg">
       <Stack.Screen options={{ title: "Pick a username", headerBackVisible: false }} />
       <View className="flex-1 px-6 pt-10">
-        <Text className="text-weered-text text-2xl font-black mb-1">Welcome, {me?.name?.split(" ")[0] || "friend"}.</Text>
+        <Text className="text-weered-text text-2xl font-black mb-1">
+          Welcome, {me?.name?.split(" ")[0] || "friend"}.
+        </Text>
         <Text className="text-weered-muted text-sm mb-8">
           Pick a handle. Lowercase letters, numbers, and underscores only. 2–32 characters.
         </Text>
@@ -77,7 +95,9 @@ export default function Onboarding() {
             <Text className="text-green-400 text-xs">@{clean} is available.</Text>
           )}
           {clean.length >= 2 && available === false && (
-            <Text className="text-red-400 text-xs">@{clean} is {reason || "taken"}.</Text>
+            <Text className="text-red-400 text-xs">
+              @{clean} is {reason || "taken"}.
+            </Text>
           )}
           {clean.length < 2 && username.length > 0 && (
             <Text className="text-weered-muted text-xs">Too short.</Text>

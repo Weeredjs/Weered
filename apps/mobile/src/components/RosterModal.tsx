@@ -49,7 +49,7 @@ export function RosterModal({
             ...(online.length ? [{ header: `Online · ${online.length}` } as any, ...online] : []),
             ...(away.length ? [{ header: `Lying low · ${away.length}` } as any, ...away] : []),
           ]}
-          keyExtractor={(item: any, i) => item.header ? `h-${i}` : item.id}
+          keyExtractor={(item: any, i) => (item.header ? `h-${i}` : item.id)}
           renderItem={({ item }: any) => {
             if (item.header) {
               return (
@@ -79,9 +79,7 @@ export function RosterModal({
                     </Text>
                   )}
                 </View>
-                {item.isAway && (
-                  <Text className="text-amber-400 text-xs">Lying low</Text>
-                )}
+                {item.isAway && <Text className="text-amber-400 text-xs">Lying low</Text>}
               </Pressable>
             );
           }}

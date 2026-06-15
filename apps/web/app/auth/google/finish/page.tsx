@@ -24,16 +24,18 @@ function GoogleFinish() {
   }, [router, sp]);
 
   return (
-    <div style={{
-      minHeight: "100vh",
-      background: "#080810",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      fontFamily: "monospace",
-      color: "rgba(167,139,250,0.7)",
-      fontSize: 13,
-    }}>
+    <div
+      style={{
+        minHeight: "100vh",
+        background: "#080810",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontFamily: "monospace",
+        color: "rgba(167,139,250,0.7)",
+        fontSize: 13,
+      }}
+    >
       Signing you in...
     </div>
   );

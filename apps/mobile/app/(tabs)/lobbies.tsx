@@ -36,7 +36,19 @@ export default function Lobbies() {
 
   const recentsQ = useQuery({
     queryKey: ["recents"],
-    queryFn: () => api<{ ok: boolean; recents: { lobbyId: string | null; roomId: string | null; lobbyName?: string | null; name: string; logoUrl: string | null; accentColor: string | null; visitedAt: string }[] }>("/recents"),
+    queryFn: () =>
+      api<{
+        ok: boolean;
+        recents: {
+          lobbyId: string | null;
+          roomId: string | null;
+          lobbyName?: string | null;
+          name: string;
+          logoUrl: string | null;
+          accentColor: string | null;
+          visitedAt: string;
+        }[];
+      }>("/recents"),
     enabled: !!token && !searching,
   });
 
@@ -104,7 +116,8 @@ export default function Lobbies() {
             letterSpacing: 1,
             color: "rgba(243,244,246,0.96)",
             backgroundColor: "rgba(255,255,255,0.04)",
-            paddingHorizontal: 12, paddingVertical: 10,
+            paddingHorizontal: 12,
+            paddingVertical: 10,
             borderRadius: 4,
             borderWidth: 1,
             borderColor: "rgba(255,255,255,0.08)",
@@ -115,12 +128,28 @@ export default function Lobbies() {
           style={{
             marginLeft: 8,
             backgroundColor: "#5800E5",
-            paddingHorizontal: 14, paddingVertical: 10,
+            paddingHorizontal: 14,
+            paddingVertical: 10,
             borderRadius: 4,
-            shadowColor: "#5800E5", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.4, shadowRadius: 6, elevation: 3,
+            shadowColor: "#5800E5",
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.4,
+            shadowRadius: 6,
+            elevation: 3,
           }}
         >
-          <Text style={{ color: "#fff", fontFamily: "monospace", fontWeight: "900", fontSize: 12, letterSpacing: 1.2, textTransform: "uppercase" }}>+ New</Text>
+          <Text
+            style={{
+              color: "#fff",
+              fontFamily: "monospace",
+              fontWeight: "900",
+              fontSize: 12,
+              letterSpacing: 1.2,
+              textTransform: "uppercase",
+            }}
+          >
+            + New
+          </Text>
         </Pressable>
       </View>
 
@@ -130,9 +159,7 @@ export default function Lobbies() {
         </View>
       ) : error ? (
         <View className="flex-1 items-center justify-center px-8">
-          <Text className="text-red-400 text-sm text-center">
-            Couldn't load. Pull to retry.
-          </Text>
+          <Text className="text-red-400 text-sm text-center">Couldn't load. Pull to retry.</Text>
         </View>
       ) : (
         <FlatList
@@ -156,7 +183,9 @@ export default function Lobbies() {
                   onPress={() => router.push(`/room/lobby`)}
                   className="active:opacity-90"
                   style={{
-                    marginHorizontal: 12, marginTop: 12, marginBottom: 8,
+                    marginHorizontal: 12,
+                    marginTop: 12,
+                    marginBottom: 8,
                     overflow: "hidden",
                     borderRadius: 4,
                     borderWidth: 1.5,
@@ -172,85 +201,192 @@ export default function Lobbies() {
                   <View style={{ flexDirection: "row", alignItems: "center", padding: 12 }}>
                     <View
                       style={{
-                        width: 44, height: 44, borderRadius: 4,
+                        width: 44,
+                        height: 44,
+                        borderRadius: 4,
                         backgroundColor: "#5800E5",
-                        alignItems: "center", justifyContent: "center",
+                        alignItems: "center",
+                        justifyContent: "center",
                       }}
                     >
                       <Ionicons name="home" size={22} color="#fff" />
                     </View>
                     <View style={{ flex: 1, marginLeft: 12, minWidth: 0 }}>
-                      <Text style={{ color: "#5800E5", fontFamily: "monospace", fontWeight: "900", fontSize: 10, letterSpacing: 1.5, textTransform: "uppercase" }}>
+                      <Text
+                        style={{
+                          color: "#5800E5",
+                          fontFamily: "monospace",
+                          fontWeight: "900",
+                          fontSize: 10,
+                          letterSpacing: 1.5,
+                          textTransform: "uppercase",
+                        }}
+                      >
                         Home Lobby
                       </Text>
-                      <Text numberOfLines={1} style={{ color: "rgba(243,244,246,0.96)", fontFamily: "monospace", fontWeight: "900", fontSize: 15, letterSpacing: 0.5, marginTop: 2 }}>
+                      <Text
+                        numberOfLines={1}
+                        style={{
+                          color: "rgba(243,244,246,0.96)",
+                          fontFamily: "monospace",
+                          fontWeight: "900",
+                          fontSize: 15,
+                          letterSpacing: 0.5,
+                          marginTop: 2,
+                        }}
+                      >
                         The Streets
                       </Text>
-                      <Text numberOfLines={1} style={{ color: "rgba(160,160,170,0.85)", fontSize: 11, marginTop: 2 }}>
+                      <Text
+                        numberOfLines={1}
+                        style={{ color: "rgba(160,160,170,0.85)", fontSize: 11, marginTop: 2 }}
+                      >
                         Global chat + presence · everyone's here.
                       </Text>
                     </View>
-                    <Ionicons name="chevron-forward" size={20} color="rgba(160,160,170,0.7)" style={{ marginLeft: 6 }} />
+                    <Ionicons
+                      name="chevron-forward"
+                      size={20}
+                      color="rgba(160,160,170,0.7)"
+                      style={{ marginLeft: 6 }}
+                    />
                   </View>
                 </Pressable>
-                {featuredQ.data?.lobby && (() => {
-                  const banner = resolveImageUrl(featuredQ.data.lobby.bannerUrl);
-                  const lob = featuredQ.data.lobby;
-                  const count = (lob as any)._count;
-                  return (
-                    <Pressable
-                      onPress={() => router.push(`/lobby/${lob.id}`)}
-                      className="active:opacity-90"
-                      style={{
-                        marginHorizontal: 12, marginTop: 12, marginBottom: 8,
-                        overflow: "hidden",
-                        backgroundColor: "#1a1408",
-                        borderWidth: 1.5,
-                        borderColor: "#f5b700",
-                        borderRadius: 4,
-                        shadowColor: "#f5b700",
-                        shadowOffset: { width: 0, height: 4 },
-                        shadowOpacity: 0.3,
-                        shadowRadius: 10,
-                        elevation: 4,
-                      }}
-                    >
-                      {!!banner && (
-                        <View style={{ position: "relative" }}>
-                          <Image source={{ uri: banner }} style={{ width: "100%", height: 130 }} resizeMode="cover" />
-                          <View style={{ position: "absolute", top: 10, left: 10 }}>
-                            <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: "#1a1408", borderWidth: 1.5, borderColor: "#f5b700", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 3, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.6, shadowRadius: 4, elevation: 3 }}>
-                              <Text style={{ color: "#f5b700", fontFamily: "monospace", fontWeight: "900", fontSize: 11, letterSpacing: 1.4 }}>★ FEATURED</Text>
+                {featuredQ.data?.lobby &&
+                  (() => {
+                    const banner = resolveImageUrl(featuredQ.data.lobby.bannerUrl);
+                    const lob = featuredQ.data.lobby;
+                    const count = (lob as any)._count;
+                    return (
+                      <Pressable
+                        onPress={() => router.push(`/lobby/${lob.id}`)}
+                        className="active:opacity-90"
+                        style={{
+                          marginHorizontal: 12,
+                          marginTop: 12,
+                          marginBottom: 8,
+                          overflow: "hidden",
+                          backgroundColor: "#1a1408",
+                          borderWidth: 1.5,
+                          borderColor: "#f5b700",
+                          borderRadius: 4,
+                          shadowColor: "#f5b700",
+                          shadowOffset: { width: 0, height: 4 },
+                          shadowOpacity: 0.3,
+                          shadowRadius: 10,
+                          elevation: 4,
+                        }}
+                      >
+                        {!!banner && (
+                          <View style={{ position: "relative" }}>
+                            <Image
+                              source={{ uri: banner }}
+                              style={{ width: "100%", height: 130 }}
+                              resizeMode="cover"
+                            />
+                            <View style={{ position: "absolute", top: 10, left: 10 }}>
+                              <View
+                                style={{
+                                  flexDirection: "row",
+                                  alignItems: "center",
+                                  backgroundColor: "#1a1408",
+                                  borderWidth: 1.5,
+                                  borderColor: "#f5b700",
+                                  paddingHorizontal: 10,
+                                  paddingVertical: 4,
+                                  borderRadius: 3,
+                                  shadowColor: "#000",
+                                  shadowOffset: { width: 0, height: 2 },
+                                  shadowOpacity: 0.6,
+                                  shadowRadius: 4,
+                                  elevation: 3,
+                                }}
+                              >
+                                <Text
+                                  style={{
+                                    color: "#f5b700",
+                                    fontFamily: "monospace",
+                                    fontWeight: "900",
+                                    fontSize: 11,
+                                    letterSpacing: 1.4,
+                                  }}
+                                >
+                                  ★ FEATURED
+                                </Text>
+                              </View>
                             </View>
                           </View>
-                        </View>
-                      )}
-                      <View style={{ flexDirection: "row", alignItems: "center", padding: 12, backgroundColor: "#1a1408" }}>
-                        <LobbyLogo name={lob.name} url={lob.logoUrl} accent={lob.accentColor} size={52} />
-                        <View style={{ flex: 1, marginLeft: 12, minWidth: 0 }}>
-                          {!banner && (
-                            <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 3 }}>
-                              <Tag tone="gold">★ FEATURED</Tag>
-                            </View>
-                          )}
-                          <Text numberOfLines={1} style={{ color: "rgba(243,244,246,0.96)", fontFamily: "monospace", fontWeight: "900", fontSize: 17, letterSpacing: 0.5 }}>
-                            {lob.name}
-                          </Text>
-                          {!!lob.description && (
-                            <Text numberOfLines={2} style={{ color: "rgba(160,160,170,0.85)", fontSize: 11, marginTop: 2 }}>
-                              {lob.description}
+                        )}
+                        <View
+                          style={{
+                            flexDirection: "row",
+                            alignItems: "center",
+                            padding: 12,
+                            backgroundColor: "#1a1408",
+                          }}
+                        >
+                          <LobbyLogo
+                            name={lob.name}
+                            url={lob.logoUrl}
+                            accent={lob.accentColor}
+                            size={52}
+                          />
+                          <View style={{ flex: 1, marginLeft: 12, minWidth: 0 }}>
+                            {!banner && (
+                              <View
+                                style={{
+                                  flexDirection: "row",
+                                  alignItems: "center",
+                                  marginBottom: 3,
+                                }}
+                              >
+                                <Tag tone="gold">★ FEATURED</Tag>
+                              </View>
+                            )}
+                            <Text
+                              numberOfLines={1}
+                              style={{
+                                color: "rgba(243,244,246,0.96)",
+                                fontFamily: "monospace",
+                                fontWeight: "900",
+                                fontSize: 17,
+                                letterSpacing: 0.5,
+                              }}
+                            >
+                              {lob.name}
                             </Text>
-                          )}
-                          {count && (
-                            <Text numberOfLines={1} style={{ color: "rgba(245,183,0,0.7)", fontFamily: "monospace", fontSize: 10, fontWeight: "700", letterSpacing: 1, marginTop: 4 }}>
-                              {count.rooms} ROOMS · {count.members} MEMBERS
-                            </Text>
-                          )}
+                            {!!lob.description && (
+                              <Text
+                                numberOfLines={2}
+                                style={{
+                                  color: "rgba(160,160,170,0.85)",
+                                  fontSize: 11,
+                                  marginTop: 2,
+                                }}
+                              >
+                                {lob.description}
+                              </Text>
+                            )}
+                            {count && (
+                              <Text
+                                numberOfLines={1}
+                                style={{
+                                  color: "rgba(245,183,0,0.7)",
+                                  fontFamily: "monospace",
+                                  fontSize: 10,
+                                  fontWeight: "700",
+                                  letterSpacing: 1,
+                                  marginTop: 4,
+                                }}
+                              >
+                                {count.rooms} ROOMS · {count.members} MEMBERS
+                              </Text>
+                            )}
+                          </View>
                         </View>
-                      </View>
-                    </Pressable>
-                  );
-                })()}
+                      </Pressable>
+                    );
+                  })()}
                 {(recentsQ.data?.recents?.length ?? 0) > 0 && (
                   <>
                     <StampHeader tone="gold">Recent</StampHeader>
@@ -267,12 +403,28 @@ export default function Lobbies() {
                             backgroundColor: "rgba(255,255,255,0.04)",
                             borderWidth: 1,
                             borderColor: "rgba(255,255,255,0.12)",
-                            paddingHorizontal: 12, paddingVertical: 6,
+                            paddingHorizontal: 12,
+                            paddingVertical: 6,
                             borderRadius: 3,
                           }}
                         >
-                          {r.roomId ? <Text className="text-weered-muted text-xs mr-1" style={{ fontFamily: "monospace" }}>#</Text> : null}
-                          <Text className="text-weered-text text-xs" style={{ fontFamily: "monospace", fontWeight: "700", letterSpacing: 0.5 }} numberOfLines={1}>
+                          {r.roomId ? (
+                            <Text
+                              className="text-weered-muted text-xs mr-1"
+                              style={{ fontFamily: "monospace" }}
+                            >
+                              #
+                            </Text>
+                          ) : null}
+                          <Text
+                            className="text-weered-text text-xs"
+                            style={{
+                              fontFamily: "monospace",
+                              fontWeight: "700",
+                              letterSpacing: 0.5,
+                            }}
+                            numberOfLines={1}
+                          >
                             {r.name}
                           </Text>
                         </Pressable>
@@ -309,11 +461,17 @@ export default function Lobbies() {
                       className="px-4 py-3 active:bg-panel flex-row items-center"
                     >
                       <View className="mr-3">
-                        <LobbyLogo name={parentName} url={parent?.logoUrl} accent={parent?.accentColor} size={36} />
+                        <LobbyLogo
+                          name={parentName}
+                          url={parent?.logoUrl}
+                          accent={parent?.accentColor}
+                          size={36}
+                        />
                       </View>
                       <View className="flex-1">
                         <Text className="text-weered-text font-semibold" numberOfLines={1}>
-                          {r.locked ? "🔒 " : ""}{r.name}
+                          {r.locked ? "🔒 " : ""}
+                          {r.name}
                         </Text>
                         <Text className="text-weered-muted text-xs" numberOfLines={1}>
                           in {parentName} · {r._count?.members ?? 0} members
@@ -349,7 +507,8 @@ function LobbyRow({ lobby }: { lobby: Lobby }) {
       onPress={() => router.push(`/lobby/${lobby.id}`)}
       className="active:opacity-90"
       style={{
-        marginHorizontal: 12, marginVertical: 6,
+        marginHorizontal: 12,
+        marginVertical: 6,
         overflow: "hidden",
         borderRadius: 4,
         borderWidth: 1,
@@ -359,11 +518,20 @@ function LobbyRow({ lobby }: { lobby: Lobby }) {
       }}
     >
       {!!notch && (
-        <View style={{ position: "absolute", top: 0, right: 0, width: 0, height: 0,
-          borderTopWidth: 14, borderLeftWidth: 14,
-          borderTopColor: notch, borderLeftColor: "transparent",
-          zIndex: 2,
-        }} />
+        <View
+          style={{
+            position: "absolute",
+            top: 0,
+            right: 0,
+            width: 0,
+            height: 0,
+            borderTopWidth: 14,
+            borderLeftWidth: 14,
+            borderTopColor: notch,
+            borderLeftColor: "transparent",
+            zIndex: 2,
+          }}
+        />
       )}
       {!!banner && (
         <Image
@@ -372,28 +540,72 @@ function LobbyRow({ lobby }: { lobby: Lobby }) {
           resizeMode="cover"
         />
       )}
-      <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(8,7,12,0.55)" }} />
-      <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 12, paddingVertical: 12 }}>
+      <View
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: "rgba(8,7,12,0.55)",
+        }}
+      />
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          paddingHorizontal: 12,
+          paddingVertical: 12,
+        }}
+      >
         <View style={{ marginRight: 12 }}>
           <LobbyLogo name={lobby.name} url={lobby.logoUrl} accent={accent} size={44} />
         </View>
         <View style={{ flex: 1, minWidth: 0 }}>
           <View style={{ flexDirection: "row", alignItems: "center", flexWrap: "wrap" }}>
-            <Text numberOfLines={1} style={{ color: "rgba(243,244,246,0.98)", fontFamily: "monospace", fontWeight: "900", fontSize: 14, letterSpacing: 0.3, maxWidth: "75%" }}>
+            <Text
+              numberOfLines={1}
+              style={{
+                color: "rgba(243,244,246,0.98)",
+                fontFamily: "monospace",
+                fontWeight: "900",
+                fontSize: 14,
+                letterSpacing: 0.3,
+                maxWidth: "75%",
+              }}
+            >
               {lobby.name}
             </Text>
-            {lobby.verified && <Text style={{ color: "#5800E5", marginLeft: 6, fontSize: 11, fontWeight: "900" }}>✓</Text>}
-            {lobby.pinned && <Text style={{ color: "#f5b700", marginLeft: 6, fontSize: 11 }}>★</Text>}
+            {lobby.verified && (
+              <Text style={{ color: "#5800E5", marginLeft: 6, fontSize: 11, fontWeight: "900" }}>
+                ✓
+              </Text>
+            )}
+            {lobby.pinned && (
+              <Text style={{ color: "#f5b700", marginLeft: 6, fontSize: 11 }}>★</Text>
+            )}
             {lobby.moduleType && lobby.moduleType !== "NONE" && lobby.moduleType !== "FEED" && (
               <ModuleBadge type={lobby.moduleType} accent={lobby.accentColor} />
             )}
           </View>
           {!!lobby.description && (
-            <Text numberOfLines={1} style={{ color: "rgba(210,210,220,0.75)", fontSize: 11, marginTop: 2 }}>
+            <Text
+              numberOfLines={1}
+              style={{ color: "rgba(210,210,220,0.75)", fontSize: 11, marginTop: 2 }}
+            >
               {lobby.description}
             </Text>
           )}
-          <Text numberOfLines={1} style={{ color: "rgba(180,180,190,0.8)", fontSize: 10, fontFamily: "monospace", letterSpacing: 0.5, marginTop: 3 }}>
+          <Text
+            numberOfLines={1}
+            style={{
+              color: "rgba(180,180,190,0.8)",
+              fontSize: 10,
+              fontFamily: "monospace",
+              letterSpacing: 0.5,
+              marginTop: 3,
+            }}
+          >
             <Text style={{ color: "#22c55e" }}>●</Text>
             {` ${lobby.onlineCount ?? 0} ONLINE  ·  ${rooms} ROOM${rooms === 1 ? "" : "S"}  ·  ${members} MEMBER${members === 1 ? "" : "S"}`}
           </Text>

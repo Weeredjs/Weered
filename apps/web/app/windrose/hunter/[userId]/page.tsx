@@ -5,14 +5,20 @@ const API = process.env.NEXT_PUBLIC_API_BASE || "https://api.weered.ca";
 
 async function fetchDossier(userId: string) {
   try {
-    const r = await fetch(`${API}/windrose/hunter/${encodeURIComponent(userId)}`, { cache: "no-store" });
+    const r = await fetch(`${API}/windrose/hunter/${encodeURIComponent(userId)}`, {
+      cache: "no-store",
+    });
     if (!r.ok) return null;
     const j = await r.json();
     return j?.ok ? j : null;
-  } catch { return null; }
+  } catch {
+    return null;
+  }
 }
 
-export async function generateMetadata(props: { params: Promise<{ userId: string }> }): Promise<Metadata> {
+export async function generateMetadata(props: {
+  params: Promise<{ userId: string }>;
+}): Promise<Metadata> {
   const params = await props.params;
   const d = await fetchDossier(decodeURIComponent(params.userId));
   const name = d?.user?.name || "Hunter";
@@ -26,7 +32,12 @@ export async function generateMetadata(props: { params: Promise<{ userId: string
   return {
     title,
     description,
-    openGraph: { title, description, url: `https://weered.ca/windrose/hunter/${params.userId}`, type: "profile" },
+    openGraph: {
+      title,
+      description,
+      url: `https://weered.ca/windrose/hunter/${params.userId}`,
+      type: "profile",
+    },
     twitter: { card: "summary_large_image", title, description },
     alternates: { canonical: `https://weered.ca/windrose/hunter/${params.userId}` },
   };

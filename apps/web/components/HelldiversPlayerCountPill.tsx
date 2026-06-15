@@ -4,11 +4,7 @@ import React from "react";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
-export default function HelldiversPlayerCountPill({
-  accentColor,
-}: {
-  accentColor?: string;
-}) {
+export default function HelldiversPlayerCountPill({ accentColor }: { accentColor?: string }) {
   const [count, setCount] = React.useState<number | null>(null);
   const [errored, setErrored] = React.useState(false);
 
@@ -48,14 +44,18 @@ export default function HelldiversPlayerCountPill({
     count === null
       ? "…"
       : count >= 1_000_000
-      ? `${(count / 1_000_000).toFixed(1)}M`
-      : count >= 1_000
-      ? `${(count / 1_000).toFixed(1)}k`
-      : String(count);
+        ? `${(count / 1_000_000).toFixed(1)}M`
+        : count >= 1_000
+          ? `${(count / 1_000).toFixed(1)}k`
+          : String(count);
 
   return (
     <span
-      title={count !== null ? `${count.toLocaleString()} Helldivers in active service` : "Helldivers online"}
+      title={
+        count !== null
+          ? `${count.toLocaleString()} Helldivers in active service`
+          : "Helldivers online"
+      }
       style={{
         display: "inline-flex",
         alignItems: "center",

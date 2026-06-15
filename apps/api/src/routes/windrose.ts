@@ -777,33 +777,27 @@ Rules:
       const amount = Math.floor(Number(body.amount) || 0);
       if (!targetHandle) return reply.code(400).send({ ok: false, error: "target_required" });
       if (amount < BOUNTY_MIN)
-        return reply
-          .code(400)
-          .send({
-            ok: false,
-            error: "amount_too_low",
-            message: `Minimum bounty is ${BOUNTY_MIN} Paper.`,
-          });
+        return reply.code(400).send({
+          ok: false,
+          error: "amount_too_low",
+          message: `Minimum bounty is ${BOUNTY_MIN} Paper.`,
+        });
       if (amount > BOUNTY_MAX)
-        return reply
-          .code(400)
-          .send({
-            ok: false,
-            error: "amount_too_high",
-            message: `Maximum bounty is ${BOUNTY_MAX.toLocaleString()} Paper.`,
-          });
+        return reply.code(400).send({
+          ok: false,
+          error: "amount_too_high",
+          message: `Maximum bounty is ${BOUNTY_MAX.toLocaleString()} Paper.`,
+        });
 
       const openCount = await (prisma as any).windroseBounty.count({
         where: { posterId: u.id, status: { in: ["OPEN", "CLAIMED"] } },
       });
       if (openCount >= BOUNTY_CAP_OPEN_PER_USER) {
-        return reply
-          .code(400)
-          .send({
-            ok: false,
-            error: "limit_reached",
-            message: `You already have ${BOUNTY_CAP_OPEN_PER_USER} bounties in flight. Settle or cancel one first.`,
-          });
+        return reply.code(400).send({
+          ok: false,
+          error: "limit_reached",
+          message: `You already have ${BOUNTY_CAP_OPEN_PER_USER} bounties in flight. Settle or cancel one first.`,
+        });
       }
 
       const debit = await awardPaper(
@@ -905,13 +899,11 @@ Rules:
           .code(400)
           .send({ ok: false, error: "not_claimable", message: "This bounty is no longer open." });
       if (b.posterId === u.id)
-        return reply
-          .code(400)
-          .send({
-            ok: false,
-            error: "cannot_self_claim",
-            message: "You can't claim your own bounty.",
-          });
+        return reply.code(400).send({
+          ok: false,
+          error: "cannot_self_claim",
+          message: "You can't claim your own bounty.",
+        });
 
       try {
         const claimantName =
@@ -1054,13 +1046,11 @@ Rules:
       if (!b) return reply.code(404).send({ ok: false, error: "not_found" });
       if (b.posterId !== u.id) return reply.code(403).send({ ok: false, error: "forbidden" });
       if (b.status !== "OPEN")
-        return reply
-          .code(400)
-          .send({
-            ok: false,
-            error: "not_open",
-            message: "Can only cancel while open (uncclaimed).",
-          });
+        return reply.code(400).send({
+          ok: false,
+          error: "not_open",
+          message: "Can only cancel while open (uncclaimed).",
+        });
       const refund = await awardPaper(
         u.id,
         "ADJUSTMENT",

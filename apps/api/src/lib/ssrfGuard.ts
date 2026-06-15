@@ -30,7 +30,11 @@ function isPrivateIp(ip: string): boolean {
 
 export async function assertSafeUrl(raw: string): Promise<URL> {
   let u: URL;
-  try { u = new URL(raw); } catch { throw new Error("invalid_url"); }
+  try {
+    u = new URL(raw);
+  } catch {
+    throw new Error("invalid_url");
+  }
   if (u.protocol !== "http:" && u.protocol !== "https:") throw new Error("bad_protocol");
   const host = u.hostname.replace(/^\[|\]$/g, "");
   if (net.isIP(host)) {

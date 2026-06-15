@@ -12,6 +12,7 @@ export const POSTS: Post[] = [
     title: "Build notes: the PoE skill tree, screened media, and a friends layer",
     date: "2026-06-13",
     dateLabel: "June 13, 2026",
-    excerpt: "We ship most days and don't usually stop to write it down. This week earned an exception.",
+    excerpt:
+      "We ship most days and don't usually stop to write it down. This week earned an exception.",
   },
 ];

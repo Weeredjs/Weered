@@ -7,9 +7,31 @@ import { api } from "@/lib/api";
 import { Avatar } from "@/components/Avatar";
 import { LobbyLogo } from "@/components/LobbyLogo";
 
-type Lobby = { id: string; name: string; description: string | null; logoUrl: string | null; accentColor: string | null; verified: boolean; _count?: { members: number; rooms: number } };
-type Room = { id: string; name: string; locked: boolean; lobby: { id: string; name: string; logoUrl: string | null; accentColor: string | null }; _count: { members: number } };
-type User = { id: string; name: string; usernameKey: string; avatar: string | null; avatarColor: string | null; tier: string; notoriety: number };
+type Lobby = {
+  id: string;
+  name: string;
+  description: string | null;
+  logoUrl: string | null;
+  accentColor: string | null;
+  verified: boolean;
+  _count?: { members: number; rooms: number };
+};
+type Room = {
+  id: string;
+  name: string;
+  locked: boolean;
+  lobby: { id: string; name: string; logoUrl: string | null; accentColor: string | null };
+  _count: { members: number };
+};
+type User = {
+  id: string;
+  name: string;
+  usernameKey: string;
+  avatar: string | null;
+  avatarColor: string | null;
+  tier: string;
+  notoriety: number;
+};
 
 type LobbiesResp = { ok: boolean; pinned: Lobby[]; rooms: Room[] };
 type UsersResp = { ok: boolean; users: User[] };
@@ -43,7 +65,8 @@ export default function Search() {
   const rooms = lobbiesQ.data?.rooms ?? [];
   const users = usersQ.data?.users ?? [];
   const loading = enabled && (lobbiesQ.isLoading || usersQ.isLoading);
-  const empty = enabled && !loading && lobbies.length === 0 && rooms.length === 0 && users.length === 0;
+  const empty =
+    enabled && !loading && lobbies.length === 0 && rooms.length === 0 && users.length === 0;
 
   return (
     <SafeAreaView edges={["bottom"]} className="flex-1 bg-weered-bg">
@@ -65,16 +88,22 @@ export default function Search() {
 
       <ScrollView contentContainerStyle={{ paddingBottom: 40 }}>
         {!enabled && (
-          <Text className="text-weered-muted text-sm text-center py-12">Type at least 2 characters.</Text>
+          <Text className="text-weered-muted text-sm text-center py-12">
+            Type at least 2 characters.
+          </Text>
         )}
 
         {loading && (
-          <View className="py-8 items-center"><ActivityIndicator color="#5800E5" /></View>
+          <View className="py-8 items-center">
+            <ActivityIndicator color="#5800E5" />
+          </View>
         )}
 
         {aiQ.data?.answer ? (
           <View className="mx-4 mt-4 p-3 bg-weered/10 border border-weered/30 rounded-xl">
-            <Text className="text-weered text-[10px] uppercase font-bold tracking-wider mb-1">🤖 The Operator</Text>
+            <Text className="text-weered text-[10px] uppercase font-bold tracking-wider mb-1">
+              🤖 The Operator
+            </Text>
             <Text className="text-weered-text text-sm">{aiQ.data.answer}</Text>
             {aiQ.data.lobbies.length > 0 && (
               <View className="flex-row flex-wrap mt-2">
@@ -99,12 +128,16 @@ export default function Search() {
         ) : null}
 
         {empty && (
-          <Text className="text-weered-muted text-sm text-center py-12">Nothing matched "{trimmed}".</Text>
+          <Text className="text-weered-muted text-sm text-center py-12">
+            Nothing matched "{trimmed}".
+          </Text>
         )}
 
         {users.length > 0 && (
           <View>
-            <Text className="text-weered-muted text-xs uppercase tracking-wide px-4 pt-4 pb-2">Users · {users.length}</Text>
+            <Text className="text-weered-muted text-xs uppercase tracking-wide px-4 pt-4 pb-2">
+              Users · {users.length}
+            </Text>
             {users.map((u) => (
               <Pressable
                 key={u.id}
@@ -115,10 +148,16 @@ export default function Search() {
                   <Avatar name={u.name} url={u.avatar} size={36} />
                 </View>
                 <View className="flex-1">
-                  <Text className="text-weered-text font-semibold" numberOfLines={1}>{u.name}</Text>
-                  <Text className="text-weered-muted text-xs">@{u.usernameKey} · {u.tier}</Text>
+                  <Text className="text-weered-text font-semibold" numberOfLines={1}>
+                    {u.name}
+                  </Text>
+                  <Text className="text-weered-muted text-xs">
+                    @{u.usernameKey} · {u.tier}
+                  </Text>
                 </View>
-                <Text className="text-weered text-xs font-bold">{u.notoriety.toLocaleString()}</Text>
+                <Text className="text-weered text-xs font-bold">
+                  {u.notoriety.toLocaleString()}
+                </Text>
               </Pressable>
             ))}
           </View>
@@ -126,7 +165,9 @@ export default function Search() {
 
         {lobbies.length > 0 && (
           <View>
-            <Text className="text-weered-muted text-xs uppercase tracking-wide px-4 pt-4 pb-2">Lobbies · {lobbies.length}</Text>
+            <Text className="text-weered-muted text-xs uppercase tracking-wide px-4 pt-4 pb-2">
+              Lobbies · {lobbies.length}
+            </Text>
             {lobbies.map((l) => (
               <Pressable
                 key={l.id}
@@ -138,11 +179,15 @@ export default function Search() {
                 </View>
                 <View className="flex-1">
                   <View className="flex-row items-center">
-                    <Text className="text-weered-text font-semibold flex-1" numberOfLines={1}>{l.name}</Text>
+                    <Text className="text-weered-text font-semibold flex-1" numberOfLines={1}>
+                      {l.name}
+                    </Text>
                     {l.verified && <Text className="text-weered text-xs font-bold">✓</Text>}
                   </View>
                   {!!l.description && (
-                    <Text className="text-weered-muted text-xs" numberOfLines={1}>{l.description}</Text>
+                    <Text className="text-weered-muted text-xs" numberOfLines={1}>
+                      {l.description}
+                    </Text>
                   )}
                   {l._count && (
                     <Text className="text-weered-muted text-xs mt-0.5">
@@ -157,7 +202,9 @@ export default function Search() {
 
         {rooms.length > 0 && (
           <View>
-            <Text className="text-weered-muted text-xs uppercase tracking-wide px-4 pt-4 pb-2">Rooms · {rooms.length}</Text>
+            <Text className="text-weered-muted text-xs uppercase tracking-wide px-4 pt-4 pb-2">
+              Rooms · {rooms.length}
+            </Text>
             {rooms.map((r) => (
               <Pressable
                 key={r.id}
@@ -165,13 +212,21 @@ export default function Search() {
                 className="flex-row items-center px-4 py-2.5 border-b border-border/20 active:bg-panel"
               >
                 <View className="mr-3">
-                  <LobbyLogo name={r.lobby?.name || "?"} url={r.lobby?.logoUrl} accent={r.lobby?.accentColor} size={36} />
+                  <LobbyLogo
+                    name={r.lobby?.name || "?"}
+                    url={r.lobby?.logoUrl}
+                    accent={r.lobby?.accentColor}
+                    size={36}
+                  />
                 </View>
                 <View className="flex-1">
                   <Text className="text-weered-text font-semibold" numberOfLines={1}>
-                    {r.locked ? "🔒 " : ""}{r.name}
+                    {r.locked ? "🔒 " : ""}
+                    {r.name}
                   </Text>
-                  <Text className="text-weered-muted text-xs">in {r.lobby?.name || "?"} · {r._count?.members ?? 0} members</Text>
+                  <Text className="text-weered-muted text-xs">
+                    in {r.lobby?.name || "?"} · {r._count?.members ?? 0} members
+                  </Text>
                 </View>
               </Pressable>
             ))}

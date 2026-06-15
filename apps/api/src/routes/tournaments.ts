@@ -109,13 +109,11 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
 
       if (!staff) {
         if (!lobbyId) {
-          return reply
-            .code(403)
-            .send({
-              ok: false,
-              error: "forbidden",
-              message: "Create tournaments from inside a lobby.",
-            });
+          return reply.code(403).send({
+            ok: false,
+            error: "forbidden",
+            message: "Create tournaments from inside a lobby.",
+          });
         }
         const lobby = await prisma.lobby.findUnique({
           where: { id: lobbyId },
@@ -127,27 +125,23 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
             select: { roleLevel: true },
           });
           if (!member) {
-            return reply
-              .code(403)
-              .send({
-                ok: false,
-                error: "not_a_member",
-                message: `Join the ${lobby?.name || "lobby"} to create a tournament here.`,
-              });
+            return reply.code(403).send({
+              ok: false,
+              error: "not_a_member",
+              message: `Join the ${lobby?.name || "lobby"} to create a tournament here.`,
+            });
           }
         }
         const liveCount = await prisma.tournament.count({
           where: { createdById: u.id, status: { in: ["REGISTRATION", "ACTIVE"] } },
         });
         if (liveCount >= 1) {
-          return reply
-            .code(400)
-            .send({
-              ok: false,
-              error: "active_limit",
-              message:
-                "You already have a live tournament. Finish or remove it before starting another.",
-            });
+          return reply.code(400).send({
+            ok: false,
+            error: "active_limit",
+            message:
+              "You already have a live tournament. Finish or remove it before starting another.",
+          });
         }
       }
 
@@ -226,13 +220,11 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
           where: { userId: u.id, gameType: "BUNGIE" },
         });
         if (!acct)
-          return reply
-            .code(400)
-            .send({
-              ok: false,
-              error: "bungie_not_linked",
-              message: "Link your Bungie account in Settings before registering.",
-            });
+          return reply.code(400).send({
+            ok: false,
+            error: "bungie_not_linked",
+            message: "Link your Bungie account in Settings before registering.",
+          });
       }
 
       const userName =
@@ -710,13 +702,11 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
       const tourney = await (prisma as any).tournament.findUnique({ where: { id } });
       if (!tourney) return reply.code(404).send({ ok: false, error: "not_found" });
       if (!["BRACKET", "BRACKET_DOUBLE", "ROUND_ROBIN"].includes(tourney.format)) {
-        return reply
-          .code(400)
-          .send({
-            ok: false,
-            error: "wrong_format",
-            message: "Format must be BRACKET, BRACKET_DOUBLE, or ROUND_ROBIN to start a draw.",
-          });
+        return reply.code(400).send({
+          ok: false,
+          error: "wrong_format",
+          message: "Format must be BRACKET, BRACKET_DOUBLE, or ROUND_ROBIN to start a draw.",
+        });
       }
       if (tourney.status === "COMPLETED" || tourney.status === "CANCELED") {
         return reply.code(400).send({ ok: false, error: "tournament_closed" });
@@ -732,14 +722,12 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
         where: { tournamentId: id },
       });
       if (entries.length < (tourney.minEntries || 2)) {
-        return reply
-          .code(400)
-          .send({
-            ok: false,
-            error: "not_enough_entries",
-            count: entries.length,
-            min: tourney.minEntries,
-          });
+        return reply.code(400).send({
+          ok: false,
+          error: "not_enough_entries",
+          count: entries.length,
+          min: tourney.minEntries,
+        });
       }
 
       const seedingMode = String(body.seeding || "random");

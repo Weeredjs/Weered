@@ -93,10 +93,12 @@ const ITEMS = [
   }
 
   // Grant founder to donkey
-  const founder = created.find(f => f.slug === "founder");
+  const founder = created.find((f) => f.slug === "founder");
   if (founder) {
     const donkey = await prisma.user.findFirst({
-      where: { OR: [{ usernameKey: "donkey" }, { name: { equals: "donkey", mode: "insensitive" } }] },
+      where: {
+        OR: [{ usernameKey: "donkey" }, { name: { equals: "donkey", mode: "insensitive" } }],
+      },
       select: { id: true, name: true, equippedFlairId: true },
     });
     if (donkey) {
@@ -112,7 +114,10 @@ const ITEMS = [
         console.log("[grant exists] founder -> donkey", donkey.id);
       }
       if (!donkey.equippedFlairId) {
-        await prisma.user.update({ where: { id: donkey.id }, data: { equippedFlairId: founder.id } });
+        await prisma.user.update({
+          where: { id: donkey.id },
+          data: { equippedFlairId: founder.id },
+        });
         console.log("[equipped] founder -> donkey");
       }
     } else {

@@ -24,7 +24,7 @@ export async function hydrateStorage(): Promise<void> {
         const v = await SecureStore.getItemAsync(k);
         if (v != null) cache.set(k, v);
       } catch {}
-    })
+    }),
   );
   hydrated = true;
 }

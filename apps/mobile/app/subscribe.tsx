@@ -1,4 +1,12 @@
-import { View, Text, ScrollView, Pressable, Alert, ActivityIndicator, RefreshControl } from "react-native";
+import {
+  View,
+  Text,
+  ScrollView,
+  Pressable,
+  Alert,
+  ActivityIndicator,
+  RefreshControl,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Stack } from "expo-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -73,7 +81,9 @@ export default function Subscribe() {
 
   const portal = useMutation({
     mutationFn: async () => {
-      const r = await api<{ ok: boolean; url?: string; error?: string }>("/subscribe/portal", { method: "POST" });
+      const r = await api<{ ok: boolean; url?: string; error?: string }>("/subscribe/portal", {
+        method: "POST",
+      });
       if (!r.ok || !r.url) throw new Error(r.error || "no_url");
       await WebBrowser.openBrowserAsync(r.url, { showTitle: true });
     },
@@ -88,19 +98,30 @@ export default function Subscribe() {
     <SafeAreaView edges={["bottom"]} className="flex-1 bg-weered-bg">
       <Stack.Screen options={{ title: "Subscribe" }} />
       <ScrollView
-        refreshControl={<RefreshControl refreshing={statusQ.isRefetching} onRefresh={() => statusQ.refetch()} tintColor="#5800E5" />}
+        refreshControl={
+          <RefreshControl
+            refreshing={statusQ.isRefetching}
+            onRefresh={() => statusQ.refetch()}
+            tintColor="#5800E5"
+          />
+        }
         contentContainerStyle={{ paddingBottom: 32 }}
       >
         {loading ? (
-          <View className="py-12 items-center"><ActivityIndicator color="#5800E5" /></View>
+          <View className="py-12 items-center">
+            <ActivityIndicator color="#5800E5" />
+          </View>
         ) : (
           <>
             <View className="px-4 py-6 border-b border-border/30 items-center">
-              <Text className="text-weered-muted text-xs uppercase tracking-widest mb-1">Current tier</Text>
+              <Text className="text-weered-muted text-xs uppercase tracking-widest mb-1">
+                Current tier
+              </Text>
               <Text className="text-weered-text text-3xl font-black">{current}</Text>
               {statusQ.data?.currentPeriodEnd && (
                 <Text className="text-weered-muted text-xs mt-1">
-                  {statusQ.data.cancelAtPeriodEnd ? "Ends" : "Renews"} {new Date(statusQ.data.currentPeriodEnd).toLocaleDateString()}
+                  {statusQ.data.cancelAtPeriodEnd ? "Ends" : "Renews"}{" "}
+                  {new Date(statusQ.data.currentPeriodEnd).toLocaleDateString()}
                 </Text>
               )}
               {current !== "FREE" && (
@@ -119,12 +140,16 @@ export default function Subscribe() {
               return (
                 <View key={t.id} className="px-4 py-4 border-b border-border/30">
                   <View className="flex-row items-end mb-2">
-                    <Text style={{ color: t.color }} className="font-black text-xl flex-1">{t.name}</Text>
+                    <Text style={{ color: t.color }} className="font-black text-xl flex-1">
+                      {t.name}
+                    </Text>
                     <Text className="text-weered-text font-bold">{t.price}</Text>
                   </View>
                   {t.perks.map((p) => (
                     <View key={p} className="flex-row items-start my-0.5">
-                      <Text style={{ color: t.color }} className="font-bold mr-2">✓</Text>
+                      <Text style={{ color: t.color }} className="font-bold mr-2">
+                        ✓
+                      </Text>
                       <Text className="text-weered-muted text-sm flex-1">{p}</Text>
                     </View>
                   ))}
@@ -140,7 +165,11 @@ export default function Subscribe() {
                       style={{ backgroundColor: t.color }}
                     >
                       <Text className="text-white text-center font-bold">
-                        {checkout.isPending ? "Opening Stripe…" : current === "FREE" ? `Subscribe to ${t.name}` : `Switch to ${t.name}`}
+                        {checkout.isPending
+                          ? "Opening Stripe…"
+                          : current === "FREE"
+                            ? `Subscribe to ${t.name}`
+                            : `Switch to ${t.name}`}
                       </Text>
                     </Pressable>
                   )}

@@ -30,8 +30,7 @@ function cleanup() {
 export function weeredConfirm(input: string | ConfirmOptions): Promise<boolean> {
   if (typeof window === "undefined") return Promise.resolve(false);
 
-  const opts: ConfirmOptions =
-    typeof input === "string" ? { title: input } : input;
+  const opts: ConfirmOptions = typeof input === "string" ? { title: input } : input;
 
   return new Promise<boolean>((resolve) => {
     cleanup();
@@ -50,11 +49,7 @@ export function weeredConfirm(input: string | ConfirmOptions): Promise<boolean> 
     }
 
     root.render(
-      <ConfirmDialog
-        {...opts}
-        onConfirm={() => finish(true)}
-        onCancel={() => finish(false)}
-      />
+      <ConfirmDialog {...opts} onConfirm={() => finish(true)} onCancel={() => finish(false)} />,
     );
   });
 }
@@ -173,8 +168,7 @@ function ConfirmDialog({
               transition: "background 0.12s, color 0.12s",
             }}
             onMouseEnter={(e) => {
-              (e.currentTarget as HTMLElement).style.background =
-                "rgba(255,255,255,0.04)";
+              (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.04)";
               (e.currentTarget as HTMLElement).style.color =
                 "var(--weered-text, rgba(243,244,246,0.95))";
             }}

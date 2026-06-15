@@ -77,16 +77,24 @@ export default function HelldiversWarMapPanel({ style }: { style?: React.CSSProp
         const j = await r.json();
         if (!alive) return;
         if (j?.ok) setCampaigns(j.campaigns || []);
-      } catch {}
-      finally { if (alive) setLoading(false); }
+      } catch {
+      } finally {
+        if (alive) setLoading(false);
+      }
     }
     load();
     const t = setInterval(load, 60_000);
-    return () => { alive = false; clearInterval(t); };
+    return () => {
+      alive = false;
+      clearInterval(t);
+    };
   }, []);
 
   useEffect(() => {
-    if (selected == null) { setDetail(null); return; }
+    if (selected == null) {
+      setDetail(null);
+      return;
+    }
     let alive = true;
     setDetailLoading(true);
     (async () => {
@@ -95,93 +103,165 @@ export default function HelldiversWarMapPanel({ style }: { style?: React.CSSProp
         const j = await r.json();
         if (!alive) return;
         if (j?.ok) setDetail(j.planet);
-      } catch {}
-      finally { if (alive) setDetailLoading(false); }
+      } catch {
+      } finally {
+        if (alive) setDetailLoading(false);
+      }
     })();
-    return () => { alive = false; };
+    return () => {
+      alive = false;
+    };
   }, [selected]);
 
   const factions = useMemo(() => {
     const set = new Set<string>();
-    campaigns.forEach(c => { if (c.planet.currentOwner) set.add(c.planet.currentOwner); });
+    campaigns.forEach((c) => {
+      if (c.planet.currentOwner) set.add(c.planet.currentOwner);
+    });
     return Array.from(set);
   }, [campaigns]);
 
-  const visible = campaigns.filter(c =>
-    filter === "ALL" ? true : c.planet.currentOwner === filter
+  const visible = campaigns.filter((c) =>
+    filter === "ALL" ? true : c.planet.currentOwner === filter,
   );
 
   return (
-    <div style={{
-      borderRadius: 10,
-      border: "1px solid rgba(255,215,0,.20)",
-      background: "linear-gradient(180deg, rgba(20,20,18,.92), rgba(10,10,8,.96))",
-      padding: 12,
-      ...style,
-    }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10, gap: 10, flexWrap: "wrap" }}>
+    <div
+      style={{
+        borderRadius: 10,
+        border: "1px solid rgba(255,215,0,.20)",
+        background: "linear-gradient(180deg, rgba(20,20,18,.92), rgba(10,10,8,.96))",
+        padding: 12,
+        ...style,
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          marginBottom: 10,
+          gap: 10,
+          flexWrap: "wrap",
+        }}
+      >
         <div>
-          <div style={{ fontSize: 14, fontWeight: 800, letterSpacing: 1.2, color: "#FFD700", textTransform: "uppercase" }}>
+          <div
+            style={{
+              fontSize: 14,
+              fontWeight: 800,
+              letterSpacing: 1.2,
+              color: "#FFD700",
+              textTransform: "uppercase",
+            }}
+          >
             ▌ Galactic War Map
           </div>
-          <div style={{ fontSize: 10, color: "rgba(255,215,0,.55)", letterSpacing: ".5px", marginTop: 2 }}>
+          <div
+            style={{
+              fontSize: 10,
+              color: "rgba(255,215,0,.55)",
+              letterSpacing: ".5px",
+              marginTop: 2,
+            }}
+          >
             Active Campaigns · {visible.length} {visible.length === 1 ? "front" : "fronts"}
           </div>
         </div>
 
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-          <Chip active={filter === "ALL"} onClick={() => setFilter("ALL")} color="#FFD700">All</Chip>
-          {factions.map(f => (
-            <Chip key={f} active={filter === f} onClick={() => setFilter(f)} color={factionColor(f)}>
+          <Chip active={filter === "ALL"} onClick={() => setFilter("ALL")} color="#FFD700">
+            All
+          </Chip>
+          {factions.map((f) => (
+            <Chip
+              key={f}
+              active={filter === f}
+              onClick={() => setFilter(f)}
+              color={factionColor(f)}
+            >
               {f}
             </Chip>
           ))}
         </div>
       </div>
 
-      {!loading && visible.length > 4 && (() => {
-        const top = [...visible].sort((a, b) => (b.planet.players || 0) - (a.planet.players || 0)).slice(0, 4);
-        const hasRealActivity = top.some(c => (c.planet.players || 0) > 100);
-        if (!hasRealActivity) return null;
-        return (
-          <div style={{ marginBottom: 12 }}>
-            <div style={{ ...stencil, fontSize: 10, color: "rgba(255,215,0,.7)", letterSpacing: "1.2px", marginBottom: 6 }}>
-              ▸ FEATURED FRONTS
+      {!loading &&
+        visible.length > 4 &&
+        (() => {
+          const top = [...visible]
+            .sort((a, b) => (b.planet.players || 0) - (a.planet.players || 0))
+            .slice(0, 4);
+          const hasRealActivity = top.some((c) => (c.planet.players || 0) > 100);
+          if (!hasRealActivity) return null;
+          return (
+            <div style={{ marginBottom: 12 }}>
+              <div
+                style={{
+                  ...stencil,
+                  fontSize: 10,
+                  color: "rgba(255,215,0,.7)",
+                  letterSpacing: "1.2px",
+                  marginBottom: 6,
+                }}
+              >
+                ▸ FEATURED FRONTS
+              </div>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+                  gap: 8,
+                }}
+              >
+                {top.map((c) => (
+                  <PlanetTile
+                    key={`featured-${c.id}`}
+                    campaign={c}
+                    onClick={() => setSelected(c.planet.index)}
+                    featured
+                  />
+                ))}
+              </div>
             </div>
-            <div style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-              gap: 8,
-            }}>
-              {top.map(c => (
-                <PlanetTile key={`featured-${c.id}`} campaign={c} onClick={() => setSelected(c.planet.index)} featured />
-              ))}
-            </div>
-          </div>
-        );
-      })()}
+          );
+        })()}
 
       {loading ? (
-        <div style={{ padding: 20, textAlign: "center", color: "rgba(255,215,0,.4)", fontSize: 12 }}>
+        <div
+          style={{ padding: 20, textAlign: "center", color: "rgba(255,215,0,.4)", fontSize: 12 }}
+        >
           Acquiring tactical data…
         </div>
       ) : visible.length === 0 ? (
-        <div style={{ padding: 20, textAlign: "center", color: "rgba(255,215,0,.4)", fontSize: 12 }}>
+        <div
+          style={{ padding: 20, textAlign: "center", color: "rgba(255,215,0,.4)", fontSize: 12 }}
+        >
           No active campaigns on this front.
         </div>
       ) : (
         <>
           {visible.length > 4 && (
-            <div style={{ ...stencil, fontSize: 10, color: "rgba(255,215,0,.7)", letterSpacing: "1.2px", marginBottom: 6 }}>
+            <div
+              style={{
+                ...stencil,
+                fontSize: 10,
+                color: "rgba(255,215,0,.7)",
+                letterSpacing: "1.2px",
+                marginBottom: 6,
+              }}
+            >
               ▸ ALL FRONTS
             </div>
           )}
-          <div style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(170px, 1fr))",
-            gap: 8,
-          }}>
-            {visible.map(c => (
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(170px, 1fr))",
+              gap: 8,
+            }}
+          >
+            {visible.map((c) => (
               <PlanetTile key={c.id} campaign={c} onClick={() => setSelected(c.planet.index)} />
             ))}
           </div>
@@ -207,7 +287,17 @@ export default function HelldiversWarMapPanel({ style }: { style?: React.CSSProp
   );
 }
 
-function Chip({ active, color, onClick, children }: { active: boolean; color: string; onClick: () => void; children: React.ReactNode }) {
+function Chip({
+  active,
+  color,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  color: string;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
   return (
     <button
       onClick={onClick}
@@ -230,7 +320,15 @@ function Chip({ active, color, onClick, children }: { active: boolean; color: st
   );
 }
 
-function PlanetTile({ campaign, onClick, featured = false }: { campaign: Campaign; onClick: () => void; featured?: boolean }) {
+function PlanetTile({
+  campaign,
+  onClick,
+  featured = false,
+}: {
+  campaign: Campaign;
+  onClick: () => void;
+  featured?: boolean;
+}) {
   const { planet, isDefense, event } = campaign;
   const color = factionColor(planet.currentOwner);
   const pct = isDefense && event ? (event.defensePct ?? 0) : (planet.liberationPct ?? 0);
@@ -254,53 +352,78 @@ function PlanetTile({ campaign, onClick, featured = false }: { campaign: Campaig
       }}
     >
       {isDefense && (
-        <div style={{
-          position: "absolute",
-          top: 6,
-          right: 6,
-          padding: "2px 6px",
-          borderRadius: 3,
-          background: "#b91c1c",
-          color: "#fff",
-          fontSize: 9,
-          fontWeight: 800,
-          letterSpacing: ".5px",
-          textTransform: "uppercase",
-          ...stencil,
-        }}>
+        <div
+          style={{
+            position: "absolute",
+            top: 6,
+            right: 6,
+            padding: "2px 6px",
+            borderRadius: 3,
+            background: "#b91c1c",
+            color: "#fff",
+            fontSize: 9,
+            fontWeight: 800,
+            letterSpacing: ".5px",
+            textTransform: "uppercase",
+            ...stencil,
+          }}
+        >
           ⚠ Defense
         </div>
       )}
 
-      <div style={{
-        ...stencil, fontSize: 14, fontWeight: 700,
-        color: "rgba(255,255,255,.95)",
-        marginBottom: 4,
-        paddingBottom: 3,
-        borderBottom: `2px solid ${color}66`,
-        display: "inline-block",
-      }}>
+      <div
+        style={{
+          ...stencil,
+          fontSize: 14,
+          fontWeight: 700,
+          color: "rgba(255,255,255,.95)",
+          marginBottom: 4,
+          paddingBottom: 3,
+          borderBottom: `2px solid ${color}66`,
+          display: "inline-block",
+        }}
+      >
         {planet.name}
       </div>
-      <div style={{ fontSize: 9, color: "rgba(255,255,255,.45)", letterSpacing: ".5px", textTransform: "uppercase", marginBottom: 6 }}>
+      <div
+        style={{
+          fontSize: 9,
+          color: "rgba(255,255,255,.45)",
+          letterSpacing: ".5px",
+          textTransform: "uppercase",
+          marginBottom: 6,
+        }}
+      >
         {planet.sector || "—"} Sector
       </div>
 
-      <div style={{
-        height: 5,
-        borderRadius: 2,
-        background: "rgba(0,0,0,.4)",
-        overflow: "hidden",
-        marginBottom: 4,
-      }}>
-        <div style={{
-          width: `${Math.max(0, Math.min(100, pct))}%`,
-          height: "100%",
-          background: isDefense ? "#b91c1c" : color,
-          transition: "width .4s",
-        }} />
+      <div
+        style={{
+          height: 5,
+          borderRadius: 2,
+          background: "rgba(0,0,0,.4)",
+          overflow: "hidden",
+          marginBottom: 4,
+        }}
+      >
+        <div
+          style={{
+            width: `${Math.max(0, Math.min(100, pct))}%`,
+            height: "100%",
+            background: isDefense ? "#b91c1c" : color,
+            transition: "width .4s",
+          }}
+        />
       </div>
-      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: "rgba(255,255,255,.7)" }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          fontSize: 10,
+          color: "rgba(255,255,255,.7)",
+        }}
+      >
         <span style={{ fontWeight: 700 }}>{pct.toFixed(1)}%</span>
         <span>{planet.players.toLocaleString()} 👤</span>
       </div>
@@ -308,29 +431,44 @@ function PlanetTile({ campaign, onClick, featured = false }: { campaign: Campaig
   );
 }
 
-function PlanetModal({ planetIndex, detail, loading, onClose }: {
-  planetIndex: number; detail: PlanetDetail; loading: boolean; onClose: () => void;
+function PlanetModal({
+  planetIndex,
+  detail,
+  loading,
+  onClose,
+}: {
+  planetIndex: number;
+  detail: PlanetDetail;
+  loading: boolean;
+  onClose: () => void;
 }) {
   const color = factionColor(detail?.currentOwner);
-  const biomeName = (detail?.biome as any)?.name || (typeof detail?.biome === "string" ? detail?.biome : "Unknown");
+  const biomeName =
+    (detail?.biome as any)?.name || (typeof detail?.biome === "string" ? detail?.biome : "Unknown");
   const biomeDesc = (detail?.biome as any)?.description || "";
 
   return (
     <div
       onClick={onClose}
       style={{
-        position: "fixed", inset: 0, zIndex: 9999,
+        position: "fixed",
+        inset: 0,
+        zIndex: 9999,
         background: "rgba(0,0,0,.75)",
-        display: "flex", alignItems: "center", justifyContent: "center",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
         padding: 20,
         backdropFilter: "blur(4px)",
       }}
     >
       <div
-        onClick={e => e.stopPropagation()}
+        onClick={(e) => e.stopPropagation()}
         style={{
-          width: "100%", maxWidth: 560,
-          maxHeight: "85vh", overflow: "auto",
+          width: "100%",
+          maxWidth: 560,
+          maxHeight: "85vh",
+          overflow: "auto",
           background: "linear-gradient(180deg, #1a1812, #0c0b08)",
           border: `2px solid ${color}`,
           borderRadius: 8,
@@ -339,54 +477,118 @@ function PlanetModal({ planetIndex, detail, loading, onClose }: {
           boxShadow: `0 0 12px ${color}22`,
         }}
       >
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+            marginBottom: 12,
+          }}
+        >
           <div>
-            <div style={{ fontSize: 10, color: "rgba(255,215,0,.6)", letterSpacing: "1px", textTransform: "uppercase", ...stencil }}>
+            <div
+              style={{
+                fontSize: 10,
+                color: "rgba(255,215,0,.6)",
+                letterSpacing: "1px",
+                textTransform: "uppercase",
+                ...stencil,
+              }}
+            >
               Planet Index #{planetIndex}
             </div>
-            <div style={{ ...stencil, fontSize: 22, fontWeight: 700, color: "rgba(255,255,255,.95)", marginTop: 2, paddingBottom: 4, borderBottom: `2px solid ${color}77`, display: "inline-block" }}>
+            <div
+              style={{
+                ...stencil,
+                fontSize: 22,
+                fontWeight: 700,
+                color: "rgba(255,255,255,.95)",
+                marginTop: 2,
+                paddingBottom: 4,
+                borderBottom: `2px solid ${color}77`,
+                display: "inline-block",
+              }}
+            >
               {detail?.name || "…"}
             </div>
-            <div style={{ fontSize: 11, color: "rgba(255,255,255,.5)", marginTop: 2, letterSpacing: ".5px" }}>
+            <div
+              style={{
+                fontSize: 11,
+                color: "rgba(255,255,255,.5)",
+                marginTop: 2,
+                letterSpacing: ".5px",
+              }}
+            >
               {detail?.sector || "Unknown"} Sector · Held by {detail?.currentOwner || "—"}
             </div>
           </div>
-          <button onClick={onClose} style={{
-            padding: "4px 10px", borderRadius: 4,
-            border: "1px solid rgba(255,255,255,.15)",
-            background: "rgba(255,255,255,.05)",
-            color: "rgba(255,255,255,.8)", cursor: "pointer", fontSize: 11, fontFamily: "inherit",
-          }}>Close</button>
+          <button
+            onClick={onClose}
+            style={{
+              padding: "4px 10px",
+              borderRadius: 4,
+              border: "1px solid rgba(255,255,255,.15)",
+              background: "rgba(255,255,255,.05)",
+              color: "rgba(255,255,255,.8)",
+              cursor: "pointer",
+              fontSize: 11,
+              fontFamily: "inherit",
+            }}
+          >
+            Close
+          </button>
         </div>
 
         {loading ? (
-          <div style={{ padding: 20, textAlign: "center", color: "rgba(255,215,0,.5)", fontSize: 12 }}>
+          <div
+            style={{ padding: 20, textAlign: "center", color: "rgba(255,215,0,.5)", fontSize: 12 }}
+          >
             Receiving telemetry…
           </div>
         ) : !detail ? (
-          <div style={{ padding: 20, textAlign: "center", color: "rgba(255,255,255,.5)", fontSize: 12 }}>
+          <div
+            style={{
+              padding: 20,
+              textAlign: "center",
+              color: "rgba(255,255,255,.5)",
+              fontSize: 12,
+            }}
+          >
             No detail available.
           </div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             <Stat label="Liberation" value={`${detail.liberationPct.toFixed(1)}%`} color={color} />
-            <Stat label="Active Helldivers" value={(detail.statistics?.playerCount ?? 0).toLocaleString()} />
+            <Stat
+              label="Active Helldivers"
+              value={(detail.statistics?.playerCount ?? 0).toLocaleString()}
+            />
 
             <Section label="Biome">
               <div style={{ fontSize: 13, fontWeight: 600 }}>{biomeName}</div>
-              {biomeDesc && <div style={{ fontSize: 11, color: "rgba(255,255,255,.6)", marginTop: 2 }}>{biomeDesc}</div>}
+              {biomeDesc && (
+                <div style={{ fontSize: 11, color: "rgba(255,255,255,.6)", marginTop: 2 }}>
+                  {biomeDesc}
+                </div>
+              )}
             </Section>
 
             {Array.isArray(detail.hazards) && detail.hazards.length > 0 && (
               <Section label="Environmental Hazards">
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                   {detail.hazards.map((h: any, i: number) => (
-                    <span key={i} style={{
-                      padding: "3px 8px", borderRadius: 3,
-                      background: "rgba(245,130,32,.12)",
-                      border: "1px solid rgba(245,130,32,.25)",
-                      fontSize: 10, color: "#f58220", fontWeight: 600,
-                    }}>
+                    <span
+                      key={i}
+                      style={{
+                        padding: "3px 8px",
+                        borderRadius: 3,
+                        background: "rgba(245,130,32,.12)",
+                        border: "1px solid rgba(245,130,32,.25)",
+                        fontSize: 10,
+                        color: "#f58220",
+                        fontWeight: 600,
+                      }}
+                    >
                       {h?.name || h?.type || String(h)}
                     </span>
                   ))}
@@ -411,8 +613,20 @@ function PlanetModal({ planetIndex, detail, loading, onClose }: {
 function Stat({ label, value, color }: { label: string; value: string; color?: string }) {
   return (
     <div>
-      <div style={{ fontSize: 10, color: "rgba(255,255,255,.5)", letterSpacing: ".5px", textTransform: "uppercase", ...stencil }}>{label}</div>
-      <div style={{ fontSize: 18, fontWeight: 800, color: color || "#FFD700", ...stencil }}>{value}</div>
+      <div
+        style={{
+          fontSize: 10,
+          color: "rgba(255,255,255,.5)",
+          letterSpacing: ".5px",
+          textTransform: "uppercase",
+          ...stencil,
+        }}
+      >
+        {label}
+      </div>
+      <div style={{ fontSize: 18, fontWeight: 800, color: color || "#FFD700", ...stencil }}>
+        {value}
+      </div>
     </div>
   );
 }
@@ -420,7 +634,18 @@ function Stat({ label, value, color }: { label: string; value: string; color?: s
 function Section({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <div style={{ fontSize: 10, color: "rgba(255,215,0,.55)", letterSpacing: ".7px", textTransform: "uppercase", marginBottom: 4, ...stencil }}>{label}</div>
+      <div
+        style={{
+          fontSize: 10,
+          color: "rgba(255,215,0,.55)",
+          letterSpacing: ".7px",
+          textTransform: "uppercase",
+          marginBottom: 4,
+          ...stencil,
+        }}
+      >
+        {label}
+      </div>
       {children}
     </div>
   );

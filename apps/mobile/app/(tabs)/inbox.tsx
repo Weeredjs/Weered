@@ -1,12 +1,5 @@
 import { useCallback, useState } from "react";
-import {
-  View,
-  Text,
-  FlatList,
-  Pressable,
-  ActivityIndicator,
-  RefreshControl,
-} from "react-native";
+import { View, Text, FlatList, Pressable, ActivityIndicator, RefreshControl } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -106,8 +99,16 @@ function SegmentedTabs({ mode, onChange }: { mode: Mode; onChange: (m: Mode) => 
 }
 
 function SegmentBtn({
-  label, active, badge, onPress,
-}: { label: string; active: boolean; badge: number; onPress: () => void }) {
+  label,
+  active,
+  badge,
+  onPress,
+}: {
+  label: string;
+  active: boolean;
+  badge: number;
+  onPress: () => void;
+}) {
   return (
     <Pressable
       onPress={onPress}
@@ -165,12 +166,20 @@ function DmsList() {
   const onRefresh = useCallback(() => q.refetch(), [q]);
 
   if (q.isLoading) {
-    return <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}><ActivityIndicator color="#5800E5" /></View>;
+    return (
+      <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+        <ActivityIndicator color="#5800E5" />
+      </View>
+    );
   }
   if (q.error) {
     return (
-      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 32 }}>
-        <Text style={{ color: "#ef4444", fontSize: 14, textAlign: "center" }}>Couldn't load conversations.</Text>
+      <View
+        style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 32 }}
+      >
+        <Text style={{ color: "#ef4444", fontSize: 14, textAlign: "center" }}>
+          Couldn't load conversations.
+        </Text>
       </View>
     );
   }
@@ -179,8 +188,14 @@ function DmsList() {
     <FlatList
       data={q.data?.previews ?? []}
       keyExtractor={(p) => p.peerId}
-      refreshControl={<RefreshControl refreshing={q.isRefetching} onRefresh={onRefresh} tintColor="#5800E5" />}
-      ItemSeparatorComponent={() => <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.04)", marginHorizontal: 16 }} />}
+      refreshControl={
+        <RefreshControl refreshing={q.isRefetching} onRefresh={onRefresh} tintColor="#5800E5" />
+      }
+      ItemSeparatorComponent={() => (
+        <View
+          style={{ height: 1, backgroundColor: "rgba(255,255,255,0.04)", marginHorizontal: 16 }}
+        />
+      )}
       renderItem={({ item }) => (
         <Pressable
           onPress={() => router.push(`/dm/${item.peerId}`)}
@@ -208,7 +223,14 @@ function DmsList() {
               >
                 {item.peerName}
               </Text>
-              <Text style={{ color: "rgba(180,180,190,0.55)", fontFamily: FONT.numericReg, fontSize: 12, marginLeft: 8 }}>
+              <Text
+                style={{
+                  color: "rgba(180,180,190,0.55)",
+                  fontFamily: FONT.numericReg,
+                  fontSize: 12,
+                  marginLeft: 8,
+                }}
+              >
                 {formatRelative(item.lastTs)}
               </Text>
             </View>
@@ -222,10 +244,19 @@ function DmsList() {
                 }}
                 numberOfLines={1}
               >
-                {item.isFromMe ? "You: " : ""}{item.lastMessage}
+                {item.isFromMe ? "You: " : ""}
+                {item.lastMessage}
               </Text>
               {item.unread && (
-                <View style={{ marginLeft: 8, width: 8, height: 8, borderRadius: 4, backgroundColor: "#5800E5" }} />
+                <View
+                  style={{
+                    marginLeft: 8,
+                    width: 8,
+                    height: 8,
+                    borderRadius: 4,
+                    backgroundColor: "#5800E5",
+                  }}
+                />
               )}
             </View>
           </View>
@@ -233,10 +264,28 @@ function DmsList() {
       )}
       ListEmptyComponent={
         <View style={{ paddingHorizontal: 32, paddingTop: 80, alignItems: "center" }}>
-          <Text style={{ color: "rgba(180,180,190,0.55)", fontFamily: FONT.uiBold, fontSize: 13, letterSpacing: 1.4, textTransform: "uppercase", textAlign: "center" }}>
+          <Text
+            style={{
+              color: "rgba(180,180,190,0.55)",
+              fontFamily: FONT.uiBold,
+              fontSize: 13,
+              letterSpacing: 1.4,
+              textTransform: "uppercase",
+              textAlign: "center",
+            }}
+          >
             No conversations yet
           </Text>
-          <Text style={{ color: "rgba(180,180,190,0.4)", fontFamily: FONT.uiReg, fontSize: 12, marginTop: 10, textAlign: "center", lineHeight: 18 }}>
+          <Text
+            style={{
+              color: "rgba(180,180,190,0.4)",
+              fontFamily: FONT.uiReg,
+              fontSize: 12,
+              marginTop: 10,
+              textAlign: "center",
+              lineHeight: 18,
+            }}
+          >
             Tap Message on a friend's profile to start one.
           </Text>
         </View>
@@ -261,7 +310,8 @@ function AlertsList() {
   });
 
   const markRead = useMutation({
-    mutationFn: (id: string) => api("/notifications/read", { method: "PATCH", body: { ids: [id] } }),
+    mutationFn: (id: string) =>
+      api("/notifications/read", { method: "PATCH", body: { ids: [id] } }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["notifications"] });
       qc.invalidateQueries({ queryKey: ["notifications-unread"] });
@@ -272,7 +322,11 @@ function AlertsList() {
   const unreadCount = q.data?.unreadCount ?? 0;
 
   if (q.isLoading) {
-    return <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}><ActivityIndicator color="#5800E5" /></View>;
+    return (
+      <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+        <ActivityIndicator color="#5800E5" />
+      </View>
+    );
   }
 
   return (
@@ -280,7 +334,15 @@ function AlertsList() {
       {unreadCount > 0 && (
         <View style={{ paddingHorizontal: 16, paddingVertical: 10, alignItems: "flex-end" }}>
           <Pressable onPress={() => markAll.mutate()} hitSlop={8}>
-            <Text style={{ color: "#a78bfa", fontFamily: FONT.uiBold, fontSize: 11, letterSpacing: 1.4, textTransform: "uppercase" }}>
+            <Text
+              style={{
+                color: "#a78bfa",
+                fontFamily: FONT.uiBold,
+                fontSize: 11,
+                letterSpacing: 1.4,
+                textTransform: "uppercase",
+              }}
+            >
               Mark all read
             </Text>
           </Pressable>
@@ -289,14 +351,22 @@ function AlertsList() {
       <FlatList
         data={q.data?.notifications ?? []}
         keyExtractor={(n) => n.id}
-        refreshControl={<RefreshControl refreshing={q.isRefetching} onRefresh={onRefresh} tintColor="#5800E5" />}
-        ItemSeparatorComponent={() => <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.04)", marginHorizontal: 16 }} />}
+        refreshControl={
+          <RefreshControl refreshing={q.isRefetching} onRefresh={onRefresh} tintColor="#5800E5" />
+        }
+        ItemSeparatorComponent={() => (
+          <View
+            style={{ height: 1, backgroundColor: "rgba(255,255,255,0.04)", marginHorizontal: 16 }}
+          />
+        )}
         renderItem={({ item }) => (
           <Pressable
             onPress={() => {
               if (!item.read) markRead.mutate(item.id);
               if (item.actionUrl) {
-                const path = item.actionUrl.startsWith("http") ? new URL(item.actionUrl).pathname : item.actionUrl;
+                const path = item.actionUrl.startsWith("http")
+                  ? new URL(item.actionUrl).pathname
+                  : item.actionUrl;
                 router.push(path as any);
               }
             }}
@@ -314,10 +384,23 @@ function AlertsList() {
             <View style={{ flex: 1 }}>
               <View style={{ flexDirection: "row", alignItems: "center" }}>
                 {!item.read && (
-                  <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: "#5800E5", marginRight: 6 }} />
+                  <View
+                    style={{
+                      width: 6,
+                      height: 6,
+                      borderRadius: 3,
+                      backgroundColor: "#5800E5",
+                      marginRight: 6,
+                    }}
+                  />
                 )}
                 <Text
-                  style={{ flex: 1, color: "rgba(243,244,246,0.96)", fontFamily: FONT.uiMed, fontSize: 14 }}
+                  style={{
+                    flex: 1,
+                    color: "rgba(243,244,246,0.96)",
+                    fontFamily: FONT.uiMed,
+                    fontSize: 14,
+                  }}
                   numberOfLines={2}
                 >
                   {item.title}
@@ -325,13 +408,25 @@ function AlertsList() {
               </View>
               {!!item.body && (
                 <Text
-                  style={{ color: "rgba(180,180,190,0.65)", fontFamily: FONT.uiReg, fontSize: 12, marginTop: 2 }}
+                  style={{
+                    color: "rgba(180,180,190,0.65)",
+                    fontFamily: FONT.uiReg,
+                    fontSize: 12,
+                    marginTop: 2,
+                  }}
                   numberOfLines={2}
                 >
                   {item.body}
                 </Text>
               )}
-              <Text style={{ color: "rgba(180,180,190,0.45)", fontFamily: FONT.numericReg, fontSize: 11, marginTop: 4 }}>
+              <Text
+                style={{
+                  color: "rgba(180,180,190,0.45)",
+                  fontFamily: FONT.numericReg,
+                  fontSize: 11,
+                  marginTop: 4,
+                }}
+              >
                 {formatRelative(item.createdAt)}
               </Text>
             </View>
@@ -339,7 +434,15 @@ function AlertsList() {
         )}
         ListEmptyComponent={
           <View style={{ paddingHorizontal: 32, paddingTop: 80, alignItems: "center" }}>
-            <Text style={{ color: "rgba(180,180,190,0.55)", fontFamily: FONT.uiBold, fontSize: 13, letterSpacing: 1.4, textTransform: "uppercase" }}>
+            <Text
+              style={{
+                color: "rgba(180,180,190,0.55)",
+                fontFamily: FONT.uiBold,
+                fontSize: 13,
+                letterSpacing: 1.4,
+                textTransform: "uppercase",
+              }}
+            >
               All quiet
             </Text>
           </View>
@@ -350,7 +453,13 @@ function AlertsList() {
 }
 
 type GroupMember = { id: string; name: string; avatar?: string | null };
-type GroupLastMessage = { id: string; senderId: string; body: string; createdAt: string; deleted: boolean } | null;
+type GroupLastMessage = {
+  id: string;
+  senderId: string;
+  body: string;
+  createdAt: string;
+  deleted: boolean;
+} | null;
 type GroupThread = {
   id: string;
   name: string | null;
@@ -370,12 +479,20 @@ function GroupsList() {
   const onRefresh = useCallback(() => q.refetch(), [q]);
 
   if (q.isLoading) {
-    return <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}><ActivityIndicator color="#5800E5" /></View>;
+    return (
+      <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+        <ActivityIndicator color="#5800E5" />
+      </View>
+    );
   }
   if (q.error) {
     return (
-      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 32 }}>
-        <Text style={{ color: "#ef4444", fontSize: 14, textAlign: "center" }}>Couldn't load groups.</Text>
+      <View
+        style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 32 }}
+      >
+        <Text style={{ color: "#ef4444", fontSize: 14, textAlign: "center" }}>
+          Couldn't load groups.
+        </Text>
       </View>
     );
   }
@@ -383,8 +500,14 @@ function GroupsList() {
     <FlatList
       data={q.data?.threads ?? []}
       keyExtractor={(t) => t.id}
-      refreshControl={<RefreshControl refreshing={q.isRefetching} onRefresh={onRefresh} tintColor="#5800E5" />}
-      ItemSeparatorComponent={() => <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.04)", marginHorizontal: 16 }} />}
+      refreshControl={
+        <RefreshControl refreshing={q.isRefetching} onRefresh={onRefresh} tintColor="#5800E5" />
+      }
+      ItemSeparatorComponent={() => (
+        <View
+          style={{ height: 1, backgroundColor: "rgba(255,255,255,0.04)", marginHorizontal: 16 }}
+        />
+      )}
       renderItem={({ item }) => {
         const title = item.name || otherMemberList(item.members);
         const preview = groupPreviewText(item.lastMessage, item.members);
@@ -415,7 +538,14 @@ function GroupsList() {
                 >
                   {title}
                 </Text>
-                <Text style={{ color: "rgba(180,180,190,0.55)", fontFamily: FONT.numericReg, fontSize: 12, marginLeft: 8 }}>
+                <Text
+                  style={{
+                    color: "rgba(180,180,190,0.55)",
+                    fontFamily: FONT.numericReg,
+                    fontSize: 12,
+                    marginLeft: 8,
+                  }}
+                >
                   {formatRelative(item.lastMessageAt)}
                 </Text>
               </View>
@@ -432,16 +562,18 @@ function GroupsList() {
                   {preview}
                 </Text>
                 {item.unread > 0 && (
-                  <View style={{
-                    marginLeft: 8,
-                    minWidth: 18,
-                    height: 18,
-                    paddingHorizontal: 5,
-                    borderRadius: 9,
-                    backgroundColor: "#5800E5",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}>
+                  <View
+                    style={{
+                      marginLeft: 8,
+                      minWidth: 18,
+                      height: 18,
+                      paddingHorizontal: 5,
+                      borderRadius: 9,
+                      backgroundColor: "#5800E5",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
                     <Text style={{ color: "#fff", fontFamily: FONT.uiBold, fontSize: 10 }}>
                       {item.unread > 99 ? "99+" : item.unread}
                     </Text>
@@ -454,10 +586,28 @@ function GroupsList() {
       }}
       ListEmptyComponent={
         <View style={{ paddingHorizontal: 32, paddingTop: 80, alignItems: "center" }}>
-          <Text style={{ color: "rgba(180,180,190,0.55)", fontFamily: FONT.uiBold, fontSize: 13, letterSpacing: 1.4, textTransform: "uppercase", textAlign: "center" }}>
+          <Text
+            style={{
+              color: "rgba(180,180,190,0.55)",
+              fontFamily: FONT.uiBold,
+              fontSize: 13,
+              letterSpacing: 1.4,
+              textTransform: "uppercase",
+              textAlign: "center",
+            }}
+          >
             No groups yet
           </Text>
-          <Text style={{ color: "rgba(180,180,190,0.4)", fontFamily: FONT.uiReg, fontSize: 12, marginTop: 10, textAlign: "center", lineHeight: 18 }}>
+          <Text
+            style={{
+              color: "rgba(180,180,190,0.4)",
+              fontFamily: FONT.uiReg,
+              fontSize: 12,
+              marginTop: 10,
+              textAlign: "center",
+              lineHeight: 18,
+            }}
+          >
             Start one on web — mobile group creation coming next.
           </Text>
         </View>
@@ -482,7 +632,8 @@ function groupPreviewText(last: GroupLastMessage, members: GroupMember[]): strin
 
 function GroupAvatarStack({ members }: { members: GroupMember[] }) {
   if (members.length === 0) return <Avatar name="?" size={44} />;
-  if (members.length === 1) return <Avatar name={members[0].name} url={members[0].avatar} size={44} />;
+  if (members.length === 1)
+    return <Avatar name={members[0].name} url={members[0].avatar} size={44} />;
   return (
     <View style={{ width: 44, height: 44 }}>
       <View style={{ position: "absolute", top: 0, left: 0 }}>
@@ -495,7 +646,6 @@ function GroupAvatarStack({ members }: { members: GroupMember[] }) {
   );
 }
 
-
 function formatRelative(iso: string): string {
   try {
     const diff = Date.now() - new Date(iso).getTime();
@@ -507,5 +657,7 @@ function formatRelative(iso: string): string {
     const days = Math.floor(hours / 24);
     if (days < 7) return `${days}d`;
     return new Date(iso).toLocaleDateString();
-  } catch { return ""; }
+  } catch {
+    return "";
+  }
 }

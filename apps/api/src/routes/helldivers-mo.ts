@@ -43,13 +43,11 @@ export default async function helldiversMoRoutes(app: FastifyInstance, opts: Opt
         select: { steamId: true },
       });
       if (!claimant?.steamId) {
-        return reply
-          .code(403)
-          .send({
-            ok: false,
-            error: "steam_required",
-            message: "Link your Steam account to claim Helldivers Major Order rewards.",
-          });
+        return reply.code(403).send({
+          ok: false,
+          error: "steam_required",
+          message: "Link your Steam account to claim Helldivers Major Order rewards.",
+        });
       }
 
       const externalRef = `hd2:mo:${moId}`;

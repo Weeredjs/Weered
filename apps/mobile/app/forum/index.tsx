@@ -1,16 +1,39 @@
 import { useState } from "react";
-import { View, Text, FlatList, Pressable, Modal, TextInput, ActivityIndicator, RefreshControl, Alert } from "react-native";
+import {
+  View,
+  Text,
+  FlatList,
+  Pressable,
+  Modal,
+  TextInput,
+  ActivityIndicator,
+  RefreshControl,
+  Alert,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Stack, router, useLocalSearchParams } from "expo-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 
-type Author = { id: string; name: string; avatar: string | null; avatarColor: string | null; tier: string; globalRole: string };
+type Author = {
+  id: string;
+  name: string;
+  avatar: string | null;
+  avatarColor: string | null;
+  tier: string;
+  globalRole: string;
+};
 type Post = {
-  id: string; title: string; body: string; category: string;
-  authorId: string; authorName: string;
-  score: number; commentCount: number;
-  pinned: boolean; locked: boolean;
+  id: string;
+  title: string;
+  body: string;
+  category: string;
+  authorId: string;
+  authorName: string;
+  score: number;
+  commentCount: number;
+  pinned: boolean;
+  locked: boolean;
   createdAt: string;
   lobbyId: string | null;
   author: Author | null;
@@ -32,13 +55,14 @@ export default function Forum() {
   const { lobbyId } = useLocalSearchParams<{ lobbyId?: string }>();
   const lobbyParam = lobbyId ? `&lobbyId=${encodeURIComponent(lobbyId)}` : "";
   const qc = useQueryClient();
-  const [sort, setSort] = useState<typeof SORTS[number]>("hot");
+  const [sort, setSort] = useState<(typeof SORTS)[number]>("hot");
   const [cat, setCat] = useState("");
   const [composeOpen, setComposeOpen] = useState(false);
 
   const q = useQuery({
     queryKey: ["forum-list", sort, cat, lobbyId || ""],
-    queryFn: () => api<ListResp>(`/forum/posts?sort=${sort}${cat ? `&category=${cat}` : ""}${lobbyParam}`),
+    queryFn: () =>
+      api<ListResp>(`/forum/posts?sort=${sort}${cat ? `&category=${cat}` : ""}${lobbyParam}`),
   });
 
   return (
@@ -47,7 +71,11 @@ export default function Forum() {
         options={{
           title: "Forum",
           headerRight: () => (
-            <Pressable onPress={() => setComposeOpen(true)} hitSlop={8} className="active:opacity-70 mr-2">
+            <Pressable
+              onPress={() => setComposeOpen(true)}
+              hitSlop={8}
+              className="active:opacity-70 mr-2"
+            >
               <Text className="text-weered font-semibold">+ Post</Text>
             </Pressable>
           ),
@@ -56,8 +84,18 @@ export default function Forum() {
 
       <View className="flex-row border-b border-border/40">
         {SORTS.map((s) => (
-          <Pressable key={s} onPress={() => setSort(s)} className="flex-1 py-3 items-center active:opacity-70" style={{ borderBottomWidth: 2, borderBottomColor: sort === s ? "#5800E5" : "transparent" }}>
-            <Text className={`text-sm font-bold ${sort === s ? "text-weered" : "text-weered-muted"}`}>
+          <Pressable
+            key={s}
+            onPress={() => setSort(s)}
+            className="flex-1 py-3 items-center active:opacity-70"
+            style={{
+              borderBottomWidth: 2,
+              borderBottomColor: sort === s ? "#5800E5" : "transparent",
+            }}
+          >
+            <Text
+              className={`text-sm font-bold ${sort === s ? "text-weered" : "text-weered-muted"}`}
+            >
               {s === "hot" ? "🔥 Hot" : s === "new" ? "🕒 New" : "🏆 Top"}
             </Text>
           </Pressable>
@@ -66,19 +104,35 @@ export default function Forum() {
 
       <View className="flex-row px-2 py-2 border-b border-border/30">
         {CATEGORIES.map((c) => (
-          <Pressable key={c || "all"} onPress={() => setCat(c)} className="px-2 py-1 active:opacity-70">
-            <Text className={`text-xs font-bold uppercase ${cat === c ? "text-weered" : "text-weered-muted"}`}>{CATEGORY_LABEL[c]}</Text>
+          <Pressable
+            key={c || "all"}
+            onPress={() => setCat(c)}
+            className="px-2 py-1 active:opacity-70"
+          >
+            <Text
+              className={`text-xs font-bold uppercase ${cat === c ? "text-weered" : "text-weered-muted"}`}
+            >
+              {CATEGORY_LABEL[c]}
+            </Text>
           </Pressable>
         ))}
       </View>
 
       {q.isLoading ? (
-        <View className="flex-1 items-center justify-center"><ActivityIndicator color="#5800E5" /></View>
+        <View className="flex-1 items-center justify-center">
+          <ActivityIndicator color="#5800E5" />
+        </View>
       ) : (
         <FlatList
           data={q.data?.posts ?? []}
           keyExtractor={(p) => p.id}
-          refreshControl={<RefreshControl refreshing={q.isRefetching} onRefresh={() => q.refetch()} tintColor="#5800E5" />}
+          refreshControl={
+            <RefreshControl
+              refreshing={q.isRefetching}
+              onRefresh={() => q.refetch()}
+              tintColor="#5800E5"
+            />
+          }
           ItemSeparatorComponent={() => <View className="h-px bg-border/30" />}
           contentContainerStyle={{ paddingBottom: 32 }}
           renderItem={({ item }) => <PostRow post={item} />}
@@ -114,12 +168,18 @@ function PostRow({ post }: { post: Post }) {
       <View className="flex-row items-center mb-1">
         {post.pinned && <Text className="text-amber-400 text-xs font-bold mr-2">★</Text>}
         {post.locked && <Text className="text-weered-muted text-xs mr-2">🔒</Text>}
-        <Text className="text-weered-muted text-[10px] font-bold uppercase mr-2">{CATEGORY_LABEL[post.category] || post.category}</Text>
+        <Text className="text-weered-muted text-[10px] font-bold uppercase mr-2">
+          {CATEGORY_LABEL[post.category] || post.category}
+        </Text>
         <Text className="text-weered-muted text-xs">by {post.authorName}</Text>
       </View>
-      <Text className="text-weered-text font-bold text-base mb-1" numberOfLines={2}>{post.title}</Text>
+      <Text className="text-weered-text font-bold text-base mb-1" numberOfLines={2}>
+        {post.title}
+      </Text>
       {!!post.body && (
-        <Text className="text-weered-muted text-xs" numberOfLines={2}>{post.body}</Text>
+        <Text className="text-weered-muted text-xs" numberOfLines={2}>
+          {post.body}
+        </Text>
       )}
       <View className="flex-row items-center mt-2">
         <Text className="text-weered text-xs font-bold mr-3">▲ {post.score}</Text>
@@ -130,16 +190,25 @@ function PostRow({ post }: { post: Post }) {
   );
 }
 
-function Compose({ lobbyId, onClose, onCreated }: { lobbyId?: string; onClose: () => void; onCreated: (postId: string) => void }) {
+function Compose({
+  lobbyId,
+  onClose,
+  onCreated,
+}: {
+  lobbyId?: string;
+  onClose: () => void;
+  onCreated: (postId: string) => void;
+}) {
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [category, setCategory] = useState("DISCUSSION");
 
   const create = useMutation({
-    mutationFn: () => api<{ ok: boolean; post: { id: string } }>("/forum/posts", {
-      method: "POST",
-      body: { title: title.trim(), body: body.trim(), category, ...(lobbyId ? { lobbyId } : {}) },
-    }),
+    mutationFn: () =>
+      api<{ ok: boolean; post: { id: string } }>("/forum/posts", {
+        method: "POST",
+        body: { title: title.trim(), body: body.trim(), category, ...(lobbyId ? { lobbyId } : {}) },
+      }),
     onSuccess: (res) => onCreated(res.post.id),
     onError: (e: any) => Alert.alert("Couldn't post", e?.message || "Unknown error"),
   });
@@ -157,7 +226,11 @@ function Compose({ lobbyId, onClose, onCreated }: { lobbyId?: string; onClose: (
                 onPress={() => setCategory(c)}
                 className={`mr-2 mb-2 px-3 py-1.5 rounded-md border ${category === c ? "bg-weered border-weered" : "bg-panel border-border"}`}
               >
-                <Text className={`text-xs font-bold ${category === c ? "text-white" : "text-weered-muted"}`}>{CATEGORY_LABEL[c]}</Text>
+                <Text
+                  className={`text-xs font-bold ${category === c ? "text-white" : "text-weered-muted"}`}
+                >
+                  {CATEGORY_LABEL[c]}
+                </Text>
               </Pressable>
             ))}
           </View>
@@ -183,7 +256,10 @@ function Compose({ lobbyId, onClose, onCreated }: { lobbyId?: string; onClose: (
           />
 
           <View className="flex-row">
-            <Pressable onPress={onClose} className="flex-1 mr-2 px-3 py-3 rounded-lg bg-panel border border-border active:opacity-70">
+            <Pressable
+              onPress={onClose}
+              className="flex-1 mr-2 px-3 py-3 rounded-lg bg-panel border border-border active:opacity-70"
+            >
               <Text className="text-weered-muted text-center font-bold">Cancel</Text>
             </Pressable>
             <Pressable
@@ -191,7 +267,9 @@ function Compose({ lobbyId, onClose, onCreated }: { lobbyId?: string; onClose: (
               disabled={create.isPending || !title.trim() || !body.trim()}
               className="flex-1 px-3 py-3 rounded-lg bg-weered active:opacity-80"
             >
-              <Text className="text-white text-center font-bold">{create.isPending ? "Posting…" : "Post"}</Text>
+              <Text className="text-white text-center font-bold">
+                {create.isPending ? "Posting…" : "Post"}
+              </Text>
             </Pressable>
           </View>
         </View>
@@ -208,5 +286,7 @@ function formatRel(iso: string): string {
     const hrs = Math.floor(mins / 60);
     if (hrs < 24) return `${hrs}h`;
     return `${Math.floor(hrs / 24)}d`;
-  } catch { return ""; }
+  } catch {
+    return "";
+  }
 }

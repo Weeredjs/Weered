@@ -23,7 +23,13 @@ const DEFAULT_PERKS = [
 const SESSION_KEY = (lobbyId: string) => `weered:join-overlay-dismissed:${lobbyId}`;
 
 export default function JoinLobbyOverlay({
-  lobbyId, lobbyName, themeable, memberPerks, accentColor, joinMode, onJoin,
+  lobbyId,
+  lobbyName,
+  themeable,
+  memberPerks,
+  accentColor,
+  joinMode,
+  onJoin,
 }: Props) {
   const [dismissed, setDismissed] = useState<boolean>(true);
   const [joining, setJoining] = useState(false);
@@ -32,7 +38,9 @@ export default function JoinLobbyOverlay({
     try {
       const d = sessionStorage.getItem(SESSION_KEY(lobbyId)) === "1";
       setDismissed(d);
-    } catch { setDismissed(false); }
+    } catch {
+      setDismissed(false);
+    }
   }, [lobbyId]);
 
   if (joinMode !== "OPEN") return null;
@@ -45,11 +53,17 @@ export default function JoinLobbyOverlay({
   async function handleJoin() {
     if (joining) return;
     setJoining(true);
-    try { await onJoin(); } finally { setJoining(false); }
+    try {
+      await onJoin();
+    } finally {
+      setJoining(false);
+    }
   }
 
   function handleDismiss() {
-    try { sessionStorage.setItem(SESSION_KEY(lobbyId), "1"); } catch {}
+    try {
+      sessionStorage.setItem(SESSION_KEY(lobbyId), "1");
+    } catch {}
     setDismissed(true);
   }
 
@@ -91,67 +105,86 @@ export default function JoinLobbyOverlay({
           fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
         }}
       >
-        <p style={{
-          margin: 0,
-          fontSize: 11,
-          fontWeight: 700,
-          letterSpacing: "0.1em",
-          textTransform: "uppercase",
-          color: accent,
-          opacity: 0.9,
-        }}>Become a member</p>
+        <p
+          style={{
+            margin: 0,
+            fontSize: 11,
+            fontWeight: 700,
+            letterSpacing: "0.1em",
+            textTransform: "uppercase",
+            color: accent,
+            opacity: 0.9,
+          }}
+        >
+          Become a member
+        </p>
 
-        <h2 id="join-overlay-title" style={{
-          margin: "8px 0 6px",
-          fontSize: 24,
-          fontWeight: 700,
-          lineHeight: 1.2,
-          color: "#fff",
-        }}>
+        <h2
+          id="join-overlay-title"
+          style={{
+            margin: "8px 0 6px",
+            fontSize: 24,
+            fontWeight: 700,
+            lineHeight: 1.2,
+            color: "#fff",
+          }}
+        >
           Unlock the {lobbyName} experience
         </h2>
 
-        <p style={{
-          margin: "0 0 18px",
-          fontSize: 14,
-          opacity: 0.78,
-          lineHeight: 1.5,
-        }}>
+        <p
+          style={{
+            margin: "0 0 18px",
+            fontSize: 14,
+            opacity: 0.78,
+            lineHeight: 1.5,
+          }}
+        >
           {themeable
             ? `Join to unlock the full ${lobbyName} look + everything below. One click, free, no commitment.`
             : `Join to unlock everything below. One click, free, no commitment.`}
         </p>
 
-        <ul style={{
-          listStyle: "none",
-          padding: 0,
-          margin: "0 0 22px",
-          display: "grid",
-          gap: 10,
-        }}>
+        <ul
+          style={{
+            listStyle: "none",
+            padding: 0,
+            margin: "0 0 22px",
+            display: "grid",
+            gap: 10,
+          }}
+        >
           {perks.map((perk, i) => (
-            <li key={i} style={{
-              display: "flex",
-              alignItems: "flex-start",
-              gap: 10,
-              fontSize: 14,
-              lineHeight: 1.45,
-            }}>
-              <span aria-hidden="true" style={{
-                flexShrink: 0,
-                marginTop: 2,
-                width: 18,
-                height: 18,
-                borderRadius: 999,
-                background: `${accent}22`,
-                border: `1px solid ${accent}66`,
-                color: accent,
-                fontSize: 11,
-                fontWeight: 800,
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}>✓</span>
+            <li
+              key={i}
+              style={{
+                display: "flex",
+                alignItems: "flex-start",
+                gap: 10,
+                fontSize: 14,
+                lineHeight: 1.45,
+              }}
+            >
+              <span
+                aria-hidden="true"
+                style={{
+                  flexShrink: 0,
+                  marginTop: 2,
+                  width: 18,
+                  height: 18,
+                  borderRadius: 999,
+                  background: `${accent}22`,
+                  border: `1px solid ${accent}66`,
+                  color: accent,
+                  fontSize: 11,
+                  fontWeight: 800,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                ✓
+              </span>
               <span style={{ opacity: 0.92 }}>{perk}</span>
             </li>
           ))}
@@ -175,8 +208,12 @@ export default function JoinLobbyOverlay({
               transition: "transform .12s, box-shadow .12s, filter .12s",
               opacity: joining ? 0.7 : 1,
             }}
-            onMouseEnter={e => { if (!joining) (e.currentTarget as HTMLElement).style.filter = "brightness(1.08)"; }}
-            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.filter = "none"; }}
+            onMouseEnter={(e) => {
+              if (!joining) (e.currentTarget as HTMLElement).style.filter = "brightness(1.08)";
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLElement).style.filter = "none";
+            }}
           >
             {joining ? "Joining…" : `Join ${lobbyName}`}
           </button>
@@ -193,19 +230,27 @@ export default function JoinLobbyOverlay({
               cursor: "pointer",
               transition: "color .12s, background .12s",
             }}
-            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "rgba(232,232,234,0.9)"; (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.04)"; }}
-            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = "rgba(232,232,234,0.65)"; (e.currentTarget as HTMLElement).style.background = "transparent"; }}
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLElement).style.color = "rgba(232,232,234,0.9)";
+              (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.04)";
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLElement).style.color = "rgba(232,232,234,0.65)";
+              (e.currentTarget as HTMLElement).style.background = "transparent";
+            }}
           >
             Maybe later
           </button>
         </div>
 
-        <p style={{
-          margin: "16px 0 0",
-          fontSize: 11,
-          opacity: 0.5,
-          textAlign: "center",
-        }}>
+        <p
+          style={{
+            margin: "16px 0 0",
+            fontSize: 11,
+            opacity: 0.5,
+            textAlign: "center",
+          }}
+        >
           Joining is one click. Free. You can leave anytime.
         </p>
       </div>

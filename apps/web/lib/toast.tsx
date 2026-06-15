@@ -165,7 +165,8 @@ function ToastCard({ item, onDismiss }: { item: ToastItem; onDismiss: () => void
         boxShadow: `0 12px 40px rgba(0,0,0,0.55), 0 0 24px ${palette.glow}, inset 0 1px 0 rgba(255,255,255,0.04)`,
         opacity: mount && !item.leaving ? 1 : 0,
         transform: mount && !item.leaving ? "translateY(0)" : "translateY(8px)",
-        transition: "opacity 0.18s cubic-bezier(0.22, 1, 0.36, 1), transform 0.22s cubic-bezier(0.22, 1, 0.36, 1)",
+        transition:
+          "opacity 0.18s cubic-bezier(0.22, 1, 0.36, 1), transform 0.22s cubic-bezier(0.22, 1, 0.36, 1)",
         fontFamily: "inherit",
       }}
     >

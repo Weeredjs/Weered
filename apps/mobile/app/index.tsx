@@ -27,13 +27,38 @@ export default function Landing() {
           style={{ width: 180, height: 180, marginBottom: 16 }}
           resizeMode="contain"
         />
-        <Text style={{ fontFamily: "monospace", fontSize: 44, fontWeight: "900", letterSpacing: -1.5, color: "rgba(243,244,246,0.96)" }}>
+        <Text
+          style={{
+            fontFamily: "monospace",
+            fontSize: 44,
+            fontWeight: "900",
+            letterSpacing: -1.5,
+            color: "rgba(243,244,246,0.96)",
+          }}
+        >
           WEERED
         </Text>
-        <Text style={{ fontFamily: "monospace", fontSize: 12, fontWeight: "700", color: "#f5b700", letterSpacing: 2.4, marginTop: 4 }}>
+        <Text
+          style={{
+            fontFamily: "monospace",
+            fontSize: 12,
+            fontWeight: "700",
+            color: "#f5b700",
+            letterSpacing: 2.4,
+            marginTop: 4,
+          }}
+        >
           LOBBIES · CREWS · CRIME
         </Text>
-        <View style={{ width: 100, height: 2, backgroundColor: "#5800E5", marginTop: 18, marginBottom: 40 }} />
+        <View
+          style={{
+            width: 100,
+            height: 2,
+            backgroundColor: "#5800E5",
+            marginTop: 18,
+            marginBottom: 40,
+          }}
+        />
 
         <Pressable
           onPress={() => router.push("/login")}
@@ -50,12 +75,29 @@ export default function Landing() {
             elevation: 8,
           }}
         >
-          <Text style={{ color: "#fff", fontFamily: "monospace", fontWeight: "900", fontSize: 16, letterSpacing: 3, textTransform: "uppercase" }}>
+          <Text
+            style={{
+              color: "#fff",
+              fontFamily: "monospace",
+              fontWeight: "900",
+              fontSize: 16,
+              letterSpacing: 3,
+              textTransform: "uppercase",
+            }}
+          >
             Enter
           </Text>
         </Pressable>
 
-        <Text style={{ fontFamily: "monospace", fontSize: 10, color: "rgba(203,213,225,0.4)", marginTop: 40, letterSpacing: 1.5 }}>
+        <Text
+          style={{
+            fontFamily: "monospace",
+            fontSize: 10,
+            color: "rgba(203,213,225,0.4)",
+            marginTop: 40,
+            letterSpacing: 1.5,
+          }}
+        >
           v0.1.0 · ALPHA
         </Text>
       </View>

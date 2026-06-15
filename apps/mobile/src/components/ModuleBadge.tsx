@@ -34,9 +34,7 @@ export function ModuleBadge({ type, accent }: { type: string; accent?: string | 
         borderColor: color + "55",
       }}
     >
-      <Text style={{ color, fontSize: 9, fontWeight: "800", letterSpacing: 0.5 }}>
-        {label}
-      </Text>
+      <Text style={{ color, fontSize: 9, fontWeight: "800", letterSpacing: 0.5 }}>{label}</Text>
     </View>
   );
 }

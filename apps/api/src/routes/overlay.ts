@@ -36,7 +36,10 @@ export default async function overlayRoutes(app: FastifyInstance, opts: Opts) {
     if (!userId) return reply.code(401).send({ error: "Unauthorized" });
     let token = newOverlayToken();
     for (let i = 0; i < 4; i++) {
-      const clash = await db.user.findUnique({ where: { overlayToken: token }, select: { id: true } });
+      const clash = await db.user.findUnique({
+        where: { overlayToken: token },
+        select: { id: true },
+      });
       if (!clash) break;
       token = newOverlayToken();
     }
@@ -57,8 +60,14 @@ export default async function overlayRoutes(app: FastifyInstance, opts: Opts) {
     const user = await db.user.findUnique({
       where: { overlayToken: token },
       select: {
-        id: true, name: true, usernameKey: true, avatar: true, avatarColor: true,
-        tier: true, globalRole: true, banned: true,
+        id: true,
+        name: true,
+        usernameKey: true,
+        avatar: true,
+        avatarColor: true,
+        tier: true,
+        globalRole: true,
+        banned: true,
       },
     });
     if (!user || user.banned) return reply.code(404).send({ ok: false, error: "Not found" });
@@ -88,17 +97,32 @@ export default async function overlayRoutes(app: FastifyInstance, opts: Opts) {
     const { roomId, room, isAway } = found;
     const roomCount = (room.users as Map<string, any>)?.size ?? 0;
 
-    const lobbyIdHint = (room as any).lobbyId || (roomId.startsWith("lobby:") ? roomId.slice(6) : null);
+    const lobbyIdHint =
+      (room as any).lobbyId || (roomId.startsWith("lobby:") ? roomId.slice(6) : null);
     let lobby: any = null;
     if (lobbyIdHint) {
       lobby = await db.lobby.findUnique({
         where: { id: lobbyIdHint },
-        select: { id: true, name: true, accentColor: true, logoUrl: true, moduleType: true, verified: true },
+        select: {
+          id: true,
+          name: true,
+          accentColor: true,
+          logoUrl: true,
+          moduleType: true,
+          verified: true,
+        },
       });
     } else {
       const guess = await db.lobby.findUnique({
         where: { id: roomId },
-        select: { id: true, name: true, accentColor: true, logoUrl: true, moduleType: true, verified: true },
+        select: {
+          id: true,
+          name: true,
+          accentColor: true,
+          logoUrl: true,
+          moduleType: true,
+          verified: true,
+        },
       });
       if (guess) lobby = guess;
     }
@@ -111,14 +135,16 @@ export default async function overlayRoutes(app: FastifyInstance, opts: Opts) {
       online: true,
       isAway,
       user: userOut,
-      lobby: lobby ? {
-        id: lobby.id,
-        name: lobby.name,
-        accentColor: lobby.accentColor || "#D9A942",
-        logoUrl: lobby.logoUrl || null,
-        moduleType: lobby.moduleType || null,
-        verified: !!lobby.verified,
-      } : null,
+      lobby: lobby
+        ? {
+            id: lobby.id,
+            name: lobby.name,
+            accentColor: lobby.accentColor || "#D9A942",
+            logoUrl: lobby.logoUrl || null,
+            moduleType: lobby.moduleType || null,
+            verified: !!lobby.verified,
+          }
+        : null,
       room: {
         id: roomId,
         name: room.name || (lobby?.name ?? "a room"),

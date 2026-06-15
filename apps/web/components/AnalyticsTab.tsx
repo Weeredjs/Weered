@@ -313,11 +313,7 @@ export default function AnalyticsTab() {
           {lastUpdated > 0 && (
             <div style={{ fontFamily: C.mono, fontSize: 11, color: C.muted, marginTop: 2 }}>
               Last updated: {elapsed(lastUpdated)}
-              {error && (
-                <span style={{ color: C.red, marginLeft: 8 }}>
-                  (refresh failed)
-                </span>
-              )}
+              {error && <span style={{ color: C.red, marginLeft: 8 }}>(refresh failed)</span>}
             </div>
           )}
         </div>
@@ -345,7 +341,16 @@ export default function AnalyticsTab() {
             (e.currentTarget as HTMLButtonElement).style.borderColor = C.border;
           }}
         >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
             <polyline points="23 4 23 10 17 10" />
             <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
           </svg>
@@ -411,7 +416,14 @@ export default function AnalyticsTab() {
                 }}
               >
                 <GreenDot size={6} />
-                <span style={{ maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                <span
+                  style={{
+                    maxWidth: 140,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                  }}
+                >
                   {r.name}
                 </span>
                 <span style={{ color: C.dim, marginLeft: 2 }}>{r.users}</span>
@@ -429,12 +441,14 @@ export default function AnalyticsTab() {
           gap: 10,
         }}
       >
-        {([
-          ["DMs Today", messages.dmToday],
-          ["DMs This Week", messages.dmThisWeek],
-          ["Chat Today", messages.chatToday],
-          ["Chat This Week", messages.chatThisWeek],
-        ] as [string, number][]).map(([label, val]) => (
+        {(
+          [
+            ["DMs Today", messages.dmToday],
+            ["DMs This Week", messages.dmThisWeek],
+            ["Chat Today", messages.chatToday],
+            ["Chat This Week", messages.chatThisWeek],
+          ] as [string, number][]
+        ).map(([label, val]) => (
           <div key={label} style={{ ...cardBase, padding: "12px 14px" }}>
             <div style={{ ...labelStyle, fontSize: 10 }}>{label}</div>
             <div style={{ ...bigNum, fontSize: 22 }}>{fmtNum(val)}</div>
@@ -485,13 +499,23 @@ export default function AnalyticsTab() {
               <tr
                 key={lob.id}
                 style={{
-                  borderBottom: i < Math.min(lobbies.length, 15) - 1 ? `1px solid ${C.border}` : undefined,
+                  borderBottom:
+                    i < Math.min(lobbies.length, 15) - 1 ? `1px solid ${C.border}` : undefined,
                 }}
               >
                 <td style={{ textAlign: "center", padding: "8px 12px", color: C.muted }}>
                   {i + 1}
                 </td>
-                <td style={{ padding: "8px 12px", color: C.text, maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                <td
+                  style={{
+                    padding: "8px 12px",
+                    color: C.text,
+                    maxWidth: 220,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                  }}
+                >
                   {lob.name}
                 </td>
                 <td style={{ textAlign: "center", padding: "8px 12px", color: C.dim }}>
@@ -532,11 +556,13 @@ export default function AnalyticsTab() {
           gap: 10,
         }}
       >
-        {([
-          ["LFG Posts This Week", engagement.lfgPostsThisWeek, C.purple],
-          ["Notoriety Events Today", engagement.notorietyEventsToday, C.gold],
-          ["Notifications Today", engagement.notificationsToday, C.text],
-        ] as [string, number, string][]).map(([label, val, color]) => (
+        {(
+          [
+            ["LFG Posts This Week", engagement.lfgPostsThisWeek, C.purple],
+            ["Notoriety Events Today", engagement.notorietyEventsToday, C.gold],
+            ["Notifications Today", engagement.notificationsToday, C.text],
+          ] as [string, number, string][]
+        ).map(([label, val, color]) => (
           <div key={label} style={{ ...cardBase, padding: "12px 14px" }}>
             <div style={{ ...labelStyle, fontSize: 10 }}>{label}</div>
             <div style={{ ...bigNum, fontSize: 22, color }}>{fmtNum(val)}</div>
@@ -574,12 +600,22 @@ export default function AnalyticsTab() {
                 {pct(retention.returnedAfter1d, retention.signupsLast30d)}
               </span>
             </div>
-            <div style={{ marginTop: 5, height: 4, borderRadius: 2, background: "rgba(255,255,255,.06)", overflow: "hidden" }}>
+            <div
+              style={{
+                marginTop: 5,
+                height: 4,
+                borderRadius: 2,
+                background: "rgba(255,255,255,.06)",
+                overflow: "hidden",
+              }}
+            >
               <div
                 style={{
                   height: "100%",
                   borderRadius: 2,
-                  width: retention.signupsLast30d ? `${Math.min(100, (retention.returnedAfter1d / retention.signupsLast30d) * 100)}%` : "0%",
+                  width: retention.signupsLast30d
+                    ? `${Math.min(100, (retention.returnedAfter1d / retention.signupsLast30d) * 100)}%`
+                    : "0%",
                   background: C.green,
                   transition: "width .6s ease",
                 }}
@@ -609,12 +645,22 @@ export default function AnalyticsTab() {
                 {pct(retention.returnedAfter7d, retention.signupsLast30d)}
               </span>
             </div>
-            <div style={{ marginTop: 5, height: 4, borderRadius: 2, background: "rgba(255,255,255,.06)", overflow: "hidden" }}>
+            <div
+              style={{
+                marginTop: 5,
+                height: 4,
+                borderRadius: 2,
+                background: "rgba(255,255,255,.06)",
+                overflow: "hidden",
+              }}
+            >
               <div
                 style={{
                   height: "100%",
                   borderRadius: 2,
-                  width: retention.signupsLast30d ? `${Math.min(100, (retention.returnedAfter7d / retention.signupsLast30d) * 100)}%` : "0%",
+                  width: retention.signupsLast30d
+                    ? `${Math.min(100, (retention.returnedAfter7d / retention.signupsLast30d) * 100)}%`
+                    : "0%",
                   background: C.purple,
                   transition: "width .6s ease",
                 }}
@@ -667,7 +713,8 @@ export default function AnalyticsTab() {
               <tr
                 key={u.id}
                 style={{
-                  borderBottom: i < Math.min(topUsers.length, 10) - 1 ? `1px solid ${C.border}` : undefined,
+                  borderBottom:
+                    i < Math.min(topUsers.length, 10) - 1 ? `1px solid ${C.border}` : undefined,
                 }}
               >
                 <td style={{ textAlign: "center", padding: "8px 12px", color: C.muted }}>

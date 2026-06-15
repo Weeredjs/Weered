@@ -41,26 +41,85 @@ export function BungieLinkButton() {
   return (
     <View style={{ marginHorizontal: 16, marginTop: 12 }}>
       {q.isLoading ? (
-        <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: "rgba(255,255,255,0.04)", borderWidth: 1, borderColor: "rgba(255,255,255,0.08)", borderRadius: 4, paddingHorizontal: 14, paddingVertical: 12 }}>
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            backgroundColor: "rgba(255,255,255,0.04)",
+            borderWidth: 1,
+            borderColor: "rgba(255,255,255,0.08)",
+            borderRadius: 4,
+            paddingHorizontal: 14,
+            paddingVertical: 12,
+          }}
+        >
           <ActivityIndicator color="#5800E5" />
-          <Text style={{ color: "rgba(203,213,225,0.72)", fontSize: 12, marginLeft: 10 }}>Checking Bungie link…</Text>
+          <Text style={{ color: "rgba(203,213,225,0.72)", fontSize: 12, marginLeft: 10 }}>
+            Checking Bungie link…
+          </Text>
         </View>
       ) : unlinked ? (
         <Pressable
           onPress={() => link.mutate()}
           disabled={link.isPending}
-          style={{ backgroundColor: "rgba(255,255,255,0.04)", borderWidth: 1, borderColor: "rgba(245,158,11,0.4)", paddingHorizontal: 14, paddingVertical: 12, borderRadius: 4 }}
+          style={{
+            backgroundColor: "rgba(255,255,255,0.04)",
+            borderWidth: 1,
+            borderColor: "rgba(245,158,11,0.4)",
+            paddingHorizontal: 14,
+            paddingVertical: 12,
+            borderRadius: 4,
+          }}
         >
-          <Text style={{ color: "#fbbf24", textAlign: "center", fontFamily: "monospace", fontWeight: "900", fontSize: 12, letterSpacing: 1, textTransform: "uppercase" }}>
+          <Text
+            style={{
+              color: "#fbbf24",
+              textAlign: "center",
+              fontFamily: "monospace",
+              fontWeight: "900",
+              fontSize: 12,
+              letterSpacing: 1,
+              textTransform: "uppercase",
+            }}
+          >
             {link.isPending ? "Opening Bungie…" : "Link Bungie · Destiny 2"}
           </Text>
           {q.data?.error === "token_expired" && (
-            <Text style={{ color: "rgba(203,213,225,0.6)", fontSize: 10, textAlign: "center", marginTop: 3 }}>Session expired — tap to re-link.</Text>
+            <Text
+              style={{
+                color: "rgba(203,213,225,0.6)",
+                fontSize: 10,
+                textAlign: "center",
+                marginTop: 3,
+              }}
+            >
+              Session expired — tap to re-link.
+            </Text>
           )}
         </Pressable>
       ) : (
-        <View style={{ backgroundColor: "rgba(255,255,255,0.04)", borderWidth: 1, borderColor: "rgba(34,197,94,0.3)", paddingHorizontal: 14, paddingVertical: 12, borderRadius: 4 }}>
-          <Text style={{ color: "#22c55e", textAlign: "center", fontFamily: "monospace", fontWeight: "900", fontSize: 12, letterSpacing: 1 }}>✓ BUNGIE LINKED{q.data?.displayName ? ` · ${q.data.displayName}` : ""}</Text>
+        <View
+          style={{
+            backgroundColor: "rgba(255,255,255,0.04)",
+            borderWidth: 1,
+            borderColor: "rgba(34,197,94,0.3)",
+            paddingHorizontal: 14,
+            paddingVertical: 12,
+            borderRadius: 4,
+          }}
+        >
+          <Text
+            style={{
+              color: "#22c55e",
+              textAlign: "center",
+              fontFamily: "monospace",
+              fontWeight: "900",
+              fontSize: 12,
+              letterSpacing: 1,
+            }}
+          >
+            ✓ BUNGIE LINKED{q.data?.displayName ? ` · ${q.data.displayName}` : ""}
+          </Text>
         </View>
       )}
     </View>

@@ -16,8 +16,15 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 
 const ACCENT_COLORS = [
-  "#5800E5", "#e85d75", "#f59e0b", "#22c55e",
-  "#06b6d4", "#a855f7", "#ef4444", "#eab308", "#14b8a6",
+  "#5800E5",
+  "#e85d75",
+  "#f59e0b",
+  "#22c55e",
+  "#06b6d4",
+  "#a855f7",
+  "#ef4444",
+  "#eab308",
+  "#14b8a6",
 ];
 
 export default function NewLobby() {
@@ -84,7 +91,9 @@ export default function NewLobby() {
             style={{ fontSize: 15 }}
           />
 
-          <Text className="text-weered-muted text-xs uppercase tracking-widest mb-2">Description</Text>
+          <Text className="text-weered-muted text-xs uppercase tracking-widest mb-2">
+            Description
+          </Text>
           <TextInput
             value={description}
             onChangeText={setDescription}
@@ -96,7 +105,9 @@ export default function NewLobby() {
             style={{ fontSize: 15, minHeight: 80, textAlignVertical: "top" }}
           />
 
-          <Text className="text-weered-muted text-xs uppercase tracking-widest mb-2">Accent color</Text>
+          <Text className="text-weered-muted text-xs uppercase tracking-widest mb-2">
+            Accent color
+          </Text>
           <View className="flex-row flex-wrap mb-4">
             {ACCENT_COLORS.map((hex) => (
               <Pressable
@@ -104,8 +115,12 @@ export default function NewLobby() {
                 onPress={() => setAccent(hex)}
                 className="mr-2 mb-2 active:opacity-80"
                 style={{
-                  width: 36, height: 36, borderRadius: 18, backgroundColor: hex,
-                  borderWidth: accent === hex ? 3 : 0, borderColor: "#ffffff",
+                  width: 36,
+                  height: 36,
+                  borderRadius: 18,
+                  backgroundColor: hex,
+                  borderWidth: accent === hex ? 3 : 0,
+                  borderColor: "#ffffff",
                 }}
               />
             ))}

@@ -4,10 +4,12 @@ import RequireAuth from "../../components/RequireAuth";
 
 export const metadata: Metadata = {
   title: "Lobbies",
-  description: "Browse all Weered lobbies — Destiny 2, League of Legends, Fortnite, Path of Exile, CS2, D&D, paper trading, and more. Find your community.",
+  description:
+    "Browse all Weered lobbies — Destiny 2, League of Legends, Fortnite, Path of Exile, CS2, D&D, paper trading, and more. Find your community.",
   openGraph: {
     title: "Lobbies — Weered",
-    description: "Browse all Weered lobbies — gaming, trading, tabletop, and community spaces with voice chat, LFG, and game integrations.",
+    description:
+      "Browse all Weered lobbies — gaming, trading, tabletop, and community spaces with voice chat, LFG, and game integrations.",
     url: "https://weered.ca/lobby",
   },
   twitter: {

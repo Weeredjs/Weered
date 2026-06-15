@@ -43,7 +43,9 @@ export async function generateStaticParams() {
   return COMPETITORS.map((c) => ({ id: c.id }));
 }
 
-export async function generateMetadata(props: { params: Promise<{ id: string }> }): Promise<Metadata> {
+export async function generateMetadata(props: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
   const params = await props.params;
   const c = findCompetitor(params.id);
   if (!c) return { title: "Comparison not found · Weered" };
@@ -125,56 +127,94 @@ export default async function CompareWeeredVsPage(props: { params: Promise<{ id:
   };
 
   return (
-    <main style={{
-      padding: "32px 20px",
-      fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
-      maxWidth: 860,
-      margin: "0 auto",
-      lineHeight: 1.55,
-      color: "#e8e8ea",
-    }}>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(articleLd) }} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLd) }} />
+    <main
+      style={{
+        padding: "32px 20px",
+        fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
+        maxWidth: 860,
+        margin: "0 auto",
+        lineHeight: 1.55,
+        color: "#e8e8ea",
+      }}
+    >
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(articleLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLd) }}
+      />
 
       <nav aria-label="Breadcrumb" style={{ fontSize: 13, opacity: 0.7, marginBottom: 16 }}>
-        <Link href="/" style={{ color: "#7c9dff" }}>Weered</Link>
+        <Link href="/" style={{ color: "#7c9dff" }}>
+          Weered
+        </Link>
         {" / "}
-        <Link href="/compare" style={{ color: "#7c9dff" }}>Compare</Link>
-        {" / "}{`Weered vs ${c.name}`}
+        <Link href="/compare" style={{ color: "#7c9dff" }}>
+          Compare
+        </Link>
+        {" / "}
+        {`Weered vs ${c.name}`}
       </nav>
 
       <header style={{ marginBottom: 28 }}>
-        <p style={{ fontSize: 12, opacity: 0.6, textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>Honest comparison</p>
+        <p
+          style={{
+            fontSize: 12,
+            opacity: 0.6,
+            textTransform: "uppercase",
+            letterSpacing: 1,
+            marginBottom: 4,
+          }}
+        >
+          Honest comparison
+        </p>
         <h1 style={{ fontSize: 32, margin: "0 0 12px", lineHeight: 1.15 }}>Weered vs {c.name}</h1>
-        <p style={{ fontSize: 17, opacity: 0.92, fontStyle: "italic", marginBottom: 16 }}>{c.tagline}</p>
+        <p style={{ fontSize: 17, opacity: 0.92, fontStyle: "italic", marginBottom: 16 }}>
+          {c.tagline}
+        </p>
         <p style={{ fontSize: 16 }}>{c.summary}</p>
       </header>
 
-      <section style={{ marginBottom: 28, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
-        <div style={{
-          padding: 16,
-          borderRadius: 8,
-          background: "rgba(255,255,255,0.04)",
-          border: "1px solid rgba(255,255,255,0.08)",
-        }}>
+      <section
+        style={{ marginBottom: 28, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}
+      >
+        <div
+          style={{
+            padding: 16,
+            borderRadius: 8,
+            background: "rgba(255,255,255,0.04)",
+            border: "1px solid rgba(255,255,255,0.08)",
+          }}
+        >
           <h2 style={{ fontSize: 18, marginTop: 0, marginBottom: 10 }}>Use {c.name} if</h2>
           <ul style={{ paddingLeft: 18, margin: 0 }}>
             {c.use_them_if.map((point, i) => (
-              <li key={i} style={{ marginBottom: 8 }}>{point}</li>
+              <li key={i} style={{ marginBottom: 8 }}>
+                {point}
+              </li>
             ))}
           </ul>
         </div>
-        <div style={{
-          padding: 16,
-          borderRadius: 8,
-          background: "rgba(124,157,255,0.08)",
-          border: "1px solid rgba(124,157,255,0.25)",
-        }}>
+        <div
+          style={{
+            padding: 16,
+            borderRadius: 8,
+            background: "rgba(124,157,255,0.08)",
+            border: "1px solid rgba(124,157,255,0.25)",
+          }}
+        >
           <h2 style={{ fontSize: 18, marginTop: 0, marginBottom: 10 }}>Use Weered if</h2>
           <ul style={{ paddingLeft: 18, margin: 0 }}>
             {c.use_weered_if.map((point, i) => (
-              <li key={i} style={{ marginBottom: 8 }}>{point}</li>
+              <li key={i} style={{ marginBottom: 8 }}>
+                {point}
+              </li>
             ))}
           </ul>
         </div>
@@ -183,16 +223,42 @@ export default async function CompareWeeredVsPage(props: { params: Promise<{ id:
       <section style={{ marginBottom: 28 }}>
         <h2 style={{ fontSize: 22, marginBottom: 12 }}>Feature comparison</h2>
         <div style={{ overflowX: "auto" }}>
-          <table style={{
-            width: "100%",
-            borderCollapse: "collapse",
-            fontSize: 14,
-          }}>
+          <table
+            style={{
+              width: "100%",
+              borderCollapse: "collapse",
+              fontSize: 14,
+            }}
+          >
             <thead>
               <tr style={{ background: "rgba(255,255,255,0.06)" }}>
-                <th style={{ padding: 10, textAlign: "left", borderBottom: "1px solid rgba(255,255,255,0.12)" }}>Feature</th>
-                <th style={{ padding: 10, textAlign: "left", borderBottom: "1px solid rgba(255,255,255,0.12)" }}>{c.name}</th>
-                <th style={{ padding: 10, textAlign: "left", borderBottom: "1px solid rgba(255,255,255,0.12)" }}>Weered</th>
+                <th
+                  style={{
+                    padding: 10,
+                    textAlign: "left",
+                    borderBottom: "1px solid rgba(255,255,255,0.12)",
+                  }}
+                >
+                  Feature
+                </th>
+                <th
+                  style={{
+                    padding: 10,
+                    textAlign: "left",
+                    borderBottom: "1px solid rgba(255,255,255,0.12)",
+                  }}
+                >
+                  {c.name}
+                </th>
+                <th
+                  style={{
+                    padding: 10,
+                    textAlign: "left",
+                    borderBottom: "1px solid rgba(255,255,255,0.12)",
+                  }}
+                >
+                  Weered
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -208,13 +274,15 @@ export default async function CompareWeeredVsPage(props: { params: Promise<{ id:
         </div>
       </section>
 
-      <section style={{
-        marginBottom: 28,
-        padding: 20,
-        borderRadius: 8,
-        background: "rgba(255,235,200,0.04)",
-        border: "1px solid rgba(156,124,63,0.35)",
-      }}>
+      <section
+        style={{
+          marginBottom: 28,
+          padding: 20,
+          borderRadius: 8,
+          background: "rgba(255,235,200,0.04)",
+          border: "1px solid rgba(156,124,63,0.35)",
+        }}
+      >
         <h2 style={{ fontSize: 22, marginTop: 0, marginBottom: 10 }}>Bottom line</h2>
         <p style={{ margin: 0, fontSize: 16 }}>{c.bottom_line}</p>
       </section>
@@ -222,24 +290,35 @@ export default async function CompareWeeredVsPage(props: { params: Promise<{ id:
       <section style={{ marginBottom: 28 }}>
         <p style={{ fontSize: 14, opacity: 0.7 }}>
           Want to learn more about either?{" "}
-          <a href={c.url} target="_blank" rel="noopener noreferrer" style={{ color: "#7c9dff" }}>Visit {c.name}</a>
+          <a href={c.url} target="_blank" rel="noopener noreferrer" style={{ color: "#7c9dff" }}>
+            Visit {c.name}
+          </a>
           {" · "}
-          <Link href="/" style={{ color: "#7c9dff" }}>Visit Weered</Link>
+          <Link href="/" style={{ color: "#7c9dff" }}>
+            Visit Weered
+          </Link>
         </p>
       </section>
 
-      <footer style={{
-        borderTop: "1px solid rgba(255,255,255,0.1)",
-        paddingTop: 16,
-        marginTop: 32,
-        fontSize: 14,
-        opacity: 0.75,
-      }}>
+      <footer
+        style={{
+          borderTop: "1px solid rgba(255,255,255,0.1)",
+          paddingTop: 16,
+          marginTop: 32,
+          fontSize: 14,
+          opacity: 0.75,
+        }}
+      >
         <p style={{ marginBottom: 8 }}>
-          <Link href="/compare" style={{ color: "#7c9dff", fontWeight: 600 }}>← See all Weered comparisons</Link>
+          <Link href="/compare" style={{ color: "#7c9dff", fontWeight: 600 }}>
+            ← See all Weered comparisons
+          </Link>
         </p>
         <p style={{ marginBottom: 0 }}>
-          Open the Weered platform: <Link href="/" style={{ color: "#7c9dff" }}>{SITE}</Link>
+          Open the Weered platform:{" "}
+          <Link href="/" style={{ color: "#7c9dff" }}>
+            {SITE}
+          </Link>
         </p>
       </footer>
     </main>

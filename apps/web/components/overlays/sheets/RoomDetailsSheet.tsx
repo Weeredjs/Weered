@@ -18,10 +18,16 @@ export default function RoomDetailsSheet({ roomId }: { roomId: string }) {
       <div className="mt-3 rounded-xl border border-white/10 bg-white/5 p-3">
         <div className="text-sm font-semibold mb-2">Actions</div>
         <div className="flex flex-col gap-2">
-          <button className="rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-sm hover:bg-white/10" type="button">
+          <button
+            className="rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-sm hover:bg-white/10"
+            type="button"
+          >
             Invite link (placeholder)
           </button>
-          <button className="rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-sm hover:bg-white/10" type="button">
+          <button
+            className="rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-sm hover:bg-white/10"
+            type="button"
+          >
             Leave room (placeholder)
           </button>
         </div>

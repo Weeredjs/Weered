@@ -1,13 +1,6 @@
 "use client";
 
-import React, {
-  useEffect,
-  useRef,
-  useState,
-  useCallback,
-  useMemo,
-  CSSProperties,
-} from "react";
+import React, { useEffect, useRef, useState, useCallback, useMemo, CSSProperties } from "react";
 import { avatarBg } from "../lib/avatarColor";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
@@ -50,13 +43,7 @@ interface TableState {
   currentBet: number;
   dealerIndex: number;
   turnIndex: number;
-  phase:
-    | "waiting"
-    | "preflop"
-    | "flop"
-    | "turn"
-    | "river"
-    | "showdown";
+  phase: "waiting" | "preflop" | "flop" | "turn" | "river" | "showdown";
   blinds: { small: number; big: number };
   minBuyin: number;
   maxBuyin: number;
@@ -143,9 +130,7 @@ const PHASE_LABELS: Record<string, string> = {
 };
 
 function wsSend(msg: Record<string, unknown>) {
-  window.dispatchEvent(
-    new CustomEvent("weered:ws:send", { detail: msg })
-  );
+  window.dispatchEvent(new CustomEvent("weered:ws:send", { detail: msg }));
 }
 
 function chipStr(n: number): string {
@@ -785,13 +770,7 @@ function WinnerOverlay({ winners }: { winners: Winner[] }) {
   );
 }
 
-function ActionBar({
-  state,
-  mySeat,
-}: {
-  state: TableState;
-  mySeat: Seat;
-}) {
+function ActionBar({ state, mySeat }: { state: TableState; mySeat: Seat }) {
   const [raiseAmount, setRaiseAmount] = useState(0);
   const [showRaiseInput, setShowRaiseInput] = useState(false);
 
@@ -815,7 +794,7 @@ function ActionBar({
       });
       setShowRaiseInput(false);
     },
-    [state.tableId]
+    [state.tableId],
   );
 
   const bar: CSSProperties = {
@@ -830,11 +809,7 @@ function ActionBar({
     flexWrap: "wrap",
   };
 
-  const btnStyle = (
-    color: string,
-    bg: string,
-    disabled?: boolean
-  ): CSSProperties => ({
+  const btnStyle = (color: string, bg: string, disabled?: boolean): CSSProperties => ({
     padding: "10px 20px",
     borderRadius: 10,
     border: "none",
@@ -866,7 +841,11 @@ function ActionBar({
         </button>
       ) : (
         <button
-          style={btnStyle("#fff", "linear-gradient(135deg, #2563eb, #1d4ed8)", callAmount > mySeat.chips)}
+          style={btnStyle(
+            "#fff",
+            "linear-gradient(135deg, #2563eb, #1d4ed8)",
+            callAmount > mySeat.chips,
+          )}
           onClick={() => send("call")}
           disabled={callAmount > mySeat.chips}
         >
@@ -928,7 +907,11 @@ function ActionBar({
         </div>
       ) : (
         <button
-          style={btnStyle("#fff", `linear-gradient(135deg, ${COLORS.purple}, #7b2ff2)`, mySeat.chips <= callAmount)}
+          style={btnStyle(
+            "#fff",
+            `linear-gradient(135deg, ${COLORS.purple}, #7b2ff2)`,
+            mySeat.chips <= callAmount,
+          )}
           onClick={() => setShowRaiseInput(true)}
           disabled={mySeat.chips <= callAmount}
         >
@@ -971,7 +954,9 @@ export default function PokerTable({ roomId, myId, myName }: Props) {
         if (data?.table) setState(data.table);
         setLoaded(true);
       })
-      .catch(() => { setLoaded(true); });
+      .catch(() => {
+        setLoaded(true);
+      });
   }, [roomId]);
 
   useEffect(() => {
@@ -1003,27 +988,30 @@ export default function PokerTable({ roomId, myId, myName }: Props) {
     toastTimer.current = setTimeout(() => setToast(null), 2500);
   }, [state?.lastAction, state?.seats]);
 
-  const ts: TableState = useMemo(() => state || {
-    tableId: roomId,
-    seats: [null, null, null, null, null, null],
-    communityCards: [],
-    pot: 0,
-    currentBet: 0,
-    dealerIndex: 0,
-    turnIndex: -1,
-    phase: "waiting" as const,
-    blinds: { small: 5, big: 10 },
-    minBuyin: 200,
-    maxBuyin: 2000,
-  }, [state, roomId]);
+  const ts: TableState = useMemo(
+    () =>
+      state || {
+        tableId: roomId,
+        seats: [null, null, null, null, null, null],
+        communityCards: [],
+        pot: 0,
+        currentBet: 0,
+        dealerIndex: 0,
+        turnIndex: -1,
+        phase: "waiting" as const,
+        blinds: { small: 5, big: 10 },
+        minBuyin: 200,
+        maxBuyin: 2000,
+      },
+    [state, roomId],
+  );
 
   const mySeat = useMemo(() => {
     return ts.seats?.find((s) => s && s.userId === myId) || null;
   }, [ts, myId]);
 
   const mySeatIndex = mySeat?.seatIndex ?? -1;
-  const isMyTurn =
-    mySeat && ts.turnIndex === mySeatIndex && !mySeat.folded;
+  const isMyTurn = mySeat && ts.turnIndex === mySeatIndex && !mySeat.folded;
   const isShowdown = ts.phase === "showdown";
   const isSeated = !!mySeat;
 
@@ -1041,7 +1029,7 @@ export default function PokerTable({ roomId, myId, myName }: Props) {
       });
       setBuyInSeat(null);
     },
-    [state?.tableId, roomId]
+    [state?.tableId, roomId],
   );
 
   const handleLeave = useCallback(() => {
@@ -1058,8 +1046,7 @@ export default function PokerTable({ roomId, myId, myName }: Props) {
     background: COLORS.bg,
     display: "flex",
     flexDirection: "column",
-    fontFamily:
-      "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
     overflow: "auto",
     userSelect: "none",
   };

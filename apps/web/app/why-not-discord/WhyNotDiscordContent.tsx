@@ -1,10 +1,11 @@
 "use client";
 import React, { useEffect, useState } from "react";
 
-
 export default function WhyNotDiscordContent() {
   const [visible, setVisible] = useState(false);
-  useEffect(() => { setTimeout(() => setVisible(true), 100); }, []);
+  useEffect(() => {
+    setTimeout(() => setVisible(true), 100);
+  }, []);
 
   return (
     <>
@@ -121,23 +122,38 @@ export default function WhyNotDiscordContent() {
 
       <div className="manifesto-root">
         <div className={`manifesto-inner${visible ? " visible" : ""}`}>
-
           <div style={{ marginBottom: 20 }}>
             <a href="/" aria-label="Weered home" style={{ display: "inline-block" }}>
-              <img src="/brand/logo/weered-logo-512.png" alt="Weered" style={{ width: 88, height: 88, filter: "drop-shadow(0 0 24px rgba(88,0,229,0.35))" }} />
+              <img
+                src="/brand/logo/weered-logo-512.png"
+                alt="Weered"
+                style={{
+                  width: 88,
+                  height: 88,
+                  filter: "drop-shadow(0 0 24px rgba(88,0,229,0.35))",
+                }}
+              />
             </a>
           </div>
-          <div className="manifesto-headline">why weered<br />isn&apos;t discord</div>
+          <div className="manifesto-headline">
+            why weered
+            <br />
+            isn&apos;t discord
+          </div>
           <div className="manifesto-tagline">a manifesto · 2026</div>
 
           <div className="manifesto-block">
             <div className="manifesto-label">origin</div>
             <div className="manifesto-text">
-              I grew up on MPlayer. Late 90s, dial-up, dedicated lobbies for specific games.
-              You walked into a room and everyone there was playing the same thing you were.
-              The chat happened around the game. The community formed around shared activity.<br /><br />
-              When a game died, the lobby died with it and people moved to the next one.
-              That was fine. It was honest.<br /><br />
+              I grew up on MPlayer. Late 90s, dial-up, dedicated lobbies for specific games. You
+              walked into a room and everyone there was playing the same thing you were. The chat
+              happened around the game. The community formed around shared activity.
+              <br />
+              <br />
+              When a game died, the lobby died with it and people moved to the next one. That was
+              fine. It was honest.
+              <br />
+              <br />
               <em>Then Discord won.</em>
             </div>
           </div>
@@ -147,18 +163,32 @@ export default function WhyNotDiscordContent() {
           <div className="manifesto-block">
             <div className="manifesto-label">what we lost</div>
             <div className="manifesto-text">
-              Discord is incredible at being the everything-app for chat. I use it.
-              I&apos;m not pretending it&apos;s bad software. But somewhere around 2018 the gaming community started using Discord as the only place we organize, and that&apos;s where it broke.<br /><br />
-              Clan tools died. Forums died. LFG tools died.
-              WoW guild sites turned into Discord servers. Destiny clans turned into Discord servers.
-              Forums that ran games like Zelda Classic for twenty years watched their communities drain into Discord servers where the conversation scrolls past in two days and nobody can find anything ever again.<br /><br />
-              The tools clans actually need? Discord doesn&apos;t build them.
-              Discord builds general chat with channels. Clans need rosters, raid signups, character sheets, loot ledgers, attendance tracking, integrated voice that ties to game state, screenshare that handles more than 50 viewers when a streamer is showing a strat.<br /><br />
-              Every one of those is a third-party bot duct-taped to a Discord server, fighting rate limits, breaking when Discord changes an API.<br /><br />
-              The problem isn&apos;t that Discord is bad.
-              The problem is that Discord is built for everyone, which means it&apos;s built for nobody specifically.
-              Clans, crews, raid teams, trading rooms, fireteams, guilds, fighting game tournaments, day-trading communities.
-              None of these get a tool designed for them. They get a generic chat surface they have to bend.
+              Discord is incredible at being the everything-app for chat. I use it. I&apos;m not
+              pretending it&apos;s bad software. But somewhere around 2018 the gaming community
+              started using Discord as the only place we organize, and that&apos;s where it broke.
+              <br />
+              <br />
+              Clan tools died. Forums died. LFG tools died. WoW guild sites turned into Discord
+              servers. Destiny clans turned into Discord servers. Forums that ran games like Zelda
+              Classic for twenty years watched their communities drain into Discord servers where
+              the conversation scrolls past in two days and nobody can find anything ever again.
+              <br />
+              <br />
+              The tools clans actually need? Discord doesn&apos;t build them. Discord builds general
+              chat with channels. Clans need rosters, raid signups, character sheets, loot ledgers,
+              attendance tracking, integrated voice that ties to game state, screenshare that
+              handles more than 50 viewers when a streamer is showing a strat.
+              <br />
+              <br />
+              Every one of those is a third-party bot duct-taped to a Discord server, fighting rate
+              limits, breaking when Discord changes an API.
+              <br />
+              <br />
+              The problem isn&apos;t that Discord is bad. The problem is that Discord is built for
+              everyone, which means it&apos;s built for nobody specifically. Clans, crews, raid
+              teams, trading rooms, fireteams, guilds, fighting game tournaments, day-trading
+              communities. None of these get a tool designed for them. They get a generic chat
+              surface they have to bend.
             </div>
           </div>
 
@@ -167,15 +197,26 @@ export default function WhyNotDiscordContent() {
           <div className="manifesto-block">
             <div className="manifesto-label">what weered does differently</div>
             <div className="manifesto-text">
-              <em>Weered is lobby-first, not server-first.</em><br /><br />
-              A Weered lobby is a room built around a specific activity.
-              Watching a stream together. Running a raid. Day trading the open. Studying a Destiny encounter. Gigging on a track.<br /><br />
-              The lobby has the tools that activity needs.
-              Game state on the left rail, location on the right, presence that knows you&apos;re in Diablo 4 because we&apos;re polling Steam, not because you remembered to update your Discord status.<br /><br />
-              <em>Crews</em> are persistent groups that run their own lobbies, post their own bounties, build their own dojos.
-              Not a Discord server with 47 channels nobody reads. A real crew home with the tools you actually use.<br /><br />
-              We&apos;re not trying to host every conversation in your life.
-              We&apos;re trying to be the place where your crew shows up to do the thing.
+              <em>Weered is lobby-first, not server-first.</em>
+              <br />
+              <br />
+              A Weered lobby is a room built around a specific activity. Watching a stream together.
+              Running a raid. Day trading the open. Studying a Destiny encounter. Gigging on a
+              track.
+              <br />
+              <br />
+              The lobby has the tools that activity needs. Game state on the left rail, location on
+              the right, presence that knows you&apos;re in Diablo 4 because we&apos;re polling
+              Steam, not because you remembered to update your Discord status.
+              <br />
+              <br />
+              <em>Crews</em> are persistent groups that run their own lobbies, post their own
+              bounties, build their own dojos. Not a Discord server with 47 channels nobody reads. A
+              real crew home with the tools you actually use.
+              <br />
+              <br />
+              We&apos;re not trying to host every conversation in your life. We&apos;re trying to be
+              the place where your crew shows up to do the thing.
             </div>
           </div>
 
@@ -184,15 +225,20 @@ export default function WhyNotDiscordContent() {
           <div className="manifesto-block">
             <div className="manifesto-label">the trading angle, because someone asked</div>
             <div className="manifesto-text">
-              I run an autonomous ML forex scalper called <em>Stirling FOREX</em> on the side. So I sit in trading Discords: FX desks, crypto rooms, the whole spread.<br /><br />
-              Day traders have been screaming about Discord&apos;s 50-viewer screenshare cap for years.
-              A trader running a live charting session for a paid room hits the cap by 9:32am.
-              The room fragments. Half the audience is staring at a frozen embed.
-              The host can&apos;t actually share what they&apos;re seeing.<br /><br />
-              This isn&apos;t a roadmap announcement.
-              But the <em>Fakeout</em> module already has live Binance feeds, TradingView charts, paper portfolios, leaderboards.
-              Lobbies built for trading rooms are not a stretch from where we already are.
-              If you run a trading community and you&apos;re tired of fighting Discord, talk to me.
+              I run an autonomous ML forex scalper called <em>Stirling FOREX</em> on the side. So I
+              sit in trading Discords: FX desks, crypto rooms, the whole spread.
+              <br />
+              <br />
+              Day traders have been screaming about Discord&apos;s 50-viewer screenshare cap for
+              years. A trader running a live charting session for a paid room hits the cap by
+              9:32am. The room fragments. Half the audience is staring at a frozen embed. The host
+              can&apos;t actually share what they&apos;re seeing.
+              <br />
+              <br />
+              This isn&apos;t a roadmap announcement. But the <em>Fakeout</em> module already has
+              live Binance feeds, TradingView charts, paper portfolios, leaderboards. Lobbies built
+              for trading rooms are not a stretch from where we already are. If you run a trading
+              community and you&apos;re tired of fighting Discord, talk to me.
             </div>
           </div>
 
@@ -201,16 +247,23 @@ export default function WhyNotDiscordContent() {
           <div className="manifesto-block">
             <div className="manifesto-label">the honest part</div>
             <div className="manifesto-text">
-              Weered is not trying to be a billion-user platform.
-              We&apos;re not a Discord competitor in the &quot;let&apos;s eat their lunch&quot; sense.
-              We don&apos;t want to host the world&apos;s chat.<br /><br />
-              We want to be the right tool for crews who organize around specific shared activities, and we&apos;re sized for that.
+              Weered is not trying to be a billion-user platform. We&apos;re not a Discord
+              competitor in the &quot;let&apos;s eat their lunch&quot; sense. We don&apos;t want to
+              host the world&apos;s chat.
+              <br />
+              <br />
+              We want to be the right tool for crews who organize around specific shared activities,
+              and we&apos;re sized for that.
               <em>Salary model, not VC bonfire.</em>
-              We&apos;re not going to enshittify because we&apos;re not chasing the metric that forces it.<br /><br />
-              If you&apos;ve ever watched your community drain into a Discord server and felt something break, you&apos;re who I built this for.
-              If you run a clan, a guild, a fireteam, a trading room, a fighting game scene, a streaming crew.
-              If you remember when forums were where the lore lived.
-              If you&apos;ve tried four different Discord bots to do what should be one tool.
+              We&apos;re not going to enshittify because we&apos;re not chasing the metric that
+              forces it.
+              <br />
+              <br />
+              If you&apos;ve ever watched your community drain into a Discord server and felt
+              something break, you&apos;re who I built this for. If you run a clan, a guild, a
+              fireteam, a trading room, a fighting game scene, a streaming crew. If you remember
+              when forums were where the lore lived. If you&apos;ve tried four different Discord
+              bots to do what should be one tool.
             </div>
           </div>
 
@@ -219,10 +272,17 @@ export default function WhyNotDiscordContent() {
           <div className="manifesto-block">
             <div className="manifesto-label">come look</div>
             <div className="manifesto-text">
-              Tell me what&apos;s missing. I&apos;m building this in public and the early users shape what it becomes.<br /><br />
+              Tell me what&apos;s missing. I&apos;m building this in public and the early users
+              shape what it becomes.
+              <br />
+              <br />
               The next version of community tooling isn&apos;t going to be Discord with more bots.
-              It&apos;s going to be platforms that pick a lane and build for it.<br /><br />
-              <em>That&apos;s the lane Weered is picking.</em><br /><br />
+              It&apos;s going to be platforms that pick a lane and build for it.
+              <br />
+              <br />
+              <em>That&apos;s the lane Weered is picking.</em>
+              <br />
+              <br />
               jim
             </div>
           </div>
@@ -234,7 +294,6 @@ export default function WhyNotDiscordContent() {
               <a href="/login">enter</a>
             </nav>
           </div>
-
         </div>
       </div>
     </>

@@ -43,7 +43,10 @@ export default function UserProfile() {
 
   const requestsQ = useQuery({
     queryKey: ["friend-requests"],
-    queryFn: () => api<{ requests: { id: string; fromId: string; toId?: string; status: string }[] }>("/friends/requests"),
+    queryFn: () =>
+      api<{ requests: { id: string; fromId: string; toId?: string; status: string }[] }>(
+        "/friends/requests",
+      ),
     enabled: !isMe && !!me,
   });
 
@@ -101,7 +104,11 @@ export default function UserProfile() {
       <ScrollView
         contentContainerStyle={{ paddingBottom: 40 }}
         refreshControl={
-          <RefreshControl refreshing={profileQ.isRefetching} onRefresh={profileQ.refetch} tintColor="#5800E5" />
+          <RefreshControl
+            refreshing={profileQ.isRefetching}
+            onRefresh={profileQ.refetch}
+            tintColor="#5800E5"
+          />
         }
       >
         {profileQ.isLoading ? (
@@ -112,9 +119,16 @@ export default function UserProfile() {
           <>
             <View className="items-center pt-6 pb-3">
               <Avatar name={profile.name} url={profile.avatar} size={96} />
-              <Text className="text-weered-text text-2xl mt-3" style={{ fontFamily: "monospace", fontWeight: "900", letterSpacing: 0.5 }}>{profile.name}</Text>
+              <Text
+                className="text-weered-text text-2xl mt-3"
+                style={{ fontFamily: "monospace", fontWeight: "900", letterSpacing: 0.5 }}
+              >
+                {profile.name}
+              </Text>
               <View className="flex-row items-center mt-2" style={{ gap: 6 }}>
-                {profile.globalRole && profile.globalRole !== "USER" && <RoleChip role={profile.globalRole} />}
+                {profile.globalRole && profile.globalRole !== "USER" && (
+                  <RoleChip role={profile.globalRole} />
+                )}
                 {profile.tier && profile.tier !== "INNOCENT" && <TierChip tier={profile.tier} />}
               </View>
             </View>
@@ -132,7 +146,9 @@ export default function UserProfile() {
                   disabled={unblock.isPending}
                   className="bg-panel border border-red-500/40 px-4 py-3 rounded-xl active:opacity-80"
                 >
-                  <Text className="text-red-400 font-semibold text-center">Blocked · tap to unblock</Text>
+                  <Text className="text-red-400 font-semibold text-center">
+                    Blocked · tap to unblock
+                  </Text>
                 </Pressable>
               </View>
             )}
@@ -142,10 +158,16 @@ export default function UserProfile() {
                   <FriendButton
                     state={friendState}
                     onSend={() => sendRequest.mutate()}
-                    onUnfriend={() => Alert.alert("Unfriend?", `Remove ${profile.name} from your friends.`, [
-                      { text: "Cancel", style: "cancel" },
-                      { text: "Unfriend", style: "destructive", onPress: () => unfriend.mutate() },
-                    ])}
+                    onUnfriend={() =>
+                      Alert.alert("Unfriend?", `Remove ${profile.name} from your friends.`, [
+                        { text: "Cancel", style: "cancel" },
+                        {
+                          text: "Unfriend",
+                          style: "destructive",
+                          onPress: () => unfriend.mutate(),
+                        },
+                      ])
+                    }
                     pending={sendRequest.isPending || unfriend.isPending}
                   />
                 </View>
@@ -172,14 +194,16 @@ export default function UserProfile() {
                   </Pressable>
                   <Text className="text-weered-muted py-2">·</Text>
                   <Pressable
-                    onPress={() => Alert.alert(
-                      `Block ${profile.name}?`,
-                      "They won't be able to DM you and you won't see their messages in rooms.",
-                      [
-                        { text: "Cancel", style: "cancel" },
-                        { text: "Block", style: "destructive", onPress: () => block.mutate() },
-                      ],
-                    )}
+                    onPress={() =>
+                      Alert.alert(
+                        `Block ${profile.name}?`,
+                        "They won't be able to DM you and you won't see their messages in rooms.",
+                        [
+                          { text: "Cancel", style: "cancel" },
+                          { text: "Block", style: "destructive", onPress: () => block.mutate() },
+                        ],
+                      )
+                    }
                     hitSlop={6}
                     className="py-2 px-3 active:opacity-70"
                   >
@@ -208,21 +232,42 @@ export default function UserProfile() {
   );
 }
 
-function InviteToCrewButton({ targetUserId, targetName }: { targetUserId: string; targetName: string }) {
+function InviteToCrewButton({
+  targetUserId,
+  targetName,
+}: {
+  targetUserId: string;
+  targetName: string;
+}) {
   const [open, setOpen] = useState(false);
   const crewsQ = useQuery({
     queryKey: ["my-crews"],
-    queryFn: () => api<{ crews: { id: string; name: string; tag: string; myRole: string; members: { userId: string }[] }[] }>("/crews/mine"),
+    queryFn: () =>
+      api<{
+        crews: {
+          id: string;
+          name: string;
+          tag: string;
+          myRole: string;
+          members: { userId: string }[];
+        }[];
+      }>("/crews/mine"),
     enabled: open,
   });
   const invite = useMutation({
-    mutationFn: (crewId: string) => api(`/crews/${crewId}/invite/${targetUserId}`, { method: "POST" }),
-    onSuccess: () => { setOpen(false); Alert.alert("Invited", `${targetName} added to crew.`); },
+    mutationFn: (crewId: string) =>
+      api(`/crews/${crewId}/invite/${targetUserId}`, { method: "POST" }),
+    onSuccess: () => {
+      setOpen(false);
+      Alert.alert("Invited", `${targetName} added to crew.`);
+    },
     onError: (e: any) => Alert.alert("Couldn't invite", e?.message || "Unknown error"),
   });
 
   const eligible = (crewsQ.data?.crews || []).filter(
-    (c) => (c.myRole === "LEADER" || c.myRole === "OFFICER") && !c.members.some((m) => m.userId === targetUserId)
+    (c) =>
+      (c.myRole === "LEADER" || c.myRole === "OFFICER") &&
+      !c.members.some((m) => m.userId === targetUserId),
   );
 
   return (
@@ -237,10 +282,14 @@ function InviteToCrewButton({ targetUserId, targetName }: { targetUserId: string
         <Modal transparent animationType="fade" onRequestClose={() => setOpen(false)}>
           <View className="flex-1 bg-black/70 justify-center px-5">
             <View className="bg-weered-bg border border-border rounded-2xl p-5 max-h-[70%]">
-              <Text className="text-weered-text font-bold text-lg mb-3">Add {targetName} to a crew</Text>
+              <Text className="text-weered-text font-bold text-lg mb-3">
+                Add {targetName} to a crew
+              </Text>
               {crewsQ.isLoading && <ActivityIndicator color="#5800E5" />}
               {!crewsQ.isLoading && eligible.length === 0 && (
-                <Text className="text-weered-muted text-sm">You don't have any crews where you can invite. Make one first or ask a leader.</Text>
+                <Text className="text-weered-muted text-sm">
+                  You don't have any crews where you can invite. Make one first or ask a leader.
+                </Text>
               )}
               <ScrollView>
                 {eligible.map((c) => (
@@ -251,7 +300,8 @@ function InviteToCrewButton({ targetUserId, targetName }: { targetUserId: string
                     className="px-3 py-3 border-b border-border/30 active:opacity-70"
                   >
                     <Text className="text-weered-text font-semibold">
-                      {c.tag ? `[${c.tag}] ` : ""}{c.name}
+                      {c.tag ? `[${c.tag}] ` : ""}
+                      {c.name}
                     </Text>
                     <Text className="text-weered-muted text-xs">{c.myRole}</Text>
                   </Pressable>
@@ -272,8 +322,16 @@ function InviteToCrewButton({ targetUserId, targetName }: { targetUserId: string
 }
 
 function FriendButton({
-  state, onSend, onUnfriend, pending,
-}: { state: FriendState; onSend: () => void; onUnfriend: () => void; pending: boolean }) {
+  state,
+  onSend,
+  onUnfriend,
+  pending,
+}: {
+  state: FriendState;
+  onSend: () => void;
+  onUnfriend: () => void;
+  pending: boolean;
+}) {
   if (state === "friends") {
     return (
       <Pressable
@@ -281,7 +339,9 @@ function FriendButton({
         disabled={pending}
         className="bg-panel border border-border px-4 py-3 rounded-xl active:opacity-80"
       >
-        <Text className="text-weered-muted font-semibold text-center">Friends · tap to unfriend</Text>
+        <Text className="text-weered-muted font-semibold text-center">
+          Friends · tap to unfriend
+        </Text>
       </Pressable>
     );
   }
@@ -295,7 +355,9 @@ function FriendButton({
   if (state === "pending_received") {
     return (
       <View className="bg-panel border border-border px-4 py-3 rounded-xl">
-        <Text className="text-weered-muted text-center">They sent you a request — accept it in Friends · Requests.</Text>
+        <Text className="text-weered-muted text-center">
+          They sent you a request — accept it in Friends · Requests.
+        </Text>
       </View>
     );
   }

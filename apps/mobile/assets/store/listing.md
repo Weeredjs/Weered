@@ -3,16 +3,19 @@
 Paste these into Play Console > Main store listing.
 
 ## App name (≤30 chars)
+
 ```
 Weered
 ```
 
 ## Short description (≤80 chars)
+
 ```
 Live community lobbies for gamers. Voice rooms, bounties, crews, presence.
 ```
 
 ## Full description (≤4000 chars)
+
 ```
 Weered is a real-time community platform built for gaming communities and crews.
 
@@ -64,35 +67,42 @@ We ship every day. If something's broken or missing, email support@weered.ca and
 ```
 
 ## App category
+
 Social
 
 ## Content rating
+
 Teen (voice chat with strangers + user-generated content)
 
 ## Tags / Topics
+
 - Social Networking
 - Gaming
 - Communication
 
 ## Privacy policy URL
+
 https://weered.ca/privacy
 
 ## Website URL
+
 https://weered.ca
 
 ## Support email
+
 support@weered.ca
 
 ## Required visual assets
 
-| Asset             | Size       | File                                  | Status |
-|-------------------|------------|---------------------------------------|--------|
-| App icon          | 512×512    | (Play Console pulls from .aab)        | ✅     |
-| Feature graphic   | 1024×500   | `feature-graphic.png`                 | ✅     |
-| Phone screenshots | 1080×1920+ | `screenshots/phone-{1..6}.png`        | ⏳ Take from your phone |
-| Tablet (optional) | 1200×1920+ | `screenshots/tablet-{1..6}.png`       | ⏳ Optional |
+| Asset             | Size       | File                            | Status                  |
+| ----------------- | ---------- | ------------------------------- | ----------------------- |
+| App icon          | 512×512    | (Play Console pulls from .aab)  | ✅                      |
+| Feature graphic   | 1024×500   | `feature-graphic.png`           | ✅                      |
+| Phone screenshots | 1080×1920+ | `screenshots/phone-{1..6}.png`  | ⏳ Take from your phone |
+| Tablet (optional) | 1200×1920+ | `screenshots/tablet-{1..6}.png` | ⏳ Optional             |
 
 ### Suggested phone screenshots (in order)
+
 1. **Lobby browser** — the grid of game lobbies, "live" pulse indicators
 2. **Inside Windrose lobby** — captain's log + live player counter
 3. **Bounty board** — open bounties with claim buttons

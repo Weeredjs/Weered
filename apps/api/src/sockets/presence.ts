@@ -19,37 +19,73 @@ type Opts = {
 };
 
 export async function handlePresence(ws: any, msg: any, opts: Opts): Promise<void> {
-  const { rooms, send, broadcast, normalizeRoomId, ensureRoomLoaded, isModOrOwner, doJoin, publishState, leaveRoom } = opts;
+  const {
+    rooms,
+    send,
+    broadcast,
+    normalizeRoomId,
+    ensureRoomLoaded,
+    isModOrOwner,
+    doJoin,
+    publishState,
+    leaveRoom,
+  } = opts;
 
   if (msg.type === "rooms:list" || msg.type === "lobby:rooms" || msg.type === "room:list") {
     const [lobbyList, roomList] = await Promise.all([
       prisma.lobby.findMany({
-      where: { pinned: true },
-      select: { id: true, name: true, description: true, verified: true, pinned: true, moduleType: true },
+        where: { pinned: true },
+        select: {
+          id: true,
+          name: true,
+          description: true,
+          verified: true,
+          pinned: true,
+          moduleType: true,
+        },
       }),
       prisma.room.findMany({
         orderBy: { updatedAt: "desc" },
         select: {
-          id: true, name: true, locked: true, lobbyId: true,
-          iconUrl: true, bannerUrl: true, accentColor: true, pinned: true, isEvent: true,
+          id: true,
+          name: true,
+          locked: true,
+          lobbyId: true,
+          iconUrl: true,
+          bannerUrl: true,
+          accentColor: true,
+          pinned: true,
+          isEvent: true,
           _count: { select: { members: true } },
         },
         take: 100,
       }),
     ]);
-      const lobbyIds = new Set(lobbyList.map((l: any) => l.id));
-      const lobbyOut = lobbyList.map((l: any) => ({
-      id: l.id, roomId: l.id, name: l.name, description: l.description,
-      verified: l.verified, pinned: true, moduleType: l.moduleType,
-      onlineCount: rooms.get(l.id)?.users.size ?? 0, locked: false,
+    const lobbyIds = new Set(lobbyList.map((l: any) => l.id));
+    const lobbyOut = lobbyList.map((l: any) => ({
+      id: l.id,
+      roomId: l.id,
+      name: l.name,
+      description: l.description,
+      verified: l.verified,
+      pinned: true,
+      moduleType: l.moduleType,
+      onlineCount: rooms.get(l.id)?.users.size ?? 0,
+      locked: false,
     }));
     const roomOut = roomList
-      .filter(r => !r.id.includes("%") && !lobbyIds.has(r.id))
+      .filter((r) => !r.id.includes("%") && !lobbyIds.has(r.id))
       .map((r: any) => ({
-        id: r.id, roomId: r.id, name: r.name || r.id,
+        id: r.id,
+        roomId: r.id,
+        name: r.name || r.id,
         onlineCount: rooms.get(r.id)?.users.size ?? 0,
-        locked: Boolean(r.locked), pinned: Boolean(r.pinned), isEvent: Boolean(r.isEvent),
-        iconUrl: r.iconUrl ?? null, bannerUrl: r.bannerUrl ?? null, accentColor: r.accentColor ?? null,
+        locked: Boolean(r.locked),
+        pinned: Boolean(r.pinned),
+        isEvent: Boolean(r.isEvent),
+        iconUrl: r.iconUrl ?? null,
+        bannerUrl: r.bannerUrl ?? null,
+        accentColor: r.accentColor ?? null,
         lobbyId: r.lobbyId ?? null,
       }));
     send(ws, { type: "rooms", rooms: [...lobbyOut, ...roomOut] });
@@ -60,7 +96,10 @@ export async function handlePresence(ws: any, msg: any, opts: Opts): Promise<voi
     const roomId = normalizeRoomId(String(msg.roomId || ""));
     if (!roomId) return;
     const room = await ensureRoomLoaded(roomId);
-    if (room.banned.has(ws.user.id)) { send(ws, { type: "room:banned", roomId }); return; }
+    if (room.banned.has(ws.user.id)) {
+      send(ws, { type: "room:banned", roomId });
+      return;
+    }
     const uid = ws.user.id;
     const isLobby = String(roomId || "").startsWith("lobby:");
 
@@ -84,7 +123,10 @@ export async function handlePresence(ws: any, msg: any, opts: Opts): Promise<voi
         if (room.knocks.length > 200) room.knocks.splice(0, room.knocks.length - 200);
       }
       let p = room.pending.get(uid);
-      if (!p) { p = new Set<any>(); room.pending.set(uid, p); }
+      if (!p) {
+        p = new Set<any>();
+        room.pending.set(uid, p);
+      }
       p.add(ws);
       ws.pendingRoomId = roomId;
       send(ws, { type: "room:knock:queued", roomId });

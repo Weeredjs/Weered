@@ -12,12 +12,12 @@ import HelldiversLoadoutBrowser from "./HelldiversLoadoutBrowser";
 const ACCENT = "#FFD700";
 
 const TABS = [
-  { id: "war"        as const, label: "War Map" },
-  { id: "squad"      as const, label: "Squad Finder" },
+  { id: "war" as const, label: "War Map" },
+  { id: "squad" as const, label: "Squad Finder" },
   { id: "stratagems" as const, label: "Stratagems" },
-  { id: "loadouts"   as const, label: "Loadouts" },
+  { id: "loadouts" as const, label: "Loadouts" },
 ];
-type TabId = typeof TABS[number]["id"];
+type TabId = (typeof TABS)[number]["id"];
 
 export default function HelldiversModulesPanel({
   lobbyId,
@@ -33,7 +33,7 @@ export default function HelldiversModulesPanel({
   hideSquad?: boolean;
 }) {
   const accent = accentColor || ACCENT;
-  const visibleTabs = hideSquad ? TABS.filter(t => t.id !== "squad") : TABS;
+  const visibleTabs = hideSquad ? TABS.filter((t) => t.id !== "squad") : TABS;
   const [tab, setTab] = useState<TabId>("war");
   const [chatOpen, setChatOpen] = useState(false);
 
@@ -62,7 +62,12 @@ export default function HelldiversModulesPanel({
       <div style={{ display: "flex", flexDirection: "column", gap: 10, minWidth: 0, minHeight: 0 }}>
         <HelldiversMajorOrderPanel />
 
-        <LobbyPlayingNowPanel appId="553850" lobbyId="helldivers2" accentColor={accent} gameLabel="Helldivers 2" />
+        <LobbyPlayingNowPanel
+          appId="553850"
+          lobbyId="helldivers2"
+          accentColor={accent}
+          gameLabel="Helldivers 2"
+        />
 
         <div
           role="tablist"
@@ -77,7 +82,7 @@ export default function HelldiversModulesPanel({
             flexWrap: "wrap",
           }}
         >
-          {visibleTabs.map(t => {
+          {visibleTabs.map((t) => {
             const active = t.id === tab;
             return (
               <button
@@ -109,16 +114,25 @@ export default function HelldiversModulesPanel({
         </div>
 
         <div style={{ flex: 1, minHeight: 0, overflow: "auto" }}>
-          {tab === "war"        && <HelldiversWarMapPanel />}
-          {tab === "squad"      && <HelldiversSquadFinder lobbyId={lobbyId} accentColor={accent} currentUserId={currentUserId} />}
+          {tab === "war" && <HelldiversWarMapPanel />}
+          {tab === "squad" && (
+            <HelldiversSquadFinder
+              lobbyId={lobbyId}
+              accentColor={accent}
+              currentUserId={currentUserId}
+            />
+          )}
           {tab === "stratagems" && <HelldiversStratagemsPanel />}
-          {tab === "loadouts"   && <HelldiversLoadoutBrowser lobbyAccent={accent} />}
+          {tab === "loadouts" && <HelldiversLoadoutBrowser lobbyAccent={accent} />}
         </div>
       </div>
 
       {!chatOpen && (
         <div style={{ minWidth: 0, minHeight: 0, display: "flex", flexDirection: "column" }}>
-          <HelldiversDispatchesPanel style={{ flex: 1, minHeight: 0, maxHeight: "none" }} limit={20} />
+          <HelldiversDispatchesPanel
+            style={{ flex: 1, minHeight: 0, maxHeight: "none" }}
+            limit={20}
+          />
         </div>
       )}
     </div>

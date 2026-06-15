@@ -19,7 +19,14 @@ export async function handleRoomClose(
     rooms: Map<string, any>;
     isModOrOwner: (room: any, userId?: string, globalRole?: string) => boolean;
     send: (ws: any, msg: any) => void;
-    globalAudit: (actorId: string, actorName: string, action: string, targetId?: string, targetName?: string, meta?: any) => Promise<any>;
+    globalAudit: (
+      actorId: string,
+      actorName: string,
+      action: string,
+      targetId?: string,
+      targetName?: string,
+      meta?: any,
+    ) => Promise<any>;
   },
 ): Promise<void> {
   const { normalizeRoomId, rooms, isModOrOwner, send, globalAudit } = opts;
@@ -34,7 +41,9 @@ export async function handleRoomClose(
     if (room.pinned) {
       for (const s of room.sockets) {
         send(s, { type: "room:closed", roomId, by: ws.user.name });
-        try { s.close(4004, "room:closed"); } catch {}
+        try {
+          s.close(4004, "room:closed");
+        } catch {}
       }
       room.users.clear();
       room.sockets.clear();
@@ -45,7 +54,9 @@ export async function handleRoomClose(
 
     for (const s of room.sockets) {
       send(s, { type: "room:closed", roomId, by: ws.user.name });
-      try { s.close(4004, "room:closed"); } catch {}
+      try {
+        s.close(4004, "room:closed");
+      } catch {}
     }
 
     room.users.clear();
@@ -69,7 +80,14 @@ export async function handleRoomClose(
 export async function handleRoomMod(
   ws: any,
   msg: any,
-  ctx: { room: any; roomId: string; actorId: string; actorName: string; actorIsMod: boolean; actorIsOwner: boolean },
+  ctx: {
+    room: any;
+    roomId: string;
+    actorId: string;
+    actorName: string;
+    actorIsMod: boolean;
+    actorIsOwner: boolean;
+  },
   opts: {
     publishState: (room: any) => void;
     broadcast: (room: any, msg: any) => void;
@@ -88,7 +106,22 @@ export async function handleRoomMod(
   },
 ): Promise<void> {
   const { room, roomId, actorId, actorName, actorIsMod, actorIsOwner } = ctx;
-  const { publishState, broadcast, persistRoomBasics, audit, removeKnock, removePending, doJoin, send, getGlobalRole, canAccessStaff, findSocketsByUser, isOwner, rooms, wss } = opts;
+  const {
+    publishState,
+    broadcast,
+    persistRoomBasics,
+    audit,
+    removeKnock,
+    removePending,
+    doJoin,
+    send,
+    getGlobalRole,
+    canAccessStaff,
+    findSocketsByUser,
+    isOwner,
+    rooms,
+    wss,
+  } = opts;
 
   if (msg.type === "room:getAdminState") {
     publishState(room);
@@ -97,7 +130,9 @@ export async function handleRoomMod(
 
   if (msg.type === "room:rename") {
     if (!actorIsMod) return;
-    const nextName = String(msg.name || "").trim().slice(0, 64);
+    const nextName = String(msg.name || "")
+      .trim()
+      .slice(0, 64);
     if (!nextName) return;
     room.name = nextName;
     await persistRoomBasics(room);
@@ -153,7 +188,12 @@ export async function handleRoomMod(
     removeKnock(room, targetId);
     const set = room.pending.get(targetId);
     if (set && set.size) {
-      for (const s of set) { send(s, { type: "room:denied", roomId }); try { s.pendingRoomId = undefined; } catch {} }
+      for (const s of set) {
+        send(s, { type: "room:denied", roomId });
+        try {
+          s.pendingRoomId = undefined;
+        } catch {}
+      }
     }
     removePending(room, targetId);
     audit(room, { type: "room:deny", actorId, actorName, targetId });
@@ -176,9 +216,15 @@ export async function handleRoomMod(
         try {
           for (const s of findSocketsByUser(r, targetId)) {
             send(s, { type: "staff:kicked", roomId: r.roomId });
-            try { (s as any).roomId = undefined; } catch {}
-            try { (s as any).pendingRoomId = undefined; } catch {}
-            try { (s as any).close(4001, "staff:kick"); } catch {}
+            try {
+              (s as any).roomId = undefined;
+            } catch {}
+            try {
+              (s as any).pendingRoomId = undefined;
+            } catch {}
+            try {
+              (s as any).close(4001, "staff:kick");
+            } catch {}
           }
         } catch {}
         broadcast(r, { type: "presence:leave", roomId: r.roomId, userId: targetId });
@@ -191,7 +237,9 @@ export async function handleRoomMod(
         const s = c as any;
         if (s?.user?.id && String(s.user.id) === targetId) {
           send(s, { type: "staff:kicked" });
-          try { s.close(4001, "staff:kick"); } catch {}
+          try {
+            s.close(4001, "staff:kick");
+          } catch {}
         }
       }
     } catch {}
@@ -227,11 +275,18 @@ export async function handleRoomMod(
     room.users.delete(targetId);
     room.mods.delete(targetId);
     if (room.roomId !== "lobby") {
-      void prisma.roomMember.updateMany({ where: { roomId: room.roomId, userId: targetId }, data: { role: RoomRole.MEMBER } }).catch(() => {});
+      void prisma.roomMember
+        .updateMany({
+          where: { roomId: room.roomId, userId: targetId },
+          data: { role: RoomRole.MEMBER },
+        })
+        .catch(() => {});
     }
     for (const s of findSocketsByUser(room, targetId)) {
       send(s, { type: "mod:kicked", roomId });
-      try { (s as any).roomId = undefined; } catch {}
+      try {
+        (s as any).roomId = undefined;
+      } catch {}
     }
     broadcast(room, { type: "presence:leave", roomId, userId: targetId });
     audit(room, { type: "mod:kick", actorId, actorName, targetId });
@@ -247,14 +302,19 @@ export async function handleRoomMod(
     room.users.delete(targetId);
     room.mods.delete(targetId);
     if (room.roomId !== "lobby") {
-      void prisma.roomBan.upsert({
-        where: { roomId_userId: { roomId: room.roomId, userId: targetId } },
-        update: {}, create: { roomId: room.roomId, userId: targetId },
-      }).catch(() => {});
+      void prisma.roomBan
+        .upsert({
+          where: { roomId_userId: { roomId: room.roomId, userId: targetId } },
+          update: {},
+          create: { roomId: room.roomId, userId: targetId },
+        })
+        .catch(() => {});
     }
     for (const s of findSocketsByUser(room, targetId)) {
       send(s, { type: "mod:banned", roomId });
-      try { (s as any).roomId = undefined; } catch {}
+      try {
+        (s as any).roomId = undefined;
+      } catch {}
     }
     broadcast(room, { type: "presence:leave", roomId, userId: targetId });
     audit(room, { type: "mod:ban", actorId, actorName, targetId });
@@ -268,7 +328,9 @@ export async function handleRoomMod(
     if (!targetId) return;
     room.banned.delete(targetId);
     if (room.roomId !== "lobby") {
-      void prisma.roomBan.deleteMany({ where: { roomId: room.roomId, userId: targetId } }).catch(() => {});
+      void prisma.roomBan
+        .deleteMany({ where: { roomId: room.roomId, userId: targetId } })
+        .catch(() => {});
     }
     audit(room, { type: "mod:unban", actorId, actorName, targetId });
     publishState(room);
@@ -281,11 +343,13 @@ export async function handleRoomMod(
     if (!targetId || isOwner(room, targetId)) return;
     room.mods.add(targetId);
     if (room.roomId !== "lobby") {
-      void prisma.roomMember.upsert({
-        where: { roomId_userId: { roomId: room.roomId, userId: targetId } },
-        update: { role: RoomRole.MOD },
-        create: { roomId: room.roomId, userId: targetId, name: "", role: RoomRole.MOD },
-      }).catch(() => {});
+      void prisma.roomMember
+        .upsert({
+          where: { roomId_userId: { roomId: room.roomId, userId: targetId } },
+          update: { role: RoomRole.MOD },
+          create: { roomId: room.roomId, userId: targetId, name: "", role: RoomRole.MOD },
+        })
+        .catch(() => {});
     }
     audit(room, { type: "mod:promote", actorId, actorName, targetId });
     publishState(room);
@@ -298,7 +362,12 @@ export async function handleRoomMod(
     if (!targetId || isOwner(room, targetId)) return;
     room.mods.delete(targetId);
     if (room.roomId !== "lobby") {
-      void prisma.roomMember.updateMany({ where: { roomId: room.roomId, userId: targetId }, data: { role: RoomRole.MEMBER } }).catch(() => {});
+      void prisma.roomMember
+        .updateMany({
+          where: { roomId: room.roomId, userId: targetId },
+          data: { role: RoomRole.MEMBER },
+        })
+        .catch(() => {});
     }
     audit(room, { type: "mod:demote", actorId, actorName, targetId });
     publishState(room);

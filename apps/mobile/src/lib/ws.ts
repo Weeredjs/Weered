@@ -16,7 +16,10 @@ export class WeeredSocket {
 
   connect() {
     this.intentionallyClosed = false;
-    if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) {
+    if (
+      this.ws &&
+      (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)
+    ) {
       // Already connected/connecting — re-auth in case the token changed.
       if (this.ws.readyState === WebSocket.OPEN) {
         const token = getAuthToken();
@@ -37,8 +40,13 @@ export class WeeredSocket {
   // Force-close and reopen the socket. Use when a stale/zombied connection is
   // suspected (e.g. silent send failures, long network changes).
   forceReconnect() {
-    if (this.reconnectTimer) { clearTimeout(this.reconnectTimer); this.reconnectTimer = null; }
-    try { this.ws?.close(); } catch {}
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
+    try {
+      this.ws?.close();
+    } catch {}
     this.ws = null;
     this.intentionallyClosed = false;
     this.open();
@@ -55,13 +63,19 @@ export class WeeredSocket {
       while (this.outbox.length) {
         const msg = this.outbox.shift();
         if (msg) {
-          try { ws.send(JSON.stringify(msg)); } catch {}
+          try {
+            ws.send(JSON.stringify(msg));
+          } catch {}
         }
       }
     };
     ws.onmessage = (ev) => {
       let msg: any;
-      try { msg = JSON.parse(String(ev.data)); } catch { return; }
+      try {
+        msg = JSON.parse(String(ev.data));
+      } catch {
+        return;
+      }
       for (const h of this.handlers) h(msg);
     };
     ws.onclose = () => {
@@ -86,20 +100,31 @@ export class WeeredSocket {
     }
     // Queue and ensure a connection is in flight.
     this.outbox.push(msg);
-    if (!this.ws || this.ws.readyState === WebSocket.CLOSED || this.ws.readyState === WebSocket.CLOSING) {
+    if (
+      !this.ws ||
+      this.ws.readyState === WebSocket.CLOSED ||
+      this.ws.readyState === WebSocket.CLOSING
+    ) {
       this.connect();
     }
   }
 
   on(handler: Handler) {
     this.handlers.add(handler);
-    return () => { this.handlers.delete(handler); };
+    return () => {
+      this.handlers.delete(handler);
+    };
   }
 
   close() {
     this.intentionallyClosed = true;
-    if (this.reconnectTimer) { clearTimeout(this.reconnectTimer); this.reconnectTimer = null; }
-    try { this.ws?.close(); } catch {}
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
+    try {
+      this.ws?.close();
+    } catch {}
     this.ws = null;
   }
 }

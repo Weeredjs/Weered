@@ -26,13 +26,17 @@ export default async function flairRoutes(app: FastifyInstance, opts: Opts) {
       orderBy: { acquiredAt: "desc" },
     });
     const flairIds = owned.map((o: any) => o.flairItemId);
-    const items = flairIds.length > 0
-      ? await prisma.flairItem.findMany({ where: { id: { in: flairIds } } })
-      : [];
+    const items =
+      flairIds.length > 0
+        ? await prisma.flairItem.findMany({ where: { id: { in: flairIds } } })
+        : [];
     const byId: Record<string, any> = {};
     for (const f of items) byId[f.id] = f;
 
-    const me = await prisma.user.findUnique({ where: { id: u.id }, select: { equippedFlairId: true } as any });
+    const me = await prisma.user.findUnique({
+      where: { id: u.id },
+      select: { equippedFlairId: true } as any,
+    });
     const equippedId = (me as any)?.equippedFlairId || null;
 
     const inventory = owned
@@ -58,27 +62,34 @@ export default async function flairRoutes(app: FastifyInstance, opts: Opts) {
     return reply.send({ ok: true, inventory, equippedFlairId: equippedId });
   });
 
-  app.post("/flair/equip", {
-  schema: { tags: ["flair"] },
-}, async (req, reply) => {
-    const u = authFromHeader((req as any).headers?.authorization);
-    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
-    const body = (req.body || {}) as any;
-    const flairItemId = body.flairItemId === null || body.flairItemId === undefined ? null : String(body.flairItemId);
+  app.post(
+    "/flair/equip",
+    {
+      schema: { tags: ["flair"] },
+    },
+    async (req, reply) => {
+      const u = authFromHeader((req as any).headers?.authorization);
+      if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+      const body = (req.body || {}) as any;
+      const flairItemId =
+        body.flairItemId === null || body.flairItemId === undefined
+          ? null
+          : String(body.flairItemId);
 
-    if (flairItemId !== null) {
-      const owned = await prisma.userFlair.findUnique({
-        where: { userId_flairItemId: { userId: u.id, flairItemId } },
+      if (flairItemId !== null) {
+        const owned = await prisma.userFlair.findUnique({
+          where: { userId_flairItemId: { userId: u.id, flairItemId } },
+        });
+        if (!owned) return reply.code(403).send({ ok: false, error: "not_owned" });
+      }
+
+      await prisma.user.update({
+        where: { id: u.id },
+        data: { equippedFlairId: flairItemId } as any,
       });
-      if (!owned) return reply.code(403).send({ ok: false, error: "not_owned" });
-    }
-
-    await prisma.user.update({
-      where: { id: u.id },
-      data: { equippedFlairId: flairItemId } as any,
-    });
-    return reply.send({ ok: true, equippedFlairId: flairItemId });
-  });
+      return reply.send({ ok: true, equippedFlairId: flairItemId });
+    },
+  );
 
   app.get("/flair/items/:id", async (req, reply) => {
     const id = String((req as any).params?.id || "");
@@ -94,60 +105,96 @@ export default async function flairRoutes(app: FastifyInstance, opts: Opts) {
     return reply.send({ ok: true, flair: f });
   });
 
-  app.post("/flair/mint", {
-  schema: { tags: ["flair"], body: z.object({ slug: z.string().min(1), name: z.string().min(1), kind: z.string().optional(), source: z.string().optional() }).passthrough() },
-}, async (req, reply) => {
-    const u = authFromHeader((req as any).headers?.authorization);
-    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
-    if (!(await isStaff(u.id))) return reply.code(403).send({ ok: false, error: "forbidden" });
+  app.post(
+    "/flair/mint",
+    {
+      schema: {
+        tags: ["flair"],
+        body: z
+          .object({
+            slug: z.string().min(1),
+            name: z.string().min(1),
+            kind: z.string().optional(),
+            source: z.string().optional(),
+          })
+          .passthrough(),
+      },
+    },
+    async (req, reply) => {
+      const u = authFromHeader((req as any).headers?.authorization);
+      if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+      if (!(await isStaff(u.id))) return reply.code(403).send({ ok: false, error: "forbidden" });
 
-    const body = (req.body || {}) as any;
-    const slug = String(body.slug || "").trim();
-    const name = String(body.name || "").trim();
-    const kind = String(body.kind || "").toUpperCase();
-    const source = String(body.source || "MANUAL").toUpperCase();
-    if (!slug || !name) return reply.code(400).send({ ok: false, error: "missing_fields" });
-    if (!["BADGE", "BANNER", "NAMEPLATE"].includes(kind)) {
-      return reply.code(400).send({ ok: false, error: "bad_kind" });
-    }
-    if (!["MANUAL", "TOURNAMENT", "CONTEST", "ACHIEVEMENT", "PURCHASE"].includes(source)) {
-      return reply.code(400).send({ ok: false, error: "bad_source" });
-    }
+      const body = (req.body || {}) as any;
+      const slug = String(body.slug || "").trim();
+      const name = String(body.name || "").trim();
+      const kind = String(body.kind || "").toUpperCase();
+      const source = String(body.source || "MANUAL").toUpperCase();
+      if (!slug || !name) return reply.code(400).send({ ok: false, error: "missing_fields" });
+      if (!["BADGE", "BANNER", "NAMEPLATE"].includes(kind)) {
+        return reply.code(400).send({ ok: false, error: "bad_kind" });
+      }
+      if (!["MANUAL", "TOURNAMENT", "CONTEST", "ACHIEVEMENT", "PURCHASE"].includes(source)) {
+        return reply.code(400).send({ ok: false, error: "bad_source" });
+      }
 
-    try {
-      const created = await mintFlairItem(prisma, {
-        slug,
-        name,
-        description: body.description ? String(body.description) : "",
-        kind: kind as any,
-        imageUrl: body.imageUrl ? String(body.imageUrl) : null,
-        color: body.color ? String(body.color) : null,
-        rarity: body.rarity ? String(body.rarity).toUpperCase() : "COMMON",
-        source: source as any,
-        sourceRefId: body.sourceRefId ? String(body.sourceRefId) : null,
-        createdById: u.id,
-        meta: body.meta || {},
-      });
-      return reply.send({ ok: true, flairItem: created });
-    } catch (e: any) {
-      if (String(e?.code) === "P2002") return reply.code(409).send({ ok: false, error: "slug_taken" });
-      return reply.code(500).send({ ok: false, error: "mint_failed", detail: String(e?.message || e) });
-    }
-  });
+      try {
+        const created = await mintFlairItem(prisma, {
+          slug,
+          name,
+          description: body.description ? String(body.description) : "",
+          kind: kind as any,
+          imageUrl: body.imageUrl ? String(body.imageUrl) : null,
+          color: body.color ? String(body.color) : null,
+          rarity: body.rarity ? String(body.rarity).toUpperCase() : "COMMON",
+          source: source as any,
+          sourceRefId: body.sourceRefId ? String(body.sourceRefId) : null,
+          createdById: u.id,
+          meta: body.meta || {},
+        });
+        return reply.send({ ok: true, flairItem: created });
+      } catch (e: any) {
+        if (String(e?.code) === "P2002")
+          return reply.code(409).send({ ok: false, error: "slug_taken" });
+        return reply
+          .code(500)
+          .send({ ok: false, error: "mint_failed", detail: String(e?.message || e) });
+      }
+    },
+  );
 
-  app.post("/flair/grant", {
-  schema: { tags: ["flair"], body: z.object({ userId: z.string().min(1), flairItemId: z.string().min(1), acquiredFrom: z.string().optional() }).passthrough() },
-}, async (req, reply) => {
-    const u = authFromHeader((req as any).headers?.authorization);
-    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
-    if (!(await isStaff(u.id))) return reply.code(403).send({ ok: false, error: "forbidden" });
+  app.post(
+    "/flair/grant",
+    {
+      schema: {
+        tags: ["flair"],
+        body: z
+          .object({
+            userId: z.string().min(1),
+            flairItemId: z.string().min(1),
+            acquiredFrom: z.string().optional(),
+          })
+          .passthrough(),
+      },
+    },
+    async (req, reply) => {
+      const u = authFromHeader((req as any).headers?.authorization);
+      if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+      if (!(await isStaff(u.id))) return reply.code(403).send({ ok: false, error: "forbidden" });
 
-    const body = (req.body || {}) as any;
-    const userId = String(body.userId || "").trim();
-    const flairItemId = String(body.flairItemId || "").trim();
-    if (!userId || !flairItemId) return reply.code(400).send({ ok: false, error: "missing_fields" });
+      const body = (req.body || {}) as any;
+      const userId = String(body.userId || "").trim();
+      const flairItemId = String(body.flairItemId || "").trim();
+      if (!userId || !flairItemId)
+        return reply.code(400).send({ ok: false, error: "missing_fields" });
 
-    const result = await grantFlairToUser(prisma, userId, flairItemId, body.acquiredFrom ? String(body.acquiredFrom) : undefined);
-    return reply.send({ ok: true, ...result });
-  });
+      const result = await grantFlairToUser(
+        prisma,
+        userId,
+        flairItemId,
+        body.acquiredFrom ? String(body.acquiredFrom) : undefined,
+      );
+      return reply.send({ ok: true, ...result });
+    },
+  );
 }

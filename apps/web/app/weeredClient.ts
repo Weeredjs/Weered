@@ -1,6 +1,4 @@
-﻿
-
-export type WsInbound = { type: string; [k: string]: any };
+﻿export type WsInbound = { type: string; [k: string]: any };
 export type WsOutbound = { type: string; [k: string]: any };
 
 export type ChatMessage = {
@@ -28,7 +26,9 @@ const API_BASE =
 
 export const WEERED_API_BASE = String(API_BASE);
 
-function safeNow() { return Date.now(); }
+function safeNow() {
+  return Date.now();
+}
 function makeId() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const g: any = globalThis as any;
@@ -73,7 +73,10 @@ export class WeeredClient {
 
     this.loadTokenFromStorage();
 
-    if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) {
+    if (
+      this.ws &&
+      (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)
+    ) {
       return;
     }
 
@@ -126,7 +129,9 @@ export class WeeredClient {
       } catch {}
     }
   }
-  clearToken() { this.setToken(null); }
+  clearToken() {
+    this.setToken(null);
+  }
   getTokenPreview(): string {
     if (!this.token) return "(none)";
     return this.token.slice(0, 18) + "ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦";
@@ -156,7 +161,9 @@ export class WeeredClient {
         }
 
         let data: any = null;
-        try { data = await res.json(); } catch {}
+        try {
+          data = await res.json();
+        } catch {}
         const t = pickTokenFromJson(data);
         if (t) {
           this.setToken(t);
@@ -170,20 +177,35 @@ export class WeeredClient {
       }
     })();
 
-    try { await this.devLoginInFlight; }
-    finally { this.devLoginInFlight = null; }
+    try {
+      await this.devLoginInFlight;
+    } finally {
+      this.devLoginInFlight = null;
+    }
   }
 
-  isConnected() { return this.connected; }
-  isAuthed() { return this.authed; }
-  getAuthError() { return this.authError; }
-  getRoomId() { return this.currentRoomId; }
-  getPresence(): PresenceState { return this.presence; }
+  isConnected() {
+    return this.connected;
+  }
+  isAuthed() {
+    return this.authed;
+  }
+  getAuthError() {
+    return this.authError;
+  }
+  getRoomId() {
+    return this.currentRoomId;
+  }
+  getPresence(): PresenceState {
+    return this.presence;
+  }
   getChat(roomId?: string | null): ChatMessage[] {
     if (!roomId) return [];
     return this.chatLog.filter((m) => m.roomId === roomId);
   }
-  getDebugLog(): string[] { return [...this.logLines]; }
+  getDebugLog(): string[] {
+    return [...this.logLines];
+  }
 
   on<T = any>(type: string, handler: Handler<T>): () => void {
     if (type === "*") {
@@ -268,15 +290,24 @@ export class WeeredClient {
 
   private emit(msg: WsInbound) {
     const set = this.subscribers.get(msg.type);
-    if (set) set.forEach((h) => { try { h(msg); } catch {} });
-    this.anySubscribers.forEach((h) => { try { h(msg); } catch {} });
+    if (set)
+      set.forEach((h) => {
+        try {
+          h(msg);
+        } catch {}
+      });
+    this.anySubscribers.forEach((h) => {
+      try {
+        h(msg);
+      } catch {}
+    });
   }
 
   private sendRaw(msg: WsOutbound) {
     if (!this.authed && (msg.type?.startsWith("presence:") || msg.type?.startsWith("chat:"))) {
       return;
     }
-if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
     try {
       this.pushLog(`[ws] out ${msg.type}`);
       this.ws.send(JSON.stringify(msg));
@@ -340,21 +371,17 @@ if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
 }
 
 declare global {
-  // eslint-disable-next-line no-var
   var __WEERED_CLIENT__: WeeredClient | undefined;
 }
 
 export const weeredClient: WeeredClient =
   globalThis.__WEERED_CLIENT__ ?? (globalThis.__WEERED_CLIENT__ = new WeeredClient(String(WS_URL)));
 
-export function getWeeredClient() { return weeredClient; }
+export function getWeeredClient() {
+  return weeredClient;
+}
 export function applyAuthPayload(payload: any): boolean {
-  const t =
-    payload?.token ??
-    payload?.access_token ??
-    payload?.accessToken ??
-    payload?.jwt ??
-    null;
+  const t = payload?.token ?? payload?.access_token ?? payload?.accessToken ?? payload?.jwt ?? null;
 
   if (typeof t === "string" && t.length > 10) {
     try {
@@ -367,4 +394,3 @@ export function applyAuthPayload(payload: any): boolean {
   }
   return false;
 }
-

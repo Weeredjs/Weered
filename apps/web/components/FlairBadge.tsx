@@ -106,7 +106,9 @@ export default function FlairBadge({ flair, size = "sm", children }: FlairBadgeP
           flexShrink: 0,
           verticalAlign: "middle",
         }}
-      >{flair.imageUrl!.slice(6)}</span>
+      >
+        {flair.imageUrl!.slice(6)}
+      </span>
     );
   }
   return (
@@ -132,7 +134,9 @@ export default function FlairBadge({ flair, size = "sm", children }: FlairBadgeP
           src={flair.imageUrl}
           alt=""
           style={{ width: "100%", height: "100%", objectFit: "cover" }}
-          onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+          onError={(e) => {
+            (e.currentTarget as HTMLImageElement).style.display = "none";
+          }}
         />
       ) : (
         <span

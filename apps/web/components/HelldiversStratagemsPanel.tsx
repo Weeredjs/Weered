@@ -6,23 +6,23 @@ const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 const ACCENT = "#FFD700";
 
 const CATEGORY_COLORS: Record<string, string> = {
-  Eagle:     "#FFD700",
-  Orbital:   "#4FC3F7",
+  Eagle: "#FFD700",
+  Orbital: "#4FC3F7",
   Defensive: "#81C784",
-  Supply:    "#FFB74D",
-  Backpack:  "#BA68C8",
-  Mech:      "#EF5350",
-  Mission:   "#90A4AE",
+  Supply: "#FFB74D",
+  Backpack: "#BA68C8",
+  Mech: "#EF5350",
+  Mission: "#90A4AE",
 };
 
 const USAGE_TYPES = ["All", "Offensive", "Defensive", "Supply", "Vehicle", "Mission"];
 const UNLOCK_TIERS = [
-  { label: "All Levels",  max: 50 },
-  { label: "≤ Level 5",   max: 5 },
-  { label: "≤ Level 10",  max: 10 },
-  { label: "≤ Level 15",  max: 15 },
-  { label: "≤ Level 20",  max: 20 },
-  { label: "≤ Level 25",  max: 25 },
+  { label: "All Levels", max: 50 },
+  { label: "≤ Level 5", max: 5 },
+  { label: "≤ Level 10", max: 10 },
+  { label: "≤ Level 15", max: 15 },
+  { label: "≤ Level 20", max: 20 },
+  { label: "≤ Level 25", max: 25 },
 ];
 
 type Stratagem = {
@@ -38,19 +38,71 @@ type Stratagem = {
 };
 
 const S = {
-  card: { borderRadius: 8, border: `1px solid ${ACCENT}22`, background: "rgba(255,215,0,.04)", padding: "10px 14px" } as React.CSSProperties,
-  btn: { padding: "5px 10px", borderRadius: 6, border: "1px solid rgba(255,255,255,.10)", background: "rgba(255,255,255,.04)", fontSize: 11, cursor: "pointer", color: "rgba(243,244,246,.85)", fontFamily: "inherit", letterSpacing: ".4px" } as React.CSSProperties,
-  btnActive: { padding: "5px 10px", borderRadius: 6, border: `1px solid ${ACCENT}`, background: `${ACCENT}18`, fontSize: 11, cursor: "pointer", color: ACCENT, fontFamily: "inherit", fontWeight: 700, letterSpacing: ".4px" } as React.CSSProperties,
-  input: { width: "100%", padding: "8px 12px", borderRadius: 6, border: `1px solid ${ACCENT}30`, background: "rgba(0,0,0,.50)", fontSize: 13, color: "rgba(243,244,246,.92)", outline: "none", boxSizing: "border-box" as const, fontFamily: "inherit" } as React.CSSProperties,
-  label: { fontSize: 10, fontWeight: 700, opacity: 0.55, letterSpacing: "1.2px", textTransform: "uppercase" as const, marginBottom: 6, color: ACCENT } as React.CSSProperties,
+  card: {
+    borderRadius: 8,
+    border: `1px solid ${ACCENT}22`,
+    background: "rgba(255,215,0,.04)",
+    padding: "10px 14px",
+  } as React.CSSProperties,
+  btn: {
+    padding: "5px 10px",
+    borderRadius: 6,
+    border: "1px solid rgba(255,255,255,.10)",
+    background: "rgba(255,255,255,.04)",
+    fontSize: 11,
+    cursor: "pointer",
+    color: "rgba(243,244,246,.85)",
+    fontFamily: "inherit",
+    letterSpacing: ".4px",
+  } as React.CSSProperties,
+  btnActive: {
+    padding: "5px 10px",
+    borderRadius: 6,
+    border: `1px solid ${ACCENT}`,
+    background: `${ACCENT}18`,
+    fontSize: 11,
+    cursor: "pointer",
+    color: ACCENT,
+    fontFamily: "inherit",
+    fontWeight: 700,
+    letterSpacing: ".4px",
+  } as React.CSSProperties,
+  input: {
+    width: "100%",
+    padding: "8px 12px",
+    borderRadius: 6,
+    border: `1px solid ${ACCENT}30`,
+    background: "rgba(0,0,0,.50)",
+    fontSize: 13,
+    color: "rgba(243,244,246,.92)",
+    outline: "none",
+    boxSizing: "border-box" as const,
+    fontFamily: "inherit",
+  } as React.CSSProperties,
+  label: {
+    fontSize: 10,
+    fontWeight: 700,
+    opacity: 0.55,
+    letterSpacing: "1.2px",
+    textTransform: "uppercase" as const,
+    marginBottom: 6,
+    color: ACCENT,
+  } as React.CSSProperties,
 };
 
 function authHeaders(): Record<string, string> {
-  try { const t = localStorage.getItem("weered_token") || ""; return t ? { Authorization: `Bearer ${t}` } : {}; } catch { return {}; }
+  try {
+    const t = localStorage.getItem("weered_token") || "";
+    return t ? { Authorization: `Bearer ${t}` } : {};
+  } catch {
+    return {};
+  }
 }
 
 async function apiFetch(path: string) {
-  const r = await fetch(`${API}${path}`, { headers: { "Content-Type": "application/json", ...authHeaders() } });
+  const r = await fetch(`${API}${path}`, {
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+  });
   return r.json();
 }
 
@@ -59,9 +111,18 @@ function formatCode(code: string): string {
 }
 
 const ARROW_KEYS: Record<string, string> = {
-  ArrowUp: "↑", ArrowDown: "↓", ArrowLeft: "←", ArrowRight: "→",
-  w: "↑", s: "↓", a: "←", d: "→",
-  W: "↑", S: "↓", A: "←", D: "→",
+  ArrowUp: "↑",
+  ArrowDown: "↓",
+  ArrowLeft: "←",
+  ArrowRight: "→",
+  w: "↑",
+  s: "↓",
+  a: "←",
+  d: "→",
+  W: "↑",
+  S: "↓",
+  A: "←",
+  D: "→",
 };
 
 function TrainerMode({ pool }: { pool: Stratagem[] }) {
@@ -81,7 +142,9 @@ function TrainerMode({ pool }: { pool: Stratagem[] }) {
     setLastHit(null);
   }, [pool]);
 
-  useEffect(() => { if (!target) pickNext(); }, [target, pickNext]);
+  useEffect(() => {
+    if (!target) pickNext();
+  }, [target, pickNext]);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -97,14 +160,18 @@ function TrainerMode({ pool }: { pool: Stratagem[] }) {
           const elapsed = (Date.now() - (startedAt ?? Date.now())) / 1000;
           setLastTime(elapsed);
           setLastHit("hit");
-          setScore(s => ({ hits: s.hits + 1, misses: s.misses, best: Math.min(s.best, elapsed) }));
+          setScore((s) => ({
+            hits: s.hits + 1,
+            misses: s.misses,
+            best: Math.min(s.best, elapsed),
+          }));
           setTimeout(pickNext, 900);
         } else {
           setProgress(next);
         }
       } else {
         setLastHit("miss");
-        setScore(s => ({ ...s, misses: s.misses + 1 }));
+        setScore((s) => ({ ...s, misses: s.misses + 1 }));
         setProgress("");
         setStartedAt(null);
         setTimeout(pickNext, 600);
@@ -114,20 +181,43 @@ function TrainerMode({ pool }: { pool: Stratagem[] }) {
     return () => window.removeEventListener("keydown", onKey);
   }, [target, progress, startedAt, pickNext]);
 
-  if (!target) return <div style={{ opacity: 0.5, padding: 20, textAlign: "center" }}>Loading trainer...</div>;
+  if (!target)
+    return <div style={{ opacity: 0.5, padding: 20, textAlign: "center" }}>Loading trainer...</div>;
 
   return (
     <div style={{ ...S.card, marginTop: 20 }}>
-      <div style={{ ...S.label, marginBottom: 10, fontSize: 11 }}>Trainer Mode — input via arrow keys or WASD</div>
+      <div style={{ ...S.label, marginBottom: 10, fontSize: 11 }}>
+        Trainer Mode — input via arrow keys or WASD
+      </div>
 
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8 }}>
-        <div style={{ fontSize: 18, fontWeight: 700, color: ACCENT, letterSpacing: ".5px" }}>{target.name}</div>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "baseline",
+          marginBottom: 8,
+        }}
+      >
+        <div style={{ fontSize: 18, fontWeight: 700, color: ACCENT, letterSpacing: ".5px" }}>
+          {target.name}
+        </div>
         <div style={{ fontSize: 11, opacity: 0.5 }}>
-          Hits {score.hits} · Misses {score.misses}{score.best < Infinity ? ` · Best ${score.best.toFixed(2)}s` : ""}
+          Hits {score.hits} · Misses {score.misses}
+          {score.best < Infinity ? ` · Best ${score.best.toFixed(2)}s` : ""}
         </div>
       </div>
 
-      <div style={{ display: "flex", justifyContent: "center", gap: 10, padding: "20px 0", fontSize: 38, fontWeight: 900, letterSpacing: 4 }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          gap: 10,
+          padding: "20px 0",
+          fontSize: 38,
+          fontWeight: 900,
+          letterSpacing: 4,
+        }}
+      >
         {target.code.split("").map((ch, i) => {
           const done = i < progress.length;
           const isCurrent = i === progress.length && !lastHit;
@@ -136,31 +226,49 @@ function TrainerMode({ pool }: { pool: Stratagem[] }) {
               key={i}
               style={{
                 color: done ? "#4ADE80" : isCurrent ? ACCENT : "rgba(255,255,255,.25)",
-                textShadow: done ? "0 0 12px rgba(74,222,128,.55)" : isCurrent ? `0 0 12px ${ACCENT}80` : "none",
+                textShadow: done
+                  ? "0 0 12px rgba(74,222,128,.55)"
+                  : isCurrent
+                    ? `0 0 12px ${ACCENT}80`
+                    : "none",
                 transition: "color .15s, text-shadow .15s",
               }}
-            >{ch}</span>
+            >
+              {ch}
+            </span>
           );
         })}
       </div>
 
       <div style={{ textAlign: "center", fontSize: 13, height: 18 }}>
-        {lastHit === "hit" && <span style={{ color: "#4ADE80", fontWeight: 700 }}>STRATAGEM DEPLOYED · {lastTime?.toFixed(2)}s</span>}
-        {lastHit === "miss" && <span style={{ color: "#EF4444", fontWeight: 700 }}>INPUT REJECTED — TRY AGAIN</span>}
+        {lastHit === "hit" && (
+          <span style={{ color: "#4ADE80", fontWeight: 700 }}>
+            STRATAGEM DEPLOYED · {lastTime?.toFixed(2)}s
+          </span>
+        )}
+        {lastHit === "miss" && (
+          <span style={{ color: "#EF4444", fontWeight: 700 }}>INPUT REJECTED — TRY AGAIN</span>
+        )}
         {!lastHit && <span style={{ opacity: 0.5 }}>Awaiting input...</span>}
       </div>
 
       <div style={{ display: "flex", justifyContent: "center", marginTop: 6 }}>
-        <button onClick={pickNext} style={S.btn}>Skip</button>
+        <button onClick={pickNext} style={S.btn}>
+          Skip
+        </button>
       </div>
     </div>
   );
 }
 
 export default function HelldiversStratagemsPanel({
-  lobbyId, accentColor, style,
+  lobbyId,
+  accentColor,
+  style,
 }: {
-  lobbyId?: string; accentColor?: string; style?: React.CSSProperties;
+  lobbyId?: string;
+  accentColor?: string;
+  style?: React.CSSProperties;
 }) {
   const accent = accentColor || ACCENT;
   const [stratagems, setStratagems] = useState<Stratagem[]>([]);
@@ -176,33 +284,55 @@ export default function HelldiversStratagemsPanel({
   useEffect(() => {
     let alive = true;
     apiFetch("/helldivers/stratagems")
-      .then(j => {
+      .then((j) => {
         if (!alive) return;
         setStratagems(j.stratagems || []);
         setCategories(j.categories || []);
         setLoading(false);
       })
-      .catch(() => { if (alive) setLoading(false); });
-    return () => { alive = false; };
+      .catch(() => {
+        if (alive) setLoading(false);
+      });
+    return () => {
+      alive = false;
+    };
   }, []);
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
     const maxLvl = UNLOCK_TIERS[tier].max;
-    return stratagems.filter(s => {
+    return stratagems.filter((s) => {
       if (category !== "All" && s.category !== category) return false;
       if (usage !== "All" && s.usageType !== usage) return false;
       if (s.unlockLevel > maxLvl) return false;
-      if (q && !(s.name.toLowerCase().includes(q) || s.description.toLowerCase().includes(q))) return false;
+      if (q && !(s.name.toLowerCase().includes(q) || s.description.toLowerCase().includes(q)))
+        return false;
       return true;
     });
   }, [stratagems, search, category, usage, tier]);
 
   return (
-    <div style={{ padding: "14px 16px", overflow: "auto", color: "rgba(243,244,246,.92)", ...style }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+    <div
+      style={{ padding: "14px 16px", overflow: "auto", color: "rgba(243,244,246,.92)", ...style }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          marginBottom: 14,
+        }}
+      >
         <div>
-          <div style={{ fontSize: 18, fontWeight: 800, letterSpacing: 1.2, color: accent, textTransform: "uppercase" }}>
+          <div
+            style={{
+              fontSize: 18,
+              fontWeight: 800,
+              letterSpacing: 1.2,
+              color: accent,
+              textTransform: "uppercase",
+            }}
+          >
             Stratagems
           </div>
           <div style={{ fontSize: 11, opacity: 0.5, marginTop: 2, letterSpacing: ".5px" }}>
@@ -210,7 +340,7 @@ export default function HelldiversStratagemsPanel({
           </div>
         </div>
         <button
-          onClick={() => setShowTrainer(v => !v)}
+          onClick={() => setShowTrainer((v) => !v)}
           style={showTrainer ? S.btnActive : S.btn}
           title="Practice stratagem inputs with arrow keys or WASD"
         >
@@ -218,12 +348,14 @@ export default function HelldiversStratagemsPanel({
         </button>
       </div>
 
-      {showTrainer && stratagems.length > 0 && <TrainerMode pool={filtered.length ? filtered : stratagems} />}
+      {showTrainer && stratagems.length > 0 && (
+        <TrainerMode pool={filtered.length ? filtered : stratagems} />
+      )}
 
       <div style={{ marginTop: showTrainer ? 16 : 0, marginBottom: 12 }}>
         <input
           value={search}
-          onChange={e => setSearch(e.target.value)}
+          onChange={(e) => setSearch(e.target.value)}
           placeholder="Search stratagems..."
           style={S.input}
         />
@@ -233,15 +365,29 @@ export default function HelldiversStratagemsPanel({
         <div>
           <div style={S.label}>Category</div>
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-            <button onClick={() => setCategory("All")} style={category === "All" ? S.btnActive : S.btn}>All</button>
-            {categories.map(c => (
+            <button
+              onClick={() => setCategory("All")}
+              style={category === "All" ? S.btnActive : S.btn}
+            >
+              All
+            </button>
+            {categories.map((c) => (
               <button
                 key={c}
                 onClick={() => setCategory(c)}
-                style={category === c
-                  ? { ...S.btnActive, borderColor: CATEGORY_COLORS[c] || accent, color: CATEGORY_COLORS[c] || accent, background: `${CATEGORY_COLORS[c] || accent}18` }
-                  : S.btn}
-              >{c}</button>
+                style={
+                  category === c
+                    ? {
+                        ...S.btnActive,
+                        borderColor: CATEGORY_COLORS[c] || accent,
+                        color: CATEGORY_COLORS[c] || accent,
+                        background: `${CATEGORY_COLORS[c] || accent}18`,
+                      }
+                    : S.btn
+                }
+              >
+                {c}
+              </button>
             ))}
           </div>
         </div>
@@ -249,8 +395,10 @@ export default function HelldiversStratagemsPanel({
         <div>
           <div style={S.label}>Usage</div>
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-            {USAGE_TYPES.map(u => (
-              <button key={u} onClick={() => setUsage(u)} style={usage === u ? S.btnActive : S.btn}>{u}</button>
+            {USAGE_TYPES.map((u) => (
+              <button key={u} onClick={() => setUsage(u)} style={usage === u ? S.btnActive : S.btn}>
+                {u}
+              </button>
             ))}
           </div>
         </div>
@@ -259,18 +407,26 @@ export default function HelldiversStratagemsPanel({
           <div style={S.label}>Unlock Level</div>
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
             {UNLOCK_TIERS.map((t, i) => (
-              <button key={t.label} onClick={() => setTier(i)} style={tier === i ? S.btnActive : S.btn}>{t.label}</button>
+              <button
+                key={t.label}
+                onClick={() => setTier(i)}
+                style={tier === i ? S.btnActive : S.btn}
+              >
+                {t.label}
+              </button>
             ))}
           </div>
         </div>
       </div>
 
       <div style={{ fontSize: 11, opacity: 0.55, marginBottom: 8, letterSpacing: ".3px" }}>
-        {loading ? "Loading..." : `${filtered.length} stratagem${filtered.length === 1 ? "" : "s"} match`}
+        {loading
+          ? "Loading..."
+          : `${filtered.length} stratagem${filtered.length === 1 ? "" : "s"} match`}
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-        {filtered.map(s => {
+        {filtered.map((s) => {
           const catColor = CATEGORY_COLORS[s.category] || accent;
           const isOpen = selected?.slug === s.slug;
           return (
@@ -286,46 +442,89 @@ export default function HelldiversStratagemsPanel({
               onClick={() => setSelected(isOpen ? null : s)}
             >
               <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-                <div style={{
-                  flex: "0 0 auto",
-                  fontSize: 30,
-                  fontWeight: 900,
-                  letterSpacing: 4,
-                  color: catColor,
-                  fontFamily: "ui-monospace, 'JetBrains Mono', 'Cascadia Mono', monospace",
-                  textShadow: `0 0 12px ${catColor}55, 0 0 2px ${catColor}80`,
-                  minWidth: 170,
-                  lineHeight: 1,
-                }}>
+                <div
+                  style={{
+                    flex: "0 0 auto",
+                    fontSize: 30,
+                    fontWeight: 900,
+                    letterSpacing: 4,
+                    color: catColor,
+                    fontFamily: "ui-monospace, 'JetBrains Mono', 'Cascadia Mono', monospace",
+                    textShadow: `0 0 12px ${catColor}55, 0 0 2px ${catColor}80`,
+                    minWidth: 170,
+                    lineHeight: 1,
+                  }}
+                >
                   {formatCode(s.code)}
                 </div>
 
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 3, color: "rgba(243,244,246,.96)" }}>
+                  <div
+                    style={{
+                      fontWeight: 700,
+                      fontSize: 14,
+                      marginBottom: 3,
+                      color: "rgba(243,244,246,.96)",
+                    }}
+                  >
                     {s.name}
                   </div>
-                  <div style={{ display: "flex", gap: 8, fontSize: 10, opacity: 0.7, alignItems: "center", flexWrap: "wrap" }}>
-                    <span style={{
-                      padding: "2px 7px",
-                      borderRadius: 999,
-                      background: `${catColor}20`,
-                      color: catColor,
-                      fontWeight: 700,
-                      letterSpacing: ".5px",
-                      textTransform: "uppercase",
-                      fontSize: 9,
-                    }}>{s.category}</span>
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: 8,
+                      fontSize: 10,
+                      opacity: 0.7,
+                      alignItems: "center",
+                      flexWrap: "wrap",
+                    }}
+                  >
+                    <span
+                      style={{
+                        padding: "2px 7px",
+                        borderRadius: 999,
+                        background: `${catColor}20`,
+                        color: catColor,
+                        fontWeight: 700,
+                        letterSpacing: ".5px",
+                        textTransform: "uppercase",
+                        fontSize: 9,
+                      }}
+                    >
+                      {s.category}
+                    </span>
                     <span>{s.usageType}</span>
                     <span>·</span>
                     <span>CD {s.cooldown}s</span>
-                    {s.uses > 0 && (<><span>·</span><span>{s.uses} use{s.uses === 1 ? "" : "s"}</span></>)}
-                    {s.unlockLevel > 0 && (<><span>·</span><span>Lv {s.unlockLevel}</span></>)}
+                    {s.uses > 0 && (
+                      <>
+                        <span>·</span>
+                        <span>
+                          {s.uses} use{s.uses === 1 ? "" : "s"}
+                        </span>
+                      </>
+                    )}
+                    {s.unlockLevel > 0 && (
+                      <>
+                        <span>·</span>
+                        <span>Lv {s.unlockLevel}</span>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
 
               {isOpen && (
-                <div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px solid ${catColor}25`, fontSize: 12, lineHeight: 1.5, opacity: 0.85 }}>
+                <div
+                  style={{
+                    marginTop: 10,
+                    paddingTop: 10,
+                    borderTop: `1px solid ${catColor}25`,
+                    fontSize: 12,
+                    lineHeight: 1.5,
+                    opacity: 0.85,
+                  }}
+                >
                   {s.description}
                   {s.unlockLevel > 0 && (
                     <div style={{ marginTop: 6, fontSize: 10, opacity: 0.65, color: catColor }}>

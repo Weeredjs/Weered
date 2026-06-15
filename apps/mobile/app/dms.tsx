@@ -1,12 +1,5 @@
 import { useCallback } from "react";
-import {
-  View,
-  Text,
-  FlatList,
-  Pressable,
-  ActivityIndicator,
-  RefreshControl,
-} from "react-native";
+import { View, Text, FlatList, Pressable, ActivityIndicator, RefreshControl } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Stack, router } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
@@ -67,14 +60,17 @@ export default function DMs() {
                   <Text className="text-weered-text font-bold text-base flex-1" numberOfLines={1}>
                     {item.peerName}
                   </Text>
-                  <Text className="text-weered-muted text-xs ml-2">{formatRelative(item.lastTs)}</Text>
+                  <Text className="text-weered-muted text-xs ml-2">
+                    {formatRelative(item.lastTs)}
+                  </Text>
                 </View>
                 <View className="flex-row items-center mt-0.5">
                   <Text
                     className={`text-sm flex-1 ${item.unread ? "text-weered-text font-semibold" : "text-weered-muted"}`}
                     numberOfLines={1}
                   >
-                    {item.isFromMe ? "You: " : ""}{item.lastMessage}
+                    {item.isFromMe ? "You: " : ""}
+                    {item.lastMessage}
                   </Text>
                   {item.unread && (
                     <View
@@ -111,5 +107,7 @@ function formatRelative(iso: string): string {
     const days = Math.floor(hours / 24);
     if (days < 7) return `${days}d`;
     return new Date(iso).toLocaleDateString();
-  } catch { return ""; }
+  } catch {
+    return "";
+  }
 }

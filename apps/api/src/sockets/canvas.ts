@@ -27,16 +27,21 @@ export function handleCanvas(ws: any, msg: any, opts: Opts): boolean {
       broadcast(room, { type: "module:state", roomId, activeModule: null });
       return true;
     }
-    const disabled: string[] = Array.isArray((room as any).disabledModules) ? (room as any).disabledModules : [];
+    const disabled: string[] = Array.isArray((room as any).disabledModules)
+      ? (room as any).disabledModules
+      : [];
     if (disabled.includes(mode) && !isModOrOwner(room, ws.user.id, ws.user?.globalRole)) {
-      try { send(ws, { type: "module:rejected", roomId, mode, reason: "module_disabled" }); } catch {}
+      try {
+        send(ws, { type: "module:rejected", roomId, mode, reason: "module_disabled" });
+      } catch {}
       return true;
     }
     if (mode !== "youtube") room.ytState = null;
     const moduleState = {
       mode,
       url: typeof msg.url === "string" ? msg.url.slice(0, 2000) : undefined,
-      channel: typeof msg.channel === "string" ? msg.channel.slice(0, 100).toLowerCase() : undefined,
+      channel:
+        typeof msg.channel === "string" ? msg.channel.slice(0, 100).toLowerCase() : undefined,
       setBy: ws.user.id,
       setAt: Date.now(),
     };
@@ -67,9 +72,13 @@ export function handleCanvasRelay(
   opts: { send: (ws: any, m: any) => void },
 ): boolean {
   if (
-    msg.type === "dnd:initiative" || msg.type === "dnd:roll" ||
-    msg.type === "dnd:combatant:damage" || msg.type === "dnd:combatant:select" ||
-    msg.type === "map:token-move" || msg.type === "map:fog-reveal" || msg.type === "map:fog-clear"
+    msg.type === "dnd:initiative" ||
+    msg.type === "dnd:roll" ||
+    msg.type === "dnd:combatant:damage" ||
+    msg.type === "dnd:combatant:select" ||
+    msg.type === "map:token-move" ||
+    msg.type === "map:fog-reveal" ||
+    msg.type === "map:fog-clear"
   ) {
     const { room, roomId } = snap;
     if (!room.users.has(ws.user.id)) return true;

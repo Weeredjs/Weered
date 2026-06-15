@@ -3,20 +3,20 @@
 export type ModuleType =
   | "NONE"
   | "FEED"
-  | "RIOT"       // League of Legends
+  | "RIOT" // League of Legends
   | "FORTNITE"
-  | "BUNGIE"     // Destiny 2
+  | "BUNGIE" // Destiny 2
   | "PUBG"
   | "MLB"
   | "PGA"
-  | "WINDROSE"   // Age of Piracy
+  | "WINDROSE" // Age of Piracy
   | "POKER"
-  | "TRADING"    // FakeOut paper trading
+  | "TRADING" // FakeOut paper trading
   | "CS2"
   | "DOTA2"
-  | "POE"        // Path of Exile
+  | "POE" // Path of Exile
   | "MARATHON"
-  | "DND"        // Dungeons & Dragons
+  | "DND" // Dungeons & Dragons
   | "STUDY"
   | "HEADQUARTERS"
   | "CUSTOM";

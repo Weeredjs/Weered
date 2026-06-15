@@ -5,32 +5,67 @@ const ALLOWED_SUBS: Record<string, string> = {
   gta6: "GTA6",
 };
 
-type RedditPost = { id: string; title: string; url: string; author: string; updatedAt: string; flair: string; thumbnail: string | null; excerpt: string; hasVideo: boolean };
+type RedditPost = {
+  id: string;
+  title: string;
+  url: string;
+  author: string;
+  updatedAt: string;
+  flair: string;
+  thumbnail: string | null;
+  excerpt: string;
+  hasVideo: boolean;
+};
 
 const cache = new Map<string, { posts: RedditPost[]; cachedAt: number }>();
 const TTL = 5 * 60 * 1000;
 
 function decodeOnce(s: string): string {
   return s
-    .replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"')
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
     .replace(/&apos;/g, "'")
-    .replace(/&#x([0-9a-f]+);/gi, (_, h) => { try { return String.fromCodePoint(parseInt(h, 16)); } catch { return ""; } })
-    .replace(/&#(\d+);/g, (_, n) => { try { return String.fromCodePoint(parseInt(n, 10)); } catch { return ""; } })
+    .replace(/&#x([0-9a-f]+);/gi, (_, h) => {
+      try {
+        return String.fromCodePoint(parseInt(h, 16));
+      } catch {
+        return "";
+      }
+    })
+    .replace(/&#(\d+);/g, (_, n) => {
+      try {
+        return String.fromCodePoint(parseInt(n, 10));
+      } catch {
+        return "";
+      }
+    })
     .replace(/&amp;/g, "&");
 }
 function decode(s: string): string {
-  let prev = s, out = decodeOnce(s);
-  for (let i = 0; i < 2 && out !== prev; i++) { prev = out; out = decodeOnce(out); }
+  let prev = s,
+    out = decodeOnce(s);
+  for (let i = 0; i < 2 && out !== prev; i++) {
+    prev = out;
+    out = decodeOnce(out);
+  }
   return out;
 }
 
-function extractMedia(contentHtml: string): { thumbnail: string | null; excerpt: string; hasVideo: boolean } {
+function extractMedia(contentHtml: string): {
+  thumbnail: string | null;
+  excerpt: string;
+  hasVideo: boolean;
+} {
   const c = decode(contentHtml);
   const hasVideo = /v\.redd\.it/.test(c);
   let thumbnail: string | null = null;
-  const direct = /https?:\/\/i\.redd\.it\/[^\s"'<>]+?\.(?:jpg|jpeg|png|gif|webp)/i.exec(c)?.[0]
-    || /https?:\/\/(?:preview|external-preview)\.redd\.it\/[^\s"'<>]+?\.(?:jpg|jpeg|png|gif|webp)/i.exec(c)?.[0]
-    || null;
+  const direct =
+    /https?:\/\/i\.redd\.it\/[^\s"'<>]+?\.(?:jpg|jpeg|png|gif|webp)/i.exec(c)?.[0] ||
+    /https?:\/\/(?:preview|external-preview)\.redd\.it\/[^\s"'<>]+?\.(?:jpg|jpeg|png|gif|webp)/i.exec(
+      c,
+    )?.[0] ||
+    null;
   if (direct) thumbnail = direct.replace(/&amp;/g, "&");
   const excerpt = c
     .replace(/<[^>]+>/g, " ")
@@ -53,7 +88,9 @@ function parseAtom(xml: string): RedditPost[] {
     const block = m[1];
     const title = decode((/<title>([\s\S]*?)<\/title>/.exec(block)?.[1] || "").trim());
     const url = (/<link[^>]*href="([^"]+)"/.exec(block)?.[1] || "").trim();
-    const author = decode((/<author>[\s\S]*?<name>(?:\/u\/)?([^<]+)<\/name>/.exec(block)?.[1] || "").trim());
+    const author = decode(
+      (/<author>[\s\S]*?<name>(?:\/u\/)?([^<]+)<\/name>/.exec(block)?.[1] || "").trim(),
+    );
     const updatedAt = (/<updated>([^<]+)<\/updated>/.exec(block)?.[1] || "").trim();
     const flair = decode((/<category[^>]*term="([^"]+)"/.exec(block)?.[1] || "").trim());
     const contentHtml = /<content[^>]*>([\s\S]*?)<\/content>/.exec(block)?.[1] || "";
@@ -77,14 +114,29 @@ export default async function redditRoutes(app: FastifyInstance) {
 
     const cached = cache.get(cacheKey);
     if (cached && Date.now() - cached.cachedAt < TTL) {
-      return reply.send({ ok: true, sub, posts: cached.posts, updatedAt: new Date(cached.cachedAt).toISOString(), cached: true });
+      return reply.send({
+        ok: true,
+        sub,
+        posts: cached.posts,
+        updatedAt: new Date(cached.cachedAt).toISOString(),
+        cached: true,
+      });
     }
 
     try {
       const url = `https://www.reddit.com/r/${encodeURIComponent(sub)}/${sort}.rss?limit=25`;
-      const res = await fetchWithTimeout(url, { headers: { "User-Agent": "weered:lobby-feed:v1 (by /u/weeeered)" } });
+      const res = await fetchWithTimeout(url, {
+        headers: { "User-Agent": "weered:lobby-feed:v1 (by /u/weeeered)" },
+      });
       if (!res.ok) {
-        if (cached) return reply.send({ ok: true, sub, posts: cached.posts, updatedAt: new Date(cached.cachedAt).toISOString(), stale: true });
+        if (cached)
+          return reply.send({
+            ok: true,
+            sub,
+            posts: cached.posts,
+            updatedAt: new Date(cached.cachedAt).toISOString(),
+            stale: true,
+          });
         return reply.code(502).send({ ok: false, error: "reddit_upstream", status: res.status });
       }
       const xml = await res.text();
@@ -92,7 +144,14 @@ export default async function redditRoutes(app: FastifyInstance) {
       cache.set(cacheKey, { posts, cachedAt: Date.now() });
       return reply.send({ ok: true, sub, posts, updatedAt: new Date().toISOString() });
     } catch (e: any) {
-      if (cached) return reply.send({ ok: true, sub, posts: cached.posts, updatedAt: new Date(cached.cachedAt).toISOString(), stale: true });
+      if (cached)
+        return reply.send({
+          ok: true,
+          sub,
+          posts: cached.posts,
+          updatedAt: new Date(cached.cachedAt).toISOString(),
+          stale: true,
+        });
       return reply.code(502).send({ ok: false, error: "reddit_fetch_failed" });
     }
   });

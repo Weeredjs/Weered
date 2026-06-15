@@ -1,4 +1,3 @@
-
 export type ModifierTab = "BOON" | "BUILDCRAFT" | "GAMEPLAY" | "CHALLENGE" | "RULE" | "TIER";
 export type SlotKind = "PLAYER_PICK" | "ACTIVITY_LOCKED";
 
@@ -19,12 +18,18 @@ export type ModifierEntry = {
 
 function legacyCategory(tab: ModifierTab): ModifierCategory {
   switch (tab) {
-    case "BOON":      return "SURGE";
-    case "CHALLENGE": return "THREAT";
-    case "GAMEPLAY":  return "RESTRICTION";
-    case "RULE":      return "DIFFICULTY";
-    case "BUILDCRAFT": return "RESTRICTION";
-    case "TIER":      return "TIER";
+    case "BOON":
+      return "SURGE";
+    case "CHALLENGE":
+      return "THREAT";
+    case "GAMEPLAY":
+      return "RESTRICTION";
+    case "RULE":
+      return "DIFFICULTY";
+    case "BUILDCRAFT":
+      return "RESTRICTION";
+    case "TIER":
+      return "TIER";
   }
 }
 
@@ -38,7 +43,7 @@ const RAW_MODIFIERS = [
     slotKind: "PLAYER_PICK",
     rewardStars: 2,
     icon: "🌞",
-    color: "#f97316"
+    color: "#f97316",
   },
   {
     hash: "2691200658",
@@ -49,7 +54,7 @@ const RAW_MODIFIERS = [
     slotKind: "PLAYER_PICK",
     rewardStars: 2,
     icon: "⚡",
-    color: "#60a5fa"
+    color: "#60a5fa",
   },
   {
     hash: "3196075844",
@@ -60,7 +65,7 @@ const RAW_MODIFIERS = [
     slotKind: "PLAYER_PICK",
     rewardStars: 2,
     icon: "🌑",
-    color: "#a78bfa"
+    color: "#a78bfa",
   },
   {
     hash: "3809788899",
@@ -71,7 +76,7 @@ const RAW_MODIFIERS = [
     slotKind: "PLAYER_PICK",
     rewardStars: 2,
     icon: "🧊",
-    color: "#67e8f9"
+    color: "#67e8f9",
   },
   {
     hash: "3810297122",
@@ -82,29 +87,31 @@ const RAW_MODIFIERS = [
     slotKind: "PLAYER_PICK",
     rewardStars: 2,
     icon: "🟢",
-    color: "#22c55e"
+    color: "#22c55e",
   },
   {
     hash: "1575279060",
     slug: "solar-thermal-swap",
     name: "Solar Thermal Swap",
-    description: "Solar final blows grant melee and grenade energy. Stasis subclasses receive a lot; other subclasses receive a little.",
+    description:
+      "Solar final blows grant melee and grenade energy. Stasis subclasses receive a lot; other subclasses receive a little.",
     tab: "BOON",
     slotKind: "PLAYER_PICK",
     rewardStars: 2,
     icon: "♨️",
-    color: "#f97316"
+    color: "#f97316",
   },
   {
     hash: "2072906693",
     slug: "stasis-thermal-swap",
     name: "Stasis Thermal Swap",
-    description: "Stasis final blows grant melee and grenade energy. Solar subclasses receive a lot; other subclasses receive a little.",
+    description:
+      "Stasis final blows grant melee and grenade energy. Solar subclasses receive a lot; other subclasses receive a little.",
     tab: "BOON",
     slotKind: "PLAYER_PICK",
     rewardStars: 2,
     icon: "❄️",
-    color: "#67e8f9"
+    color: "#67e8f9",
   },
   {
     hash: "3762220583",
@@ -115,7 +122,7 @@ const RAW_MODIFIERS = [
     slotKind: "PLAYER_PICK",
     rewardStars: 3,
     icon: "🏎️",
-    color: "#22c55e"
+    color: "#22c55e",
   },
   {
     hash: "3787716856",
@@ -126,7 +133,7 @@ const RAW_MODIFIERS = [
     slotKind: "PLAYER_PICK",
     rewardStars: 2,
     icon: "👊",
-    color: "#f87171"
+    color: "#f87171",
   },
   {
     hash: "2378419670",
@@ -137,7 +144,7 @@ const RAW_MODIFIERS = [
     slotKind: "PLAYER_PICK",
     rewardStars: 2,
     icon: "⚙️",
-    color: "#22c55e"
+    color: "#22c55e",
   },
   {
     hash: "2742259563",
@@ -148,18 +155,19 @@ const RAW_MODIFIERS = [
     slotKind: "PLAYER_PICK",
     rewardStars: 1,
     icon: "🔋",
-    color: "#a78bfa"
+    color: "#a78bfa",
   },
   {
     hash: "2492586271",
     slug: "prism-day",
     name: "PRISM Day",
-    description: "All collected Elemental Orbs contribute toward the elemental buff counter. Subclass choice determines which elemental buff is applied. Prismatic orbs from Taken combatants grant a random empowerment",
+    description:
+      "All collected Elemental Orbs contribute toward the elemental buff counter. Subclass choice determines which elemental buff is applied. Prismatic orbs from Taken combatants grant a random empowerment",
     tab: "BOON",
     slotKind: "PLAYER_PICK",
     rewardStars: 2,
     icon: "🌈",
-    color: "#fbbf24"
+    color: "#fbbf24",
   },
   {
     hash: "3517267764",
@@ -170,7 +178,7 @@ const RAW_MODIFIERS = [
     slotKind: "PLAYER_PICK",
     rewardStars: 3,
     icon: "🔥",
-    color: "#f97316"
+    color: "#f97316",
   },
   {
     hash: "186409259",
@@ -181,7 +189,7 @@ const RAW_MODIFIERS = [
     slotKind: "PLAYER_PICK",
     rewardStars: 3,
     icon: "⚡",
-    color: "#60a5fa"
+    color: "#60a5fa",
   },
   {
     hash: "3652821947",
@@ -192,7 +200,7 @@ const RAW_MODIFIERS = [
     slotKind: "PLAYER_PICK",
     rewardStars: 3,
     icon: "🟣",
-    color: "#a78bfa"
+    color: "#a78bfa",
   },
   {
     hash: "512042454",
@@ -203,7 +211,7 @@ const RAW_MODIFIERS = [
     slotKind: "PLAYER_PICK",
     rewardStars: 3,
     icon: "❄️",
-    color: "#67e8f9"
+    color: "#67e8f9",
   },
   {
     hash: "1598472557",
@@ -214,7 +222,7 @@ const RAW_MODIFIERS = [
     slotKind: "PLAYER_PICK",
     rewardStars: 3,
     icon: "🟢",
-    color: "#22c55e"
+    color: "#22c55e",
   },
   {
     hash: "2751349583",
@@ -225,7 +233,7 @@ const RAW_MODIFIERS = [
     slotKind: "PLAYER_PICK",
     rewardStars: 2,
     icon: "🎯",
-    color: "#fbbf24"
+    color: "#fbbf24",
   },
   {
     hash: "1486810101",
@@ -236,7 +244,7 @@ const RAW_MODIFIERS = [
     slotKind: "PLAYER_PICK",
     rewardStars: 2,
     icon: "🔐",
-    color: "#94a3b8"
+    color: "#94a3b8",
   },
   {
     hash: "3629079662",
@@ -247,7 +255,7 @@ const RAW_MODIFIERS = [
     slotKind: "PLAYER_PICK",
     rewardStars: 2,
     icon: "🤝",
-    color: "#60a5fa"
+    color: "#60a5fa",
   },
   {
     hash: "2482824751",
@@ -258,7 +266,7 @@ const RAW_MODIFIERS = [
     slotKind: "PLAYER_PICK",
     rewardStars: 2,
     icon: "🥶",
-    color: "#67e8f9"
+    color: "#67e8f9",
   },
   {
     hash: "1365610347",
@@ -269,7 +277,7 @@ const RAW_MODIFIERS = [
     slotKind: "PLAYER_PICK",
     rewardStars: 2,
     icon: "🔥",
-    color: "#f97316"
+    color: "#f97316",
   },
   {
     hash: "112345143",
@@ -280,7 +288,7 @@ const RAW_MODIFIERS = [
     slotKind: "PLAYER_PICK",
     rewardStars: 3,
     icon: "🔪",
-    color: "#ef4444"
+    color: "#ef4444",
   },
   {
     hash: "703904464",
@@ -291,7 +299,7 @@ const RAW_MODIFIERS = [
     slotKind: "PLAYER_PICK",
     rewardStars: 2,
     icon: "💣",
-    color: "#f97316"
+    color: "#f97316",
   },
   {
     hash: "941999846",
@@ -302,7 +310,7 @@ const RAW_MODIFIERS = [
     slotKind: "PLAYER_PICK",
     rewardStars: 3,
     icon: "🛡️",
-    color: "#fbbf24"
+    color: "#fbbf24",
   },
   {
     hash: "965929096",
@@ -313,7 +321,7 @@ const RAW_MODIFIERS = [
     slotKind: "PLAYER_PICK",
     rewardStars: 2,
     icon: "🍖",
-    color: "#94a3b8"
+    color: "#94a3b8",
   },
   {
     hash: "998275325",
@@ -324,7 +332,7 @@ const RAW_MODIFIERS = [
     slotKind: "PLAYER_PICK",
     rewardStars: 4,
     icon: "💥",
-    color: "#a78bfa"
+    color: "#a78bfa",
   },
   {
     hash: "1463769380",
@@ -335,161 +343,175 @@ const RAW_MODIFIERS = [
     slotKind: "PLAYER_PICK",
     rewardStars: 3,
     icon: "🪨",
-    color: "#94a3b8"
+    color: "#94a3b8",
   },
   {
     hash: "410878524",
     slug: "rage-and-healing",
     name: "Rage and Healing",
-    description: "Banes Rage and Healing will appear on enemy combatants. Rage: Affected enemy combatants deal increased damage and have increased damage resistance as their health levels decline. Healing: Affected e",
+    description:
+      "Banes Rage and Healing will appear on enemy combatants. Rage: Affected enemy combatants deal increased damage and have increased damage resistance as their health levels decline. Healing: Affected e",
     tab: "CHALLENGE",
     slotKind: "PLAYER_PICK",
     rewardStars: 4,
     icon: "🩸",
-    color: "#ef4444"
+    color: "#ef4444",
   },
   {
     hash: "468121195",
     slug: "protected-and-meteors",
     name: "Protected and Meteors",
-    description: "Banes Protected and Meteors will appear on enemy combatants. Protected: Affected enemy combatants are invulnerable until you destroy the shield drones orbiting them. Meteors: Affected enemy combatan",
+    description:
+      "Banes Protected and Meteors will appear on enemy combatants. Protected: Affected enemy combatants are invulnerable until you destroy the shield drones orbiting them. Meteors: Affected enemy combatan",
     tab: "CHALLENGE",
     slotKind: "PLAYER_PICK",
     rewardStars: 4,
     icon: "🩸",
-    color: "#ef4444"
+    color: "#ef4444",
   },
   {
     hash: "739936454",
     slug: "gravity-and-meteors",
     name: "Gravity and Meteors",
-    description: "Banes Gravity and Meteors will appear on enemy combatants. Gravity: Affected enemy combatants fire Void projectiles that detonate into damaging Void fields. Meteors: Affected enemy combatants period",
+    description:
+      "Banes Gravity and Meteors will appear on enemy combatants. Gravity: Affected enemy combatants fire Void projectiles that detonate into damaging Void fields. Meteors: Affected enemy combatants period",
     tab: "CHALLENGE",
     slotKind: "PLAYER_PICK",
     rewardStars: 4,
     icon: "🩸",
-    color: "#ef4444"
+    color: "#ef4444",
   },
   {
     hash: "874363817",
     slug: "gravity-and-shield",
     name: "Gravity and Shield",
-    description: "Banes Gravity and Shield will appear on enemy combatants. Gravity: Affected enemy combatants fire Void projectiles that detonate into damaging Void fields. Shield: Affected enemy combatants have a f",
+    description:
+      "Banes Gravity and Shield will appear on enemy combatants. Gravity: Affected enemy combatants fire Void projectiles that detonate into damaging Void fields. Shield: Affected enemy combatants have a f",
     tab: "CHALLENGE",
     slotKind: "PLAYER_PICK",
     rewardStars: 4,
     icon: "🩸",
-    color: "#ef4444"
+    color: "#ef4444",
   },
   {
     hash: "951858375",
     slug: "rage-and-meteors",
     name: "Rage and Meteors",
-    description: "Banes Rage and Meteors will appear on enemy combatants. Rage: Affected enemy combatants deal increased damage and have increased damage resistance as their health levels decline. Meteors: Affected e",
+    description:
+      "Banes Rage and Meteors will appear on enemy combatants. Rage: Affected enemy combatants deal increased damage and have increased damage resistance as their health levels decline. Meteors: Affected e",
     tab: "CHALLENGE",
     slotKind: "PLAYER_PICK",
     rewardStars: 4,
     icon: "🩸",
-    color: "#ef4444"
+    color: "#ef4444",
   },
   {
     hash: "963950168",
     slug: "protected-and-healing",
     name: "Protected and Healing",
-    description: "Banes Protected and Healing will appear on enemy combatants. Protected: Affected enemy combatants are invulnerable until you destroy the shield drones orbiting them. Healing: Affected enemy combatan",
+    description:
+      "Banes Protected and Healing will appear on enemy combatants. Protected: Affected enemy combatants are invulnerable until you destroy the shield drones orbiting them. Healing: Affected enemy combatan",
     tab: "CHALLENGE",
     slotKind: "PLAYER_PICK",
     rewardStars: 5,
     icon: "🩸",
-    color: "#ef4444"
+    color: "#ef4444",
   },
   {
     hash: "975464573",
     slug: "gravity-and-hypernova",
     name: "Gravity and Hypernova",
-    description: "Banes Gravity and Hypernova will appear on enemy combatants. Gravity: Affected enemy combatants fire Void projectiles that detonate into damaging Void fields. Hypernova: Affected enemy combatants th",
+    description:
+      "Banes Gravity and Hypernova will appear on enemy combatants. Gravity: Affected enemy combatants fire Void projectiles that detonate into damaging Void fields. Hypernova: Affected enemy combatants th",
     tab: "CHALLENGE",
     slotKind: "PLAYER_PICK",
     rewardStars: 5,
     icon: "🩸",
-    color: "#ef4444"
+    color: "#ef4444",
   },
   {
     hash: "1033382240",
     slug: "shield-and-meteors",
     name: "Shield and Meteors",
-    description: "Banes Shield and Meteors will appear on enemy combatants. Shield: Affected enemy combatants have a forward-facing shield protecting them from damage. Try shooting them from behind. Meteors: Affected",
+    description:
+      "Banes Shield and Meteors will appear on enemy combatants. Shield: Affected enemy combatants have a forward-facing shield protecting them from damage. Try shooting them from behind. Meteors: Affected",
     tab: "CHALLENGE",
     slotKind: "PLAYER_PICK",
     rewardStars: 4,
     icon: "🩸",
-    color: "#ef4444"
+    color: "#ef4444",
   },
   {
     hash: "1303655893",
     slug: "rage-and-hypernova",
     name: "Rage and Hypernova",
-    description: "Banes Rage and Hypernova will appear on enemy combatants. Rage: Affected enemy combatants deal increased damage and have increased damage resistance as their health levels decline. Hypernova: Affect",
+    description:
+      "Banes Rage and Hypernova will appear on enemy combatants. Rage: Affected enemy combatants deal increased damage and have increased damage resistance as their health levels decline. Hypernova: Affect",
     tab: "CHALLENGE",
     slotKind: "PLAYER_PICK",
     rewardStars: 5,
     icon: "🩸",
-    color: "#ef4444"
+    color: "#ef4444",
   },
   {
     hash: "2368554323",
     slug: "healing-and-hypernova",
     name: "Healing and Hypernova",
-    description: "Banes Healing and Hypernova will appear on enemy combatants. Healing: Affected enemy combatants provide a buff to nearby allies based on shield type. Hypernova: Affected enemy combatants that have r",
+    description:
+      "Banes Healing and Hypernova will appear on enemy combatants. Healing: Affected enemy combatants provide a buff to nearby allies based on shield type. Hypernova: Affected enemy combatants that have r",
     tab: "CHALLENGE",
     slotKind: "PLAYER_PICK",
     rewardStars: 5,
     icon: "🩸",
-    color: "#ef4444"
+    color: "#ef4444",
   },
   {
     hash: "3332446153",
     slug: "protected-and-hypernova",
     name: "Protected and Hypernova",
-    description: "Banes Protected and Hypernova will appear on enemy combatants. Protected: Affected enemy combatants are invulnerable until you destroy the shield drones orbiting them. Hypernova: Affected enemy comb",
+    description:
+      "Banes Protected and Hypernova will appear on enemy combatants. Protected: Affected enemy combatants are invulnerable until you destroy the shield drones orbiting them. Hypernova: Affected enemy comb",
     tab: "CHALLENGE",
     slotKind: "PLAYER_PICK",
     rewardStars: 5,
     icon: "🩸",
-    color: "#ef4444"
+    color: "#ef4444",
   },
   {
     hash: "3499773572",
     slug: "gravity-and-healing",
     name: "Gravity and Healing",
-    description: "Banes Gravity and Healing will appear on enemy combatants. Gravity: Affected enemy combatants fire Void projectiles that detonate into damaging Void fields. Healing: Affected enemy combatants provid",
+    description:
+      "Banes Gravity and Healing will appear on enemy combatants. Gravity: Affected enemy combatants fire Void projectiles that detonate into damaging Void fields. Healing: Affected enemy combatants provid",
     tab: "CHALLENGE",
     slotKind: "PLAYER_PICK",
     rewardStars: 4,
     icon: "🩸",
-    color: "#ef4444"
+    color: "#ef4444",
   },
   {
     hash: "3820155910",
     slug: "rage-and-shield",
     name: "Rage and Shield",
-    description: "Banes Rage and Meteors will appear on enemy combatants. Rage: Affected enemy combatants deal increased damage and have increased damage resistance as their health levels decline. Meteors: Affected e",
+    description:
+      "Banes Rage and Meteors will appear on enemy combatants. Rage: Affected enemy combatants deal increased damage and have increased damage resistance as their health levels decline. Meteors: Affected e",
     tab: "CHALLENGE",
     slotKind: "PLAYER_PICK",
     rewardStars: 4,
     icon: "🩸",
-    color: "#ef4444"
+    color: "#ef4444",
   },
   {
     hash: "4067953666",
     slug: "protected-and-shield",
     name: "Protected and Shield",
-    description: "Banes Protected and Shield will appear on enemy combatants. Protected: Affected enemy combatants are invulnerable until you destroy the shield drones orbiting them. Shield: Affected enemy combatants",
+    description:
+      "Banes Protected and Shield will appear on enemy combatants. Protected: Affected enemy combatants are invulnerable until you destroy the shield drones orbiting them. Shield: Affected enemy combatants",
     tab: "CHALLENGE",
     slotKind: "PLAYER_PICK",
     rewardStars: 5,
     icon: "🩸",
-    color: "#ef4444"
+    color: "#ef4444",
   },
   {
     hash: "4239965093",
@@ -500,29 +522,31 @@ const RAW_MODIFIERS = [
     slotKind: "ACTIVITY_LOCKED",
     rewardStars: 2,
     icon: "💔",
-    color: "#ef4444"
+    color: "#ef4444",
   },
   {
     hash: "1974619026",
     slug: "champions-barrier",
     name: "Champions: Barrier",
-    description: "This mode contains Barrier Champions, which cannot be stopped without an Anti-Barrier mod.",
+    description:
+      "This mode contains Barrier Champions, which cannot be stopped without an Anti-Barrier mod.",
     tab: "RULE",
     slotKind: "ACTIVITY_LOCKED",
     rewardStars: 2,
     icon: "🛡️",
-    color: "#fbbf24"
+    color: "#fbbf24",
   },
   {
     hash: "1201462052",
     slug: "champions-overload",
     name: "Champions: Overload",
-    description: "This mode contains Overload Champions, which cannot be stopped without an Overload mod.",
+    description:
+      "This mode contains Overload Champions, which cannot be stopped without an Overload mod.",
     tab: "RULE",
     slotKind: "ACTIVITY_LOCKED",
     rewardStars: 2,
     icon: "🔄",
-    color: "#a78bfa"
+    color: "#a78bfa",
   },
   {
     hash: "40182179",
@@ -533,7 +557,7 @@ const RAW_MODIFIERS = [
     slotKind: "ACTIVITY_LOCKED",
     rewardStars: 2,
     icon: "⚔️",
-    color: "#ef4444"
+    color: "#ef4444",
   },
   {
     hash: "197794292",
@@ -544,29 +568,31 @@ const RAW_MODIFIERS = [
     slotKind: "ACTIVITY_LOCKED",
     rewardStars: 2,
     icon: "⚔️",
-    color: "#ef4444"
+    color: "#ef4444",
   },
   {
     hash: "438106166",
     slug: "champion-foes-438106166",
     name: "Champion Foes ([Shield-Piercing] Barrier and [Stagger] Unstoppable Champion)",
-    description: "You will face [Shield-Piercing] Barrier and [Stagger] Unstoppable Champions. Visit the Character or Mod Customization screen to view your active anti-Champion perks.",
+    description:
+      "You will face [Shield-Piercing] Barrier and [Stagger] Unstoppable Champions. Visit the Character or Mod Customization screen to view your active anti-Champion perks.",
     tab: "RULE",
     slotKind: "ACTIVITY_LOCKED",
     rewardStars: 2,
     icon: "⚔️",
-    color: "#ef4444"
+    color: "#ef4444",
   },
   {
     hash: "1262171714",
     slug: "champion-foes-1262171714",
     name: "Champion Foes ([Disruption] Overload Champions)",
-    description: "You will face [Disruption] Overload Champions. Visit the Character or Mod Customization screen to view your active anti-Champion perks.",
+    description:
+      "You will face [Disruption] Overload Champions. Visit the Character or Mod Customization screen to view your active anti-Champion perks.",
     tab: "RULE",
     slotKind: "ACTIVITY_LOCKED",
     rewardStars: 2,
     icon: "⚔️",
-    color: "#ef4444"
+    color: "#ef4444",
   },
   {
     hash: "1598783516",
@@ -577,7 +603,7 @@ const RAW_MODIFIERS = [
     slotKind: "ACTIVITY_LOCKED",
     rewardStars: 2,
     icon: "⚔️",
-    color: "#ef4444"
+    color: "#ef4444",
   },
   {
     hash: "1615778293",
@@ -588,7 +614,7 @@ const RAW_MODIFIERS = [
     slotKind: "ACTIVITY_LOCKED",
     rewardStars: 2,
     icon: "⚔️",
-    color: "#ef4444"
+    color: "#ef4444",
   },
   {
     hash: "1806568190",
@@ -599,51 +625,55 @@ const RAW_MODIFIERS = [
     slotKind: "ACTIVITY_LOCKED",
     rewardStars: 2,
     icon: "⚔️",
-    color: "#ef4444"
+    color: "#ef4444",
   },
   {
     hash: "1990363418",
     slug: "champion-foes-1990363418",
     name: "Champion Foes ([Shield-Piercing] Barrier and [Disruption] Overload Champion)",
-    description: "You will face [Shield-Piercing] Barrier and [Disruption] Overload Champions. Visit the Character or Mod Customization screen to view your active anti-Champion perks.",
+    description:
+      "You will face [Shield-Piercing] Barrier and [Disruption] Overload Champions. Visit the Character or Mod Customization screen to view your active anti-Champion perks.",
     tab: "RULE",
     slotKind: "ACTIVITY_LOCKED",
     rewardStars: 2,
     icon: "⚔️",
-    color: "#ef4444"
+    color: "#ef4444",
   },
   {
     hash: "2006149364",
     slug: "champion-foes-2006149364",
     name: "Champion Foes ([Shield-Piercing] Barrier, [Disruption] Overload, and [Stagg)",
-    description: "You will face [Shield-Piercing] Barrier, [Disruption] Overload, and [Stagger] Unstoppable Champions. Visit the Character or Mod Customization screen to view your active anti-Champion perks.",
+    description:
+      "You will face [Shield-Piercing] Barrier, [Disruption] Overload, and [Stagger] Unstoppable Champions. Visit the Character or Mod Customization screen to view your active anti-Champion perks.",
     tab: "RULE",
     slotKind: "ACTIVITY_LOCKED",
     rewardStars: 2,
     icon: "⚔️",
-    color: "#ef4444"
+    color: "#ef4444",
   },
   {
     hash: "2475764450",
     slug: "champion-foes-2475764450",
     name: "Champion Foes ([Stagger] Unstoppable Champions)",
-    description: "You will face [Stagger] Unstoppable Champions. Visit the Character or Mod Customization screen to view your active anti-Champion perks.",
+    description:
+      "You will face [Stagger] Unstoppable Champions. Visit the Character or Mod Customization screen to view your active anti-Champion perks.",
     tab: "RULE",
     slotKind: "ACTIVITY_LOCKED",
     rewardStars: 2,
     icon: "⚔️",
-    color: "#ef4444"
+    color: "#ef4444",
   },
   {
     hash: "3307318061",
     slug: "champion-foes-3307318061",
     name: "Champion Foes ([Disruption] Overload and [Stagger] Unstoppable Champions)",
-    description: "You will face [Disruption] Overload and [Stagger] Unstoppable Champions. Visit the Character or Mod Customization screen to view your active anti-Champion perks.",
+    description:
+      "You will face [Disruption] Overload and [Stagger] Unstoppable Champions. Visit the Character or Mod Customization screen to view your active anti-Champion perks.",
     tab: "RULE",
     slotKind: "ACTIVITY_LOCKED",
     rewardStars: 2,
     icon: "⚔️",
-    color: "#ef4444"
+    color: "#ef4444",
   },
   {
     hash: "3461252634",
@@ -654,29 +684,31 @@ const RAW_MODIFIERS = [
     slotKind: "ACTIVITY_LOCKED",
     rewardStars: 2,
     icon: "⚔️",
-    color: "#ef4444"
+    color: "#ef4444",
   },
   {
     hash: "4038464106",
     slug: "champion-foes-4038464106",
     name: "Champion Foes ([Shield-Piercing] Barrier, [Disruption] Overload, and [Stagg)",
-    description: "You will face [Shield-Piercing] Barrier, [Disruption] Overload, and [Stagger] Unstoppable Champions.",
+    description:
+      "You will face [Shield-Piercing] Barrier, [Disruption] Overload, and [Stagger] Unstoppable Champions.",
     tab: "RULE",
     slotKind: "ACTIVITY_LOCKED",
     rewardStars: 2,
     icon: "⚔️",
-    color: "#ef4444"
+    color: "#ef4444",
   },
   {
     hash: "4190795159",
     slug: "champion-foes-4190795159",
     name: "Champion Foes ([Shield-Piercing] Barrier Champions)",
-    description: "You will face [Shield-Piercing] Barrier Champions. Visit the Character or Mod Customization screen to view your active anti-Champion perks.",
+    description:
+      "You will face [Shield-Piercing] Barrier Champions. Visit the Character or Mod Customization screen to view your active anti-Champion perks.",
     tab: "RULE",
     slotKind: "ACTIVITY_LOCKED",
     rewardStars: 2,
     icon: "⚔️",
-    color: "#ef4444"
+    color: "#ef4444",
   },
   {
     hash: "1282934989",
@@ -687,7 +719,7 @@ const RAW_MODIFIERS = [
     slotKind: "ACTIVITY_LOCKED",
     rewardStars: 2,
     icon: "🎯",
-    color: "#fbbf24"
+    color: "#fbbf24",
   },
   {
     hash: "2178457119",
@@ -698,7 +730,7 @@ const RAW_MODIFIERS = [
     slotKind: "ACTIVITY_LOCKED",
     rewardStars: 2,
     icon: "🔫",
-    color: "#fbbf24"
+    color: "#fbbf24",
   },
   {
     hash: "95459596",
@@ -709,7 +741,7 @@ const RAW_MODIFIERS = [
     slotKind: "ACTIVITY_LOCKED",
     rewardStars: 2,
     icon: "🚀",
-    color: "#fbbf24"
+    color: "#fbbf24",
   },
   {
     hash: "2626834038",
@@ -720,7 +752,7 @@ const RAW_MODIFIERS = [
     slotKind: "ACTIVITY_LOCKED",
     rewardStars: 2,
     icon: "💥",
-    color: "#fbbf24"
+    color: "#fbbf24",
   },
   {
     hash: "795009574",
@@ -731,7 +763,7 @@ const RAW_MODIFIERS = [
     slotKind: "ACTIVITY_LOCKED",
     rewardStars: 2,
     icon: "⚙️",
-    color: "#fbbf24"
+    color: "#fbbf24",
   },
   {
     hash: "1326581064",
@@ -742,7 +774,7 @@ const RAW_MODIFIERS = [
     slotKind: "ACTIVITY_LOCKED",
     rewardStars: 2,
     icon: "⚔️",
-    color: "#fbbf24"
+    color: "#fbbf24",
   },
   {
     hash: "2743796883",
@@ -753,7 +785,7 @@ const RAW_MODIFIERS = [
     slotKind: "ACTIVITY_LOCKED",
     rewardStars: 2,
     icon: "🔱",
-    color: "#fbbf24"
+    color: "#fbbf24",
   },
   {
     hash: "3132780533",
@@ -764,7 +796,7 @@ const RAW_MODIFIERS = [
     slotKind: "ACTIVITY_LOCKED",
     rewardStars: 2,
     icon: "💣",
-    color: "#fbbf24"
+    color: "#fbbf24",
   },
   {
     hash: "3320777106",
@@ -775,7 +807,7 @@ const RAW_MODIFIERS = [
     slotKind: "ACTIVITY_LOCKED",
     rewardStars: 2,
     icon: "🔆",
-    color: "#fbbf24"
+    color: "#fbbf24",
   },
   {
     hash: "3758645512",
@@ -786,7 +818,7 @@ const RAW_MODIFIERS = [
     slotKind: "ACTIVITY_LOCKED",
     rewardStars: 2,
     icon: "💣",
-    color: "#fbbf24"
+    color: "#fbbf24",
   },
   {
     hash: "tier:normal",
@@ -796,7 +828,7 @@ const RAW_MODIFIERS = [
     icon: "🟢",
     color: "#22c55e",
     tab: "TIER",
-    slotKind: "PLAYER_PICK"
+    slotKind: "PLAYER_PICK",
   },
   {
     hash: "tier:advanced",
@@ -806,7 +838,7 @@ const RAW_MODIFIERS = [
     icon: "🟡",
     color: "#fbbf24",
     tab: "TIER",
-    slotKind: "PLAYER_PICK"
+    slotKind: "PLAYER_PICK",
   },
   {
     hash: "tier:expert",
@@ -816,7 +848,7 @@ const RAW_MODIFIERS = [
     icon: "🟠",
     color: "#f97316",
     tab: "TIER",
-    slotKind: "PLAYER_PICK"
+    slotKind: "PLAYER_PICK",
   },
   {
     hash: "tier:master",
@@ -826,7 +858,7 @@ const RAW_MODIFIERS = [
     icon: "🔴",
     color: "#ef4444",
     tab: "TIER",
-    slotKind: "PLAYER_PICK"
+    slotKind: "PLAYER_PICK",
   },
   {
     hash: "tier:grandmaster",
@@ -836,7 +868,7 @@ const RAW_MODIFIERS = [
     icon: "🟣",
     color: "#a78bfa",
     tab: "TIER",
-    slotKind: "PLAYER_PICK"
+    slotKind: "PLAYER_PICK",
   },
   {
     hash: "tier:ultimate",
@@ -846,8 +878,8 @@ const RAW_MODIFIERS = [
     icon: "⚫",
     color: "#000000",
     tab: "TIER",
-    slotKind: "PLAYER_PICK"
-  }
+    slotKind: "PLAYER_PICK",
+  },
 ];
 
 export const DESTINY_MODIFIERS: ModifierEntry[] = RAW_MODIFIERS.map((m: any) => ({
@@ -856,10 +888,36 @@ export const DESTINY_MODIFIERS: ModifierEntry[] = RAW_MODIFIERS.map((m: any) => 
 }));
 
 export const TABS: { key: ModifierTab; label: string; description: string; slots?: number }[] = [
-  { key: "TIER",       label: "Difficulty",         description: "Activity power tier — Normal through Ultimate" },
-  { key: "BOON",       label: "Boons",              description: "Player buffs — pick up to 3 in Custom Ops",            slots: 3 },
-  { key: "CHALLENGE",  label: "Challenge Modifiers", description: "Banes, threats, debuffs — pick 5 in Custom Ops",       slots: 5 },
-  { key: "BUILDCRAFT", label: "Buildcraft Stakes",  description: "Loadout/buildcraft restrictions — partly player-set" },
-  { key: "GAMEPLAY",   label: "Gameplay Stakes",    description: "Revives, timers, rewards — mostly Bungie-set" },
-  { key: "RULE",       label: "Rule Modifiers",     description: "Bungie-locked: Champions and core activity rules" },
+  {
+    key: "TIER",
+    label: "Difficulty",
+    description: "Activity power tier — Normal through Ultimate",
+  },
+  {
+    key: "BOON",
+    label: "Boons",
+    description: "Player buffs — pick up to 3 in Custom Ops",
+    slots: 3,
+  },
+  {
+    key: "CHALLENGE",
+    label: "Challenge Modifiers",
+    description: "Banes, threats, debuffs — pick 5 in Custom Ops",
+    slots: 5,
+  },
+  {
+    key: "BUILDCRAFT",
+    label: "Buildcraft Stakes",
+    description: "Loadout/buildcraft restrictions — partly player-set",
+  },
+  {
+    key: "GAMEPLAY",
+    label: "Gameplay Stakes",
+    description: "Revives, timers, rewards — mostly Bungie-set",
+  },
+  {
+    key: "RULE",
+    label: "Rule Modifiers",
+    description: "Bungie-locked: Champions and core activity rules",
+  },
 ];

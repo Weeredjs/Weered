@@ -1,5 +1,13 @@
 import { useEffect, useState } from "react";
-import { View, Text, Modal, TextInput, Pressable, KeyboardAvoidingView, Platform } from "react-native";
+import {
+  View,
+  Text,
+  Modal,
+  TextInput,
+  Pressable,
+  KeyboardAvoidingView,
+  Platform,
+} from "react-native";
 
 export function PromptModal({
   visible,
@@ -29,19 +37,24 @@ export function PromptModal({
   keyboardType?: "default" | "email-address" | "url";
 }) {
   const [value, setValue] = useState(initialValue);
-  useEffect(() => { if (visible) setValue(initialValue); }, [visible, initialValue]);
+  useEffect(() => {
+    if (visible) setValue(initialValue);
+  }, [visible, initialValue]);
 
   return (
     <Modal visible={visible} animationType="fade" transparent onRequestClose={onClose}>
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : undefined}
-        style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.7)", justifyContent: "center", padding: 24 }}
+        style={{
+          flex: 1,
+          backgroundColor: "rgba(0,0,0,0.7)",
+          justifyContent: "center",
+          padding: 24,
+        }}
       >
         <View className="bg-panel rounded-2xl p-5">
           <Text className="text-weered-text font-bold text-lg mb-1">{title}</Text>
-          {!!description && (
-            <Text className="text-weered-muted text-sm mb-3">{description}</Text>
-          )}
+          {!!description && <Text className="text-weered-muted text-sm mb-3">{description}</Text>}
           <TextInput
             value={value}
             onChangeText={setValue}

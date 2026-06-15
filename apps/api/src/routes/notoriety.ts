@@ -6,7 +6,11 @@ import { prisma } from "../lib/prisma";
 // index.ts code and awardNotoriety, so they are injected (never moved).
 type Opts = {
   authFromHeader: (h?: string) => { id: string; name?: string } | null;
-  getNotorietyRank: (n: number) => { title: string; min: number; next: { title: string; min: number } | null };
+  getNotorietyRank: (n: number) => {
+    title: string;
+    min: number;
+    next: { title: string; min: number } | null;
+  };
   NOTORIETY_RANKS: { title: string; min: number }[];
 };
 
@@ -36,7 +40,9 @@ export default async function notorietyRoutes(app: FastifyInstance, opts: Opts) 
       score,
       rank: rank.title,
       rankMin: rank.min,
-      nextRank: rank.next ? { title: rank.next.title, min: rank.next.min, pointsNeeded: rank.next.min - score } : null,
+      nextRank: rank.next
+        ? { title: rank.next.title, min: rank.next.min, pointsNeeded: rank.next.min - score }
+        : null,
       recentEvents,
       ranks: NOTORIETY_RANKS,
     });
@@ -47,7 +53,14 @@ export default async function notorietyRoutes(app: FastifyInstance, opts: Opts) 
     const leaders = await prisma.user.findMany({
       orderBy: { notoriety: "desc" },
       take: limit,
-      select: { id: true, name: true, notoriety: true, tier: true, avatar: true, avatarColor: true },
+      select: {
+        id: true,
+        name: true,
+        notoriety: true,
+        tier: true,
+        avatar: true,
+        avatarColor: true,
+      },
     });
     const ranked = leaders.map((u, i) => ({
       position: i + 1,

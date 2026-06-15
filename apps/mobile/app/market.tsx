@@ -1,5 +1,16 @@
 import { useState } from "react";
-import { View, Text, FlatList, Pressable, Image, TextInput, Alert, ActivityIndicator, RefreshControl, Modal } from "react-native";
+import {
+  View,
+  Text,
+  FlatList,
+  Pressable,
+  Image,
+  TextInput,
+  Alert,
+  ActivityIndicator,
+  RefreshControl,
+  Modal,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Stack } from "expo-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -7,10 +18,20 @@ import { api } from "@/lib/api";
 import { useAuth } from "@/stores/auth";
 
 type Listing = {
-  id: string; sellerId: string; sellerName: string; sellerColor: string | null;
-  itemId: string; userItemId: string; itemName: string; itemRarity: string;
-  imageUrl: string | null; description: string | null; category: string | null;
-  price: number; createdAt: string; expiresAt: string;
+  id: string;
+  sellerId: string;
+  sellerName: string;
+  sellerColor: string | null;
+  itemId: string;
+  userItemId: string;
+  itemName: string;
+  itemRarity: string;
+  imageUrl: string | null;
+  description: string | null;
+  category: string | null;
+  price: number;
+  createdAt: string;
+  expiresAt: string;
 };
 type ListResp = { ok: boolean; listings: Listing[] };
 type WalletResp = { ok: boolean; balance: number };
@@ -33,7 +54,8 @@ export default function Market() {
 
   const q = useQuery({
     queryKey: ["market", search, sort],
-    queryFn: () => api<ListResp>(`/market?sort=${sort}${search ? `&search=${encodeURIComponent(search)}` : ""}`),
+    queryFn: () =>
+      api<ListResp>(`/market?sort=${sort}${search ? `&search=${encodeURIComponent(search)}` : ""}`),
   });
 
   const walletQ = useQuery({
@@ -42,7 +64,10 @@ export default function Market() {
   });
 
   const buy = useMutation({
-    mutationFn: (listingId: string) => api<{ ok: boolean; balance?: number; error?: string }>(`/market/buy/${listingId}`, { method: "POST" }),
+    mutationFn: (listingId: string) =>
+      api<{ ok: boolean; balance?: number; error?: string }>(`/market/buy/${listingId}`, {
+        method: "POST",
+      }),
     onSuccess: (res) => {
       if (res.ok) {
         Alert.alert("Bought", `New balance: ${res.balance}`);
@@ -75,7 +100,11 @@ export default function Market() {
         options={{
           title: "Marketplace",
           headerRight: () => (
-            <Pressable onPress={() => setListOpen(true)} hitSlop={8} className="active:opacity-70 mr-2">
+            <Pressable
+              onPress={() => setListOpen(true)}
+              hitSlop={8}
+              className="active:opacity-70 mr-2"
+            >
               <Text className="text-weered font-semibold">Sell</Text>
             </Pressable>
           ),
@@ -84,7 +113,9 @@ export default function Market() {
 
       <View className="px-4 py-3 bg-panel/40 border-b border-border/40 flex-row items-center">
         <Text className="text-weered-muted text-xs uppercase tracking-widest mr-2">Paper</Text>
-        <Text className="text-weered-text font-black text-lg flex-1">{(walletQ.data?.balance ?? 0).toLocaleString()}</Text>
+        <Text className="text-weered-text font-black text-lg flex-1">
+          {(walletQ.data?.balance ?? 0).toLocaleString()}
+        </Text>
       </View>
 
       <View className="px-3 py-2 border-b border-border/30 flex-row items-center">
@@ -97,7 +128,11 @@ export default function Market() {
           style={{ fontSize: 14 }}
         />
         <Pressable
-          onPress={() => setSort(sort === "newest" ? "price_asc" : sort === "price_asc" ? "price_desc" : "newest")}
+          onPress={() =>
+            setSort(
+              sort === "newest" ? "price_asc" : sort === "price_asc" ? "price_desc" : "newest",
+            )
+          }
           className="ml-2 px-3 py-2 rounded-lg bg-panel border border-border active:opacity-70"
         >
           <Text className="text-weered-muted text-xs font-bold">
@@ -107,12 +142,20 @@ export default function Market() {
       </View>
 
       {q.isLoading ? (
-        <View className="flex-1 items-center justify-center"><ActivityIndicator color="#5800E5" /></View>
+        <View className="flex-1 items-center justify-center">
+          <ActivityIndicator color="#5800E5" />
+        </View>
       ) : (
         <FlatList
           data={q.data?.listings ?? []}
           keyExtractor={(l) => l.id}
-          refreshControl={<RefreshControl refreshing={q.isRefetching} onRefresh={() => q.refetch()} tintColor="#5800E5" />}
+          refreshControl={
+            <RefreshControl
+              refreshing={q.isRefetching}
+              onRefresh={() => q.refetch()}
+              tintColor="#5800E5"
+            />
+          }
           ItemSeparatorComponent={() => <View className="h-px bg-border/30" />}
           contentContainerStyle={{ paddingBottom: 32 }}
           renderItem={({ item }) => {
@@ -120,39 +163,66 @@ export default function Market() {
             return (
               <View className="px-4 py-3 flex-row items-start">
                 {item.imageUrl ? (
-                  <Image source={{ uri: item.imageUrl }} style={{ width: 56, height: 56, borderRadius: 8, backgroundColor: "#1a1a1a" }} />
+                  <Image
+                    source={{ uri: item.imageUrl }}
+                    style={{ width: 56, height: 56, borderRadius: 8, backgroundColor: "#1a1a1a" }}
+                  />
                 ) : (
                   <View
-                    style={{ width: 56, height: 56, borderRadius: 8, backgroundColor: (RARITY_COLOR[item.itemRarity] || "#94a3b8") + "33" }}
+                    style={{
+                      width: 56,
+                      height: 56,
+                      borderRadius: 8,
+                      backgroundColor: (RARITY_COLOR[item.itemRarity] || "#94a3b8") + "33",
+                    }}
                     className="items-center justify-center"
                   >
-                    <Text className="text-weered-text font-black text-lg">{item.itemName.slice(0, 1).toUpperCase()}</Text>
+                    <Text className="text-weered-text font-black text-lg">
+                      {item.itemName.slice(0, 1).toUpperCase()}
+                    </Text>
                   </View>
                 )}
                 <View className="flex-1 ml-3">
                   <View className="flex-row items-center">
-                    <Text className="text-weered-text font-semibold flex-1" numberOfLines={1}>{item.itemName}</Text>
-                    <Text style={{ color: RARITY_COLOR[item.itemRarity] || "#94a3b8" }} className="text-[10px] font-bold uppercase ml-2">{item.itemRarity}</Text>
+                    <Text className="text-weered-text font-semibold flex-1" numberOfLines={1}>
+                      {item.itemName}
+                    </Text>
+                    <Text
+                      style={{ color: RARITY_COLOR[item.itemRarity] || "#94a3b8" }}
+                      className="text-[10px] font-bold uppercase ml-2"
+                    >
+                      {item.itemRarity}
+                    </Text>
                   </View>
                   <Text className="text-weered-muted text-xs mt-0.5">by {item.sellerName}</Text>
                   <View className="flex-row items-center mt-2">
-                    <Text className="text-weered font-bold text-base flex-1">{item.price.toLocaleString()} Paper</Text>
+                    <Text className="text-weered font-bold text-base flex-1">
+                      {item.price.toLocaleString()} Paper
+                    </Text>
                     {mine ? (
                       <Pressable
-                        onPress={() => Alert.alert("Cancel listing?", item.itemName, [
-                          { text: "Keep", style: "cancel" },
-                          { text: "Cancel listing", style: "destructive", onPress: () => cancel.mutate(item.id) },
-                        ])}
+                        onPress={() =>
+                          Alert.alert("Cancel listing?", item.itemName, [
+                            { text: "Keep", style: "cancel" },
+                            {
+                              text: "Cancel listing",
+                              style: "destructive",
+                              onPress: () => cancel.mutate(item.id),
+                            },
+                          ])
+                        }
                         className="bg-panel border border-border px-3 py-1.5 rounded-md active:opacity-70"
                       >
                         <Text className="text-weered-muted text-xs font-bold">Cancel</Text>
                       </Pressable>
                     ) : (
                       <Pressable
-                        onPress={() => Alert.alert(`Buy ${item.itemName}?`, `${item.price} Paper`, [
-                          { text: "Cancel", style: "cancel" },
-                          { text: "Buy", onPress: () => buy.mutate(item.id) },
-                        ])}
+                        onPress={() =>
+                          Alert.alert(`Buy ${item.itemName}?`, `${item.price} Paper`, [
+                            { text: "Cancel", style: "cancel" },
+                            { text: "Buy", onPress: () => buy.mutate(item.id) },
+                          ])
+                        }
                         className="bg-weered px-4 py-1.5 rounded-md active:opacity-80"
                       >
                         <Text className="text-white text-xs font-bold">Buy</Text>
@@ -171,7 +241,15 @@ export default function Market() {
         />
       )}
 
-      {listOpen && <SellModal onClose={() => setListOpen(false)} onListed={() => { setListOpen(false); qc.invalidateQueries({ queryKey: ["market"] }); }} />}
+      {listOpen && (
+        <SellModal
+          onClose={() => setListOpen(false)}
+          onListed={() => {
+            setListOpen(false);
+            qc.invalidateQueries({ queryKey: ["market"] });
+          }}
+        />
+      )}
     </SafeAreaView>
   );
 }
@@ -179,27 +257,45 @@ export default function Market() {
 function SellModal({ onClose, onListed }: { onClose: () => void; onListed: () => void }) {
   const invQ = useQuery({
     queryKey: ["inventory"],
-    queryFn: () => api<{ ok: boolean; items: { id: string; name: string; rarity: string; category: string; equipped: boolean; consumed: boolean; imageUrl: string | null }[] }>("/inventory"),
+    queryFn: () =>
+      api<{
+        ok: boolean;
+        items: {
+          id: string;
+          name: string;
+          rarity: string;
+          category: string;
+          equipped: boolean;
+          consumed: boolean;
+          imageUrl: string | null;
+        }[];
+      }>("/inventory"),
   });
 
   const [selected, setSelected] = useState<{ id: string; name: string } | null>(null);
   const [price, setPrice] = useState("100");
 
   const list = useMutation({
-    mutationFn: () => api(`/market/list`, {
-      method: "POST",
-      body: { userItemId: selected!.id, price: Number(price) },
-    }),
+    mutationFn: () =>
+      api(`/market/list`, {
+        method: "POST",
+        body: { userItemId: selected!.id, price: Number(price) },
+      }),
     onSuccess: () => onListed(),
     onError: (e: any) => Alert.alert("Couldn't list", e?.message || "Unknown error"),
   });
 
-  const eligible = (invQ.data?.items || []).filter((i) => !i.consumed && i.category !== "CONSUMABLE");
+  const eligible = (invQ.data?.items || []).filter(
+    (i) => !i.consumed && i.category !== "CONSUMABLE",
+  );
 
   return (
     <Modal transparent animationType="slide" onRequestClose={onClose}>
       <View className="flex-1 bg-black/70 justify-end">
-        <View className="bg-weered-bg border-t border-border rounded-t-2xl" style={{ maxHeight: "80%" }}>
+        <View
+          className="bg-weered-bg border-t border-border rounded-t-2xl"
+          style={{ maxHeight: "80%" }}
+        >
           <View className="px-4 pt-4 pb-2 flex-row items-center">
             <Text className="text-weered-text font-bold text-lg flex-1">List an item</Text>
             <Pressable onPress={onClose} hitSlop={10}>
@@ -210,7 +306,9 @@ function SellModal({ onClose, onListed }: { onClose: () => void; onListed: () =>
           {selected ? (
             <View className="px-4 pt-2 pb-4">
               <Text className="text-weered-text font-semibold mb-2">Selling: {selected.name}</Text>
-              <Text className="text-weered-muted text-xs uppercase tracking-wide mb-1">Price (Paper)</Text>
+              <Text className="text-weered-muted text-xs uppercase tracking-wide mb-1">
+                Price (Paper)
+              </Text>
               <TextInput
                 value={price}
                 onChangeText={setPrice}
@@ -230,14 +328,20 @@ function SellModal({ onClose, onListed }: { onClose: () => void; onListed: () =>
                   disabled={list.isPending || !(Number(price) > 0)}
                   className="flex-1 px-3 py-3 rounded-lg bg-weered active:opacity-80"
                 >
-                  <Text className="text-white text-center font-bold">{list.isPending ? "Listing…" : "List for sale"}</Text>
+                  <Text className="text-white text-center font-bold">
+                    {list.isPending ? "Listing…" : "List for sale"}
+                  </Text>
                 </Pressable>
               </View>
             </View>
           ) : invQ.isLoading ? (
-            <View className="py-8 items-center"><ActivityIndicator color="#5800E5" /></View>
+            <View className="py-8 items-center">
+              <ActivityIndicator color="#5800E5" />
+            </View>
           ) : eligible.length === 0 ? (
-            <Text className="text-weered-muted text-sm text-center py-12">Nothing sellable in your inventory.</Text>
+            <Text className="text-weered-muted text-sm text-center py-12">
+              Nothing sellable in your inventory.
+            </Text>
           ) : (
             <FlatList
               data={eligible}
@@ -249,17 +353,34 @@ function SellModal({ onClose, onListed }: { onClose: () => void; onListed: () =>
                   className="px-4 py-3 flex-row items-center border-b border-border/20 active:bg-panel"
                 >
                   {item.imageUrl ? (
-                    <Image source={{ uri: item.imageUrl }} style={{ width: 40, height: 40, borderRadius: 6, backgroundColor: "#1a1a1a" }} />
+                    <Image
+                      source={{ uri: item.imageUrl }}
+                      style={{ width: 40, height: 40, borderRadius: 6, backgroundColor: "#1a1a1a" }}
+                    />
                   ) : (
                     <View
-                      style={{ width: 40, height: 40, borderRadius: 6, backgroundColor: (RARITY_COLOR[item.rarity] || "#94a3b8") + "33" }}
+                      style={{
+                        width: 40,
+                        height: 40,
+                        borderRadius: 6,
+                        backgroundColor: (RARITY_COLOR[item.rarity] || "#94a3b8") + "33",
+                      }}
                       className="items-center justify-center"
                     >
-                      <Text className="text-weered-text font-black text-sm">{item.name.slice(0, 1).toUpperCase()}</Text>
+                      <Text className="text-weered-text font-black text-sm">
+                        {item.name.slice(0, 1).toUpperCase()}
+                      </Text>
                     </View>
                   )}
-                  <Text className="text-weered-text font-semibold ml-3 flex-1" numberOfLines={1}>{item.name}</Text>
-                  <Text style={{ color: RARITY_COLOR[item.rarity] || "#94a3b8" }} className="text-[10px] font-bold uppercase">{item.rarity}</Text>
+                  <Text className="text-weered-text font-semibold ml-3 flex-1" numberOfLines={1}>
+                    {item.name}
+                  </Text>
+                  <Text
+                    style={{ color: RARITY_COLOR[item.rarity] || "#94a3b8" }}
+                    className="text-[10px] font-bold uppercase"
+                  >
+                    {item.rarity}
+                  </Text>
                 </Pressable>
               )}
             />

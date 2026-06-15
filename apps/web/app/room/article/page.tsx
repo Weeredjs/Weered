@@ -8,10 +8,12 @@ function Redirect() {
   const sp = useSearchParams();
 
   useEffect(() => {
-    const roomId  = sp?.get("room") || "";
+    const roomId = sp?.get("room") || "";
     const article = sp?.get("article") || "";
     if (roomId) {
-      router.replace(`/room/${encodeURIComponent(roomId)}${article ? `?article=${encodeURIComponent(article)}` : ""}`);
+      router.replace(
+        `/room/${encodeURIComponent(roomId)}${article ? `?article=${encodeURIComponent(article)}` : ""}`,
+      );
     } else {
       router.replace("/lobby");
     }

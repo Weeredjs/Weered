@@ -51,7 +51,11 @@ function extractParticipants(ctx: any, roomId?: string): Person[] {
   for (const path of tries) {
     const v = get(ctx, path.filter(Boolean));
     if (!v) continue;
-    const vv: any = Array.isArray(v) ? v : (v && typeof v === "object" ? Object.values(v as any) : null);
+    const vv: any = Array.isArray(v)
+      ? v
+      : v && typeof v === "object"
+        ? Object.values(v as any)
+        : null;
     if (Array.isArray(vv) && vv.length) return vv.map(normUser).filter(Boolean);
   }
 
@@ -134,7 +138,11 @@ export default function ModeratorToolsPanel(props: { roomId?: string; title?: st
       me: me ? { id: String(me.id ?? ""), name: String(me.name ?? me.username ?? "") } : null,
       wired,
       peopleCount: people.length,
-      people: people.map((p) => ({ id: String(p.id ?? ""), name: String(p.name ?? ""), role: String(p.role ?? "") })),
+      people: people.map((p) => ({
+        id: String(p.id ?? ""),
+        name: String(p.name ?? ""),
+        role: String(p.role ?? ""),
+      })),
       selected: selected ? { id: targetId, name: targetName } : null,
     };
     try {
@@ -159,9 +167,18 @@ export default function ModeratorToolsPanel(props: { roomId?: string; title?: st
 
   return (
     <section className="weered-panel2 p-3" style={{ borderRadius: 16 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "baseline" }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          gap: 10,
+          alignItems: "baseline",
+        }}
+      >
         <div style={{ fontWeight: 950 }}>{props.title || "Moderator Tools"}</div>
-        <div style={{ opacity: 0.7, fontSize: 12 }}>{roomId ? `room: ${roomId}` : "no room selected"}</div>
+        <div style={{ opacity: 0.7, fontSize: 12 }}>
+          {roomId ? `room: ${roomId}` : "no room selected"}
+        </div>
       </div>
 
       <div style={{ height: 1, background: "rgba(148,163,184,.14)", margin: "10px 0" }} />
@@ -185,18 +202,44 @@ export default function ModeratorToolsPanel(props: { roomId?: string; title?: st
       <div style={{ height: 1, background: "rgba(148,163,184,.14)", margin: "12px 0" }} />
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-        <button onClick={() => safe(() => w.lockRoom?.(), wired.lock ? "lock sent" : "lock not wired (UI-only)")} style={{ padding: "8px 10px", borderRadius: 12, fontWeight: 950 }}>
+        <button
+          onClick={() =>
+            safe(() => w.lockRoom?.(), wired.lock ? "lock sent" : "lock not wired (UI-only)")
+          }
+          style={{ padding: "8px 10px", borderRadius: 12, fontWeight: 950 }}
+        >
           Lock
         </button>
-        <button onClick={() => safe(() => w.unlockRoom?.(), wired.unlock ? "unlock sent" : "unlock not wired (UI-only)")} style={{ padding: "8px 10px", borderRadius: 12, fontWeight: 950 }}>
+        <button
+          onClick={() =>
+            safe(
+              () => w.unlockRoom?.(),
+              wired.unlock ? "unlock sent" : "unlock not wired (UI-only)",
+            )
+          }
+          style={{ padding: "8px 10px", borderRadius: 12, fontWeight: 950 }}
+        >
           Unlock
         </button>
 
         <div style={{ gridColumn: "1 / -1" }}>
           <div style={{ opacity: 0.8, fontSize: 12, marginBottom: 6 }}>Rename room</div>
           <div style={{ display: "flex", gap: 8 }}>
-            <input value={renameTo} onChange={(e) => setRenameTo(e.target.value)} placeholder="New room name" style={{ flex: 1, padding: "8px 10px", borderRadius: 12 }} />
-            <button onClick={() => safe(() => w.renameRoom?.(renameTo), wired.rename ? "rename sent" : "rename not wired (UI-only)")} style={{ padding: "8px 10px", borderRadius: 12, fontWeight: 950 }}>
+            <input
+              value={renameTo}
+              onChange={(e) => setRenameTo(e.target.value)}
+              placeholder="New room name"
+              style={{ flex: 1, padding: "8px 10px", borderRadius: 12 }}
+            />
+            <button
+              onClick={() =>
+                safe(
+                  () => w.renameRoom?.(renameTo),
+                  wired.rename ? "rename sent" : "rename not wired (UI-only)",
+                )
+              }
+              style={{ padding: "8px 10px", borderRadius: 12, fontWeight: 950 }}
+            >
               Rename
             </button>
           </div>
@@ -206,10 +249,19 @@ export default function ModeratorToolsPanel(props: { roomId?: string; title?: st
       <div style={{ height: 1, background: "rgba(148,163,184,.14)", margin: "12px 0" }} />
 
       <div style={{ opacity: 0.8, fontSize: 12, marginBottom: 6 }}>User picker</div>
-      <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search users…" style={{ width: "100%", padding: "8px 10px", borderRadius: 12, marginBottom: 8 }} />
+      <input
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder="Search users…"
+        style={{ width: "100%", padding: "8px 10px", borderRadius: 12, marginBottom: 8 }}
+      />
 
       <div style={{ display: "flex", gap: 8 }}>
-        <select value={selectedId} onChange={(e) => setSelectedId(e.target.value)} style={{ flex: 1, padding: "8px 10px", borderRadius: 12 }}>
+        <select
+          value={selectedId}
+          onChange={(e) => setSelectedId(e.target.value)}
+          style={{ flex: 1, padding: "8px 10px", borderRadius: 12 }}
+        >
           <option value="">(auto)</option>
           {filtered.slice(0, 60).map((p, i) => {
             const id = String(p.id ?? p.name ?? i);
@@ -221,48 +273,159 @@ export default function ModeratorToolsPanel(props: { roomId?: string; title?: st
             );
           })}
         </select>
-        <button onClick={() => { setQuery(""); setSelectedId(""); }} style={{ padding: "8px 10px", borderRadius: 12, fontWeight: 950 }}>
+        <button
+          onClick={() => {
+            setQuery("");
+            setSelectedId("");
+          }}
+          style={{ padding: "8px 10px", borderRadius: 12, fontWeight: 950 }}
+        >
           Clear
         </button>
       </div>
 
       <div style={{ marginTop: 8, fontSize: 12, opacity: 0.85 }}>
-        selected: <span style={{ opacity: 0.95, fontWeight: 800 }}>{selected ? targetName : "none"}</span>
+        selected:{" "}
+        <span style={{ opacity: 0.95, fontWeight: 800 }}>{selected ? targetName : "none"}</span>
         {isSelf ? <span style={{ marginLeft: 8, opacity: 0.75 }}>(self)</span> : null}
       </div>
 
       <div style={{ marginTop: 10, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-        <button disabled={!canTarget || isSelf} onClick={() => safe(() => w.kick?.(targetId), wired.kick ? `kick sent → ${targetName}` : "kick not wired (UI-only)")} style={{ padding: "8px 10px", borderRadius: 12, fontWeight: 950, opacity: (!canTarget || isSelf) ? 0.5 : 1 }}>
+        <button
+          disabled={!canTarget || isSelf}
+          onClick={() =>
+            safe(
+              () => w.kick?.(targetId),
+              wired.kick ? `kick sent → ${targetName}` : "kick not wired (UI-only)",
+            )
+          }
+          style={{
+            padding: "8px 10px",
+            borderRadius: 12,
+            fontWeight: 950,
+            opacity: !canTarget || isSelf ? 0.5 : 1,
+          }}
+        >
           Kick
         </button>
 
-        <button disabled={!canTarget || isSelf} onClick={() => safe(() => w.mute?.(targetId), wired.mute ? `mute sent → ${targetName}` : "mute not wired (UI-only)")} style={{ padding: "8px 10px", borderRadius: 12, fontWeight: 950, opacity: (!canTarget || isSelf) ? 0.5 : 1 }}>
+        <button
+          disabled={!canTarget || isSelf}
+          onClick={() =>
+            safe(
+              () => w.mute?.(targetId),
+              wired.mute ? `mute sent → ${targetName}` : "mute not wired (UI-only)",
+            )
+          }
+          style={{
+            padding: "8px 10px",
+            borderRadius: 12,
+            fontWeight: 950,
+            opacity: !canTarget || isSelf ? 0.5 : 1,
+          }}
+        >
           Mute
         </button>
 
-        <button disabled={!canTarget || isSelf} onClick={() => safe(() => w.promote?.(targetId), wired.promote ? `promote sent → ${targetName}` : "promote not wired (UI-only)")} style={{ padding: "8px 10px", borderRadius: 12, fontWeight: 950, opacity: (!canTarget || isSelf) ? 0.5 : 1 }}>
+        <button
+          disabled={!canTarget || isSelf}
+          onClick={() =>
+            safe(
+              () => w.promote?.(targetId),
+              wired.promote ? `promote sent → ${targetName}` : "promote not wired (UI-only)",
+            )
+          }
+          style={{
+            padding: "8px 10px",
+            borderRadius: 12,
+            fontWeight: 950,
+            opacity: !canTarget || isSelf ? 0.5 : 1,
+          }}
+        >
           Promote MOD
         </button>
 
-        <button disabled={!canTarget || isSelf} onClick={() => safe(() => w.demote?.(targetId), wired.demote ? `demote sent → ${targetName}` : "demote not wired (UI-only)")} style={{ padding: "8px 10px", borderRadius: 12, fontWeight: 950, opacity: (!canTarget || isSelf) ? 0.5 : 1 }}>
+        <button
+          disabled={!canTarget || isSelf}
+          onClick={() =>
+            safe(
+              () => w.demote?.(targetId),
+              wired.demote ? `demote sent → ${targetName}` : "demote not wired (UI-only)",
+            )
+          }
+          style={{
+            padding: "8px 10px",
+            borderRadius: 12,
+            fontWeight: 950,
+            opacity: !canTarget || isSelf ? 0.5 : 1,
+          }}
+        >
           Demote
         </button>
 
-        <button disabled={!canTarget || isSelf} onClick={() => safe(() => w.ban?.(targetId), wired.ban ? `ban sent → ${targetName}` : "ban not wired (UI-only)")} style={{ padding: "8px 10px", borderRadius: 12, fontWeight: 950, opacity: (!canTarget || isSelf) ? 0.5 : 1 }}>
+        <button
+          disabled={!canTarget || isSelf}
+          onClick={() =>
+            safe(
+              () => w.ban?.(targetId),
+              wired.ban ? `ban sent → ${targetName}` : "ban not wired (UI-only)",
+            )
+          }
+          style={{
+            padding: "8px 10px",
+            borderRadius: 12,
+            fontWeight: 950,
+            opacity: !canTarget || isSelf ? 0.5 : 1,
+          }}
+        >
           Ban
         </button>
 
-        <button disabled={!canTarget || isSelf} onClick={() => safe(() => w.unban?.(targetId), wired.unban ? `unban sent → ${targetName}` : "unban not wired (UI-only)")} style={{ padding: "8px 10px", borderRadius: 12, fontWeight: 950, opacity: (!canTarget || isSelf) ? 0.5 : 1 }}>
+        <button
+          disabled={!canTarget || isSelf}
+          onClick={() =>
+            safe(
+              () => w.unban?.(targetId),
+              wired.unban ? `unban sent → ${targetName}` : "unban not wired (UI-only)",
+            )
+          }
+          style={{
+            padding: "8px 10px",
+            borderRadius: 12,
+            fontWeight: 950,
+            opacity: !canTarget || isSelf ? 0.5 : 1,
+          }}
+        >
           Unban
         </button>
 
         {canStaffOrGod(role) ? (
-          <button disabled={!canTarget || isSelf} onClick={() => safe(() => w.staffKick?.(targetId), wired.staffKick ? `staffKick sent → ${targetName}` : "staffKick not wired (UI-only)")} style={{ gridColumn: "1 / -1", padding: "8px 10px", borderRadius: 12, fontWeight: 950, opacity: (!canTarget || isSelf) ? 0.5 : 1 }}>
+          <button
+            disabled={!canTarget || isSelf}
+            onClick={() =>
+              safe(
+                () => w.staffKick?.(targetId),
+                wired.staffKick
+                  ? `staffKick sent → ${targetName}`
+                  : "staffKick not wired (UI-only)",
+              )
+            }
+            style={{
+              gridColumn: "1 / -1",
+              padding: "8px 10px",
+              borderRadius: 12,
+              fontWeight: 950,
+              opacity: !canTarget || isSelf ? 0.5 : 1,
+            }}
+          >
             Staff Kick (global)
           </button>
         ) : null}
 
-        <button onClick={copyDebug} style={{ gridColumn: "1 / -1", padding: "8px 10px", borderRadius: 12, fontWeight: 950 }}>
+        <button
+          onClick={copyDebug}
+          style={{ gridColumn: "1 / -1", padding: "8px 10px", borderRadius: 12, fontWeight: 950 }}
+        >
           Copy debug snapshot
         </button>
       </div>
@@ -271,4 +434,3 @@ export default function ModeratorToolsPanel(props: { roomId?: string; title?: st
     </section>
   );
 }
-

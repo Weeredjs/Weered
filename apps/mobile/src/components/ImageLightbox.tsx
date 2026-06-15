@@ -4,7 +4,9 @@ import { View, Modal, Image, Pressable, Text, Dimensions, Linking } from "react-
 type Ctx = { open: (url: string) => void };
 const LightboxContext = createContext<Ctx>({ open: () => {} });
 
-export function useImageLightbox() { return useContext(LightboxContext); }
+export function useImageLightbox() {
+  return useContext(LightboxContext);
+}
 
 export function ImageLightboxProvider({ children }: { children: React.ReactNode }) {
   const [url, setUrl] = useState<string | null>(null);
@@ -12,7 +14,11 @@ export function ImageLightboxProvider({ children }: { children: React.ReactNode 
 
   useEffect(() => {
     if (url) {
-      Image.getSize(url, (w, h) => setSize({ w, h }), () => setSize(null));
+      Image.getSize(
+        url,
+        (w, h) => setSize({ w, h }),
+        () => setSize(null),
+      );
     } else {
       setSize(null);
     }

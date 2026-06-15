@@ -15,14 +15,16 @@
   const r = await fetch(url, {
     headers: {
       "User-Agent": "weered-dev/0.1 (contact: local)",
-      "Accept": "application/json",
+      Accept: "application/json",
     },
     cache: "no-store",
   });
 
   const txt = await r.text();
   if (!r.ok) {
-    return new Response(JSON.stringify({ ok: false, status: r.status, body: txt.slice(0, 300) }), { status: 502 });
+    return new Response(JSON.stringify({ ok: false, status: r.status, body: txt.slice(0, 300) }), {
+      status: 502,
+    });
   }
 
   return new Response(txt, {

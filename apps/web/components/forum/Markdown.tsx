@@ -19,22 +19,31 @@ function safeUrl(url: string): string {
 
 function renderInline(s: string): string {
   let out = escapeHtml(s);
-  out = out.replace(/!\[([^\]]*)\]\(([^)\s]+)\)/g, (_m, alt: string, url: string) =>
-    `<img src="${safeUrl(url)}" alt="${alt}" style="max-width:100%;border-radius:6px;margin:6px 0;" />`
+  out = out.replace(
+    /!\[([^\]]*)\]\(([^)\s]+)\)/g,
+    (_m, alt: string, url: string) =>
+      `<img src="${safeUrl(url)}" alt="${alt}" style="max-width:100%;border-radius:6px;margin:6px 0;" />`,
   );
-  out = out.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (_m, text: string, url: string) =>
-    `<a href="${safeUrl(url)}" target="_blank" rel="noopener noreferrer" style="color:#a78bfa;text-decoration:underline;">${text}</a>`
+  out = out.replace(
+    /\[([^\]]+)\]\(([^)\s]+)\)/g,
+    (_m, text: string, url: string) =>
+      `<a href="${safeUrl(url)}" target="_blank" rel="noopener noreferrer" style="color:#a78bfa;text-decoration:underline;">${text}</a>`,
   );
   out = out.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
   out = out.replace(/__([^_]+)__/g, "<strong>$1</strong>");
   out = out.replace(/(^|[^*])\*([^*\s][^*]*?)\*/g, "$1<em>$2</em>");
   out = out.replace(/(^|[^_])_([^_\s][^_]*?)_/g, "$1<em>$2</em>");
-  out = out.replace(/`([^`]+)`/g, '<code style="background:rgba(0,0,0,.35);padding:1px 5px;border-radius:4px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.92em;">$1</code>');
+  out = out.replace(
+    /`([^`]+)`/g,
+    '<code style="background:rgba(0,0,0,.35);padding:1px 5px;border-radius:4px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.92em;">$1</code>',
+  );
   return out;
 }
 
 export function renderMarkdown(md: string): string {
-  const lines = String(md || "").replace(/\r\n/g, "\n").split("\n");
+  const lines = String(md || "")
+    .replace(/\r\n/g, "\n")
+    .split("\n");
   const out: string[] = [];
   let i = 0;
   let inCode = false;
@@ -44,7 +53,9 @@ export function renderMarkdown(md: string): string {
 
   function flushList() {
     if (!listType) return;
-    out.push(`<${listType} style="padding-left:22px;margin:6px 0;">${listItems.map(li => `<li>${li}</li>`).join("")}</${listType}>`);
+    out.push(
+      `<${listType} style="padding-left:22px;margin:6px 0;">${listItems.map((li) => `<li>${li}</li>`).join("")}</${listType}>`,
+    );
     listType = null;
     listItems = [];
   }
@@ -53,7 +64,9 @@ export function renderMarkdown(md: string): string {
     const ln = lines[i];
     if (/^```/.test(ln)) {
       if (inCode) {
-        out.push(`<pre style="background:rgba(0,0,0,.4);padding:10px 12px;border-radius:8px;overflow-x:auto;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;margin:8px 0;"><code>${escapeHtml(codeBuf.join("\n"))}</code></pre>`);
+        out.push(
+          `<pre style="background:rgba(0,0,0,.4);padding:10px 12px;border-radius:8px;overflow-x:auto;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;margin:8px 0;"><code>${escapeHtml(codeBuf.join("\n"))}</code></pre>`,
+        );
         codeBuf = [];
         inCode = false;
       } else {
@@ -63,7 +76,11 @@ export function renderMarkdown(md: string): string {
       i++;
       continue;
     }
-    if (inCode) { codeBuf.push(ln); i++; continue; }
+    if (inCode) {
+      codeBuf.push(ln);
+      i++;
+      continue;
+    }
 
     if (!ln.trim()) {
       flushList();
@@ -76,31 +93,49 @@ export function renderMarkdown(md: string): string {
       flushList();
       const lvl = h[1].length;
       const sizes = [0, 18, 16, 14];
-      out.push(`<h${lvl} style="font-size:${sizes[lvl]}px;font-weight:800;margin:10px 0 6px;letter-spacing:-0.2px;">${renderInline(h[2])}</h${lvl}>`);
-      i++; continue;
+      out.push(
+        `<h${lvl} style="font-size:${sizes[lvl]}px;font-weight:800;margin:10px 0 6px;letter-spacing:-0.2px;">${renderInline(h[2])}</h${lvl}>`,
+      );
+      i++;
+      continue;
     }
     if (/^>\s?/.test(ln)) {
       flushList();
       const text = ln.replace(/^>\s?/, "");
-      out.push(`<blockquote style="border-left:3px solid rgba(167,139,250,.4);padding:4px 12px;margin:6px 0;color:rgba(229,231,235,.7);">${renderInline(text)}</blockquote>`);
-      i++; continue;
+      out.push(
+        `<blockquote style="border-left:3px solid rgba(167,139,250,.4);padding:4px 12px;margin:6px 0;color:rgba(229,231,235,.7);">${renderInline(text)}</blockquote>`,
+      );
+      i++;
+      continue;
     }
     const ul = ln.match(/^[\s]*[-*+]\s+(.+)$/);
     if (ul) {
-      if (listType !== "ul") { flushList(); listType = "ul"; }
+      if (listType !== "ul") {
+        flushList();
+        listType = "ul";
+      }
       listItems.push(renderInline(ul[1]));
-      i++; continue;
+      i++;
+      continue;
     }
     const ol = ln.match(/^[\s]*\d+\.\s+(.+)$/);
     if (ol) {
-      if (listType !== "ol") { flushList(); listType = "ol"; }
+      if (listType !== "ol") {
+        flushList();
+        listType = "ol";
+      }
       listItems.push(renderInline(ol[1]));
-      i++; continue;
+      i++;
+      continue;
     }
     flushList();
     const para: string[] = [ln];
     i++;
-    while (i < lines.length && lines[i].trim() && !/^(```|#{1,3}\s|>\s?|[\s]*[-*+]\s+|[\s]*\d+\.\s+)/.test(lines[i])) {
+    while (
+      i < lines.length &&
+      lines[i].trim() &&
+      !/^(```|#{1,3}\s|>\s?|[\s]*[-*+]\s+|[\s]*\d+\.\s+)/.test(lines[i])
+    ) {
       para.push(lines[i]);
       i++;
     }
@@ -108,7 +143,9 @@ export function renderMarkdown(md: string): string {
   }
   flushList();
   if (inCode && codeBuf.length) {
-    out.push(`<pre style="background:rgba(0,0,0,.4);padding:10px 12px;border-radius:8px;overflow-x:auto;"><code>${escapeHtml(codeBuf.join("\n"))}</code></pre>`);
+    out.push(
+      `<pre style="background:rgba(0,0,0,.4);padding:10px 12px;border-radius:8px;overflow-x:auto;"><code>${escapeHtml(codeBuf.join("\n"))}</code></pre>`,
+    );
   }
   return out.join("\n");
 }
@@ -118,7 +155,13 @@ export default function Markdown({ text, style }: { text: string; style?: React.
   return (
     <div
       className="weered-md"
-      style={{ fontSize: 13, lineHeight: 1.65, color: "rgba(229,231,235,.78)", wordBreak: "break-word", ...style }}
+      style={{
+        fontSize: 13,
+        lineHeight: 1.65,
+        color: "rgba(229,231,235,.78)",
+        wordBreak: "break-word",
+        ...style,
+      }}
       dangerouslySetInnerHTML={{ __html: html }}
     />
   );

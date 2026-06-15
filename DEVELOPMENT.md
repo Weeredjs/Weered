@@ -23,13 +23,13 @@ packages/
 
 ## Release cadence
 
-| Surface | What ships when | Notes |
-|---|---|---|
-| **API** | Every push → deploy on droplet | Instant. Affects all clients. |
-| **Web** | Every push → deploy on droplet | Instant. |
-| **Desktop shell** | Same URL → instant. New installer only when the Rust shell changes. | Rare (1–2× / quarter). |
-| **Mobile JS** | Push → Expo EAS Update (when wired) | Same-day, no store review. |
-| **Mobile binary** | Only when native modules change | Store review (~24h iOS, instant Android). |
+| Surface           | What ships when                                                     | Notes                                     |
+| ----------------- | ------------------------------------------------------------------- | ----------------------------------------- |
+| **API**           | Every push → deploy on droplet                                      | Instant. Affects all clients.             |
+| **Web**           | Every push → deploy on droplet                                      | Instant.                                  |
+| **Desktop shell** | Same URL → instant. New installer only when the Rust shell changes. | Rare (1–2× / quarter).                    |
+| **Mobile JS**     | Push → Expo EAS Update (when wired)                                 | Same-day, no store review.                |
+| **Mobile binary** | Only when native modules change                                     | Store review (~24h iOS, instant Android). |
 
 ## Ship-a-feature workflow
 

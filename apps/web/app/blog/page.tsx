@@ -4,7 +4,8 @@ import MarketingHeader from "../../components/MarketingHeader";
 import { POSTS } from "./posts";
 
 const TITLE = "Weered blog: build notes and dispatches";
-const DESC = "What's shipping on Weered: build notes, feature launches, and the occasional story from the lobbies.";
+const DESC =
+  "What's shipping on Weered: build notes, feature launches, and the occasional story from the lobbies.";
 const URL = "https://weered.ca/blog";
 
 export const metadata: Metadata = {

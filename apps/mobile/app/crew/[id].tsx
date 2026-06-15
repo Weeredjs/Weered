@@ -1,5 +1,18 @@
 import { useEffect, useRef, useState } from "react";
-import { View, Text, FlatList, TextInput, Pressable, KeyboardAvoidingView, Platform, ActivityIndicator, Alert, Modal, ScrollView, Share } from "react-native";
+import {
+  View,
+  Text,
+  FlatList,
+  TextInput,
+  Pressable,
+  KeyboardAvoidingView,
+  Platform,
+  ActivityIndicator,
+  Alert,
+  Modal,
+  ScrollView,
+  Share,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Stack, useLocalSearchParams, router } from "expo-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -12,9 +25,21 @@ import { GifPicker } from "@/components/GifPicker";
 import { useActionSheet } from "@/components/ActionSheet";
 import { ReportModal } from "@/components/ReportModal";
 
-type Member = { userId: string; name: string; role: string; online: boolean; roomName?: string | null; avatar?: string | null; avatarColor?: string | null };
+type Member = {
+  userId: string;
+  name: string;
+  role: string;
+  online: boolean;
+  roomName?: string | null;
+  avatar?: string | null;
+  avatarColor?: string | null;
+};
 type Crew = {
-  id: string; name: string; tag: string; description: string; ownerId: string;
+  id: string;
+  name: string;
+  tag: string;
+  description: string;
+  ownerId: string;
   myRole: "LEADER" | "OFFICER" | "MEMBER";
   members: Member[];
 };
@@ -23,9 +48,16 @@ type CrewsResp = { crews: Crew[] };
 type Reaction = { emoji: string; count: number; users: string[] };
 
 type CrewMessage = {
-  id: string; userId: string; userName: string; body: string;
-  createdAt: string; editedAt?: string; deletedAt?: string;
-  replyToId?: string | null; replyToUserName?: string | null; replyToBody?: string | null;
+  id: string;
+  userId: string;
+  userName: string;
+  body: string;
+  createdAt: string;
+  editedAt?: string;
+  deletedAt?: string;
+  replyToId?: string | null;
+  replyToUserName?: string | null;
+  replyToBody?: string | null;
   reactions?: Reaction[];
 };
 
@@ -69,24 +101,37 @@ export default function CrewDetail() {
     wsClient.connect();
     wsClient.reauth();
     const off = wsClient.on((m: any) => {
-      if (m.type === "auth:ok") { setConnected(true); return; }
+      if (m.type === "auth:ok") {
+        setConnected(true);
+        return;
+      }
       if (m.type === "crew:message" && m.crewId === crewId) {
-        setMessages((prev) => prev.some((x) => x.id === m.message.id) ? prev : [...prev, m.message]);
+        setMessages((prev) =>
+          prev.some((x) => x.id === m.message.id) ? prev : [...prev, m.message],
+        );
       }
       if (m.type === "crew:edited" && m.crewId === crewId) {
-        setMessages((prev) => prev.map((x) => x.id === m.msgId ? { ...x, body: m.body, editedAt: m.editedAt } : x));
+        setMessages((prev) =>
+          prev.map((x) => (x.id === m.msgId ? { ...x, body: m.body, editedAt: m.editedAt } : x)),
+        );
       }
       if (m.type === "crew:deleted" && m.crewId === crewId) {
-        setMessages((prev) => prev.map((x) => x.id === m.msgId ? { ...x, deletedAt: m.deletedAt, body: "" } : x));
+        setMessages((prev) =>
+          prev.map((x) => (x.id === m.msgId ? { ...x, deletedAt: m.deletedAt, body: "" } : x)),
+        );
       }
       if (m.type === "crew:rejected" && m.crewId === crewId) {
         Alert.alert("Message rejected", m.reason || "Try again");
       }
       if (m.type === "crew:reaction" && m.crewId === crewId) {
-        setMessages((prev) => prev.map((x) => x.id === m.msgId ? { ...x, reactions: m.reactions } : x));
+        setMessages((prev) =>
+          prev.map((x) => (x.id === m.msgId ? { ...x, reactions: m.reactions } : x)),
+        );
       }
     });
-    return () => { off?.(); };
+    return () => {
+      off?.();
+    };
   }, [crewId]);
 
   const send = () => {
@@ -126,13 +171,37 @@ export default function CrewDetail() {
     const mine = me?.id === msg.userId;
     const within = Date.now() - new Date(msg.createdAt).getTime() < 15 * 60 * 1000;
 
-    const actions: { label: string; icon?: string; onPress: () => void; destructive?: boolean }[] = [];
+    const actions: { label: string; icon?: string; onPress: () => void; destructive?: boolean }[] =
+      [];
     actions.push({ label: "React", icon: "🙂", onPress: () => showReactPicker(msg.id) });
-    actions.push({ label: "Reply", icon: "↩︎", onPress: () => { setReplyTo(msg); setEditingId(null); } });
-    actions.push({ label: "Copy", icon: "⎘", onPress: () => Share.share({ message: msg.body }).catch(() => {}) });
-    actions.push({ label: "View profile", icon: "👤", onPress: () => router.push(`/user/${msg.userId}`) });
+    actions.push({
+      label: "Reply",
+      icon: "↩︎",
+      onPress: () => {
+        setReplyTo(msg);
+        setEditingId(null);
+      },
+    });
+    actions.push({
+      label: "Copy",
+      icon: "⎘",
+      onPress: () => Share.share({ message: msg.body }).catch(() => {}),
+    });
+    actions.push({
+      label: "View profile",
+      icon: "👤",
+      onPress: () => router.push(`/user/${msg.userId}`),
+    });
     if (mine && within) {
-      actions.push({ label: "Edit", icon: "✎", onPress: () => { setEditingId(msg.id); setReplyTo(null); setDraft(msg.body); } });
+      actions.push({
+        label: "Edit",
+        icon: "✎",
+        onPress: () => {
+          setEditingId(msg.id);
+          setReplyTo(null);
+          setDraft(msg.body);
+        },
+      });
     }
     if (mine) {
       actions.push({
@@ -159,13 +228,19 @@ export default function CrewDetail() {
 
   const leave = useMutation({
     mutationFn: () => api(`/crews/${crewId}/members/${me!.id}`, { method: "DELETE" }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["my-crews"] }); router.back(); },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["my-crews"] });
+      router.back();
+    },
     onError: (e: any) => Alert.alert("Couldn't leave", e?.message || "Unknown error"),
   });
 
   const dissolve = useMutation({
     mutationFn: () => api(`/crews/${crewId}`, { method: "DELETE" }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["my-crews"] }); router.back(); },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["my-crews"] });
+      router.back();
+    },
     onError: (e: any) => Alert.alert("Couldn't dissolve", e?.message || "Unknown error"),
   });
 
@@ -178,27 +253,46 @@ export default function CrewDetail() {
           title: crew ? `${crew.tag ? `[${crew.tag}] ` : ""}${crew.name}` : "Crew",
           headerRight: () => (
             <View className="flex-row items-center mr-2">
-              <Pressable onPress={() => setRosterOpen(true)} hitSlop={8} className="active:opacity-70 mr-3">
+              <Pressable
+                onPress={() => setRosterOpen(true)}
+                hitSlop={8}
+                className="active:opacity-70 mr-3"
+              >
                 <Text className="text-weered font-semibold">Members</Text>
               </Pressable>
               <Pressable
-                onPress={() => Alert.alert(isLeader ? "Dissolve crew?" : "Leave crew?",
-                  isLeader ? "This deletes the crew for everyone." : "You can be re-invited later.",
-                  [
-                    { text: "Cancel", style: "cancel" },
-                    { text: isLeader ? "Dissolve" : "Leave", style: "destructive", onPress: () => isLeader ? dissolve.mutate() : leave.mutate() },
-                  ])}
+                onPress={() =>
+                  Alert.alert(
+                    isLeader ? "Dissolve crew?" : "Leave crew?",
+                    isLeader
+                      ? "This deletes the crew for everyone."
+                      : "You can be re-invited later.",
+                    [
+                      { text: "Cancel", style: "cancel" },
+                      {
+                        text: isLeader ? "Dissolve" : "Leave",
+                        style: "destructive",
+                        onPress: () => (isLeader ? dissolve.mutate() : leave.mutate()),
+                      },
+                    ],
+                  )
+                }
                 hitSlop={8}
                 className="active:opacity-70"
               >
-                <Text className="text-red-400 font-semibold">{isLeader ? "Dissolve" : "Leave"}</Text>
+                <Text className="text-red-400 font-semibold">
+                  {isLeader ? "Dissolve" : "Leave"}
+                </Text>
               </Pressable>
             </View>
           ),
         }}
       />
 
-      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        style={{ flex: 1 }}
+      >
         <FlatList
           ref={listRef}
           data={messages}
@@ -215,7 +309,9 @@ export default function CrewDetail() {
           )}
           ListEmptyComponent={
             <View className="px-8 py-16 items-center">
-              {msgsQ.isLoading ? <ActivityIndicator color="#5800E5" /> : (
+              {msgsQ.isLoading ? (
+                <ActivityIndicator color="#5800E5" />
+              ) : (
                 <Text className="text-weered-muted text-sm">Start the conversation.</Text>
               )}
             </View>
@@ -227,7 +323,9 @@ export default function CrewDetail() {
             <Text className="text-weered text-xs font-bold mr-2">REPLY</Text>
             <View className="flex-1">
               <Text className="text-weered-text text-xs font-semibold">{replyTo.userName}</Text>
-              <Text className="text-weered-muted text-xs" numberOfLines={1}>{replyTo.body}</Text>
+              <Text className="text-weered-muted text-xs" numberOfLines={1}>
+                {replyTo.body}
+              </Text>
             </View>
             <Pressable onPress={() => setReplyTo(null)} hitSlop={8} className="ml-2">
               <Text className="text-weered-muted text-xs">Cancel</Text>
@@ -241,7 +339,13 @@ export default function CrewDetail() {
             <Text className="text-weered-muted text-xs flex-1" numberOfLines={1}>
               {messages.find((m) => m.id === editingId)?.body}
             </Text>
-            <Pressable onPress={() => { setEditingId(null); setDraft(""); }} hitSlop={8}>
+            <Pressable
+              onPress={() => {
+                setEditingId(null);
+                setDraft("");
+              }}
+              hitSlop={8}
+            >
               <Text className="text-weered-muted text-xs">Cancel</Text>
             </Pressable>
           </View>
@@ -258,7 +362,13 @@ export default function CrewDetail() {
           <TextInput
             value={draft}
             onChangeText={setDraft}
-            placeholder={editingId ? "Edit message" : replyTo ? `Reply to ${replyTo.userName}` : "Message your crew"}
+            placeholder={
+              editingId
+                ? "Edit message"
+                : replyTo
+                  ? `Reply to ${replyTo.userName}`
+                  : "Message your crew"
+            }
             placeholderTextColor="rgba(160,160,170,0.6)"
             multiline
             className="flex-1 text-weered-text text-base px-3 py-2"
@@ -270,7 +380,9 @@ export default function CrewDetail() {
             className="bg-weered px-4 py-2.5 rounded-xl ml-2 active:opacity-80"
             style={{ opacity: !draft.trim() || !connected ? 0.4 : 1 }}
           >
-            <Text className="text-white font-bold">{!connected ? "…" : editingId ? "Save" : "Send"}</Text>
+            <Text className="text-white font-bold">
+              {!connected ? "…" : editingId ? "Save" : "Send"}
+            </Text>
           </Pressable>
         </View>
         <GifPicker
@@ -283,9 +395,14 @@ export default function CrewDetail() {
       {rosterOpen && crew && (
         <Modal transparent animationType="slide" onRequestClose={() => setRosterOpen(false)}>
           <View className="flex-1 bg-black/70 justify-end">
-            <View className="bg-weered-bg border-t border-border rounded-t-2xl" style={{ maxHeight: "70%" }}>
+            <View
+              className="bg-weered-bg border-t border-border rounded-t-2xl"
+              style={{ maxHeight: "70%" }}
+            >
               <View className="px-4 pt-4 pb-2 flex-row items-center">
-                <Text className="text-weered-text font-bold text-lg flex-1">Members · {crew.members.length}</Text>
+                <Text className="text-weered-text font-bold text-lg flex-1">
+                  Members · {crew.members.length}
+                </Text>
                 <Pressable onPress={() => setRosterOpen(false)} hitSlop={10}>
                   <Text className="text-weered-muted font-bold text-base">✕</Text>
                 </Pressable>
@@ -294,14 +411,19 @@ export default function CrewDetail() {
                 {crew.members.map((m) => (
                   <Pressable
                     key={m.userId}
-                    onPress={() => { setRosterOpen(false); router.push(`/user/${m.userId}`); }}
+                    onPress={() => {
+                      setRosterOpen(false);
+                      router.push(`/user/${m.userId}`);
+                    }}
                     className="flex-row items-center px-4 py-2.5 border-b border-border/20 active:bg-panel"
                   >
                     <View className="mr-3">
                       <Avatar name={m.name} url={m.avatar} size={36} />
                     </View>
                     <View className="flex-1">
-                      <Text className="text-weered-text font-semibold" numberOfLines={1}>{m.name}</Text>
+                      <Text className="text-weered-text font-semibold" numberOfLines={1}>
+                        {m.name}
+                      </Text>
                       <Text className="text-weered-muted text-xs">
                         {m.online ? <Text className="text-green-400">● online</Text> : "offline"}
                         {m.roomName ? ` · in ${m.roomName}` : ""} · {m.role}
@@ -326,10 +448,15 @@ export default function CrewDetail() {
 }
 
 function Msg({
-  msg, isSelf, onLongPress, onTapReaction,
+  msg,
+  isSelf,
+  onLongPress,
+  onTapReaction,
 }: {
-  msg: CrewMessage; isSelf: boolean;
-  onLongPress: () => void; onTapReaction: (emoji: string) => void;
+  msg: CrewMessage;
+  isSelf: boolean;
+  onLongPress: () => void;
+  onTapReaction: (emoji: string) => void;
 }) {
   if (msg.deletedAt) {
     return (
@@ -339,10 +466,16 @@ function Msg({
     );
   }
   return (
-    <Pressable onLongPress={onLongPress} delayLongPress={300} className="px-4 py-1.5 active:bg-panel/40">
+    <Pressable
+      onLongPress={onLongPress}
+      delayLongPress={300}
+      className="px-4 py-1.5 active:bg-panel/40"
+    >
       <View className="flex-row items-baseline mb-0.5">
         <Pressable onPress={() => router.push(`/user/${msg.userId}`)} hitSlop={4}>
-          <Text className={`font-bold text-sm ${isSelf ? "text-weered" : "text-weered-text"}`}>{msg.userName}</Text>
+          <Text className={`font-bold text-sm ${isSelf ? "text-weered" : "text-weered-text"}`}>
+            {msg.userName}
+          </Text>
         </Pressable>
         <Text className="text-weered-muted/70 text-xs ml-2">
           {new Date(msg.createdAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}

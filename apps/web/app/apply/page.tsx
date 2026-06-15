@@ -4,7 +4,11 @@ import React, { useEffect, useState } from "react";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 function getToken() {
-  try { return localStorage.getItem("weered_token") || ""; } catch { return ""; }
+  try {
+    return localStorage.getItem("weered_token") || "";
+  } catch {
+    return "";
+  }
 }
 
 const TIMEZONES = ["EST", "CST", "MST", "PST", "GMT", "CET", "AEST", "Other"];
@@ -38,11 +42,16 @@ export default function ApplyPage() {
   useEffect(() => {
     document.title = "Apply to Moderate | Weered";
     const meta = document.querySelector('meta[name="description"]');
-    if (meta) meta.setAttribute("content", "Apply to become a Global Moderator on Weered. Help keep our community safe and welcoming.");
+    if (meta)
+      meta.setAttribute(
+        "content",
+        "Apply to become a Global Moderator on Weered. Help keep our community safe and welcoming.",
+      );
     else {
       const m = document.createElement("meta");
       m.name = "description";
-      m.content = "Apply to become a Global Moderator on Weered. Help keep our community safe and welcoming.";
+      m.content =
+        "Apply to become a Global Moderator on Weered. Help keep our community safe and welcoming.";
       document.head.appendChild(m);
     }
     setTimeout(() => setVisible(true), 100);
@@ -54,10 +63,19 @@ export default function ApplyPage() {
     e.preventDefault();
     setError("");
 
-    if (!username.trim()) { setError("Username is required."); return; }
+    if (!username.trim()) {
+      setError("Username is required.");
+      return;
+    }
     const ageNum = parseInt(age, 10);
-    if (!age || isNaN(ageNum) || ageNum < 18) { setError("You must be at least 18 years old."); return; }
-    if (!whyMod.trim()) { setError("Please tell us why you want to moderate Weered."); return; }
+    if (!age || isNaN(ageNum) || ageNum < 18) {
+      setError("You must be at least 18 years old.");
+      return;
+    }
+    if (!whyMod.trim()) {
+      setError("Please tell us why you want to moderate Weered.");
+      return;
+    }
 
     const body = [
       "[MOD APPLICATION]",
@@ -371,26 +389,34 @@ export default function ApplyPage() {
 
       <div className="mod-root">
         <div className={`mod-inner${visible ? " visible" : ""}`}>
-
           <div style={{ marginBottom: 20 }}>
             <a href="/" aria-label="Weered home" style={{ display: "inline-block" }}>
-              <img src="/brand/logo/weered-logo-512.png" alt="Weered" style={{ width: 72, height: 72, filter: "drop-shadow(0 0 20px rgba(88,0,229,0.35))" }} />
+              <img
+                src="/brand/logo/weered-logo-512.png"
+                alt="Weered"
+                style={{
+                  width: 72,
+                  height: 72,
+                  filter: "drop-shadow(0 0 20px rgba(88,0,229,0.35))",
+                }}
+              />
             </a>
           </div>
           <div className="mod-eyebrow">apply</div>
           <div className="mod-title">Apply to Moderate</div>
           <div className="mod-sub">
-            Help us keep Weered safe and welcoming.<br />
+            Help us keep Weered safe and welcoming.
+            <br />
             Global Moderators keep the lobbies in order.
           </div>
 
           {authed === false && (
             <div className="mod-card">
               <div className="mod-login-card">
-                <div className="mod-login-msg">
-                  You need to be logged in to apply.
-                </div>
-                <a href="/login" className="mod-login-link">Log in</a>
+                <div className="mod-login-msg">You need to be logged in to apply.</div>
+                <a href="/login" className="mod-login-link">
+                  Log in
+                </a>
               </div>
             </div>
           )}
@@ -412,7 +438,8 @@ export default function ApplyPage() {
                     <span className="mod-success-icon">&#10022;</span>
                     <div className="mod-success-title">Application submitted!</div>
                     <div className="mod-success-sub">
-                      We&apos;ll review it and get back to you.<br />
+                      We&apos;ll review it and get back to you.
+                      <br />
                       Thanks for wanting to help.
                     </div>
                   </div>
@@ -427,7 +454,7 @@ export default function ApplyPage() {
                       className="mod-input"
                       type="text"
                       value={username}
-                      onChange={e => setUsername(e.target.value)}
+                      onChange={(e) => setUsername(e.target.value)}
                       placeholder="your weered username"
                       required
                     />
@@ -440,7 +467,7 @@ export default function ApplyPage() {
                       type="number"
                       min={18}
                       value={age}
-                      onChange={e => setAge(e.target.value)}
+                      onChange={(e) => setAge(e.target.value)}
                       placeholder="18+"
                       required
                     />
@@ -449,10 +476,12 @@ export default function ApplyPage() {
                     <select
                       className="mod-select"
                       value={timezone}
-                      onChange={e => setTimezone(e.target.value)}
+                      onChange={(e) => setTimezone(e.target.value)}
                     >
-                      {TIMEZONES.map(tz => (
-                        <option key={tz} value={tz}>{tz}</option>
+                      {TIMEZONES.map((tz) => (
+                        <option key={tz} value={tz}>
+                          {tz}
+                        </option>
                       ))}
                     </select>
 
@@ -460,31 +489,29 @@ export default function ApplyPage() {
                     <select
                       className="mod-select"
                       value={hours}
-                      onChange={e => setHours(e.target.value)}
+                      onChange={(e) => setHours(e.target.value)}
                     >
-                      {HOURS_OPTIONS.map(h => (
-                        <option key={h} value={h}>{h}</option>
+                      {HOURS_OPTIONS.map((h) => (
+                        <option key={h} value={h}>
+                          {h}
+                        </option>
                       ))}
                     </select>
 
-                    <label className="mod-label">
-                      Which lobbies/games are you most active in?
-                    </label>
+                    <label className="mod-label">Which lobbies/games are you most active in?</label>
                     <textarea
                       className="mod-textarea"
                       value={activeLobbies}
-                      onChange={e => setActiveLobbies(e.target.value)}
+                      onChange={(e) => setActiveLobbies(e.target.value)}
                       placeholder="e.g. Valorant lobby, League ranked, general chat..."
                       rows={3}
                     />
 
-                    <label className="mod-label">
-                      Have you moderated before? If so, where?
-                    </label>
+                    <label className="mod-label">Have you moderated before? If so, where?</label>
                     <textarea
                       className="mod-textarea"
                       value={priorMod}
-                      onChange={e => setPriorMod(e.target.value)}
+                      onChange={(e) => setPriorMod(e.target.value)}
                       placeholder="Discord servers, subreddits, forums..."
                       rows={3}
                     />
@@ -495,7 +522,7 @@ export default function ApplyPage() {
                     <textarea
                       className="mod-textarea"
                       value={whyMod}
-                      onChange={e => setWhyMod(e.target.value)}
+                      onChange={(e) => setWhyMod(e.target.value)}
                       placeholder="tell us what drives you..."
                       rows={4}
                       required
@@ -507,7 +534,7 @@ export default function ApplyPage() {
                     <textarea
                       className="mod-textarea"
                       value={extra}
-                      onChange={e => setExtra(e.target.value)}
+                      onChange={(e) => setExtra(e.target.value)}
                       placeholder="availability notes, relevant skills, links..."
                       rows={3}
                     />
@@ -531,7 +558,6 @@ export default function ApplyPage() {
               <a href="/forum">forum</a>
             </nav>
           </div>
-
         </div>
       </div>
     </>

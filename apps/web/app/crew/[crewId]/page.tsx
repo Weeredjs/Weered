@@ -9,10 +9,14 @@ async function fetchCrew(crewId: string) {
     if (!r.ok) return null;
     const j = await r.json();
     return j?.ok ? j.crew : null;
-  } catch { return null; }
+  } catch {
+    return null;
+  }
 }
 
-export async function generateMetadata(props: { params: Promise<{ crewId: string }> }): Promise<Metadata> {
+export async function generateMetadata(props: {
+  params: Promise<{ crewId: string }>;
+}): Promise<Metadata> {
   const params = await props.params;
   const c = await fetchCrew(params.crewId);
   if (!c) return { title: "Crew | Weered", description: "A crew on Weered." };
@@ -26,7 +30,8 @@ export async function generateMetadata(props: { params: Promise<{ crewId: string
     title,
     description,
     openGraph: {
-      title, description,
+      title,
+      description,
       url: `https://weered.ca/crew/${params.crewId}`,
       type: "profile",
       images: c.bannerUrl ? [{ url: c.bannerUrl, alt: c.name }] : undefined,

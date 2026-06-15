@@ -4,8 +4,7 @@ import React, { useEffect, useRef, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 
-const API_BASE =
-  (process.env.NEXT_PUBLIC_API_BASE as string) || "http://127.0.0.1:4000";
+const API_BASE = (process.env.NEXT_PUBLIC_API_BASE as string) || "http://127.0.0.1:4000";
 
 const PURPLE = "#5800E5";
 const GREEN = "#22c55e";
@@ -19,20 +18,10 @@ const MONO = "'SF Mono', 'Cascadia Mono', 'Fira Code', 'Consolas', monospace";
 import type { Lobby } from "@weered/shared";
 
 function hueFromId(id: string): number {
-  return (
-    Math.abs([...id].reduce((a, c) => a + c.charCodeAt(0), 0)) % 360
-  );
+  return Math.abs([...id].reduce((a, c) => a + c.charCodeAt(0), 0)) % 360;
 }
 
-function InitialAvatar({
-  id,
-  name,
-  size,
-}: {
-  id: string;
-  name: string;
-  size: number;
-}) {
+function InitialAvatar({ id, name, size }: { id: string; name: string; size: number }) {
   const hue = hueFromId(id);
   const initial = (name || id || "?").trim().slice(0, 1).toUpperCase();
   return (
@@ -58,13 +47,7 @@ function InitialAvatar({
   );
 }
 
-function LobbyLogo({
-  lobby,
-  size,
-}: {
-  lobby: Lobby;
-  size: number;
-}) {
+function LobbyLogo({ lobby, size }: { lobby: Lobby; size: number }) {
   const [ok, setOk] = useState(true);
   if (lobby.logoUrl && ok) {
     return (
@@ -148,13 +131,7 @@ function VerifiedBadge() {
   );
 }
 
-function LiveCard({
-  lobby,
-  onClick,
-}: {
-  lobby: Lobby;
-  onClick: () => void;
-}) {
+function LiveCard({ lobby, onClick }: { lobby: Lobby; onClick: () => void }) {
   const [hovered, setHovered] = useState(false);
   return (
     <button
@@ -167,9 +144,7 @@ function LiveCard({
         padding: "14px 14px 12px",
         borderRadius: 2,
         border: `1px solid ${hovered ? "rgba(88,0,229,.5)" : BORDER}`,
-        background: hovered
-          ? "rgba(88,0,229,.12)"
-          : "rgba(255,255,255,.03)",
+        background: hovered ? "rgba(88,0,229,.12)" : "rgba(255,255,255,.03)",
         cursor: "pointer",
         display: "flex",
         flexDirection: "column",
@@ -178,9 +153,7 @@ function LiveCard({
         transition: "all .2s ease",
         color: TEXT,
         textAlign: "center",
-        boxShadow: hovered
-          ? `0 0 20px rgba(88,0,229,.2)`
-          : "none",
+        boxShadow: hovered ? `0 0 20px rgba(88,0,229,.2)` : "none",
       }}
     >
       <LobbyLogo lobby={lobby} size={44} />
@@ -213,13 +186,7 @@ function LiveCard({
   );
 }
 
-function LobbyCard({
-  lobby,
-  onClick,
-}: {
-  lobby: Lobby;
-  onClick: () => void;
-}) {
+function LobbyCard({ lobby, onClick }: { lobby: Lobby; onClick: () => void }) {
   const [hovered, setHovered] = useState(false);
   const accent = lobby.accentColor || PURPLE;
   const hasBanner = !!lobby.bannerUrl;
@@ -435,7 +402,7 @@ export default function LobbyBrowser() {
               members: Number(l._count?.members ?? 0),
             },
             onlineCount: Number(l.onlineCount ?? 0),
-          }))
+          })),
         );
       }
     } catch {
@@ -505,8 +472,7 @@ export default function LobbyBrowser() {
     })
     .sort((a, b) => {
       if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
-      if (b.onlineCount !== a.onlineCount)
-        return b.onlineCount - a.onlineCount;
+      if (b.onlineCount !== a.onlineCount) return b.onlineCount - a.onlineCount;
       return b._count.members - a._count.members;
     });
 
@@ -604,22 +570,43 @@ export default function LobbyBrowser() {
         )}
 
         <button
-          onClick={() => { close(); router.push("/lobby/create"); }}
+          onClick={() => {
+            close();
+            router.push("/lobby/create");
+          }}
           style={{
-            display: "flex", alignItems: "center", gap: 10,
-            padding: "8px 20px", borderRadius: 2,
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            padding: "8px 20px",
+            borderRadius: 2,
             background: "linear-gradient(135deg, rgba(88,0,229,.15), rgba(212,160,23,.10))",
             border: "1px solid rgba(212,160,23,.30)",
-            cursor: "pointer", flexShrink: 0,
+            cursor: "pointer",
+            flexShrink: 0,
             transition: "all .2s",
           }}
-          onMouseEnter={e => { e.currentTarget.style.background = "linear-gradient(135deg, rgba(88,0,229,.25), rgba(212,160,23,.18))"; e.currentTarget.style.borderColor = "rgba(212,160,23,.50)"; }}
-          onMouseLeave={e => { e.currentTarget.style.background = "linear-gradient(135deg, rgba(88,0,229,.15), rgba(212,160,23,.10))"; e.currentTarget.style.borderColor = "rgba(212,160,23,.30)"; }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background =
+              "linear-gradient(135deg, rgba(88,0,229,.25), rgba(212,160,23,.18))";
+            e.currentTarget.style.borderColor = "rgba(212,160,23,.50)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background =
+              "linear-gradient(135deg, rgba(88,0,229,.15), rgba(212,160,23,.10))";
+            e.currentTarget.style.borderColor = "rgba(212,160,23,.30)";
+          }}
         >
           <span style={{ fontSize: 18 }}>+</span>
           <div>
-            <div style={{ fontSize: 12, fontWeight: 800, color: "#D4A017", letterSpacing: "-.2px" }}>Create Your Lobby</div>
-            <div style={{ fontSize: 10, color: "rgba(255,255,255,.35)", marginTop: 1 }}>Your game. Your rules.</div>
+            <div
+              style={{ fontSize: 12, fontWeight: 800, color: "#D4A017", letterSpacing: "-.2px" }}
+            >
+              Create Your Lobby
+            </div>
+            <div style={{ fontSize: 10, color: "rgba(255,255,255,.35)", marginTop: 1 }}>
+              Your game. Your rules.
+            </div>
           </div>
         </button>
 
@@ -712,11 +699,7 @@ export default function LobbyBrowser() {
               }}
             >
               {live.map((lobby) => (
-                <LiveCard
-                  key={lobby.id}
-                  lobby={lobby}
-                  onClick={() => goLobby(lobby.id)}
-                />
+                <LiveCard key={lobby.id} lobby={lobby} onClick={() => goLobby(lobby.id)} />
               ))}
             </div>
           </div>
@@ -740,9 +723,7 @@ export default function LobbyBrowser() {
             }}
           >
             All Lobbies{" "}
-            <span style={{ color: TEXT_MUTED, fontWeight: 500 }}>
-              {filtered.length}
-            </span>
+            <span style={{ color: TEXT_MUTED, fontWeight: 500 }}>{filtered.length}</span>
           </div>
 
           {filtered.length > 0 ? (
@@ -754,11 +735,7 @@ export default function LobbyBrowser() {
               }}
             >
               {filtered.map((lobby) => (
-                <LobbyCard
-                  key={lobby.id}
-                  lobby={lobby}
-                  onClick={() => goLobby(lobby.id)}
-                />
+                <LobbyCard key={lobby.id} lobby={lobby} onClick={() => goLobby(lobby.id)} />
               ))}
             </div>
           ) : (

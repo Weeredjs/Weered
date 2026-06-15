@@ -13,20 +13,67 @@
         "honest_take": "Bungie's in-game Fireteam Finder (launched 2024) is solid for one-off pickup activities. It's quick, lives inside the Director, and works. Where it falls short is everything *around* the run: persistent crews that survive past the activity, tournaments verified through the API, sherpa relationships that build over weeks, and post-run discussion. Weered's Destiny 2 lobby covers that wraparound layer."
       },
       "activity_types": [
-        {"name": "Raids", "examples": "Salvation's Edge, Crota's End, Last Wish, Vow of the Disciple", "size": "6", "typical_filters": "Power level, weapon loadout familiarity, sherpa-friendly or experienced"},
-        {"name": "Dungeons", "examples": "Warlord's Ruin, Ghosts of the Deep, Spire of the Watcher", "size": "3", "typical_filters": "Power level, solo/duo flawless attempts, casual clear"},
-        {"name": "Grandmaster Nightfalls", "examples": "Weekly GM rotation", "size": "3", "typical_filters": "Power level cap, champion mods loaded, surge weapons"},
-        {"name": "Trials of Osiris", "examples": "Weekend Trials, Flawless attempts", "size": "3", "typical_filters": "Glory rank, mic required, three-peeking, 5+ win card"},
-        {"name": "Pantheon 2.0", "examples": "Weekly featured raid boss rotation", "size": "6", "typical_filters": "Encounter familiarity, score pushing, casual completion"},
-        {"name": "Crucible", "examples": "Competitive, Iron Banner, Comp", "size": "3-6", "typical_filters": "Rank, mic, comp seriousness"},
-        {"name": "Custom Ops", "examples": "Skull-modifier challenges", "size": "1-6", "typical_filters": "Modifier preference, score target"}
+        {
+          "name": "Raids",
+          "examples": "Salvation's Edge, Crota's End, Last Wish, Vow of the Disciple",
+          "size": "6",
+          "typical_filters": "Power level, weapon loadout familiarity, sherpa-friendly or experienced"
+        },
+        {
+          "name": "Dungeons",
+          "examples": "Warlord's Ruin, Ghosts of the Deep, Spire of the Watcher",
+          "size": "3",
+          "typical_filters": "Power level, solo/duo flawless attempts, casual clear"
+        },
+        {
+          "name": "Grandmaster Nightfalls",
+          "examples": "Weekly GM rotation",
+          "size": "3",
+          "typical_filters": "Power level cap, champion mods loaded, surge weapons"
+        },
+        {
+          "name": "Trials of Osiris",
+          "examples": "Weekend Trials, Flawless attempts",
+          "size": "3",
+          "typical_filters": "Glory rank, mic required, three-peeking, 5+ win card"
+        },
+        {
+          "name": "Pantheon 2.0",
+          "examples": "Weekly featured raid boss rotation",
+          "size": "6",
+          "typical_filters": "Encounter familiarity, score pushing, casual completion"
+        },
+        {
+          "name": "Crucible",
+          "examples": "Competitive, Iron Banner, Comp",
+          "size": "3-6",
+          "typical_filters": "Rank, mic, comp seriousness"
+        },
+        {
+          "name": "Custom Ops",
+          "examples": "Skull-modifier challenges",
+          "size": "1-6",
+          "typical_filters": "Modifier preference, score target"
+        }
       ],
       "weered_advantage": "Activity completions are verified server-side via the Bungie Post-Game Carnage Report (PGCR). Your tournament entries, challenge progress, and stat history are tied to actual API data — no trust-based 'I cleared it, I promise.' That same integration powers persistent crew membership and verified-tournament hosting that Bungie's own tools don't offer.",
       "faq": [
-        {"q": "Do I need to link my Bungie account to find a fireteam on Weered?", "a": "You can join the lobby and post LFG without linking. Bungie account linking is required only if you want your activity results to count toward tournaments, challenges, or persistent crew stats. Most casual fireteam-finding doesn't need it."},
-        {"q": "Is Weered's fireteam finder different from Bungie's in-game Fireteam Finder?", "a": "Yes. Bungie's tool is great for instant pickup fireteams within the Director. Weered focuses on what happens around the activity: persistent crews that stay together past one run, verified-via-PGCR tournament results, sherpa relationships, and post-run discussion in the forum."},
-        {"q": "Can I find a fireteam for Pantheon 2.0 or GM Nightfalls on Weered?", "a": "Yes. The Destiny 2 lobby on Weered has pinned rooms for raids, dungeons, GMs, Trials, Pantheon 2.0 races, and Custom Ops challenges. Each room is built for that specific activity's group-finding needs."},
-        {"q": "Is it free to find a fireteam on Weered?", "a": "Yes. Joining the Destiny 2 lobby and using the LFG system is free. Premium features (custom community branding, cosmetic flair) are optional paid extras."}
+        {
+          "q": "Do I need to link my Bungie account to find a fireteam on Weered?",
+          "a": "You can join the lobby and post LFG without linking. Bungie account linking is required only if you want your activity results to count toward tournaments, challenges, or persistent crew stats. Most casual fireteam-finding doesn't need it."
+        },
+        {
+          "q": "Is Weered's fireteam finder different from Bungie's in-game Fireteam Finder?",
+          "a": "Yes. Bungie's tool is great for instant pickup fireteams within the Director. Weered focuses on what happens around the activity: persistent crews that stay together past one run, verified-via-PGCR tournament results, sherpa relationships, and post-run discussion in the forum."
+        },
+        {
+          "q": "Can I find a fireteam for Pantheon 2.0 or GM Nightfalls on Weered?",
+          "a": "Yes. The Destiny 2 lobby on Weered has pinned rooms for raids, dungeons, GMs, Trials, Pantheon 2.0 races, and Custom Ops challenges. Each room is built for that specific activity's group-finding needs."
+        },
+        {
+          "q": "Is it free to find a fireteam on Weered?",
+          "a": "Yes. Joining the Destiny 2 lobby and using the LFG system is free. Premium features (custom community branding, cosmetic flair) are optional paid extras."
+        }
       ]
     },
     {
@@ -41,19 +88,61 @@
         "honest_take": "Riot's in-client team finder handles ad-hoc queue partners well, and Clash bracket signups handle the tournament side. Both are oriented around immediate queue fill rather than persistent community. Weered fills the gap for finding the same crew week after week, ranking up together, and coordinating Clash teams that actually communicate before tournament day."
       },
       "activity_types": [
-        {"name": "Ranked Solo/Duo", "examples": "Climbing ranked, duo synergy", "size": "1-2", "typical_filters": "Rank, role main, peak rank, time zone"},
-        {"name": "Flex Queue 5-stack", "examples": "Weekly flex sessions", "size": "5", "typical_filters": "Rank, role coverage, mic required"},
-        {"name": "Premier Division Teams", "examples": "Premier team formation", "size": "5", "typical_filters": "Division tier, role mains, scrim time"},
-        {"name": "Clash Tournament Teams", "examples": "Weekend Clash brackets", "size": "5", "typical_filters": "Tier eligibility, role coverage, full availability for one bracket window"},
-        {"name": "ARAM stacks", "examples": "Casual ARAM duos/trios", "size": "2-5", "typical_filters": "Casual vibe, no rank pressure"},
-        {"name": "Coaching / VOD review", "examples": "Higher-rank player reviewing lower-rank gameplay", "size": "1-1", "typical_filters": "Rank gap, specific role focus, free or paid"}
+        {
+          "name": "Ranked Solo/Duo",
+          "examples": "Climbing ranked, duo synergy",
+          "size": "1-2",
+          "typical_filters": "Rank, role main, peak rank, time zone"
+        },
+        {
+          "name": "Flex Queue 5-stack",
+          "examples": "Weekly flex sessions",
+          "size": "5",
+          "typical_filters": "Rank, role coverage, mic required"
+        },
+        {
+          "name": "Premier Division Teams",
+          "examples": "Premier team formation",
+          "size": "5",
+          "typical_filters": "Division tier, role mains, scrim time"
+        },
+        {
+          "name": "Clash Tournament Teams",
+          "examples": "Weekend Clash brackets",
+          "size": "5",
+          "typical_filters": "Tier eligibility, role coverage, full availability for one bracket window"
+        },
+        {
+          "name": "ARAM stacks",
+          "examples": "Casual ARAM duos/trios",
+          "size": "2-5",
+          "typical_filters": "Casual vibe, no rank pressure"
+        },
+        {
+          "name": "Coaching / VOD review",
+          "examples": "Higher-rank player reviewing lower-rank gameplay",
+          "size": "1-1",
+          "typical_filters": "Rank gap, specific role focus, free or paid"
+        }
       ],
       "weered_advantage": "Weered pulls your live Riot API data — verified summoner name, current ranked tier, top champion mastery, recent match history — so when you post LFG, prospective teammates can see who you actually are without having to trust a screenshot. The challenger leaderboard and free champion rotation live in the lobby too.",
       "faq": [
-        {"q": "Do I need to link my Riot account to find a team on Weered?", "a": "You can post LFG without linking, but linking your Riot ID lets the lobby pull your verified rank, role mains, and recent match data. That makes your LFG posts more credible and helps teammates filter for fit."},
-        {"q": "Can I find Clash teammates on Weered?", "a": "Yes. The League lobby has a Clash room for assembling and coordinating tournament rosters ahead of weekend brackets. Posting includes your tier eligibility, role coverage, and full-bracket availability."},
-        {"q": "Does Weered show ranked stats for League players?", "a": "Yes — verified through the Riot API. Summoner profile, current Solo/Duo and Flex tier, top champion mastery, and recent matches all pull live from Riot."},
-        {"q": "Is the League lobby on Weered free?", "a": "Yes. Joining and finding teammates is free. Premium tier exists for cosmetic flair and custom community branding but doesn't gate any LFG functionality."}
+        {
+          "q": "Do I need to link my Riot account to find a team on Weered?",
+          "a": "You can post LFG without linking, but linking your Riot ID lets the lobby pull your verified rank, role mains, and recent match data. That makes your LFG posts more credible and helps teammates filter for fit."
+        },
+        {
+          "q": "Can I find Clash teammates on Weered?",
+          "a": "Yes. The League lobby has a Clash room for assembling and coordinating tournament rosters ahead of weekend brackets. Posting includes your tier eligibility, role coverage, and full-bracket availability."
+        },
+        {
+          "q": "Does Weered show ranked stats for League players?",
+          "a": "Yes — verified through the Riot API. Summoner profile, current Solo/Duo and Flex tier, top champion mastery, and recent matches all pull live from Riot."
+        },
+        {
+          "q": "Is the League lobby on Weered free?",
+          "a": "Yes. Joining and finding teammates is free. Premium tier exists for cosmetic flair and custom community branding but doesn't gate any LFG functionality."
+        }
       ]
     },
     {
@@ -68,19 +157,61 @@
         "honest_take": "The MTG LFG landscape is fragmented across Discord servers (per-format, per-region), the official Spelltable lobby, and various Facebook groups. None of them have rich Scryfall + deck-platform integration in chat. Weered's MTG lobby leans into that integration: paste a Moxfield link, see the deck details inline; type [[Sol Ring]], see the card image. Makes pod-finding conversations way faster."
       },
       "activity_types": [
-        {"name": "Commander / EDH pods", "examples": "Casual 4-player Commander", "size": "4", "typical_filters": "Power level 1-10, salt level, proxy policy, time zone"},
-        {"name": "cEDH (competitive Commander)", "examples": "Optimized 4-player cEDH", "size": "4", "typical_filters": "Deck tier, no proxy / proxy-friendly, fast play"},
-        {"name": "Brew night", "examples": "Jank decks, weird strategies, no-tier-list zone", "size": "4", "typical_filters": "Anti-meta vibe, casual feedback"},
-        {"name": "Modern / Pioneer / Legacy", "examples": "1v1 competitive constructed", "size": "2", "typical_filters": "Format, archetype, platform (MTGO/paper)"},
-        {"name": "Limited (sealed, draft)", "examples": "Cube draft, set draft, sealed", "size": "4-8", "typical_filters": "Cube list, set, schedule"},
-        {"name": "Cube draft", "examples": "Custom cube drafts", "size": "4-8", "typical_filters": "Cube link, schedule, platform"}
+        {
+          "name": "Commander / EDH pods",
+          "examples": "Casual 4-player Commander",
+          "size": "4",
+          "typical_filters": "Power level 1-10, salt level, proxy policy, time zone"
+        },
+        {
+          "name": "cEDH (competitive Commander)",
+          "examples": "Optimized 4-player cEDH",
+          "size": "4",
+          "typical_filters": "Deck tier, no proxy / proxy-friendly, fast play"
+        },
+        {
+          "name": "Brew night",
+          "examples": "Jank decks, weird strategies, no-tier-list zone",
+          "size": "4",
+          "typical_filters": "Anti-meta vibe, casual feedback"
+        },
+        {
+          "name": "Modern / Pioneer / Legacy",
+          "examples": "1v1 competitive constructed",
+          "size": "2",
+          "typical_filters": "Format, archetype, platform (MTGO/paper)"
+        },
+        {
+          "name": "Limited (sealed, draft)",
+          "examples": "Cube draft, set draft, sealed",
+          "size": "4-8",
+          "typical_filters": "Cube list, set, schedule"
+        },
+        {
+          "name": "Cube draft",
+          "examples": "Custom cube drafts",
+          "size": "4-8",
+          "typical_filters": "Cube link, schedule, platform"
+        }
       ],
       "weered_advantage": "Inline Scryfall card lookups ([[Card Name]] in chat), Moxfield + Archidekt deck-link embeds with commander, color identity, and card count rendered automatically, and persistent rooms so the same Friday-night pod doesn't have to re-find each other every week. Lobby presence shows who's online and what platform (paper, MTGO, Spelltable).",
       "faq": [
-        {"q": "How do I find a Commander pod on Weered?", "a": "Open the MTG lobby, go to the Commander room, post your power level (1-10), play schedule, and platform (paper webcam, Spelltable, MTGO, Tabletop Simulator). Other players reply with their decks (Moxfield/Archidekt links render with commander, colors, and card count inline)."},
-        {"q": "Does Weered have card image previews in chat?", "a": "Yes. Type [[Card Name]] in any MTG-lobby chat and the card image, mana cost, and oracle text render inline via Scryfall. Works for any printed card."},
-        {"q": "Can I share Moxfield or Archidekt decks in the MTG lobby?", "a": "Yes — paste the deck URL and it renders as a rich chip showing commander, color identity, card count, and format. No need to open a separate tab to evaluate someone's deck."},
-        {"q": "Does Weered support cEDH or just casual Commander?", "a": "Both. The Commander room covers casual pods (power 1-7), and the cEDH room handles optimized 4-player cEDH with no-proxy/proxy-friendly filtering."}
+        {
+          "q": "How do I find a Commander pod on Weered?",
+          "a": "Open the MTG lobby, go to the Commander room, post your power level (1-10), play schedule, and platform (paper webcam, Spelltable, MTGO, Tabletop Simulator). Other players reply with their decks (Moxfield/Archidekt links render with commander, colors, and card count inline)."
+        },
+        {
+          "q": "Does Weered have card image previews in chat?",
+          "a": "Yes. Type [[Card Name]] in any MTG-lobby chat and the card image, mana cost, and oracle text render inline via Scryfall. Works for any printed card."
+        },
+        {
+          "q": "Can I share Moxfield or Archidekt decks in the MTG lobby?",
+          "a": "Yes — paste the deck URL and it renders as a rich chip showing commander, color identity, card count, and format. No need to open a separate tab to evaluate someone's deck."
+        },
+        {
+          "q": "Does Weered support cEDH or just casual Commander?",
+          "a": "Both. The Commander room covers casual pods (power 1-7), and the cEDH room handles optimized 4-player cEDH with no-proxy/proxy-friendly filtering."
+        }
       ]
     },
     {
@@ -95,17 +226,49 @@
         "honest_take": "Helldivers 2's SOS beacon does its job for ad-hoc joiners on a mission in progress. Where it falls short is everything pre-deployment: planning a Helldive run on a specific planet, coordinating Major Order pushes, building a recurring squad that drops together every week. The Weered Helldivers lobby fills that planning + persistent-squad layer."
       },
       "activity_types": [
-        {"name": "Helldive / Super Helldive runs", "examples": "9-10 difficulty operations", "size": "4", "typical_filters": "Difficulty cap, mic required, faction (Terminid/Automaton/Illuminate), loadout coordination"},
-        {"name": "Major Order pushes", "examples": "Active community-objective operations", "size": "4", "typical_filters": "Specific planet/sector, sample farming vs liberation focus"},
-        {"name": "Sample / super-credit farming", "examples": "Resource-focused operations", "size": "4", "typical_filters": "Difficulty, planet, mission type"},
-        {"name": "Casual democracy", "examples": "Lower-difficulty squad-up", "size": "1-4", "typical_filters": "Chill vibe, mic optional, any difficulty"}
+        {
+          "name": "Helldive / Super Helldive runs",
+          "examples": "9-10 difficulty operations",
+          "size": "4",
+          "typical_filters": "Difficulty cap, mic required, faction (Terminid/Automaton/Illuminate), loadout coordination"
+        },
+        {
+          "name": "Major Order pushes",
+          "examples": "Active community-objective operations",
+          "size": "4",
+          "typical_filters": "Specific planet/sector, sample farming vs liberation focus"
+        },
+        {
+          "name": "Sample / super-credit farming",
+          "examples": "Resource-focused operations",
+          "size": "4",
+          "typical_filters": "Difficulty, planet, mission type"
+        },
+        {
+          "name": "Casual democracy",
+          "examples": "Lower-difficulty squad-up",
+          "size": "1-4",
+          "typical_filters": "Chill vibe, mic optional, any difficulty"
+        }
       ],
       "weered_advantage": "Lobby includes a live war map module showing current Major Orders, planet status, and faction pressure — squads form around the actual community objectives, not abstract LFG. Persistent rooms mean the same squad you ran with on Wednesday isn't lost on Friday.",
       "faq": [
-        {"q": "Can I find a Helldive squad on Weered?", "a": "Yes. The Helldivers 2 lobby has rooms for Helldive and Super Helldive difficulty, plus rooms for Major Order pushes and lower-difficulty casual squads. Post your loadout, faction preference, and mic requirement."},
-        {"q": "Does Weered show the live Helldivers 2 war map?", "a": "Yes. The lobby has a war map module pulling live community-objective data so squads form around current Major Orders and active planet pushes."},
-        {"q": "Is the Helldivers 2 lobby on Weered free?", "a": "Yes — joining and finding squads is free. Premium tier exists for cosmetic flair but doesn't gate any LFG functionality."},
-        {"q": "Do I need to link my Steam account to find a Helldivers squad?", "a": "No. You can join the lobby and post LFG with any Weered account (Steam, Xbox, PSN, or email). Linking Steam adds presence (other members can see you're in-game)."}
+        {
+          "q": "Can I find a Helldive squad on Weered?",
+          "a": "Yes. The Helldivers 2 lobby has rooms for Helldive and Super Helldive difficulty, plus rooms for Major Order pushes and lower-difficulty casual squads. Post your loadout, faction preference, and mic requirement."
+        },
+        {
+          "q": "Does Weered show the live Helldivers 2 war map?",
+          "a": "Yes. The lobby has a war map module pulling live community-objective data so squads form around current Major Orders and active planet pushes."
+        },
+        {
+          "q": "Is the Helldivers 2 lobby on Weered free?",
+          "a": "Yes — joining and finding squads is free. Premium tier exists for cosmetic flair but doesn't gate any LFG functionality."
+        },
+        {
+          "q": "Do I need to link my Steam account to find a Helldivers squad?",
+          "a": "No. You can join the lobby and post LFG with any Weered account (Steam, Xbox, PSN, or email). Linking Steam adds presence (other members can see you're in-game)."
+        }
       ]
     },
     {
@@ -120,18 +283,55 @@
         "honest_take": "PoE's in-game party-finding channel works for instant party joins. Discord servers handle persistent league-launch crews and boss-service coordination. Neither has GGG-authenticated character data inline or rich rooms organized by activity. Weered's PoE lobby is built around the league cycle: pre-launch crew formation, day-1 leveling, mapping rotation, endgame chase."
       },
       "activity_types": [
-        {"name": "League launch crews", "examples": "Day-1 leveling party, fresh-economy mapping group", "size": "2-6", "typical_filters": "League name, target play time, hardcore/SC, voice required"},
-        {"name": "Mapping parties", "examples": "T16 rotation, atlas completion, juiced maps", "size": "2-6", "typical_filters": "Map tier, juice level, MF responsibility, atlas completion %"},
-        {"name": "Boss services", "examples": "Uber boss carries, voidstones, pinnacle bosses", "size": "1-6", "typical_filters": "Boss tier, payment (free/exalts/divines), proof of completion"},
-        {"name": "Currency trade coordination", "examples": "Bulk trades, standing exchanges, real-time negotiation", "size": "1-2", "typical_filters": "Currency pair, volume, hot trade time"},
-        {"name": "Lab / Heist runs", "examples": "Uber Lab carries, contract/blueprint heists", "size": "1-6", "typical_filters": "Lab difficulty, heist target, key requirement"}
+        {
+          "name": "League launch crews",
+          "examples": "Day-1 leveling party, fresh-economy mapping group",
+          "size": "2-6",
+          "typical_filters": "League name, target play time, hardcore/SC, voice required"
+        },
+        {
+          "name": "Mapping parties",
+          "examples": "T16 rotation, atlas completion, juiced maps",
+          "size": "2-6",
+          "typical_filters": "Map tier, juice level, MF responsibility, atlas completion %"
+        },
+        {
+          "name": "Boss services",
+          "examples": "Uber boss carries, voidstones, pinnacle bosses",
+          "size": "1-6",
+          "typical_filters": "Boss tier, payment (free/exalts/divines), proof of completion"
+        },
+        {
+          "name": "Currency trade coordination",
+          "examples": "Bulk trades, standing exchanges, real-time negotiation",
+          "size": "1-2",
+          "typical_filters": "Currency pair, volume, hot trade time"
+        },
+        {
+          "name": "Lab / Heist runs",
+          "examples": "Uber Lab carries, contract/blueprint heists",
+          "size": "1-6",
+          "typical_filters": "Lab difficulty, heist target, key requirement"
+        }
       ],
       "weered_advantage": "GGG OAuth linking shows your verified active character, ascendancy, and league participation — so boss-service requests come with real proof of completion, and league-launch crews can size up actual progression. Rooms are organized around the league cycle (launch → mapping → endgame → wind-down) so finding the right party doesn't require digging through unrelated chat.",
       "faq": [
-        {"q": "How do I find a Path of Exile party for league launch?", "a": "Open the PoE lobby on Weered before the league starts. The league-launch crew room handles day-1 party formation: post your target play time, hardcore/SC preference, voice requirement, and goal (leveling, mapping rotation, MF crew). Most crews form 2-3 days before launch."},
-        {"q": "Can I find boss-service runners on Weered?", "a": "Yes. The boss-service room covers Uber bosses, voidstones, and pinnacle fights. Service runners post their pricing (free, exalts, divines), tier eligibility, and recent proof of completion via linked GGG character."},
-        {"q": "Does the Weered PoE lobby link to my GGG account?", "a": "Yes — optional GGG OAuth linking pulls your active character, ascendancy, league participation, and recent boss completions. Makes LFG posts credible without screenshot proof."},
-        {"q": "Is the PoE lobby on Weered free to use?", "a": "Yes. Joining the PoE lobby and finding parties is free. Premium tier exists for cosmetic flair but doesn't gate party-finding."}
+        {
+          "q": "How do I find a Path of Exile party for league launch?",
+          "a": "Open the PoE lobby on Weered before the league starts. The league-launch crew room handles day-1 party formation: post your target play time, hardcore/SC preference, voice requirement, and goal (leveling, mapping rotation, MF crew). Most crews form 2-3 days before launch."
+        },
+        {
+          "q": "Can I find boss-service runners on Weered?",
+          "a": "Yes. The boss-service room covers Uber bosses, voidstones, and pinnacle fights. Service runners post their pricing (free, exalts, divines), tier eligibility, and recent proof of completion via linked GGG character."
+        },
+        {
+          "q": "Does the Weered PoE lobby link to my GGG account?",
+          "a": "Yes — optional GGG OAuth linking pulls your active character, ascendancy, league participation, and recent boss completions. Makes LFG posts credible without screenshot proof."
+        },
+        {
+          "q": "Is the PoE lobby on Weered free to use?",
+          "a": "Yes. Joining the PoE lobby and finding parties is free. Premium tier exists for cosmetic flair but doesn't gate party-finding."
+        }
       ]
     },
     {
@@ -146,19 +346,61 @@
         "honest_take": "D&D LFG is heavily fragmented: r/lfg for free games, StartPlaying for paid DMs, Roll20's LFG board for platform-specific groups, D&D Beyond forums for 5e-focused matchmaking. Each has its niche. Weered's D&D lobby focuses on persistent groups that stay together past one session — the recurring Tuesday-night campaign rather than the one-shot pickup."
       },
       "activity_types": [
-        {"name": "Long-form campaigns", "examples": "Recurring weekly campaigns, multi-month arcs", "size": "3-6 + DM", "typical_filters": "Edition, schedule (day/time), experience level, tone, in-person/online platform"},
-        {"name": "DMs seeking players", "examples": "DM has a campaign concept, building the table", "size": "DM + 3-5", "typical_filters": "Campaign concept, system, schedule, experience level required"},
-        {"name": "Players seeking campaign", "examples": "Player available for the right group", "size": "1", "typical_filters": "Edition preference, schedule availability, experience level, character concept"},
-        {"name": "One-shots and pickup games", "examples": "Single-session adventures, convention modules", "size": "3-6 + DM", "typical_filters": "Module, system, schedule (one date)"},
-        {"name": "West marches / drop-in", "examples": "Persistent world with rotating players", "size": "Variable", "typical_filters": "World setting, session schedule, character creation rules"},
-        {"name": "Alternative systems", "examples": "Pathfinder, Call of Cthulhu, OSR, Blades in the Dark", "size": "3-6 + GM", "typical_filters": "System, schedule, experience"}
+        {
+          "name": "Long-form campaigns",
+          "examples": "Recurring weekly campaigns, multi-month arcs",
+          "size": "3-6 + DM",
+          "typical_filters": "Edition, schedule (day/time), experience level, tone, in-person/online platform"
+        },
+        {
+          "name": "DMs seeking players",
+          "examples": "DM has a campaign concept, building the table",
+          "size": "DM + 3-5",
+          "typical_filters": "Campaign concept, system, schedule, experience level required"
+        },
+        {
+          "name": "Players seeking campaign",
+          "examples": "Player available for the right group",
+          "size": "1",
+          "typical_filters": "Edition preference, schedule availability, experience level, character concept"
+        },
+        {
+          "name": "One-shots and pickup games",
+          "examples": "Single-session adventures, convention modules",
+          "size": "3-6 + DM",
+          "typical_filters": "Module, system, schedule (one date)"
+        },
+        {
+          "name": "West marches / drop-in",
+          "examples": "Persistent world with rotating players",
+          "size": "Variable",
+          "typical_filters": "World setting, session schedule, character creation rules"
+        },
+        {
+          "name": "Alternative systems",
+          "examples": "Pathfinder, Call of Cthulhu, OSR, Blades in the Dark",
+          "size": "3-6 + GM",
+          "typical_filters": "System, schedule, experience"
+        }
       ],
       "weered_advantage": "Persistent rooms designed around tabletop's recurring-schedule rhythm (most D&D LFG tools optimize for one-shot pickups). The voice rooms support full session playback, and the forum layer handles campaign session-zero discussions, character backstories, and between-session play.",
       "faq": [
-        {"q": "How do I find a D&D group online on Weered?", "a": "Open the D&D lobby and pick the room matched to what you want: 'Players seeking campaign,' 'DMs seeking players,' 'One-shots and pickups,' or system-specific rooms (Pathfinder, OSR, etc.). Post your preferred edition, schedule, tone preference, and experience level."},
-        {"q": "Can I find a DM on Weered or only fellow players?", "a": "Both. The lobby has dedicated rooms for DMs seeking players (DM posts the campaign concept and recruits a table) and players seeking campaigns (player posts availability and character preferences)."},
-        {"q": "Does Weered support systems other than D&D 5e?", "a": "Yes. The lobby has rooms or post tags for Pathfinder, OSR, Call of Cthulhu, Blades in the Dark, and other systems. 5e is the largest by traffic but the lobby is system-agnostic."},
-        {"q": "Is the D&D lobby on Weered free?", "a": "Yes. Joining the lobby, posting LFG, using voice rooms for sessions, and the forum layer are all free. Premium tier exists for cosmetic flair but doesn't gate any tabletop functionality."}
+        {
+          "q": "How do I find a D&D group online on Weered?",
+          "a": "Open the D&D lobby and pick the room matched to what you want: 'Players seeking campaign,' 'DMs seeking players,' 'One-shots and pickups,' or system-specific rooms (Pathfinder, OSR, etc.). Post your preferred edition, schedule, tone preference, and experience level."
+        },
+        {
+          "q": "Can I find a DM on Weered or only fellow players?",
+          "a": "Both. The lobby has dedicated rooms for DMs seeking players (DM posts the campaign concept and recruits a table) and players seeking campaigns (player posts availability and character preferences)."
+        },
+        {
+          "q": "Does Weered support systems other than D&D 5e?",
+          "a": "Yes. The lobby has rooms or post tags for Pathfinder, OSR, Call of Cthulhu, Blades in the Dark, and other systems. 5e is the largest by traffic but the lobby is system-agnostic."
+        },
+        {
+          "q": "Is the D&D lobby on Weered free?",
+          "a": "Yes. Joining the lobby, posting LFG, using voice rooms for sessions, and the forum layer are all free. Premium tier exists for cosmetic flair but doesn't gate any tabletop functionality."
+        }
       ]
     }
   ]

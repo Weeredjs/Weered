@@ -45,21 +45,17 @@ export default async function paperRoutes(app: FastifyInstance, opts: Opts) {
         .slice(0, 200);
       if (!toUsername) return reply.code(400).send({ ok: false, error: "recipient_required" });
       if (amount < TIP_MIN)
-        return reply
-          .code(400)
-          .send({
-            ok: false,
-            error: "amount_too_low",
-            message: `Minimum tip is ${TIP_MIN} Paper.`,
-          });
+        return reply.code(400).send({
+          ok: false,
+          error: "amount_too_low",
+          message: `Minimum tip is ${TIP_MIN} Paper.`,
+        });
       if (amount > TIP_MAX)
-        return reply
-          .code(400)
-          .send({
-            ok: false,
-            error: "amount_too_high",
-            message: `Maximum tip is ${TIP_MAX.toLocaleString()} Paper.`,
-          });
+        return reply.code(400).send({
+          ok: false,
+          error: "amount_too_high",
+          message: `Maximum tip is ${TIP_MAX.toLocaleString()} Paper.`,
+        });
 
       try {
         const recipient = await prisma.user.findFirst({
@@ -67,13 +63,11 @@ export default async function paperRoutes(app: FastifyInstance, opts: Opts) {
           select: { id: true, name: true },
         });
         if (!recipient)
-          return reply
-            .code(404)
-            .send({
-              ok: false,
-              error: "recipient_not_found",
-              message: `No user named @${toUsername}.`,
-            });
+          return reply.code(404).send({
+            ok: false,
+            error: "recipient_not_found",
+            message: `No user named @${toUsername}.`,
+          });
         if (recipient.id === u.id)
           return reply.code(400).send({ ok: false, error: "cannot_self_tip" });
 

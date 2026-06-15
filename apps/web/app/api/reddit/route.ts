@@ -5,8 +5,10 @@ function xmlText(xml: string, tag: string): string {
   if (!m) return "";
   return m[1]
     .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1")
-    .replace(/&lt;/g, "<").replace(/&gt;/g, ">")
-    .replace(/&amp;/g, "&").replace(/&quot;/g, '"')
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&amp;/g, "&")
+    .replace(/&quot;/g, '"')
     .trim();
 }
 
@@ -32,19 +34,22 @@ function parseAtomEntries(feed: string): any[] {
   while ((m = entryRe.exec(feed)) !== null) {
     const block = m[1];
 
-    const title   = stripHtml(xmlText(block, "title"));
+    const title = stripHtml(xmlText(block, "title"));
     const content = xmlText(block, "content");
 
     const authorBlock = block.match(/<author>([\s\S]*?)<\/author>/i)?.[1] || "";
     const author = xmlText(authorBlock, "name").replace(/^\/u\//i, "");
 
-    const linkMatch = block.match(/<link[^>]*rel="alternate"[^>]*href="([^"]+)"/i)
-                   || block.match(/<link[^>]*href="([^"]+)"/i);
+    const linkMatch =
+      block.match(/<link[^>]*rel="alternate"[^>]*href="([^"]+)"/i) ||
+      block.match(/<link[^>]*href="([^"]+)"/i);
     const link = linkMatch ? linkMatch[1] : "";
 
     const updated = xmlText(block, "updated") || xmlText(block, "published");
     let created_utc = 0;
-    try { created_utc = Math.floor(new Date(updated).getTime() / 1000); } catch {}
+    try {
+      created_utc = Math.floor(new Date(updated).getTime() / 1000);
+    } catch {}
 
     const catMatch = block.match(/<category[^>]*label="r\/([^"]+)"/i);
     const subreddit = catMatch ? catMatch[1] : "";
@@ -76,7 +81,18 @@ function parseAtomEntries(feed: string): any[] {
       }
     }
 
-    items.push({ id, title, author, score: 0, num_comments, created_utc, permalink, selftext, url, subreddit });
+    items.push({
+      id,
+      title,
+      author,
+      score: 0,
+      num_comments,
+      created_utc,
+      permalink,
+      selftext,
+      url,
+      subreddit,
+    });
   }
 
   return items;
@@ -84,7 +100,7 @@ function parseAtomEntries(feed: string): any[] {
 
 export async function GET(req: Request) {
   const u = new URL(req.url);
-  const subRaw  = (u.searchParams.get("sub")  || "").trim();
+  const subRaw = (u.searchParams.get("sub") || "").trim();
   const sortRaw = (u.searchParams.get("sort") || "hot").trim().toLowerCase();
 
   const sub = subRaw.replace(/^r\//i, "");
@@ -100,7 +116,7 @@ export async function GET(req: Request) {
     const r = await fetch(feedUrl, {
       headers: {
         "User-Agent": "Mozilla/5.0 (compatible; WeeredBot/1.0; +https://weered.ca)",
-        "Accept": "application/atom+xml, application/rss+xml, application/xml, text/xml",
+        Accept: "application/atom+xml, application/rss+xml, application/xml, text/xml",
       },
       cache: "no-store",
     });
@@ -108,7 +124,7 @@ export async function GET(req: Request) {
     if (!r.ok) {
       return new Response(
         JSON.stringify({ ok: false, status: r.status, error: `Reddit returned ${r.status}` }),
-        { status: 502 }
+        { status: 502 },
       );
     }
 
@@ -116,7 +132,7 @@ export async function GET(req: Request) {
   } catch (e: any) {
     return new Response(
       JSON.stringify({ ok: false, error: String(e?.message || "fetch failed") }),
-      { status: 502 }
+      { status: 502 },
     );
   }
 
@@ -130,6 +146,6 @@ export async function GET(req: Request) {
         "Content-Type": "application/json; charset=utf-8",
         "Cache-Control": "public, max-age=30, s-maxage=120, stale-while-revalidate=180",
       },
-    }
+    },
   );
 }

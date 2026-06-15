@@ -32,8 +32,14 @@ import { FONT, StampHeader } from "@/components/Brand";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 const AVATAR_COLORS = [
-  "#5800E5", "#e85d75", "#f59e0b", "#22c55e",
-  "#06b6d4", "#a855f7", "#ef4444", "#eab308",
+  "#5800E5",
+  "#e85d75",
+  "#f59e0b",
+  "#22c55e",
+  "#06b6d4",
+  "#a855f7",
+  "#ef4444",
+  "#eab308",
 ];
 
 function MeInner() {
@@ -81,28 +87,41 @@ function MeInner() {
   });
 
   const saveColor = useMutation({
-    mutationFn: (hex: string) => api("/profile/me", { method: "PATCH", body: { avatarColor: hex } }),
+    mutationFn: (hex: string) =>
+      api("/profile/me", { method: "PATCH", body: { avatarColor: hex } }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["profile", me?.id] }),
     onError: (e: any) => Alert.alert("Couldn't save color", e?.message || "Unknown error"),
   });
 
   const uploadAvatar = useMutation({
-    mutationFn: (dataUrl: string) => api<{ avatar?: string; error?: string; message?: string }>("/profile/avatar/upload", { method: "POST", body: { image: dataUrl } }),
+    mutationFn: (dataUrl: string) =>
+      api<{ avatar?: string; error?: string; message?: string }>("/profile/avatar/upload", {
+        method: "POST",
+        body: { image: dataUrl },
+      }),
     onSuccess: (r) => {
       if (r.error) Alert.alert("Couldn't upload", r.message || r.error);
-      else { Alert.alert("Avatar updated"); qc.invalidateQueries({ queryKey: ["profile", me?.id] }); }
+      else {
+        Alert.alert("Avatar updated");
+        qc.invalidateQueries({ queryKey: ["profile", me?.id] });
+      }
     },
     onError: (e: any) => Alert.alert("Couldn't upload", e?.message || "Unknown error"),
   });
 
   async function pickAvatar() {
     let ImagePicker: any;
-    try { ImagePicker = require("expo-image-picker"); } catch (e: any) {
+    try {
+      ImagePicker = require("expo-image-picker");
+    } catch (e: any) {
       Alert.alert("Image picker unavailable", "Reload the app after installing expo-image-picker.");
       return;
     }
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!perm.granted) { Alert.alert("Permission needed", "Give photos access to pick an avatar."); return; }
+    if (!perm.granted) {
+      Alert.alert("Permission needed", "Give photos access to pick an avatar.");
+      return;
+    }
     const res = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
@@ -124,7 +143,14 @@ function MeInner() {
 
   if (!me) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: "#0c0b0a", alignItems: "center", justifyContent: "center" }}>
+      <SafeAreaView
+        style={{
+          flex: 1,
+          backgroundColor: "#0c0b0a",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
         <Text style={{ color: "rgba(203,213,225,0.72)" }}>Not signed in.</Text>
       </SafeAreaView>
     );
@@ -153,20 +179,74 @@ function MeInner() {
             borderBottomColor: "rgba(88,0,229,0.35)",
           }}
         >
-          <View style={{ width: 80, height: 2, backgroundColor: "#5800E5", marginBottom: 14, opacity: 0.6 }} />
-          <Pressable onPress={pickAvatar} style={{ shadowColor: "#5800E5", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.5, shadowRadius: 12, elevation: 6 }}>
+          <View
+            style={{
+              width: 80,
+              height: 2,
+              backgroundColor: "#5800E5",
+              marginBottom: 14,
+              opacity: 0.6,
+            }}
+          />
+          <Pressable
+            onPress={pickAvatar}
+            style={{
+              shadowColor: "#5800E5",
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.5,
+              shadowRadius: 12,
+              elevation: 6,
+            }}
+          >
             <Avatar name={me.name} url={profile?.avatar || me.avatar} size={104} />
             {uploadAvatar.isPending && (
-              <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(0,0,0,0.5)", borderRadius: 52 }}>
+              <View
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  backgroundColor: "rgba(0,0,0,0.5)",
+                  borderRadius: 52,
+                }}
+              >
                 <ActivityIndicator color="#fff" />
               </View>
             )}
           </Pressable>
-          <Text style={{ color: "rgba(203,213,225,0.5)", fontSize: 10, fontFamily: FONT.uiBold, letterSpacing: 1.4, marginTop: 6, textTransform: "uppercase" }}>Tap to change · Indicted+</Text>
-          <Text style={{ color: "rgba(243,244,246,0.98)", fontFamily: FONT.display, fontSize: 32, letterSpacing: 0.8, marginTop: 8 }}>{me.name}</Text>
+          <Text
+            style={{
+              color: "rgba(203,213,225,0.5)",
+              fontSize: 10,
+              fontFamily: FONT.uiBold,
+              letterSpacing: 1.4,
+              marginTop: 6,
+              textTransform: "uppercase",
+            }}
+          >
+            Tap to change · Indicted+
+          </Text>
+          <Text
+            style={{
+              color: "rgba(243,244,246,0.98)",
+              fontFamily: FONT.display,
+              fontSize: 32,
+              letterSpacing: 0.8,
+              marginTop: 8,
+            }}
+          >
+            {me.name}
+          </Text>
           <View style={{ flexDirection: "row", alignItems: "center", marginTop: 8, gap: 6 }}>
-            {profile?.globalRole && profile.globalRole !== "USER" && <RoleChip role={profile.globalRole} size={16} />}
-            {profile?.tier && profile.tier !== "INNOCENT" && <TierChip tier={profile.tier} size={16} />}
+            {profile?.globalRole && profile.globalRole !== "USER" && (
+              <RoleChip role={profile.globalRole} size={16} />
+            )}
+            {profile?.tier && profile.tier !== "INNOCENT" && (
+              <TierChip tier={profile.tier} size={16} />
+            )}
           </View>
         </View>
 
@@ -211,7 +291,10 @@ function MeInner() {
                       <Text className="text-white font-bold text-sm">Save</Text>
                     </Pressable>
                     <Pressable
-                      onPress={() => { setBio(profile.bio || ""); setEditingBio(false); }}
+                      onPress={() => {
+                        setBio(profile.bio || "");
+                        setEditingBio(false);
+                      }}
                       className="bg-panel border border-border px-4 py-2 rounded-lg active:opacity-80"
                     >
                       <Text className="text-weered-muted font-bold text-sm">Cancel</Text>
@@ -220,7 +303,11 @@ function MeInner() {
                 </View>
               ) : (
                 <Pressable onPress={() => setEditingBio(true)} className="active:opacity-70">
-                  <Text className={profile.bio ? "text-weered-text text-sm" : "text-weered-muted text-sm italic"}>
+                  <Text
+                    className={
+                      profile.bio ? "text-weered-text text-sm" : "text-weered-muted text-sm italic"
+                    }
+                  >
                     {profile.bio || "Tap to add a bio"}
                   </Text>
                 </Pressable>
@@ -232,7 +319,10 @@ function MeInner() {
                 {AVATAR_COLORS.map((hex) => (
                   <Pressable
                     key={hex}
-                    onPress={() => { setColor(hex); saveColor.mutate(hex); }}
+                    onPress={() => {
+                      setColor(hex);
+                      saveColor.mutate(hex);
+                    }}
                     style={{
                       width: 36,
                       height: 36,
@@ -260,45 +350,113 @@ function MeInner() {
 
         <View style={{ marginTop: 6 }}>
           <DossierSection title="Identity">
-            <NavTile icon="trophy-outline" label="Notoriety" tone="gold" onPress={() => router.push("/notoriety")} />
-            <NavTile icon="bag-handle-outline" label="Inventory" onPress={() => router.push("/inventory")} />
-            <NavTile icon="pulse-outline" label="Activity" onPress={() => router.push("/activity")} />
+            <NavTile
+              icon="trophy-outline"
+              label="Notoriety"
+              tone="gold"
+              onPress={() => router.push("/notoriety")}
+            />
+            <NavTile
+              icon="bag-handle-outline"
+              label="Inventory"
+              onPress={() => router.push("/inventory")}
+            />
+            <NavTile
+              icon="pulse-outline"
+              label="Activity"
+              onPress={() => router.push("/activity")}
+            />
           </DossierSection>
 
           <DossierSection title="Circle">
             <NavTile icon="people-outline" label="Crews" onPress={() => router.push("/crews")} />
-            <NavTile icon="chatbubbles-outline" label="Forum" onPress={() => router.push("/forum")} />
+            <NavTile
+              icon="chatbubbles-outline"
+              label="Forum"
+              onPress={() => router.push("/forum")}
+            />
             <NavTile icon="mail-outline" label="Invites" onPress={() => router.push("/invites")} />
-            <NavTile icon="share-social-outline" label="Share" onPress={() => Share.share({ message: `Join me on Weered — ${WEB_BASE}`, url: WEB_BASE }).catch(() => {})} />
+            <NavTile
+              icon="share-social-outline"
+              label="Share"
+              onPress={() =>
+                Share.share({ message: `Join me on Weered — ${WEB_BASE}`, url: WEB_BASE }).catch(
+                  () => {},
+                )
+              }
+            />
           </DossierSection>
 
           <DossierSection title="Games & Goods">
-            <NavTile icon="cash-outline" label="Store" tone="gold" onPress={() => router.push("/store")} />
-            <NavTile icon="storefront-outline" label="Market" onPress={() => router.push("/market")} />
-            <NavTile icon="flag-outline" label="Challenges" onPress={() => router.push("/challenges")} />
-            <NavTile icon="ribbon-outline" label="Tournaments" tone="gold" onPress={() => router.push("/tournaments")} />
-            <NavTile icon="flame-outline" label="Hot" tone="red" onPress={() => router.push("/hot")} />
+            <NavTile
+              icon="cash-outline"
+              label="Store"
+              tone="gold"
+              onPress={() => router.push("/store")}
+            />
+            <NavTile
+              icon="storefront-outline"
+              label="Market"
+              onPress={() => router.push("/market")}
+            />
+            <NavTile
+              icon="flag-outline"
+              label="Challenges"
+              onPress={() => router.push("/challenges")}
+            />
+            <NavTile
+              icon="ribbon-outline"
+              label="Tournaments"
+              tone="gold"
+              onPress={() => router.push("/tournaments")}
+            />
+            <NavTile
+              icon="flame-outline"
+              label="Hot"
+              tone="red"
+              onPress={() => router.push("/hot")}
+            />
             <NavTile icon="newspaper-outline" label="News" onPress={() => router.push("/news")} />
           </DossierSection>
 
           <DossierSection title="Account">
-            <NavTile icon="settings-outline" label="Settings" onPress={() => router.push("/settings")} />
-            <NavTile icon="diamond-outline" label="Subscribe" tone="purple" onPress={() => router.push("/subscribe")} />
+            <NavTile
+              icon="settings-outline"
+              label="Settings"
+              onPress={() => router.push("/settings")}
+            />
+            <NavTile
+              icon="diamond-outline"
+              label="Subscribe"
+              tone="purple"
+              onPress={() => router.push("/subscribe")}
+            />
             {["GOD", "STAFF", "ADMIN", "SUPPORT"].includes(String(profile?.globalRole || "")) && (
-              <NavTile icon="shield-checkmark-outline" label="Staff" tone="gold" onPress={() => router.push("/staff")} />
+              <NavTile
+                icon="shield-checkmark-outline"
+                label="Staff"
+                tone="gold"
+                onPress={() => router.push("/staff")}
+              />
             )}
           </DossierSection>
         </View>
 
         <View className="px-3 mt-2">
           <Pressable
-            onPress={() => Alert.alert("Sign out?", "You'll need to sign in again to use Weered.", [
-              { text: "Cancel", style: "cancel" },
-              {
-                text: "Sign out", style: "destructive",
-                onPress: () => { signOut(); router.replace("/login"); },
-              },
-            ])}
+            onPress={() =>
+              Alert.alert("Sign out?", "You'll need to sign in again to use Weered.", [
+                { text: "Cancel", style: "cancel" },
+                {
+                  text: "Sign out",
+                  style: "destructive",
+                  onPress: () => {
+                    signOut();
+                    router.replace("/login");
+                  },
+                },
+              ])
+            }
             className="active:opacity-80 mt-4 mx-1"
             style={{
               backgroundColor: "rgba(239,68,68,0.1)",
@@ -308,7 +466,16 @@ function MeInner() {
               borderRadius: 4,
             }}
           >
-            <Text style={{ color: "#ef4444", fontFamily: FONT.uiBold, textAlign: "center", letterSpacing: 2, textTransform: "uppercase", fontSize: 14 }}>
+            <Text
+              style={{
+                color: "#ef4444",
+                fontFamily: FONT.uiBold,
+                textAlign: "center",
+                letterSpacing: 2,
+                textTransform: "uppercase",
+                fontSize: 14,
+              }}
+            >
               Sign out
             </Text>
           </Pressable>
@@ -318,7 +485,9 @@ function MeInner() {
           <View className="items-center mt-6 mb-2">
             <Text className="text-weered-muted/60 text-[10px]">
               Weered mobile v{Constants.expoConfig?.version || "0.1.0"}
-              {Constants.expoConfig?.runtimeVersion ? ` · rt ${Constants.expoConfig.runtimeVersion}` : ""}
+              {Constants.expoConfig?.runtimeVersion
+                ? ` · rt ${Constants.expoConfig.runtimeVersion}`
+                : ""}
             </Text>
           </View>
         </View>
@@ -330,13 +499,13 @@ function MeInner() {
 function FooterLinks() {
   const [open, setOpen] = useState(false);
   const links: { label: string; path: string; icon: keyof typeof Ionicons.glyphMap }[] = [
-    { label: "About",         path: "/about",      icon: "information-circle-outline" },
-    { label: "Premium",       path: "/premium",    icon: "diamond-outline" },
-    { label: "Guidelines",    path: "/guidelines", icon: "book-outline" },
-    { label: "Contact",       path: "/contact",    icon: "mail-outline" },
-    { label: "Apply to Mod",  path: "/apply",      icon: "shield-outline" },
-    { label: "Terms",         path: "/terms",      icon: "document-text-outline" },
-    { label: "Privacy",       path: "/privacy",    icon: "lock-closed-outline" },
+    { label: "About", path: "/about", icon: "information-circle-outline" },
+    { label: "Premium", path: "/premium", icon: "diamond-outline" },
+    { label: "Guidelines", path: "/guidelines", icon: "book-outline" },
+    { label: "Contact", path: "/contact", icon: "mail-outline" },
+    { label: "Apply to Mod", path: "/apply", icon: "shield-outline" },
+    { label: "Terms", path: "/terms", icon: "document-text-outline" },
+    { label: "Privacy", path: "/privacy", icon: "lock-closed-outline" },
   ];
   return (
     <View className="mt-5">
@@ -357,14 +526,36 @@ function FooterLinks() {
       >
         <View className="flex-row items-center">
           <Ionicons name="link-outline" size={14} color="rgba(203,213,225,0.7)" />
-          <Text style={{ color: "rgba(203,213,225,0.8)", fontFamily: "monospace", fontWeight: "900", fontSize: 11, letterSpacing: 1.5, textTransform: "uppercase", marginLeft: 8 }}>
+          <Text
+            style={{
+              color: "rgba(203,213,225,0.8)",
+              fontFamily: "monospace",
+              fontWeight: "900",
+              fontSize: 11,
+              letterSpacing: 1.5,
+              textTransform: "uppercase",
+              marginLeft: 8,
+            }}
+          >
             About & Links
           </Text>
         </View>
-        <Ionicons name={open ? "chevron-up" : "chevron-down"} size={14} color="rgba(203,213,225,0.5)" />
+        <Ionicons
+          name={open ? "chevron-up" : "chevron-down"}
+          size={14}
+          color="rgba(203,213,225,0.5)"
+        />
       </Pressable>
       {open && (
-        <View className="mx-1 mt-1" style={{ backgroundColor: "#0d0c12", borderWidth: 1, borderColor: "rgba(255,255,255,0.06)", borderRadius: 4 }}>
+        <View
+          className="mx-1 mt-1"
+          style={{
+            backgroundColor: "#0d0c12",
+            borderWidth: 1,
+            borderColor: "rgba(255,255,255,0.06)",
+            borderRadius: 4,
+          }}
+        >
           {links.map((l, i) => (
             <Pressable
               key={l.path}
@@ -380,7 +571,18 @@ function FooterLinks() {
               }}
             >
               <Ionicons name={l.icon} size={14} color="rgba(203,213,225,0.6)" />
-              <Text style={{ color: "rgba(203,213,225,0.85)", fontFamily: "monospace", fontWeight: "700", fontSize: 12, letterSpacing: 1.2, textTransform: "uppercase", marginLeft: 10, flex: 1 }}>
+              <Text
+                style={{
+                  color: "rgba(203,213,225,0.85)",
+                  fontFamily: "monospace",
+                  fontWeight: "700",
+                  fontSize: 12,
+                  letterSpacing: 1.2,
+                  textTransform: "uppercase",
+                  marginLeft: 10,
+                  flex: 1,
+                }}
+              >
                 {l.label}
               </Text>
               <Ionicons name="open-outline" size={13} color="rgba(203,213,225,0.4)" />
@@ -395,7 +597,18 @@ function FooterLinks() {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <View style={{ paddingHorizontal: 16, paddingTop: 20 }}>
-      <Text style={{ color: "rgba(203,213,225,0.72)", fontFamily: FONT.uiBold, fontSize: 12, letterSpacing: 1.6, textTransform: "uppercase", marginBottom: 8 }}>{title}</Text>
+      <Text
+        style={{
+          color: "rgba(203,213,225,0.72)",
+          fontFamily: FONT.uiBold,
+          fontSize: 12,
+          letterSpacing: 1.6,
+          textTransform: "uppercase",
+          marginBottom: 8,
+        }}
+      >
+        {title}
+      </Text>
       {children}
     </View>
   );
@@ -415,7 +628,10 @@ function DossierSection({ title, children }: { title: string; children: React.Re
 }
 
 function NavTile({
-  icon, label, onPress, tone = "default",
+  icon,
+  label,
+  onPress,
+  tone = "default",
 }: {
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
@@ -423,10 +639,34 @@ function NavTile({
   tone?: "default" | "gold" | "purple" | "red";
 }) {
   const colors = {
-    default: { bg: "#15131a", border: "rgba(255,255,255,0.1)",  icon: "#d1d5db", text: "rgba(243,244,246,0.92)", shadow: "transparent" },
-    gold:    { bg: "#1a1408", border: "rgba(245,183,0,0.45)",   icon: "#f5b700", text: "#f5b700",                shadow: "#f5b700" },
-    purple:  { bg: "#160a24", border: "rgba(88,0,229,0.5)",     icon: "#a78bfa", text: "#a78bfa",                shadow: "#5800E5" },
-    red:     { bg: "#1a0a0a", border: "rgba(239,68,68,0.4)",    icon: "#f87171", text: "#f87171",                shadow: "#ef4444" },
+    default: {
+      bg: "#15131a",
+      border: "rgba(255,255,255,0.1)",
+      icon: "#d1d5db",
+      text: "rgba(243,244,246,0.92)",
+      shadow: "transparent",
+    },
+    gold: {
+      bg: "#1a1408",
+      border: "rgba(245,183,0,0.45)",
+      icon: "#f5b700",
+      text: "#f5b700",
+      shadow: "#f5b700",
+    },
+    purple: {
+      bg: "#160a24",
+      border: "rgba(88,0,229,0.5)",
+      icon: "#a78bfa",
+      text: "#a78bfa",
+      shadow: "#5800E5",
+    },
+    red: {
+      bg: "#1a0a0a",
+      border: "rgba(239,68,68,0.4)",
+      icon: "#f87171",
+      text: "#f87171",
+      shadow: "#ef4444",
+    },
   };
   const c = colors[tone];
   return (

@@ -12,7 +12,9 @@ export default function VoicePanel({ roomId }: { roomId: string }) {
   const [conn, setConn] = useState<Conn>("disconnected");
   const [err, setErr] = useState<string>("");
   const [micOn, setMicOn] = useState<boolean>(false);
-  const [participants, setParticipants] = useState<{ id: string; name: string; isLocal: boolean }[]>([]);
+  const [participants, setParticipants] = useState<
+    { id: string; name: string; isLocal: boolean }[]
+  >([]);
 
   const roomRef = useRef<Room | null>(null);
   const audioRootRef = useRef<HTMLDivElement | null>(null);
@@ -27,12 +29,20 @@ export default function VoicePanel({ roomId }: { roomId: string }) {
 
   function syncRoster() {
     const r = roomRef.current;
-    if (!r) { setParticipants([]); return; }
+    if (!r) {
+      setParticipants([]);
+      return;
+    }
 
     const list: { id: string; name: string; isLocal: boolean }[] = [];
-    if (r.localParticipant) list.push({ id: r.localParticipant.identity, name: r.localParticipant.name || "Me", isLocal: true });
+    if (r.localParticipant)
+      list.push({
+        id: r.localParticipant.identity,
+        name: r.localParticipant.name || "Me",
+        isLocal: true,
+      });
 
-    (((r as any).participants ?? (r as any).remoteParticipants) ?? new Map()).forEach((p: any) => {
+    ((r as any).participants ?? (r as any).remoteParticipants ?? new Map()).forEach((p: any) => {
       list.push({ id: p.identity, name: p.name || p.identity, isLocal: false });
     });
 
@@ -48,7 +58,7 @@ export default function VoicePanel({ roomId }: { roomId: string }) {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ roomId }),
       });
@@ -75,7 +85,9 @@ export default function VoicePanel({ roomId }: { roomId: string }) {
 
       room.on(RoomEvent.TrackUnsubscribed, (track) => {
         if (track.kind !== Track.Kind.Audio) return;
-        try { track.detach().forEach((n) => n.remove()); } catch {}
+        try {
+          track.detach().forEach((n) => n.remove());
+        } catch {}
       });
 
       room.on(RoomEvent.ParticipantConnected, syncRoster);
@@ -97,7 +109,9 @@ export default function VoicePanel({ roomId }: { roomId: string }) {
     } catch (e: any) {
       setErr(String(e?.message || e || "voice_error"));
       setConn("error");
-      try { roomRef.current?.disconnect(); } catch {}
+      try {
+        roomRef.current?.disconnect();
+      } catch {}
       roomRef.current = null;
       clearAudio();
     }
@@ -105,7 +119,9 @@ export default function VoicePanel({ roomId }: { roomId: string }) {
 
   async function disconnect() {
     setErr("");
-    try { roomRef.current?.disconnect(); } catch {}
+    try {
+      roomRef.current?.disconnect();
+    } catch {}
     roomRef.current = null;
     clearAudio();
     setMicOn(false);
@@ -123,20 +139,41 @@ export default function VoicePanel({ roomId }: { roomId: string }) {
 
   useEffect(() => {
     return () => {
-      try { roomRef.current?.disconnect(); } catch {}
+      try {
+        roomRef.current?.disconnect();
+      } catch {}
       roomRef.current = null;
       clearAudio();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const card: React.CSSProperties = { border: "1px solid var(--weered-border)", borderRadius: 14, padding: 12, background: "rgba(15,23,42,.92)" };
-  const btn: React.CSSProperties = { border: "1px solid var(--weered-border)", borderRadius: 10, padding: "6px 10px", background: "rgba(15,23,42,.92)", cursor: "pointer", fontSize: 13 };
-  const pill: React.CSSProperties = { border: "1px solid var(--weered-border)", borderRadius: 999, padding: "2px 8px", fontSize: 12, background: "#fafafa" };
+  const card: React.CSSProperties = {
+    border: "1px solid var(--weered-border)",
+    borderRadius: 14,
+    padding: 12,
+    background: "rgba(15,23,42,.92)",
+  };
+  const btn: React.CSSProperties = {
+    border: "1px solid var(--weered-border)",
+    borderRadius: 10,
+    padding: "6px 10px",
+    background: "rgba(15,23,42,.92)",
+    cursor: "pointer",
+    fontSize: 13,
+  };
+  const pill: React.CSSProperties = {
+    border: "1px solid var(--weered-border)",
+    borderRadius: 999,
+    padding: "2px 8px",
+    fontSize: 12,
+    background: "#fafafa",
+  };
 
   return (
     <div style={card}>
-      <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center" }}>
+      <div
+        style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center" }}
+      >
         <div>
           <div style={{ fontWeight: 900 }}>Voice</div>
           <div style={{ fontSize: 12, color: "#666", marginTop: 4 }}>
@@ -148,28 +185,40 @@ export default function VoicePanel({ roomId }: { roomId: string }) {
 
         <div style={{ display: "flex", gap: 8 }}>
           {conn !== "connected" ? (
-            <button style={{ ...btn, opacity: btnDisabled ? 0.6 : 1 }} disabled={btnDisabled} onClick={connect}>Connect</button>
+            <button
+              style={{ ...btn, opacity: btnDisabled ? 0.6 : 1 }}
+              disabled={btnDisabled}
+              onClick={connect}
+            >
+              Connect
+            </button>
           ) : (
             <>
-              <button style={btn} onClick={toggleMic}>{micOn ? "Mute" : "Unmute"}</button>
-              <button style={btn} onClick={disconnect}>Disconnect</button>
+              <button style={btn} onClick={toggleMic}>
+                {micOn ? "Mute" : "Unmute"}
+              </button>
+              <button style={btn} onClick={disconnect}>
+                Disconnect
+              </button>
             </>
           )}
         </div>
       </div>
 
-      {err ? (
-        <div style={{ marginTop: 10, fontSize: 12, color: "#b00" }}>
-          {err}
-        </div>
-      ) : null}
+      {err ? <div style={{ marginTop: 10, fontSize: 12, color: "#b00" }}>{err}</div> : null}
 
       <div style={{ marginTop: 10 }}>
         <div style={{ fontWeight: 800, fontSize: 13 }}>Participants</div>
         <div style={{ marginTop: 6, display: "flex", flexWrap: "wrap", gap: 6 }}>
-          {participants.length ? participants.map((p) => (
-            <span key={p.id} style={pill}>{p.isLocal ? "me" : p.name}</span>
-          )) : <span style={{ fontSize: 12, color: "#666" }}>None</span>}
+          {participants.length ? (
+            participants.map((p) => (
+              <span key={p.id} style={pill}>
+                {p.isLocal ? "me" : p.name}
+              </span>
+            ))
+          ) : (
+            <span style={{ fontSize: 12, color: "#666" }}>None</span>
+          )}
         </div>
       </div>
 
@@ -177,4 +226,3 @@ export default function VoicePanel({ roomId }: { roomId: string }) {
     </div>
   );
 }
-

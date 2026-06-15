@@ -2,7 +2,11 @@ import { API_BASE } from "./config";
 import { getAuthToken } from "./storage";
 
 export class ApiError extends Error {
-  constructor(public status: number, message: string, public body?: unknown) {
+  constructor(
+    public status: number,
+    message: string,
+    public body?: unknown,
+  ) {
     super(message);
     this.name = "ApiError";
   }
@@ -30,9 +34,14 @@ export async function api<T = unknown>(path: string, opts: FetchOptions = {}): P
   });
   const text = await res.text();
   let parsed: unknown;
-  try { parsed = text ? JSON.parse(text) : null; } catch { parsed = text; }
+  try {
+    parsed = text ? JSON.parse(text) : null;
+  } catch {
+    parsed = text;
+  }
   if (!res.ok) {
-    const message = (parsed as any)?.error || (parsed as any)?.message || res.statusText || "Request failed";
+    const message =
+      (parsed as any)?.error || (parsed as any)?.message || res.statusText || "Request failed";
     throw new ApiError(res.status, message, parsed);
   }
   return parsed as T;

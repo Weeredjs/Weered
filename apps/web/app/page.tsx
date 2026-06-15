@@ -41,7 +41,9 @@ export default function Page() {
         html[data-weered-authed] .lp-authed-splash { display: grid; }
         html[data-weered-authed] .lp-root { display: none; }
       `}</style>
-      <div className="lp-authed-splash"><InitialSplash /></div>
+      <div className="lp-authed-splash">
+        <InitialSplash />
+      </div>
       <Landing nextPath={nextPath} />
     </>
   );
@@ -49,18 +51,20 @@ export default function Page() {
 
 function InitialSplash() {
   return (
-    <div style={{
-      minHeight: "100vh",
-      display: "grid",
-      placeItems: "center",
-      background: "#1a1a1c",
-      color: "rgba(198,188,168,.65)",
-      fontFamily: "var(--font-rajdhani), 'Rajdhani', system-ui, sans-serif",
-      fontSize: 13,
-      fontWeight: 600,
-      letterSpacing: "0.18em",
-      textTransform: "uppercase",
-    }}>
+    <div
+      style={{
+        minHeight: "100vh",
+        display: "grid",
+        placeItems: "center",
+        background: "#1a1a1c",
+        color: "rgba(198,188,168,.65)",
+        fontFamily: "var(--font-rajdhani), 'Rajdhani', system-ui, sans-serif",
+        fontSize: 13,
+        fontWeight: 600,
+        letterSpacing: "0.18em",
+        textTransform: "uppercase",
+      }}
+    >
       connecting…
     </div>
   );
@@ -818,21 +822,30 @@ function Landing({ nextPath }: { nextPath: string }) {
           <div className="lp-nav-links">
             <a href="#inside">The lobbies</a>
             <a href="#different">Why it's different</a>
-            <Link href={getIn} className="lp-getin">get_in()</Link>
+            <Link href={getIn} className="lp-getin">
+              get_in()
+            </Link>
           </div>
         </nav>
 
         <section className="lp-hero">
           <div className="lp-eyebrow">Bringing back the game lobby</div>
           <h1 className="lp-headline">
-            Every game<br />gets a lobby.
+            Every game
+            <br />
+            gets a lobby.
           </h1>
           <p className="lp-sub">
-            Voice rooms, crews, and live game presence, built into a place that actually knows what you're playing. It does more than the launcher you already have, and it's free.
+            Voice rooms, crews, and live game presence, built into a place that actually knows what
+            you're playing. It does more than the launcher you already have, and it's free.
           </p>
           <div className="lp-hero-cta">
-            <Link href={getIn} className="lp-btn-primary">get_in()</Link>
-            <a href="#inside" className="lp-btn-secondary">See the lobbies →</a>
+            <Link href={getIn} className="lp-btn-primary">
+              get_in()
+            </Link>
+            <a href="#inside" className="lp-btn-secondary">
+              See the lobbies →
+            </a>
           </div>
         </section>
 
@@ -841,7 +854,8 @@ function Landing({ nextPath }: { nextPath: string }) {
         <section id="inside" className="lp-section">
           <h2 className="lp-section-title">The lobbies are open.</h2>
           <p className="lp-section-sub">
-            Every tile is a real lobby with real members. Click one to peek inside (read-only), then get_in() to actually sit at the table.
+            Every tile is a real lobby with real members. Click one to peek inside (read-only), then
+            get_in() to actually sit at the table.
           </p>
           <LobbyWall loginHref={getIn} />
         </section>
@@ -855,25 +869,32 @@ function Landing({ nextPath }: { nextPath: string }) {
             <div className="lp-diff-row">
               <div className="lp-diff-mark">✓</div>
               <div className="lp-diff-text">
-                <strong>No invite links.</strong> Communities are discoverable by default. Lobbies live on the front page. People find you because they care about what you do, not because someone slid them a link.
+                <strong>No invite links.</strong> Communities are discoverable by default. Lobbies
+                live on the front page. People find you because they care about what you do, not
+                because someone slid them a link.
               </div>
             </div>
             <div className="lp-diff-row">
               <div className="lp-diff-mark">✓</div>
               <div className="lp-diff-text">
-                <strong>Game integrations are apps, not bots.</strong> Your Destiny clan leader can actually manage loadouts from inside Weered. Your League room shows real match state. This isn't a chat command. It's a real UI layer with authenticated context per user.
+                <strong>Game integrations are apps, not bots.</strong> Your Destiny clan leader can
+                actually manage loadouts from inside Weered. Your League room shows real match
+                state. This isn't a chat command. It's a real UI layer with authenticated context
+                per user.
               </div>
             </div>
             <div className="lp-diff-row">
               <div className="lp-diff-mark">✓</div>
               <div className="lp-diff-text">
-                <strong>An economy that works.</strong> Earning notoriety means something. Paper buys stuff. Tournaments have stakes. Your presence on the platform leaves marks.
+                <strong>An economy that works.</strong> Earning notoriety means something. Paper
+                buys stuff. Tournaments have stakes. Your presence on the platform leaves marks.
               </div>
             </div>
             <div className="lp-diff-row">
               <div className="lp-diff-mark">✓</div>
               <div className="lp-diff-text">
-                <strong>Not just gaming.</strong> The same platform serves gamers, pickleballers, fishermen, storm chasers, and D&D tables. Pick your vertical and the tools match it.
+                <strong>Not just gaming.</strong> The same platform serves gamers, pickleballers,
+                fishermen, storm chasers, and D&D tables. Pick your vertical and the tools match it.
               </div>
             </div>
           </div>
@@ -882,7 +903,9 @@ function Landing({ nextPath }: { nextPath: string }) {
         <section className="lp-foot-cta">
           <h3>Get in.</h3>
           <p>Free. Takes 30 seconds. Pick a handle and you're running.</p>
-          <Link href={getIn} className="lp-btn-primary">get_in()</Link>
+          <Link href={getIn} className="lp-btn-primary">
+            get_in()
+          </Link>
         </section>
 
         <footer className="lp-footer">
@@ -917,21 +940,33 @@ function LobbyWall({ loginHref }: { loginHref: string }) {
         if (!alive) return;
         if (Array.isArray(j?.lobbies)) setLobbies(j.lobbies);
         else setError(true);
-      } catch { if (alive) setError(true); }
+      } catch {
+        if (alive) setError(true);
+      }
     })();
-    return () => { alive = false; };
+    return () => {
+      alive = false;
+    };
   }, []);
 
   if (lobbies === null && !error) {
-    return <div style={{ padding: 24, color: "rgba(198,188,168,.55)", fontSize: 13 }}>Lighting the lanterns…</div>;
+    return (
+      <div style={{ padding: 24, color: "rgba(198,188,168,.55)", fontSize: 13 }}>
+        Lighting the lanterns…
+      </div>
+    );
   }
   if (error || (lobbies && !lobbies.length)) {
-    return <div style={{ padding: 24, color: "rgba(198,188,168,.55)", fontSize: 13 }}>The wall will fill in shortly.</div>;
+    return (
+      <div style={{ padding: 24, color: "rgba(198,188,168,.55)", fontSize: 13 }}>
+        The wall will fill in shortly.
+      </div>
+    );
   }
   return (
     <>
       <div className="lp-wall">
-        {lobbies!.map(l => (
+        {lobbies!.map((l) => (
           <LandingLobbyCard key={l.id} lobby={l} onOpen={setOpen} />
         ))}
       </div>

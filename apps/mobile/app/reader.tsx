@@ -48,7 +48,9 @@ export default function Reader() {
       />
 
       {q.isLoading ? (
-        <View className="flex-1 items-center justify-center"><ActivityIndicator color="#5800E5" /></View>
+        <View className="flex-1 items-center justify-center">
+          <ActivityIndicator color="#5800E5" />
+        </View>
       ) : q.error || !q.data?.title ? (
         <View className="flex-1 items-center justify-center px-8">
           <Text className="text-red-400 text-sm text-center mb-3">Couldn't extract article.</Text>
@@ -62,7 +64,11 @@ export default function Reader() {
       ) : (
         <ScrollView contentContainerStyle={{ paddingBottom: 40 }}>
           {q.data.image && (
-            <Image source={{ uri: q.data.image }} style={{ width: "100%", height: 220, backgroundColor: "#1a1a1a" }} resizeMode="cover" />
+            <Image
+              source={{ uri: q.data.image }}
+              style={{ width: "100%", height: 220, backgroundColor: "#1a1a1a" }}
+              resizeMode="cover"
+            />
           )}
           <View className="px-4 pt-4">
             <Text className="text-weered-muted text-xs uppercase tracking-wide mb-1">
@@ -90,7 +96,13 @@ function ArticleBody({ body }: { body: string }) {
             <Image
               key={i}
               source={{ uri: m[2] }}
-              style={{ width: "100%", aspectRatio: 16 / 9, borderRadius: 8, marginVertical: 12, backgroundColor: "#1a1a1a" }}
+              style={{
+                width: "100%",
+                aspectRatio: 16 / 9,
+                borderRadius: 8,
+                marginVertical: 12,
+                backgroundColor: "#1a1a1a",
+              }}
               resizeMode="cover"
             />
           );

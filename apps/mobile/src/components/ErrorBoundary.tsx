@@ -33,23 +33,49 @@ export class ErrorBoundary extends React.Component<Props, State> {
     if (!this.state.error) return this.props.children;
     const msg = this.state.error.message || String(this.state.error);
     return (
-      <ScrollView style={{ flex: 1, backgroundColor: "#0c0b0a" }} contentContainerStyle={{ padding: 20, paddingTop: 60 }}>
+      <ScrollView
+        style={{ flex: 1, backgroundColor: "#0c0b0a" }}
+        contentContainerStyle={{ padding: 20, paddingTop: 60 }}
+      >
         <Text style={{ color: "#fca5a5", fontSize: 16, fontWeight: "800", marginBottom: 8 }}>
           {this.props.label || "Screen"} crashed.
         </Text>
-        <Text style={{ color: "rgba(243,244,246,0.85)", fontSize: 13, marginBottom: 12, fontFamily: "monospace" }}>
+        <Text
+          style={{
+            color: "rgba(243,244,246,0.85)",
+            fontSize: 13,
+            marginBottom: 12,
+            fontFamily: "monospace",
+          }}
+        >
           {msg}
         </Text>
         {this.state.error.stack ? (
-          <View style={{ backgroundColor: "rgba(255,255,255,0.04)", borderRadius: 8, padding: 12, marginBottom: 16 }}>
-            <Text style={{ color: "rgba(203,213,225,0.7)", fontSize: 11, fontFamily: "monospace" }} selectable>
+          <View
+            style={{
+              backgroundColor: "rgba(255,255,255,0.04)",
+              borderRadius: 8,
+              padding: 12,
+              marginBottom: 16,
+            }}
+          >
+            <Text
+              style={{ color: "rgba(203,213,225,0.7)", fontSize: 11, fontFamily: "monospace" }}
+              selectable
+            >
               {String(this.state.error.stack).split("\n").slice(0, 30).join("\n")}
             </Text>
           </View>
         ) : null}
         <Pressable
           onPress={this.reset}
-          style={{ backgroundColor: "#5800E5", paddingVertical: 12, paddingHorizontal: 18, borderRadius: 10, alignSelf: "flex-start" }}
+          style={{
+            backgroundColor: "#5800E5",
+            paddingVertical: 12,
+            paddingHorizontal: 18,
+            borderRadius: 10,
+            alignSelf: "flex-start",
+          }}
         >
           <Text style={{ color: "white", fontWeight: "800" }}>Try again</Text>
         </Pressable>

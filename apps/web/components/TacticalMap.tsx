@@ -11,7 +11,9 @@ function authHeaders(): Record<string, string> {
   try {
     const t = localStorage.getItem("weered_token") || localStorage.getItem("token") || "";
     return t ? { Authorization: `Bearer ${t}` } : {};
-  } catch { return {}; }
+  } catch {
+    return {};
+  }
 }
 
 export type MapData = {
@@ -76,83 +78,134 @@ export default function TacticalMap({ roomId }: Props) {
   const [measureA, setMeasureA] = useState<{ x: number; y: number } | null>(null);
   const [measureB, setMeasureB] = useState<{ x: number; y: number } | null>(null);
 
-  const dragRef = useRef<{ tokenId: string; offsetCx: number; offsetCy: number; lastX: number; lastY: number } | null>(null);
-  const panRef = useRef<{ startX: number; startY: number; origX: number; origY: number } | null>(null);
+  const dragRef = useRef<{
+    tokenId: string;
+    offsetCx: number;
+    offsetCy: number;
+    lastX: number;
+    lastY: number;
+  } | null>(null);
+  const panRef = useRef<{ startX: number; startY: number; origX: number; origY: number } | null>(
+    null,
+  );
   const fogPaintRef = useRef<Set<string> | null>(null);
 
   const fogKey = (x: number, y: number) => `${x},${y}`;
 
   const reload = useCallback(async () => {
     try {
-      const r = await fetch(`${API}/maps/${encodeURIComponent(roomId)}`, { headers: authHeaders() });
+      const r = await fetch(`${API}/maps/${encodeURIComponent(roomId)}`, {
+        headers: authHeaders(),
+      });
       const j = await r.json();
       if (!j?.ok) return;
       setIsDM(Boolean(j.isDM));
       if (!j.map) {
-        setMap(null); setTokens([]); setFog(new Set()); setImgLoaded(false);
+        setMap(null);
+        setTokens([]);
+        setFog(new Set());
+        setImgLoaded(false);
         return;
       }
       setMap(j.map);
       setTokens(j.tokens || []);
       const f = new Set<string>();
-      for (const c of (j.fogReveals || [])) f.add(fogKey(c.x, c.y));
+      for (const c of j.fogReveals || []) f.add(fogKey(c.x, c.y));
       setFog(f);
     } catch {}
   }, [roomId]);
 
-  useEffect(() => { reload(); }, [reload]);
+  useEffect(() => {
+    reload();
+  }, [reload]);
 
   useEffect(() => {
-    if (!map?.imageUrl) { setImgLoaded(false); return; }
+    if (!map?.imageUrl) {
+      setImgLoaded(false);
+      return;
+    }
     const img = new Image();
-    img.onload = () => { imgRef.current = img; setImgLoaded(true); };
-    img.onerror = () => { setImgLoaded(false); };
-    img.src = map.imageUrl.startsWith("http") || map.imageUrl.startsWith("/") ? map.imageUrl : `/${map.imageUrl}`;
-    return () => { };
+    img.onload = () => {
+      imgRef.current = img;
+      setImgLoaded(true);
+    };
+    img.onerror = () => {
+      setImgLoaded(false);
+    };
+    img.src =
+      map.imageUrl.startsWith("http") || map.imageUrl.startsWith("/")
+        ? map.imageUrl
+        : `/${map.imageUrl}`;
+    return () => {};
   }, [map?.imageUrl]);
 
   useEffect(() => {
     function onCreated(ev: any) {
-      const d = ev?.detail; if (!d || d.roomId !== roomId) return;
+      const d = ev?.detail;
+      if (!d || d.roomId !== roomId) return;
       reload();
     }
     function onUpdated(ev: any) {
-      const d = ev?.detail; if (!d || d.roomId !== roomId || !d.map) return;
-      setMap(prev => prev && prev.id === d.map.id ? { ...prev, ...d.map } : d.map);
+      const d = ev?.detail;
+      if (!d || d.roomId !== roomId || !d.map) return;
+      setMap((prev) => (prev && prev.id === d.map.id ? { ...prev, ...d.map } : d.map));
     }
     function onDeleted(ev: any) {
-      const d = ev?.detail; if (!d || d.roomId !== roomId) return;
-      setMap(null); setTokens([]); setFog(new Set());
+      const d = ev?.detail;
+      if (!d || d.roomId !== roomId) return;
+      setMap(null);
+      setTokens([]);
+      setFog(new Set());
     }
     function onTokenAdd(ev: any) {
-      const d = ev?.detail; if (!d || d.roomId !== roomId || !d.token) return;
-      setTokens(prev => prev.find(t => t.id === d.token.id) ? prev : [...prev, d.token]);
+      const d = ev?.detail;
+      if (!d || d.roomId !== roomId || !d.token) return;
+      setTokens((prev) => (prev.find((t) => t.id === d.token.id) ? prev : [...prev, d.token]));
     }
     function onTokenUpdate(ev: any) {
-      const d = ev?.detail; if (!d || d.roomId !== roomId || !d.token) return;
-      setTokens(prev => prev.map(t => t.id === d.token.id ? { ...t, ...d.token } : t));
+      const d = ev?.detail;
+      if (!d || d.roomId !== roomId || !d.token) return;
+      setTokens((prev) => prev.map((t) => (t.id === d.token.id ? { ...t, ...d.token } : t)));
     }
     function onTokenRemove(ev: any) {
-      const d = ev?.detail; if (!d || d.roomId !== roomId || !d.tokenId) return;
-      setTokens(prev => prev.filter(t => t.id !== d.tokenId));
+      const d = ev?.detail;
+      if (!d || d.roomId !== roomId || !d.tokenId) return;
+      setTokens((prev) => prev.filter((t) => t.id !== d.tokenId));
     }
     function onTokenMove(ev: any) {
-      const d = ev?.detail; if (!d || d.roomId !== roomId || !d.tokenId) return;
-      setTokens(prev => prev.map(t => t.id === d.tokenId ? { ...t, x: Number(d.x), y: Number(d.y) } : t));
+      const d = ev?.detail;
+      if (!d || d.roomId !== roomId || !d.tokenId) return;
+      setTokens((prev) =>
+        prev.map((t) => (t.id === d.tokenId ? { ...t, x: Number(d.x), y: Number(d.y) } : t)),
+      );
     }
     function onFogReveal(ev: any) {
-      const d = ev?.detail; if (!d || d.roomId !== roomId || !Array.isArray(d.cells)) return;
-      setFog(prev => { const next = new Set(prev); for (const c of d.cells) next.add(fogKey(c.x, c.y)); return next; });
+      const d = ev?.detail;
+      if (!d || d.roomId !== roomId || !Array.isArray(d.cells)) return;
+      setFog((prev) => {
+        const next = new Set(prev);
+        for (const c of d.cells) next.add(fogKey(c.x, c.y));
+        return next;
+      });
     }
     function onFogClear(ev: any) {
-      const d = ev?.detail; if (!d || d.roomId !== roomId) return;
-      if (d.all) { setFog(new Set()); return; }
+      const d = ev?.detail;
+      if (!d || d.roomId !== roomId) return;
+      if (d.all) {
+        setFog(new Set());
+        return;
+      }
       if (Array.isArray(d.cells)) {
-        setFog(prev => { const next = new Set(prev); for (const c of d.cells) next.delete(fogKey(c.x, c.y)); return next; });
+        setFog((prev) => {
+          const next = new Set(prev);
+          for (const c of d.cells) next.delete(fogKey(c.x, c.y));
+          return next;
+        });
       }
     }
     function onInitiative(ev: any) {
-      const d = ev?.detail; if (!d || d.roomId !== roomId) return;
+      const d = ev?.detail;
+      if (!d || d.roomId !== roomId) return;
       const list = d.combatants || [];
       const turn = typeof d.currentTurn === "number" ? d.currentTurn : 0;
       const sorted = [...list].sort((a: any, b: any) => b.initiative - a.initiative);
@@ -186,27 +239,39 @@ export default function TacticalMap({ roomId }: Props) {
   useEffect(() => {
     if (!activeCombatantId) return;
     let raf = 0;
-    const tick = () => { setPulse(p => (p + 1) % 1000); raf = requestAnimationFrame(tick); };
+    const tick = () => {
+      setPulse((p) => (p + 1) % 1000);
+      raf = requestAnimationFrame(tick);
+    };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
   }, [activeCombatantId]);
 
-  const pxToCell = useCallback((px: number, py: number) => {
-    if (!map) return { x: 0, y: 0 };
-    return { x: px / map.gridSize, y: py / map.gridSize };
-  }, [map]);
+  const pxToCell = useCallback(
+    (px: number, py: number) => {
+      if (!map) return { x: 0, y: 0 };
+      return { x: px / map.gridSize, y: py / map.gridSize };
+    },
+    [map],
+  );
 
-  const screenToWorld = useCallback((sx: number, sy: number) => {
-    const c = canvasRef.current; if (!c) return { x: 0, y: 0 };
-    const r = c.getBoundingClientRect();
-    const cx = (sx - r.left - pan.x) / zoom;
-    const cy = (sy - r.top - pan.y) / zoom;
-    return { x: cx, y: cy };
-  }, [zoom, pan]);
+  const screenToWorld = useCallback(
+    (sx: number, sy: number) => {
+      const c = canvasRef.current;
+      if (!c) return { x: 0, y: 0 };
+      const r = c.getBoundingClientRect();
+      const cx = (sx - r.left - pan.x) / zoom;
+      const cy = (sy - r.top - pan.y) / zoom;
+      return { x: cx, y: cy };
+    },
+    [zoom, pan],
+  );
 
   useEffect(() => {
-    const c = canvasRef.current; if (!c) return;
-    const wrap = wrapRef.current; if (!wrap) return;
+    const c = canvasRef.current;
+    if (!c) return;
+    const wrap = wrapRef.current;
+    if (!wrap) return;
     const dpr = window.devicePixelRatio || 1;
     const rect = wrap.getBoundingClientRect();
     if (c.width !== Math.floor(rect.width * dpr) || c.height !== Math.floor(rect.height * dpr)) {
@@ -215,7 +280,8 @@ export default function TacticalMap({ roomId }: Props) {
       c.style.width = `${rect.width}px`;
       c.style.height = `${rect.height}px`;
     }
-    const ctx = c.getContext("2d"); if (!ctx) return;
+    const ctx = c.getContext("2d");
+    if (!ctx) return;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, rect.width, rect.height);
 
@@ -247,7 +313,8 @@ export default function TacticalMap({ roomId }: Props) {
         ctx.globalCompositeOperation = "destination-out";
         for (const k of fog) {
           const [xs, ys] = k.split(",");
-          const x = parseInt(xs, 10), y = parseInt(ys, 10);
+          const x = parseInt(xs, 10),
+            y = parseInt(ys, 10);
           ctx.fillRect(x * map.gridSize, y * map.gridSize, map.gridSize, map.gridSize);
         }
         ctx.restore();
@@ -273,21 +340,24 @@ export default function TacticalMap({ roomId }: Props) {
       ctx.beginPath();
       for (let i = 0; i <= cellsX; i++) {
         const x = i * map.gridSize;
-        ctx.moveTo(x, 0); ctx.lineTo(x, map.heightPx);
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, map.heightPx);
       }
       for (let j = 0; j <= cellsY; j++) {
         const y = j * map.gridSize;
-        ctx.moveTo(0, y); ctx.lineTo(map.widthPx, y);
+        ctx.moveTo(0, y);
+        ctx.lineTo(map.widthPx, y);
       }
       ctx.stroke();
       ctx.restore();
     }
 
     const drawTokens = [...tokens]
-      .filter(t => isDM || !t.hidden)
-      .filter(t => {
+      .filter((t) => isDM || !t.hidden)
+      .filter((t) => {
         if (isDM || !map.fogEnabled) return true;
-        const tx = Math.floor(t.x), ty = Math.floor(t.y);
+        const tx = Math.floor(t.x),
+          ty = Math.floor(t.y);
         for (let dy = 0; dy < t.sizeCells; dy++) {
           for (let dx = 0; dx < t.sizeCells; dx++) {
             if (fog.has(fogKey(tx + dx, ty + dy))) return true;
@@ -378,7 +448,10 @@ export default function TacticalMap({ roomId }: Props) {
       ctx.strokeStyle = "#facc15";
       ctx.lineWidth = 2 / zoom;
       ctx.setLineDash([8 / zoom, 4 / zoom]);
-      ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(ax, ay);
+      ctx.lineTo(bx, by);
+      ctx.stroke();
       ctx.restore();
       const dx = Math.abs(measureB.x - measureA.x);
       const dy = Math.abs(measureB.y - measureA.y);
@@ -391,7 +464,8 @@ export default function TacticalMap({ roomId }: Props) {
       ctx.fillStyle = "#facc15";
       ctx.strokeStyle = "rgba(0,0,0,0.85)";
       ctx.lineWidth = 4 / zoom;
-      const mx = (ax + bx) / 2, my = (ay + by) / 2 - 8;
+      const mx = (ax + bx) / 2,
+        my = (ay + by) / 2 - 8;
       ctx.textAlign = "center";
       ctx.strokeText(`${ft} ft`, mx, my);
       ctx.fillText(`${ft} ft`, mx, my);
@@ -402,9 +476,10 @@ export default function TacticalMap({ roomId }: Props) {
   });
 
   useEffect(() => {
-    const wrap = wrapRef.current; if (!wrap) return;
+    const wrap = wrapRef.current;
+    if (!wrap) return;
     const ro = new ResizeObserver(() => {
-      setPulse(p => (p + 1) % 1000);
+      setPulse((p) => (p + 1) % 1000);
     });
     ro.observe(wrap);
     return () => ro.disconnect();
@@ -434,7 +509,7 @@ export default function TacticalMap({ roomId }: Props) {
       return;
     }
 
-    const sortedTokens = [...tokens].filter(t => isDM || !t.hidden).sort((a, b) => a.z - b.z);
+    const sortedTokens = [...tokens].filter((t) => isDM || !t.hidden).sort((a, b) => a.z - b.z);
 
     if (tool === "fogReveal" || tool === "fogClear") {
       if (!isDM) return;
@@ -444,25 +519,38 @@ export default function TacticalMap({ roomId }: Props) {
     }
 
     if (tool === "measure") {
-      if (!measureA) { setMeasureA({ x: cellX, y: cellY }); setMeasureB({ x: cellX, y: cellY }); }
-      else if (!measureB || (measureB.x === measureA.x && measureB.y === measureA.y)) { setMeasureB({ x: cellX, y: cellY }); }
-      else { setMeasureA({ x: cellX, y: cellY }); setMeasureB({ x: cellX, y: cellY }); }
+      if (!measureA) {
+        setMeasureA({ x: cellX, y: cellY });
+        setMeasureB({ x: cellX, y: cellY });
+      } else if (!measureB || (measureB.x === measureA.x && measureB.y === measureA.y)) {
+        setMeasureB({ x: cellX, y: cellY });
+      } else {
+        setMeasureA({ x: cellX, y: cellY });
+        setMeasureB({ x: cellX, y: cellY });
+      }
       return;
     }
 
     if (tool === "addToken" || tool === "addHidden") {
       if (!isDM) return;
       const hidden = tool === "addHidden";
-      const name = window.prompt("Token name?", hidden ? "Hidden" : "Token") || (hidden ? "Hidden" : "Token");
-      const colorIn = window.prompt("Color (hex like #C4A55A) — leave blank for default", "#C4A55A") || "#C4A55A";
+      const name =
+        window.prompt("Token name?", hidden ? "Hidden" : "Token") || (hidden ? "Hidden" : "Token");
+      const colorIn =
+        window.prompt("Color (hex like #C4A55A) — leave blank for default", "#C4A55A") || "#C4A55A";
       const sizeIn = parseInt(window.prompt("Size (1, 2, or 3 cells)", "1") || "1", 10);
       const sizeCells = [1, 2, 3].includes(sizeIn) ? sizeIn : 1;
       fetch(`${API}/maps/${map.id}/tokens`, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...authHeaders() },
         body: JSON.stringify({
-          name, color: /^#[0-9a-fA-F]{6}$/.test(colorIn) ? colorIn : "#C4A55A",
-          sizeCells, x: cellX, y: cellY, hidden, kind: hidden ? "MONSTER" : "NPC",
+          name,
+          color: /^#[0-9a-fA-F]{6}$/.test(colorIn) ? colorIn : "#C4A55A",
+          sizeCells,
+          x: cellX,
+          y: cellY,
+          hidden,
+          kind: hidden ? "MONSTER" : "NPC",
         }),
       }).catch(() => {});
       setTool("select");
@@ -475,15 +563,23 @@ export default function TacticalMap({ roomId }: Props) {
       setSelectedTokenId(hit.id);
       if (hit.combatantId) {
         try {
-          window.dispatchEvent(new CustomEvent("weered:dnd:combatant:select", {
-            detail: { roomId, combatantId: hit.combatantId },
-          }));
+          window.dispatchEvent(
+            new CustomEvent("weered:dnd:combatant:select", {
+              detail: { roomId, combatantId: hit.combatantId },
+            }),
+          );
         } catch {}
       }
       if (movable) {
         const offCx = cell.x - hit.x;
         const offCy = cell.y - hit.y;
-        dragRef.current = { tokenId: hit.id, offsetCx: offCx, offsetCy: offCy, lastX: hit.x, lastY: hit.y };
+        dragRef.current = {
+          tokenId: hit.id,
+          offsetCx: offCx,
+          offsetCy: offCy,
+          lastX: hit.x,
+          lastY: hit.y,
+        };
         (e.target as Element).setPointerCapture(e.pointerId);
       }
     } else {
@@ -499,13 +595,16 @@ export default function TacticalMap({ roomId }: Props) {
     const cellY = Math.floor(cell.y);
 
     if (panRef.current) {
-      setPan({ x: panRef.current.origX + (e.clientX - panRef.current.startX), y: panRef.current.origY + (e.clientY - panRef.current.startY) });
+      setPan({
+        x: panRef.current.origX + (e.clientX - panRef.current.startX),
+        y: panRef.current.origY + (e.clientY - panRef.current.startY),
+      });
       return;
     }
 
     if (fogPaintRef.current) {
       fogPaintRef.current.add(fogKey(cellX, cellY));
-      setFog(prev => {
+      setFog((prev) => {
         const next = new Set(prev);
         if (tool === "fogReveal") next.add(fogKey(cellX, cellY));
         else if (tool === "fogClear") next.delete(fogKey(cellX, cellY));
@@ -520,7 +619,9 @@ export default function TacticalMap({ roomId }: Props) {
       const newY = cell.y - drag.offsetCy;
       const snapX = Math.round(newX);
       const snapY = Math.round(newY);
-      setTokens(prev => prev.map(t => t.id === drag.tokenId ? { ...t, x: snapX, y: snapY } : t));
+      setTokens((prev) =>
+        prev.map((t) => (t.id === drag.tokenId ? { ...t, x: snapX, y: snapY } : t)),
+      );
       drag.lastX = snapX;
       drag.lastY = snapY;
       return;
@@ -532,10 +633,16 @@ export default function TacticalMap({ roomId }: Props) {
   }
 
   function onPointerUp(e: React.PointerEvent) {
-    if (panRef.current) { panRef.current = null; return; }
+    if (panRef.current) {
+      panRef.current = null;
+      return;
+    }
 
     if (fogPaintRef.current && map) {
-      const cells = Array.from(fogPaintRef.current).map(k => { const [x, y] = k.split(","); return { x: parseInt(x, 10), y: parseInt(y, 10) }; });
+      const cells = Array.from(fogPaintRef.current).map((k) => {
+        const [x, y] = k.split(",");
+        return { x: parseInt(x, 10), y: parseInt(y, 10) };
+      });
       fogPaintRef.current = null;
       const endpoint = tool === "fogReveal" ? "reveal" : "clear";
       fetch(`${API}/maps/${map.id}/fog/${endpoint}`, {
@@ -563,8 +670,10 @@ export default function TacticalMap({ roomId }: Props) {
     const delta = -e.deltaY;
     const factor = delta > 0 ? 1.1 : 1 / 1.1;
     const r = canvasRef.current.getBoundingClientRect();
-    const sx = e.clientX - r.left, sy = e.clientY - r.top;
-    const wx = (sx - pan.x) / zoom, wy = (sy - pan.y) / zoom;
+    const sx = e.clientX - r.left,
+      sy = e.clientY - r.top;
+    const wx = (sx - pan.x) / zoom,
+      wy = (sy - pan.y) / zoom;
     const newZoom = Math.max(0.25, Math.min(4, zoom * factor));
     setPan({ x: sx - wx * newZoom, y: sy - wy * newZoom });
     setZoom(newZoom);
@@ -578,24 +687,44 @@ export default function TacticalMap({ roomId }: Props) {
     setPan({ x: (r.width - map.widthPx * z) / 2, y: (r.height - map.heightPx * z) / 2 });
   }, [map?.id, imgLoaded]);
 
-  const onUploaded = useCallback(() => { reload(); }, [reload]);
+  const onUploaded = useCallback(() => {
+    reload();
+  }, [reload]);
 
   return (
-    <div className="weered-dnd-modules" style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden", background: "#0a0806" }}>
+    <div
+      className="weered-dnd-modules"
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        height: "100%",
+        overflow: "hidden",
+        background: "#0a0806",
+      }}
+    >
       <TacticalMapToolbar
         roomId={roomId}
         map={map}
         isDM={isDM}
         tool={tool}
         setTool={setTool}
-        selectedToken={tokens.find(t => t.id === selectedTokenId) || null}
+        selectedToken={tokens.find((t) => t.id === selectedTokenId) || null}
         onUploaded={onUploaded}
         onClearSelection={() => setSelectedTokenId(null)}
-        onClearMeasure={() => { setMeasureA(null); setMeasureB(null); }}
+        onClearMeasure={() => {
+          setMeasureA(null);
+          setMeasureB(null);
+        }}
       />
       <div
         ref={wrapRef}
-        style={{ flex: 1, position: "relative", overflow: "hidden", cursor: tool === "select" ? "default" : tool === "measure" ? "crosshair" : "cell", touchAction: "none" }}
+        style={{
+          flex: 1,
+          position: "relative",
+          overflow: "hidden",
+          cursor: tool === "select" ? "default" : tool === "measure" ? "crosshair" : "cell",
+          touchAction: "none",
+        }}
         onContextMenu={(e) => e.preventDefault()}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
@@ -604,9 +733,35 @@ export default function TacticalMap({ roomId }: Props) {
       >
         <canvas ref={canvasRef} style={{ position: "absolute", inset: 0 }} />
         {!map && (
-          <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 12, color: "rgba(243,236,220,0.55)", fontFamily: "var(--font-cormorant), serif", fontSize: 18, textAlign: "center", padding: 24 }}>
-            <div style={{ fontFamily: "var(--font-pirata), serif", fontSize: 28, color: ACCENT, letterSpacing: ".5px" }}>The Battle Map</div>
-            <div>{isDM ? "Upload a map to begin." : "The Dungeon Master has not yet unfurled a map."}</div>
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexDirection: "column",
+              gap: 12,
+              color: "rgba(243,236,220,0.55)",
+              fontFamily: "var(--font-cormorant), serif",
+              fontSize: 18,
+              textAlign: "center",
+              padding: 24,
+            }}
+          >
+            <div
+              style={{
+                fontFamily: "var(--font-pirata), serif",
+                fontSize: 28,
+                color: ACCENT,
+                letterSpacing: ".5px",
+              }}
+            >
+              The Battle Map
+            </div>
+            <div>
+              {isDM ? "Upload a map to begin." : "The Dungeon Master has not yet unfurled a map."}
+            </div>
           </div>
         )}
       </div>

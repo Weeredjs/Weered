@@ -9,11 +9,19 @@ import ModuleTabBar from "./ModuleTabBar";
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
 function authHeaders(): Record<string, string> {
-  try { const t = localStorage.getItem("weered_token") || ""; return t ? { Authorization: `Bearer ${t}` } : {}; } catch { return {}; }
+  try {
+    const t = localStorage.getItem("weered_token") || "";
+    return t ? { Authorization: `Bearer ${t}` } : {};
+  } catch {
+    return {};
+  }
 }
 
 async function apiFetch(path: string, opts?: RequestInit) {
-  const r = await fetch(`${API}${path}`, { ...opts, headers: { "Content-Type": "application/json", ...authHeaders(), ...(opts?.headers || {}) } });
+  const r = await fetch(`${API}${path}`, {
+    ...opts,
+    headers: { "Content-Type": "application/json", ...authHeaders(), ...(opts?.headers || {}) },
+  });
   return r.json();
 }
 
@@ -22,22 +30,72 @@ const ACCENT_AMBER = "#F59E0B";
 const ACCENT_GREEN = "#22C55E";
 
 const S = {
-  card: { borderRadius: 2, border: "1px solid rgba(255,255,255,.06)", background: "rgba(255,255,255,.03)", padding: "14px 16px" } as React.CSSProperties,
-  btn: { padding: "7px 14px", borderRadius: 2, border: "1px solid rgba(255,255,255,.10)", background: "rgba(255,255,255,.05)", fontSize: 12, cursor: "pointer", color: "rgba(243,244,246,.88)" } as React.CSSProperties,
-  btnPri: { padding: "7px 14px", borderRadius: 2, border: `1px solid ${ACCENT}50`, background: `${ACCENT}15`, fontSize: 12, cursor: "pointer", color: ACCENT, fontWeight: 600 } as React.CSSProperties,
-  input: { width: "100%", padding: "8px 12px", borderRadius: 2, border: "1px solid rgba(255,255,255,.10)", background: "rgba(0,0,0,.30)", fontSize: 13, color: "rgba(243,244,246,.92)", outline: "none", boxSizing: "border-box" as const },
-  select: { padding: "8px 12px", borderRadius: 2, border: "1px solid rgba(255,255,255,.10)", background: "rgba(0,0,0,.30)", fontSize: 12, color: "rgba(243,244,246,.92)", outline: "none", cursor: "pointer", width: "100%", boxSizing: "border-box" as const } as React.CSSProperties,
-  label: { fontSize: 10, fontWeight: 700, opacity: 0.45, letterSpacing: ".7px", textTransform: "uppercase" as const, marginBottom: 6 } as React.CSSProperties,
+  card: {
+    borderRadius: 2,
+    border: "1px solid rgba(255,255,255,.06)",
+    background: "rgba(255,255,255,.03)",
+    padding: "14px 16px",
+  } as React.CSSProperties,
+  btn: {
+    padding: "7px 14px",
+    borderRadius: 2,
+    border: "1px solid rgba(255,255,255,.10)",
+    background: "rgba(255,255,255,.05)",
+    fontSize: 12,
+    cursor: "pointer",
+    color: "rgba(243,244,246,.88)",
+  } as React.CSSProperties,
+  btnPri: {
+    padding: "7px 14px",
+    borderRadius: 2,
+    border: `1px solid ${ACCENT}50`,
+    background: `${ACCENT}15`,
+    fontSize: 12,
+    cursor: "pointer",
+    color: ACCENT,
+    fontWeight: 600,
+  } as React.CSSProperties,
+  input: {
+    width: "100%",
+    padding: "8px 12px",
+    borderRadius: 2,
+    border: "1px solid rgba(255,255,255,.10)",
+    background: "rgba(0,0,0,.30)",
+    fontSize: 13,
+    color: "rgba(243,244,246,.92)",
+    outline: "none",
+    boxSizing: "border-box" as const,
+  },
+  select: {
+    padding: "8px 12px",
+    borderRadius: 2,
+    border: "1px solid rgba(255,255,255,.10)",
+    background: "rgba(0,0,0,.30)",
+    fontSize: 12,
+    color: "rgba(243,244,246,.92)",
+    outline: "none",
+    cursor: "pointer",
+    width: "100%",
+    boxSizing: "border-box" as const,
+  } as React.CSSProperties,
+  label: {
+    fontSize: 10,
+    fontWeight: 700,
+    opacity: 0.45,
+    letterSpacing: ".7px",
+    textTransform: "uppercase" as const,
+    marginBottom: 6,
+  } as React.CSSProperties,
 };
 
 const TABS = [
-  { id: "timer" as const,   label: "Focus Timer", icon: "⏱" },
-  { id: "quiz" as const,    label: "Practice Test", icon: "🧠" },
-  { id: "rooms" as const,   label: "Study Rooms", icon: "📚" },
-  { id: "lfg" as const,     label: "Find Partners", icon: "🤝" },
-  { id: "ambient" as const, label: "Ambient",       icon: "🎧" },
+  { id: "timer" as const, label: "Focus Timer", icon: "⏱" },
+  { id: "quiz" as const, label: "Practice Test", icon: "🧠" },
+  { id: "rooms" as const, label: "Study Rooms", icon: "📚" },
+  { id: "lfg" as const, label: "Find Partners", icon: "🤝" },
+  { id: "ambient" as const, label: "Ambient", icon: "🎧" },
 ];
-type TabId = typeof TABS[number]["id"];
+type TabId = (typeof TABS)[number]["id"];
 
 function todayKey() {
   const d = new Date();
@@ -48,12 +106,14 @@ function getStudyStats(date: string): { focusMinutes: number; sessions: number }
   try {
     const raw = localStorage.getItem(`weered:study:${date}`);
     if (raw) return JSON.parse(raw);
-  } catch { }
+  } catch {}
   return { focusMinutes: 0, sessions: 0 };
 }
 
 function saveStudyStats(date: string, stats: { focusMinutes: number; sessions: number }) {
-  try { localStorage.setItem(`weered:study:${date}`, JSON.stringify(stats)); } catch { }
+  try {
+    localStorage.setItem(`weered:study:${date}`, JSON.stringify(stats));
+  } catch {}
 }
 
 function calcStreak(): number {
@@ -106,7 +166,7 @@ function FocusTimer({ accent }: { accent: string }) {
   useEffect(() => {
     if (!running) return;
     intervalRef.current = setInterval(() => {
-      setTimeLeft(t => {
+      setTimeLeft((t) => {
         if (t <= 1) {
           clearInterval(intervalRef.current!);
           intervalRef.current = null;
@@ -128,7 +188,10 @@ function FocusTimer({ accent }: { accent: string }) {
             const isLongBreak = newSessions % SESSIONS_BEFORE_LONG_BREAK === 0;
             const nextBreak = isLongBreak ? LONG_BREAK_MINUTES : breakDuration;
 
-            setTimeout(() => { setTodayStats(getStudyStats(key)); setStreak(calcStreak()); }, 50);
+            setTimeout(() => {
+              setTodayStats(getStudyStats(key));
+              setStreak(calcStreak());
+            }, 50);
 
             return nextBreak * 60;
           } else {
@@ -139,18 +202,27 @@ function FocusTimer({ accent }: { accent: string }) {
         return t - 1;
       });
     }, 1000);
-    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
   }, [running, phase, focusDuration, breakDuration, sessions]);
 
   useEffect(() => {
     if (showFlash) setRunning(false);
   }, [showFlash]);
 
-  function handleStart() { setRunning(true); }
-  function handlePause() { setRunning(false); }
+  function handleStart() {
+    setRunning(true);
+  }
+  function handlePause() {
+    setRunning(false);
+  }
   function handleReset() {
     setRunning(false);
-    if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null; }
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
     setPhase("focus");
     setTimeLeft(focusDuration * 60);
   }
@@ -170,36 +242,54 @@ function FocusTimer({ accent }: { accent: string }) {
   const radius = 90;
   const circumference = 2 * Math.PI * radius;
   const totalSeconds = phase === "focus" ? focusDuration * 60 : breakDuration * 60;
-  const progress = 1 - (timeLeft / totalSeconds);
+  const progress = 1 - timeLeft / totalSeconds;
   const dashOffset = circumference * (1 - progress);
   const ringColor = phase === "focus" ? accent : ACCENT_GREEN;
 
   const currentCycle = sessions % SESSIONS_BEFORE_LONG_BREAK;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 24, padding: "8px 0" }}>
-
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        gap: 24,
+        padding: "8px 0",
+      }}
+    >
       {showFlash && (
-        <div style={{
-          position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
-          background: phase === "focus" ? `${ACCENT_GREEN}12` : `${accent}12`,
-          pointerEvents: "none", zIndex: 9999,
-          animation: "none",
-          transition: "opacity .6s ease-out",
-          opacity: 1,
-        }} />
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: phase === "focus" ? `${ACCENT_GREEN}12` : `${accent}12`,
+            pointerEvents: "none",
+            zIndex: 9999,
+            animation: "none",
+            transition: "opacity .6s ease-out",
+            opacity: 1,
+          }}
+        />
       )}
 
       <div style={{ position: "relative", width: 200, height: 200 }}>
         <svg width="200" height="200" viewBox="0 0 200 200" style={{ transform: "rotate(-90deg)" }}>
           <circle
-            cx="100" cy="100" r={radius}
+            cx="100"
+            cy="100"
+            r={radius}
             fill="none"
             stroke="rgba(255,255,255,.06)"
             strokeWidth="6"
           />
           <circle
-            cx="100" cy="100" r={radius}
+            cx="100"
+            cy="100"
+            r={radius}
             fill="none"
             stroke={ringColor}
             strokeWidth="6"
@@ -209,53 +299,91 @@ function FocusTimer({ accent }: { accent: string }) {
             style={{ transition: "stroke-dashoffset 0.5s ease, stroke 0.3s ease" }}
           />
         </svg>
-        <div style={{
-          position: "absolute", top: 0, left: 0, right: 0, bottom: 0,
-          display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-        }}>
-          <div style={{
-            fontSize: 42, fontWeight: 300, letterSpacing: "2px",
-            color: "rgba(243,244,246,.92)", fontVariantNumeric: "tabular-nums",
-            lineHeight: 1,
-          }}>
+        <div
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <div
+            style={{
+              fontSize: 42,
+              fontWeight: 300,
+              letterSpacing: "2px",
+              color: "rgba(243,244,246,.92)",
+              fontVariantNumeric: "tabular-nums",
+              lineHeight: 1,
+            }}
+          >
             {formatTime(timeLeft)}
           </div>
-          <div style={{
-            fontSize: 11, fontWeight: 700, letterSpacing: "2px", textTransform: "uppercase",
-            color: ringColor, marginTop: 8, opacity: 0.8,
-          }}>
+          <div
+            style={{
+              fontSize: 11,
+              fontWeight: 700,
+              letterSpacing: "2px",
+              textTransform: "uppercase",
+              color: ringColor,
+              marginTop: 8,
+              opacity: 0.8,
+            }}
+          >
             {phase === "focus" ? "FOCUS" : "BREAK"}
           </div>
         </div>
       </div>
 
       {phase === "focus" && running && (
-        <div style={{
-          display: "flex", alignItems: "center", gap: 8,
-          padding: "8px 16px", borderRadius: 2,
-          background: `${accent}10`, border: `1px solid ${accent}25`, borderLeft: `2px solid ${accent}`,
-          fontSize: 12, color: "rgba(243,244,246,.6)",
-        }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            padding: "8px 16px",
+            borderRadius: 2,
+            background: `${accent}10`,
+            border: `1px solid ${accent}25`,
+            borderLeft: `2px solid ${accent}`,
+            fontSize: 12,
+            color: "rgba(243,244,246,.6)",
+          }}
+        >
           <span style={{ fontSize: 14 }}>🔇</span>
           Quiet Mode — mics muted during focus
         </div>
       )}
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 12, width: "100%", maxWidth: 340 }}>
+      <div
+        style={{ display: "flex", flexDirection: "column", gap: 12, width: "100%", maxWidth: 340 }}
+      >
         <div>
           <div style={{ ...S.label, textAlign: "center" }}>Focus Duration</div>
           <div style={{ display: "flex", gap: 6, justifyContent: "center" }}>
-            {FOCUS_DURATIONS.map(d => (
-              <button key={d} onClick={() => selectFocusDuration(d)} style={{
-                padding: "6px 14px", borderRadius: 2, border: "1px solid",
-                borderColor: focusDuration === d ? `${accent}60` : "rgba(255,255,255,.08)",
-                background: focusDuration === d ? `${accent}18` : "rgba(255,255,255,.03)",
-                color: focusDuration === d ? "rgba(243,244,246,.92)" : "rgba(243,244,246,.4)",
-                fontWeight: focusDuration === d ? 600 : 400,
-                fontSize: 12, cursor: running ? "default" : "pointer",
-                transition: "all .15s ease",
-                opacity: running ? 0.5 : 1,
-              }}>
+            {FOCUS_DURATIONS.map((d) => (
+              <button
+                key={d}
+                onClick={() => selectFocusDuration(d)}
+                style={{
+                  padding: "6px 14px",
+                  borderRadius: 2,
+                  border: "1px solid",
+                  borderColor: focusDuration === d ? `${accent}60` : "rgba(255,255,255,.08)",
+                  background: focusDuration === d ? `${accent}18` : "rgba(255,255,255,.03)",
+                  color: focusDuration === d ? "rgba(243,244,246,.92)" : "rgba(243,244,246,.4)",
+                  fontWeight: focusDuration === d ? 600 : 400,
+                  fontSize: 12,
+                  cursor: running ? "default" : "pointer",
+                  transition: "all .15s ease",
+                  opacity: running ? 0.5 : 1,
+                }}
+              >
                 {d}m
               </button>
             ))}
@@ -265,17 +393,24 @@ function FocusTimer({ accent }: { accent: string }) {
         <div>
           <div style={{ ...S.label, textAlign: "center" }}>Break Duration</div>
           <div style={{ display: "flex", gap: 6, justifyContent: "center" }}>
-            {BREAK_DURATIONS.map(d => (
-              <button key={d} onClick={() => selectBreakDuration(d)} style={{
-                padding: "6px 14px", borderRadius: 2, border: "1px solid",
-                borderColor: breakDuration === d ? `${ACCENT_GREEN}60` : "rgba(255,255,255,.08)",
-                background: breakDuration === d ? `${ACCENT_GREEN}18` : "rgba(255,255,255,.03)",
-                color: breakDuration === d ? "rgba(243,244,246,.92)" : "rgba(243,244,246,.4)",
-                fontWeight: breakDuration === d ? 600 : 400,
-                fontSize: 12, cursor: running ? "default" : "pointer",
-                transition: "all .15s ease",
-                opacity: running ? 0.5 : 1,
-              }}>
+            {BREAK_DURATIONS.map((d) => (
+              <button
+                key={d}
+                onClick={() => selectBreakDuration(d)}
+                style={{
+                  padding: "6px 14px",
+                  borderRadius: 2,
+                  border: "1px solid",
+                  borderColor: breakDuration === d ? `${ACCENT_GREEN}60` : "rgba(255,255,255,.08)",
+                  background: breakDuration === d ? `${ACCENT_GREEN}18` : "rgba(255,255,255,.03)",
+                  color: breakDuration === d ? "rgba(243,244,246,.92)" : "rgba(243,244,246,.4)",
+                  fontWeight: breakDuration === d ? 600 : 400,
+                  fontSize: 12,
+                  cursor: running ? "default" : "pointer",
+                  transition: "all .15s ease",
+                  opacity: running ? 0.5 : 1,
+                }}
+              >
                 {d}m
               </button>
             ))}
@@ -285,30 +420,54 @@ function FocusTimer({ accent }: { accent: string }) {
 
       <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
         {!running ? (
-          <button onClick={handleStart} style={{
-            padding: "10px 28px", borderRadius: 2, border: `1px solid ${ACCENT_GREEN}50`,
-            background: `${ACCENT_GREEN}15`, color: ACCENT_GREEN,
-            fontWeight: 700, fontSize: 14, cursor: "pointer",
-            transition: "all .15s ease",
-          }}>
+          <button
+            onClick={handleStart}
+            style={{
+              padding: "10px 28px",
+              borderRadius: 2,
+              border: `1px solid ${ACCENT_GREEN}50`,
+              background: `${ACCENT_GREEN}15`,
+              color: ACCENT_GREEN,
+              fontWeight: 700,
+              fontSize: 14,
+              cursor: "pointer",
+              transition: "all .15s ease",
+            }}
+          >
             {timeLeft < totalSeconds ? "Resume" : "Start"}
           </button>
         ) : (
-          <button onClick={handlePause} style={{
-            padding: "10px 28px", borderRadius: 2, border: `1px solid ${ACCENT_AMBER}50`,
-            background: `${ACCENT_AMBER}15`, color: ACCENT_AMBER,
-            fontWeight: 700, fontSize: 14, cursor: "pointer",
-            transition: "all .15s ease",
-          }}>
+          <button
+            onClick={handlePause}
+            style={{
+              padding: "10px 28px",
+              borderRadius: 2,
+              border: `1px solid ${ACCENT_AMBER}50`,
+              background: `${ACCENT_AMBER}15`,
+              color: ACCENT_AMBER,
+              fontWeight: 700,
+              fontSize: 14,
+              cursor: "pointer",
+              transition: "all .15s ease",
+            }}
+          >
             Pause
           </button>
         )}
-        <button onClick={handleReset} style={{
-          padding: "10px 20px", borderRadius: 2, border: "1px solid rgba(255,255,255,.08)",
-          background: "rgba(255,255,255,.04)", color: "rgba(243,244,246,.4)",
-          fontWeight: 500, fontSize: 13, cursor: "pointer",
-          transition: "all .15s ease",
-        }}>
+        <button
+          onClick={handleReset}
+          style={{
+            padding: "10px 20px",
+            borderRadius: 2,
+            border: "1px solid rgba(255,255,255,.08)",
+            background: "rgba(255,255,255,.04)",
+            color: "rgba(243,244,246,.4)",
+            fontWeight: 500,
+            fontSize: 13,
+            cursor: "pointer",
+            transition: "all .15s ease",
+          }}
+        >
           Reset
         </button>
       </div>
@@ -319,25 +478,39 @@ function FocusTimer({ accent }: { accent: string }) {
         </div>
         <div style={{ display: "flex", gap: 6 }}>
           {Array.from({ length: SESSIONS_BEFORE_LONG_BREAK }).map((_, i) => (
-            <div key={i} style={{
-              width: 10, height: 10, borderRadius: "50%",
-              background: i < currentCycle ? accent : "rgba(255,255,255,.08)",
-              border: i === currentCycle ? `2px solid ${accent}80` : "2px solid transparent",
-              transition: "all .3s ease",
-            }} />
+            <div
+              key={i}
+              style={{
+                width: 10,
+                height: 10,
+                borderRadius: "50%",
+                background: i < currentCycle ? accent : "rgba(255,255,255,.08)",
+                border: i === currentCycle ? `2px solid ${accent}80` : "2px solid transparent",
+                transition: "all .3s ease",
+              }}
+            />
           ))}
         </div>
-        {sessions > 0 && sessions % SESSIONS_BEFORE_LONG_BREAK === 0 && !running && phase === "break" && (
-          <div style={{ fontSize: 11, color: ACCENT_GREEN, opacity: 0.7, marginTop: 2 }}>
-            Long break earned — you've completed {SESSIONS_BEFORE_LONG_BREAK} sessions!
-          </div>
-        )}
+        {sessions > 0 &&
+          sessions % SESSIONS_BEFORE_LONG_BREAK === 0 &&
+          !running &&
+          phase === "break" && (
+            <div style={{ fontSize: 11, color: ACCENT_GREEN, opacity: 0.7, marginTop: 2 }}>
+              Long break earned — you've completed {SESSIONS_BEFORE_LONG_BREAK} sessions!
+            </div>
+          )}
       </div>
 
-      <div style={{
-        ...S.card, width: "100%", maxWidth: 340,
-        display: "flex", justifyContent: "space-around", textAlign: "center",
-      }}>
+      <div
+        style={{
+          ...S.card,
+          width: "100%",
+          maxWidth: 340,
+          display: "flex",
+          justifyContent: "space-around",
+          textAlign: "center",
+        }}
+      >
         <div>
           <div style={{ fontSize: 22, fontWeight: 300, color: "rgba(243,244,246,.85)" }}>
             {formatMinutes(todayStats.focusMinutes)}
@@ -373,16 +546,27 @@ function StudyRooms({ lobbyId, accent }: { lobbyId: string; accent: string }) {
     Promise.all([
       apiFetch(`/lobbies/${encodeURIComponent(lobbyId)}/rooms`),
       apiFetch(`/lobbies/${encodeURIComponent(lobbyId)}/presence`),
-    ]).then(([rj, pj]) => {
-      setRooms(rj.rooms || rj || []);
-      setPresence(pj.users || pj || []);
-      setLoading(false);
-    }).catch(() => setLoading(false));
+    ])
+      .then(([rj, pj]) => {
+        setRooms(rj.rooms || rj || []);
+        setPresence(pj.users || pj || []);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
   }, [lobbyId]);
 
-  useEffect(() => { load(); const i = setInterval(load, 15000); return () => clearInterval(i); }, [load]);
+  useEffect(() => {
+    load();
+    const i = setInterval(load, 15000);
+    return () => clearInterval(i);
+  }, [load]);
 
-  if (loading) return <div style={{ padding: 32, textAlign: "center", opacity: 0.4, fontSize: 13 }}>Loading rooms...</div>;
+  if (loading)
+    return (
+      <div style={{ padding: 32, textAlign: "center", opacity: 0.4, fontSize: 13 }}>
+        Loading rooms...
+      </div>
+    );
 
   const onlineCount = Array.isArray(presence) ? presence.length : 0;
 
@@ -395,8 +579,14 @@ function StudyRooms({ lobbyId, accent }: { lobbyId: string; accent: string }) {
   }
 
   const ROOM_ICONS: Record<string, string> = {
-    library: "📚", stem: "🧪", essay: "📝", creative: "🎨",
-    math: "🔢", code: "💻", reading: "📖", study: "📚",
+    library: "📚",
+    stem: "🧪",
+    essay: "📝",
+    creative: "🎨",
+    math: "🔢",
+    code: "💻",
+    reading: "📖",
+    study: "📚",
   };
 
   function roomIcon(name: string): string {
@@ -409,17 +599,31 @@ function StudyRooms({ lobbyId, accent }: { lobbyId: string; accent: string }) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      <div style={{
-        display: "flex", alignItems: "center", gap: 8,
-        padding: "10px 14px", borderRadius: 2,
-        background: `${accent}08`, border: `1px solid ${accent}20`,
-      }}>
-        <span style={{
-          width: 8, height: 8, borderRadius: "50%", background: ACCENT_GREEN,
-          boxShadow: `0 0 8px ${ACCENT_GREEN}80`, flexShrink: 0,
-        }} />
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          padding: "10px 14px",
+          borderRadius: 2,
+          background: `${accent}08`,
+          border: `1px solid ${accent}20`,
+        }}
+      >
+        <span
+          style={{
+            width: 8,
+            height: 8,
+            borderRadius: "50%",
+            background: ACCENT_GREEN,
+            boxShadow: `0 0 8px ${ACCENT_GREEN}80`,
+            flexShrink: 0,
+          }}
+        />
         <span style={{ fontSize: 13, color: "rgba(243,244,246,.7)" }}>
-          {onlineCount > 0 ? `${onlineCount} ${onlineCount === 1 ? "person" : "people"} studying right now` : "Nobody's studying. Be the first to lock in."}
+          {onlineCount > 0
+            ? `${onlineCount} ${onlineCount === 1 ? "person" : "people"} studying right now`
+            : "Nobody's studying. Be the first to lock in."}
         </span>
       </div>
 
@@ -429,24 +633,41 @@ function StudyRooms({ lobbyId, accent }: { lobbyId: string; accent: string }) {
             const count = roomUserCounts[room.id] || 0;
             const status = count > 0 ? "Active Session" : "Quiet Study";
             return (
-              <div key={room.id} style={{
-                ...S.card, display: "flex", flexDirection: "column", gap: 8,
-                transition: "border-color .15s ease, background .15s ease",
-              }}>
+              <div
+                key={room.id}
+                style={{
+                  ...S.card,
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 8,
+                  transition: "border-color .15s ease, background .15s ease",
+                }}
+              >
                 <div style={{ fontSize: 15 }}>
                   {roomIcon(room.name || "")}
-                  <span style={{ fontWeight: 600, fontSize: 13, marginLeft: 6, color: "rgba(243,244,246,.88)" }}>
+                  <span
+                    style={{
+                      fontWeight: 600,
+                      fontSize: 13,
+                      marginLeft: 6,
+                      color: "rgba(243,244,246,.88)",
+                    }}
+                  >
                     {room.name || "Study Room"}
                   </span>
                 </div>
 
                 <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <span style={{
-                    width: 6, height: 6, borderRadius: "50%",
-                    background: count > 0 ? ACCENT_GREEN : "rgba(255,255,255,.15)",
-                    boxShadow: count > 0 ? `0 0 6px ${ACCENT_GREEN}60` : "none",
-                    flexShrink: 0,
-                  }} />
+                  <span
+                    style={{
+                      width: 6,
+                      height: 6,
+                      borderRadius: "50%",
+                      background: count > 0 ? ACCENT_GREEN : "rgba(255,255,255,.15)",
+                      boxShadow: count > 0 ? `0 0 6px ${ACCENT_GREEN}60` : "none",
+                      flexShrink: 0,
+                    }}
+                  />
                   <span style={{ fontSize: 11, color: "rgba(243,244,246,.5)" }}>
                     {count} {count === 1 ? "person" : "people"} — {status}
                   </span>
@@ -455,8 +676,12 @@ function StudyRooms({ lobbyId, accent }: { lobbyId: string; accent: string }) {
                 <button
                   onClick={() => router.push(`/room/${room.id}`)}
                   style={{
-                    ...S.btnPri, width: "100%", padding: "7px 0", marginTop: "auto",
-                    textAlign: "center", fontSize: 12,
+                    ...S.btnPri,
+                    width: "100%",
+                    padding: "7px 0",
+                    marginTop: "auto",
+                    textAlign: "center",
+                    fontSize: 12,
                   }}
                 >
                   Enter
@@ -493,80 +718,126 @@ function FindPartners({ lobbyId, accent }: { lobbyId: string; accent: string }) 
 
   const load = useCallback(() => {
     apiFetch(`/lfg/${encodeURIComponent(lobbyId)}`)
-      .then(j => { setPosts(j.posts || []); setLoading(false); })
+      .then((j) => {
+        setPosts(j.posts || []);
+        setLoading(false);
+      })
       .catch(() => setLoading(false));
   }, [lobbyId]);
 
-  useEffect(() => { load(); const i = setInterval(load, 15000); return () => clearInterval(i); }, [load]);
+  useEffect(() => {
+    load();
+    const i = setInterval(load, 15000);
+    return () => clearInterval(i);
+  }, [load]);
 
   async function create() {
-    if (!subject.trim()) { setMsg("Add a subject or topic"); return; }
-    const activity = `${subject.trim()} — ${level} — ${sessionLen} — ${STUDY_STYLES.find(s => s.value === studyStyle)?.label || studyStyle}`;
+    if (!subject.trim()) {
+      setMsg("Add a subject or topic");
+      return;
+    }
+    const activity = `${subject.trim()} — ${level} — ${sessionLen} — ${STUDY_STYLES.find((s) => s.value === studyStyle)?.label || studyStyle}`;
     const j = await apiFetch(`/lfg/${encodeURIComponent(lobbyId)}`, {
       method: "POST",
       body: JSON.stringify({ activity, description: note, maxPlayers: 8, platform: "any" }),
     });
-    if (j.ok) { setShowForm(false); setSubject(""); setNote(""); load(); }
-    else setMsg(j.message || j.error || "Failed");
+    if (j.ok) {
+      setShowForm(false);
+      setSubject("");
+      setNote("");
+      load();
+    } else setMsg(j.message || j.error || "Failed");
   }
 
   async function join(postId: string) {
     const j = await apiFetch(`/lfg/${postId}/join`, { method: "POST", body: JSON.stringify({}) });
-    if (j.ok) load(); else setMsg(j.message || j.error || "Failed");
+    if (j.ok) load();
+    else setMsg(j.message || j.error || "Failed");
   }
 
   async function leave(postId: string) {
     const j = await apiFetch(`/lfg/${postId}/leave`, { method: "POST", body: JSON.stringify({}) });
-    if (j.ok) load(); else setMsg(j.message || j.error || "Failed");
+    if (j.ok) load();
+    else setMsg(j.message || j.error || "Failed");
   }
 
-  if (loading) return <div style={{ padding: 32, textAlign: "center", opacity: 0.4, fontSize: 13 }}>Loading study partners...</div>;
+  if (loading)
+    return (
+      <div style={{ padding: 32, textAlign: "center", opacity: 0.4, fontSize: 13 }}>
+        Loading study partners...
+      </div>
+    );
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <div style={{ fontSize: 13, color: "rgba(243,244,246,.5)" }}>{posts.length} looking for partners</div>
+        <div style={{ fontSize: 13, color: "rgba(243,244,246,.5)" }}>
+          {posts.length} looking for partners
+        </div>
         <button style={S.btnPri} onClick={() => setShowForm(!showForm)}>
           {showForm ? "Cancel" : "+ Find Partner"}
         </button>
       </div>
-      {msg && <div style={{ fontSize: 12, color: "rgba(243,244,246,.6)", padding: "4px 0" }}>{msg}</div>}
+      {msg && (
+        <div style={{ fontSize: 12, color: "rgba(243,244,246,.6)", padding: "4px 0" }}>{msg}</div>
+      )}
 
       {showForm && (
         <div style={{ ...S.card, border: `1px solid ${accent}25`, background: `${accent}06` }}>
           <div style={S.label}>Subject / Topic</div>
           <input
             style={{ ...S.input, marginBottom: 10 }}
-            value={subject} onChange={e => setSubject(e.target.value)}
+            value={subject}
+            onChange={(e) => setSubject(e.target.value)}
             placeholder="e.g. Calculus II, MCAT Prep, Thesis Writing..."
           />
 
           <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
             <div style={{ flex: 1 }}>
               <div style={S.label}>Level</div>
-              <select value={level} onChange={e => setLevel(e.target.value)} style={S.select}>
-                {STUDY_LEVELS.map(l => <option key={l} value={l}>{l}</option>)}
+              <select value={level} onChange={(e) => setLevel(e.target.value)} style={S.select}>
+                {STUDY_LEVELS.map((l) => (
+                  <option key={l} value={l}>
+                    {l}
+                  </option>
+                ))}
               </select>
             </div>
             <div style={{ flex: 1 }}>
               <div style={S.label}>Session Length</div>
-              <select value={sessionLen} onChange={e => setSessionLen(e.target.value)} style={S.select}>
-                {SESSION_LENGTHS.map(l => <option key={l} value={l}>{l}</option>)}
+              <select
+                value={sessionLen}
+                onChange={(e) => setSessionLen(e.target.value)}
+                style={S.select}
+              >
+                {SESSION_LENGTHS.map((l) => (
+                  <option key={l} value={l}>
+                    {l}
+                  </option>
+                ))}
               </select>
             </div>
           </div>
 
           <div style={S.label}>Study Style</div>
           <div style={{ display: "flex", gap: 6, marginBottom: 10, flexWrap: "wrap" }}>
-            {STUDY_STYLES.map(ss => (
-              <button key={ss.value} onClick={() => setStudyStyle(ss.value)} style={{
-                padding: "6px 14px", borderRadius: 2, border: "1px solid",
-                borderColor: studyStyle === ss.value ? `${accent}60` : "rgba(255,255,255,.08)",
-                background: studyStyle === ss.value ? `${accent}15` : "rgba(255,255,255,.03)",
-                color: studyStyle === ss.value ? "rgba(243,244,246,.92)" : "rgba(243,244,246,.4)",
-                fontWeight: studyStyle === ss.value ? 600 : 400,
-                fontSize: 11, cursor: "pointer", transition: "all .15s ease",
-              }}>
+            {STUDY_STYLES.map((ss) => (
+              <button
+                key={ss.value}
+                onClick={() => setStudyStyle(ss.value)}
+                style={{
+                  padding: "6px 14px",
+                  borderRadius: 2,
+                  border: "1px solid",
+                  borderColor: studyStyle === ss.value ? `${accent}60` : "rgba(255,255,255,.08)",
+                  background: studyStyle === ss.value ? `${accent}15` : "rgba(255,255,255,.03)",
+                  color: studyStyle === ss.value ? "rgba(243,244,246,.92)" : "rgba(243,244,246,.4)",
+                  fontWeight: studyStyle === ss.value ? 600 : 400,
+                  fontSize: 11,
+                  cursor: "pointer",
+                  transition: "all .15s ease",
+                }}
+              >
                 {ss.label} <span style={{ opacity: 0.5, marginLeft: 4 }}>({ss.desc})</span>
               </button>
             ))}
@@ -575,7 +846,8 @@ function FindPartners({ lobbyId, accent }: { lobbyId: string; accent: string }) 
           <div style={S.label}>Note (optional)</div>
           <input
             style={{ ...S.input, marginBottom: 12 }}
-            value={note} onChange={e => setNote(e.target.value)}
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
             placeholder="Any details for potential study partners..."
           />
 
@@ -586,20 +858,35 @@ function FindPartners({ lobbyId, accent }: { lobbyId: string; accent: string }) 
       )}
 
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        {posts.map(p => {
+        {posts.map((p) => {
           const slots = `${(p.players || []).length}/${p.maxPlayers || 8}`;
           const isFull = p.status === "FULL";
           return (
-            <div key={p.id} style={{
-              ...S.card, display: "flex", alignItems: "center", gap: 12,
-              opacity: isFull ? 0.6 : 1,
-            }}>
+            <div
+              key={p.id}
+              style={{
+                ...S.card,
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
+                opacity: isFull ? 0.6 : 1,
+              }}
+            >
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontWeight: 600, fontSize: 13, color: "rgba(243,244,246,.85)", marginBottom: 3 }}>
+                <div
+                  style={{
+                    fontWeight: 600,
+                    fontSize: 13,
+                    color: "rgba(243,244,246,.85)",
+                    marginBottom: 3,
+                  }}
+                >
                   {p.activity}
                 </div>
                 {p.description && (
-                  <div style={{ fontSize: 11, color: "rgba(243,244,246,.4)", marginBottom: 3 }}>{p.description}</div>
+                  <div style={{ fontSize: 11, color: "rgba(243,244,246,.4)", marginBottom: 3 }}>
+                    {p.description}
+                  </div>
                 )}
                 <div style={{ fontSize: 11, color: "rgba(243,244,246,.35)" }}>
                   {slots} joined
@@ -607,8 +894,12 @@ function FindPartners({ lobbyId, accent }: { lobbyId: string; accent: string }) 
                 </div>
               </div>
               <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
-                <button style={S.btnPri} onClick={() => join(p.id)}>Join</button>
-                <button style={S.btn} onClick={() => leave(p.id)}>Leave</button>
+                <button style={S.btnPri} onClick={() => join(p.id)}>
+                  Join
+                </button>
+                <button style={S.btn} onClick={() => leave(p.id)}>
+                  Leave
+                </button>
               </div>
             </div>
           );
@@ -616,38 +907,95 @@ function FindPartners({ lobbyId, accent }: { lobbyId: string; accent: string }) 
       </div>
 
       {posts.length === 0 && !showForm && (
-        <EmptyState title="No study partners yet." hint="Post what you're studying — find a buddy." />
+        <EmptyState
+          title="No study partners yet."
+          hint="Post what you're studying — find a buddy."
+        />
       )}
     </div>
   );
 }
 
 const AMBIENT_SCENES = [
-  { id: "coffee", emoji: "☕", label: "Coffee Shop", gradient: "linear-gradient(135deg, #3E2723 0%, #5D4037 50%, #4E342E 100%)" },
-  { id: "rain", emoji: "🌧", label: "Rainy Day", gradient: "linear-gradient(135deg, #37474F 0%, #546E7A 50%, #455A64 100%)" },
-  { id: "library", emoji: "📚", label: "Library", gradient: "linear-gradient(135deg, #4E342E 0%, #6D4C41 50%, #5D4037 100%)" },
-  { id: "ocean", emoji: "🌊", label: "Ocean", gradient: "linear-gradient(135deg, #0D47A1 0%, #1565C0 50%, #0D47A1 100%)" },
-  { id: "forest", emoji: "🌲", label: "Forest", gradient: "linear-gradient(135deg, #1B5E20 0%, #2E7D32 50%, #1B5E20 100%)" },
-  { id: "night", emoji: "🌙", label: "Night Sky", gradient: "linear-gradient(135deg, #1A237E 0%, #283593 50%, #1A237E 100%)" },
-  { id: "fire", emoji: "🔥", label: "Fireplace", gradient: "linear-gradient(135deg, #BF360C 0%, #E65100 50%, #BF360C 100%)" },
-  { id: "winter", emoji: "❄️", label: "Winter Cabin", gradient: "linear-gradient(135deg, #B0BEC5 0%, #CFD8DC 50%, #B0BEC5 100%)" },
+  {
+    id: "coffee",
+    emoji: "☕",
+    label: "Coffee Shop",
+    gradient: "linear-gradient(135deg, #3E2723 0%, #5D4037 50%, #4E342E 100%)",
+  },
+  {
+    id: "rain",
+    emoji: "🌧",
+    label: "Rainy Day",
+    gradient: "linear-gradient(135deg, #37474F 0%, #546E7A 50%, #455A64 100%)",
+  },
+  {
+    id: "library",
+    emoji: "📚",
+    label: "Library",
+    gradient: "linear-gradient(135deg, #4E342E 0%, #6D4C41 50%, #5D4037 100%)",
+  },
+  {
+    id: "ocean",
+    emoji: "🌊",
+    label: "Ocean",
+    gradient: "linear-gradient(135deg, #0D47A1 0%, #1565C0 50%, #0D47A1 100%)",
+  },
+  {
+    id: "forest",
+    emoji: "🌲",
+    label: "Forest",
+    gradient: "linear-gradient(135deg, #1B5E20 0%, #2E7D32 50%, #1B5E20 100%)",
+  },
+  {
+    id: "night",
+    emoji: "🌙",
+    label: "Night Sky",
+    gradient: "linear-gradient(135deg, #1A237E 0%, #283593 50%, #1A237E 100%)",
+  },
+  {
+    id: "fire",
+    emoji: "🔥",
+    label: "Fireplace",
+    gradient: "linear-gradient(135deg, #BF360C 0%, #E65100 50%, #BF360C 100%)",
+  },
+  {
+    id: "winter",
+    emoji: "❄️",
+    label: "Winter Cabin",
+    gradient: "linear-gradient(135deg, #B0BEC5 0%, #CFD8DC 50%, #B0BEC5 100%)",
+  },
 ];
 
-function AmbientTab({ accent, onSceneChange }: { accent: string; onSceneChange: (gradient: string | null) => void }) {
+function AmbientTab({
+  accent,
+  onSceneChange,
+}: {
+  accent: string;
+  onSceneChange: (gradient: string | null) => void;
+}) {
   const [selected, setSelected] = useState<string | null>(() => {
-    try { return localStorage.getItem("weered:study:ambient") || null; } catch { return null; }
+    try {
+      return localStorage.getItem("weered:study:ambient") || null;
+    } catch {
+      return null;
+    }
   });
 
   function select(id: string) {
     if (selected === id) {
       setSelected(null);
       onSceneChange(null);
-      try { localStorage.removeItem("weered:study:ambient"); } catch { }
+      try {
+        localStorage.removeItem("weered:study:ambient");
+      } catch {}
     } else {
       setSelected(id);
-      const scene = AMBIENT_SCENES.find(s => s.id === id);
+      const scene = AMBIENT_SCENES.find((s) => s.id === id);
       onSceneChange(scene?.gradient || null);
-      try { localStorage.setItem("weered:study:ambient", id); } catch { }
+      try {
+        localStorage.setItem("weered:study:ambient", id);
+      } catch {}
     }
   }
 
@@ -658,30 +1006,49 @@ function AmbientTab({ accent, onSceneChange }: { accent: string; onSceneChange: 
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-        {AMBIENT_SCENES.map(scene => {
+        {AMBIENT_SCENES.map((scene) => {
           const isActive = selected === scene.id;
           return (
-            <button key={scene.id} onClick={() => select(scene.id)} style={{
-              padding: "20px 14px", borderRadius: 2, cursor: "pointer",
-              border: isActive ? `2px solid ${accent}80` : "2px solid rgba(255,255,255,.06)",
-              background: scene.gradient,
-              display: "flex", flexDirection: "column", alignItems: "center", gap: 6,
-              transition: "all .2s ease",
-              opacity: isActive ? 1 : 0.7,
-              transform: isActive ? "scale(1.02)" : "scale(1)",
-            }}>
+            <button
+              key={scene.id}
+              onClick={() => select(scene.id)}
+              style={{
+                padding: "20px 14px",
+                borderRadius: 2,
+                cursor: "pointer",
+                border: isActive ? `2px solid ${accent}80` : "2px solid rgba(255,255,255,.06)",
+                background: scene.gradient,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: 6,
+                transition: "all .2s ease",
+                opacity: isActive ? 1 : 0.7,
+                transform: isActive ? "scale(1.02)" : "scale(1)",
+              }}
+            >
               <span style={{ fontSize: 28 }}>{scene.emoji}</span>
-              <span style={{
-                fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,.85)",
-                textShadow: "0 1px 4px rgba(0,0,0,.5)",
-              }}>
+              <span
+                style={{
+                  fontSize: 12,
+                  fontWeight: 600,
+                  color: "rgba(255,255,255,.85)",
+                  textShadow: "0 1px 4px rgba(0,0,0,.5)",
+                }}
+              >
                 {scene.label}
               </span>
               {isActive && (
-                <span style={{
-                  fontSize: 9, fontWeight: 700, color: "rgba(255,255,255,.7)",
-                  textTransform: "uppercase", letterSpacing: "1px", marginTop: 2,
-                }}>
+                <span
+                  style={{
+                    fontSize: 9,
+                    fontWeight: 700,
+                    color: "rgba(255,255,255,.7)",
+                    textTransform: "uppercase",
+                    letterSpacing: "1px",
+                    marginTop: 2,
+                  }}
+                >
                   Active
                 </span>
               )}
@@ -690,13 +1057,16 @@ function AmbientTab({ accent, onSceneChange }: { accent: string; onSceneChange: 
         })}
       </div>
 
-      <div style={{
-        ...S.card, textAlign: "center",
-        fontSize: 12, color: "rgba(243,244,246,.4)", lineHeight: 1.6,
-      }}>
-        <div style={{ marginBottom: 6 }}>
-          🎵 Ambient sounds coming soon
-        </div>
+      <div
+        style={{
+          ...S.card,
+          textAlign: "center",
+          fontSize: 12,
+          color: "rgba(243,244,246,.4)",
+          lineHeight: 1.6,
+        }}
+      >
+        <div style={{ marginBottom: 6 }}>🎵 Ambient sounds coming soon</div>
         <div>
           For now, try{" "}
           <a
@@ -706,8 +1076,8 @@ function AmbientTab({ accent, onSceneChange }: { accent: string; onSceneChange: 
             style={{ color: accent, textDecoration: "none", fontWeight: 600 }}
           >
             lofi.cafe
-          </a>
-          {" "}or{" "}
+          </a>{" "}
+          or{" "}
           <a
             href="https://mynoise.net"
             target="_blank"
@@ -715,8 +1085,8 @@ function AmbientTab({ accent, onSceneChange }: { accent: string; onSceneChange: 
             style={{ color: accent, textDecoration: "none", fontWeight: 600 }}
           >
             mynoise.net
-          </a>
-          {" "}alongside Weered
+          </a>{" "}
+          alongside Weered
         </div>
       </div>
     </div>
@@ -735,47 +1105,73 @@ export default function StudyModulesPanel({ lobbyId, accentColor = ACCENT, style
     try {
       const saved = localStorage.getItem("weered:study:ambient");
       if (saved) {
-        const scene = AMBIENT_SCENES.find(s => s.id === saved);
+        const scene = AMBIENT_SCENES.find((s) => s.id === saved);
         return scene?.gradient || null;
       }
-    } catch { }
+    } catch {}
     return null;
   });
 
-  const ambientOverlay: React.CSSProperties = ambientGradient ? {
-    position: "relative" as const,
-  } : {};
+  const ambientOverlay: React.CSSProperties = ambientGradient
+    ? {
+        position: "relative" as const,
+      }
+    : {};
 
   return (
-    <div style={{
-      display: "flex", flexDirection: "column", height: "100%", minHeight: 0,
-      ...style,
-      ...ambientOverlay,
-    }}>
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        height: "100%",
+        minHeight: 0,
+        ...style,
+        ...ambientOverlay,
+      }}
+    >
       {ambientGradient && (
-        <div style={{
-          position: "absolute", top: 0, left: 0, right: 0, bottom: 0,
-          background: ambientGradient,
-          opacity: 0.06,
-          borderRadius: "inherit",
-          pointerEvents: "none",
-          transition: "opacity .5s ease, background .5s ease",
-        }} />
+        <div
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: ambientGradient,
+            opacity: 0.06,
+            borderRadius: "inherit",
+            pointerEvents: "none",
+            transition: "opacity .5s ease, background .5s ease",
+          }}
+        />
       )}
 
-      <ModuleTabBar tabs={TABS} active={tab} onSelect={(id) => setTab(id as TabId)} accent={accentColor} />
+      <ModuleTabBar
+        tabs={TABS}
+        active={tab}
+        onSelect={(id) => setTab(id as TabId)}
+        accent={accentColor}
+      />
 
-      <div style={{
-        flex: 1, minHeight: 0, overflowY: "auto",
-        padding: "18px 16px 18px",
-        display: "flex", flexDirection: "column",
-        position: "relative", zIndex: 1,
-      }}>
-        {tab === "timer"   && <FocusTimer accent={accentColor} />}
-        {tab === "quiz"    && <StudyQuiz />}
-        {tab === "rooms"   && <StudyRooms lobbyId={lobbyId} accent={accentColor} />}
-        {tab === "lfg"     && <FindPartners lobbyId={lobbyId} accent={accentColor} />}
-        {tab === "ambient" && <AmbientTab accent={accentColor} onSceneChange={setAmbientGradient} />}
+      <div
+        style={{
+          flex: 1,
+          minHeight: 0,
+          overflowY: "auto",
+          padding: "18px 16px 18px",
+          display: "flex",
+          flexDirection: "column",
+          position: "relative",
+          zIndex: 1,
+        }}
+      >
+        {tab === "timer" && <FocusTimer accent={accentColor} />}
+        {tab === "quiz" && <StudyQuiz />}
+        {tab === "rooms" && <StudyRooms lobbyId={lobbyId} accent={accentColor} />}
+        {tab === "lfg" && <FindPartners lobbyId={lobbyId} accent={accentColor} />}
+        {tab === "ambient" && (
+          <AmbientTab accent={accentColor} onSceneChange={setAmbientGradient} />
+        )}
       </div>
     </div>
   );

@@ -28,12 +28,15 @@ export function LobbyEvents({ lobbyId, isOwner }: { lobbyId: string; isOwner: bo
   });
 
   const del = useMutation({
-    mutationFn: (eventId: string) => api(`/lobbies/${lobbyId}/events/${eventId}`, { method: "DELETE" }),
+    mutationFn: (eventId: string) =>
+      api(`/lobbies/${lobbyId}/events/${eventId}`, { method: "DELETE" }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["lobby-events", lobbyId] }),
     onError: (e: any) => Alert.alert("Couldn't delete", e?.message || "Unknown error"),
   });
 
-  const upcoming = (q.data?.events ?? []).filter((e) => new Date(e.startsAt).getTime() >= Date.now() - 2 * 60 * 60 * 1000);
+  const upcoming = (q.data?.events ?? []).filter(
+    (e) => new Date(e.startsAt).getTime() >= Date.now() - 2 * 60 * 60 * 1000,
+  );
   if (upcoming.length === 0 && !isOwner) return null;
 
   return (
@@ -57,21 +60,30 @@ export function LobbyEvents({ lobbyId, isOwner }: { lobbyId: string; isOwner: bo
                   {e.status === "DRAFT" && (
                     <Text className="text-amber-400 text-xs font-bold mr-2">DRAFT</Text>
                   )}
-                  <Text className="text-weered-text font-semibold flex-1" numberOfLines={1}>{e.title}</Text>
+                  <Text className="text-weered-text font-semibold flex-1" numberOfLines={1}>
+                    {e.title}
+                  </Text>
                 </View>
                 {!!e.description && (
-                  <Text className="text-weered-muted text-xs mt-0.5" numberOfLines={2}>{e.description}</Text>
+                  <Text className="text-weered-muted text-xs mt-0.5" numberOfLines={2}>
+                    {e.description}
+                  </Text>
                 )}
                 <Text className="text-weered text-xs mt-1">
-                  {new Date(e.startsAt).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })}
+                  {new Date(e.startsAt).toLocaleString([], {
+                    dateStyle: "medium",
+                    timeStyle: "short",
+                  })}
                 </Text>
               </View>
               {isOwner && (
                 <Pressable
-                  onPress={() => Alert.alert("Delete event?", e.title, [
-                    { text: "Cancel", style: "cancel" },
-                    { text: "Delete", style: "destructive", onPress: () => del.mutate(e.id) },
-                  ])}
+                  onPress={() =>
+                    Alert.alert("Delete event?", e.title, [
+                      { text: "Cancel", style: "cancel" },
+                      { text: "Delete", style: "destructive", onPress: () => del.mutate(e.id) },
+                    ])
+                  }
                   hitSlop={8}
                   className="ml-2 px-2 active:opacity-70"
                 >
@@ -87,14 +99,25 @@ export function LobbyEvents({ lobbyId, isOwner }: { lobbyId: string; isOwner: bo
         <EventForm
           lobbyId={lobbyId}
           onClose={() => setFormOpen(false)}
-          onCreated={() => { setFormOpen(false); qc.invalidateQueries({ queryKey: ["lobby-events", lobbyId] }); }}
+          onCreated={() => {
+            setFormOpen(false);
+            qc.invalidateQueries({ queryKey: ["lobby-events", lobbyId] });
+          }}
         />
       )}
     </View>
   );
 }
 
-function EventForm({ lobbyId, onClose, onCreated }: { lobbyId: string; onClose: () => void; onCreated: () => void }) {
+function EventForm({
+  lobbyId,
+  onClose,
+  onCreated,
+}: {
+  lobbyId: string;
+  onClose: () => void;
+  onCreated: () => void;
+}) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
@@ -110,7 +133,14 @@ function EventForm({ lobbyId, onClose, onCreated }: { lobbyId: string; onClose: 
       if (isNaN(parsed.getTime())) throw new Error("Invalid date — use YYYY-MM-DD HH:MM");
       return api(`/lobbies/${lobbyId}/events`, {
         method: "POST",
-        body: { title, description, category, startsAt: parsed.toISOString(), status, timezone: "UTC" },
+        body: {
+          title,
+          description,
+          category,
+          startsAt: parsed.toISOString(),
+          status,
+          timezone: "UTC",
+        },
       });
     },
     onSuccess: onCreated,
@@ -125,29 +155,50 @@ function EventForm({ lobbyId, onClose, onCreated }: { lobbyId: string; onClose: 
             <Text className="text-weered-text font-bold text-lg mb-4">New event</Text>
             <Text className="text-weered-muted text-xs uppercase tracking-wide mb-1">Title</Text>
             <Input value={title} onChangeText={setTitle} />
-            <Text className="text-weered-muted text-xs uppercase tracking-wide mb-1 mt-3">Description</Text>
+            <Text className="text-weered-muted text-xs uppercase tracking-wide mb-1 mt-3">
+              Description
+            </Text>
             <Input value={description} onChangeText={setDescription} multiline />
-            <Text className="text-weered-muted text-xs uppercase tracking-wide mb-1 mt-3">Category</Text>
-            <Input value={category} onChangeText={setCategory} placeholder="tournament, raid, meetup…" />
-            <Text className="text-weered-muted text-xs uppercase tracking-wide mb-1 mt-3">Starts (UTC, YYYY-MM-DD HH:MM)</Text>
+            <Text className="text-weered-muted text-xs uppercase tracking-wide mb-1 mt-3">
+              Category
+            </Text>
+            <Input
+              value={category}
+              onChangeText={setCategory}
+              placeholder="tournament, raid, meetup…"
+            />
+            <Text className="text-weered-muted text-xs uppercase tracking-wide mb-1 mt-3">
+              Starts (UTC, YYYY-MM-DD HH:MM)
+            </Text>
             <Input value={startsAt} onChangeText={setStartsAt} autoCapitalize="none" />
             <View className="flex-row mt-4">
               <Pressable
                 onPress={() => setStatus("PUBLISHED")}
                 className={`flex-1 mr-2 px-3 py-2.5 rounded-lg border ${status === "PUBLISHED" ? "bg-weered border-weered" : "bg-panel border-border"}`}
               >
-                <Text className={`text-xs font-bold text-center ${status === "PUBLISHED" ? "text-white" : "text-weered-muted"}`}>Publish</Text>
+                <Text
+                  className={`text-xs font-bold text-center ${status === "PUBLISHED" ? "text-white" : "text-weered-muted"}`}
+                >
+                  Publish
+                </Text>
               </Pressable>
               <Pressable
                 onPress={() => setStatus("DRAFT")}
                 className={`flex-1 px-3 py-2.5 rounded-lg border ${status === "DRAFT" ? "bg-amber-500 border-amber-500" : "bg-panel border-border"}`}
               >
-                <Text className={`text-xs font-bold text-center ${status === "DRAFT" ? "text-white" : "text-weered-muted"}`}>Save draft</Text>
+                <Text
+                  className={`text-xs font-bold text-center ${status === "DRAFT" ? "text-white" : "text-weered-muted"}`}
+                >
+                  Save draft
+                </Text>
               </Pressable>
             </View>
 
             <View className="flex-row mt-5">
-              <Pressable onPress={onClose} className="flex-1 mr-2 px-3 py-3 rounded-lg bg-panel border border-border active:opacity-70">
+              <Pressable
+                onPress={onClose}
+                className="flex-1 mr-2 px-3 py-3 rounded-lg bg-panel border border-border active:opacity-70"
+              >
                 <Text className="text-weered-muted text-center font-bold">Cancel</Text>
               </Pressable>
               <Pressable
@@ -155,7 +206,9 @@ function EventForm({ lobbyId, onClose, onCreated }: { lobbyId: string; onClose: 
                 disabled={create.isPending || !title.trim()}
                 className="flex-1 px-3 py-3 rounded-lg bg-weered active:opacity-80"
               >
-                <Text className="text-white text-center font-bold">{create.isPending ? "Saving…" : "Save"}</Text>
+                <Text className="text-white text-center font-bold">
+                  {create.isPending ? "Saving…" : "Save"}
+                </Text>
               </Pressable>
             </View>
           </ScrollView>
@@ -171,7 +224,10 @@ function Input(props: React.ComponentProps<typeof TextInput>) {
       {...props}
       placeholderTextColor="rgba(160,160,170,0.6)"
       className="bg-panel border border-border text-weered-text px-3 py-2.5 rounded-lg"
-      style={[{ fontSize: 14, minHeight: 42 }, props.multiline ? { minHeight: 64, textAlignVertical: "top" } : null]}
+      style={[
+        { fontSize: 14, minHeight: 42 },
+        props.multiline ? { minHeight: 64, textAlignVertical: "top" } : null,
+      ]}
     />
   );
 }

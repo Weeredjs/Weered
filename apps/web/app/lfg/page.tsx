@@ -25,11 +25,13 @@ const GUIDES: Guide[] = (() => {
 
 export const metadata: Metadata = {
   title: "LFG guides: how to find groups for any game on Weered",
-  description: "Per-game guides for finding fireteams, parties, squads, pods, and teams on Weered. Destiny 2, League of Legends, MTG, Path of Exile, Helldivers 2, D&D and more.",
+  description:
+    "Per-game guides for finding fireteams, parties, squads, pods, and teams on Weered. Destiny 2, League of Legends, MTG, Path of Exile, Helldivers 2, D&D and more.",
   alternates: { canonical: `${SITE}/lfg` },
   openGraph: {
     title: "LFG guides on Weered",
-    description: "How to find groups for any game on Weered: Destiny 2 fireteams, MTG pods, PoE parties, D&D campaigns, and more.",
+    description:
+      "How to find groups for any game on Weered: Destiny 2 fireteams, MTG pods, PoE parties, D&D campaigns, and more.",
     url: `${SITE}/lfg`,
     type: "website",
   },
@@ -38,25 +40,45 @@ export const metadata: Metadata = {
 
 export default function LfgIndexPage() {
   return (
-    <main style={{
-      padding: "32px 20px",
-      fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
-      maxWidth: 860,
-      margin: "0 auto",
-      lineHeight: 1.55,
-      color: "#e8e8ea",
-    }}>
+    <main
+      style={{
+        padding: "32px 20px",
+        fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
+        maxWidth: 860,
+        margin: "0 auto",
+        lineHeight: 1.55,
+        color: "#e8e8ea",
+      }}
+    >
       <header style={{ marginBottom: 28 }}>
-        <p style={{ fontSize: 12, opacity: 0.6, textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>LFG guides</p>
-        <h1 style={{ fontSize: 32, margin: "0 0 12px", lineHeight: 1.15 }}>How to find a group on Weered</h1>
+        <p
+          style={{
+            fontSize: 12,
+            opacity: 0.6,
+            textTransform: "uppercase",
+            letterSpacing: 1,
+            marginBottom: 4,
+          }}
+        >
+          LFG guides
+        </p>
+        <h1 style={{ fontSize: 32, margin: "0 0 12px", lineHeight: 1.15 }}>
+          How to find a group on Weered
+        </h1>
         <p style={{ fontSize: 17, opacity: 0.92 }}>
-          Per-game guides for finding fireteams, parties, squads, pods, and teams on Weered.
-          Each guide covers the activity types the lobby supports, how Weered's integration with
-          the game differs from native LFG, and the common questions players ask.
+          Per-game guides for finding fireteams, parties, squads, pods, and teams on Weered. Each
+          guide covers the activity types the lobby supports, how Weered's integration with the game
+          differs from native LFG, and the common questions players ask.
         </p>
       </header>
 
-      <section style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 16 }}>
+      <section
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
+          gap: 16,
+        }}
+      >
         {GUIDES.map((g) => (
           <Link
             key={g.lobby_id}
@@ -75,25 +97,33 @@ export default function LfgIndexPage() {
               {g.game_name} {g.noun_singular} finder
             </h2>
             <p style={{ fontSize: 13, opacity: 0.8, marginBottom: 0 }}>
-              {g.tldr.slice(0, 140)}{g.tldr.length > 140 ? "..." : ""}
+              {g.tldr.slice(0, 140)}
+              {g.tldr.length > 140 ? "..." : ""}
             </p>
           </Link>
         ))}
       </section>
 
-      <footer style={{
-        borderTop: "1px solid rgba(255,255,255,0.1)",
-        paddingTop: 16,
-        marginTop: 40,
-        fontSize: 14,
-        opacity: 0.75,
-      }}>
+      <footer
+        style={{
+          borderTop: "1px solid rgba(255,255,255,0.1)",
+          paddingTop: 16,
+          marginTop: 40,
+          fontSize: 14,
+          opacity: 0.75,
+        }}
+      >
         <p style={{ marginBottom: 8 }}>
           Don't see your game? The lobby probably exists even if a dedicated guide doesn't yet.{" "}
-          <Link href="/lobby" style={{ color: "#7c9dff" }}>Browse all lobbies →</Link>
+          <Link href="/lobby" style={{ color: "#7c9dff" }}>
+            Browse all lobbies →
+          </Link>
         </p>
         <p style={{ marginBottom: 0 }}>
-          Open Weered: <Link href="/" style={{ color: "#7c9dff" }}>{SITE}</Link>
+          Open Weered:{" "}
+          <Link href="/" style={{ color: "#7c9dff" }}>
+            {SITE}
+          </Link>
         </p>
       </footer>
     </main>

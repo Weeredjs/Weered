@@ -5,25 +5,37 @@ import * as React from "react";
 type Thread = { id: string; title: string; preview: string; unread?: number; lastTs: string };
 type Msg = { id: string; author: string; text: string; ts: string };
 
-function nowTs(){
+function nowTs() {
   const d = new Date();
-  const hh = String(d.getHours()).padStart(2,"0");
-  const mm = String(d.getMinutes()).padStart(2,"0");
+  const hh = String(d.getHours()).padStart(2, "0");
+  const mm = String(d.getMinutes()).padStart(2, "0");
   return `${hh}:${mm}`;
 }
 
 export default function DockSheet(props: { payload?: any; onClose?: () => void }) {
   const threads = React.useMemo<Thread[]>(
     () => [
-      { id: "dm:alice", title: "Alice", preview: "You: yep sounds good", unread: 2, lastTs: "10:12" },
+      {
+        id: "dm:alice",
+        title: "Alice",
+        preview: "You: yep sounds good",
+        unread: 2,
+        lastTs: "10:12",
+      },
       { id: "dm:bob", title: "Bob", preview: "Bob: lol", unread: 0, lastTs: "09:48" },
-      { id: "team:weered", title: "Weered Team", preview: "Room tabs are live", unread: 5, lastTs: "10:01" },
+      {
+        id: "team:weered",
+        title: "Weered Team",
+        preview: "Room tabs are live",
+        unread: 5,
+        lastTs: "10:01",
+      },
     ],
-    []
+    [],
   );
 
   const [activeId, setActiveId] = React.useState<string>(threads[0]?.id ?? "dm:alice");
-  const [draftByThread, setDraftByThread] = React.useState<Record<string,string>>({});
+  const [draftByThread, setDraftByThread] = React.useState<Record<string, string>>({});
 
   const draft = draftByThread[activeId] ?? "";
 
@@ -33,7 +45,7 @@ export default function DockSheet(props: { payload?: any; onClose?: () => void }
       { id: "m2", author: "You", text: "Yep — UI-first. No regressions.", ts: "10:13" },
       { id: "m3", author: "Alice", text: "Perfect.", ts: "10:14" },
     ],
-    [activeId]
+    [activeId],
   );
 
   const listRef = React.useRef<HTMLDivElement | null>(null);
@@ -44,9 +56,12 @@ export default function DockSheet(props: { payload?: any; onClose?: () => void }
     });
   }, [activeId]);
 
-  const setDraft = React.useCallback((v: string) => {
-    setDraftByThread((cur) => ({ ...cur, [activeId]: v }));
-  }, [activeId]);
+  const setDraft = React.useCallback(
+    (v: string) => {
+      setDraftByThread((cur) => ({ ...cur, [activeId]: v }));
+    },
+    [activeId],
+  );
 
   const send = React.useCallback(() => {
     const v = draft.trim();
@@ -66,8 +81,22 @@ export default function DockSheet(props: { payload?: any; onClose?: () => void }
           gap: 10,
         }}
       >
-        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap: 10 }}>
-          <div style={{ fontSize: 12, letterSpacing: ".08em", textTransform: "uppercase", opacity: 0.75 }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 10,
+          }}
+        >
+          <div
+            style={{
+              fontSize: 12,
+              letterSpacing: ".08em",
+              textTransform: "uppercase",
+              opacity: 0.75,
+            }}
+          >
             Messages
           </div>
           <button
@@ -79,7 +108,7 @@ export default function DockSheet(props: { payload?: any; onClose?: () => void }
               padding: "6px 10px",
               cursor: "pointer",
               color: "rgba(229,231,235,.95)",
-              fontWeight: 900
+              fontWeight: 900,
             }}
             title="New DM (placeholder)"
           >
@@ -102,7 +131,15 @@ export default function DockSheet(props: { payload?: any; onClose?: () => void }
           }}
         />
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 6, overflow: "auto", paddingRight: 2 }}>
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 6,
+            overflow: "auto",
+            paddingRight: 2,
+          }}
+        >
           {threads.map((t) => {
             const active = t.id === activeId;
             return (
@@ -112,19 +149,35 @@ export default function DockSheet(props: { payload?: any; onClose?: () => void }
                 style={{
                   textAlign: "left",
                   borderRadius: 12,
-                  border: "1px solid " + (active ? "rgba(124,58,237,.35)" : "rgba(255,255,255,.08)"),
+                  border:
+                    "1px solid " + (active ? "rgba(124,58,237,.35)" : "rgba(255,255,255,.08)"),
                   background: active ? "rgba(124,58,237,.14)" : "rgba(255,255,255,.03)",
                   padding: "10px 10px",
                   cursor: "pointer",
                   color: "rgba(229,231,235,.96)",
                 }}
               >
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-                  <div style={{ fontWeight: 900, minWidth:0, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 10,
+                  }}
+                >
+                  <div
+                    style={{
+                      fontWeight: 900,
+                      minWidth: 0,
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
                     {t.title}
                   </div>
-                  <div style={{ display:"flex", alignItems:"center", gap: 8 }}>
-                    <span style={{ fontSize: 11, opacity: .7 }}>{t.lastTs}</span>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <span style={{ fontSize: 11, opacity: 0.7 }}>{t.lastTs}</span>
                     {!!t.unread && (
                       <span
                         style={{
@@ -203,7 +256,10 @@ export default function DockSheet(props: { payload?: any; onClose?: () => void }
           }}
         >
           {messages.map((m) => (
-            <div key={m.id} style={{ alignSelf: m.author === "You" ? "flex-end" : "flex-start", maxWidth: "78%" }}>
+            <div
+              key={m.id}
+              style={{ alignSelf: m.author === "You" ? "flex-end" : "flex-start", maxWidth: "78%" }}
+            >
               <div style={{ fontSize: 12, opacity: 0.72, marginBottom: 4 }}>
                 {m.author} · {m.ts}
               </div>
@@ -223,7 +279,14 @@ export default function DockSheet(props: { payload?: any; onClose?: () => void }
           ))}
         </div>
 
-        <div style={{ padding: 12, borderTop: "1px solid rgba(255,255,255,.08)", display: "flex", gap: 10 }}>
+        <div
+          style={{
+            padding: 12,
+            borderTop: "1px solid rgba(255,255,255,.08)",
+            display: "flex",
+            gap: 10,
+          }}
+        >
           <textarea
             value={draft}
             onChange={(e) => setDraft(e.target.value)}

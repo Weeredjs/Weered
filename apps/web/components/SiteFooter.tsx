@@ -8,7 +8,7 @@ const HIDE_ON = ["/login", "/register", "/staff"];
 
 export default function SiteFooter() {
   const pathname = usePathname() || "";
-  const hidden = HIDE_ON.some(r => pathname === r || pathname.startsWith(r + "/"));
+  const hidden = HIDE_ON.some((r) => pathname === r || pathname.startsWith(r + "/"));
   if (hidden) return null;
 
   return (

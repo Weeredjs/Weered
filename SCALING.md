@@ -57,7 +57,7 @@ documented at the bottom of this file.
    cheapest lever by far and the right first move every time. The single-process
    model uses one core for the event loop, so favor higher per-core clock and
    enough RAM to hold connection state + Postgres working set.
-2. **Fix the known O(n) fanouts.** Two broadcast paths currently iterate *all*
+2. **Fix the known O(n) fanouts.** Two broadcast paths currently iterate _all_
    connections rather than a targeted set: `createNotification` and the
    `lobby:activity` broadcast. Convert these to a `userId → Set<socket>` /
    `lobbyId → Set<socket>` index so a broadcast touches only the relevant

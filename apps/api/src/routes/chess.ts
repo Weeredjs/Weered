@@ -25,25 +25,37 @@ export default async function chessRoutes(app: FastifyInstance, opts: Opts) {
 
     if (!LICHESS_USERNAME_RE.test(raw)) {
       return reply.code(400).send({
-        ok: false, error: "invalid_lichess_username",
-        message: "Lichess usernames are 2-29 chars, letters/digits/dash/underscore, must start with a letter or digit.",
+        ok: false,
+        error: "invalid_lichess_username",
+        message:
+          "Lichess usernames are 2-29 chars, letters/digits/dash/underscore, must start with a letter or digit.",
       });
     }
 
     try {
       const r = await fetchWithTimeout(`https://lichess.org/api/user/${encodeURIComponent(raw)}`);
       if (r.status === 404) {
-        return reply.code(404).send({ ok: false, error: "lichess_user_not_found", message: `Lichess user "${raw}" doesn't exist.` });
+        return reply.code(404).send({
+          ok: false,
+          error: "lichess_user_not_found",
+          message: `Lichess user "${raw}" doesn't exist.`,
+        });
       }
       if (!r.ok) {
-        return reply.code(502).send({ ok: false, error: "lichess_unreachable", message: "Couldn't reach Lichess just now. Try again in a sec." });
+        return reply.code(502).send({
+          ok: false,
+          error: "lichess_unreachable",
+          message: "Couldn't reach Lichess just now. Try again in a sec.",
+        });
       }
       const data = await r.json();
       const canonical = (data?.username || raw).trim();
       await prisma.user.update({ where: { id: u.id }, data: { lichessUsername: canonical } });
       return reply.send({ ok: true, lichessUsername: canonical });
     } catch (err: any) {
-      return reply.code(502).send({ ok: false, error: "lichess_error", message: String(err?.message || err) });
+      return reply
+        .code(502)
+        .send({ ok: false, error: "lichess_error", message: String(err?.message || err) });
     }
   });
 
@@ -60,27 +72,41 @@ export default async function chessRoutes(app: FastifyInstance, opts: Opts) {
 
     if (!CHESS_COM_USERNAME_RE.test(raw)) {
       return reply.code(400).send({
-        ok: false, error: "invalid_chess_com_username",
+        ok: false,
+        error: "invalid_chess_com_username",
         message: "Chess.com usernames are 3-25 chars, letters/digits/dash/underscore.",
       });
     }
 
     try {
-      const r = await fetchWithTimeout(`https://api.chess.com/pub/player/${encodeURIComponent(raw.toLowerCase())}`, {
-        headers: { "User-Agent": "Weered (https://weered.ca)" },
-      });
+      const r = await fetchWithTimeout(
+        `https://api.chess.com/pub/player/${encodeURIComponent(raw.toLowerCase())}`,
+        {
+          headers: { "User-Agent": "Weered (https://weered.ca)" },
+        },
+      );
       if (r.status === 404) {
-        return reply.code(404).send({ ok: false, error: "chess_com_user_not_found", message: `Chess.com user "${raw}" doesn't exist.` });
+        return reply.code(404).send({
+          ok: false,
+          error: "chess_com_user_not_found",
+          message: `Chess.com user "${raw}" doesn't exist.`,
+        });
       }
       if (!r.ok) {
-        return reply.code(502).send({ ok: false, error: "chess_com_unreachable", message: "Couldn't reach Chess.com just now. Try again in a sec." });
+        return reply.code(502).send({
+          ok: false,
+          error: "chess_com_unreachable",
+          message: "Couldn't reach Chess.com just now. Try again in a sec.",
+        });
       }
       const data = await r.json();
       const canonical = String(data?.username || raw).trim();
       await prisma.user.update({ where: { id: u.id }, data: { chessComUsername: canonical } });
       return reply.send({ ok: true, chessComUsername: canonical });
     } catch (err: any) {
-      return reply.code(502).send({ ok: false, error: "chess_com_error", message: String(err?.message || err) });
+      return reply
+        .code(502)
+        .send({ ok: false, error: "chess_com_error", message: String(err?.message || err) });
     }
   });
 
@@ -95,12 +121,20 @@ export default async function chessRoutes(app: FastifyInstance, opts: Opts) {
     const lichessUsername = row?.lichessUsername || null;
     const chessComUsername = row?.chessComUsername || null;
 
-    const result: any = { ok: true, lichessUsername, chessComUsername, lichess: null, chessCom: null };
+    const result: any = {
+      ok: true,
+      lichessUsername,
+      chessComUsername,
+      lichess: null,
+      chessCom: null,
+    };
 
     const ua = { "User-Agent": "Weered (https://weered.ca)" };
     if (lichessUsername) {
       try {
-        const r = await fetchWithTimeout(`https://lichess.org/api/user/${encodeURIComponent(lichessUsername)}`);
+        const r = await fetchWithTimeout(
+          `https://lichess.org/api/user/${encodeURIComponent(lichessUsername)}`,
+        );
         if (r.ok) {
           const d = await r.json();
           result.lichess = {
@@ -108,7 +142,14 @@ export default async function chessRoutes(app: FastifyInstance, opts: Opts) {
             url: d.url,
             createdAt: d.createdAt,
             seenAt: d.seenAt,
-            perfs: d.perfs ? Object.fromEntries(Object.entries(d.perfs).map(([k, v]: any) => [k, { rating: v.rating, games: v.games, prog: v.prog }])) : null,
+            perfs: d.perfs
+              ? Object.fromEntries(
+                  Object.entries(d.perfs).map(([k, v]: any) => [
+                    k,
+                    { rating: v.rating, games: v.games, prog: v.prog },
+                  ]),
+                )
+              : null,
             count: d.count,
           };
         }
@@ -116,17 +157,20 @@ export default async function chessRoutes(app: FastifyInstance, opts: Opts) {
     }
     if (chessComUsername) {
       try {
-        const r = await fetchWithTimeout(`https://api.chess.com/pub/player/${encodeURIComponent(chessComUsername.toLowerCase())}/stats`, { headers: ua });
+        const r = await fetchWithTimeout(
+          `https://api.chess.com/pub/player/${encodeURIComponent(chessComUsername.toLowerCase())}/stats`,
+          { headers: ua },
+        );
         if (r.ok) {
           const d = await r.json();
           result.chessCom = {
             username: chessComUsername,
             url: `https://chess.com/member/${chessComUsername}`,
             ratings: {
-              bullet:    d.chess_bullet?.last?.rating ?? null,
-              blitz:     d.chess_blitz?.last?.rating ?? null,
-              rapid:     d.chess_rapid?.last?.rating ?? null,
-              daily:     d.chess_daily?.last?.rating ?? null,
+              bullet: d.chess_bullet?.last?.rating ?? null,
+              blitz: d.chess_blitz?.last?.rating ?? null,
+              rapid: d.chess_rapid?.last?.rating ?? null,
+              daily: d.chess_daily?.last?.rating ?? null,
             },
           };
         }
@@ -165,12 +209,21 @@ export default async function chessRoutes(app: FastifyInstance, opts: Opts) {
     const rows: any[] = [];
     for (const u of users) {
       try {
-        const r = await fetchWithTimeout(`https://lichess.org/api/user/${encodeURIComponent(u.lichessUsername!)}`);
+        const r = await fetchWithTimeout(
+          `https://lichess.org/api/user/${encodeURIComponent(u.lichessUsername!)}`,
+        );
         if (!r.ok) continue;
         const d = await r.json();
         const rating = d?.perfs?.[perf]?.rating;
         if (typeof rating === "number") {
-          rows.push({ userId: u.id, name: u.name, usernameKey: u.usernameKey, lichessUsername: u.lichessUsername, rating, games: d?.perfs?.[perf]?.games || 0 });
+          rows.push({
+            userId: u.id,
+            name: u.name,
+            usernameKey: u.usernameKey,
+            lichessUsername: u.lichessUsername,
+            rating,
+            games: d?.perfs?.[perf]?.games || 0,
+          });
         }
       } catch {}
     }

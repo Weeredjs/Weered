@@ -33,38 +33,66 @@ function pickFirstString(...vals: any[]): string {
 }
 
 function normRole(x: string) {
-  const s = String(x || "").trim().toUpperCase();
+  const s = String(x || "")
+    .trim()
+    .toUpperCase();
   if (!s) return "";
-  if (s === "GOD")     return "GOD";
+  if (s === "GOD") return "GOD";
   if (s === "SUPPORT") return "SUPPORT";
-  if (s === "STAFF")   return "STAFF";
-  if (s === "ADMIN")   return "ADMIN";
-  if (s === "MOD")     return "MOD";
-  if (s === "OWNER")   return "OWNER";
-  if (s === "MEMBER")  return "MEMBER";
+  if (s === "STAFF") return "STAFF";
+  if (s === "ADMIN") return "ADMIN";
+  if (s === "MOD") return "MOD";
+  if (s === "OWNER") return "OWNER";
+  if (s === "MEMBER") return "MEMBER";
   return s.slice(0, 14);
 }
 
 const ROLE_DISPLAY: Record<string, string> = {
-  GOD: "GODFATHER", ADMIN: "LIEUTENANT", STAFF: "ENFORCER", SUPPORT: "BACKUP",
-  MOD: "CAPTAIN", OWNER: "FOUNDER", MEMBER: "MEMBER",
+  GOD: "GODFATHER",
+  ADMIN: "LIEUTENANT",
+  STAFF: "ENFORCER",
+  SUPPORT: "BACKUP",
+  MOD: "CAPTAIN",
+  OWNER: "FOUNDER",
+  MEMBER: "MEMBER",
 };
 const ROLE_DISPLAY_WINDROSE: Record<string, string> = {
-  GOD: "ADMIRAL", ADMIN: "FIRST MATE", STAFF: "BOATSWAIN", SUPPORT: "LOOKOUT",
-  MOD: "QUARTERMASTER", OWNER: "CAPTAIN", MEMBER: "CREWMATE",
+  GOD: "ADMIRAL",
+  ADMIN: "FIRST MATE",
+  STAFF: "BOATSWAIN",
+  SUPPORT: "LOOKOUT",
+  MOD: "QUARTERMASTER",
+  OWNER: "CAPTAIN",
+  MEMBER: "CREWMATE",
 };
 const ROLE_DISPLAY_HELLDIVERS: Record<string, string> = {
-  GOD: "SUPREME COMMANDER", ADMIN: "GENERAL", STAFF: "COMMANDER", SUPPORT: "OFFICER",
-  MOD: "DRILL SERGEANT", OWNER: "DIVE LEAD", MEMBER: "HELLDIVER",
+  GOD: "SUPREME COMMANDER",
+  ADMIN: "GENERAL",
+  STAFF: "COMMANDER",
+  SUPPORT: "OFFICER",
+  MOD: "DRILL SERGEANT",
+  OWNER: "DIVE LEAD",
+  MEMBER: "HELLDIVER",
 };
 function roleDisplay(dbRole: string, lobbyTheme?: string | null): string {
-  if (lobbyTheme === "windrose" && ROLE_DISPLAY_WINDROSE[dbRole]) return ROLE_DISPLAY_WINDROSE[dbRole];
-  if (lobbyTheme === "helldivers2" && ROLE_DISPLAY_HELLDIVERS[dbRole]) return ROLE_DISPLAY_HELLDIVERS[dbRole];
+  if (lobbyTheme === "windrose" && ROLE_DISPLAY_WINDROSE[dbRole])
+    return ROLE_DISPLAY_WINDROSE[dbRole];
+  if (lobbyTheme === "helldivers2" && ROLE_DISPLAY_HELLDIVERS[dbRole])
+    return ROLE_DISPLAY_HELLDIVERS[dbRole];
   return ROLE_DISPLAY[dbRole] || dbRole;
 }
 
 const IconDock = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <rect x="2" y="4" width="20" height="14" rx="3" />
     <path d="M7 9.5h10M7 13h6" opacity=".6" />
   </svg>
@@ -75,7 +103,17 @@ function UserCornerFlair({ userId }: { userId?: string }) {
   if (!f) return null;
   if (f.kind !== "BADGE" && f.kind !== "NAMEPLATE") return null;
   return (
-    <div style={{ marginTop: 4, display: "flex", alignItems: "center", gap: 6, fontSize: 10, fontWeight: 700, color: f.color || "rgba(243,244,246,.85)" }}>
+    <div
+      style={{
+        marginTop: 4,
+        display: "flex",
+        alignItems: "center",
+        gap: 6,
+        fontSize: 10,
+        fontWeight: 700,
+        color: f.color || "rgba(243,244,246,.85)",
+      }}
+    >
       <FlairBadge flair={f as any} size="sm" />
       <span style={{ textTransform: "uppercase", letterSpacing: "1px" }}>{f.name}</span>
     </div>
@@ -91,10 +129,20 @@ export default function UserCorner() {
     const read = () => setLobbyTheme(document.documentElement.getAttribute("data-weered-lobby"));
     read();
     const obs = new MutationObserver(read);
-    obs.observe(document.documentElement, { attributes: true, attributeFilter: ["data-weered-lobby"] });
+    obs.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["data-weered-lobby"],
+    });
     return () => obs.disconnect();
   }, []);
-  const burnerLabel = lobbyTheme === "windrose" ? "Bottle" : lobbyTheme === "destiny2" ? "Transmat" : lobbyTheme === "helldivers2" ? "Comms" : "Burner";
+  const burnerLabel =
+    lobbyTheme === "windrose"
+      ? "Bottle"
+      : lobbyTheme === "destiny2"
+        ? "Transmat"
+        : lobbyTheme === "helldivers2"
+          ? "Comms"
+          : "Burner";
 
   const API_BASE = (process.env.NEXT_PUBLIC_API_BASE as string) || "http://127.0.0.1:4000";
   const [lobbyLogo, setLobbyLogo] = React.useState<string | null>(null);
@@ -104,7 +152,11 @@ export default function UserCorner() {
     const lid = currentLobbyId || "";
     if (lid === prevLobbyRef.current) return;
     prevLobbyRef.current = lid;
-    if (!lid || lid === "lobby") { setLobbyLogo(null); setLobbyAccent(null); return; }
+    if (!lid || lid === "lobby") {
+      setLobbyLogo(null);
+      setLobbyAccent(null);
+      return;
+    }
     let cancelled = false;
     (async () => {
       try {
@@ -114,9 +166,16 @@ export default function UserCorner() {
           setLobbyLogo(j.lobby.logoUrl || null);
           setLobbyAccent(j.lobby.accentColor || null);
         }
-      } catch { if (!cancelled) { setLobbyLogo(null); setLobbyAccent(null); } }
+      } catch {
+        if (!cancelled) {
+          setLobbyLogo(null);
+          setLobbyAccent(null);
+        }
+      }
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [currentLobbyId]);
 
   const name = useMemo(() => pickFirstString(me?.name, me?.username, "Guest"), [me]);
@@ -147,14 +206,20 @@ export default function UserCorner() {
   }, []);
 
   const [dockUnread, setDockUnread] = React.useState(() => {
-    try { return Math.max(0, Number(localStorage.getItem("weered:dock:unread")) || 0); } catch { return 0; }
+    try {
+      return Math.max(0, Number(localStorage.getItem("weered:dock:unread")) || 0);
+    } catch {
+      return 0;
+    }
   });
 
   React.useEffect(() => {
     const onUnread = (e: Event) => {
       const count = Math.max(0, Number((e as CustomEvent)?.detail?.count) || 0);
       setDockUnread(count);
-      try { localStorage.setItem("weered:dock:unread", String(count)); } catch {}
+      try {
+        localStorage.setItem("weered:dock:unread", String(count));
+      } catch {}
     };
     const poll = () => {
       try {
@@ -173,69 +238,107 @@ export default function UserCorner() {
   React.useEffect(() => {
     const handler = () => {
       setDockUnread(0);
-      try { localStorage.setItem("weered:dock:unread", "0"); } catch {}
+      try {
+        localStorage.setItem("weered:dock:unread", "0");
+      } catch {}
     };
-    window.addEventListener("weered:dock:open",   handler);
+    window.addEventListener("weered:dock:open", handler);
     window.addEventListener("weered:dock:toggle", handler);
     return () => {
-      window.removeEventListener("weered:dock:open",   handler);
+      window.removeEventListener("weered:dock:open", handler);
       window.removeEventListener("weered:dock:toggle", handler);
     };
   }, []);
 
-  const gRole    = useMemo(() => normRole(globalRole || ""), [globalRole]);
+  const gRole = useMemo(() => normRole(globalRole || ""), [globalRole]);
   const roomRole = useMemo(() => normRole(pickFirstString(role)), [role]);
-  const initial  = (name || "G").trim().slice(0, 1).toUpperCase();
+  const initial = (name || "G").trim().slice(0, 1).toUpperCase();
 
   const profileUserId = (me?.id ?? me?.userId ?? me?.name ?? me?.username ?? "me").toString();
 
-  const [primaryCrew, setPrimaryCrew] = useState<{ id: string; name: string; tag: string; logoUrl: string | null; accentColor: string | null } | null>(null);
+  const [primaryCrew, setPrimaryCrew] = useState<{
+    id: string;
+    name: string;
+    tag: string;
+    logoUrl: string | null;
+    accentColor: string | null;
+  } | null>(null);
   const [notorietyRank, setNotorietyRank] = useState<string>("");
   const [notorietyScore, setNotorietyScore] = useState<number | null>(null);
   const [nameEffect, setNameEffect] = useState<string | null>(null);
   const [avatarFrame, setAvatarFrame] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!avatarFrame) { document.documentElement.removeAttribute("data-uc-frame"); return; }
+    if (!avatarFrame) {
+      document.documentElement.removeAttribute("data-uc-frame");
+      return;
+    }
     document.documentElement.setAttribute("data-uc-frame", avatarFrame);
-    return () => { document.documentElement.removeAttribute("data-uc-frame"); };
+    return () => {
+      document.documentElement.removeAttribute("data-uc-frame");
+    };
   }, [avatarFrame]);
   const [bannerUrl, setBannerUrl] = useState<string | null>(null);
   const [status, setStatus] = useState<{ text: string; emoji: string }>({ text: "", emoji: "" });
   const [editingStatus, setEditingStatus] = useState(false);
-  const [draftStatus, setDraftStatus] = useState<{ text: string; emoji: string }>({ text: "", emoji: "" });
+  const [draftStatus, setDraftStatus] = useState<{ text: string; emoji: string }>({
+    text: "",
+    emoji: "",
+  });
   const loadProfile = React.useCallback(() => {
-    if (!me?.id) { setPrimaryCrew(null); setNotorietyRank(""); setProfileAvatar(undefined); return () => {}; }
+    if (!me?.id) {
+      setPrimaryCrew(null);
+      setNotorietyRank("");
+      setProfileAvatar(undefined);
+      return () => {};
+    }
     let cancelled = false;
     const token = (typeof window !== "undefined" ? localStorage.getItem("weered_token") : "") || "";
     fetch(`${API_BASE}/profile/${encodeURIComponent(me.id)}`, {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
-    }).then(r => r.json()).then(j => {
-      if (cancelled) return;
-      if (j?.primaryCrew) {
-        setPrimaryCrew({
-          id: j.primaryCrew.id,
-          name: j.primaryCrew.name,
-          tag: j.primaryCrew.tag || "",
-          logoUrl: j.primaryCrew.logoUrl || null,
-          accentColor: j.primaryCrew.accentColor || null,
-        });
-      } else { setPrimaryCrew(null); }
-      if (j?.notorietyRank) setNotorietyRank(String(j.notorietyRank));
-      if (typeof j?.notoriety === "number") setNotorietyScore(j.notoriety);
-      setNameEffect(j?.nameEffect || null);
-      setAvatarFrame(j?.avatarFrame || null);
-      if (j?.bannerUrl) setBannerUrl(String(j.bannerUrl)); else setBannerUrl(null);
-      setStatus({ text: j?.statusText || "", emoji: j?.statusEmoji || "" });
-      setProfileAvatar(typeof j?.avatar === "string" && j.avatar ? j.avatar : (j && "avatar" in j ? null : undefined));
-      setProfileColor(typeof j?.avatarColor === "string" && j.avatarColor ? j.avatarColor : null);
-    }).catch(() => {});
-    return () => { cancelled = true; };
+    })
+      .then((r) => r.json())
+      .then((j) => {
+        if (cancelled) return;
+        if (j?.primaryCrew) {
+          setPrimaryCrew({
+            id: j.primaryCrew.id,
+            name: j.primaryCrew.name,
+            tag: j.primaryCrew.tag || "",
+            logoUrl: j.primaryCrew.logoUrl || null,
+            accentColor: j.primaryCrew.accentColor || null,
+          });
+        } else {
+          setPrimaryCrew(null);
+        }
+        if (j?.notorietyRank) setNotorietyRank(String(j.notorietyRank));
+        if (typeof j?.notoriety === "number") setNotorietyScore(j.notoriety);
+        setNameEffect(j?.nameEffect || null);
+        setAvatarFrame(j?.avatarFrame || null);
+        if (j?.bannerUrl) setBannerUrl(String(j.bannerUrl));
+        else setBannerUrl(null);
+        setStatus({ text: j?.statusText || "", emoji: j?.statusEmoji || "" });
+        setProfileAvatar(
+          typeof j?.avatar === "string" && j.avatar
+            ? j.avatar
+            : j && "avatar" in j
+              ? null
+              : undefined,
+        );
+        setProfileColor(typeof j?.avatarColor === "string" && j.avatarColor ? j.avatarColor : null);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
   }, [me?.id, API_BASE]);
 
   useEffect(() => {
     let cancel = loadProfile();
-    const reload = () => { cancel(); cancel = loadProfile(); };
+    const reload = () => {
+      cancel();
+      cancel = loadProfile();
+    };
     window.addEventListener("weered:profile:updated", reload);
     window.addEventListener("weered:profileColors", reload);
     window.addEventListener("weered:avatarColor", reload);
@@ -256,44 +359,63 @@ export default function UserCorner() {
   }, [liveAvatarColor]);
 
   const rawPanelAccent = colorOverrides.panelAccentColor || me?.panelAccentColor;
-  const rawPanelBg     = colorOverrides.panelBgColor     || me?.panelBgColor;
-  const userPanelAccent = (rawPanelAccent && /^#[0-9a-f]{6}$/i.test(rawPanelAccent)) ? rawPanelAccent : null;
-  const userPanelBg     = (rawPanelBg     && /^#[0-9a-f]{6}$/i.test(rawPanelBg))     ? rawPanelBg     : null;
+  const rawPanelBg = colorOverrides.panelBgColor || me?.panelBgColor;
+  const userPanelAccent =
+    rawPanelAccent && /^#[0-9a-f]{6}$/i.test(rawPanelAccent) ? rawPanelAccent : null;
+  const userPanelBg = rawPanelBg && /^#[0-9a-f]{6}$/i.test(rawPanelBg) ? rawPanelBg : null;
   const bestRoleForAccent = gRole || (roomRole && roomRole !== "MEMBER" ? roomRole : "");
   const roleAccentHex =
-    bestRoleForAccent === "GOD"     ? "#facc15" :
-    bestRoleForAccent === "ADMIN"   ? "#f87171" :
-    bestRoleForAccent === "STAFF"   ? "#60a5fa" :
-    bestRoleForAccent === "SUPPORT" ? "#34d399" :
-    bestRoleForAccent === "OWNER"   ? "#fb923c" :
-    bestRoleForAccent === "MOD"     ? "#a78bfa" :
-    null;
-  const crewAccentHex = primaryCrew?.accentColor && /^#[0-9a-f]{6}$/i.test(primaryCrew.accentColor) ? primaryCrew.accentColor : null;
+    bestRoleForAccent === "GOD"
+      ? "#facc15"
+      : bestRoleForAccent === "ADMIN"
+        ? "#f87171"
+        : bestRoleForAccent === "STAFF"
+          ? "#60a5fa"
+          : bestRoleForAccent === "SUPPORT"
+            ? "#34d399"
+            : bestRoleForAccent === "OWNER"
+              ? "#fb923c"
+              : bestRoleForAccent === "MOD"
+                ? "#a78bfa"
+                : null;
+  const crewAccentHex =
+    primaryCrew?.accentColor && /^#[0-9a-f]{6}$/i.test(primaryCrew.accentColor)
+      ? primaryCrew.accentColor
+      : null;
   const cardAccent = userPanelAccent || roleAccentHex || crewAccentHex || "#7C3AED";
 
   useEffect(() => {
     const r = document.documentElement.style;
-    if (userPanelBg) r.setProperty("--weered-user-panel-bg", userPanelBg); else r.removeProperty("--weered-user-panel-bg");
-    if (userPanelAccent) r.setProperty("--weered-user-panel-accent", cardAccent); else r.removeProperty("--weered-user-panel-accent");
+    if (userPanelBg) r.setProperty("--weered-user-panel-bg", userPanelBg);
+    else r.removeProperty("--weered-user-panel-bg");
+    if (userPanelAccent) r.setProperty("--weered-user-panel-accent", cardAccent);
+    else r.removeProperty("--weered-user-panel-accent");
     return () => {
       r.removeProperty("--weered-user-panel-bg");
       r.removeProperty("--weered-user-panel-accent");
     };
   }, [userPanelBg, userPanelAccent, cardAccent]);
 
-  const saveStatus = React.useCallback(async (text: string, emoji: string) => {
-    const token = (typeof window !== "undefined" ? localStorage.getItem("weered_token") : "") || "";
-    try {
-      const r = await fetch(`${API_BASE}/profile/me`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-        body: JSON.stringify({ statusText: text, statusEmoji: emoji }),
-      });
-      const j = await r.json();
-      if (j?.ok) setStatus({ text: j.statusText || "", emoji: j.statusEmoji || "" });
-    } catch {}
-    setEditingStatus(false);
-  }, [API_BASE]);
+  const saveStatus = React.useCallback(
+    async (text: string, emoji: string) => {
+      const token =
+        (typeof window !== "undefined" ? localStorage.getItem("weered_token") : "") || "";
+      try {
+        const r = await fetch(`${API_BASE}/profile/me`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify({ statusText: text, statusEmoji: emoji }),
+        });
+        const j = await r.json();
+        if (j?.ok) setStatus({ text: j.statusText || "", emoji: j.statusEmoji || "" });
+      } catch {}
+      setEditingStatus(false);
+    },
+    [API_BASE],
+  );
 
   const idHash = useMemo(() => {
     const raw = String(me?.id || "");
@@ -309,7 +431,7 @@ export default function UserCorner() {
       style={{
         position: "relative",
         borderRadius: 16,
-        ...(userPanelBg     && { ["--weered-uc-bg" as any]:     userPanelBg }),
+        ...(userPanelBg && { ["--weered-uc-bg" as any]: userPanelBg }),
         ...(userPanelAccent && { ["--weered-uc-accent" as any]: cardAccent }),
         border: `2px solid ${userPanelAccent ? `${cardAccent}aa` : `${cardAccent}30`}`,
         background: userPanelBg
@@ -333,7 +455,9 @@ export default function UserCorner() {
         <div
           aria-hidden
           style={{
-            position: "absolute", inset: 0, pointerEvents: "none",
+            position: "absolute",
+            inset: 0,
+            pointerEvents: "none",
             backgroundImage: `repeating-linear-gradient(180deg, transparent 0 3px, rgba(255,255,255,.014) 3px 4px)`,
             mixBlendMode: "overlay",
             opacity: 0.6,
@@ -351,7 +475,8 @@ export default function UserCorner() {
           aria-hidden
           style={{
             position: "absolute",
-            width: 11, height: 11,
+            width: 11,
+            height: 11,
             borderTop: `2.5px solid ${userPanelAccent ? cardAccent : `${cardAccent}b0`}`,
             borderLeft: `2.5px solid ${userPanelAccent ? cardAccent : `${cardAccent}b0`}`,
             transform: `rotate(${pos.rotate}deg)`,
@@ -361,71 +486,118 @@ export default function UserCorner() {
         />
       ))}
       {lobbyLogo ? (
-        <div style={{
-          position: "absolute", top: 6, right: 8,
-          width: 26, height: 26, borderRadius: 6,
-          overflow: "hidden", pointerEvents: "none", userSelect: "none",
-          opacity: 0.55,
-          display: "flex", alignItems: "center", justifyContent: "center",
-          zIndex: 2,
-        }}>
+        <div
+          style={{
+            position: "absolute",
+            top: 6,
+            right: 8,
+            width: 26,
+            height: 26,
+            borderRadius: 6,
+            overflow: "hidden",
+            pointerEvents: "none",
+            userSelect: "none",
+            opacity: 0.55,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 2,
+          }}
+        >
           <img
             src={lobbyLogo}
             alt="Lobby logo"
-            style={{ width: "100%", height: "100%", objectFit: "contain", filter: "drop-shadow(0 0 6px rgba(0,0,0,.4))" }}
+            style={{
+              width: "100%",
+              height: "100%",
+              objectFit: "contain",
+              filter: "drop-shadow(0 0 6px rgba(0,0,0,.4))",
+            }}
           />
         </div>
       ) : null}
 
-      <div className="weered-uc-banner" style={{
-        position: "relative",
-        height: 64,
-        background: (() => {
-          if (bannerUrl) return `url(${bannerUrl}) center / cover no-repeat`;
-          const tier = String(me?.tier || "").toLowerCase();
-          const tierBanner =
-            tier === "kingpin"  ? "/brand/tiers/kingpin.svg" :
-            tier === "made_man" || tier === "mademan" ? "/brand/tiers/made_man.svg" :
-            tier === "felon"    ? "/brand/tiers/felon.svg" :
-            tier === "indicted" ? "/brand/tiers/indicted.svg" :
-            "/brand/tiers/innocent.svg";
-          return `url(${tierBanner}) center / cover no-repeat, linear-gradient(135deg, ${cardAccent}55 0%, ${cardAccent}15 60%, rgba(0,0,0,.45) 100%)`;
-        })(),
-        zIndex: 1,
-      }}>
-        <div aria-hidden style={{
-          position: "absolute", inset: 0,
-          background: "linear-gradient(180deg, rgba(0,0,0,0) 30%, rgba(0,0,0,.55) 100%)",
-          pointerEvents: "none",
-        }} />
+      <div
+        className="weered-uc-banner"
+        style={{
+          position: "relative",
+          height: 64,
+          background: (() => {
+            if (bannerUrl) return `url(${bannerUrl}) center / cover no-repeat`;
+            const tier = String(me?.tier || "").toLowerCase();
+            const tierBanner =
+              tier === "kingpin"
+                ? "/brand/tiers/kingpin.svg"
+                : tier === "made_man" || tier === "mademan"
+                  ? "/brand/tiers/made_man.svg"
+                  : tier === "felon"
+                    ? "/brand/tiers/felon.svg"
+                    : tier === "indicted"
+                      ? "/brand/tiers/indicted.svg"
+                      : "/brand/tiers/innocent.svg";
+            return `url(${tierBanner}) center / cover no-repeat, linear-gradient(135deg, ${cardAccent}55 0%, ${cardAccent}15 60%, rgba(0,0,0,.45) 100%)`;
+          })(),
+          zIndex: 1,
+        }}
+      >
+        <div
+          aria-hidden
+          style={{
+            position: "absolute",
+            inset: 0,
+            background: "linear-gradient(180deg, rgba(0,0,0,0) 30%, rgba(0,0,0,.55) 100%)",
+            pointerEvents: "none",
+          }}
+        />
 
-        <div style={{
-          position: "absolute", top: 8, left: 12,
-          display: "flex", alignItems: "center", gap: 8,
-          fontFamily: "ui-monospace, 'JetBrains Mono', monospace",
-          fontSize: 9, fontWeight: 800, letterSpacing: "1.4px",
-          textShadow: "0 1px 2px rgba(0,0,0,.6)",
-          pointerEvents: "none",
-        }}>
-          {idHash && (
-            <span style={{ color: "rgba(255,255,255,.55)" }}>ID · {idHash}</span>
-          )}
+        <div
+          style={{
+            position: "absolute",
+            top: 8,
+            left: 12,
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            fontFamily: "ui-monospace, 'JetBrains Mono', monospace",
+            fontSize: 9,
+            fontWeight: 800,
+            letterSpacing: "1.4px",
+            textShadow: "0 1px 2px rgba(0,0,0,.6)",
+            pointerEvents: "none",
+          }}
+        >
+          {idHash && <span style={{ color: "rgba(255,255,255,.55)" }}>ID · {idHash}</span>}
           {(() => {
             const tier = String(me?.tier || "").toUpperCase();
             if (!tier || tier === "INNOCENT") return null;
             const tierColor =
-              tier === "KINGPIN"  ? "#fde68a" :
-              tier === "FELON"    ? "#fdba74" :
-              tier === "INDICTED" ? "rgba(216,180,254,.95)" :
-              "rgba(243,244,246,.85)";
+              tier === "KINGPIN"
+                ? "#fde68a"
+                : tier === "FELON"
+                  ? "#fdba74"
+                  : tier === "INDICTED"
+                    ? "rgba(216,180,254,.95)"
+                    : "rgba(243,244,246,.85)";
             return (
-              <span className="weered-uc-banner-tier" style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-                {idHash && <span aria-hidden style={{ opacity: 0.4, color: "#fff" }}>·</span>}
-                <span style={{
-                  display: "inline-flex", alignItems: "center", gap: 4,
-                  color: tierColor,
-                  fontWeight: 900, letterSpacing: "1.8px",
-                }}>
+              <span
+                className="weered-uc-banner-tier"
+                style={{ display: "inline-flex", alignItems: "center", gap: 8 }}
+              >
+                {idHash && (
+                  <span aria-hidden style={{ opacity: 0.4, color: "#fff" }}>
+                    ·
+                  </span>
+                )}
+                <span
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 4,
+                    color: tierColor,
+                    fontWeight: 900,
+                    letterSpacing: "1.8px",
+                  }}
+                >
                   <TierIcon tier={tier as any} size={10} />
                   {tier}
                 </span>
@@ -433,81 +605,129 @@ export default function UserCorner() {
             );
           })()}
           {notorietyScore != null && (
-            <span className="weered-uc-noto" data-tooltip="Notoriety — your reputation XP. Climbs through Innocent, Indicted, Felon, Made Man, Kingpin as you contribute." style={{
-              display: "inline-flex", alignItems: "center", gap: 3,
-              color: "#D4A017", letterSpacing: "0.06em",
-              pointerEvents: "auto", cursor: "help", position: "relative",
-            }}>
+            <span
+              className="weered-uc-noto"
+              data-tooltip="Notoriety — your reputation XP. Climbs through Innocent, Indicted, Felon, Made Man, Kingpin as you contribute."
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 3,
+                color: "#D4A017",
+                letterSpacing: "0.06em",
+                pointerEvents: "auto",
+                cursor: "help",
+                position: "relative",
+              }}
+            >
               <span style={{ fontSize: 11 }}>★</span>
               {notorietyScore.toLocaleString()}
             </span>
           )}
         </div>
 
-        {primaryCrew?.tag && (() => {
-          const ca = primaryCrew.accentColor && /^#[0-9a-f]{6}$/i.test(primaryCrew.accentColor) ? primaryCrew.accentColor : cardAccent;
-          return (
-            <a
-              href={`/crew/${encodeURIComponent(primaryCrew.id)}`}
-              title={primaryCrew.name || ""}
-              style={{
-                position: "absolute", top: 8,
-                right: lobbyLogo ? 40 : 10,
-                display: "inline-flex", alignItems: "center", gap: 5,
-                padding: "3px 8px",
-                fontFamily: "ui-monospace, 'JetBrains Mono', monospace",
-                fontSize: 10, fontWeight: 900, letterSpacing: "1.2px",
-                color: ca,
-                background: "rgba(10,10,18,.55)",
-                border: `1px solid ${ca}80`,
-                borderRadius: 4,
-                textDecoration: "none",
-                boxShadow: "0 2px 6px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.08)",
-                backdropFilter: "blur(4px)",
-                WebkitBackdropFilter: "blur(4px)",
-              }}
-            >
-              [{primaryCrew.tag}]
-            </a>
-          );
-        })()}
+        {primaryCrew?.tag &&
+          (() => {
+            const ca =
+              primaryCrew.accentColor && /^#[0-9a-f]{6}$/i.test(primaryCrew.accentColor)
+                ? primaryCrew.accentColor
+                : cardAccent;
+            return (
+              <a
+                href={`/crew/${encodeURIComponent(primaryCrew.id)}`}
+                title={primaryCrew.name || ""}
+                style={{
+                  position: "absolute",
+                  top: 8,
+                  right: lobbyLogo ? 40 : 10,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 5,
+                  padding: "3px 8px",
+                  fontFamily: "ui-monospace, 'JetBrains Mono', monospace",
+                  fontSize: 10,
+                  fontWeight: 900,
+                  letterSpacing: "1.2px",
+                  color: ca,
+                  background: "rgba(10,10,18,.55)",
+                  border: `1px solid ${ca}80`,
+                  borderRadius: 4,
+                  textDecoration: "none",
+                  boxShadow: "0 2px 6px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.08)",
+                  backdropFilter: "blur(4px)",
+                  WebkitBackdropFilter: "blur(4px)",
+                }}
+              >
+                [{primaryCrew.tag}]
+              </a>
+            );
+          })()}
 
-        <div className="weered-uc-notoriety" style={{
-          position: "absolute", left: 0, right: 0, bottom: 0,
-          padding: "0 12px 6px",
-          paddingLeft: 78,
-        }}>
+        <div
+          className="weered-uc-notoriety"
+          style={{
+            position: "absolute",
+            left: 0,
+            right: 0,
+            bottom: 0,
+            padding: "0 12px 6px",
+            paddingLeft: 78,
+          }}
+        >
           <NotorietyBar compact />
         </div>
       </div>
 
-      <div style={{ position: "relative", padding: "12px 14px 10px 78px", zIndex: 1, minHeight: 56 }}>
+      <div
+        style={{ position: "relative", padding: "12px 14px 10px 78px", zIndex: 1, minHeight: 56 }}
+      >
         <button
           type="button"
           onClick={() => openSheet("profile", { userId: profileUserId })}
           aria-label="Open profile"
           style={{
-            position: "absolute", left: 14, top: -28,
-            padding: 0, background: "none", border: "none", cursor: "pointer",
+            position: "absolute",
+            left: 14,
+            top: -28,
+            padding: 0,
+            background: "none",
+            border: "none",
+            cursor: "pointer",
           }}
         >
           <div style={{ position: "relative" }}>
-            <div className="weered-avatar" style={{
-              width: 56, height: 56, borderRadius: "50%",
-              ["--wa-bg" as any]: avatarUrl ? "rgba(255,255,255,.08)" : avatarBg(name, true, stickyAvatarColor),
-              background: avatarUrl ? "rgba(255,255,255,.08)" : avatarBg(name, true, stickyAvatarColor),
-              boxShadow: `
+            <div
+              className="weered-avatar"
+              style={{
+                width: 56,
+                height: 56,
+                borderRadius: "50%",
+                ["--wa-bg" as any]: avatarUrl
+                  ? "rgba(255,255,255,.08)"
+                  : avatarBg(name, true, stickyAvatarColor),
+                background: avatarUrl
+                  ? "rgba(255,255,255,.08)"
+                  : avatarBg(name, true, stickyAvatarColor),
+                boxShadow: `
                 0 0 0 3px rgba(10,10,18,.95),
                 0 0 0 4px ${cardAccent}80,
                 0 0 14px ${cardAccent}50,
                 inset 0 2px 0 rgba(255,255,255,.18)
               `,
-              display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: 22, fontWeight: 950, color: "#fff",
-              overflow: "hidden",
-            }}>
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: 22,
+                fontWeight: 950,
+                color: "#fff",
+                overflow: "hidden",
+              }}
+            >
               {avatarUrl ? (
-                <img src={avatarUrl} alt={name + " avatar"} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                <img
+                  src={avatarUrl}
+                  alt={name + " avatar"}
+                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                />
               ) : (
                 initial
               )}
@@ -515,14 +735,29 @@ export default function UserCorner() {
             <span
               role="button"
               tabIndex={0}
-              onClick={e => { e.stopPropagation(); if (typeof setAway === "function") setAway(!isAway); }}
-              onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); if (typeof setAway === "function") setAway(!isAway); } }}
-              title={isAway ? "Lying low — click to come back online." : "Online — click to lie low."}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (typeof setAway === "function") setAway(!isAway);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  if (typeof setAway === "function") setAway(!isAway);
+                }
+              }}
+              title={
+                isAway ? "Lying low — click to come back online." : "Online — click to lie low."
+              }
               aria-label={isAway ? "Set status to online" : "Set status to lying low"}
               style={{
                 display: "block",
-                position: "absolute", bottom: 0, right: 0,
-                width: 14, height: 14, borderRadius: "50%",
+                position: "absolute",
+                bottom: 0,
+                right: 0,
+                width: 14,
+                height: 14,
+                borderRadius: "50%",
                 background: isAway ? "#facc15" : "#22c55e",
                 boxShadow: isAway ? "0 0 8px rgba(250,204,21,.7)" : "0 0 8px rgba(34,197,94,.8)",
                 border: "2.5px solid rgba(10,10,18,.95)",
@@ -536,9 +771,14 @@ export default function UserCorner() {
           type="button"
           onClick={() => openSheet("profile", { userId: profileUserId })}
           style={{
-            display: "block", width: "100%", padding: 0,
-            background: "none", border: "none", cursor: "pointer",
-            color: "inherit", textAlign: "left",
+            display: "block",
+            width: "100%",
+            padding: 0,
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            color: "inherit",
+            textAlign: "left",
             minWidth: 0,
           }}
         >
@@ -547,20 +787,35 @@ export default function UserCorner() {
             const bestRole = gRole || (roomRole && roomRole !== "MEMBER" ? roomRole : "");
             if (!bestRole || bestRole === "MEMBER" || bestRole === "USER") return null;
             const roleColor =
-              bestRole === "GOD"     ? "#fde68a" :
-              bestRole === "ADMIN"   ? "#fca5a5" :
-              bestRole === "STAFF"   ? "#93c5fd" :
-              bestRole === "SUPPORT" ? "#6ee7b7" :
-              bestRole === "MOD"     ? "rgba(216,180,254,.95)" :
-              "rgba(243,244,246,.85)";
+              bestRole === "GOD"
+                ? "#fde68a"
+                : bestRole === "ADMIN"
+                  ? "#fca5a5"
+                  : bestRole === "STAFF"
+                    ? "#93c5fd"
+                    : bestRole === "SUPPORT"
+                      ? "#6ee7b7"
+                      : bestRole === "MOD"
+                        ? "rgba(216,180,254,.95)"
+                        : "rgba(243,244,246,.85)";
             return (
-              <div style={{
-                marginTop: 5, display: "flex", alignItems: "center", gap: 5,
-                fontFamily: "ui-monospace, 'JetBrains Mono', monospace",
-                fontSize: 9, fontWeight: 900, letterSpacing: "1.4px",
-                textTransform: "uppercase", color: roleColor,
-                overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-              }}>
+              <div
+                style={{
+                  marginTop: 5,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 5,
+                  fontFamily: "ui-monospace, 'JetBrains Mono', monospace",
+                  fontSize: 9,
+                  fontWeight: 900,
+                  letterSpacing: "1.4px",
+                  textTransform: "uppercase",
+                  color: roleColor,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                }}
+              >
                 <RoleIcon role={bestRole} size={11} />
                 {roleDisplay(bestRole, lobbyTheme)}
               </div>
@@ -570,19 +825,33 @@ export default function UserCorner() {
             const tierU = String(me?.tier || "").toUpperCase();
             if (!tierU || tierU === "INNOCENT") return null;
             const tierColor =
-              tierU === "KINGPIN"  ? "#fde68a" :
-              tierU === "MADE_MAN" || tierU === "MADEMAN" ? "#f0abfc" :
-              tierU === "FELON"    ? "#fdba74" :
-              tierU === "INDICTED" ? "rgba(216,180,254,.95)" :
-              "rgba(243,244,246,.85)";
+              tierU === "KINGPIN"
+                ? "#fde68a"
+                : tierU === "MADE_MAN" || tierU === "MADEMAN"
+                  ? "#f0abfc"
+                  : tierU === "FELON"
+                    ? "#fdba74"
+                    : tierU === "INDICTED"
+                      ? "rgba(216,180,254,.95)"
+                      : "rgba(243,244,246,.85)";
             return (
-              <div style={{
-                marginTop: 3, display: "flex", alignItems: "center", gap: 5,
-                fontFamily: "ui-monospace, 'JetBrains Mono', monospace",
-                fontSize: 9, fontWeight: 900, letterSpacing: "1.4px",
-                textTransform: "uppercase", color: tierColor,
-                overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-              }}>
+              <div
+                style={{
+                  marginTop: 3,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 5,
+                  fontFamily: "ui-monospace, 'JetBrains Mono', monospace",
+                  fontSize: 9,
+                  fontWeight: 900,
+                  letterSpacing: "1.4px",
+                  textTransform: "uppercase",
+                  color: tierColor,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                }}
+              >
                 <TierIcon tier={tierU as any} size={11} />
                 {tierU.replace("_", " ")}
               </div>
@@ -591,29 +860,51 @@ export default function UserCorner() {
           {primaryCrew?.name && (
             <div
               className="weered-uc-crew-line"
-              onClick={(e) => { e.stopPropagation(); try { window.location.href = `/crew/${encodeURIComponent(primaryCrew.id)}`; } catch {} }}
+              onClick={(e) => {
+                e.stopPropagation();
+                try {
+                  window.location.href = `/crew/${encodeURIComponent(primaryCrew.id)}`;
+                } catch {}
+              }}
               title={`${primaryCrew.name} — open crew`}
               style={{
-                display: "flex", alignItems: "center", gap: 7,
-                marginTop: 5, cursor: "pointer",
-                overflow: "hidden", whiteSpace: "nowrap",
+                display: "flex",
+                alignItems: "center",
+                gap: 7,
+                marginTop: 5,
+                cursor: "pointer",
+                overflow: "hidden",
+                whiteSpace: "nowrap",
               }}
             >
               {primaryCrew.tag && (
-                <span style={{
-                  fontFamily: "ui-monospace, 'JetBrains Mono', monospace",
-                  fontSize: 10, fontWeight: 900, letterSpacing: "1px",
-                  color: cardAccent,
-                  border: `1px solid ${cardAccent}55`,
-                  padding: "1px 5px", flexShrink: 0,
-                }}>[{primaryCrew.tag}]</span>
+                <span
+                  style={{
+                    fontFamily: "ui-monospace, 'JetBrains Mono', monospace",
+                    fontSize: 10,
+                    fontWeight: 900,
+                    letterSpacing: "1px",
+                    color: cardAccent,
+                    border: `1px solid ${cardAccent}55`,
+                    padding: "1px 5px",
+                    flexShrink: 0,
+                  }}
+                >
+                  [{primaryCrew.tag}]
+                </span>
               )}
-              <span style={{
-                fontSize: 12, fontStyle: "italic",
-                color: "rgba(240,232,214,.7)",
-                overflow: "hidden", textOverflow: "ellipsis",
-                paddingRight: 3,
-              }}>{primaryCrew.name}</span>
+              <span
+                style={{
+                  fontSize: 12,
+                  fontStyle: "italic",
+                  color: "rgba(240,232,214,.7)",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  paddingRight: 3,
+                }}
+              >
+                {primaryCrew.name}
+              </span>
             </div>
           )}
         </button>
@@ -622,86 +913,184 @@ export default function UserCorner() {
           <div style={{ display: "flex", gap: 5, marginTop: 7, alignItems: "center" }}>
             <input
               value={draftStatus.emoji}
-              onChange={e => setDraftStatus(v => ({ ...v, emoji: e.target.value }))}
+              onChange={(e) => setDraftStatus((v) => ({ ...v, emoji: e.target.value }))}
               placeholder="\ud83e\udd5e"
               maxLength={8}
-              style={{ width: 30, textAlign: "center", background: "rgba(255,255,255,.06)", border: "1px solid rgba(255,255,255,.14)", borderRadius: 4, color: "#fff", fontSize: 13, padding: "4px 0" }}
+              style={{
+                width: 30,
+                textAlign: "center",
+                background: "rgba(255,255,255,.06)",
+                border: "1px solid rgba(255,255,255,.14)",
+                borderRadius: 4,
+                color: "#fff",
+                fontSize: 13,
+                padding: "4px 0",
+              }}
             />
             <input
               value={draftStatus.text}
-              onChange={e => setDraftStatus(v => ({ ...v, text: e.target.value }))}
-              onKeyDown={e => { if (e.key === "Enter") saveStatus(draftStatus.text, draftStatus.emoji); if (e.key === "Escape") setEditingStatus(false); }}
+              onChange={(e) => setDraftStatus((v) => ({ ...v, text: e.target.value }))}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") saveStatus(draftStatus.text, draftStatus.emoji);
+                if (e.key === "Escape") setEditingStatus(false);
+              }}
               placeholder="What's the vibe?"
               maxLength={80}
               autoFocus
-              style={{ flex: 1, minWidth: 0, background: "rgba(255,255,255,.06)", border: "1px solid rgba(255,255,255,.14)", borderRadius: 4, color: "#fff", fontSize: 12, padding: "4px 7px" }}
+              style={{
+                flex: 1,
+                minWidth: 0,
+                background: "rgba(255,255,255,.06)",
+                border: "1px solid rgba(255,255,255,.14)",
+                borderRadius: 4,
+                color: "#fff",
+                fontSize: 12,
+                padding: "4px 7px",
+              }}
             />
-            <button type="button" onClick={() => saveStatus(draftStatus.text, draftStatus.emoji)} style={{ background: "#3b0764", border: "none", color: "#fff", fontSize: 10, fontWeight: 800, letterSpacing: ".06em", padding: "5px 9px", cursor: "pointer", borderRadius: 0, flexShrink: 0 }}>SET</button>
+            <button
+              type="button"
+              onClick={() => saveStatus(draftStatus.text, draftStatus.emoji)}
+              style={{
+                background: "#3b0764",
+                border: "none",
+                color: "#fff",
+                fontSize: 10,
+                fontWeight: 800,
+                letterSpacing: ".06em",
+                padding: "5px 9px",
+                cursor: "pointer",
+                borderRadius: 0,
+                flexShrink: 0,
+              }}
+            >
+              SET
+            </button>
           </div>
         ) : (
           <button
             type="button"
-            onClick={() => { setDraftStatus(status); setEditingStatus(true); }}
-            style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 7, background: "none", border: "none", padding: 0, cursor: "pointer", color: "inherit", textAlign: "left", maxWidth: "100%" }}
+            onClick={() => {
+              setDraftStatus(status);
+              setEditingStatus(true);
+            }}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              marginTop: 7,
+              background: "none",
+              border: "none",
+              padding: 0,
+              cursor: "pointer",
+              color: "inherit",
+              textAlign: "left",
+              maxWidth: "100%",
+            }}
             title="Set a status"
           >
             {status.emoji && <span style={{ fontSize: 13, flexShrink: 0 }}>{status.emoji}</span>}
-            <span style={{ fontSize: 11, fontStyle: "italic", color: status.text ? "rgba(240,232,214,.80)" : "rgba(148,163,184,.5)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", paddingRight: 3 }}>
+            <span
+              style={{
+                fontSize: 11,
+                fontStyle: "italic",
+                color: status.text ? "rgba(240,232,214,.80)" : "rgba(148,163,184,.5)",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+                paddingRight: 3,
+              }}
+            >
               {status.text || "Set a status\u2026"}
             </span>
           </button>
         )}
       </div>
 
-      <div style={{
-        display: "flex", gap: 6, padding: "6px 12px 10px",
-        position: "relative", zIndex: 1,
-      }}>
+      <div
+        style={{
+          display: "flex",
+          gap: 6,
+          padding: "6px 12px 10px",
+          position: "relative",
+          zIndex: 1,
+        }}
+      >
         <button
           type="button"
-          onClick={() => { try { window.dispatchEvent(new CustomEvent("weered:dock:toggle")); } catch {} }}
+          onClick={() => {
+            try {
+              window.dispatchEvent(new CustomEvent("weered:dock:toggle"));
+            } catch {}
+          }}
           title={dockUnread > 0 ? `${dockUnread} unread` : "Messages, friends, crew"}
           className={`weered-uc-action${dockUnread > 0 ? " weered-burner-hot" : ""}`}
           style={{
-            flex: 1, display: "flex", alignItems: "center", justifyContent: "center",
-            gap: 7, padding: "9px 14px",
-            background: dockUnread > 0
-              ? "linear-gradient(135deg, rgba(245,158,11,.18), rgba(239,68,68,.12))"
-              : "rgba(88,0,229,.14)",
-            border: dockUnread > 0
-              ? "1px solid rgba(245,158,11,.40)"
-              : "1px solid rgba(88,0,229,.35)",
-            borderRadius: 10, cursor: "pointer",
+            flex: 1,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 7,
+            padding: "9px 14px",
+            background:
+              dockUnread > 0
+                ? "linear-gradient(135deg, rgba(245,158,11,.18), rgba(239,68,68,.12))"
+                : "rgba(88,0,229,.14)",
+            border:
+              dockUnread > 0 ? "1px solid rgba(245,158,11,.40)" : "1px solid rgba(88,0,229,.35)",
+            borderRadius: 10,
+            cursor: "pointer",
             color: dockUnread > 0 ? "rgba(253,230,138,.95)" : "rgba(243,244,246,.88)",
-            fontFamily: "inherit", fontSize: 12, fontWeight: 800,
+            fontFamily: "inherit",
+            fontSize: 12,
+            fontWeight: 800,
             letterSpacing: "0.02em",
             transition: "all 0.2s",
             position: "relative",
           }}
-          onMouseEnter={e => {
+          onMouseEnter={(e) => {
             const el = e.currentTarget as HTMLElement;
-            el.style.background = dockUnread > 0
-              ? "linear-gradient(135deg, rgba(245,158,11,.25), rgba(239,68,68,.18))"
-              : "rgba(88,0,229,.22)";
+            el.style.background =
+              dockUnread > 0
+                ? "linear-gradient(135deg, rgba(245,158,11,.25), rgba(239,68,68,.18))"
+                : "rgba(88,0,229,.22)";
             el.style.borderColor = dockUnread > 0 ? "rgba(245,158,11,.55)" : "rgba(88,0,229,.45)";
           }}
-          onMouseLeave={e => {
+          onMouseLeave={(e) => {
             const el = e.currentTarget as HTMLElement;
-            el.style.background = dockUnread > 0
-              ? "linear-gradient(135deg, rgba(245,158,11,.18), rgba(239,68,68,.12))"
-              : "rgba(88,0,229,.14)";
+            el.style.background =
+              dockUnread > 0
+                ? "linear-gradient(135deg, rgba(245,158,11,.18), rgba(239,68,68,.12))"
+                : "rgba(88,0,229,.14)";
             el.style.borderColor = dockUnread > 0 ? "rgba(245,158,11,.40)" : "rgba(88,0,229,.35)";
           }}
         >
           {lobbyTheme === "windrose" ? (
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" style={{ flexShrink: 0 }}>
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              style={{ flexShrink: 0 }}
+            >
               <rect x="10" y="2" width="4" height="5" strokeWidth="1.5" />
-              <path d="M9 7 Q7 9 7 11 L7 21 Q7 22 8 22 L16 22 Q17 22 17 21 L17 11 Q17 9 15 7 Z" strokeWidth="1.8" />
+              <path
+                d="M9 7 Q7 9 7 11 L7 21 Q7 22 8 22 L16 22 Q17 22 17 21 L17 11 Q17 9 15 7 Z"
+                strokeWidth="1.8"
+              />
               <rect x="8" y="13" width="8" height="5" strokeWidth="1" opacity=".45" />
               <line x1="10" y1="2" x2="14" y2="2" strokeWidth="1.5" opacity=".65" />
             </svg>
           ) : (
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" style={{ flexShrink: 0 }}>
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              style={{ flexShrink: 0 }}
+            >
               <rect x="6" y="2" width="12" height="20" rx="3" strokeWidth="2" />
               <rect x="9" y="5" width="6" height="6" rx="1.5" strokeWidth="1.5" opacity=".55" />
               <circle cx="10" cy="15" r="1" fill="currentColor" stroke="none" opacity=".45" />
@@ -716,21 +1105,30 @@ export default function UserCorner() {
           <span>{burnerLabel}</span>
 
           {dockUnread > 0 && (
-            <span style={{
-              position: "absolute",
-              top: -6, right: -6,
-              minWidth: 18, height: 18, borderRadius: 999,
-              background: "#f59e0b",
-              border: "2px solid rgba(10,10,15,.9)",
-              fontSize: 9, fontWeight: 900, color: "#000",
-              display: "inline-flex", alignItems: "center", justifyContent: "center",
-              padding: dockUnread > 9 ? "0 4px" : "0",
-              lineHeight: 1,
-              boxShadow: "0 0 8px rgba(245,158,11,.5)",
-              animation: "weered-burner-badge 2s ease-in-out infinite",
-              zIndex: 2,
-              pointerEvents: "none",
-            }}>
+            <span
+              style={{
+                position: "absolute",
+                top: -6,
+                right: -6,
+                minWidth: 18,
+                height: 18,
+                borderRadius: 999,
+                background: "#f59e0b",
+                border: "2px solid rgba(10,10,15,.9)",
+                fontSize: 9,
+                fontWeight: 900,
+                color: "#000",
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                padding: dockUnread > 9 ? "0 4px" : "0",
+                lineHeight: 1,
+                boxShadow: "0 0 8px rgba(245,158,11,.5)",
+                animation: "weered-burner-badge 2s ease-in-out infinite",
+                zIndex: 2,
+                pointerEvents: "none",
+              }}
+            >
               {dockUnread > 99 ? "99+" : dockUnread}
             </span>
           )}
@@ -764,10 +1162,17 @@ export default function UserCorner() {
 }
 
 const actionBtn: React.CSSProperties = {
-  flex: 1, display: "flex", alignItems: "center", justifyContent: "center",
-  gap: 5, padding: "8px 0",
-  background: "none", border: "none", cursor: "pointer",
-  color: "rgba(255,255,255,.45)", fontFamily: "inherit",
+  flex: 1,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: 5,
+  padding: "8px 0",
+  background: "none",
+  border: "none",
+  cursor: "pointer",
+  color: "rgba(255,255,255,.45)",
+  fontFamily: "inherit",
   transition: "color 0.12s, background 0.12s",
 };
 
@@ -780,16 +1185,27 @@ function FittedName({ name, effect }: { name: string; effect?: string | null }) 
       ref={ref}
       style={{
         fontFamily: "'Barlow Condensed', 'Oswald', ui-sans-serif, sans-serif",
-        fontSize, fontWeight: 800, letterSpacing: "0.5px",
+        fontSize,
+        fontWeight: 800,
+        letterSpacing: "0.5px",
         textTransform: "uppercase",
         lineHeight: 1.0,
         color: "rgba(243,244,246,.97)",
-        overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+        overflow: "hidden",
+        textOverflow: "ellipsis",
+        whiteSpace: "nowrap",
       }}
     >
-      {effect
-        ? <span className={"weered-name-" + effect} style={{ display: "inline-block", lineHeight: "inherit" }}>{name}</span>
-        : name}
+      {effect ? (
+        <span
+          className={"weered-name-" + effect}
+          style={{ display: "inline-block", lineHeight: "inherit" }}
+        >
+          {name}
+        </span>
+      ) : (
+        name
+      )}
     </div>
   );
 }

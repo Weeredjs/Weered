@@ -5,12 +5,40 @@ import { useOverlay } from "../../components/overlays/OverlayProvider";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 function authHeaders(): Record<string, string> {
-  try { const t = localStorage.getItem("weered_token") || ""; return t ? { Authorization: `Bearer ${t}` } : {}; } catch { return {}; }
+  try {
+    const t = localStorage.getItem("weered_token") || "";
+    return t ? { Authorization: `Bearer ${t}` } : {};
+  } catch {
+    return {};
+  }
 }
 
-interface HexCell { h3: string; count: number; boundary: [number, number][] }
-interface NearbyUser { id: string; usernameKey: string; name: string; avatar?: string; avatarColor?: string; tier: string; locationH3: string; lobbyId?: string; lobbyName?: string }
-interface LobbyPin { id: string; name: string; logoUrl?: string; accentColor?: string; moduleType: string; memberCount: number; lat: number; lng: number }
+interface HexCell {
+  h3: string;
+  count: number;
+  boundary: [number, number][];
+}
+interface NearbyUser {
+  id: string;
+  usernameKey: string;
+  name: string;
+  avatar?: string;
+  avatarColor?: string;
+  tier: string;
+  locationH3: string;
+  lobbyId?: string;
+  lobbyName?: string;
+}
+interface LobbyPin {
+  id: string;
+  name: string;
+  logoUrl?: string;
+  accentColor?: string;
+  moduleType: string;
+  memberCount: number;
+  lat: number;
+  lng: number;
+}
 
 export default function MapContent() {
   const mapRef = useRef<HTMLDivElement>(null);
@@ -34,16 +62,21 @@ export default function MapContent() {
   const [showLobbyPins, setShowLobbyPins] = useState(true);
 
   const [gameFilter, setGameFilter] = useState<string>("all");
-  const [availableGames, setAvailableGames] = useState<{ id: string; name: string; count: number }[]>([]);
+  const [availableGames, setAvailableGames] = useState<
+    { id: string; name: string; count: number }[]
+  >([]);
 
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
 
   useEffect(() => {
     const h = authHeaders();
-    if (!h.Authorization) { setOptIn(false); return; }
+    if (!h.Authorization) {
+      setOptIn(false);
+      return;
+    }
     fetch(`${API}/me/location`, { headers: h })
-      .then(r => r.json())
-      .then(j => {
+      .then((r) => r.json())
+      .then((j) => {
         setOptIn(j.optIn || false);
         if (j.optIn && j.latitude && j.longitude) {
           setUserPos([j.latitude, j.longitude]);
@@ -55,8 +88,8 @@ export default function MapContent() {
   const loadHexes = useCallback(() => {
     const params = gameFilter !== "all" ? `?game=${encodeURIComponent(gameFilter)}` : "";
     fetch(`${API}/map/hexes${params}`)
-      .then(r => r.json())
-      .then(j => {
+      .then((r) => r.json())
+      .then((j) => {
         setHexes(j.hexes || []);
         setTotalUsers((j.hexes || []).reduce((s: number, h: HexCell) => s + h.count, 0));
         if (j.games) setAvailableGames(j.games);
@@ -65,7 +98,9 @@ export default function MapContent() {
     setLastRefresh(new Date());
   }, [gameFilter]);
 
-  useEffect(() => { loadHexes(); }, [loadHexes]);
+  useEffect(() => {
+    loadHexes();
+  }, [loadHexes]);
 
   useEffect(() => {
     const iv = setInterval(loadHexes, 30000);
@@ -77,15 +112,15 @@ export default function MapContent() {
     const h = authHeaders();
     if (!h.Authorization) return;
     fetch(`${API}/map/nearby?lat=${userPos[0]}&lng=${userPos[1]}`, { headers: h })
-      .then(r => r.json())
-      .then(j => setNearby(j.users || []))
+      .then((r) => r.json())
+      .then((j) => setNearby(j.users || []))
       .catch(() => {});
   }, [userPos]);
 
   useEffect(() => {
     fetch(`${API}/map/lobbies`)
-      .then(r => r.json())
-      .then(j => setLobbyPins(j.lobbies || []))
+      .then((r) => r.json())
+      .then((j) => setLobbyPins(j.lobbies || []))
       .catch(() => {});
   }, []);
 
@@ -93,7 +128,7 @@ export default function MapContent() {
     if (!mapRef.current || leafletMap.current) return;
     let cancelled = false;
 
-    import("leaflet").then(L => {
+    import("leaflet").then((L) => {
       if (cancelled || !mapRef.current) return;
 
       const map = L.map(mapRef.current, {
@@ -111,8 +146,11 @@ export default function MapContent() {
       }).addTo(map);
 
       L.control.zoom({ position: "topright" }).addTo(map);
-      L.control.attribution({ position: "bottomright", prefix: false })
-        .addAttribution('&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> &copy; <a href="https://carto.com/" target="_blank">CARTO</a>')
+      L.control
+        .attribution({ position: "bottomright", prefix: false })
+        .addAttribution(
+          '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> &copy; <a href="https://carto.com/" target="_blank">CARTO</a>',
+        )
         .addTo(map);
 
       hexLayer.current = L.layerGroup().addTo(map);
@@ -121,34 +159,45 @@ export default function MapContent() {
       setMapReady(true);
     });
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
     if (!mapReady || !userPos || !leafletMap.current) return;
-    leafletMap.current.setView(userPos, Math.max(leafletMap.current.getZoom(), 8), { animate: true });
+    leafletMap.current.setView(userPos, Math.max(leafletMap.current.getZoom(), 8), {
+      animate: true,
+    });
   }, [mapReady, userPos]);
 
   useEffect(() => {
     if (!mapReady || !hexLayer.current) return;
-    import("leaflet").then(L => {
+    import("leaflet").then((L) => {
       hexLayer.current.clearLayers();
-      const maxCount = Math.max(1, ...hexes.map(h => h.count));
+      const maxCount = Math.max(1, ...hexes.map((h) => h.count));
 
       for (const hex of hexes) {
-        const intensity = Math.min(1, Math.log(1 + hex.count) / Math.log(1 + Math.max(maxCount, 10)));
+        const intensity = Math.min(
+          1,
+          Math.log(1 + hex.count) / Math.log(1 + Math.max(maxCount, 10)),
+        );
         const color = intensityColor(intensity);
-        const fillOpacity = 0.08 + intensity * 0.30;
+        const fillOpacity = 0.08 + intensity * 0.3;
         const borderOpacity = 0.15 + intensity * 0.35;
 
         const polygon = L.polygon(hex.boundary as [number, number][], {
-          color, weight: 1, fillColor: color, fillOpacity, opacity: borderOpacity,
+          color,
+          weight: 1,
+          fillColor: color,
+          fillOpacity,
+          opacity: borderOpacity,
         });
 
         polygon.bindPopup(
           `<div style="font-family:monospace;font-size:13px;color:#e2e8f0;background:#0a0a12;padding:8px 12px;border-radius:8px;border:1px solid rgba(212,146,10,0.3)">` +
-          `<strong style="color:#d4920a">${hex.count}</strong> user${hex.count !== 1 ? "s" : ""} in this area</div>`,
-          { className: "weered-popup", closeButton: false }
+            `<strong style="color:#d4920a">${hex.count}</strong> user${hex.count !== 1 ? "s" : ""} in this area</div>`,
+          { className: "weered-popup", closeButton: false },
         );
 
         hexLayer.current.addLayer(polygon);
@@ -156,11 +205,15 @@ export default function MapContent() {
 
       if (userPos) {
         const marker = L.circleMarker(userPos, {
-          radius: 8, color: "#d4920a", fillColor: "#f5a623", fillOpacity: 0.9, weight: 2,
+          radius: 8,
+          color: "#d4920a",
+          fillColor: "#f5a623",
+          fillOpacity: 0.9,
+          weight: 2,
         });
         marker.bindPopup(
           `<div style="font-family:monospace;font-size:12px;color:#e2e8f0;background:#0a0a12;padding:6px 10px;border-radius:6px;border:1px solid rgba(212,146,10,0.3)">Your location</div>`,
-          { className: "weered-popup", closeButton: false }
+          { className: "weered-popup", closeButton: false },
         );
         hexLayer.current.addLayer(marker);
       }
@@ -169,12 +222,13 @@ export default function MapContent() {
 
   useEffect(() => {
     if (!mapReady || !lobbyLayer.current) return;
-    import("leaflet").then(L => {
+    import("leaflet").then((L) => {
       lobbyLayer.current.clearLayers();
       if (!showLobbyPins) return;
 
       for (const lobby of lobbyPins) {
-        if (gameFilter !== "all" && lobby.moduleType.toLowerCase() !== gameFilter.toLowerCase()) continue;
+        if (gameFilter !== "all" && lobby.moduleType.toLowerCase() !== gameFilter.toLowerCase())
+          continue;
         const accent = lobby.accentColor || "#d4920a";
 
         const icon = L.divIcon({
@@ -194,10 +248,10 @@ export default function MapContent() {
         const marker = L.marker([lobby.lat, lobby.lng], { icon });
         marker.bindPopup(
           `<div style="font-family:monospace;font-size:12px;color:#e2e8f0;background:#0a0a12;padding:10px 14px;border-radius:8px;border:1px solid ${accent}44;min-width:140px">` +
-          `<div style="font-weight:800;font-size:13px;margin-bottom:4px;color:${accent}">${lobby.name}</div>` +
-          `<div style="color:rgba(148,163,184,0.6);font-size:10px">${lobby.moduleType} · ${lobby.memberCount} member${lobby.memberCount !== 1 ? "s" : ""}</div>` +
-          `</div>`,
-          { className: "weered-popup", closeButton: false }
+            `<div style="font-weight:800;font-size:13px;margin-bottom:4px;color:${accent}">${lobby.name}</div>` +
+            `<div style="color:rgba(148,163,184,0.6);font-size:10px">${lobby.moduleType} · ${lobby.memberCount} member${lobby.memberCount !== 1 ? "s" : ""}</div>` +
+            `</div>`,
+          { className: "weered-popup", closeButton: false },
         );
 
         lobbyLayer.current.addLayer(marker);
@@ -255,7 +309,7 @@ export default function MapContent() {
         };
         setGpsError(reasons[err.code] || `Unknown error (code ${err.code})`);
       },
-      { enableHighAccuracy: true, maximumAge: 60000, timeout: 15000 }
+      { enableHighAccuracy: true, maximumAge: 60000, timeout: 15000 },
     );
   };
 
@@ -284,7 +338,10 @@ export default function MapContent() {
       saveManualLocation(e.latlng.lat, e.latlng.lng);
     };
     map.on("click", handler);
-    return () => { map.off("click", handler); container.classList.remove("click-to-place"); };
+    return () => {
+      map.off("click", handler);
+      container.classList.remove("click-to-place");
+    };
   }, [mapReady, clickToPlace]);
 
   const disableLocation = async () => {
@@ -375,23 +432,56 @@ export default function MapContent() {
               <div className="map-title">Locator</div>
               <div style={{ display: "flex", gap: 4 }}>
                 {userPos && (
-                  <button className="map-btn map-btn-ghost map-btn-icon" onClick={flyToMe} title="Fly to my location">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <button
+                    className="map-btn map-btn-ghost map-btn-icon"
+                    onClick={flyToMe}
+                    title="Fly to my location"
+                  >
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
                       <polygon points="3 11 22 2 13 21 11 13 3 11" />
                     </svg>
                   </button>
                 )}
-                <button className="map-btn map-btn-ghost map-btn-icon" onClick={loadHexes} title="Refresh map data">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M21 2v6h-6" /><path d="M3 12a9 9 0 0115.36-6.36L21 8" />
-                    <path d="M3 22v-6h6" /><path d="M21 12a9 9 0 01-15.36 6.36L3 16" />
+                <button
+                  className="map-btn map-btn-ghost map-btn-icon"
+                  onClick={loadHexes}
+                  title="Refresh map data"
+                >
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M21 2v6h-6" />
+                    <path d="M3 12a9 9 0 0115.36-6.36L21 8" />
+                    <path d="M3 22v-6h6" />
+                    <path d="M21 12a9 9 0 01-15.36 6.36L3 16" />
                   </svg>
                 </button>
               </div>
             </div>
             <div className="map-stat">
               <strong>{totalUsers}</strong> user{totalUsers !== 1 ? "s" : ""} sharing location
-              {hexes.length > 0 && <> across <strong>{hexes.length}</strong> zone{hexes.length !== 1 ? "s" : ""}</>}
+              {hexes.length > 0 && (
+                <>
+                  {" "}
+                  across <strong>{hexes.length}</strong> zone{hexes.length !== 1 ? "s" : ""}
+                </>
+              )}
             </div>
             <div style={{ fontSize: 9, color: "rgba(180,165,140,0.3)", marginTop: 4 }}>
               updated {timeSince(lastRefresh)} · auto-refresh 30s
@@ -400,13 +490,30 @@ export default function MapContent() {
 
           {availableGames.length > 1 && (
             <div className="map-panel" style={{ padding: "10px 14px" }}>
-              <div style={{ fontSize: 10, color: "rgba(212,146,10,0.45)", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 6 }}>Filter by game</div>
+              <div
+                style={{
+                  fontSize: 10,
+                  color: "rgba(212,146,10,0.45)",
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                  marginBottom: 6,
+                }}
+              >
+                Filter by game
+              </div>
               <div className="map-filter">
-                <button className={`map-filter-btn ${gameFilter === "all" ? "map-filter-btn-active" : ""}`} onClick={() => setGameFilter("all")}>
+                <button
+                  className={`map-filter-btn ${gameFilter === "all" ? "map-filter-btn-active" : ""}`}
+                  onClick={() => setGameFilter("all")}
+                >
                   All ({totalUsers})
                 </button>
-                {availableGames.map(g => (
-                  <button key={g.id} className={`map-filter-btn ${gameFilter === g.id ? "map-filter-btn-active" : ""}`} onClick={() => setGameFilter(g.id)}>
+                {availableGames.map((g) => (
+                  <button
+                    key={g.id}
+                    className={`map-filter-btn ${gameFilter === g.id ? "map-filter-btn-active" : ""}`}
+                    onClick={() => setGameFilter(g.id)}
+                  >
                     {g.name} ({g.count})
                   </button>
                 ))}
@@ -418,18 +525,44 @@ export default function MapContent() {
             <div className="map-panel" style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {optIn ? (
                 <>
-                  <div style={{ fontSize: 11, color: "rgba(212,146,10,0.7)", display: "flex", alignItems: "center", gap: 6 }}>
-                    <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#22c55e", display: "inline-block" }} />
+                  <div
+                    style={{
+                      fontSize: 11,
+                      color: "rgba(212,146,10,0.7)",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 6,
+                    }}
+                  >
+                    <span
+                      style={{
+                        width: 6,
+                        height: 6,
+                        borderRadius: "50%",
+                        background: "#22c55e",
+                        display: "inline-block",
+                      }}
+                    />
                     Location sharing ON
                   </div>
                   <div style={{ display: "flex", gap: 8 }}>
-                    <button className="map-btn map-btn-ghost" onClick={enableLocation} disabled={locating}>
+                    <button
+                      className="map-btn map-btn-ghost"
+                      onClick={enableLocation}
+                      disabled={locating}
+                    >
                       {locating ? "Updating..." : "Update"}
                     </button>
-                    <button className="map-btn map-btn-danger" onClick={disableLocation}>Disable</button>
+                    <button className="map-btn map-btn-danger" onClick={disableLocation}>
+                      Disable
+                    </button>
                   </div>
                   <label className="map-toggle">
-                    <input type="checkbox" checked={showLobbyPins} onChange={e => setShowLobbyPins(e.target.checked)} />
+                    <input
+                      type="checkbox"
+                      checked={showLobbyPins}
+                      onChange={(e) => setShowLobbyPins(e.target.checked)}
+                    />
                     Show lobby pins ({lobbyPins.length})
                   </label>
                 </>
@@ -443,24 +576,50 @@ export default function MapContent() {
 
           {nearby.length > 0 && (
             <div className="map-panel">
-              <div style={{ fontSize: 10, color: "rgba(212,146,10,0.5)", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 8 }}>
+              <div
+                style={{
+                  fontSize: 10,
+                  color: "rgba(212,146,10,0.5)",
+                  letterSpacing: "0.1em",
+                  textTransform: "uppercase",
+                  marginBottom: 8,
+                }}
+              >
                 Nearby ({nearby.length})
               </div>
               <div className="nearby-list">
-                {nearby.map(u => (
+                {nearby.map((u) => (
                   <div
                     key={u.id}
                     className="nearby-user"
                     onClick={() => replaceTop("profile", { userId: u.id })}
                     role="button"
                     tabIndex={0}
-                    onKeyDown={e => { if (e.key === "Enter") replaceTop("profile", { userId: u.id }); }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") replaceTop("profile", { userId: u.id });
+                    }}
                   >
-                    <div className="nearby-avatar" style={{ background: u.avatarColor ? `${u.avatarColor}22` : "rgba(212,146,10,0.1)", color: u.avatarColor || "#d4920a" }}>
-                      {u.avatar
-                        ? <img src={u.avatar} style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 8 }} alt={`${u.name || u.usernameKey || "User"} avatar`} />
-                        : (u.name || u.usernameKey || "?").charAt(0).toUpperCase()
-                      }
+                    <div
+                      className="nearby-avatar"
+                      style={{
+                        background: u.avatarColor ? `${u.avatarColor}22` : "rgba(212,146,10,0.1)",
+                        color: u.avatarColor || "#d4920a",
+                      }}
+                    >
+                      {u.avatar ? (
+                        <img
+                          src={u.avatar}
+                          style={{
+                            width: "100%",
+                            height: "100%",
+                            objectFit: "cover",
+                            borderRadius: 8,
+                          }}
+                          alt={`${u.name || u.usernameKey || "User"} avatar`}
+                        />
+                      ) : (
+                        (u.name || u.usernameKey || "?").charAt(0).toUpperCase()
+                      )}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div className="nearby-name">{u.name || u.usernameKey}</div>
@@ -469,7 +628,17 @@ export default function MapContent() {
                         {u.lobbyName && <> · {u.lobbyName}</>}
                       </div>
                     </div>
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(212,146,10,0.3)" strokeWidth="2" strokeLinecap="round"><polyline points="9 18 15 12 9 6" /></svg>
+                    <svg
+                      width="12"
+                      height="12"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="rgba(212,146,10,0.3)"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                    >
+                      <polyline points="9 18 15 12 9 6" />
+                    </svg>
                   </div>
                 ))}
               </div>
@@ -478,21 +647,55 @@ export default function MapContent() {
         </div>
 
         {clickToPlace && (
-          <div style={{
-            position: "absolute", bottom: 24, left: "50%", transform: "translateX(-50%)", zIndex: 1500,
-            background: "rgba(10,8,6,0.92)", border: "1px solid rgba(212,146,10,0.3)", borderRadius: 12,
-            padding: "12px 20px", display: "flex", alignItems: "center", gap: 12, backdropFilter: "blur(12px)",
-            fontFamily: "'DM Mono', monospace", cursor: "crosshair",
-          }}>
-          <span style={{ fontSize: 20 }}>📍</span>
+          <div
+            style={{
+              position: "absolute",
+              bottom: 24,
+              left: "50%",
+              transform: "translateX(-50%)",
+              zIndex: 1500,
+              background: "rgba(10,8,6,0.92)",
+              border: "1px solid rgba(212,146,10,0.3)",
+              borderRadius: 12,
+              padding: "12px 20px",
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
+              backdropFilter: "blur(12px)",
+              fontFamily: "'DM Mono', monospace",
+              cursor: "crosshair",
+            }}
+          >
+            <span style={{ fontSize: 20 }}>📍</span>
             <div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: "#e2e8f0" }}>Click the map to set your location</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: "#e2e8f0" }}>
+                Click the map to set your location
+              </div>
               <div style={{ fontSize: 11, color: gpsError ? "#f87171" : "rgba(180,165,140,0.5)" }}>
                 {gpsError || "GPS unavailable — drop your pin manually instead"}
               </div>
             </div>
-            <button className="map-btn map-btn-primary" style={{ marginLeft: 8, fontSize: 11 }} onClick={() => { setClickToPlace(false); setGpsError(null); enableLocation(); }}>Try GPS</button>
-            <button className="map-btn map-btn-ghost" style={{ marginLeft: 4 }} onClick={() => { setClickToPlace(false); setGpsError(null); }}>Cancel</button>
+            <button
+              className="map-btn map-btn-primary"
+              style={{ marginLeft: 8, fontSize: 11 }}
+              onClick={() => {
+                setClickToPlace(false);
+                setGpsError(null);
+                enableLocation();
+              }}
+            >
+              Try GPS
+            </button>
+            <button
+              className="map-btn map-btn-ghost"
+              style={{ marginLeft: 4 }}
+              onClick={() => {
+                setClickToPlace(false);
+                setGpsError(null);
+              }}
+            >
+              Cancel
+            </button>
           </div>
         )}
 
@@ -502,23 +705,42 @@ export default function MapContent() {
               <div className="consent-icon">📍</div>
               <div className="consent-title">Share Your Location</div>
               <div className="consent-text">
-                Weered uses your <em>approximate location</em> to show you on the Locator
-                and help you find nearby users.<br /><br />
-                Your position is snapped to a <em>~5 km grid cell</em> — your exact coordinates
-                are <em>never</em> shared with other users.<br /><br />
+                Weered uses your <em>approximate location</em> to show you on the Locator and help
+                you find nearby users.
+                <br />
+                <br />
+                Your position is snapped to a <em>~5 km grid cell</em> — your exact coordinates are{" "}
+                <em>never</em> shared with other users.
+                <br />
+                <br />
                 You can disable this at any time from this page or your profile settings.
               </div>
               <div className="consent-buttons">
-                <button className="map-btn map-btn-ghost" onClick={() => setShowConsent(false)}>Cancel</button>
-                <button className="map-btn map-btn-primary" onClick={enableLocation} disabled={locating}>
+                <button className="map-btn map-btn-ghost" onClick={() => setShowConsent(false)}>
+                  Cancel
+                </button>
+                <button
+                  className="map-btn map-btn-primary"
+                  onClick={enableLocation}
+                  disabled={locating}
+                >
                   {locating ? "Locating..." : "Enable Location"}
                 </button>
               </div>
-              <div style={{ marginTop: 12, borderTop: "1px solid rgba(212,146,10,0.12)", paddingTop: 12 }}>
+              <div
+                style={{
+                  marginTop: 12,
+                  borderTop: "1px solid rgba(212,146,10,0.12)",
+                  paddingTop: 12,
+                }}
+              >
                 <button
                   className="map-btn map-btn-ghost"
                   style={{ fontSize: 11, width: "100%" }}
-                  onClick={() => { setShowConsent(false); setClickToPlace(true); }}
+                  onClick={() => {
+                    setShowConsent(false);
+                    setClickToPlace(true);
+                  }}
                 >
                   Or click the map to set your location manually
                 </button>

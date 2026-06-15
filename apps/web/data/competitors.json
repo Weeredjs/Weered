@@ -24,7 +24,11 @@
         ["Text + voice chat", "Yes", "Yes"],
         ["Video chat / screen share", "Yes", "Yes"],
         ["Mobile app", "Yes", "Planned (Q3 2026)"],
-        ["Per-game presence (Steam/Xbox/PSN/Twitch)", "Discord status only", "Cross-platform aggregated"],
+        [
+          "Per-game presence (Steam/Xbox/PSN/Twitch)",
+          "Discord status only",
+          "Cross-platform aggregated"
+        ],
         ["Verified-via-game-API tournaments", "Not native", "Yes (Bungie PGCR, etc.)"],
         ["Lobby-first structure", "Servers/channels", "Themed lobbies + rooms"],
         ["Bot ecosystem", "Massive (millions)", "Not user-extensible"],

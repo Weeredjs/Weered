@@ -1,4 +1,13 @@
-import { View, Text, ScrollView, Pressable, Image, Alert, ActivityIndicator, RefreshControl } from "react-native";
+import {
+  View,
+  Text,
+  ScrollView,
+  Pressable,
+  Image,
+  Alert,
+  ActivityIndicator,
+  RefreshControl,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Stack } from "expo-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -44,7 +53,11 @@ export default function Store() {
   });
 
   const buy = useMutation({
-    mutationFn: (itemId: string) => api<{ ok: boolean; balance?: number; error?: string; need?: number; have?: number }>(`/store/buy/${itemId}`, { method: "POST" }),
+    mutationFn: (itemId: string) =>
+      api<{ ok: boolean; balance?: number; error?: string; need?: number; have?: number }>(
+        `/store/buy/${itemId}`,
+        { method: "POST" },
+      ),
     onSuccess: (res, itemId) => {
       if (res.ok) {
         Alert.alert("Purchased", `New balance: ${res.balance}`);
@@ -69,7 +82,7 @@ export default function Store() {
       [
         { text: "Cancel", style: "cancel" },
         { text: "Buy", onPress: () => buy.mutate(item.id) },
-      ]
+      ],
     );
   };
 
@@ -91,18 +104,30 @@ export default function Store() {
       </View>
 
       {storeQ.isLoading ? (
-        <View className="flex-1 items-center justify-center"><ActivityIndicator color="#5800E5" /></View>
+        <View className="flex-1 items-center justify-center">
+          <ActivityIndicator color="#5800E5" />
+        </View>
       ) : (
         <ScrollView
-          refreshControl={<RefreshControl refreshing={storeQ.isRefetching} onRefresh={() => storeQ.refetch()} tintColor="#5800E5" />}
+          refreshControl={
+            <RefreshControl
+              refreshing={storeQ.isRefetching}
+              onRefresh={() => storeQ.refetch()}
+              tintColor="#5800E5"
+            />
+          }
           contentContainerStyle={{ paddingBottom: 40 }}
         >
           {categories.length === 0 && (
-            <Text className="text-weered-muted text-sm text-center py-12">No items in the store right now.</Text>
+            <Text className="text-weered-muted text-sm text-center py-12">
+              No items in the store right now.
+            </Text>
           )}
           {categories.map((cat) => (
             <View key={cat} className="mt-3">
-              <Text className="text-weered-muted text-xs uppercase tracking-wide px-4 pb-2">{cat}</Text>
+              <Text className="text-weered-muted text-xs uppercase tracking-wide px-4 pb-2">
+                {cat}
+              </Text>
               {byCategory[cat].map((item) => (
                 <Pressable
                   key={item.id}
@@ -118,26 +143,43 @@ export default function Store() {
                   ) : (
                     <View
                       className="items-center justify-center rounded-lg"
-                      style={{ width: 48, height: 48, backgroundColor: (RARITY_COLOR[item.rarity] || "#94a3b8") + "33" }}
+                      style={{
+                        width: 48,
+                        height: 48,
+                        backgroundColor: (RARITY_COLOR[item.rarity] || "#94a3b8") + "33",
+                      }}
                     >
-                      <Text className="text-weered-text font-black text-lg">{item.name.slice(0, 1).toUpperCase()}</Text>
+                      <Text className="text-weered-text font-black text-lg">
+                        {item.name.slice(0, 1).toUpperCase()}
+                      </Text>
                     </View>
                   )}
                   <View className="flex-1 ml-3">
                     <View className="flex-row items-center">
-                      <Text className="text-weered-text font-semibold flex-1" numberOfLines={1}>{item.name}</Text>
-                      <Text style={{ color: RARITY_COLOR[item.rarity] || "#94a3b8" }} className="text-[10px] font-bold uppercase ml-2">
+                      <Text className="text-weered-text font-semibold flex-1" numberOfLines={1}>
+                        {item.name}
+                      </Text>
+                      <Text
+                        style={{ color: RARITY_COLOR[item.rarity] || "#94a3b8" }}
+                        className="text-[10px] font-bold uppercase ml-2"
+                      >
                         {item.rarity}
                       </Text>
                     </View>
                     {!!item.description && (
-                      <Text className="text-weered-muted text-xs mt-0.5" numberOfLines={2}>{item.description}</Text>
+                      <Text className="text-weered-muted text-xs mt-0.5" numberOfLines={2}>
+                        {item.description}
+                      </Text>
                     )}
                     <View className="flex-row items-center mt-1">
-                      <Text className="text-weered font-bold text-sm">{item.price.toLocaleString()} Paper</Text>
+                      <Text className="text-weered font-bold text-sm">
+                        {item.price.toLocaleString()} Paper
+                      </Text>
                       {item.maxSupply != null && (
                         <Text className="text-weered-muted text-xs ml-3">
-                          {item.soldOut ? "sold out" : `${item.remaining} of ${item.maxSupply} left`}
+                          {item.soldOut
+                            ? "sold out"
+                            : `${item.remaining} of ${item.maxSupply} left`}
                         </Text>
                       )}
                       {item.featured && (

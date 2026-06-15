@@ -16,13 +16,13 @@ function proficiencyBonus(level: number): number {
   const lv = Math.max(1, Math.min(20, Math.floor(Number(level) || 1)));
   if (lv >= 17) return 6;
   if (lv >= 13) return 5;
-  if (lv >= 9)  return 4;
-  if (lv >= 5)  return 3;
+  if (lv >= 9) return 4;
+  if (lv >= 5) return 3;
   return 2;
 }
 
 const ABILITY_KEYS = ["STR", "DEX", "CON", "INT", "WIS", "CHA"] as const;
-type AbilityKey = typeof ABILITY_KEYS[number];
+type AbilityKey = (typeof ABILITY_KEYS)[number];
 
 const SKILL_ABILITY: Record<string, AbilityKey> = {
   acrobatics: "DEX",
@@ -47,12 +47,18 @@ const SKILL_ABILITY: Record<string, AbilityKey> = {
 
 function abilityScore(c: any, k: AbilityKey): number {
   switch (k) {
-    case "STR": return c.str;
-    case "DEX": return c.dex;
-    case "CON": return c.con;
-    case "INT": return c.int;
-    case "WIS": return c.wis;
-    case "CHA": return c.cha;
+    case "STR":
+      return c.str;
+    case "DEX":
+      return c.dex;
+    case "CON":
+      return c.con;
+    case "INT":
+      return c.int;
+    case "WIS":
+      return c.wis;
+    case "CHA":
+      return c.cha;
   }
 }
 
@@ -62,16 +68,17 @@ function withDerived(c: any) {
   for (const k of ABILITY_KEYS) mods[k] = abilityMod(abilityScore(c, k));
 
   const saveProfs: string[] = Array.isArray(c.saveProfs) ? c.saveProfs : [];
-  const saves = ABILITY_KEYS.map(k => ({
+  const saves = ABILITY_KEYS.map((k) => ({
     ability: k,
     proficient: saveProfs.includes(k),
     bonus: mods[k] + (saveProfs.includes(k) ? pb : 0),
   }));
 
-  const skillProfs: Array<{ skill: string; expertise?: boolean }> =
-    Array.isArray(c.skillProfs) ? c.skillProfs : [];
-  const profMap = new Map(skillProfs.map(s => [s.skill, !!s.expertise]));
-  const skills = Object.keys(SKILL_ABILITY).map(skill => {
+  const skillProfs: Array<{ skill: string; expertise?: boolean }> = Array.isArray(c.skillProfs)
+    ? c.skillProfs
+    : [];
+  const profMap = new Map(skillProfs.map((s) => [s.skill, !!s.expertise]));
+  const skills = Object.keys(SKILL_ABILITY).map((skill) => {
     const ability = SKILL_ABILITY[skill];
     const proficient = profMap.has(skill);
     const expertise = profMap.get(skill) === true;
@@ -86,7 +93,7 @@ function withDerived(c: any) {
       mods,
       saves,
       skills,
-      passivePerception: 10 + (skills.find(s => s.skill === "perception")?.bonus ?? mods.WIS),
+      passivePerception: 10 + (skills.find((s) => s.skill === "perception")?.bonus ?? mods.WIS),
       initiative: mods.DEX,
     },
   };
@@ -113,7 +120,9 @@ export default async function characterRoutes(app: FastifyInstance, opts: Opts) 
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
 
     const b: any = (req as any).body || {};
-    const name = String(b.name || "").trim().slice(0, 80);
+    const name = String(b.name || "")
+      .trim()
+      .slice(0, 80);
     if (!name) return reply.code(400).send({ ok: false, error: "name_required" });
 
     const data: any = {
@@ -125,29 +134,33 @@ export default async function characterRoutes(app: FastifyInstance, opts: Opts) 
       alignment: String(b.alignment || "").slice(0, 40),
       campaignId: b.campaignId ? String(b.campaignId) : null,
       roomId: b.roomId ? String(b.roomId) : null,
-      str: clampScore(b.str), dex: clampScore(b.dex), con: clampScore(b.con),
-      int: clampScore(b.int), wis: clampScore(b.wis), cha: clampScore(b.cha),
+      str: clampScore(b.str),
+      dex: clampScore(b.dex),
+      con: clampScore(b.con),
+      int: clampScore(b.int),
+      wis: clampScore(b.wis),
+      cha: clampScore(b.cha),
       hpCurrent: clampInt(b.hpCurrent, 0, 999, 0),
-      hpMax:     clampInt(b.hpMax,     0, 999, 0),
-      hpTemp:    clampInt(b.hpTemp,    0, 999, 0),
-      ac:        clampInt(b.ac,        0, 50,  10),
-      speed:     clampInt(b.speed,     0, 200, 30),
-      hitDice:   String(b.hitDice || "").slice(0, 40),
+      hpMax: clampInt(b.hpMax, 0, 999, 0),
+      hpTemp: clampInt(b.hpTemp, 0, 999, 0),
+      ac: clampInt(b.ac, 0, 50, 10),
+      speed: clampInt(b.speed, 0, 200, 30),
+      hitDice: String(b.hitDice || "").slice(0, 40),
       saveProfs: sanitizeSaveProfs(b.saveProfs),
       skillProfs: sanitizeSkillProfs(b.skillProfs),
       spellSlots: sanitizeSpellSlots(b.spellSlots),
-      spells:     sanitizeSpells(b.spells),
-      inventory:  sanitizeInventory(b.inventory),
+      spells: sanitizeSpells(b.spells),
+      inventory: sanitizeInventory(b.inventory),
       cp: clampInt(b.cp, 0, 1_000_000, 0),
       sp: clampInt(b.sp, 0, 1_000_000, 0),
       ep: clampInt(b.ep, 0, 1_000_000, 0),
       gp: clampInt(b.gp, 0, 1_000_000, 0),
       pp: clampInt(b.pp, 0, 1_000_000, 0),
       features: sanitizeFeatures(b.features),
-      attacks:  sanitizeAttacks(b.attacks),
-      notesDM:     String(b.notesDM     || "").slice(0, 8000),
+      attacks: sanitizeAttacks(b.attacks),
+      notesDM: String(b.notesDM || "").slice(0, 8000),
       notesPlayer: String(b.notesPlayer || "").slice(0, 8000),
-      notesParty:  String(b.notesParty  || "").slice(0, 8000),
+      notesParty: String(b.notesParty || "").slice(0, 8000),
     };
 
     const c = await prisma.character.create({ data });
@@ -164,8 +177,11 @@ export default async function characterRoutes(app: FastifyInstance, opts: Opts) 
 
     if (roomId && !mineOnly) {
       const role = await getGlobalRole(u.id);
-      const room = await prisma.room.findUnique({ where: { id: roomId }, select: { ownerId: true } });
-      const isDM = canAccessStaff(role) || (room?.ownerId === u.id);
+      const room = await prisma.room.findUnique({
+        where: { id: roomId },
+        select: { ownerId: true },
+      });
+      const isDM = canAccessStaff(role) || room?.ownerId === u.id;
       if (isDM) {
         const chars = await prisma.character.findMany({
           where: { roomId },
@@ -218,41 +234,41 @@ export default async function characterRoutes(app: FastifyInstance, opts: Opts) 
     const data: any = {};
 
     if (isOwner) {
-      if (typeof b.name === "string")        data.name = b.name.trim().slice(0, 80) || c.name;
-      if (typeof b.className === "string")   data.className = b.className.slice(0, 40);
-      if (b.level !== undefined)             data.level = Math.max(1, Math.min(20, parseInt(b.level) || 1));
-      if (typeof b.race === "string")        data.race = b.race.slice(0, 40);
-      if (typeof b.alignment === "string")   data.alignment = b.alignment.slice(0, 40);
+      if (typeof b.name === "string") data.name = b.name.trim().slice(0, 80) || c.name;
+      if (typeof b.className === "string") data.className = b.className.slice(0, 40);
+      if (b.level !== undefined) data.level = Math.max(1, Math.min(20, parseInt(b.level) || 1));
+      if (typeof b.race === "string") data.race = b.race.slice(0, 40);
+      if (typeof b.alignment === "string") data.alignment = b.alignment.slice(0, 40);
       if (b.str !== undefined) data.str = clampScore(b.str);
       if (b.dex !== undefined) data.dex = clampScore(b.dex);
       if (b.con !== undefined) data.con = clampScore(b.con);
       if (b.int !== undefined) data.int = clampScore(b.int);
       if (b.wis !== undefined) data.wis = clampScore(b.wis);
       if (b.cha !== undefined) data.cha = clampScore(b.cha);
-      if (b.speed !== undefined)   data.speed   = clampInt(b.speed,   0, 200, c.speed);
+      if (b.speed !== undefined) data.speed = clampInt(b.speed, 0, 200, c.speed);
       if (typeof b.hitDice === "string") data.hitDice = b.hitDice.slice(0, 40);
-      if (Array.isArray(b.saveProfs))  data.saveProfs  = sanitizeSaveProfs(b.saveProfs);
+      if (Array.isArray(b.saveProfs)) data.saveProfs = sanitizeSaveProfs(b.saveProfs);
       if (b.skillProfs !== undefined) data.skillProfs = sanitizeSkillProfs(b.skillProfs);
       if (b.spellSlots !== undefined) data.spellSlots = sanitizeSpellSlots(b.spellSlots);
-      if (b.spells !== undefined)     data.spells     = sanitizeSpells(b.spells);
-      if (b.inventory !== undefined)  data.inventory  = sanitizeInventory(b.inventory);
+      if (b.spells !== undefined) data.spells = sanitizeSpells(b.spells);
+      if (b.inventory !== undefined) data.inventory = sanitizeInventory(b.inventory);
       if (b.cp !== undefined) data.cp = clampInt(b.cp, 0, 1_000_000, c.cp);
       if (b.sp !== undefined) data.sp = clampInt(b.sp, 0, 1_000_000, c.sp);
       if (b.ep !== undefined) data.ep = clampInt(b.ep, 0, 1_000_000, c.ep);
       if (b.gp !== undefined) data.gp = clampInt(b.gp, 0, 1_000_000, c.gp);
       if (b.pp !== undefined) data.pp = clampInt(b.pp, 0, 1_000_000, c.pp);
       if (b.features !== undefined) data.features = sanitizeFeatures(b.features);
-      if (b.attacks !== undefined)  data.attacks  = sanitizeAttacks(b.attacks);
+      if (b.attacks !== undefined) data.attacks = sanitizeAttacks(b.attacks);
       if (typeof b.notesPlayer === "string") data.notesPlayer = b.notesPlayer.slice(0, 8000);
-      if (typeof b.notesParty  === "string") data.notesParty  = b.notesParty.slice(0, 8000);
+      if (typeof b.notesParty === "string") data.notesParty = b.notesParty.slice(0, 8000);
       if (b.campaignId !== undefined) data.campaignId = b.campaignId ? String(b.campaignId) : null;
-      if (b.roomId !== undefined)     data.roomId     = b.roomId ? String(b.roomId) : null;
+      if (b.roomId !== undefined) data.roomId = b.roomId ? String(b.roomId) : null;
     }
 
     if (b.hpCurrent !== undefined) data.hpCurrent = clampInt(b.hpCurrent, 0, 999, c.hpCurrent);
-    if (b.hpMax     !== undefined) data.hpMax     = clampInt(b.hpMax,     0, 999, c.hpMax);
-    if (b.hpTemp    !== undefined) data.hpTemp    = clampInt(b.hpTemp,    0, 999, c.hpTemp);
-    if (b.ac        !== undefined) data.ac        = clampInt(b.ac,        0, 50,  c.ac);
+    if (b.hpMax !== undefined) data.hpMax = clampInt(b.hpMax, 0, 999, c.hpMax);
+    if (b.hpTemp !== undefined) data.hpTemp = clampInt(b.hpTemp, 0, 999, c.hpTemp);
+    if (b.ac !== undefined) data.ac = clampInt(b.ac, 0, 50, c.ac);
     if (typeof b.notesDM === "string") data.notesDM = b.notesDM.slice(0, 8000);
 
     if (Object.keys(data).length === 0) {
@@ -306,16 +322,17 @@ export default async function characterRoutes(app: FastifyInstance, opts: Opts) 
     const b: any = (req as any).body || {};
     const lvl = String(b.level || "");
     const op = String(b.op || "toggle");
-    const slots: any = c.spellSlots && typeof c.spellSlots === "object" ? { ...(c.spellSlots as any) } : {};
+    const slots: any =
+      c.spellSlots && typeof c.spellSlots === "object" ? { ...(c.spellSlots as any) } : {};
     const cur = slots[lvl] && typeof slots[lvl] === "object" ? slots[lvl] : { current: 0, max: 0 };
     let { current, max } = cur as { current: number; max: number };
     current = Math.max(0, Math.floor(Number(current) || 0));
-    max     = Math.max(0, Math.floor(Number(max)     || 0));
-    if (op === "use")     current = Math.max(0, current - 1);
+    max = Math.max(0, Math.floor(Number(max) || 0));
+    if (op === "use") current = Math.max(0, current - 1);
     else if (op === "restore") current = Math.min(max, current + 1);
     else if (op === "set") {
       if (b.current !== undefined) current = Math.max(0, Math.min(max, parseInt(b.current) || 0));
-      if (b.max     !== undefined) {
+      if (b.max !== undefined) {
         max = Math.max(0, parseInt(b.max) || 0);
         current = Math.min(current, max);
       }
@@ -344,9 +361,9 @@ function clampScore(v: any): number {
 function sanitizeSaveProfs(v: any): string[] {
   if (!Array.isArray(v)) return [];
   const allowed = new Set<string>(ABILITY_KEYS as readonly string[]);
-  return Array.from(new Set(
-    v.map((x: any) => String(x || "").toUpperCase()).filter((x: string) => allowed.has(x))
-  ));
+  return Array.from(
+    new Set(v.map((x: any) => String(x || "").toUpperCase()).filter((x: string) => allowed.has(x))),
+  );
 }
 function sanitizeSkillProfs(v: any): any {
   if (!Array.isArray(v)) return [];
@@ -370,36 +387,48 @@ function sanitizeSpellSlots(v: any): any {
 }
 function sanitizeSpells(v: any): any {
   if (!Array.isArray(v)) return [];
-  return v.slice(0, 200).map((s: any) => ({
-    name: String(s?.name || "").slice(0, 80),
-    level: clampInt(s?.level, 0, 9, 0),
-  })).filter((s: any) => s.name);
+  return v
+    .slice(0, 200)
+    .map((s: any) => ({
+      name: String(s?.name || "").slice(0, 80),
+      level: clampInt(s?.level, 0, 9, 0),
+    }))
+    .filter((s: any) => s.name);
 }
 function sanitizeInventory(v: any): any {
   if (!Array.isArray(v)) return [];
-  return v.slice(0, 200).map((it: any) => ({
-    name: String(it?.name || "").slice(0, 80),
-    qty: clampInt(it?.qty, 0, 99999, 1),
-    equipped: !!it?.equipped,
-    attuned: !!it?.attuned,
-    notes: String(it?.notes || "").slice(0, 500),
-  })).filter((it: any) => it.name);
+  return v
+    .slice(0, 200)
+    .map((it: any) => ({
+      name: String(it?.name || "").slice(0, 80),
+      qty: clampInt(it?.qty, 0, 99999, 1),
+      equipped: !!it?.equipped,
+      attuned: !!it?.attuned,
+      notes: String(it?.notes || "").slice(0, 500),
+    }))
+    .filter((it: any) => it.name);
 }
 function sanitizeFeatures(v: any): any {
   if (!Array.isArray(v)) return [];
   const allowed = new Set(["race", "class", "feat", "background", "other"]);
-  return v.slice(0, 100).map((f: any) => ({
-    title: String(f?.title || "").slice(0, 80),
-    body: String(f?.body || "").slice(0, 4000),
-    source: allowed.has(String(f?.source)) ? String(f.source) : "other",
-  })).filter((f: any) => f.title);
+  return v
+    .slice(0, 100)
+    .map((f: any) => ({
+      title: String(f?.title || "").slice(0, 80),
+      body: String(f?.body || "").slice(0, 4000),
+      source: allowed.has(String(f?.source)) ? String(f.source) : "other",
+    }))
+    .filter((f: any) => f.title);
 }
 function sanitizeAttacks(v: any): any {
   if (!Array.isArray(v)) return [];
-  return v.slice(0, 50).map((a: any) => ({
-    name: String(a?.name || "").slice(0, 60),
-    expression: String(a?.expression || "").slice(0, 32),
-    damage: String(a?.damage || "").slice(0, 32),
-    notes: String(a?.notes || "").slice(0, 200),
-  })).filter((a: any) => a.name && a.expression);
+  return v
+    .slice(0, 50)
+    .map((a: any) => ({
+      name: String(a?.name || "").slice(0, 60),
+      expression: String(a?.expression || "").slice(0, 32),
+      damage: String(a?.damage || "").slice(0, 32),
+      notes: String(a?.notes || "").slice(0, 200),
+    }))
+    .filter((a: any) => a.name && a.expression);
 }

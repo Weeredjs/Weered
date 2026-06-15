@@ -30,7 +30,10 @@ export default function MarketingHeader({
           gap: 16,
         }}
       >
-        <Link href="/" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none" }}>
+        <Link
+          href="/"
+          style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none" }}
+        >
           <img
             src="/brand/logo/weered-logo-32.png"
             alt="Weered"
@@ -53,10 +56,18 @@ export default function MarketingHeader({
         </Link>
 
         <nav style={{ display: "flex", alignItems: "center", gap: 22 }}>
-          <Link href="/why-not-discord" style={navLinkStyle}>Why Weered</Link>
-          <Link href="/lobby" style={navLinkStyle}>Lobbies</Link>
-          <Link href="/premium" style={navLinkStyle}>Premium</Link>
-          <Link href={ctaHref} style={ctaStyle}>{ctaLabel} →</Link>
+          <Link href="/why-not-discord" style={navLinkStyle}>
+            Why Weered
+          </Link>
+          <Link href="/lobby" style={navLinkStyle}>
+            Lobbies
+          </Link>
+          <Link href="/premium" style={navLinkStyle}>
+            Premium
+          </Link>
+          <Link href={ctaHref} style={ctaStyle}>
+            {ctaLabel} →
+          </Link>
         </nav>
       </div>
     </header>

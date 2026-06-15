@@ -39,5 +39,7 @@ export function consumePendingStream(): string | null {
 }
 
 export function clearPendingStream() {
-  try { delete (window as any)[PENDING_KEY]; } catch {}
+  try {
+    delete (window as any)[PENDING_KEY];
+  } catch {}
 }

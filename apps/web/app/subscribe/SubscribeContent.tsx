@@ -7,17 +7,29 @@ import { weeredToast } from "../../lib/toast";
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
 function authHeaders(): Record<string, string> {
-  try { const t = localStorage.getItem("weered_token") || ""; return t ? { Authorization: `Bearer ${t}` } : {}; } catch { return {}; }
+  try {
+    const t = localStorage.getItem("weered_token") || "";
+    return t ? { Authorization: `Bearer ${t}` } : {};
+  } catch {
+    return {};
+  }
 }
 
 async function apiFetch(path: string, opts?: RequestInit) {
-  const r = await fetch(`${API}${path}`, { ...opts, headers: { "Content-Type": "application/json", ...authHeaders(), ...(opts?.headers || {}) } });
+  const r = await fetch(`${API}${path}`, {
+    ...opts,
+    headers: { "Content-Type": "application/json", ...authHeaders(), ...(opts?.headers || {}) },
+  });
   return r.json();
 }
 
 const TIERS = [
   {
-    id: "FREE", name: "Innocent", price: "Free", sub: "for now", monthly: 0,
+    id: "FREE",
+    name: "Innocent",
+    price: "Free",
+    sub: "for now",
+    monthly: 0,
     color: "#94a3b8",
     glow: "rgba(148,163,184,0.15)",
     border: "rgba(148,163,184,0.2)",
@@ -31,7 +43,11 @@ const TIERS = [
     ctaStyle: "ghost",
   },
   {
-    id: "INDICTED", name: "Indicted", price: "$6", sub: "/ month", monthly: 6,
+    id: "INDICTED",
+    name: "Indicted",
+    price: "$6",
+    sub: "/ month",
+    monthly: 6,
     color: "#a78bfa",
     glow: "rgba(88,0,229,0.2)",
     border: "rgba(88,0,229,0.35)",
@@ -48,7 +64,11 @@ const TIERS = [
     ctaStyle: "primary",
   },
   {
-    id: "FELON", name: "Felon", price: "$14", sub: "/ month", monthly: 14,
+    id: "FELON",
+    name: "Felon",
+    price: "$14",
+    sub: "/ month",
+    monthly: 14,
     color: "#f97316",
     glow: "rgba(249,115,22,0.15)",
     border: "rgba(249,115,22,0.3)",
@@ -64,7 +84,11 @@ const TIERS = [
     ctaStyle: "orange",
   },
   {
-    id: "KINGPIN", name: "Kingpin", price: "—", sub: "sealed", monthly: -1,
+    id: "KINGPIN",
+    name: "Kingpin",
+    price: "—",
+    sub: "sealed",
+    monthly: -1,
     color: "#fcd34d",
     glow: "rgba(252,211,77,0.12)",
     border: "rgba(252,211,77,0.25)",
@@ -89,15 +113,26 @@ export default function SubscribeContent() {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    apiFetch("/subscribe/status").then(j => { if (j.ok) setSub(j); setLoading(false); }).catch(() => setLoading(false));
+    apiFetch("/subscribe/status")
+      .then((j) => {
+        if (j.ok) setSub(j);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
     setTimeout(() => setVisible(true), 100);
   }, []);
 
   async function checkout(tier: string) {
     setChecking(tier);
-    const j = await apiFetch("/subscribe/checkout", { method: "POST", body: JSON.stringify({ tier }) });
+    const j = await apiFetch("/subscribe/checkout", {
+      method: "POST",
+      body: JSON.stringify({ tier }),
+    });
     if (j.ok && j.url) window.location.href = j.url;
-    else { weeredToast.error(j.message || j.error || "Checkout failed."); setChecking(null); }
+    else {
+      weeredToast.error(j.message || j.error || "Checkout failed.");
+      setChecking(null);
+    }
   }
 
   async function manageSubscription() {
@@ -300,20 +335,29 @@ export default function SubscribeContent() {
 
       <div className="sub-root">
         <div className={`sub-inner${visible ? " visible" : ""}`}>
-
           <div className="sub-header">
             <div className="sub-eyebrow">access levels</div>
             <div className="sub-title">Choose your status.</div>
-            <div className="sub-subtitle">Some things cost money. Most things don't. One thing can't be bought.</div>
+            <div className="sub-subtitle">
+              Some things cost money. Most things don't. One thing can't be bought.
+            </div>
           </div>
 
           {success && (
-            <div style={{
-              marginBottom: 32, padding: "16px 24px", borderRadius: 14, textAlign: "center",
-              background: "rgba(16,185,129,.08)", border: "1px solid rgba(16,185,129,.25)",
-              color: "rgb(167,243,208)", fontSize: 13, fontWeight: 600,
-              fontFamily: "'DM Mono', monospace",
-            }}>
+            <div
+              style={{
+                marginBottom: 32,
+                padding: "16px 24px",
+                borderRadius: 14,
+                textAlign: "center",
+                background: "rgba(16,185,129,.08)",
+                border: "1px solid rgba(16,185,129,.25)",
+                color: "rgb(167,243,208)",
+                fontSize: 13,
+                fontWeight: 600,
+                fontFamily: "'DM Mono', monospace",
+              }}
+            >
               Subscription activated. Welcome to the crew.
             </div>
           )}
@@ -326,18 +370,22 @@ export default function SubscribeContent() {
                 </div>
                 {sub.currentPeriodEnd && (
                   <div style={{ fontSize: 11, opacity: 0.5, marginTop: 3 }}>
-                    {sub.cancelAtPeriodEnd ? "Cancels" : "Renews"} on {new Date(sub.currentPeriodEnd).toLocaleDateString()}
+                    {sub.cancelAtPeriodEnd ? "Cancels" : "Renews"} on{" "}
+                    {new Date(sub.currentPeriodEnd).toLocaleDateString()}
                   </div>
                 )}
               </div>
               <button
                 onClick={manageSubscription}
                 style={{
-                  padding: "8px 16px", borderRadius: 8,
+                  padding: "8px 16px",
+                  borderRadius: 8,
                   border: "1px solid rgba(255,255,255,.15)",
                   background: "rgba(255,255,255,.06)",
                   color: "rgba(243,244,246,.8)",
-                  fontSize: 11, fontWeight: 600, cursor: "pointer",
+                  fontSize: 11,
+                  fontWeight: 600,
+                  cursor: "pointer",
                   fontFamily: "'DM Mono', monospace",
                   transition: "all .15s",
                 }}
@@ -350,85 +398,132 @@ export default function SubscribeContent() {
           <div className="sub-grid">
             {TIERS.map((tier, i) => {
               const isCurrent = currentTier === tier.id;
-              const isUpgrade = tier.monthly > 0 && (currentTier === "FREE" || (currentTier === "INDICTED" && tier.id === "FELON"));
+              const isUpgrade =
+                tier.monthly > 0 &&
+                (currentTier === "FREE" || (currentTier === "INDICTED" && tier.id === "FELON"));
               const isKingpin = tier.id === "KINGPIN";
 
               return (
-                <div key={tier.id} className="sub-card" style={{
-                  border: isCurrent ? `2px solid ${tier.border}` : `1px solid ${tier.border}`,
-                  boxShadow: `0 0 40px ${tier.glow}, inset 0 1px 0 rgba(255,255,255,0.04)`,
-                }}>
+                <div
+                  key={tier.id}
+                  className="sub-card"
+                  style={{
+                    border: isCurrent ? `2px solid ${tier.border}` : `1px solid ${tier.border}`,
+                    boxShadow: `0 0 40px ${tier.glow}, inset 0 1px 0 rgba(255,255,255,0.04)`,
+                  }}
+                >
                   {tier.badge && (
-                    <div className="sub-badge" style={{
-                      background: tier.id === "KINGPIN" ? "rgba(252,211,77,0.15)" : "rgba(88,0,229,0.2)",
-                      border: `1px solid ${tier.border}`,
-                      color: tier.color,
-                    }}>{tier.badge}</div>
+                    <div
+                      className="sub-badge"
+                      style={{
+                        background:
+                          tier.id === "KINGPIN" ? "rgba(252,211,77,0.15)" : "rgba(88,0,229,0.2)",
+                        border: `1px solid ${tier.border}`,
+                        color: tier.color,
+                      }}
+                    >
+                      {tier.badge}
+                    </div>
                   )}
 
                   {isCurrent && (
-                    <div style={{
-                      position: "absolute", top: 12, right: 12,
-                      fontSize: 9, padding: "2px 8px", borderRadius: 999,
-                      background: tier.border, color: "#050810",
-                      fontWeight: 800, letterSpacing: ".5px",
-                    }}>CURRENT</div>
+                    <div
+                      style={{
+                        position: "absolute",
+                        top: 12,
+                        right: 12,
+                        fontSize: 9,
+                        padding: "2px 8px",
+                        borderRadius: 999,
+                        background: tier.border,
+                        color: "#050810",
+                        fontWeight: 800,
+                        letterSpacing: ".5px",
+                      }}
+                    >
+                      CURRENT
+                    </div>
                   )}
 
-                  <div className="sub-tier-name" style={{ color: tier.color }}>{tier.name}</div>
+                  <div className="sub-tier-name" style={{ color: tier.color }}>
+                    {tier.name}
+                  </div>
                   <div className="sub-price">{tier.price}</div>
                   <div className="sub-price-sub">{tier.sub || "\u00a0"}</div>
 
                   <ul className="sub-features">
                     {tier.features.map((f, fi) => (
-                      <li key={fi} className={f === "———" ? "muted" : ""}>{f}</li>
+                      <li key={fi} className={f === "———" ? "muted" : ""}>
+                        {f}
+                      </li>
                     ))}
                   </ul>
 
                   {isKingpin ? (
-                    <div className="sub-cta" style={{
-                      background: "rgba(252,211,77,0.05)",
-                      border: "1px solid rgba(252,211,77,0.15)",
-                      color: "rgba(252,211,77,0.35)",
-                      cursor: "default", fontStyle: "italic",
-                    }}>You don't apply for this.</div>
+                    <div
+                      className="sub-cta"
+                      style={{
+                        background: "rgba(252,211,77,0.05)",
+                        border: "1px solid rgba(252,211,77,0.15)",
+                        color: "rgba(252,211,77,0.35)",
+                        cursor: "default",
+                        fontStyle: "italic",
+                      }}
+                    >
+                      You don't apply for this.
+                    </div>
                   ) : isCurrent ? (
-                    <div className="sub-cta" style={{
-                      background: "rgba(255,255,255,.04)",
-                      border: "1px solid rgba(255,255,255,.10)",
-                      color: "rgba(255,255,255,.45)",
-                      cursor: "default",
-                    }}>Active</div>
+                    <div
+                      className="sub-cta"
+                      style={{
+                        background: "rgba(255,255,255,.04)",
+                        border: "1px solid rgba(255,255,255,.10)",
+                        color: "rgba(255,255,255,.45)",
+                        cursor: "default",
+                      }}
+                    >
+                      Active
+                    </div>
                   ) : isUpgrade ? (
                     <button
                       className="sub-cta"
                       onClick={() => checkout(tier.id)}
                       disabled={!!checking}
                       style={
-                        tier.ctaStyle === "primary" ? {
-                          background: "linear-gradient(135deg, rgba(88,0,229,0.85), rgba(217,70,239,0.75))",
-                          color: "#fff",
-                          boxShadow: "0 4px 20px rgba(88,0,229,0.25)",
-                        } : tier.ctaStyle === "orange" ? {
-                          background: "rgba(249,115,22,0.12)",
-                          border: "1px solid rgba(249,115,22,0.3)",
-                          color: "rgba(253,186,116,0.9)",
-                        } : {
-                          background: "rgba(255,255,255,0.04)",
-                          border: "1px solid rgba(255,255,255,0.1)",
-                          color: "rgba(255,255,255,0.4)",
-                        }
+                        tier.ctaStyle === "primary"
+                          ? {
+                              background:
+                                "linear-gradient(135deg, rgba(88,0,229,0.85), rgba(217,70,239,0.75))",
+                              color: "#fff",
+                              boxShadow: "0 4px 20px rgba(88,0,229,0.25)",
+                            }
+                          : tier.ctaStyle === "orange"
+                            ? {
+                                background: "rgba(249,115,22,0.12)",
+                                border: "1px solid rgba(249,115,22,0.3)",
+                                color: "rgba(253,186,116,0.9)",
+                              }
+                            : {
+                                background: "rgba(255,255,255,0.04)",
+                                border: "1px solid rgba(255,255,255,0.1)",
+                                color: "rgba(255,255,255,0.4)",
+                              }
                       }
                     >
                       {checking === tier.id ? "Redirecting..." : `Upgrade to ${tier.name}`}
                     </button>
                   ) : (
-                    <div className="sub-cta" style={{
-                      background: "rgba(255,255,255,.04)",
-                      border: "1px solid rgba(255,255,255,.06)",
-                      color: "rgba(255,255,255,.3)",
-                      cursor: "default",
-                    }}>{tier.monthly === 0 ? "You're already here." : "Contact support"}</div>
+                    <div
+                      className="sub-cta"
+                      style={{
+                        background: "rgba(255,255,255,.04)",
+                        border: "1px solid rgba(255,255,255,.06)",
+                        color: "rgba(255,255,255,.3)",
+                        cursor: "default",
+                      }}
+                    >
+                      {tier.monthly === 0 ? "You're already here." : "Contact support"}
+                    </div>
                   )}
                 </div>
               );
@@ -443,7 +538,6 @@ export default function SubscribeContent() {
               <a href="/about">about</a>
             </nav>
           </div>
-
         </div>
       </div>
     </>

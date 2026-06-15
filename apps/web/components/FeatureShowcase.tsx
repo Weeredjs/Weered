@@ -2,72 +2,193 @@
 
 import React, { useState } from "react";
 
-interface Props { open: boolean; onClose: () => void }
+interface Props {
+  open: boolean;
+  onClose: () => void;
+}
 
 const PILLARS = [
-  { icon: "🎮", color: "#a78bfa", title: "The game lobby, reborn", line: "Every game gets its own lobby — voice, crews, and live presence built in. The MPlayer/Xfire feeling, back and better." },
-  { icon: "🔊", color: "#22c55e", title: "Talk, watch, play together", line: "Low-latency voice and video, screen share, synced YouTube and Twitch. Pull up a room and hang." },
-  { icon: "🧭", color: "#60a5fa", title: "It knows your game", line: "Live stats, LFG with roles and reliability, squad finders. The lobby actually understands what you're playing." },
-  { icon: "💸", color: "#fbbf24", title: "An economy with stakes", line: "Earn Notoriety from Innocent to Kingpin. Paper currency, poker, paper-trading. Your presence leaves marks." },
-  { icon: "🤖", color: "#ec4899", title: "The Operator", line: "An AI in every room that talks like a character, not a chatbot. Ask it anything. It's got attitude." },
-  { icon: "🏠", color: "#7C3AED", title: "Make it yours", line: "Spin up your own lobby for your crew, community, or business. Your branding, your roles, your rules." },
+  {
+    icon: "🎮",
+    color: "#a78bfa",
+    title: "The game lobby, reborn",
+    line: "Every game gets its own lobby — voice, crews, and live presence built in. The MPlayer/Xfire feeling, back and better.",
+  },
+  {
+    icon: "🔊",
+    color: "#22c55e",
+    title: "Talk, watch, play together",
+    line: "Low-latency voice and video, screen share, synced YouTube and Twitch. Pull up a room and hang.",
+  },
+  {
+    icon: "🧭",
+    color: "#60a5fa",
+    title: "It knows your game",
+    line: "Live stats, LFG with roles and reliability, squad finders. The lobby actually understands what you're playing.",
+  },
+  {
+    icon: "💸",
+    color: "#fbbf24",
+    title: "An economy with stakes",
+    line: "Earn Notoriety from Innocent to Kingpin. Paper currency, poker, paper-trading. Your presence leaves marks.",
+  },
+  {
+    icon: "🤖",
+    color: "#ec4899",
+    title: "The Operator",
+    line: "An AI in every room that talks like a character, not a chatbot. Ask it anything. It's got attitude.",
+  },
+  {
+    icon: "🏠",
+    color: "#7C3AED",
+    title: "Make it yours",
+    line: "Spin up your own lobby for your crew, community, or business. Your branding, your roles, your rules.",
+  },
 ];
 
 const SECTIONS = [
   {
-    title: "Your Own Lobby", icon: "🏠", color: "#7C3AED",
+    title: "Your Own Lobby",
+    icon: "🏠",
+    color: "#7C3AED",
     items: [
-      { label: "Community Hub", desc: "Build a community around anything — gaming, music, anime, crypto, fitness, book clubs." },
-      { label: "Business HQ", desc: "Virtual office with directory, team status, and announcements." },
-      { label: "Custom Branding", desc: "Your logo, banners, and a five-tier role hierarchy with custom titles." },
-      { label: "Moderation Tools", desc: "Ban management, audit logging, chat lock, room-level roles." },
+      {
+        label: "Community Hub",
+        desc: "Build a community around anything — gaming, music, anime, crypto, fitness, book clubs.",
+      },
+      {
+        label: "Business HQ",
+        desc: "Virtual office with directory, team status, and announcements.",
+      },
+      {
+        label: "Custom Branding",
+        desc: "Your logo, banners, and a five-tier role hierarchy with custom titles.",
+      },
+      {
+        label: "Moderation Tools",
+        desc: "Ban management, audit logging, chat lock, room-level roles.",
+      },
     ],
   },
   {
-    title: "Voice & Video Rooms", icon: "🎙️", color: "#22c55e",
+    title: "Voice & Video Rooms",
+    icon: "🎙️",
+    color: "#22c55e",
     items: [
-      { label: "Voice Chat", desc: "Low-latency voice powered by LiveKit. Join any room and talk." },
-      { label: "Video & Screen Share", desc: "Face cam, screen share, or both. Watch parties, study groups, standups." },
+      {
+        label: "Voice Chat",
+        desc: "Low-latency voice powered by LiveKit. Join any room and talk.",
+      },
+      {
+        label: "Video & Screen Share",
+        desc: "Face cam, screen share, or both. Watch parties, study groups, standups.",
+      },
       { label: "YouTube Sync", desc: "Search YouTube and everyone in the room watches together." },
       { label: "Twitch Streams", desc: "Embed any Twitch stream directly in your room." },
     ],
   },
   {
-    title: "Game Integrations & LFG", icon: "🎮", color: "#f59e0b",
+    title: "Game Integrations & LFG",
+    icon: "🎮",
+    color: "#f59e0b",
     items: [
-      { label: "Live Game Data", desc: "Destiny 2, League, Fortnite, PUBG, CS2, Dota 2 — stats, profiles, vendors, leaderboards." },
-      { label: "LFG with Roles + Reputation", desc: "Post a session, claim a role, build a reliability track record. No more flaky randoms." },
-      { label: "Squad Finders", desc: "Filter by rank, region, and playstyle. Stack with people who play your role." },
-      { label: "GTA 6 Hub", desc: "Crew finder, heist teams, live news, countdown — aging ahead of launch." },
+      {
+        label: "Live Game Data",
+        desc: "Destiny 2, League, Fortnite, PUBG, CS2, Dota 2 — stats, profiles, vendors, leaderboards.",
+      },
+      {
+        label: "LFG with Roles + Reputation",
+        desc: "Post a session, claim a role, build a reliability track record. No more flaky randoms.",
+      },
+      {
+        label: "Squad Finders",
+        desc: "Filter by rank, region, and playstyle. Stack with people who play your role.",
+      },
+      {
+        label: "GTA 6 Hub",
+        desc: "Crew finder, heist teams, live news, countdown — aging ahead of launch.",
+      },
     ],
   },
   {
-    title: "Paper Economy", icon: "💵", color: "#D4A017",
+    title: "Paper Economy",
+    icon: "💵",
+    color: "#D4A017",
     items: [
-      { label: "Notoriety (XP)", desc: "Level Innocent → Kingpin. Every action earns it — post, chat, trade, play." },
-      { label: "Paper Currency", desc: "Earn from daily bonuses, FakeOut profits, and challenges. Spend in the store or at poker." },
-      { label: "FakeOut Trading", desc: "Real-time crypto charts, $100K fake money, leaderboards. Risk-free." },
-      { label: "Texas Hold'em", desc: "Real poker engine with Paper buy-ins. Up to 6 players per table." },
+      {
+        label: "Notoriety (XP)",
+        desc: "Level Innocent → Kingpin. Every action earns it — post, chat, trade, play.",
+      },
+      {
+        label: "Paper Currency",
+        desc: "Earn from daily bonuses, FakeOut profits, and challenges. Spend in the store or at poker.",
+      },
+      {
+        label: "FakeOut Trading",
+        desc: "Real-time crypto charts, $100K fake money, leaderboards. Risk-free.",
+      },
+      {
+        label: "Texas Hold'em",
+        desc: "Real poker engine with Paper buy-ins. Up to 6 players per table.",
+      },
     ],
   },
   {
-    title: "Social & Study", icon: "📡", color: "#ec4899",
+    title: "Social & Study",
+    icon: "📡",
+    color: "#ec4899",
     items: [
-      { label: "Crews", desc: "Private group chats that persist across rooms. Your squad, always connected." },
-      { label: "DMs, Friends & Forum", desc: "Direct messages, friend requests, online status, and a community board." },
-      { label: "Focus & Study Rooms", desc: "Pomodoro timer, ambient backgrounds, AI practice tests from your notes." },
-      { label: "Locator", desc: "Opt-in map of where users are active. ~5km hex grid — privacy first." },
+      {
+        label: "Crews",
+        desc: "Private group chats that persist across rooms. Your squad, always connected.",
+      },
+      {
+        label: "DMs, Friends & Forum",
+        desc: "Direct messages, friend requests, online status, and a community board.",
+      },
+      {
+        label: "Focus & Study Rooms",
+        desc: "Pomodoro timer, ambient backgrounds, AI practice tests from your notes.",
+      },
+      {
+        label: "Locator",
+        desc: "Opt-in map of where users are active. ~5km hex grid — privacy first.",
+      },
     ],
   },
 ];
 
 const WISHLIST = [
-  { label: "Fantasy Football", desc: "Draft rooms with voice, live game-day watch parties, AI start/sit advice.", status: "Planned" },
-  { label: "Tournament Brackets", desc: "Single elimination and round robin with Paper prize pools.", status: "Planned" },
-  { label: "Spotify Listen Along", desc: "See what the room host is playing, album art, Listen Along links.", status: "Exploring" },
-  { label: "NFL / NBA / MLB Live", desc: "Real-time scores, play-by-play, watch parties synced to game time.", status: "Exploring" },
-  { label: "Custom Game Modules", desc: "Request any game integration. If there's an API, we can build it.", status: "Open" },
-  { label: "Mobile App", desc: "Native iOS and Android with push notifications and voice.", status: "Planned" },
+  {
+    label: "Fantasy Football",
+    desc: "Draft rooms with voice, live game-day watch parties, AI start/sit advice.",
+    status: "Planned",
+  },
+  {
+    label: "Tournament Brackets",
+    desc: "Single elimination and round robin with Paper prize pools.",
+    status: "Planned",
+  },
+  {
+    label: "Spotify Listen Along",
+    desc: "See what the room host is playing, album art, Listen Along links.",
+    status: "Exploring",
+  },
+  {
+    label: "NFL / NBA / MLB Live",
+    desc: "Real-time scores, play-by-play, watch parties synced to game time.",
+    status: "Exploring",
+  },
+  {
+    label: "Custom Game Modules",
+    desc: "Request any game integration. If there's an API, we can build it.",
+    status: "Open",
+  },
+  {
+    label: "Mobile App",
+    desc: "Native iOS and Android with push notifications and voice.",
+    status: "Planned",
+  },
 ];
 
 export default function FeatureShowcase({ open, onClose }: Props) {
@@ -122,20 +243,37 @@ export default function FeatureShowcase({ open, onClose }: Props) {
       `}</style>
 
       <div className="showcase-overlay" onClick={onClose}>
-        <div className="showcase-card" onClick={e => e.stopPropagation()} style={{ position: "relative" }}>
-          <button className="showcase-close" onClick={onClose}>✕</button>
+        <div
+          className="showcase-card"
+          onClick={(e) => e.stopPropagation()}
+          style={{ position: "relative" }}
+        >
+          <button className="showcase-close" onClick={onClose}>
+            ✕
+          </button>
 
           <div className="showcase-header">
             <div className="showcase-eyebrow">What is Weered?</div>
-            <div className="showcase-title">More gamery than the<br />launchers you already use.</div>
+            <div className="showcase-title">
+              More gamery than the
+              <br />
+              launchers you already use.
+            </div>
             <div className="showcase-sub">
-              Weered brings back the game lobby — a place that actually knows what you're playing and who's around. Here's the gist.
+              Weered brings back the game lobby — a place that actually knows what you're playing
+              and who's around. Here's the gist.
             </div>
             <div className="showcase-tabs">
-              <button className={`showcase-tab ${tab === "features" ? "showcase-tab-active" : "showcase-tab-inactive"}`} onClick={() => setTab("features")}>
+              <button
+                className={`showcase-tab ${tab === "features" ? "showcase-tab-active" : "showcase-tab-inactive"}`}
+                onClick={() => setTab("features")}
+              >
                 The Gist
               </button>
-              <button className={`showcase-tab ${tab === "wishlist" ? "showcase-tab-active" : "showcase-tab-inactive"}`} onClick={() => setTab("wishlist")}>
+              <button
+                className={`showcase-tab ${tab === "wishlist" ? "showcase-tab-active" : "showcase-tab-inactive"}`}
+                onClick={() => setTab("wishlist")}
+              >
                 What's Next
               </button>
             </div>
@@ -145,59 +283,104 @@ export default function FeatureShowcase({ open, onClose }: Props) {
             {tab === "features" ? (
               <>
                 <div className="pillar-grid">
-                  {PILLARS.map(p => (
+                  {PILLARS.map((p) => (
                     <div key={p.title} className="pillar">
                       <div className="pillar-icon">{p.icon}</div>
-                      <div className="pillar-title" style={{ color: p.color }}>{p.title}</div>
+                      <div className="pillar-title" style={{ color: p.color }}>
+                        {p.title}
+                      </div>
                       <div className="pillar-line">{p.line}</div>
                     </div>
                   ))}
                 </div>
 
-                <button className="showcase-expand" onClick={() => setShowAll(s => !s)}>
+                <button className="showcase-expand" onClick={() => setShowAll((s) => !s)}>
                   {showAll ? "Show less" : "Explore everything →"}
                 </button>
-                {showAll && SECTIONS.map(section => (
-                  <div key={section.title} className="showcase-section">
-                    <div className="showcase-section-head">
-                      <span className="showcase-section-icon">{section.icon}</span>
-                      <span className="showcase-section-title" style={{ color: section.color }}>{section.title}</span>
+                {showAll &&
+                  SECTIONS.map((section) => (
+                    <div key={section.title} className="showcase-section">
+                      <div className="showcase-section-head">
+                        <span className="showcase-section-icon">{section.icon}</span>
+                        <span className="showcase-section-title" style={{ color: section.color }}>
+                          {section.title}
+                        </span>
+                      </div>
+                      <div className="showcase-grid">
+                        {section.items.map((item) => (
+                          <div key={item.label} className="showcase-item">
+                            <div className="showcase-item-label">{item.label}</div>
+                            <div className="showcase-item-desc">{item.desc}</div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                    <div className="showcase-grid">
-                      {section.items.map(item => (
-                        <div key={item.label} className="showcase-item">
-                          <div className="showcase-item-label">{item.label}</div>
-                          <div className="showcase-item-desc">{item.desc}</div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
+                  ))}
               </>
             ) : (
               <div>
-                <div style={{ fontSize: 13, color: "rgba(148,163,184,0.6)", marginBottom: 16, lineHeight: 1.7 }}>
-                  Weered ships fast. If there's an API for it, we can integrate it. If there isn't, we'll build it anyway.
-                  <strong style={{ color: "rgba(255,255,255,0.6)" }}> Request a module and watch it ship.</strong>
+                <div
+                  style={{
+                    fontSize: 13,
+                    color: "rgba(148,163,184,0.6)",
+                    marginBottom: 16,
+                    lineHeight: 1.7,
+                  }}
+                >
+                  Weered ships fast. If there's an API for it, we can integrate it. If there isn't,
+                  we'll build it anyway.
+                  <strong style={{ color: "rgba(255,255,255,0.6)" }}>
+                    {" "}
+                    Request a module and watch it ship.
+                  </strong>
                 </div>
                 <div className="showcase-grid">
-                  {WISHLIST.map(item => {
-                    const statusColor = item.status === "Planned" ? "#22c55e" : item.status === "Exploring" ? "#f59e0b" : "#3b82f6";
+                  {WISHLIST.map((item) => {
+                    const statusColor =
+                      item.status === "Planned"
+                        ? "#22c55e"
+                        : item.status === "Exploring"
+                          ? "#f59e0b"
+                          : "#3b82f6";
                     return (
                       <div key={item.label} className="showcase-item">
                         <div className="showcase-item-label">
                           {item.label}
-                          <span className="showcase-badge" style={{ background: `${statusColor}22`, color: statusColor }}>{item.status}</span>
+                          <span
+                            className="showcase-badge"
+                            style={{ background: `${statusColor}22`, color: statusColor }}
+                          >
+                            {item.status}
+                          </span>
                         </div>
                         <div className="showcase-item-desc">{item.desc}</div>
                       </div>
                     );
                   })}
                 </div>
-                <div style={{ marginTop: 22, padding: "16px 18px", borderRadius: 12, border: "1px solid rgba(124,58,237,0.2)", background: "rgba(124,58,237,0.05)", textAlign: "center" }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: "rgba(243,244,246,0.8)", marginBottom: 4 }}>Got an idea?</div>
+                <div
+                  style={{
+                    marginTop: 22,
+                    padding: "16px 18px",
+                    borderRadius: 12,
+                    border: "1px solid rgba(124,58,237,0.2)",
+                    background: "rgba(124,58,237,0.05)",
+                    textAlign: "center",
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: 13,
+                      fontWeight: 700,
+                      color: "rgba(243,244,246,0.8)",
+                      marginBottom: 4,
+                    }}
+                  >
+                    Got an idea?
+                  </div>
                   <div style={{ fontSize: 11, color: "rgba(148,163,184,0.55)", lineHeight: 1.6 }}>
-                    Post it in the Forum or tell The Operator. No feature-request forms. No 6-month roadmaps. Just ship.
+                    Post it in the Forum or tell The Operator. No feature-request forms. No 6-month
+                    roadmaps. Just ship.
                   </div>
                 </div>
               </div>

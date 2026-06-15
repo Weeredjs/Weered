@@ -17,19 +17,44 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${BASE}/compare`, lastModified: now, changeFrequency: "weekly", priority: 0.7 },
     { url: `${BASE}/lfg`, lastModified: now, changeFrequency: "weekly", priority: 0.7 },
     { url: `${BASE}/forum`, lastModified: now, changeFrequency: "hourly", priority: 0.7 },
-    { url: `${BASE}/why-not-discord`, lastModified: now, changeFrequency: "monthly", priority: 0.6 },
+    {
+      url: `${BASE}/why-not-discord`,
+      lastModified: now,
+      changeFrequency: "monthly",
+      priority: 0.6,
+    },
     { url: `${BASE}/safety`, lastModified: now, changeFrequency: "monthly", priority: 0.8 },
     { url: `${BASE}/features`, lastModified: now, changeFrequency: "monthly", priority: 0.8 },
     { url: `${BASE}/blog`, lastModified: now, changeFrequency: "weekly", priority: 0.6 },
-    { url: `${BASE}/blog/build-notes-poe-tree-screened-media-friends`, lastModified: now, changeFrequency: "monthly", priority: 0.5 },
+    {
+      url: `${BASE}/blog/build-notes-poe-tree-screened-media-friends`,
+      lastModified: now,
+      changeFrequency: "monthly",
+      priority: 0.5,
+    },
     { url: `${BASE}/guidelines`, lastModified: now, changeFrequency: "monthly", priority: 0.4 },
     { url: `${BASE}/map`, lastModified: now, changeFrequency: "weekly", priority: 0.5 },
     { url: `${BASE}/desktop`, lastModified: now, changeFrequency: "monthly", priority: 0.6 },
-  
-    { url: `${BASE}/alternatives/discord`, lastModified: now, changeFrequency: "weekly", priority: 0.8 },
-    { url: `${BASE}/tournaments/destiny-2`, lastModified: now, changeFrequency: "weekly", priority: 0.8 },
+
+    {
+      url: `${BASE}/alternatives/discord`,
+      lastModified: now,
+      changeFrequency: "weekly",
+      priority: 0.8,
+    },
+    {
+      url: `${BASE}/tournaments/destiny-2`,
+      lastModified: now,
+      changeFrequency: "weekly",
+      priority: 0.8,
+    },
     { url: `${BASE}/play/chess`, lastModified: now, changeFrequency: "weekly", priority: 0.8 },
-    { url: `${BASE}/play/path-of-exile`, lastModified: now, changeFrequency: "weekly", priority: 0.8 },
+    {
+      url: `${BASE}/play/path-of-exile`,
+      lastModified: now,
+      changeFrequency: "weekly",
+      priority: 0.8,
+    },
     { url: `${BASE}/play/fakeout`, lastModified: now, changeFrequency: "weekly", priority: 0.8 },
   ];
 
@@ -95,7 +120,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   let forumEntries: MetadataRoute.Sitemap = [];
   try {
-    const res = await fetch(`${API}/forum/posts?sort=new&limit=200`, { next: { revalidate: 3600 } });
+    const res = await fetch(`${API}/forum/posts?sort=new&limit=200`, {
+      next: { revalidate: 3600 },
+    });
     const data = await res.json();
     if (data?.ok && Array.isArray(data.posts)) {
       forumEntries = data.posts.map((post: any) => {
@@ -111,5 +138,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     }
   } catch {}
 
-  return [...statics, ...lobbyEntries, ...aboutEntries, ...compareEntries, ...lfgEntries, ...forumEntries];
+  return [
+    ...statics,
+    ...lobbyEntries,
+    ...aboutEntries,
+    ...compareEntries,
+    ...lfgEntries,
+    ...forumEntries,
+  ];
 }

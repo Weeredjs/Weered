@@ -49,7 +49,7 @@ export default function OverlayProvider({ children }: { children: React.ReactNod
 
   const api = useMemo(
     () => ({ stack, openSheet, closeSheet, clearSheets, replaceTop }),
-    [stack, openSheet, closeSheet, clearSheets, replaceTop]
+    [stack, openSheet, closeSheet, clearSheets, replaceTop],
   );
 
   return <OverlayContext.Provider value={api}>{children}</OverlayContext.Provider>;

@@ -32,11 +32,7 @@ function IconButton({
         position: "relative",
       }}
     >
-      <Ionicons
-        name={icon}
-        size={22}
-        color={active ? accent : "rgba(220,220,230,0.9)"}
-      />
+      <Ionicons name={icon} size={22} color={active ? accent : "rgba(220,220,230,0.9)"} />
       {count > 0 && (
         <View
           style={{
@@ -104,9 +100,24 @@ export function HeaderActions() {
 
   return (
     <View style={{ flexDirection: "row", alignItems: "center", marginRight: 8 }}>
-      <IconButton icon="search-outline" count={0} accent="#5800E5" onPress={() => router.push("/search")} />
-      <IconButton icon="chatbubble-outline" count={dmCount} accent="#5800E5" onPress={() => router.push("/dms")} />
-      <IconButton icon="notifications-outline" count={notifCount} accent="#ef4444" onPress={() => router.push("/notifications")} />
+      <IconButton
+        icon="search-outline"
+        count={0}
+        accent="#5800E5"
+        onPress={() => router.push("/search")}
+      />
+      <IconButton
+        icon="chatbubble-outline"
+        count={dmCount}
+        accent="#5800E5"
+        onPress={() => router.push("/dms")}
+      />
+      <IconButton
+        icon="notifications-outline"
+        count={notifCount}
+        accent="#ef4444"
+        onPress={() => router.push("/notifications")}
+      />
     </View>
   );
 }

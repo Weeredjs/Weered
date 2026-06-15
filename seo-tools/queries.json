@@ -1,22 +1,52 @@
 [
   { "query": "destiny 2 fireteam finder", "our_page": "https://weered.ca/about/lobby/destiny2" },
-  { "query": "destiny 2 community after bungie monument of triumph", "our_page": "https://weered.ca/about/lobby/destiny2" },
+  {
+    "query": "destiny 2 community after bungie monument of triumph",
+    "our_page": "https://weered.ca/about/lobby/destiny2"
+  },
   { "query": "find dnd group online lfg", "our_page": "https://weered.ca/about/lobby/dnd" },
   { "query": "edh commander pod finder website", "our_page": "https://weered.ca/about/lobby/mtg" },
   { "query": "magic the gathering lfg site", "our_page": "https://weered.ca/about/lobby/mtg" },
-  { "query": "path of exile league launch group finder", "our_page": "https://weered.ca/about/lobby/poe" },
+  {
+    "query": "path of exile league launch group finder",
+    "our_page": "https://weered.ca/about/lobby/poe"
+  },
   { "query": "helldivers 2 squad finder", "our_page": "https://weered.ca/about/lobby/helldivers2" },
-  { "query": "discord alternative for gaming communities", "our_page": "https://weered.ca/why-not-discord" },
-  { "query": "verified destiny 2 tournament platform", "our_page": "https://weered.ca/tournaments/destiny-2" },
+  {
+    "query": "discord alternative for gaming communities",
+    "our_page": "https://weered.ca/why-not-discord"
+  },
+  {
+    "query": "verified destiny 2 tournament platform",
+    "our_page": "https://weered.ca/tournaments/destiny-2"
+  },
   { "query": "eve online new player corp finder", "our_page": "https://weered.ca/about/lobby/eve" },
-  { "query": "league of legends 5 stack finder", "our_page": "https://weered.ca/about/lobby/league-of-legends" },
-  { "query": "fortnite squad finder website", "our_page": "https://weered.ca/about/lobby/fortnite" },
-  { "query": "cs2 premier 5 stack finder", "our_page": "https://weered.ca/about/lobby/counter-strike-2" },
-  { "query": "apex legends ranked trio finder", "our_page": "https://weered.ca/about/lobby/apex-legends" },
+  {
+    "query": "league of legends 5 stack finder",
+    "our_page": "https://weered.ca/about/lobby/league-of-legends"
+  },
+  {
+    "query": "fortnite squad finder website",
+    "our_page": "https://weered.ca/about/lobby/fortnite"
+  },
+  {
+    "query": "cs2 premier 5 stack finder",
+    "our_page": "https://weered.ca/about/lobby/counter-strike-2"
+  },
+  {
+    "query": "apex legends ranked trio finder",
+    "our_page": "https://weered.ca/about/lobby/apex-legends"
+  },
   { "query": "warframe clan finder website", "our_page": "https://weered.ca/about/lobby/warframe" },
   { "query": "valorant premier team finder", "our_page": "https://weered.ca/about/lobby/valorant" },
-  { "query": "rocket league ranked partner finder", "our_page": "https://weered.ca/about/lobby/rocket-league" },
+  {
+    "query": "rocket league ranked partner finder",
+    "our_page": "https://weered.ca/about/lobby/rocket-league"
+  },
   { "query": "pubg squad finder website", "our_page": "https://weered.ca/about/lobby/pubg" },
-  { "query": "dota 2 ranked roles party finder", "our_page": "https://weered.ca/about/lobby/dota-2" },
+  {
+    "query": "dota 2 ranked roles party finder",
+    "our_page": "https://weered.ca/about/lobby/dota-2"
+  },
   { "query": "chess online community lobby", "our_page": "https://weered.ca/about/lobby/chess" }
 ]

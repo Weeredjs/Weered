@@ -31,12 +31,15 @@ export default async function campaignsRoutes(app: FastifyInstance, opts: Opts) 
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const { roomId } = req.params as any;
     const body = (req.body as any) || {};
-    const name = String(body.name || "").trim().slice(0, 120);
+    const name = String(body.name || "")
+      .trim()
+      .slice(0, 120);
     if (!name) return reply.code(400).send({ ok: false, error: "name_required" });
     const room = await prisma.room.findUnique({ where: { id: roomId } });
     if (!room) return reply.code(404).send({ ok: false, error: "room_not_found" });
     const existing = await getCampaignByRoom(roomId);
-    if (existing) return reply.code(409).send({ ok: false, error: "campaign_exists", campaign: existing });
+    if (existing)
+      return reply.code(409).send({ ok: false, error: "campaign_exists", campaign: existing });
     const description = String(body.description || "").slice(0, 2000);
     const campaign = await prisma.campaign.create({
       data: { roomId, name, description, dmUserId: u.id },
@@ -47,9 +50,10 @@ export default async function campaignsRoutes(app: FastifyInstance, opts: Opts) 
     return reply.send({ ok: true, campaign });
   });
 
-  async function loadCampaignForMutate(roomId: string, userId: string): Promise<
-    { error: string; code: number } | { campaign: any }
-  > {
+  async function loadCampaignForMutate(
+    roomId: string,
+    userId: string,
+  ): Promise<{ error: string; code: number } | { campaign: any }> {
     const campaign = await getCampaignByRoom(roomId);
     if (!campaign) return { error: "no_campaign", code: 404 };
     if (campaign.dmUserId !== userId) return { error: "not_dm", code: 403 };
@@ -64,7 +68,9 @@ export default async function campaignsRoutes(app: FastifyInstance, opts: Opts) 
     if ("error" in r) return reply.code(r.code).send({ ok: false, error: r.error });
     const body = (req.body as any) || {};
     const userId = String(body.userId || "").trim();
-    const characterName = String(body.characterName || "").trim().slice(0, 80);
+    const characterName = String(body.characterName || "")
+      .trim()
+      .slice(0, 80);
     if (!userId) return reply.code(400).send({ ok: false, error: "userId_required" });
     const m = await prisma.campaignMember.upsert({
       where: { campaignId_userId: { campaignId: r.campaign.id, userId } },
@@ -106,7 +112,8 @@ export default async function campaignsRoutes(app: FastifyInstance, opts: Opts) 
     if ("error" in r) return reply.code(r.code).send({ ok: false, error: r.error });
     const body = (req.body as any) || {};
     const type = String(body.type || "").toUpperCase();
-    if (!["GOLD", "ITEM", "XP"].includes(type)) return reply.code(400).send({ ok: false, error: "bad_type" });
+    if (!["GOLD", "ITEM", "XP"].includes(type))
+      return reply.code(400).send({ ok: false, error: "bad_type" });
     const delta = Math.trunc(Number(body.delta) || 0);
     const description = String(body.description || "").slice(0, 500);
     const awardedToUserId = body.awardedToUserId ? String(body.awardedToUserId) : null;
@@ -125,7 +132,12 @@ export default async function campaignsRoutes(app: FastifyInstance, opts: Opts) 
 
     const room = await prisma.room.findUnique({ where: { id: roomId } });
     if (room?.lobbyId) {
-      broadcastToLobby(room.lobbyId, { type: "campaign:ledger", roomId, entry, partyGold: updatedCampaign.partyGold });
+      broadcastToLobby(room.lobbyId, {
+        type: "campaign:ledger",
+        roomId,
+        entry,
+        partyGold: updatedCampaign.partyGold,
+      });
     }
     return reply.send({ ok: true, entry, partyGold: updatedCampaign.partyGold });
   });
@@ -136,7 +148,9 @@ export default async function campaignsRoutes(app: FastifyInstance, opts: Opts) 
     const { roomId, entryId } = req.params as any;
     const r = await loadCampaignForMutate(roomId, u.id);
     if ("error" in r) return reply.code(r.code).send({ ok: false, error: r.error });
-    const entry = await prisma.ledgerEntry.findFirst({ where: { id: entryId, campaignId: r.campaign.id } });
+    const entry = await prisma.ledgerEntry.findFirst({
+      where: { id: entryId, campaignId: r.campaign.id },
+    });
     if (!entry) return reply.code(404).send({ ok: false, error: "not_found" });
     await prisma.ledgerEntry.delete({ where: { id: entry.id } });
     let partyGold = r.campaign.partyGold;
@@ -161,7 +175,7 @@ export default async function campaignsRoutes(app: FastifyInstance, opts: Opts) 
       where: { campaignId: campaign.id, type: "XP" },
       _sum: { delta: true },
     });
-    const totals = grouped.map(g => ({ userId: g.awardedToUserId, xp: g._sum.delta || 0 }));
+    const totals = grouped.map((g) => ({ userId: g.awardedToUserId, xp: g._sum.delta || 0 }));
     return reply.send({ ok: true, totals });
   });
 
@@ -205,7 +219,9 @@ export default async function campaignsRoutes(app: FastifyInstance, opts: Opts) 
     const r = await loadCampaignForMutate(roomId, u.id);
     if ("error" in r) return reply.code(r.code).send({ ok: false, error: r.error });
     const body = (req.body as any) || {};
-    const session = await prisma.sessionLog.findFirst({ where: { id: sessionId, campaignId: r.campaign.id } });
+    const session = await prisma.sessionLog.findFirst({
+      where: { id: sessionId, campaignId: r.campaign.id },
+    });
     if (!session) return reply.code(404).send({ ok: false, error: "not_found" });
     const updated = await prisma.sessionLog.update({
       where: { id: session.id },
@@ -244,7 +260,9 @@ export default async function campaignsRoutes(app: FastifyInstance, opts: Opts) 
     const r = await loadCampaignForMutate(roomId, u.id);
     if ("error" in r) return reply.code(r.code).send({ ok: false, error: r.error });
     const body = (req.body as any) || {};
-    const name = String(body.name || "").trim().slice(0, 120);
+    const name = String(body.name || "")
+      .trim()
+      .slice(0, 120);
     if (!name) return reply.code(400).send({ ok: false, error: "name_required" });
     const status = String(body.status || "UNKNOWN").toUpperCase();
     if (!["ALIVE", "DEAD", "HOSTILE", "ALLIED", "UNKNOWN"].includes(status)) {
@@ -268,7 +286,9 @@ export default async function campaignsRoutes(app: FastifyInstance, opts: Opts) 
     const { roomId, npcId } = req.params as any;
     const r = await loadCampaignForMutate(roomId, u.id);
     if ("error" in r) return reply.code(r.code).send({ ok: false, error: r.error });
-    const npc = await prisma.npcEncounter.findFirst({ where: { id: npcId, campaignId: r.campaign.id } });
+    const npc = await prisma.npcEncounter.findFirst({
+      where: { id: npcId, campaignId: r.campaign.id },
+    });
     if (!npc) return reply.code(404).send({ ok: false, error: "not_found" });
     const body = (req.body as any) || {};
     const data: any = {};
@@ -318,7 +338,9 @@ export default async function campaignsRoutes(app: FastifyInstance, opts: Opts) 
     const r = await loadCampaignForMutate(roomId, u.id);
     if ("error" in r) return reply.code(r.code).send({ ok: false, error: r.error });
     const body = (req.body as any) || {};
-    const title = String(body.title || "").trim().slice(0, 200);
+    const title = String(body.title || "")
+      .trim()
+      .slice(0, 200);
     if (!title) return reply.code(400).send({ ok: false, error: "title_required" });
     const thread = await prisma.plotThread.create({
       data: {
@@ -337,7 +359,9 @@ export default async function campaignsRoutes(app: FastifyInstance, opts: Opts) 
     const { roomId, threadId } = req.params as any;
     const r = await loadCampaignForMutate(roomId, u.id);
     if ("error" in r) return reply.code(r.code).send({ ok: false, error: r.error });
-    const thread = await prisma.plotThread.findFirst({ where: { id: threadId, campaignId: r.campaign.id } });
+    const thread = await prisma.plotThread.findFirst({
+      where: { id: threadId, campaignId: r.campaign.id },
+    });
     if (!thread) return reply.code(404).send({ ok: false, error: "not_found" });
     const body = (req.body as any) || {};
     const data: any = {};
@@ -375,8 +399,15 @@ export default async function campaignsRoutes(app: FastifyInstance, opts: Opts) 
       where: { campaignId: campaign.id },
       orderBy: { createdAt: "asc" },
       select: {
-        id: true, name: true, className: true, level: true, race: true,
-        hpCurrent: true, hpMax: true, hpTemp: true, ac: true,
+        id: true,
+        name: true,
+        className: true,
+        level: true,
+        race: true,
+        hpCurrent: true,
+        hpMax: true,
+        hpTemp: true,
+        ac: true,
         ownerUserId: true,
       },
     });
@@ -387,7 +418,7 @@ export default async function campaignsRoutes(app: FastifyInstance, opts: Opts) 
     });
     const xpByUser: Record<string, number> = {};
     for (const r of xpRows) if (r.awardedToUserId) xpByUser[r.awardedToUserId] = r._sum.delta || 0;
-    const party = characters.map(c => ({ ...c, xp: xpByUser[c.ownerUserId] || 0 }));
+    const party = characters.map((c) => ({ ...c, xp: xpByUser[c.ownerUserId] || 0 }));
     return reply.send({ ok: true, party });
   });
 
@@ -401,13 +432,15 @@ export default async function campaignsRoutes(app: FastifyInstance, opts: Opts) 
     const delta = Math.trunc(Number(body.delta) || 0);
     if (!delta) return reply.code(400).send({ ok: false, error: "bad_delta" });
     const description = String(body.description || "XP").slice(0, 500);
-    const onlyIds: string[] = Array.isArray(body.characterIds) ? body.characterIds.map((x: any) => String(x)) : [];
+    const onlyIds: string[] = Array.isArray(body.characterIds)
+      ? body.characterIds.map((x: any) => String(x))
+      : [];
     const where: any = { campaignId: r.campaign.id };
     if (onlyIds.length) where.id = { in: onlyIds };
     const characters = await prisma.character.findMany({ where, select: { ownerUserId: true } });
     if (!characters.length) return reply.code(400).send({ ok: false, error: "no_party" });
     const entries = await prisma.$transaction(
-      characters.map(c =>
+      characters.map((c) =>
         prisma.ledgerEntry.create({
           data: {
             campaignId: r.campaign.id,
@@ -416,13 +449,18 @@ export default async function campaignsRoutes(app: FastifyInstance, opts: Opts) 
             description,
             awardedToUserId: c.ownerUserId,
           },
-        })
-      )
+        }),
+      ),
     );
     const room = await prisma.room.findUnique({ where: { id: roomId } });
     if (room?.lobbyId) {
       for (const entry of entries) {
-        broadcastToLobby(room.lobbyId, { type: "campaign:ledger", roomId, entry, partyGold: r.campaign.partyGold });
+        broadcastToLobby(room.lobbyId, {
+          type: "campaign:ledger",
+          roomId,
+          entry,
+          partyGold: r.campaign.partyGold,
+        });
       }
     }
     return reply.send({ ok: true, awarded: entries.length, entries });
@@ -448,11 +486,15 @@ export default async function campaignsRoutes(app: FastifyInstance, opts: Opts) 
     const r = await loadCampaignForMutate(roomId, u.id);
     if ("error" in r) return reply.code(r.code).send({ ok: false, error: r.error });
     const body = (req.body as any) || {};
-    const title = String(body.title || "").trim().slice(0, 160);
+    const title = String(body.title || "")
+      .trim()
+      .slice(0, 160);
     if (!title) return reply.code(400).send({ ok: false, error: "title_required" });
     const parentId = body.parentId ? String(body.parentId) : null;
     if (parentId) {
-      const parent = await prisma.worldNote.findFirst({ where: { id: parentId, campaignId: r.campaign.id } });
+      const parent = await prisma.worldNote.findFirst({
+        where: { id: parentId, campaignId: r.campaign.id },
+      });
       if (!parent) return reply.code(400).send({ ok: false, error: "bad_parent" });
     }
     const note = await prisma.worldNote.create({
@@ -472,7 +514,9 @@ export default async function campaignsRoutes(app: FastifyInstance, opts: Opts) 
     const { roomId, noteId } = req.params as any;
     const r = await loadCampaignForMutate(roomId, u.id);
     if ("error" in r) return reply.code(r.code).send({ ok: false, error: r.error });
-    const note = await prisma.worldNote.findFirst({ where: { id: noteId, campaignId: r.campaign.id } });
+    const note = await prisma.worldNote.findFirst({
+      where: { id: noteId, campaignId: r.campaign.id },
+    });
     if (!note) return reply.code(404).send({ ok: false, error: "not_found" });
     const body = (req.body as any) || {};
     const data: any = {};
@@ -482,7 +526,9 @@ export default async function campaignsRoutes(app: FastifyInstance, opts: Opts) 
       const parentId = body.parentId ? String(body.parentId) : null;
       if (parentId === note.id) return reply.code(400).send({ ok: false, error: "self_parent" });
       if (parentId) {
-        const parent = await prisma.worldNote.findFirst({ where: { id: parentId, campaignId: r.campaign.id } });
+        const parent = await prisma.worldNote.findFirst({
+          where: { id: parentId, campaignId: r.campaign.id },
+        });
         if (!parent) return reply.code(400).send({ ok: false, error: "bad_parent" });
       }
       data.parentId = parentId;

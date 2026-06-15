@@ -8,52 +8,160 @@ import CharacterSheet from "../CharacterSheet";
 import TacticalMap from "../TacticalMap";
 
 const S = {
-  card: { borderRadius: 10, border: "1px solid rgba(255,255,255,.08)", background: "rgba(255,255,255,.03)", padding: "10px 12px" } as React.CSSProperties,
-  btn: { padding: "6px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,.10)", background: "rgba(255,255,255,.05)", fontSize: 12, cursor: "pointer", color: "rgba(243,244,246,.88)", fontFamily: "inherit" } as React.CSSProperties,
-  btnPri: { padding: "6px 12px", borderRadius: 8, border: "1px solid rgba(196,165,90,.35)", background: "rgba(196,165,90,.12)", fontSize: 12, cursor: "pointer", color: "rgb(196,165,90)", fontWeight: 600, fontFamily: "inherit" } as React.CSSProperties,
-  input: { width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,.10)", background: "rgba(0,0,0,.30)", fontSize: 13, color: "rgba(243,244,246,.92)", outline: "none", boxSizing: "border-box" as const, fontFamily: "inherit" },
-  label: { fontSize: 10, fontWeight: 700, opacity: 0.45, letterSpacing: ".7px", textTransform: "uppercase" as const, marginBottom: 6 } as React.CSSProperties,
+  card: {
+    borderRadius: 10,
+    border: "1px solid rgba(255,255,255,.08)",
+    background: "rgba(255,255,255,.03)",
+    padding: "10px 12px",
+  } as React.CSSProperties,
+  btn: {
+    padding: "6px 12px",
+    borderRadius: 8,
+    border: "1px solid rgba(255,255,255,.10)",
+    background: "rgba(255,255,255,.05)",
+    fontSize: 12,
+    cursor: "pointer",
+    color: "rgba(243,244,246,.88)",
+    fontFamily: "inherit",
+  } as React.CSSProperties,
+  btnPri: {
+    padding: "6px 12px",
+    borderRadius: 8,
+    border: "1px solid rgba(196,165,90,.35)",
+    background: "rgba(196,165,90,.12)",
+    fontSize: 12,
+    cursor: "pointer",
+    color: "rgb(196,165,90)",
+    fontWeight: 600,
+    fontFamily: "inherit",
+  } as React.CSSProperties,
+  input: {
+    width: "100%",
+    padding: "8px 12px",
+    borderRadius: 8,
+    border: "1px solid rgba(255,255,255,.10)",
+    background: "rgba(0,0,0,.30)",
+    fontSize: 13,
+    color: "rgba(243,244,246,.92)",
+    outline: "none",
+    boxSizing: "border-box" as const,
+    fontFamily: "inherit",
+  },
+  label: {
+    fontSize: 10,
+    fontWeight: 700,
+    opacity: 0.45,
+    letterSpacing: ".7px",
+    textTransform: "uppercase" as const,
+    marginBottom: 6,
+  } as React.CSSProperties,
 };
 
 const ACCENT = "#C4A55A";
 
 type DiceResult = {
-  id: string; expr: string; rolls: number[]; modifier: number; total: number;
-  advantage?: boolean; disadvantage?: boolean; kept?: number[]; dropped?: number[];
-  sides: number; roller: string; ts: number; isNat20?: boolean; isNat1?: boolean;
+  id: string;
+  expr: string;
+  rolls: number[];
+  modifier: number;
+  total: number;
+  advantage?: boolean;
+  disadvantage?: boolean;
+  kept?: number[];
+  dropped?: number[];
+  sides: number;
+  roller: string;
+  ts: number;
+  isNat20?: boolean;
+  isNat1?: boolean;
 };
 
-function parseDice(expr: string): { count: number; sides: number; modifier: number; advantage?: boolean; disadvantage?: boolean } | null {
+function parseDice(expr: string): {
+  count: number;
+  sides: number;
+  modifier: number;
+  advantage?: boolean;
+  disadvantage?: boolean;
+} | null {
   const clean = expr.toLowerCase().trim().replace(/\s+/g, "");
-  let adv = false, dis = false;
+  let adv = false,
+    dis = false;
   let working = clean;
-  if (working.includes("adv")) { adv = true; working = working.replace(/adv(antage)?/, ""); }
-  if (working.includes("dis")) { dis = true; working = working.replace(/dis(advantage)?/, ""); }
+  if (working.includes("adv")) {
+    adv = true;
+    working = working.replace(/adv(antage)?/, "");
+  }
+  if (working.includes("dis")) {
+    dis = true;
+    working = working.replace(/dis(advantage)?/, "");
+  }
   const m = working.match(/^(\d*)d(\d+)([+-]\d+)?$/);
   if (!m) return null;
-  return { count: m[1] ? parseInt(m[1]) : 1, sides: parseInt(m[2]), modifier: m[3] ? parseInt(m[3]) : 0, advantage: adv, disadvantage: dis };
+  return {
+    count: m[1] ? parseInt(m[1]) : 1,
+    sides: parseInt(m[2]),
+    modifier: m[3] ? parseInt(m[3]) : 0,
+    advantage: adv,
+    disadvantage: dis,
+  };
 }
 
-function rollDice(parsed: { count: number; sides: number; modifier: number; advantage?: boolean; disadvantage?: boolean }): Omit<DiceResult, "id" | "expr" | "roller" | "ts"> {
+function rollDice(parsed: {
+  count: number;
+  sides: number;
+  modifier: number;
+  advantage?: boolean;
+  disadvantage?: boolean;
+}): Omit<DiceResult, "id" | "expr" | "roller" | "ts"> {
   if (parsed.advantage || parsed.disadvantage) {
     const r1 = Math.floor(Math.random() * parsed.sides) + 1;
     const r2 = Math.floor(Math.random() * parsed.sides) + 1;
     const keep = parsed.advantage ? Math.max(r1, r2) : Math.min(r1, r2);
     const drop = parsed.advantage ? Math.min(r1, r2) : Math.max(r1, r2);
-    return { rolls: [r1, r2], kept: [keep], dropped: [drop], modifier: parsed.modifier, total: keep + parsed.modifier, sides: parsed.sides, advantage: parsed.advantage, disadvantage: parsed.disadvantage, isNat20: parsed.sides === 20 && keep === 20, isNat1: parsed.sides === 20 && keep === 1 };
+    return {
+      rolls: [r1, r2],
+      kept: [keep],
+      dropped: [drop],
+      modifier: parsed.modifier,
+      total: keep + parsed.modifier,
+      sides: parsed.sides,
+      advantage: parsed.advantage,
+      disadvantage: parsed.disadvantage,
+      isNat20: parsed.sides === 20 && keep === 20,
+      isNat1: parsed.sides === 20 && keep === 1,
+    };
   }
   const rolls: number[] = [];
   for (let i = 0; i < parsed.count; i++) rolls.push(Math.floor(Math.random() * parsed.sides) + 1);
   const sum = rolls.reduce((a, b) => a + b, 0);
-  return { rolls, kept: rolls, dropped: [], modifier: parsed.modifier, total: sum + parsed.modifier, sides: parsed.sides, isNat20: parsed.sides === 20 && parsed.count === 1 && rolls[0] === 20, isNat1: parsed.sides === 20 && parsed.count === 1 && rolls[0] === 1 };
+  return {
+    rolls,
+    kept: rolls,
+    dropped: [],
+    modifier: parsed.modifier,
+    total: sum + parsed.modifier,
+    sides: parsed.sides,
+    isNat20: parsed.sides === 20 && parsed.count === 1 && rolls[0] === 20,
+    isNat1: parsed.sides === 20 && parsed.count === 1 && rolls[0] === 1,
+  };
 }
 
 const CONDITIONS = [
-  { name: "Blinded", icon: "🙈" }, { name: "Charmed", icon: "💘" }, { name: "Deafened", icon: "🔇" },
-  { name: "Frightened", icon: "😨" }, { name: "Grappled", icon: "🤼" }, { name: "Incapacitated", icon: "💫" },
-  { name: "Invisible", icon: "👻" }, { name: "Paralyzed", icon: "⚡" }, { name: "Petrified", icon: "🪨" },
-  { name: "Poisoned", icon: "☠️" }, { name: "Prone", icon: "🔽" }, { name: "Restrained", icon: "⛓" },
-  { name: "Stunned", icon: "💥" }, { name: "Unconscious", icon: "💤" }, { name: "Exhaustion", icon: "😩" },
+  { name: "Blinded", icon: "🙈" },
+  { name: "Charmed", icon: "💘" },
+  { name: "Deafened", icon: "🔇" },
+  { name: "Frightened", icon: "😨" },
+  { name: "Grappled", icon: "🤼" },
+  { name: "Incapacitated", icon: "💫" },
+  { name: "Invisible", icon: "👻" },
+  { name: "Paralyzed", icon: "⚡" },
+  { name: "Petrified", icon: "🪨" },
+  { name: "Poisoned", icon: "☠️" },
+  { name: "Prone", icon: "🔽" },
+  { name: "Restrained", icon: "⛓" },
+  { name: "Stunned", icon: "💥" },
+  { name: "Unconscious", icon: "💤" },
+  { name: "Exhaustion", icon: "😩" },
   { name: "Concentrating", icon: "🧠" },
 ];
 
@@ -83,10 +191,19 @@ function InitiativeTracker({ roomId }: { roomId: string }) {
 
   const [condPicker, setCondPicker] = useState<string | null>(null);
 
-  const sorted = useMemo(() => [...combatants].sort((a, b) => b.initiative - a.initiative), [combatants]);
+  const sorted = useMemo(
+    () => [...combatants].sort((a, b) => b.initiative - a.initiative),
+    [combatants],
+  );
 
   function broadcast(updated: Combatant[], turn: number, rnd: number) {
-    sendRaw?.({ type: "dnd:initiative", roomId, combatants: updated, currentTurn: turn, round: rnd });
+    sendRaw?.({
+      type: "dnd:initiative",
+      roomId,
+      combatants: updated,
+      currentTurn: turn,
+      round: rnd,
+    });
   }
 
   useEffect(() => {
@@ -102,10 +219,12 @@ function InitiativeTracker({ roomId }: { roomId: string }) {
       if (!d || d.roomId !== roomId || !d.combatantId) return;
       const dmg = Math.max(0, Math.trunc(Number(d.amount) || 0));
       if (!dmg) return;
-      setCombatants(prev => {
-        const updated = prev.map(c => c.id === d.combatantId
-          ? { ...c, hpCurrent: Math.max(0, Math.min(c.hpMax, c.hpCurrent - dmg)) }
-          : c);
+      setCombatants((prev) => {
+        const updated = prev.map((c) =>
+          c.id === d.combatantId
+            ? { ...c, hpCurrent: Math.max(0, Math.min(c.hpMax, c.hpCurrent - dmg)) }
+            : c,
+        );
         sendRaw?.({ type: "dnd:initiative", roomId, combatants: updated, currentTurn, round });
         return updated;
       });
@@ -113,8 +232,10 @@ function InitiativeTracker({ roomId }: { roomId: string }) {
     function selectHandler(ev: any) {
       const d = ev?.detail;
       if (!d || d.roomId !== roomId || !d.combatantId) return;
-      setCombatants(prev => {
-        const idx = [...prev].sort((a, b) => b.initiative - a.initiative).findIndex(c => c.id === d.combatantId);
+      setCombatants((prev) => {
+        const idx = [...prev]
+          .sort((a, b) => b.initiative - a.initiative)
+          .findIndex((c) => c.id === d.combatantId);
         if (idx >= 0) setCurrentTurn(idx);
         return prev;
       });
@@ -151,12 +272,16 @@ function InitiativeTracker({ roomId }: { roomId: string }) {
     const updated = [...combatants, c];
     setCombatants(updated);
     broadcast(updated, currentTurn, round);
-    setAddName(""); setAddInit(""); setAddHp(""); setAddAc(""); setAddIsNpc(false);
+    setAddName("");
+    setAddInit("");
+    setAddHp("");
+    setAddAc("");
+    setAddIsNpc(false);
     setShowAdd(false);
   }
 
   function removeCombatant(id: string) {
-    const updated = combatants.filter(c => c.id !== id);
+    const updated = combatants.filter((c) => c.id !== id);
     setCombatants(updated);
     const newTurn = currentTurn >= updated.length ? 0 : currentTurn;
     setCurrentTurn(newTurn);
@@ -174,22 +299,29 @@ function InitiativeTracker({ roomId }: { roomId: string }) {
   function prevTurn() {
     let newTurn = currentTurn - 1;
     let newRound = round;
-    if (newTurn < 0) { newTurn = Math.max(sorted.length - 1, 0); newRound = Math.max(round - 1, 1); }
+    if (newTurn < 0) {
+      newTurn = Math.max(sorted.length - 1, 0);
+      newRound = Math.max(round - 1, 1);
+    }
     setCurrentTurn(newTurn);
     setRound(newRound);
     broadcast(combatants, newTurn, newRound);
   }
 
   function adjustHp(id: string, delta: number) {
-    const updated = combatants.map(c => c.id === id ? { ...c, hpCurrent: Math.max(0, Math.min(c.hpMax, c.hpCurrent + delta)) } : c);
+    const updated = combatants.map((c) =>
+      c.id === id ? { ...c, hpCurrent: Math.max(0, Math.min(c.hpMax, c.hpCurrent + delta)) } : c,
+    );
     setCombatants(updated);
     broadcast(updated, currentTurn, round);
   }
 
   function toggleCondition(id: string, condition: string) {
-    const updated = combatants.map(c => {
+    const updated = combatants.map((c) => {
       if (c.id !== id) return c;
-      const conds = c.conditions.includes(condition) ? c.conditions.filter(x => x !== condition) : [...c.conditions, condition];
+      const conds = c.conditions.includes(condition)
+        ? c.conditions.filter((x) => x !== condition)
+        : [...c.conditions, condition];
       return { ...c, conditions: conds };
     });
     setCombatants(updated);
@@ -207,29 +339,101 @@ function InitiativeTracker({ roomId }: { roomId: string }) {
     <div style={{ display: "flex", flexDirection: "column", gap: 10, height: "100%" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div>
-          <span className="dnd-heading" style={{ fontSize: 18, color: "#F5D58A" }}>Initiative Tracker</span>
-          <span className="dnd-serif" style={{ fontSize: 12, color: "rgba(201,168,120,.65)", marginLeft: 8, fontStyle: "italic" }}>Round {round}</span>
+          <span className="dnd-heading" style={{ fontSize: 18, color: "#F5D58A" }}>
+            Initiative Tracker
+          </span>
+          <span
+            className="dnd-serif"
+            style={{
+              fontSize: 12,
+              color: "rgba(201,168,120,.65)",
+              marginLeft: 8,
+              fontStyle: "italic",
+            }}
+          >
+            Round {round}
+          </span>
         </div>
         <div style={{ display: "flex", gap: 4 }}>
-          <button style={S.btnPri} onClick={() => setShowAdd(!showAdd)}>{showAdd ? "Cancel" : "+ Add"}</button>
-          {combatants.length > 0 && <button style={{ ...S.btn, fontSize: 10, color: "rgba(239,68,68,.6)" }} onClick={clearAll}>Clear</button>}
+          <button style={S.btnPri} onClick={() => setShowAdd(!showAdd)}>
+            {showAdd ? "Cancel" : "+ Add"}
+          </button>
+          {combatants.length > 0 && (
+            <button
+              style={{ ...S.btn, fontSize: 10, color: "rgba(239,68,68,.6)" }}
+              onClick={clearAll}
+            >
+              Clear
+            </button>
+          )}
         </div>
       </div>
 
       {showAdd && (
-        <div style={{ ...S.card, display: "flex", flexDirection: "column", gap: 8, border: `1px solid ${ACCENT}33`, background: `${ACCENT}06` }}>
+        <div
+          style={{
+            ...S.card,
+            display: "flex",
+            flexDirection: "column",
+            gap: 8,
+            border: `1px solid ${ACCENT}33`,
+            background: `${ACCENT}06`,
+          }}
+        >
           <div style={{ display: "flex", gap: 6 }}>
-            <input style={{ ...S.input, flex: 2 }} placeholder="Name" value={addName} onChange={e => setAddName(e.target.value)} onKeyDown={e => e.key === "Enter" && addCombatant()} />
-            <input style={{ ...S.input, flex: 1 }} placeholder="Init" type="number" value={addInit} onChange={e => setAddInit(e.target.value)} onKeyDown={e => e.key === "Enter" && addCombatant()} />
+            <input
+              style={{ ...S.input, flex: 2 }}
+              placeholder="Name"
+              value={addName}
+              onChange={(e) => setAddName(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && addCombatant()}
+            />
+            <input
+              style={{ ...S.input, flex: 1 }}
+              placeholder="Init"
+              type="number"
+              value={addInit}
+              onChange={(e) => setAddInit(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && addCombatant()}
+            />
           </div>
           <div style={{ display: "flex", gap: 6 }}>
-            <input style={{ ...S.input, flex: 1 }} placeholder="HP" type="number" value={addHp} onChange={e => setAddHp(e.target.value)} />
-            <input style={{ ...S.input, flex: 1 }} placeholder="AC" type="number" value={addAc} onChange={e => setAddAc(e.target.value)} />
-            <label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: "rgba(148,163,184,.6)", cursor: "pointer", whiteSpace: "nowrap" }}>
-              <input type="checkbox" checked={addIsNpc} onChange={e => setAddIsNpc(e.target.checked)} /> NPC
+            <input
+              style={{ ...S.input, flex: 1 }}
+              placeholder="HP"
+              type="number"
+              value={addHp}
+              onChange={(e) => setAddHp(e.target.value)}
+            />
+            <input
+              style={{ ...S.input, flex: 1 }}
+              placeholder="AC"
+              type="number"
+              value={addAc}
+              onChange={(e) => setAddAc(e.target.value)}
+            />
+            <label
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 4,
+                fontSize: 11,
+                color: "rgba(148,163,184,.6)",
+                cursor: "pointer",
+                whiteSpace: "nowrap",
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={addIsNpc}
+                onChange={(e) => setAddIsNpc(e.target.checked)}
+              />{" "}
+              NPC
             </label>
           </div>
-          <button style={{ ...S.btnPri, alignSelf: "flex-start" }} onClick={addCombatant}>Add to Initiative</button>
+          <button style={{ ...S.btnPri, alignSelf: "flex-start" }} onClick={addCombatant}>
+            Add to Initiative
+          </button>
         </div>
       )}
 
@@ -238,67 +442,231 @@ function InitiativeTracker({ roomId }: { roomId: string }) {
           No combatants. Add creatures to begin tracking initiative.
         </div>
       ) : (
-        <div style={{ flex: 1, overflow: "auto", display: "flex", flexDirection: "column", gap: 4 }}>
+        <div
+          style={{ flex: 1, overflow: "auto", display: "flex", flexDirection: "column", gap: 4 }}
+        >
           {sorted.map((c, i) => {
             const isActive = i === currentTurn;
             const hpPct = c.hpMax > 0 ? (c.hpCurrent / c.hpMax) * 100 : 0;
             const hpColor = hpPct > 50 ? "#22C55E" : hpPct > 25 ? "#F59E0B" : "#EF4444";
             return (
-              <div key={c.id} style={{
-                ...S.card, display: "flex", flexDirection: "column", gap: 6, position: "relative",
-                borderColor: isActive ? `${ACCENT}66` : "rgba(255,255,255,.08)",
-                background: isActive ? `${ACCENT}0A` : "rgba(255,255,255,.03)",
-                boxShadow: isActive ? `0 0 12px ${ACCENT}15` : "none",
-              }}>
+              <div
+                key={c.id}
+                style={{
+                  ...S.card,
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 6,
+                  position: "relative",
+                  borderColor: isActive ? `${ACCENT}66` : "rgba(255,255,255,.08)",
+                  background: isActive ? `${ACCENT}0A` : "rgba(255,255,255,.03)",
+                  boxShadow: isActive ? `0 0 12px ${ACCENT}15` : "none",
+                }}
+              >
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  {isActive && <span style={{ width: 6, height: 6, borderRadius: "50%", background: ACCENT, boxShadow: `0 0 6px ${ACCENT}`, flexShrink: 0 }} />}
-                  <span style={{ fontSize: 16, fontWeight: 900, color: ACCENT, minWidth: 28, textAlign: "center" }}>{c.initiative}</span>
-                  <span style={{ fontSize: 13, fontWeight: 700, color: "rgba(243,244,246,.92)", flex: 1 }}>
+                  {isActive && (
+                    <span
+                      style={{
+                        width: 6,
+                        height: 6,
+                        borderRadius: "50%",
+                        background: ACCENT,
+                        boxShadow: `0 0 6px ${ACCENT}`,
+                        flexShrink: 0,
+                      }}
+                    />
+                  )}
+                  <span
+                    style={{
+                      fontSize: 16,
+                      fontWeight: 900,
+                      color: ACCENT,
+                      minWidth: 28,
+                      textAlign: "center",
+                    }}
+                  >
+                    {c.initiative}
+                  </span>
+                  <span
+                    style={{
+                      fontSize: 13,
+                      fontWeight: 700,
+                      color: "rgba(243,244,246,.92)",
+                      flex: 1,
+                    }}
+                  >
                     {c.name}
-                    {c.isNPC && <span style={{ fontSize: 9, marginLeft: 4, padding: "1px 4px", borderRadius: 3, background: "rgba(239,68,68,.12)", color: "#EF5350", fontWeight: 600 }}>NPC</span>}
+                    {c.isNPC && (
+                      <span
+                        style={{
+                          fontSize: 9,
+                          marginLeft: 4,
+                          padding: "1px 4px",
+                          borderRadius: 3,
+                          background: "rgba(239,68,68,.12)",
+                          color: "#EF5350",
+                          fontWeight: 600,
+                        }}
+                      >
+                        NPC
+                      </span>
+                    )}
                   </span>
                   <span style={{ fontSize: 10, color: "rgba(148,163,184,.5)" }}>AC {c.ac}</span>
-                  <button onClick={() => removeCombatant(c.id)} style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(239,68,68,.4)", fontSize: 14, padding: 2, lineHeight: 1 }}>×</button>
+                  <button
+                    onClick={() => removeCombatant(c.id)}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      cursor: "pointer",
+                      color: "rgba(239,68,68,.4)",
+                      fontSize: 14,
+                      padding: 2,
+                      lineHeight: 1,
+                    }}
+                  >
+                    ×
+                  </button>
                 </div>
 
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <button onClick={() => adjustHp(c.id, -1)} style={{ ...S.btn, padding: "2px 8px", fontSize: 14, fontWeight: 900, color: "#EF4444", borderColor: "rgba(239,68,68,.2)" }}>−</button>
+                  <button
+                    onClick={() => adjustHp(c.id, -1)}
+                    style={{
+                      ...S.btn,
+                      padding: "2px 8px",
+                      fontSize: 14,
+                      fontWeight: 900,
+                      color: "#EF4444",
+                      borderColor: "rgba(239,68,68,.2)",
+                    }}
+                  >
+                    −
+                  </button>
                   <div style={{ flex: 1, position: "relative" }}>
-                    <div style={{ height: 14, borderRadius: 4, background: "rgba(0,0,0,.3)", overflow: "hidden" }}>
-                      <div style={{ height: "100%", width: `${hpPct}%`, background: hpColor, borderRadius: 4, transition: "width .2s, background .2s" }} />
+                    <div
+                      style={{
+                        height: 14,
+                        borderRadius: 4,
+                        background: "rgba(0,0,0,.3)",
+                        overflow: "hidden",
+                      }}
+                    >
+                      <div
+                        style={{
+                          height: "100%",
+                          width: `${hpPct}%`,
+                          background: hpColor,
+                          borderRadius: 4,
+                          transition: "width .2s, background .2s",
+                        }}
+                      />
                     </div>
-                    <span style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, fontWeight: 700, color: "rgba(243,244,246,.9)" }}>
+                    <span
+                      style={{
+                        position: "absolute",
+                        inset: 0,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: 9,
+                        fontWeight: 700,
+                        color: "rgba(243,244,246,.9)",
+                      }}
+                    >
                       {c.hpCurrent} / {c.hpMax}
                     </span>
                   </div>
-                  <button onClick={() => adjustHp(c.id, 1)} style={{ ...S.btn, padding: "2px 8px", fontSize: 14, fontWeight: 900, color: "#22C55E", borderColor: "rgba(34,197,94,.2)" }}>+</button>
-                  <button onClick={() => adjustHp(c.id, -5)} style={{ ...S.btn, padding: "2px 6px", fontSize: 9, color: "#EF4444" }}>-5</button>
-                  <button onClick={() => adjustHp(c.id, 5)} style={{ ...S.btn, padding: "2px 6px", fontSize: 9, color: "#22C55E" }}>+5</button>
+                  <button
+                    onClick={() => adjustHp(c.id, 1)}
+                    style={{
+                      ...S.btn,
+                      padding: "2px 8px",
+                      fontSize: 14,
+                      fontWeight: 900,
+                      color: "#22C55E",
+                      borderColor: "rgba(34,197,94,.2)",
+                    }}
+                  >
+                    +
+                  </button>
+                  <button
+                    onClick={() => adjustHp(c.id, -5)}
+                    style={{ ...S.btn, padding: "2px 6px", fontSize: 9, color: "#EF4444" }}
+                  >
+                    -5
+                  </button>
+                  <button
+                    onClick={() => adjustHp(c.id, 5)}
+                    style={{ ...S.btn, padding: "2px 6px", fontSize: 9, color: "#22C55E" }}
+                  >
+                    +5
+                  </button>
                 </div>
 
                 <div style={{ display: "flex", gap: 3, flexWrap: "wrap", alignItems: "center" }}>
-                  {c.conditions.map(cond => {
-                    const ci = CONDITIONS.find(x => x.name === cond);
+                  {c.conditions.map((cond) => {
+                    const ci = CONDITIONS.find((x) => x.name === cond);
                     return (
-                      <span key={cond} onClick={() => toggleCondition(c.id, cond)} style={{
-                        fontSize: 9, padding: "2px 5px", borderRadius: 3, cursor: "pointer",
-                        background: "rgba(239,68,68,.12)", color: "#EF5350", fontWeight: 600,
-                      }}>{ci?.icon || "⚠"} {cond}</span>
+                      <span
+                        key={cond}
+                        onClick={() => toggleCondition(c.id, cond)}
+                        style={{
+                          fontSize: 9,
+                          padding: "2px 5px",
+                          borderRadius: 3,
+                          cursor: "pointer",
+                          background: "rgba(239,68,68,.12)",
+                          color: "#EF5350",
+                          fontWeight: 600,
+                        }}
+                      >
+                        {ci?.icon || "⚠"} {cond}
+                      </span>
                     );
                   })}
-                  <button onClick={() => setCondPicker(condPicker === c.id ? null : c.id)} style={{
-                    ...S.btn, padding: "1px 5px", fontSize: 9, color: "rgba(148,163,184,.4)",
-                  }}>+ condition</button>
+                  <button
+                    onClick={() => setCondPicker(condPicker === c.id ? null : c.id)}
+                    style={{
+                      ...S.btn,
+                      padding: "1px 5px",
+                      fontSize: 9,
+                      color: "rgba(148,163,184,.4)",
+                    }}
+                  >
+                    + condition
+                  </button>
                 </div>
 
                 {condPicker === c.id && (
-                  <div style={{ display: "flex", gap: 3, flexWrap: "wrap", padding: "6px 0", borderTop: "1px solid rgba(255,255,255,.06)" }}>
-                    {CONDITIONS.map(cond => (
-                      <button key={cond.name} onClick={() => { toggleCondition(c.id, cond.name); setCondPicker(null); }} style={{
-                        ...S.btn, fontSize: 9, padding: "3px 6px",
-                        background: c.conditions.includes(cond.name) ? "rgba(239,68,68,.12)" : undefined,
-                        color: c.conditions.includes(cond.name) ? "#EF5350" : undefined,
-                      }}>{cond.icon} {cond.name}</button>
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: 3,
+                      flexWrap: "wrap",
+                      padding: "6px 0",
+                      borderTop: "1px solid rgba(255,255,255,.06)",
+                    }}
+                  >
+                    {CONDITIONS.map((cond) => (
+                      <button
+                        key={cond.name}
+                        onClick={() => {
+                          toggleCondition(c.id, cond.name);
+                          setCondPicker(null);
+                        }}
+                        style={{
+                          ...S.btn,
+                          fontSize: 9,
+                          padding: "3px 6px",
+                          background: c.conditions.includes(cond.name)
+                            ? "rgba(239,68,68,.12)"
+                            : undefined,
+                          color: c.conditions.includes(cond.name) ? "#EF5350" : undefined,
+                        }}
+                      >
+                        {cond.icon} {cond.name}
+                      </button>
                     ))}
                   </div>
                 )}
@@ -309,9 +677,26 @@ function InitiativeTracker({ roomId }: { roomId: string }) {
       )}
 
       {sorted.length > 0 && (
-        <div style={{ display: "flex", gap: 8, paddingTop: 6, borderTop: "1px solid rgba(255,255,255,.06)" }}>
-          <button onClick={prevTurn} style={{ ...S.btn, flex: 1, padding: "10px 16px", fontSize: 13 }}>← Prev</button>
-          <button onClick={nextTurn} style={{ ...S.btnPri, flex: 2, padding: "10px 16px", fontSize: 14, fontWeight: 800 }}>Next Turn →</button>
+        <div
+          style={{
+            display: "flex",
+            gap: 8,
+            paddingTop: 6,
+            borderTop: "1px solid rgba(255,255,255,.06)",
+          }}
+        >
+          <button
+            onClick={prevTurn}
+            style={{ ...S.btn, flex: 1, padding: "10px 16px", fontSize: 13 }}
+          >
+            ← Prev
+          </button>
+          <button
+            onClick={nextTurn}
+            style={{ ...S.btnPri, flex: 2, padding: "10px 16px", fontSize: 14, fontWeight: 800 }}
+          >
+            Next Turn →
+          </button>
         </div>
       )}
     </div>
@@ -319,8 +704,12 @@ function InitiativeTracker({ roomId }: { roomId: string }) {
 }
 
 const QUICK_DICE = [
-  { label: "d4", expr: "d4" }, { label: "d6", expr: "d6" }, { label: "d8", expr: "d8" },
-  { label: "d10", expr: "d10" }, { label: "d12", expr: "d12" }, { label: "d20", expr: "d20" },
+  { label: "d4", expr: "d4" },
+  { label: "d6", expr: "d6" },
+  { label: "d8", expr: "d8" },
+  { label: "d10", expr: "d10" },
+  { label: "d12", expr: "d12" },
+  { label: "d20", expr: "d20" },
   { label: "d100", expr: "d100" },
 ];
 
@@ -336,7 +725,7 @@ function RoomDiceRoller({ roomId }: { roomId: string }) {
       const d = ev?.detail;
       if (!d || d.roomId !== roomId || d.type !== "dnd:roll") return;
       if (d.roll) {
-        setHistory(prev => [d.roll, ...prev].slice(0, 50));
+        setHistory((prev) => [d.roll, ...prev].slice(0, 50));
         setLastRoll(d.roll);
         setShowFlash(true);
         setTimeout(() => setShowFlash(false), 600);
@@ -358,7 +747,7 @@ function RoomDiceRoller({ roomId }: { roomId: string }) {
       ts: Date.now(),
     };
     setLastRoll(roll);
-    setHistory(prev => [roll, ...prev].slice(0, 50));
+    setHistory((prev) => [roll, ...prev].slice(0, 50));
     setShowFlash(true);
     setTimeout(() => setShowFlash(false), 600);
     sendRaw?.({ type: "dnd:roll", roomId, roll });
@@ -366,34 +755,55 @@ function RoomDiceRoller({ roomId }: { roomId: string }) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14, height: "100%" }}>
-      <div className="dnd-brazier" style={{
-        boxShadow: showFlash
-          ? (lastRoll?.isNat20 ? "0 0 56px rgba(122,209,88,0.50), inset 0 2px 0 rgba(196,165,90,0.10), inset 0 -1px 0 rgba(0,0,0,0.6)"
-            : lastRoll?.isNat1 ? "0 0 50px rgba(239,68,68,0.50), inset 0 2px 0 rgba(196,165,90,0.10), inset 0 -1px 0 rgba(0,0,0,0.6)"
-            : "0 0 48px rgba(232,160,74,0.40), inset 0 2px 0 rgba(196,165,90,0.10), inset 0 -1px 0 rgba(0,0,0,0.6)")
-          : undefined,
-      }}>
+      <div
+        className="dnd-brazier"
+        style={{
+          boxShadow: showFlash
+            ? lastRoll?.isNat20
+              ? "0 0 56px rgba(122,209,88,0.50), inset 0 2px 0 rgba(196,165,90,0.10), inset 0 -1px 0 rgba(0,0,0,0.6)"
+              : lastRoll?.isNat1
+                ? "0 0 50px rgba(239,68,68,0.50), inset 0 2px 0 rgba(196,165,90,0.10), inset 0 -1px 0 rgba(0,0,0,0.6)"
+                : "0 0 48px rgba(232,160,74,0.40), inset 0 2px 0 rgba(196,165,90,0.10), inset 0 -1px 0 rgba(0,0,0,0.6)"
+            : undefined,
+        }}
+      >
         {lastRoll ? (
           <>
-            <div className={`dnd-brazier-result${lastRoll.isNat20 ? " is-nat20" : lastRoll.isNat1 ? " is-nat1" : ""}`}>
+            <div
+              className={`dnd-brazier-result${lastRoll.isNat20 ? " is-nat20" : lastRoll.isNat1 ? " is-nat1" : ""}`}
+            >
               {lastRoll.total}
             </div>
             {lastRoll.isNat20 && <div className="dnd-brazier-tag is-nat20">NATURAL 20</div>}
             {lastRoll.isNat1 && <div className="dnd-brazier-tag is-nat1">CRITICAL FAIL</div>}
             <div className="dnd-brazier-expr">
-              <strong style={{ color: "#F5D58A", fontStyle: "normal" }}>{lastRoll.roller}</strong>{" rolled "}{lastRoll.expr}
+              <strong style={{ color: "#F5D58A", fontStyle: "normal" }}>{lastRoll.roller}</strong>
+              {" rolled "}
+              {lastRoll.expr}
               {(lastRoll.advantage || lastRoll.disadvantage) && (
-                <span style={{ color: lastRoll.advantage ? "#C8E886" : "#FF8A7A", fontWeight: 600 }}>
-                  {" "}({lastRoll.advantage ? "ADV" : "DIS"})
+                <span
+                  style={{ color: lastRoll.advantage ? "#C8E886" : "#FF8A7A", fontWeight: 600 }}
+                >
+                  {" "}
+                  ({lastRoll.advantage ? "ADV" : "DIS"})
                 </span>
               )}
             </div>
             <div className="dnd-brazier-rolls">
               [{lastRoll.rolls.join(", ")}]
               {lastRoll.dropped && lastRoll.dropped.length > 0 && (
-                <span style={{ textDecoration: "line-through", opacity: 0.4 }}> dropped: {lastRoll.dropped.join(", ")}</span>
+                <span style={{ textDecoration: "line-through", opacity: 0.4 }}>
+                  {" "}
+                  dropped: {lastRoll.dropped.join(", ")}
+                </span>
               )}
-              {lastRoll.modifier !== 0 && <span> {lastRoll.modifier > 0 ? "+" : ""}{lastRoll.modifier}</span>}
+              {lastRoll.modifier !== 0 && (
+                <span>
+                  {" "}
+                  {lastRoll.modifier > 0 ? "+" : ""}
+                  {lastRoll.modifier}
+                </span>
+              )}
             </div>
           </>
         ) : (
@@ -407,7 +817,7 @@ function RoomDiceRoller({ roomId }: { roomId: string }) {
       </div>
 
       <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-        {QUICK_DICE.map(d => (
+        {QUICK_DICE.map((d) => (
           <button key={d.label} onClick={() => doRoll(d.expr)} className="dnd-stone-tile">
             {d.label}
           </button>
@@ -415,10 +825,18 @@ function RoomDiceRoller({ roomId }: { roomId: string }) {
       </div>
 
       <div style={{ display: "flex", gap: 8 }}>
-        <button onClick={() => doRoll("d20adv")} className="dnd-stone-tile dnd-stone-tile--adv" style={{ flex: 1 }}>
+        <button
+          onClick={() => doRoll("d20adv")}
+          className="dnd-stone-tile dnd-stone-tile--adv"
+          style={{ flex: 1 }}
+        >
           d20 Advantage
         </button>
-        <button onClick={() => doRoll("d20dis")} className="dnd-stone-tile dnd-stone-tile--dis" style={{ flex: 1 }}>
+        <button
+          onClick={() => doRoll("d20dis")}
+          className="dnd-stone-tile dnd-stone-tile--dis"
+          style={{ flex: 1 }}
+        >
           d20 Disadvantage
         </button>
       </div>
@@ -428,45 +846,93 @@ function RoomDiceRoller({ roomId }: { roomId: string }) {
           className="dnd-parchment-input"
           placeholder="2d8+5, d20adv, 4d6, d100..."
           value={customExpr}
-          onChange={e => setCustomExpr(e.target.value)}
-          onKeyDown={e => { if (e.key === "Enter" && customExpr) { doRoll(customExpr); setCustomExpr(""); } }}
+          onChange={(e) => setCustomExpr(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && customExpr) {
+              doRoll(customExpr);
+              setCustomExpr("");
+            }
+          }}
         />
         <button
           className="dnd-stone-tile"
           style={{ flex: "0 0 auto", minWidth: 78 }}
-          onClick={() => { if (customExpr) { doRoll(customExpr); setCustomExpr(""); } }}
-        >Cast</button>
+          onClick={() => {
+            if (customExpr) {
+              doRoll(customExpr);
+              setCustomExpr("");
+            }
+          }}
+        >
+          Cast
+        </button>
       </div>
 
       {history.length > 0 && (
-        <div style={{ flex: 1, overflow: "auto", display: "flex", flexDirection: "column", gap: 4 }}>
-          <div className="dnd-section-label" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div
+          style={{ flex: 1, overflow: "auto", display: "flex", flexDirection: "column", gap: 4 }}
+        >
+          <div
+            className="dnd-section-label"
+            style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
+          >
             <span>Roll Log</span>
             <button
               style={{
-                background: "transparent", border: "1px solid rgba(196,165,90,0.25)",
-                color: "rgba(201,168,120,0.6)", fontSize: 10, padding: "2px 8px",
-                borderRadius: 4, cursor: "pointer", fontFamily: "inherit", letterSpacing: ".5px",
+                background: "transparent",
+                border: "1px solid rgba(196,165,90,0.25)",
+                color: "rgba(201,168,120,0.6)",
+                fontSize: 10,
+                padding: "2px 8px",
+                borderRadius: 4,
+                cursor: "pointer",
+                fontFamily: "inherit",
+                letterSpacing: ".5px",
               }}
               onClick={() => setHistory([])}
-            >Clear</button>
+            >
+              Clear
+            </button>
           </div>
-          {history.map(r => (
-            <div key={r.id} className={`dnd-history-row${r.isNat20 ? " is-nat20" : r.isNat1 ? " is-nat1" : ""}`}>
+          {history.map((r) => (
+            <div
+              key={r.id}
+              className={`dnd-history-row${r.isNat20 ? " is-nat20" : r.isNat1 ? " is-nat1" : ""}`}
+            >
               <span className="dnd-history-total">{r.total}</span>
               <div style={{ flex: 1 }}>
                 <span style={{ fontSize: 11, fontWeight: 700, color: "#F5D58A" }}>{r.roller}</span>
-                <span className="dnd-history-expr" style={{ marginLeft: 6 }}>{r.expr}</span>
+                <span className="dnd-history-expr" style={{ marginLeft: 6 }}>
+                  {r.expr}
+                </span>
                 {(r.advantage || r.disadvantage) && (
-                  <span style={{ fontSize: 10, marginLeft: 6, color: r.advantage ? "#C8E886" : "#FF8A7A", fontWeight: 700, letterSpacing: ".5px" }}>
+                  <span
+                    style={{
+                      fontSize: 10,
+                      marginLeft: 6,
+                      color: r.advantage ? "#C8E886" : "#FF8A7A",
+                      fontWeight: 700,
+                      letterSpacing: ".5px",
+                    }}
+                  >
                     {r.advantage ? "ADV" : "DIS"}
                   </span>
                 )}
-                <span style={{ fontSize: 10, color: "rgba(201,168,120,0.45)", marginLeft: 6, fontFamily: "monospace" }}>
-                  [{r.rolls.join(",")}]{r.modifier ? (r.modifier > 0 ? `+${r.modifier}` : r.modifier) : ""}
+                <span
+                  style={{
+                    fontSize: 10,
+                    color: "rgba(201,168,120,0.45)",
+                    marginLeft: 6,
+                    fontFamily: "monospace",
+                  }}
+                >
+                  [{r.rolls.join(",")}]
+                  {r.modifier ? (r.modifier > 0 ? `+${r.modifier}` : r.modifier) : ""}
                 </span>
               </div>
-              <span style={{ fontSize: 9, color: "rgba(201,168,120,0.35)", fontFamily: "monospace" }}>
+              <span
+                style={{ fontSize: 9, color: "rgba(201,168,120,0.35)", fontFamily: "monospace" }}
+              >
                 {new Date(r.ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
               </span>
             </div>
@@ -479,7 +945,13 @@ function RoomDiceRoller({ roomId }: { roomId: string }) {
 
 function RoomD20Icon() {
   return (
-    <svg width="96" height="96" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+    <svg
+      width="96"
+      height="96"
+      viewBox="0 0 100 100"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-hidden
+    >
       <defs>
         <linearGradient id="dndDieFillRoom" x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" stopColor="#7F4422" />
@@ -508,14 +980,17 @@ function RoomD20Icon() {
         strokeWidth="1"
       />
       <text
-        x="50" y="56"
+        x="50"
+        y="56"
         textAnchor="middle"
         fontSize="22"
         fontWeight="700"
         fill="#F5D58A"
         fontFamily="var(--font-pirata), 'Pirata One', serif"
         style={{ filter: "drop-shadow(0 1px 1px rgba(0,0,0,0.6))" }}
-      >20</text>
+      >
+        20
+      </text>
     </svg>
   );
 }
@@ -536,8 +1011,16 @@ const ACTIONS_IN_COMBAT = [
 ];
 
 const COVER_RULES = [
-  { type: "Half Cover", ac: "+2 AC, +2 DEX saves", desc: "Obstacle blocks at least half the body." },
-  { type: "Three-Quarters", ac: "+5 AC, +5 DEX saves", desc: "Obstacle blocks about three-quarters." },
+  {
+    type: "Half Cover",
+    ac: "+2 AC, +2 DEX saves",
+    desc: "Obstacle blocks at least half the body.",
+  },
+  {
+    type: "Three-Quarters",
+    ac: "+5 AC, +5 DEX saves",
+    desc: "Obstacle blocks about three-quarters.",
+  },
   { type: "Total Cover", ac: "Can't be targeted", desc: "Completely concealed by an obstacle." },
 ];
 
@@ -558,13 +1041,25 @@ const CONDITIONS_REF = [
 
 function QuickReference() {
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16, height: "100%", overflow: "auto" }}>
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: 16,
+        height: "100%",
+        overflow: "auto",
+      }}
+    >
       <div>
-        <div style={{ ...S.label, color: ACCENT, opacity: 1, marginBottom: 8, fontSize: 11 }}>Actions in Combat</div>
+        <div style={{ ...S.label, color: ACCENT, opacity: 1, marginBottom: 8, fontSize: 11 }}>
+          Actions in Combat
+        </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-          {ACTIONS_IN_COMBAT.map(a => (
+          {ACTIONS_IN_COMBAT.map((a) => (
             <div key={a.name} style={{ ...S.card, padding: "6px 10px", display: "flex", gap: 8 }}>
-              <span style={{ fontSize: 11, fontWeight: 700, color: ACCENT, minWidth: 80 }}>{a.name}</span>
+              <span style={{ fontSize: 11, fontWeight: 700, color: ACCENT, minWidth: 80 }}>
+                {a.name}
+              </span>
               <span style={{ fontSize: 11, color: "rgba(243,244,246,.65)" }}>{a.desc}</span>
             </div>
           ))}
@@ -572,26 +1067,47 @@ function QuickReference() {
       </div>
 
       <div>
-        <div style={{ ...S.label, color: ACCENT, opacity: 1, marginBottom: 8, fontSize: 11 }}>Cover</div>
+        <div style={{ ...S.label, color: ACCENT, opacity: 1, marginBottom: 8, fontSize: 11 }}>
+          Cover
+        </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-          {COVER_RULES.map(c => (
+          {COVER_RULES.map((c) => (
             <div key={c.type} style={{ ...S.card, padding: "6px 10px" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontSize: 11, fontWeight: 700, color: "rgba(243,244,246,.85)" }}>{c.type}</span>
+              <div
+                style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
+              >
+                <span style={{ fontSize: 11, fontWeight: 700, color: "rgba(243,244,246,.85)" }}>
+                  {c.type}
+                </span>
                 <span style={{ fontSize: 10, fontWeight: 600, color: "#22C55E" }}>{c.ac}</span>
               </div>
-              <div style={{ fontSize: 10, color: "rgba(148,163,184,.45)", marginTop: 2 }}>{c.desc}</div>
+              <div style={{ fontSize: 10, color: "rgba(148,163,184,.45)", marginTop: 2 }}>
+                {c.desc}
+              </div>
             </div>
           ))}
         </div>
       </div>
 
       <div>
-        <div style={{ ...S.label, color: ACCENT, opacity: 1, marginBottom: 8, fontSize: 11 }}>Conditions Quick Ref</div>
+        <div style={{ ...S.label, color: ACCENT, opacity: 1, marginBottom: 8, fontSize: 11 }}>
+          Conditions Quick Ref
+        </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-          {CONDITIONS_REF.map(c => (
-            <div key={c.name} style={{ display: "flex", gap: 8, padding: "4px 8px", borderRadius: 4, background: "rgba(255,255,255,.02)" }}>
-              <span style={{ fontSize: 10, fontWeight: 700, color: ACCENT, minWidth: 80 }}>{c.name}</span>
+          {CONDITIONS_REF.map((c) => (
+            <div
+              key={c.name}
+              style={{
+                display: "flex",
+                gap: 8,
+                padding: "4px 8px",
+                borderRadius: 4,
+                background: "rgba(255,255,255,.02)",
+              }}
+            >
+              <span style={{ fontSize: 10, fontWeight: 700, color: ACCENT, minWidth: 80 }}>
+                {c.name}
+              </span>
               <span style={{ fontSize: 10, color: "rgba(243,244,246,.55)" }}>{c.short}</span>
             </div>
           ))}
@@ -602,24 +1118,42 @@ function QuickReference() {
 }
 
 const STAGE_TABS = [
-  { id: "sheets" as const,     label: "Sheets",     icon: "📜" },
-  { id: "map" as const,        label: "Battle Map", icon: "🗺" },
+  { id: "sheets" as const, label: "Sheets", icon: "📜" },
+  { id: "map" as const, label: "Battle Map", icon: "🗺" },
   { id: "initiative" as const, label: "Initiative", icon: "⚔" },
-  { id: "dice" as const,       label: "Dice",       icon: "🎲" },
-  { id: "npcs" as const,       label: "NPCs",       icon: "🧙" },
-  { id: "campaign" as const,   label: "Campaign",   icon: "📚" },
-  { id: "reference" as const,  label: "Reference",  icon: "📖" },
+  { id: "dice" as const, label: "Dice", icon: "🎲" },
+  { id: "npcs" as const, label: "NPCs", icon: "🧙" },
+  { id: "campaign" as const, label: "Campaign", icon: "📚" },
+  { id: "reference" as const, label: "Reference", icon: "📖" },
 ];
-type StageTab = typeof STAGE_TABS[number]["id"];
+type StageTab = (typeof STAGE_TABS)[number]["id"];
 
 export default function DndStage({ roomId, onClose }: { roomId: string; onClose: () => void }) {
   const [tab, setTab] = useState<StageTab>("sheets");
   const { currentLobbyId } = useWeered() as any;
 
   return (
-    <div className="weered-dnd-modules" style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden", position: "relative" }}>
-      <div style={{ display: "flex", gap: 5, padding: "10px 12px", borderBottom: "1px solid rgba(196,165,90,.18)", flexShrink: 0, flexWrap: "wrap" }}>
-        {STAGE_TABS.map(t => (
+    <div
+      className="weered-dnd-modules"
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        height: "100%",
+        overflow: "hidden",
+        position: "relative",
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          gap: 5,
+          padding: "10px 12px",
+          borderBottom: "1px solid rgba(196,165,90,.18)",
+          flexShrink: 0,
+          flexWrap: "wrap",
+        }}
+      >
+        {STAGE_TABS.map((t) => (
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
@@ -630,7 +1164,13 @@ export default function DndStage({ roomId, onClose }: { roomId: string; onClose:
         ))}
       </div>
 
-      <div style={{ flex: 1, overflow: tab === "map" ? "hidden" : "auto", padding: tab === "npcs" || tab === "map" ? 0 : 12 }}>
+      <div
+        style={{
+          flex: 1,
+          overflow: tab === "map" ? "hidden" : "auto",
+          padding: tab === "npcs" || tab === "map" ? 0 : 12,
+        }}
+      >
         {tab === "initiative" && <InitiativeTracker roomId={roomId} />}
         {tab === "map" && <TacticalMap roomId={roomId} />}
         {tab === "dice" && <RoomDiceRoller roomId={roomId} />}

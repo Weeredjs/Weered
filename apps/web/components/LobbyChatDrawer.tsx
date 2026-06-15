@@ -11,19 +11,29 @@ interface Props {
 }
 
 export default function LobbyChatDrawer({ roomId, title = "Lobby Chat", accentColor }: Props) {
-  const [open, setOpen] = useState(() => typeof window !== "undefined" ? window.innerWidth > 767 : true);
+  const [open, setOpen] = useState(() =>
+    typeof window !== "undefined" ? window.innerWidth > 767 : true,
+  );
   const [mounted, setMounted] = useState(false);
   const [unread, setUnread] = useState(0);
   const [fullscreen, setFullscreen] = useState(() => {
-    try { return typeof window !== "undefined" && localStorage.getItem("weered_chat_fullscreen") === "1"; } catch { return false; }
+    try {
+      return (
+        typeof window !== "undefined" && localStorage.getItem("weered_chat_fullscreen") === "1"
+      );
+    } catch {
+      return false;
+    }
   });
   const openRef = useRef(false);
 
   const ctx = useWeered() as any;
 
   const toggleFullscreen = () => {
-    setFullscreen(v => {
-      try { localStorage.setItem("weered_chat_fullscreen", v ? "0" : "1"); } catch {}
+    setFullscreen((v) => {
+      try {
+        localStorage.setItem("weered_chat_fullscreen", v ? "0" : "1");
+      } catch {}
       return !v;
     });
     setOpen(true);
@@ -32,7 +42,9 @@ export default function LobbyChatDrawer({ roomId, title = "Lobby Chat", accentCo
 
   useEffect(() => {
     if (!fullscreen) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") toggleFullscreen(); };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") toggleFullscreen();
+    };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [fullscreen]);
@@ -44,13 +56,22 @@ export default function LobbyChatDrawer({ roomId, title = "Lobby Chat", accentCo
   const effectiveRoomId = (() => {
     let rid = String(roomId || "").trim();
     if (rid.startsWith("room:")) rid = rid.slice(5);
-    try { rid = decodeURIComponent(rid); } catch {}
+    try {
+      rid = decodeURIComponent(rid);
+    } catch {}
     return rid;
   })();
 
-  useEffect(() => { openRef.current = open; try { window.dispatchEvent(new CustomEvent("weered:chat:drawer", { detail: { open } })); } catch {} }, [open]);
+  useEffect(() => {
+    openRef.current = open;
+    try {
+      window.dispatchEvent(new CustomEvent("weered:chat:drawer", { detail: { open } }));
+    } catch {}
+  }, [open]);
 
-  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     function onChatNew(e: Event) {
@@ -60,7 +81,7 @@ export default function LobbyChatDrawer({ roomId, title = "Lobby Chat", accentCo
       const myId = ctx?.me?.id;
       if (senderId && myId && senderId === myId) return;
       if (!openRef.current) {
-        setUnread(prev => prev + 1);
+        setUnread((prev) => prev + 1);
       }
     }
     window.addEventListener("weered:chat:new", onChatNew);
@@ -214,18 +235,29 @@ export default function LobbyChatDrawer({ roomId, title = "Lobby Chat", accentCo
         >
           CHAT
           {hasUnread && !open && (
-            <div style={{
-              position: "absolute", top: 8, left: "50%",
-              transform: "translateX(-50%)",
-              writingMode: "horizontal-tb",
-              minWidth: 18, height: 18, borderRadius: 9,
-              background: "#ef4444",
-              border: "2px solid rgba(10,10,18,0.9)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: 10, fontWeight: 800, color: "#fff",
-              lineHeight: 1, padding: "0 4px",
-              animation: "unreadPulse 2s ease-in-out infinite",
-            }}>
+            <div
+              style={{
+                position: "absolute",
+                top: 8,
+                left: "50%",
+                transform: "translateX(-50%)",
+                writingMode: "horizontal-tb",
+                minWidth: 18,
+                height: 18,
+                borderRadius: 9,
+                background: "#ef4444",
+                border: "2px solid rgba(10,10,18,0.9)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: 10,
+                fontWeight: 800,
+                color: "#fff",
+                lineHeight: 1,
+                padding: "0 4px",
+                animation: "unreadPulse 2s ease-in-out infinite",
+              }}
+            >
               {unread > 99 ? "99+" : unread}
             </div>
           )}
@@ -235,13 +267,18 @@ export default function LobbyChatDrawer({ roomId, title = "Lobby Chat", accentCo
       {mounted && open && (
         <div
           className={`lobby-chat-drawer${fullscreen ? " weered-chat-fullscreen" : ""}`}
-          onTouchStart={e => { (e.currentTarget as any)._swipe = { x: e.touches[0].clientX, t: Date.now() }; }}
-          onTouchMove={e => {
-            const s = (e.currentTarget as any)._swipe; if (!s) return;
-            const dx = e.touches[0].clientX - s.x;
-            if (dx > 0) { (e.currentTarget as any)._swipeDx = dx; }
+          onTouchStart={(e) => {
+            (e.currentTarget as any)._swipe = { x: e.touches[0].clientX, t: Date.now() };
           }}
-          onTouchEnd={e => {
+          onTouchMove={(e) => {
+            const s = (e.currentTarget as any)._swipe;
+            if (!s) return;
+            const dx = e.touches[0].clientX - s.x;
+            if (dx > 0) {
+              (e.currentTarget as any)._swipeDx = dx;
+            }
+          }}
+          onTouchEnd={(e) => {
             const dx = (e.currentTarget as any)._swipeDx || 0;
             const dt = Date.now() - ((e.currentTarget as any)._swipe?.t || Date.now());
             if (dx > 60 || (dx > 20 && dx / Math.max(1, dt) > 0.3)) setOpen(false);
@@ -249,20 +286,49 @@ export default function LobbyChatDrawer({ roomId, title = "Lobby Chat", accentCo
             (e.currentTarget as any)._swipeDx = 0;
           }}
         >
-          <div style={{
-            position: "absolute", inset: 0, zIndex: 0,
-            display: "flex", alignItems: "center", justifyContent: "center",
-            pointerEvents: "none", opacity: 0.14,
-            flexDirection: "column", gap: 6,
-          }}>
-            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: ac }}>
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              zIndex: 0,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              pointerEvents: "none",
+              opacity: 0.14,
+              flexDirection: "column",
+              gap: 6,
+            }}
+          >
+            <svg
+              width="48"
+              height="48"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              style={{ color: ac }}
+            >
               <path d="M5 12h14M13 6l6 6-6 6" />
             </svg>
-            <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 10, letterSpacing: "0.2em", textTransform: "uppercase", color: ac }}>swipe to close</span>
+            <span
+              style={{
+                fontFamily: "'DM Mono', monospace",
+                fontSize: 10,
+                letterSpacing: "0.2em",
+                textTransform: "uppercase",
+                color: ac,
+              }}
+            >
+              swipe to close
+            </span>
           </div>
           <div className="lobby-drawer-header" style={{ position: "relative", zIndex: 1, gap: 8 }}>
             <span className="lobby-drawer-title">
-              {title}{fullscreen ? " · Fullscreen" : ""}
+              {title}
+              {fullscreen ? " · Fullscreen" : ""}
             </span>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <button
@@ -272,7 +338,9 @@ export default function LobbyChatDrawer({ roomId, title = "Lobby Chat", accentCo
                 aria-label={fullscreen ? "Collapse chat" : "Go fullscreen"}
                 className="weered-chat-fullscreen-cta"
                 style={{
-                  display: "inline-flex", alignItems: "center", gap: 6,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 6,
                   padding: "5px 12px 5px 10px",
                   borderRadius: 7,
                   border: `1px solid ${fullscreen ? `${ac}b0` : acMid}`,
@@ -291,22 +359,54 @@ export default function LobbyChatDrawer({ roomId, title = "Lobby Chat", accentCo
               >
                 {fullscreen ? (
                   <>
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+                    <svg
+                      width="13"
+                      height="13"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <polyline points="4 14 10 14 10 20" />
+                      <polyline points="20 10 14 10 14 4" />
+                      <line x1="14" y1="10" x2="21" y2="3" />
+                      <line x1="3" y1="21" x2="10" y2="14" />
+                    </svg>
                     <span>Collapse</span>
                   </>
                 ) : (
                   <>
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+                    <svg
+                      width="13"
+                      height="13"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <polyline points="15 3 21 3 21 9" />
+                      <polyline points="9 21 3 21 3 15" />
+                      <line x1="21" y1="3" x2="14" y2="10" />
+                      <line x1="3" y1="21" x2="10" y2="14" />
+                    </svg>
                     <span>Dial In</span>
                   </>
                 )}
               </button>
               {!fullscreen && (
-                <div className="lobby-drawer-close" onClick={() => setOpen(false)}>✕</div>
+                <div className="lobby-drawer-close" onClick={() => setOpen(false)}>
+                  ✕
+                </div>
               )}
             </div>
           </div>
-          <div style={{ flex: 1, minHeight: 0, position: "relative", zIndex: 1, paddingBottom: 32 }}>
+          <div
+            style={{ flex: 1, minHeight: 0, position: "relative", zIndex: 1, paddingBottom: 32 }}
+          >
             <LobbyChatPanel roomId={roomId} embedded={true} />
           </div>
         </div>

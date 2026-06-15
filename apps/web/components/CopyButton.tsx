@@ -38,8 +38,7 @@ export default function CopyButton({
         setCopied(true);
         onCopy?.();
         setTimeout(() => setCopied(false), 1400);
-      } catch {
-      }
+      } catch {}
     }
   }
 

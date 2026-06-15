@@ -27,7 +27,9 @@ export function handleVoice(ws: any, msg: any, opts: Opts): void {
   function pushVoicePermission(room: any, userId: string) {
     for (const sock of room.sockets) {
       if ((sock as any).user?.id === userId) {
-        try { send(sock as any, { type: "voice:permission", roomId: room.roomId, userId }); } catch {}
+        try {
+          send(sock as any, { type: "voice:permission", roomId: room.roomId, userId });
+        } catch {}
       }
     }
   }
@@ -47,7 +49,9 @@ export function handleVoice(ws: any, msg: any, opts: Opts): void {
       room.voiceSpeakers = new Set();
       for (const uid of dropped) pushVoicePermission(room, uid);
     }
-    (prisma as any).room.update({ where: { id: roomId }, data: { voiceMode: next } }).catch(() => {});
+    (prisma as any).room
+      .update({ where: { id: roomId }, data: { voiceMode: next } })
+      .catch(() => {});
     broadcastVoiceState(room);
     return;
   }

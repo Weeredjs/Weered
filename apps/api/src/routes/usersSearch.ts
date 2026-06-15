@@ -14,7 +14,15 @@ export default async function usersSearchRoutes(app: FastifyInstance) {
         ],
         banned: false,
       },
-      select: { id: true, name: true, usernameKey: true, avatar: true, avatarColor: true, tier: true, notoriety: true },
+      select: {
+        id: true,
+        name: true,
+        usernameKey: true,
+        avatar: true,
+        avatarColor: true,
+        tier: true,
+        notoriety: true,
+      },
       orderBy: { notoriety: "desc" },
       take: 25,
     });

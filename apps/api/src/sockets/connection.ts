@@ -25,22 +25,52 @@ export async function handleAuthHello(
 
   if (msg.type === "auth:hello") {
     const u = verifyToken(msg.token);
-    if (!u) { send(ws, { type: "auth:fail", reason: "Invalid token" }); return; }
+    if (!u) {
+      send(ws, { type: "auth:fail", reason: "Invalid token" });
+      return;
+    }
     ws.user = await hydrateGlobalRole(u);
     if (await isGloballyBanned(ws.user.id)) {
       send(ws, { type: "auth:fail", reason: "Your account has been suspended." });
-      try { ws.close(4003, "banned"); } catch {}
+      try {
+        ws.close(4003, "banned");
+      } catch {}
       return;
     }
-    send(ws, { type: "auth:ok", user: { id: ws.user.id, name: ws.user.name, globalRole: ws.user.globalRole, tier: ws.user.tier || "INNOCENT", avatarColor: ws.user.avatarColor, avatar: ws.user.avatar, panelBgColor: (ws.user as any).panelBgColor, panelAccentColor: (ws.user as any).panelAccentColor, pillBgColor: (ws.user as any).pillBgColor, pillAccentColor: (ws.user as any).pillAccentColor } });
+    send(ws, {
+      type: "auth:ok",
+      user: {
+        id: ws.user.id,
+        name: ws.user.name,
+        globalRole: ws.user.globalRole,
+        tier: ws.user.tier || "INNOCENT",
+        avatarColor: ws.user.avatarColor,
+        avatar: ws.user.avatar,
+        panelBgColor: (ws.user as any).panelBgColor,
+        panelAccentColor: (ws.user as any).panelAccentColor,
+        pillBgColor: (ws.user as any).pillBgColor,
+        pillAccentColor: (ws.user as any).pillAccentColor,
+      },
+    });
     awardNotoriety(ws.user.id, "DAILY_ACTIVE").catch(() => {});
     (async () => {
       try {
-        const memberships = await prisma.crewMember.findMany({ where: { userId: ws.user!.id }, select: { crewId: true } });
+        const memberships = await prisma.crewMember.findMany({
+          where: { userId: ws.user!.id },
+          select: { crewId: true },
+        });
         if (!memberships.length) return;
         const crewIds = memberships.map((m: any) => m.crewId);
-        const mates = await prisma.crewMember.findMany({ where: { crewId: { in: crewIds }, userId: { not: ws.user!.id } }, select: { userId: true, crewId: true } });
-        const payload = { type: "crew:presence", userId: ws.user!.id, name: ws.user!.name, online: true };
+        const mates = await prisma.crewMember.findMany({
+          where: { crewId: { in: crewIds }, userId: { not: ws.user!.id } },
+          select: { userId: true, crewId: true },
+        });
+        const payload = {
+          type: "crew:presence",
+          userId: ws.user!.id,
+          name: ws.user!.name,
+          online: true,
+        };
         for (const mate of mates) {
           for (const sock of wss.clients) {
             if ((sock as any).user?.id === mate.userId) send(sock as any, payload);
@@ -79,11 +109,22 @@ export function handleClose(
       if (!isUserOnline(closingUserId)) {
         (async () => {
           try {
-            const memberships = await prisma.crewMember.findMany({ where: { userId: closingUserId }, select: { crewId: true } });
+            const memberships = await prisma.crewMember.findMany({
+              where: { userId: closingUserId },
+              select: { crewId: true },
+            });
             if (!memberships.length) return;
             const crewIds = memberships.map((m: any) => m.crewId);
-            const mates = await prisma.crewMember.findMany({ where: { crewId: { in: crewIds }, userId: { not: closingUserId } }, select: { userId: true } });
-            const payload = { type: "crew:presence", userId: closingUserId, name: closingUserName, online: false };
+            const mates = await prisma.crewMember.findMany({
+              where: { crewId: { in: crewIds }, userId: { not: closingUserId } },
+              select: { userId: true },
+            });
+            const payload = {
+              type: "crew:presence",
+              userId: closingUserId,
+              name: closingUserName,
+              online: false,
+            };
             for (const mate of mates) {
               for (const sock of wss.clients) {
                 if ((sock as any).user?.id === mate.userId) send(sock as any, payload);

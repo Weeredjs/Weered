@@ -93,68 +93,80 @@ const S = {
     gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
     gap: 14,
   } as React.CSSProperties,
-  btn: (bg: string, disabled?: boolean) => ({
-    background: disabled ? "rgba(255,255,255,.06)" : bg,
-    color: disabled ? "rgba(255,255,255,.3)" : "#000",
-    border: "none",
-    borderRadius: 8,
-    padding: "8px 16px",
-    fontWeight: 700,
-    fontSize: 13,
-    cursor: disabled ? "not-allowed" : "pointer",
-    width: "100%",
-    marginTop: 8,
-    opacity: disabled ? 0.5 : 1,
-  } as React.CSSProperties),
-  rarityBadge: (rarity: string) => ({
-    display: "inline-block",
-    fontSize: 10,
-    fontWeight: 700,
-    textTransform: "uppercase" as const,
-    color: RARITY_COLORS[rarity] || "#fff",
-    border: `1px solid ${RARITY_COLORS[rarity] || "#fff"}33`,
-    borderRadius: 4,
-    padding: "2px 6px",
-    letterSpacing: 0.5,
-  } as React.CSSProperties),
+  btn: (bg: string, disabled?: boolean) =>
+    ({
+      background: disabled ? "rgba(255,255,255,.06)" : bg,
+      color: disabled ? "rgba(255,255,255,.3)" : "#000",
+      border: "none",
+      borderRadius: 8,
+      padding: "8px 16px",
+      fontWeight: 700,
+      fontSize: 13,
+      cursor: disabled ? "not-allowed" : "pointer",
+      width: "100%",
+      marginTop: 8,
+      opacity: disabled ? 0.5 : 1,
+    }) as React.CSSProperties,
+  rarityBadge: (rarity: string) =>
+    ({
+      display: "inline-block",
+      fontSize: 10,
+      fontWeight: 700,
+      textTransform: "uppercase" as const,
+      color: RARITY_COLORS[rarity] || "#fff",
+      border: `1px solid ${RARITY_COLORS[rarity] || "#fff"}33`,
+      borderRadius: 4,
+      padding: "2px 6px",
+      letterSpacing: 0.5,
+    }) as React.CSSProperties,
   empty: {
     textAlign: "center" as const,
     padding: "60px 20px",
     color: "rgba(255,255,255,.35)",
     fontSize: 14,
   } as React.CSSProperties,
-  dailyBtn: (claimed: boolean) => ({
-    background: claimed ? "rgba(255,255,255,.06)" : `linear-gradient(135deg, ${GOLD}, #e6a800)`,
-    color: claimed ? "rgba(255,255,255,.4)" : "#000",
-    border: "none",
-    borderRadius: 10,
-    padding: "10px 20px",
-    fontWeight: 700,
-    fontSize: 13,
-    cursor: claimed ? "default" : "pointer",
-  } as React.CSSProperties),
+  dailyBtn: (claimed: boolean) =>
+    ({
+      background: claimed ? "rgba(255,255,255,.06)" : `linear-gradient(135deg, ${GOLD}, #e6a800)`,
+      color: claimed ? "rgba(255,255,255,.4)" : "#000",
+      border: "none",
+      borderRadius: 10,
+      padding: "10px 20px",
+      fontWeight: 700,
+      fontSize: 13,
+      cursor: claimed ? "default" : "pointer",
+    }) as React.CSSProperties,
 };
 
 function useApi() {
   const { apiBase, token } = useWeered();
-  const headers = useCallback(() => ({
-    "Content-Type": "application/json",
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-  }), [token]);
+  const headers = useCallback(
+    () => ({
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    }),
+    [token],
+  );
 
-  const get = useCallback(async (path: string) => {
-    const r = await fetch(`${apiBase}${path}`, { headers: headers() });
-    return r.json();
-  }, [apiBase, headers]);
+  const get = useCallback(
+    async (path: string) => {
+      const r = await fetch(`${apiBase}${path}`, { headers: headers() });
+      return r.json();
+    },
+    [apiBase, headers],
+  );
 
-  const post = useCallback(async (path: string, body?: any) => {
-    const r = await fetch(`${apiBase}${path}`, {
-      method: "POST",
-      headers: headers(),
-      body: JSON.stringify(body || {}),
-    });
-    return r.json();
-  }, [apiBase, headers]);
+  const post = useCallback(
+    async (path: string, body?: any) => {
+      const r = await fetch(`${apiBase}${path}`, {
+        method: "POST",
+        headers: headers(),
+        body: JSON.stringify(body || {}),
+      });
+      return r.json();
+    },
+    [apiBase, headers],
+  );
 
   return { get, post };
 }
@@ -249,19 +261,21 @@ export default function StorePage() {
 
   useEffect(() => {
     if (!authed) return;
-    get("/paper/wallet").then(d => {
-      if (!d.ok && d.ok !== undefined) return;
-      setBalance(d.balance ?? 0);
-      const txns = d.transactions || [];
-      const daily = txns.find((t: any) => t.type === "EARN_DAILY");
-      if (daily) {
-        const since = Date.now() - new Date(daily.createdAt).getTime();
-        if (since < 86400000) {
-          setDailyClaimed(true);
-          setDailyNextAt(new Date(new Date(daily.createdAt).getTime() + 86400000).toISOString());
+    get("/paper/wallet")
+      .then((d) => {
+        if (!d.ok && d.ok !== undefined) return;
+        setBalance(d.balance ?? 0);
+        const txns = d.transactions || [];
+        const daily = txns.find((t: any) => t.type === "EARN_DAILY");
+        if (daily) {
+          const since = Date.now() - new Date(daily.createdAt).getTime();
+          if (since < 86400000) {
+            setDailyClaimed(true);
+            setDailyNextAt(new Date(new Date(daily.createdAt).getTime() + 86400000).toISOString());
+          }
         }
-      }
-    }).catch(() => {});
+      })
+      .catch(() => {});
   }, [authed]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function buyItem(itemId: string) {
@@ -272,7 +286,13 @@ export default function StorePage() {
       fetchStore();
       fetchInventory();
     } else {
-      weeredToast.error(d.error === "insufficient_paper" ? "Not enough Paper." : d.error === "sold_out" ? "Sold out." : (d.error || "Purchase failed."));
+      weeredToast.error(
+        d.error === "insufficient_paper"
+          ? "Not enough Paper."
+          : d.error === "sold_out"
+            ? "Sold out."
+            : d.error || "Purchase failed.",
+      );
     }
     setBusy(null);
   }
@@ -297,7 +317,10 @@ export default function StorePage() {
   async function listForSale() {
     if (!listingItem || !listingPrice) return;
     setBusy("listing");
-    const d = await post("/market/list", { userItemId: listingItem.id, price: parseInt(listingPrice) });
+    const d = await post("/market/list", {
+      userItemId: listingItem.id,
+      price: parseInt(listingPrice),
+    });
     if (d.ok) {
       setListingItem(null);
       setListingPrice("");
@@ -317,7 +340,9 @@ export default function StorePage() {
       fetchMarket();
       fetchInventory();
     } else {
-      weeredToast.error(d.error === "insufficient_paper" ? "Not enough Paper." : (d.error || "Purchase failed."));
+      weeredToast.error(
+        d.error === "insufficient_paper" ? "Not enough Paper." : d.error || "Purchase failed.",
+      );
     }
     setBusy(null);
   }
@@ -333,7 +358,11 @@ export default function StorePage() {
   }
 
   if (!authed) {
-    return <div style={S.page}><div style={S.empty}>Log in to access the store.</div></div>;
+    return (
+      <div style={S.page}>
+        <div style={S.empty}>Log in to access the store.</div>
+      </div>
+    );
   }
 
   return (
@@ -341,11 +370,17 @@ export default function StorePage() {
       <div style={S.header}>
         <div>
           <div style={S.title}>Paper</div>
-          <div style={{ fontSize: 12, color: "rgba(255,255,255,.4)", marginTop: 2 }}>Earn. Spend. Trade.</div>
+          <div style={{ fontSize: 12, color: "rgba(255,255,255,.4)", marginTop: 2 }}>
+            Earn. Spend. Trade.
+          </div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <button onClick={claimDaily} style={S.dailyBtn(dailyClaimed)}>
-            {dailyClaimed ? (dailyNextAt ? `Next: ${new Date(dailyNextAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : "Claimed") : "+ Claim 25 Paper"}
+            {dailyClaimed
+              ? dailyNextAt
+                ? `Next: ${new Date(dailyNextAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
+                : "Claimed"
+              : "+ Claim 25 Paper"}
           </button>
           <div style={S.wallet}>
             <div>
@@ -358,7 +393,7 @@ export default function StorePage() {
       </div>
 
       <div style={S.tabs}>
-        {(["store", "inventory", "market"] as Tab[]).map(t => (
+        {(["store", "inventory", "market"] as Tab[]).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -401,16 +436,43 @@ export default function StorePage() {
                       borderColor: `${RARITY_COLORS[item.rarity] || "#fff"}22`,
                     }}
                   >
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        marginBottom: 8,
+                      }}
+                    >
                       <span style={{ fontSize: 28 }}>{CATEGORY_ICONS[item.category] || "📦"}</span>
                       <span style={S.rarityBadge(item.rarity)}>{item.rarity}</span>
                     </div>
-                    <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 4 }}>{item.name}</div>
+                    <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 4 }}>
+                      {item.name}
+                    </div>
                     {item.description && (
-                      <div style={{ fontSize: 11, color: "rgba(255,255,255,.4)", marginBottom: 8, lineHeight: 1.4 }}>{item.description}</div>
+                      <div
+                        style={{
+                          fontSize: 11,
+                          color: "rgba(255,255,255,.4)",
+                          marginBottom: 8,
+                          lineHeight: 1.4,
+                        }}
+                      >
+                        {item.description}
+                      </div>
                     )}
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-                      <span style={{ fontWeight: 700, color: GOLD, fontSize: 15 }}>{item.price} 💵</span>
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        marginBottom: 4,
+                      }}
+                    >
+                      <span style={{ fontWeight: 700, color: GOLD, fontSize: 15 }}>
+                        {item.price} 💵
+                      </span>
                       {item.maxSupply > 0 && (
                         <span style={{ fontSize: 10, color: "rgba(255,255,255,.35)" }}>
                           {item.soldCount}/{item.maxSupply} sold
@@ -422,7 +484,13 @@ export default function StorePage() {
                       onClick={() => buyItem(item.id)}
                       disabled={soldOut || !canAfford || busy === item.id}
                     >
-                      {busy === item.id ? "..." : soldOut ? "SOLD OUT" : !canAfford ? "CAN'T AFFORD" : "BUY"}
+                      {busy === item.id
+                        ? "..."
+                        : soldOut
+                          ? "SOLD OUT"
+                          : !canAfford
+                            ? "CAN'T AFFORD"
+                            : "BUY"}
                     </button>
                   </div>
                 );
@@ -447,18 +515,40 @@ export default function StorePage() {
                     key={ui.id}
                     style={{
                       ...S.card,
-                      borderColor: ui.equipped ? `${GOLD}44` : `${RARITY_COLORS[item.rarity] || "#fff"}22`,
+                      borderColor: ui.equipped
+                        ? `${GOLD}44`
+                        : `${RARITY_COLORS[item.rarity] || "#fff"}22`,
                       background: ui.equipped ? "rgba(245,197,24,.06)" : S.card.background,
                     }}
                   >
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        marginBottom: 8,
+                      }}
+                    >
                       <span style={{ fontSize: 28 }}>{CATEGORY_ICONS[item.category] || "📦"}</span>
                       <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                        {ui.equipped && <span style={{ fontSize: 10, fontWeight: 700, color: GOLD, textTransform: "uppercase" }}>Equipped</span>}
+                        {ui.equipped && (
+                          <span
+                            style={{
+                              fontSize: 10,
+                              fontWeight: 700,
+                              color: GOLD,
+                              textTransform: "uppercase",
+                            }}
+                          >
+                            Equipped
+                          </span>
+                        )}
                         <span style={S.rarityBadge(item.rarity)}>{item.rarity}</span>
                       </div>
                     </div>
-                    <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 4 }}>{item.name}</div>
+                    <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 4 }}>
+                      {item.name}
+                    </div>
                     {item.maxSupply > 0 && ui.mintNumber && (
                       <div style={{ fontSize: 10, color: "rgba(255,255,255,.3)", marginBottom: 4 }}>
                         #{ui.mintNumber} / {item.maxSupply}
@@ -467,7 +557,10 @@ export default function StorePage() {
                     <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
                       {item.category !== "CONSUMABLE" && (
                         <button
-                          style={{ ...S.btn(ui.equipped ? "rgba(255,255,255,.12)" : GOLD), flex: 1 }}
+                          style={{
+                            ...S.btn(ui.equipped ? "rgba(255,255,255,.12)" : GOLD),
+                            flex: 1,
+                          }}
                           onClick={() => equipItem(ui.id)}
                           disabled={busy === ui.id}
                         >
@@ -486,7 +579,10 @@ export default function StorePage() {
                       {!ui.equipped && !ui.consumed && (
                         <button
                           style={{ ...S.btn("rgba(255,255,255,.08)"), flex: 1, color: "#fff" }}
-                          onClick={() => { setListingItem(ui); setListingPrice(""); }}
+                          onClick={() => {
+                            setListingItem(ui);
+                            setListingPrice("");
+                          }}
                         >
                           SELL
                         </button>
@@ -506,7 +602,7 @@ export default function StorePage() {
             <input
               placeholder="Search items..."
               value={marketSearch}
-              onChange={e => setMarketSearch(e.target.value)}
+              onChange={(e) => setMarketSearch(e.target.value)}
               style={{
                 flex: 1,
                 minWidth: 160,
@@ -521,7 +617,7 @@ export default function StorePage() {
             />
             <select
               value={marketRarity}
-              onChange={e => setMarketRarity(e.target.value)}
+              onChange={(e) => setMarketRarity(e.target.value)}
               style={{
                 background: "rgba(255,255,255,.04)",
                 border: "1px solid rgba(255,255,255,.1)",
@@ -532,13 +628,15 @@ export default function StorePage() {
               }}
             >
               <option value="">All Rarities</option>
-              {Object.keys(RARITY_COLORS).map(r => (
-                <option key={r} value={r}>{r}</option>
+              {Object.keys(RARITY_COLORS).map((r) => (
+                <option key={r} value={r}>
+                  {r}
+                </option>
               ))}
             </select>
             <select
               value={marketSort}
-              onChange={e => setMarketSort(e.target.value)}
+              onChange={(e) => setMarketSort(e.target.value)}
               style={{
                 background: "rgba(255,255,255,.04)",
                 border: "1px solid rgba(255,255,255,.1)",
@@ -571,16 +669,33 @@ export default function StorePage() {
                       borderColor: `${RARITY_COLORS[l.itemRarity] || "#fff"}22`,
                     }}
                   >
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        marginBottom: 8,
+                      }}
+                    >
                       <span style={{ fontSize: 28 }}>{CATEGORY_ICONS[l.category] || "📦"}</span>
                       <span style={S.rarityBadge(l.itemRarity)}>{l.itemRarity}</span>
                     </div>
-                    <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 4 }}>{l.itemName}</div>
+                    <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 4 }}>
+                      {l.itemName}
+                    </div>
                     <div style={{ fontSize: 11, color: "rgba(255,255,255,.35)", marginBottom: 4 }}>
                       Seller: {l.sellerName || "Unknown"}
                     </div>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <span style={{ fontWeight: 700, color: GOLD, fontSize: 16 }}>{l.price} 💵</span>
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                      }}
+                    >
+                      <span style={{ fontWeight: 700, color: GOLD, fontSize: 16 }}>
+                        {l.price} 💵
+                      </span>
                       <span style={{ fontSize: 10, color: "rgba(255,255,255,.25)" }}>
                         {timeLeft(l.expiresAt)}
                       </span>
@@ -632,23 +747,33 @@ export default function StorePage() {
               maxWidth: 360,
               width: "90%",
             }}
-            onClick={e => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
           >
             <div style={{ fontWeight: 700, fontSize: 18, marginBottom: 16 }}>List for Sale</div>
             <div style={{ fontSize: 14, marginBottom: 4 }}>
-              {CATEGORY_ICONS[(listingItem.item || {}).category] || "📦"} {(listingItem.item || {}).name}
+              {CATEGORY_ICONS[(listingItem.item || {}).category] || "📦"}{" "}
+              {(listingItem.item || {}).name}
             </div>
             <div style={{ marginBottom: 12 }}>
-              <span style={S.rarityBadge((listingItem.item || {}).rarity || "COMMON")}>{(listingItem.item || {}).rarity}</span>
+              <span style={S.rarityBadge((listingItem.item || {}).rarity || "COMMON")}>
+                {(listingItem.item || {}).rarity}
+              </span>
             </div>
-            <label style={{ fontSize: 12, color: "rgba(255,255,255,.5)", display: "block", marginBottom: 4 }}>
+            <label
+              style={{
+                fontSize: 12,
+                color: "rgba(255,255,255,.5)",
+                display: "block",
+                marginBottom: 4,
+              }}
+            >
               Price (Paper)
             </label>
             <input
               type="number"
               min="1"
               value={listingPrice}
-              onChange={e => setListingPrice(e.target.value)}
+              onChange={(e) => setListingPrice(e.target.value)}
               placeholder="Enter price..."
               style={{
                 width: "100%",
@@ -671,14 +796,24 @@ export default function StorePage() {
                 Cancel
               </button>
               <button
-                style={S.btn(GOLD, !listingPrice || parseInt(listingPrice) <= 0 || busy === "listing")}
+                style={S.btn(
+                  GOLD,
+                  !listingPrice || parseInt(listingPrice) <= 0 || busy === "listing",
+                )}
                 onClick={listForSale}
                 disabled={!listingPrice || parseInt(listingPrice) <= 0 || busy === "listing"}
               >
                 {busy === "listing" ? "..." : "LIST"}
               </button>
             </div>
-            <div style={{ fontSize: 10, color: "rgba(255,255,255,.3)", marginTop: 10, textAlign: "center" }}>
+            <div
+              style={{
+                fontSize: 10,
+                color: "rgba(255,255,255,.3)",
+                marginTop: 10,
+                textAlign: "center",
+              }}
+            >
               Listing expires in 7 days
             </div>
           </div>

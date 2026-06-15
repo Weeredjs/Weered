@@ -2,7 +2,9 @@
 const WS_URL = "ws://127.0.0.1:4001";
 const ROOM = "abc123";
 
-function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
+function sleep(ms) {
+  return new Promise((r) => setTimeout(r, ms));
+}
 
 async function main() {
   // 1) dev-login
@@ -17,7 +19,10 @@ async function main() {
     process.exit(1);
   }
   const { token } = await r.json();
-  if (!token) { console.error("No token returned"); process.exit(1); }
+  if (!token) {
+    console.error("No token returned");
+    process.exit(1);
+  }
   console.log("Got token:", token.slice(0, 20) + "...");
 
   // 2) WS connect
@@ -25,7 +30,9 @@ async function main() {
 
   const timer = setTimeout(() => {
     console.error("Timed out waiting for auth:ok");
-    try { ws.close(); } catch {}
+    try {
+      ws.close();
+    } catch {}
     process.exit(2);
   }, 4000);
 
@@ -62,4 +69,7 @@ async function main() {
   ws.onclose = () => console.log("WS closed");
 }
 
-main().catch(err => { console.error(err); process.exit(9); });
+main().catch((err) => {
+  console.error(err);
+  process.exit(9);
+});

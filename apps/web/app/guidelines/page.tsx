@@ -3,10 +3,12 @@ import GuidelinesContent from "./GuidelinesContent";
 
 export const metadata: Metadata = {
   title: "Community Guidelines | Weered",
-  description: "Weered Community Guidelines. Rules for chat, video, screen sharing, forums, and all community interactions on the platform.",
+  description:
+    "Weered Community Guidelines. Rules for chat, video, screen sharing, forums, and all community interactions on the platform.",
   openGraph: {
     title: "Community Guidelines | Weered",
-    description: "What flies and what doesn't on Weered. Rules for chat, video, screen sharing, and community conduct.",
+    description:
+      "What flies and what doesn't on Weered. Rules for chat, video, screen sharing, and community conduct.",
     url: "https://weered.ca/guidelines",
   },
   twitter: {

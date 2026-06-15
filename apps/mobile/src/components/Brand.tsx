@@ -6,12 +6,12 @@ import { View, Text, Pressable } from "react-native";
 // before this file existed. Always reference fonts through these
 // constants so a typo on one screen doesn't quietly de-brand it.
 export const FONT = {
-  display: "PirataOne_400Regular",         // headlines, hero
-  ui: "BarlowCondensed_700Bold",           // default UI/body
-  uiBold: "BarlowCondensed_800ExtraBold",  // labels, stamps, tab bar
-  uiMed: "BarlowCondensed_500Medium",      // secondary UI
-  uiReg: "BarlowCondensed_400Regular",     // captions, paragraphs
-  numeric: "Rajdhani_700Bold",             // tabular numbers, stats
+  display: "PirataOne_400Regular", // headlines, hero
+  ui: "BarlowCondensed_700Bold", // default UI/body
+  uiBold: "BarlowCondensed_800ExtraBold", // labels, stamps, tab bar
+  uiMed: "BarlowCondensed_500Medium", // secondary UI
+  uiReg: "BarlowCondensed_400Regular", // captions, paragraphs
+  numeric: "Rajdhani_700Bold", // tabular numbers, stats
   numericReg: "Rajdhani_400Regular",
 } as const;
 
@@ -98,13 +98,14 @@ export function StreetCard({
   style?: any;
   className?: string;
 }) {
-  const borderColor = tone === "gold"
-    ? "rgba(245,183,0,0.35)"
-    : tone === "purple"
-    ? "rgba(88,0,229,0.45)"
-    : tone === "danger"
-    ? "rgba(239,68,68,0.45)"
-    : "rgba(255,255,255,0.08)";
+  const borderColor =
+    tone === "gold"
+      ? "rgba(245,183,0,0.35)"
+      : tone === "purple"
+        ? "rgba(88,0,229,0.45)"
+        : tone === "danger"
+          ? "rgba(239,68,68,0.45)"
+          : "rgba(255,255,255,0.08)";
   return (
     <View
       className={className}
@@ -146,13 +147,15 @@ export function StreetButton({
   size?: "sm" | "md" | "lg";
   style?: any;
 }) {
-  const bg = tone === "gold" ? "#f5b700"
-    : tone === "danger" ? "#ef4444"
-    : tone === "outline" ? "transparent"
-    : "#5800E5";
-  const txt = tone === "outline" ? "#5800E5"
-    : tone === "gold" ? "#1a1408"
-    : "#fff";
+  const bg =
+    tone === "gold"
+      ? "#f5b700"
+      : tone === "danger"
+        ? "#ef4444"
+        : tone === "outline"
+          ? "transparent"
+          : "#5800E5";
+  const txt = tone === "outline" ? "#5800E5" : tone === "gold" ? "#1a1408" : "#fff";
   const padY = size === "sm" ? 8 : size === "lg" ? 14 : 11;
   const padX = size === "sm" ? 12 : size === "lg" ? 20 : 16;
   const fontSize = size === "sm" ? 13 : size === "lg" ? 17 : 15;
@@ -206,15 +209,28 @@ export function Tag({
   tone?: "muted" | "gold" | "purple" | "green" | "red";
 }) {
   const colors = {
-    muted: { bg: "rgba(255,255,255,0.06)", text: "rgba(203,213,225,0.85)", border: "rgba(255,255,255,0.1)" },
-    gold:  { bg: "rgba(245,183,0,0.15)",   text: "#f5b700", border: "rgba(245,183,0,0.4)" },
-    purple:{ bg: "rgba(88,0,229,0.2)",     text: "#a78bfa", border: "rgba(88,0,229,0.5)" },
-    green: { bg: "rgba(34,197,94,0.15)",   text: "#22c55e", border: "rgba(34,197,94,0.4)" },
-    red:   { bg: "rgba(239,68,68,0.15)",   text: "#ef4444", border: "rgba(239,68,68,0.4)" },
+    muted: {
+      bg: "rgba(255,255,255,0.06)",
+      text: "rgba(203,213,225,0.85)",
+      border: "rgba(255,255,255,0.1)",
+    },
+    gold: { bg: "rgba(245,183,0,0.15)", text: "#f5b700", border: "rgba(245,183,0,0.4)" },
+    purple: { bg: "rgba(88,0,229,0.2)", text: "#a78bfa", border: "rgba(88,0,229,0.5)" },
+    green: { bg: "rgba(34,197,94,0.15)", text: "#22c55e", border: "rgba(34,197,94,0.4)" },
+    red: { bg: "rgba(239,68,68,0.15)", text: "#ef4444", border: "rgba(239,68,68,0.4)" },
   };
   const c = colors[tone];
   return (
-    <View style={{ backgroundColor: c.bg, borderWidth: 1, borderColor: c.border, borderRadius: 3, paddingHorizontal: 7, paddingVertical: 2 }}>
+    <View
+      style={{
+        backgroundColor: c.bg,
+        borderWidth: 1,
+        borderColor: c.border,
+        borderRadius: 3,
+        paddingHorizontal: 7,
+        paddingVertical: 2,
+      }}
+    >
       <Text style={{ color: c.text, fontFamily: FONT.uiBold, fontSize: 11, letterSpacing: 1 }}>
         {children}
       </Text>
@@ -239,15 +255,31 @@ export function Stat({
   size?: "sm" | "md" | "lg";
   align?: "left" | "center" | "right";
 }) {
-  const numColor = tone === "gold" ? "#f5b700"
-    : tone === "purple" ? "#a78bfa"
-    : tone === "green" ? "#22c55e"
-    : tone === "red" ? "#ef4444"
-    : "rgba(243,244,246,0.96)";
+  const numColor =
+    tone === "gold"
+      ? "#f5b700"
+      : tone === "purple"
+        ? "#a78bfa"
+        : tone === "green"
+          ? "#22c55e"
+          : tone === "red"
+            ? "#ef4444"
+            : "rgba(243,244,246,0.96)";
   const numSize = size === "sm" ? 18 : size === "lg" ? 32 : 24;
   return (
-    <View style={{ alignItems: align === "center" ? "center" : align === "right" ? "flex-end" : "flex-start" }}>
-      <Text style={{ fontFamily: FONT.numeric, fontSize: numSize, color: numColor, lineHeight: numSize * 1.05 }}>
+    <View
+      style={{
+        alignItems: align === "center" ? "center" : align === "right" ? "flex-end" : "flex-start",
+      }}
+    >
+      <Text
+        style={{
+          fontFamily: FONT.numeric,
+          fontSize: numSize,
+          color: numColor,
+          lineHeight: numSize * 1.05,
+        }}
+      >
         {value}
       </Text>
       <Text
@@ -269,10 +301,28 @@ export function Stat({
 /**
  * Section divider with the rule-and-stamp shape used between groups in lists.
  */
-export function SectionDivider({ label, tone = "muted" }: { label?: string; tone?: "muted" | "gold" | "purple" }) {
-  const accent = tone === "gold" ? "rgba(245,183,0,0.45)" : tone === "purple" ? "rgba(88,0,229,0.45)" : "rgba(255,255,255,0.1)";
+export function SectionDivider({
+  label,
+  tone = "muted",
+}: {
+  label?: string;
+  tone?: "muted" | "gold" | "purple";
+}) {
+  const accent =
+    tone === "gold"
+      ? "rgba(245,183,0,0.45)"
+      : tone === "purple"
+        ? "rgba(88,0,229,0.45)"
+        : "rgba(255,255,255,0.1)";
   return (
-    <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 16, marginVertical: 14 }}>
+    <View
+      style={{
+        flexDirection: "row",
+        alignItems: "center",
+        paddingHorizontal: 16,
+        marginVertical: 14,
+      }}
+    >
       <View style={{ flex: 1, height: 1, backgroundColor: accent }} />
       {label && (
         <Text

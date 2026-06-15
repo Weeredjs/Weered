@@ -10,7 +10,11 @@ export default function RequireAuth({ children }: { children: React.ReactNode })
   const pathname = usePathname();
   const [ok, setOk] = useState<boolean | null>(() => {
     if (typeof window === "undefined") return null;
-    try { return !!(localStorage.getItem(TOKEN_KEY) || ""); } catch { return null; }
+    try {
+      return !!(localStorage.getItem(TOKEN_KEY) || "");
+    } catch {
+      return null;
+    }
   });
 
   useEffect(() => {
@@ -30,11 +34,7 @@ export default function RequireAuth({ children }: { children: React.ReactNode })
   }, [router, pathname]);
 
   if (ok === null) {
-    return (
-      <div style={{ padding: 20, opacity: 0.7, fontSize: 13 }}>
-        Checking session...
-      </div>
-    );
+    return <div style={{ padding: 20, opacity: 0.7, fontSize: 13 }}>Checking session...</div>;
   }
   if (ok === false) return null;
 
