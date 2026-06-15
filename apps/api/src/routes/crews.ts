@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
+import { z } from "zod";
 
 type Opts = {
   authFromHeader: (h?: string) => { id: string; name: string } | null;
@@ -88,7 +89,9 @@ export default async function crewsRoutes(app: FastifyInstance, opts: Opts) {
     return reply.send({ crews });
   });
 
-  app.post("/crews", async (req, reply) => {
+  app.post("/crews", {
+  schema: { tags: ["crews"], body: z.object({ name: z.string().min(1) }).passthrough() },
+}, async (req, reply) => {
     const token = String((req.headers.authorization || "").replace("Bearer ", "").trim());
     const u = verifyToken(token);
     if (!u) return reply.code(401).send({ error: "Unauthorized" });
@@ -109,7 +112,9 @@ export default async function crewsRoutes(app: FastifyInstance, opts: Opts) {
     return reply.send({ ok: true, crew });
   });
 
-  app.post("/crews/:crewId/invite/:userId", async (req, reply) => {
+  app.post("/crews/:crewId/invite/:userId", {
+  schema: { tags: ["crews"], params: z.object({ crewId: z.string().min(1), userId: z.string().min(1) }) },
+}, async (req, reply) => {
     const token = String((req.headers.authorization || "").replace("Bearer ", "").trim());
     const u = verifyToken(token);
     if (!u) return reply.code(401).send({ error: "Unauthorized" });
@@ -130,7 +135,9 @@ export default async function crewsRoutes(app: FastifyInstance, opts: Opts) {
     return reply.send({ ok: true });
   });
 
-  app.post("/crews/:crewId/requests", async (req, reply) => {
+  app.post("/crews/:crewId/requests", {
+  schema: { tags: ["crews"], params: z.object({ crewId: z.string().min(1) }) },
+}, async (req, reply) => {
     const token = String((req.headers.authorization || "").replace("Bearer ", "").trim());
     const u = verifyToken(token);
     if (!u) return reply.code(401).send({ error: "Unauthorized" });
@@ -169,7 +176,9 @@ export default async function crewsRoutes(app: FastifyInstance, opts: Opts) {
     return reply.send({ ok: true, requests });
   });
 
-  app.post("/crews/:crewId/requests/:userId/:decision", async (req, reply) => {
+  app.post("/crews/:crewId/requests/:userId/:decision", {
+  schema: { tags: ["crews"], params: z.object({ crewId: z.string().min(1), userId: z.string().min(1), decision: z.string().min(1) }) },
+}, async (req, reply) => {
     const token = String((req.headers.authorization || "").replace("Bearer ", "").trim());
     const u = verifyToken(token);
     if (!u) return reply.code(401).send({ error: "Unauthorized" });
@@ -200,7 +209,9 @@ export default async function crewsRoutes(app: FastifyInstance, opts: Opts) {
     return reply.send({ ok: true });
   });
 
-  app.post("/crews/:crewId/members/:userId/role", async (req, reply) => {
+  app.post("/crews/:crewId/members/:userId/role", {
+  schema: { tags: ["crews"], params: z.object({ crewId: z.string().min(1), userId: z.string().min(1) }) },
+}, async (req, reply) => {
     const token = String((req.headers.authorization || "").replace("Bearer ", "").trim());
     const u = verifyToken(token);
     if (!u) return reply.code(401).send({ error: "Unauthorized" });
@@ -221,7 +232,9 @@ export default async function crewsRoutes(app: FastifyInstance, opts: Opts) {
     return reply.send({ ok: true, role: newRole });
   });
 
-  app.delete("/crews/:crewId/members/:userId", async (req, reply) => {
+  app.delete("/crews/:crewId/members/:userId", {
+  schema: { tags: ["crews"], params: z.object({ crewId: z.string().min(1), userId: z.string().min(1) }) },
+}, async (req, reply) => {
     const token = String((req.headers.authorization || "").replace("Bearer ", "").trim());
     const u = verifyToken(token);
     if (!u) return reply.code(401).send({ error: "Unauthorized" });
@@ -237,7 +250,9 @@ export default async function crewsRoutes(app: FastifyInstance, opts: Opts) {
     return reply.send({ ok: true });
   });
 
-  app.delete("/crews/:crewId", async (req, reply) => {
+  app.delete("/crews/:crewId", {
+  schema: { tags: ["crews"], params: z.object({ crewId: z.string().min(1) }) },
+}, async (req, reply) => {
     const token = String((req.headers.authorization || "").replace("Bearer ", "").trim());
     const u = verifyToken(token);
     if (!u) return reply.code(401).send({ error: "Unauthorized" });
@@ -285,7 +300,9 @@ export default async function crewsRoutes(app: FastifyInstance, opts: Opts) {
     });
   });
 
-  app.patch("/crews/:crewId", async (req, reply) => {
+  app.patch("/crews/:crewId", {
+  schema: { tags: ["crews"], params: z.object({ crewId: z.string().min(1) }) },
+}, async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const { crewId } = req.params as any;

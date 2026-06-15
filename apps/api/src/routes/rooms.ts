@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
+import { z } from "zod";
 import { LobbyRole, RoomRole } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
@@ -60,7 +61,9 @@ const ROOM_CREATE_MAX_PER_HR  = 8;
 const ROOM_USER_ACTIVE_CAP    = 25;
 const ROOM_LOBBY_CEILING      = 500;
 
-app.post("/rooms", async (req, reply) => {
+app.post("/rooms", {
+  schema: { tags: ["rooms"], body: z.object({ name: z.string().min(1), lobbyId: z.string().min(1) }).passthrough() },
+}, async (req, reply) => {
   const u = authFromHeader((req as any).headers?.authorization);
   if (!u) return reply.code(401).send({ ok: false, error: "unauthorized", message: "Sign in to create rooms." });
   const body: any = (req as any).body || {};
@@ -216,7 +219,9 @@ app.get("/rooms/:roomId", async (req, reply) => {
   });
 });
 
-app.patch("/rooms/:roomId", async (req, reply) => {
+app.patch("/rooms/:roomId", {
+  schema: { tags: ["rooms"], params: z.object({ roomId: z.string().min(1) }) },
+}, async (req, reply) => {
   const token = String((req.headers.authorization || "").replace("Bearer ", "").trim());
   const u = verifyToken(token);
   if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -309,7 +314,9 @@ app.get("/rooms/:roomId/npcs", async (req, reply) => {
   return reply.send({ ok: true, npcs });
 });
 
-app.post("/rooms/:roomId/npcs", async (req, reply) => {
+app.post("/rooms/:roomId/npcs", {
+  schema: { tags: ["rooms"], params: z.object({ roomId: z.string().min(1) }) },
+}, async (req, reply) => {
   const u = authFromHeader((req as any).headers?.authorization);
   if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
   const roomId = String((req as any).params?.roomId || "");
@@ -348,7 +355,9 @@ app.post("/rooms/:roomId/npcs", async (req, reply) => {
   return reply.send({ ok: true, npc });
 });
 
-app.put("/rooms/:roomId/npcs/:npcId", async (req, reply) => {
+app.put("/rooms/:roomId/npcs/:npcId", {
+  schema: { tags: ["rooms"], params: z.object({ roomId: z.string().min(1), npcId: z.string().min(1) }) },
+}, async (req, reply) => {
   const u = authFromHeader((req as any).headers?.authorization);
   if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
   const npcId = String((req as any).params?.npcId || "");
@@ -361,7 +370,9 @@ app.put("/rooms/:roomId/npcs/:npcId", async (req, reply) => {
   return reply.send({ ok: true, npc });
 });
 
-app.delete("/rooms/:roomId/npcs/:npcId", async (req, reply) => {
+app.delete("/rooms/:roomId/npcs/:npcId", {
+  schema: { tags: ["rooms"], params: z.object({ roomId: z.string().min(1), npcId: z.string().min(1) }) },
+}, async (req, reply) => {
   const u = authFromHeader((req as any).headers?.authorization);
   if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
   const npcId = String((req as any).params?.npcId || "");
@@ -378,7 +389,9 @@ app.get("/rooms/:roomId/npcs/:npcId/messages", async (req, reply) => {
 const NPC_DAILY_CAP_PER_USER = 100;
 const npcCooldowns = new Map<string, number>();
 const npcDailyCounts = new Map<string, { date: string; n: number }>();
-app.post("/rooms/:roomId/npcs/:npcId/messages", async (req, reply) => {
+app.post("/rooms/:roomId/npcs/:npcId/messages", {
+  schema: { tags: ["rooms"], params: z.object({ roomId: z.string().min(1), npcId: z.string().min(1) }) },
+}, async (req, reply) => {
   const u = authFromHeader((req as any).headers?.authorization);
   if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
 

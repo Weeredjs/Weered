@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { randomUUID } from "node:crypto";
 import { prisma } from "../lib/prisma";
+import { z } from "zod";
 import { LobbyRole } from "@prisma/client";
 
 type Opts = {
@@ -64,7 +65,9 @@ app.get("/lobbies/:lobbyId/rooms", async (req, reply) => {
   return { ok: true, rooms: out };
 });
 
-app.post("/lobbies/:lobbyId/claim", async (req, reply) => {
+app.post("/lobbies/:lobbyId/claim", {
+  schema: { tags: ["lobbies"], params: z.object({ lobbyId: z.string().min(1) }) },
+}, async (req, reply) => {
   const u = authFromHeader((req as any).headers?.authorization);
   if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
   const lobbyId = String((req as any).params?.lobbyId || "");
@@ -231,7 +234,9 @@ app.get("/lobbies/:id", async (req, reply) => {
   });
 });
 
-app.post("/lobbies/:id/join", async (req, reply) => {
+app.post("/lobbies/:id/join", {
+  schema: { tags: ["lobbies"], params: z.object({ id: z.string().min(1) }) },
+}, async (req, reply) => {
   const lobbyId = (req.params as any).id as string;
   const u = authFromHeader((req as any).headers?.authorization);
   if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -304,7 +309,9 @@ app.post("/lobbies/:id/join", async (req, reply) => {
   return reply.send({ ok: true, role: member.role, roleLevel: member.roleLevel });
 });
 
-app.post("/lobbies/:id/leave", async (req, reply) => {
+app.post("/lobbies/:id/leave", {
+  schema: { tags: ["lobbies"], params: z.object({ id: z.string().min(1) }) },
+}, async (req, reply) => {
   const lobbyId = (req.params as any).id as string;
   const u = authFromHeader((req as any).headers?.authorization);
   if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
@@ -345,7 +352,9 @@ app.get("/lobbies/:id/admin/join-requests", async (req, reply) => {
   return reply.send({ ok: true, requests });
 });
 
-app.post("/lobbies/:id/admin/join-requests/:reqId/approve", async (req, reply) => {
+app.post("/lobbies/:id/admin/join-requests/:reqId/approve", {
+  schema: { tags: ["lobbies"], params: z.object({ id: z.string().min(1), reqId: z.string().min(1) }) },
+}, async (req, reply) => {
   const ctx = await lobbyAdminAccess(req, reply, 3);
   if (!ctx) return;
   const reqId = (req.params as any).reqId as string;
@@ -368,7 +377,9 @@ app.post("/lobbies/:id/admin/join-requests/:reqId/approve", async (req, reply) =
   return reply.send({ ok: true });
 });
 
-app.post("/lobbies/:id/admin/join-requests/:reqId/deny", async (req, reply) => {
+app.post("/lobbies/:id/admin/join-requests/:reqId/deny", {
+  schema: { tags: ["lobbies"], params: z.object({ id: z.string().min(1), reqId: z.string().min(1) }) },
+}, async (req, reply) => {
   const ctx = await lobbyAdminAccess(req, reply, 3);
   if (!ctx) return;
   const reqId = (req.params as any).reqId as string;
@@ -389,7 +400,9 @@ app.post("/lobbies/:id/admin/join-requests/:reqId/deny", async (req, reply) => {
   return reply.send({ ok: true });
 });
 
-app.patch("/lobbies/:id/admin/join-mode", async (req, reply) => {
+app.patch("/lobbies/:id/admin/join-mode", {
+  schema: { tags: ["lobbies"], params: z.object({ id: z.string().min(1) }) },
+}, async (req, reply) => {
   const ctx = await lobbyAdminAccess(req, reply, 4);
   if (!ctx) return;
   const body = (req.body || {}) as any;
@@ -414,7 +427,9 @@ app.patch("/lobbies/:id/admin/join-mode", async (req, reply) => {
   return reply.send({ ok: true, joinMode: mode });
 });
 
-app.post("/lobbies", async (req, reply) => {
+app.post("/lobbies", {
+  schema: { tags: ["lobbies"], body: z.object({ id: z.string().min(1), name: z.string().min(1) }).passthrough() },
+}, async (req, reply) => {
   const token = String((req.headers.authorization || "").replace("Bearer ", "").trim());
   const u = verifyToken(token);
   if (!u) return reply.code(401).send({ error: "Unauthorized" });
@@ -606,7 +621,9 @@ app.get("/lobbies/:id/admin", async (req, reply) => {
   });
 });
 
-app.patch("/lobbies/:id/admin/branding", async (req, reply) => {
+app.patch("/lobbies/:id/admin/branding", {
+  schema: { tags: ["lobbies"], params: z.object({ id: z.string().min(1) }) },
+}, async (req, reply) => {
   const ctx = await lobbyAdminAccess(req, reply, 4);
   if (!ctx) return;
   if (!hasLobbyPerm(ctx.member?.roleLevel ?? (ctx.overrideRole ? 5 : 1), "edit_branding", ctx.overrideRole)) {
@@ -631,7 +648,9 @@ app.patch("/lobbies/:id/admin/branding", async (req, reply) => {
   return reply.send({ ok: true, updated: Object.keys(data) });
 });
 
-app.patch("/lobbies/:id/admin/perks", async (req, reply) => {
+app.patch("/lobbies/:id/admin/perks", {
+  schema: { tags: ["lobbies"], params: z.object({ id: z.string().min(1) }) },
+}, async (req, reply) => {
   const ctx = await lobbyAdminAccess(req, reply, 4);
   if (!ctx) return;
   if (!hasLobbyPerm(ctx.member?.roleLevel ?? (ctx.overrideRole ? 5 : 1), "edit_branding", ctx.overrideRole)) {
@@ -653,7 +672,9 @@ app.patch("/lobbies/:id/admin/perks", async (req, reply) => {
   return reply.send({ ok: true, memberPerks: perks });
 });
 
-app.patch("/lobbies/:id/admin/moderation", async (req, reply) => {
+app.patch("/lobbies/:id/admin/moderation", {
+  schema: { tags: ["lobbies"], params: z.object({ id: z.string().min(1) }) },
+}, async (req, reply) => {
   const ctx = await lobbyAdminAccess(req, reply, 4);
   if (!ctx) return;
   if (!hasLobbyPerm(ctx.member?.roleLevel ?? (ctx.overrideRole ? 5 : 1), "edit_branding", ctx.overrideRole)) {
@@ -692,7 +713,9 @@ app.patch("/lobbies/:id/admin/moderation", async (req, reply) => {
   return reply.send({ ok: true, ...data });
 });
 
-app.patch("/lobbies/:id/admin/modules", async (req, reply) => {
+app.patch("/lobbies/:id/admin/modules", {
+  schema: { tags: ["lobbies"], params: z.object({ id: z.string().min(1) }) },
+}, async (req, reply) => {
   const ctx = await lobbyAdminAccess(req, reply, 4);
   if (!ctx) return;
   if (!hasLobbyPerm(ctx.member?.roleLevel ?? (ctx.overrideRole ? 5 : 1), "edit_branding", ctx.overrideRole)) {
@@ -712,7 +735,9 @@ app.patch("/lobbies/:id/admin/modules", async (req, reply) => {
   return reply.send({ ok: true, enabledModules });
 });
 
-app.patch("/lobbies/:id/admin/roles", async (req, reply) => {
+app.patch("/lobbies/:id/admin/roles", {
+  schema: { tags: ["lobbies"], params: z.object({ id: z.string().min(1) }) },
+}, async (req, reply) => {
   const ctx = await lobbyAdminAccess(req, reply, 5);
   if (!ctx) return;
   if (!hasLobbyPerm(ctx.member?.roleLevel ?? (ctx.overrideRole ? 5 : 1), "manage_roles", ctx.overrideRole)) {
@@ -744,7 +769,9 @@ app.get("/lobbies/:id/admin/members", async (req, reply) => {
   return reply.send({ ok: true, members });
 });
 
-app.post("/lobbies/:id/admin/members/:userId/role", async (req, reply) => {
+app.post("/lobbies/:id/admin/members/:userId/role", {
+  schema: { tags: ["lobbies"], params: z.object({ id: z.string().min(1), userId: z.string().min(1) }) },
+}, async (req, reply) => {
   const ctx = await lobbyAdminAccess(req, reply, 4);
   if (!ctx) return;
   const myLevel = ctx.overrideRole ? 5 : (ctx.member?.roleLevel ?? 1);
@@ -772,7 +799,9 @@ app.post("/lobbies/:id/admin/members/:userId/role", async (req, reply) => {
   return reply.send({ ok: true, userId: targetUserId, roleLevel: newLevel });
 });
 
-app.post("/lobbies/:id/admin/members/:userId/kick", async (req, reply) => {
+app.post("/lobbies/:id/admin/members/:userId/kick", {
+  schema: { tags: ["lobbies"], params: z.object({ id: z.string().min(1), userId: z.string().min(1) }) },
+}, async (req, reply) => {
   const ctx = await lobbyAdminAccess(req, reply, 2);
   if (!ctx) return;
   const myLevel = ctx.overrideRole ? 5 : (ctx.member?.roleLevel ?? 1);
@@ -790,7 +819,9 @@ app.post("/lobbies/:id/admin/members/:userId/kick", async (req, reply) => {
   return reply.send({ ok: true });
 });
 
-app.post("/lobbies/:id/admin/members/:userId/ban", async (req, reply) => {
+app.post("/lobbies/:id/admin/members/:userId/ban", {
+  schema: { tags: ["lobbies"], params: z.object({ id: z.string().min(1), userId: z.string().min(1) }) },
+}, async (req, reply) => {
   const ctx = await lobbyAdminAccess(req, reply, 3);
   if (!ctx) return;
   const myLevel = ctx.overrideRole ? 5 : (ctx.member?.roleLevel ?? 1);
@@ -810,7 +841,9 @@ app.post("/lobbies/:id/admin/members/:userId/ban", async (req, reply) => {
   return reply.send({ ok: true });
 });
 
-app.delete("/lobbies/:id/admin/members/:userId/ban", async (req, reply) => {
+app.delete("/lobbies/:id/admin/members/:userId/ban", {
+  schema: { tags: ["lobbies"], params: z.object({ id: z.string().min(1), userId: z.string().min(1) }) },
+}, async (req, reply) => {
   const ctx = await lobbyAdminAccess(req, reply, 3);
   if (!ctx) return;
   const myLevel = ctx.overrideRole ? 5 : (ctx.member?.roleLevel ?? 1);
@@ -823,7 +856,9 @@ app.delete("/lobbies/:id/admin/members/:userId/ban", async (req, reply) => {
   return reply.send({ ok: true });
 });
 
-app.post("/lobbies/:id/admin/rooms/:roomId/pin", async (req, reply) => {
+app.post("/lobbies/:id/admin/rooms/:roomId/pin", {
+  schema: { tags: ["lobbies"], params: z.object({ id: z.string().min(1), roomId: z.string().min(1) }) },
+}, async (req, reply) => {
   const ctx = await lobbyAdminAccess(req, reply, 3);
   if (!ctx) return;
   const myLevel = ctx.overrideRole ? 5 : (ctx.member?.roleLevel ?? 1);
@@ -852,7 +887,9 @@ app.post("/lobbies/:id/admin/rooms/:roomId/pin", async (req, reply) => {
   return reply.send({ ok: true, roomId, pinned });
 });
 
-app.post("/lobbies/:id/admin/rooms/:roomId/event", async (req, reply) => {
+app.post("/lobbies/:id/admin/rooms/:roomId/event", {
+  schema: { tags: ["lobbies"], params: z.object({ id: z.string().min(1), roomId: z.string().min(1) }) },
+}, async (req, reply) => {
   const ctx = await lobbyAdminAccess(req, reply, 3);
   if (!ctx) return;
   const myLevel = ctx.overrideRole ? 5 : (ctx.member?.roleLevel ?? 1);
@@ -881,7 +918,9 @@ app.post("/lobbies/:id/admin/rooms/:roomId/event", async (req, reply) => {
   return reply.send({ ok: true, roomId, isEvent });
 });
 
-app.delete("/lobbies/:id/admin/rooms/:roomId", async (req, reply) => {
+app.delete("/lobbies/:id/admin/rooms/:roomId", {
+  schema: { tags: ["lobbies"], params: z.object({ id: z.string().min(1), roomId: z.string().min(1) }) },
+}, async (req, reply) => {
   const ctx = await lobbyAdminAccess(req, reply, 3);
   if (!ctx) return;
   const myLevel = ctx.overrideRole ? 5 : (ctx.member?.roleLevel ?? 1);
