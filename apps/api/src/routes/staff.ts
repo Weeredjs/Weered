@@ -1,7 +1,7 @@
 import { log } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
-import { GlobalRole } from "@prisma/client";
+import { GlobalRole, ReportStatus, SubTier } from "@prisma/client";
 import { randomUUID } from "crypto";
 
 type Opts = {
@@ -457,7 +457,7 @@ export default async function staffRoutes(app: FastifyInstance, opts: Opts) {
     if (room) room.isEvent = isEvent;
 
     try {
-      await (prisma as any).room.update({ where: { id: roomId }, data: { isEvent } });
+      await prisma.room.update({ where: { id: roomId }, data: { isEvent } });
     } catch (e) {
       log.error("[staff event] db update failed", e);
     }
@@ -505,7 +505,7 @@ export default async function staffRoutes(app: FastifyInstance, opts: Opts) {
     const statusFilter = String((req.query as any)?.status || "OPEN").toUpperCase();
     const where: any = {};
     if (statusFilter !== "ALL") where.status = statusFilter;
-    const rows = await (prisma as any).report.findMany({
+    const rows = await prisma.report.findMany({
       where,
       orderBy: { createdAt: "desc" },
       take: 100,
@@ -546,9 +546,9 @@ export default async function staffRoutes(app: FastifyInstance, opts: Opts) {
     if (!["REVIEWED", "ACTIONED", "DISMISSED"].includes(status))
       return reply.code(400).send({ ok: false, error: "invalid_status" });
     try {
-      await (prisma as any).report.update({
+      await prisma.report.update({
         where: { id },
-        data: { status, reviewedAt: new Date(), reviewedById: u.id },
+        data: { status: status as ReportStatus, reviewedAt: new Date(), reviewedById: u.id },
       });
       await globalAudit(u.id, u.name, `report_${status.toLowerCase()}`, id);
       return reply.send({ ok: true });
@@ -562,7 +562,7 @@ export default async function staffRoutes(app: FastifyInstance, opts: Opts) {
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const role = await getGlobalRole(u.id);
     if (!canAccessStaff(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
-    const list = await (prisma as any).reservedName.findMany({ orderBy: { name: "asc" } });
+    const list = await prisma.reservedName.findMany({ orderBy: { name: "asc" } });
     return reply.send({ ok: true, reserved: list });
   });
 
@@ -580,7 +580,7 @@ export default async function staffRoutes(app: FastifyInstance, opts: Opts) {
     if (!name || name.length < 2)
       return reply.code(400).send({ ok: false, error: "Name too short (min 2 chars)" });
     try {
-      const entry = await (prisma as any).reservedName.create({
+      const entry = await prisma.reservedName.create({
         data: { name, scope, reason, addedBy: u.id },
       });
       await globalAudit(u.id, u.name, "reserved_name_add", undefined, undefined, {
@@ -603,7 +603,7 @@ export default async function staffRoutes(app: FastifyInstance, opts: Opts) {
     if (!canAssignRoles(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
     const id = String((req as any).params?.id || "");
     try {
-      const deleted = await (prisma as any).reservedName.delete({ where: { id } });
+      const deleted = await prisma.reservedName.delete({ where: { id } });
       await globalAudit(u.id, u.name, "reserved_name_remove", undefined, undefined, {
         name: deleted.name,
       });
@@ -679,7 +679,7 @@ export default async function staffRoutes(app: FastifyInstance, opts: Opts) {
     const lobbyId = String(body.lobbyId || "").trim();
 
     if (lobbyId) {
-      const lobby = await (prisma as any).lobby.findUnique({
+      const lobby = await prisma.lobby.findUnique({
         where: { id: lobbyId },
         select: { id: true, name: true },
       });
@@ -710,7 +710,7 @@ export default async function staffRoutes(app: FastifyInstance, opts: Opts) {
     const role = await getGlobalRole(u.id);
     if (!canAccessStaff(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
 
-    const list = await (prisma as any).lobby.findMany({
+    const list = await prisma.lobby.findMany({
       select: {
         id: true,
         name: true,
@@ -745,7 +745,7 @@ export default async function staffRoutes(app: FastifyInstance, opts: Opts) {
     if (!canAccessStaff(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
     const lobbyId = (req.params as any).id;
     const { pinned } = req.body as any;
-    await (prisma as any).lobby.update({
+    await prisma.lobby.update({
       where: { id: lobbyId },
       data: { pinned: Boolean(pinned) },
     });
@@ -759,7 +759,7 @@ export default async function staffRoutes(app: FastifyInstance, opts: Opts) {
     if (!canAccessStaff(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
     const lobbyId = String((req.params as any).id || "");
     try {
-      await (prisma as any).lobby.update({
+      await prisma.lobby.update({
         where: { id: lobbyId },
         data: { logoUrl: null, bannerUrl: null },
       });
@@ -797,7 +797,7 @@ export default async function staffRoutes(app: FastifyInstance, opts: Opts) {
     const role = await getGlobalRole(u.id);
     if (!canAccessStaff(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
 
-    const posts = await (prisma as any).staffPost.findMany({
+    const posts = await prisma.staffPost.findMany({
       orderBy: [{ pinned: "desc" }, { createdAt: "desc" }],
       take: 100,
     });
@@ -815,7 +815,7 @@ export default async function staffRoutes(app: FastifyInstance, opts: Opts) {
     if (!text || text.length > 2000)
       return reply.code(400).send({ ok: false, error: "body required (max 2000 chars)" });
 
-    const post = await (prisma as any).staffPost.create({
+    const post = await prisma.staffPost.create({
       data: { authorId: u.id, authorName: u.name, body: text, pinned: !!body.pinned },
     });
     return reply.send({ ok: true, post });
@@ -828,10 +828,10 @@ export default async function staffRoutes(app: FastifyInstance, opts: Opts) {
     if (!canAccessStaff(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
 
     const postId = (req as any).params.id;
-    const post = await (prisma as any).staffPost.findUnique({ where: { id: postId } });
+    const post = await prisma.staffPost.findUnique({ where: { id: postId } });
     if (!post) return reply.code(404).send({ ok: false, error: "not_found" });
 
-    const updated = await (prisma as any).staffPost.update({
+    const updated = await prisma.staffPost.update({
       where: { id: postId },
       data: { pinned: !post.pinned },
     });
@@ -846,7 +846,7 @@ export default async function staffRoutes(app: FastifyInstance, opts: Opts) {
 
     const postId = (req as any).params.id;
     try {
-      await (prisma as any).staffPost.delete({ where: { id: postId } });
+      await prisma.staffPost.delete({ where: { id: postId } });
     } catch {
       return reply.code(404).send({ ok: false, error: "not_found" });
     }
@@ -871,12 +871,12 @@ export default async function staffRoutes(app: FastifyInstance, opts: Opts) {
     await prisma.user.update({ where: { id: targetId }, data: { tier: userTier } });
 
     const subTier = tier === "INNOCENT" ? "FREE" : tier;
-    await (prisma as any).subscription.upsert({
+    await prisma.subscription.upsert({
       where: { userId: targetId },
-      update: { tier: subTier, status: tier === "INNOCENT" ? "inactive" : "active" },
+      update: { tier: subTier as SubTier, status: tier === "INNOCENT" ? "inactive" : "active" },
       create: {
         userId: targetId,
-        tier: subTier,
+        tier: subTier as SubTier,
         status: tier === "INNOCENT" ? "inactive" : "active",
       },
     });
@@ -902,7 +902,7 @@ export default async function staffRoutes(app: FastifyInstance, opts: Opts) {
         { author: { contains: search, mode: "insensitive" } },
       ];
     }
-    const mods = await (prisma as any).mod.findMany({
+    const mods = await prisma.mod.findMany({
       where,
       orderBy: showExcluded ? { excludedAt: "desc" } : { endorsements: "desc" },
       take: 200,
@@ -933,10 +933,10 @@ export default async function staffRoutes(app: FastifyInstance, opts: Opts) {
     if (typeof b.excluded !== "boolean") {
       return reply.code(400).send({ ok: false, error: "missing_excluded" });
     }
-    const existing = await (prisma as any).mod.findUnique({ where: { id } });
+    const existing = await prisma.mod.findUnique({ where: { id } });
     if (!existing) return reply.code(404).send({ ok: false, error: "not_found" });
     const note = typeof b.note === "string" ? String(b.note).slice(0, 500) : null;
-    const updated = await (prisma as any).mod.update({
+    const updated = await prisma.mod.update({
       where: { id },
       data: {
         excluded: b.excluded,

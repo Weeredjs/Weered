@@ -1,3 +1,4 @@
+import { VoiceRoomMode } from "@prisma/client";
 import { prisma } from "../lib/prisma";
 
 // Voice WS handlers extracted from the index.ts main message handler:
@@ -49,8 +50,8 @@ export function handleVoice(ws: any, msg: any, opts: Opts): void {
       room.voiceSpeakers = new Set();
       for (const uid of dropped) pushVoicePermission(room, uid);
     }
-    (prisma as any).room
-      .update({ where: { id: roomId }, data: { voiceMode: next } })
+    prisma.room
+      .update({ where: { id: roomId }, data: { voiceMode: next as VoiceRoomMode } })
       .catch(() => {});
     broadcastVoiceState(room);
     return;

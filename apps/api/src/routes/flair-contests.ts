@@ -1,3 +1,4 @@
+import { FlairKind } from "@prisma/client";
 import { log } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 import { isStaffUser as sharedIsStaffUser } from "../lib/isStaffUser";
@@ -140,7 +141,7 @@ export default async function flairContestsRoutes(app: FastifyInstance, opts: Op
     if (lobbyId) where.lobbyId = lobbyId;
     if (statusFilter && statusFilter.length > 0) where.status = { in: statusFilter };
 
-    const contests = await (prisma as any).flairContest.findMany({
+    const contests = await prisma.flairContest.findMany({
       where,
       include: { _count: { select: { submissions: true } } },
       orderBy: [{ status: "asc" }, { voteClosesAt: "desc" }],
@@ -164,12 +165,12 @@ export default async function flairContestsRoutes(app: FastifyInstance, opts: Op
     const myVoteByContest: Record<string, any> = {};
     if (u && contests.length > 0) {
       const ids = contests.map((c: any) => c.id);
-      const subs = await (prisma as any).flairSubmission.findMany({
+      const subs = await prisma.flairSubmission.findMany({
         where: { contestId: { in: ids }, userId: u.id },
         select: { id: true, contestId: true, imageUrl: true, caption: true, voteCount: true },
       });
       for (const s of subs) mySubByContest[s.contestId] = s;
-      const votes = await (prisma as any).flairVote.findMany({
+      const votes = await prisma.flairVote.findMany({
         where: { contestId: { in: ids }, voterId: u.id },
         select: { id: true, contestId: true, submissionId: true },
       });
@@ -187,10 +188,10 @@ export default async function flairContestsRoutes(app: FastifyInstance, opts: Op
 
   app.get("/flair-contests/:id", async (req, reply) => {
     const id = String((req as any).params?.id || "");
-    const c = await (prisma as any).flairContest.findUnique({ where: { id } });
+    const c = await prisma.flairContest.findUnique({ where: { id } });
     if (!c) return reply.code(404).send({ ok: false, error: "not_found" });
 
-    const submissions = await (prisma as any).flairSubmission.findMany({
+    const submissions = await prisma.flairSubmission.findMany({
       where: { contestId: id },
       orderBy:
         c.status === "COMPLETED"
@@ -213,7 +214,7 @@ export default async function flairContestsRoutes(app: FastifyInstance, opts: Op
     let myVote: any = null;
     let mySubmission: any = null;
     if (u) {
-      myVote = await (prisma as any).flairVote
+      myVote = await prisma.flairVote
         .findUnique({
           where: { contestId_voterId: { contestId: id, voterId: u.id } },
         })
@@ -223,7 +224,7 @@ export default async function flairContestsRoutes(app: FastifyInstance, opts: Op
 
     let rewardFlair: any = null;
     if (c.rewardFlairId) {
-      rewardFlair = await (prisma as any).flairItem.findUnique({
+      rewardFlair = await prisma.flairItem.findUnique({
         where: { id: c.rewardFlairId },
         select: {
           id: true,
@@ -289,13 +290,13 @@ export default async function flairContestsRoutes(app: FastifyInstance, opts: Op
       return reply.code(400).send({ ok: false, error: "bad_date_order" });
     }
 
-    const contest = await (prisma as any).flairContest.create({
+    const contest = await prisma.flairContest.create({
       data: {
         lobbyId,
         title,
         description,
         theme,
-        kind,
+        kind: kind as FlairKind,
         status: "SUBMISSIONS",
         submissionOpensAt,
         submissionClosesAt,
@@ -318,7 +319,7 @@ export default async function flairContestsRoutes(app: FastifyInstance, opts: Op
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const id = String((req as any).params?.id || "");
-    const c = await (prisma as any).flairContest.findUnique({ where: { id } });
+    const c = await prisma.flairContest.findUnique({ where: { id } });
     if (!c) return reply.code(404).send({ ok: false, error: "not_found" });
     if (!(await canManageContest(u.id, c)))
       return reply.code(403).send({ ok: false, error: "forbidden" });
@@ -349,7 +350,7 @@ export default async function flairContestsRoutes(app: FastifyInstance, opts: Op
       new Date(merged.voteOpensAt) < new Date(merged.voteClosesAt);
     if (!ordered) return reply.code(400).send({ ok: false, error: "bad_date_order" });
 
-    const updated = await (prisma as any).flairContest.update({ where: { id }, data });
+    const updated = await prisma.flairContest.update({ where: { id }, data });
     return reply.send({ ok: true, contest: updated });
   });
 
@@ -357,7 +358,7 @@ export default async function flairContestsRoutes(app: FastifyInstance, opts: Op
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const id = String((req as any).params?.id || "");
-    const c = await (prisma as any).flairContest.findUnique({
+    const c = await prisma.flairContest.findUnique({
       where: { id },
       include: { _count: { select: { submissions: true } } },
     });
@@ -366,13 +367,13 @@ export default async function flairContestsRoutes(app: FastifyInstance, opts: Op
       return reply.code(403).send({ ok: false, error: "forbidden" });
 
     if (c._count.submissions > 0) {
-      const updated = await (prisma as any).flairContest.update({
+      const updated = await prisma.flairContest.update({
         where: { id },
         data: { status: "CANCELED" },
       });
       return reply.send({ ok: true, canceled: true, contest: updated });
     }
-    await (prisma as any).flairContest.delete({ where: { id } });
+    await prisma.flairContest.delete({ where: { id } });
     return reply.send({ ok: true, deleted: true });
   });
 
@@ -380,7 +381,7 @@ export default async function flairContestsRoutes(app: FastifyInstance, opts: Op
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const id = String((req as any).params?.id || "");
-    const c = await (prisma as any).flairContest.findUnique({ where: { id } });
+    const c = await prisma.flairContest.findUnique({ where: { id } });
     if (!c) return reply.code(404).send({ ok: false, error: "not_found" });
     if (c.status !== "SUBMISSIONS")
       return reply.code(400).send({ ok: false, error: "submissions_closed" });
@@ -410,7 +411,7 @@ export default async function flairContestsRoutes(app: FastifyInstance, opts: Op
       return reply.code(400).send({ ok: false, error: "image_processing_failed" });
     }
 
-    const existing = await (prisma as any).flairSubmission.findUnique({
+    const existing = await prisma.flairSubmission.findUnique({
       where: { contestId_userId: { contestId: id, userId: u.id } },
     });
 
@@ -422,12 +423,12 @@ export default async function flairContestsRoutes(app: FastifyInstance, opts: Op
           unlinkSync(join(FLAIR_DIR, oldName));
         } catch {}
       }
-      submission = await (prisma as any).flairSubmission.update({
+      submission = await prisma.flairSubmission.update({
         where: { id: existing.id },
         data: { imageUrl: processed.url, caption },
       });
     } else {
-      submission = await (prisma as any).flairSubmission.create({
+      submission = await prisma.flairSubmission.create({
         data: { contestId: id, userId: u.id, imageUrl: processed.url, caption },
       });
     }
@@ -451,11 +452,11 @@ export default async function flairContestsRoutes(app: FastifyInstance, opts: Op
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const id = String((req as any).params?.id || "");
     const sid = String((req as any).params?.submissionId || "");
-    const c = await (prisma as any).flairContest.findUnique({ where: { id } });
+    const c = await prisma.flairContest.findUnique({ where: { id } });
     if (!c) return reply.code(404).send({ ok: false, error: "not_found" });
     if (c.status !== "SUBMISSIONS")
       return reply.code(400).send({ ok: false, error: "submissions_closed" });
-    const s = await (prisma as any).flairSubmission.findUnique({ where: { id: sid } });
+    const s = await prisma.flairSubmission.findUnique({ where: { id: sid } });
     if (!s || s.contestId !== id) return reply.code(404).send({ ok: false, error: "not_found" });
     const isAuthor = s.userId === u.id;
     const isManager = await canManageContest(u.id, c);
@@ -467,7 +468,7 @@ export default async function flairContestsRoutes(app: FastifyInstance, opts: Op
         unlinkSync(join(FLAIR_DIR, oldName));
       } catch {}
     }
-    await (prisma as any).flairSubmission.delete({ where: { id: sid } });
+    await prisma.flairSubmission.delete({ where: { id: sid } });
     return reply.send({ ok: true });
   });
 
@@ -475,19 +476,19 @@ export default async function flairContestsRoutes(app: FastifyInstance, opts: Op
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const id = String((req as any).params?.id || "");
-    const c = await (prisma as any).flairContest.findUnique({ where: { id } });
+    const c = await prisma.flairContest.findUnique({ where: { id } });
     if (!c) return reply.code(404).send({ ok: false, error: "not_found" });
     if (c.status !== "VOTING") return reply.code(400).send({ ok: false, error: "voting_closed" });
 
     const body: any = (req as any).body || {};
     const submissionId = String(body.submissionId || "");
-    const target = await (prisma as any).flairSubmission.findUnique({
+    const target = await prisma.flairSubmission.findUnique({
       where: { id: submissionId },
     });
     if (!target || target.contestId !== id)
       return reply.code(404).send({ ok: false, error: "submission_not_found" });
 
-    const existing = await (prisma as any).flairVote.findUnique({
+    const existing = await prisma.flairVote.findUnique({
       where: { contestId_voterId: { contestId: id, voterId: u.id } },
     });
 
@@ -497,32 +498,32 @@ export default async function flairContestsRoutes(app: FastifyInstance, opts: Op
 
     if (existing) {
       await prisma.$transaction([
-        (prisma as any).flairVote.update({
+        prisma.flairVote.update({
           where: { id: existing.id },
           data: { submissionId },
         }),
-        (prisma as any).flairSubmission.update({
+        prisma.flairSubmission.update({
           where: { id: existing.submissionId },
           data: { voteCount: { decrement: 1 } },
         }),
-        (prisma as any).flairSubmission.update({
+        prisma.flairSubmission.update({
           where: { id: submissionId },
           data: { voteCount: { increment: 1 } },
         }),
       ]);
     } else {
       await prisma.$transaction([
-        (prisma as any).flairVote.create({
+        prisma.flairVote.create({
           data: { contestId: id, submissionId, voterId: u.id },
         }),
-        (prisma as any).flairSubmission.update({
+        prisma.flairSubmission.update({
           where: { id: submissionId },
           data: { voteCount: { increment: 1 } },
         }),
       ]);
     }
 
-    const v = await (prisma as any).flairVote.findUnique({
+    const v = await prisma.flairVote.findUnique({
       where: { contestId_voterId: { contestId: id, voterId: u.id } },
     });
     return reply.send({ ok: true, vote: v, changed: true });
@@ -532,13 +533,13 @@ export default async function flairContestsRoutes(app: FastifyInstance, opts: Op
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const id = String((req as any).params?.id || "");
-    const existing = await (prisma as any).flairVote.findUnique({
+    const existing = await prisma.flairVote.findUnique({
       where: { contestId_voterId: { contestId: id, voterId: u.id } },
     });
     if (!existing) return reply.send({ ok: true, removed: false });
     await prisma.$transaction([
-      (prisma as any).flairVote.delete({ where: { id: existing.id } }),
-      (prisma as any).flairSubmission.update({
+      prisma.flairVote.delete({ where: { id: existing.id } }),
+      prisma.flairSubmission.update({
         where: { id: existing.submissionId },
         data: { voteCount: { decrement: 1 } },
       }),
@@ -550,7 +551,7 @@ export default async function flairContestsRoutes(app: FastifyInstance, opts: Op
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const id = String((req as any).params?.id || "");
-    const c = await (prisma as any).flairContest.findUnique({ where: { id } });
+    const c = await prisma.flairContest.findUnique({ where: { id } });
     if (!c) return reply.code(404).send({ ok: false, error: "not_found" });
     if (!(await canManageContest(u.id, c)))
       return reply.code(403).send({ ok: false, error: "forbidden" });
@@ -577,17 +578,17 @@ export default async function flairContestsRoutes(app: FastifyInstance, opts: Op
   async function finalizeContest(
     contestId: string,
   ): Promise<{ ok: true; contest: any; rewardFlair: any } | { ok: false; error: string }> {
-    const c = await (prisma as any).flairContest.findUnique({ where: { id: contestId } });
+    const c = await prisma.flairContest.findUnique({ where: { id: contestId } });
     if (!c) return { ok: false, error: "not_found" };
     if (c.status !== "VOTING") return { ok: false, error: "not_in_voting" };
 
-    const submissions = await (prisma as any).flairSubmission.findMany({
+    const submissions = await prisma.flairSubmission.findMany({
       where: { contestId },
       orderBy: [{ voteCount: "desc" }, { createdAt: "asc" }],
     });
 
     if (submissions.length === 0) {
-      const updated = await (prisma as any).flairContest.update({
+      const updated = await prisma.flairContest.update({
         where: { id: contestId },
         data: { status: "CANCELED" },
       });
@@ -618,7 +619,7 @@ export default async function flairContestsRoutes(app: FastifyInstance, opts: Op
       log.error("[flair-contests] mint/grant failed:", e?.message || e);
     }
 
-    const updated = await (prisma as any).flairContest.update({
+    const updated = await prisma.flairContest.update({
       where: { id: contestId },
       data: {
         status: "COMPLETED",

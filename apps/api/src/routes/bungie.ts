@@ -45,14 +45,14 @@ export default async function bungieRoutes(app: FastifyInstance, opts: Opts) {
 
   async function bungieGetCached(key: string, path: string, ttlMinutes: number) {
     try {
-      const cached = await (prisma as any).bungieCache.findUnique({ where: { key } });
+      const cached = await prisma.bungieCache.findUnique({ where: { key } });
       if (cached && new Date(cached.expiresAt) > new Date()) return cached.data;
     } catch {}
     if (!BUNGIE_API_KEY) return null;
     try {
       const data = await bungieGet(path);
       const expiresAt = new Date(Date.now() + ttlMinutes * 60 * 1000);
-      await (prisma as any).bungieCache.upsert({
+      await prisma.bungieCache.upsert({
         where: { key },
         update: { data, fetchedAt: new Date(), expiresAt },
         create: { key, data, fetchedAt: new Date(), expiresAt },
@@ -71,13 +71,13 @@ export default async function bungieRoutes(app: FastifyInstance, opts: Opts) {
     accessToken: string,
   ) {
     try {
-      const cached = await (prisma as any).bungieCache.findUnique({ where: { key } });
+      const cached = await prisma.bungieCache.findUnique({ where: { key } });
       if (cached && new Date(cached.expiresAt) > new Date()) return cached.data;
     } catch {}
     try {
       const data = await bungieGet(path, accessToken);
       const expiresAt = new Date(Date.now() + ttlMinutes * 60 * 1000);
-      await (prisma as any).bungieCache.upsert({
+      await prisma.bungieCache.upsert({
         where: { key },
         update: { data, fetchedAt: new Date(), expiresAt },
         create: { key, data, fetchedAt: new Date(), expiresAt },
@@ -118,7 +118,7 @@ export default async function bungieRoutes(app: FastifyInstance, opts: Opts) {
         log.error("[bungie] Token refresh failed:", tokens);
         return null;
       }
-      await (prisma as any).userGameAccount.update({
+      await prisma.userGameAccount.update({
         where: { userId_gameType: { userId: account.userId, gameType: "BUNGIE" } },
         data: {
           accessToken: tokens.access_token,
@@ -143,14 +143,18 @@ export default async function bungieRoutes(app: FastifyInstance, opts: Opts) {
     if (!xurMilestone) return reply.send({ ok: true, available: false });
 
     try {
-      const cached = await (prisma as any).bungieCache.findUnique({
+      const cached = await prisma.bungieCache.findUnique({
         where: { key: "xur_vendor_inventory" },
       });
-      if (cached && new Date(cached.expiresAt) > new Date() && cached.data?.items) {
+      if (
+        cached &&
+        new Date(cached.expiresAt) > new Date() &&
+        (cached.data as { items?: unknown[] } | null)?.items
+      ) {
         return reply.send({
           ok: true,
           available: true,
-          items: cached.data.items,
+          items: (cached.data as { items?: unknown[] }).items,
           cachedAt: cached.fetchedAt,
         });
       }
@@ -165,7 +169,7 @@ export default async function bungieRoutes(app: FastifyInstance, opts: Opts) {
         message: "Link your Bungie account to see Xur's inventory",
       });
 
-    const account = await (prisma as any).userGameAccount.findUnique({
+    const account = await prisma.userGameAccount.findUnique({
       where: { userId_gameType: { userId: u.id, gameType: "BUNGIE" } },
     });
     if (!account?.accessToken)
@@ -213,7 +217,7 @@ export default async function bungieRoutes(app: FastifyInstance, opts: Opts) {
 
       if (items.length > 0) {
         const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
-        await (prisma as any).bungieCache.upsert({
+        await prisma.bungieCache.upsert({
           where: { key: "xur_vendor_inventory" },
           update: { data: { items }, fetchedAt: new Date(), expiresAt },
           create: {
@@ -261,7 +265,7 @@ export default async function bungieRoutes(app: FastifyInstance, opts: Opts) {
       if (fs.existsSync(modsPath)) mods = JSON.parse(fs.readFileSync(modsPath, "utf-8"));
     } catch {}
 
-    const rows = await (prisma as any).bungieActivityLog.findMany({
+    const rows = await prisma.bungieActivityLog.findMany({
       where: { userId: u.id },
       orderBy: { period: "desc" },
       take: limit,
@@ -866,7 +870,7 @@ export default async function bungieRoutes(app: FastifyInstance, opts: Opts) {
       const primary =
         memberships.find((m: any) => m.crossSaveOverride === m.membershipType) || memberships[0];
 
-      await (prisma as any).userGameAccount.upsert({
+      await prisma.userGameAccount.upsert({
         where: { userId_gameType: { userId, gameType: "BUNGIE" } },
         update: {
           accessToken: tokens.access_token,
@@ -900,7 +904,7 @@ export default async function bungieRoutes(app: FastifyInstance, opts: Opts) {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
 
-    const account = await (prisma as any).userGameAccount.findUnique({
+    const account = await prisma.userGameAccount.findUnique({
       where: { userId_gameType: { userId: u.id, gameType: "BUNGIE" } },
     });
     if (!account?.accessToken) return reply.send({ ok: true, linked: false });
@@ -1004,7 +1008,7 @@ export default async function bungieRoutes(app: FastifyInstance, opts: Opts) {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
 
-    const account = await (prisma as any).userGameAccount.findUnique({
+    const account = await prisma.userGameAccount.findUnique({
       where: { userId_gameType: { userId: u.id, gameType: "BUNGIE" } },
     });
     if (!account?.accessToken) return reply.code(400).send({ ok: false, error: "not_linked" });
@@ -1038,7 +1042,7 @@ export default async function bungieRoutes(app: FastifyInstance, opts: Opts) {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
 
-    const account = await (prisma as any).userGameAccount.findUnique({
+    const account = await prisma.userGameAccount.findUnique({
       where: { userId_gameType: { userId: u.id, gameType: "BUNGIE" } },
     });
     if (!account?.accessToken) return reply.code(400).send({ ok: false, error: "not_linked" });

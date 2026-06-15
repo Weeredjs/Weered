@@ -40,7 +40,7 @@ export async function completeTournament(
 ): Promise<TournamentCompleteResult> {
   const { awardPaper, createNotification } = deps;
 
-  const tournament = await (prisma as any).tournament.findUnique({ where: { id: tournamentId } });
+  const tournament = await prisma.tournament.findUnique({ where: { id: tournamentId } });
   if (!tournament) return { ok: false, error: "not_found" };
   if (tournament.status === "COMPLETED" || tournament.status === "CANCELED") {
     return { ok: false, error: "already_finalized" };
@@ -48,13 +48,13 @@ export async function completeTournament(
 
   let entries: any[];
   if (tournament.format === "LEADERBOARD" || tournament.format === "CHALLENGE_RACE") {
-    entries = await (prisma as any).tournamentEntry.findMany({
+    entries = await prisma.tournamentEntry.findMany({
       where: { tournamentId },
       orderBy: { score: "desc" },
     });
   } else {
-    const allEntries = await (prisma as any).tournamentEntry.findMany({ where: { tournamentId } });
-    const matches = await (prisma as any).tournamentMatch.findMany({
+    const allEntries = await prisma.tournamentEntry.findMany({ where: { tournamentId } });
+    const matches = await prisma.tournamentMatch.findMany({
       where: { tournamentId, status: "CONFIRMED" },
     });
     const stats: Record<string, { wins: number; losses: number; diff: number }> = {};
@@ -84,7 +84,7 @@ export async function completeTournament(
   }
 
   for (let i = 0; i < entries.length; i++) {
-    await (prisma as any).tournamentEntry.update({
+    await prisma.tournamentEntry.update({
       where: { id: entries[i].id },
       data: { rank: i + 1 },
     });
@@ -133,7 +133,7 @@ export async function completeTournament(
     }
     if (p.notoriety > 0) {
       try {
-        await (prisma as any).notorietyEvent.create({
+        await prisma.notorietyEvent.create({
           data: {
             userId: e.userId,
             action: `TOURNAMENT_${t}`,
@@ -141,7 +141,7 @@ export async function completeTournament(
             refId: tournamentId,
           },
         });
-        await (prisma as any).user.update({
+        await prisma.user.update({
           where: { id: e.userId },
           data: { notoriety: { increment: p.notoriety } },
         });
@@ -170,9 +170,9 @@ export async function completeTournament(
       try {
         const rankLabel = i + 1 === 1 ? "Champion" : i + 1 === 2 ? "Runner-Up" : "3rd Place";
         const badgeName = `${tournament.title} · ${rankLabel}`;
-        let badge = await (prisma as any).challengeBadge.findFirst({ where: { name: badgeName } });
+        let badge = await prisma.challengeBadge.findFirst({ where: { name: badgeName } });
         if (!badge) {
-          badge = await (prisma as any).challengeBadge.create({
+          badge = await prisma.challengeBadge.create({
             data: {
               name: badgeName,
               description: `Top ${i + 1} finish · ${tournament.format}`,
@@ -180,7 +180,7 @@ export async function completeTournament(
             },
           });
         }
-        await (prisma as any).userBadge.upsert({
+        await prisma.userBadge.upsert({
           where: { userId_badgeId: { userId: e.userId, badgeId: badge.id } },
           update: {},
           create: { userId: e.userId, badgeId: badge.id },
@@ -208,7 +208,7 @@ export async function completeTournament(
     }
   }
 
-  const updated = await (prisma as any).tournament.update({
+  const updated = await prisma.tournament.update({
     where: { id: tournamentId },
     data: { status: "COMPLETED" },
   });

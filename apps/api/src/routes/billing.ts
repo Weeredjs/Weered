@@ -1,3 +1,4 @@
+import { SubTier } from "@prisma/client";
 import { log } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 import { fetchWithTimeout } from "../lib/fetchWithTimeout";
@@ -42,7 +43,7 @@ export default async function billingRoutes(app: FastifyInstance, opts: Opts) {
     const lobbyId = String((req as any).params?.id || "");
     const lobby = await prisma.lobby.findUnique({ where: { id: lobbyId } });
     if (!lobby) return reply.code(404).send({ ok: false, error: "lobby_not_found" });
-    const tiers = await (prisma as any).lobbyTier.findMany({
+    const tiers = await prisma.lobbyTier.findMany({
       where: { lobbyId, active: true },
       orderBy: { sortOrder: "asc" },
       select: {
@@ -62,7 +63,7 @@ export default async function billingRoutes(app: FastifyInstance, opts: Opts) {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const lobbyId = String((req as any).params?.id || "");
-    const sub = await (prisma as any).lobbyTierSub.findUnique({
+    const sub = await prisma.lobbyTierSub.findUnique({
       where: { lobbyId_userId: { lobbyId, userId: u.id } },
       include: {
         tier: {
@@ -85,7 +86,7 @@ export default async function billingRoutes(app: FastifyInstance, opts: Opts) {
   app.get("/lobbies/:id/admin/tiers", async (req, reply) => {
     const ctx = await lobbyAdminAccess(req, reply, 5);
     if (!ctx) return;
-    const tiers = await (prisma as any).lobbyTier.findMany({
+    const tiers = await prisma.lobbyTier.findMany({
       where: { lobbyId: ctx.lobby.id },
       orderBy: { sortOrder: "asc" },
       include: { _count: { select: { subscribers: true } } },
@@ -96,7 +97,7 @@ export default async function billingRoutes(app: FastifyInstance, opts: Opts) {
   app.get("/lobbies/:id/admin/tier-stats", async (req, reply) => {
     const ctx = await lobbyAdminAccess(req, reply, 5);
     if (!ctx) return;
-    const subs = await (prisma as any).lobbyTierSub.findMany({
+    const subs = await prisma.lobbyTierSub.findMany({
       where: { lobbyId: ctx.lobby.id, status: "active" },
       include: { tier: { select: { id: true, name: true, priceMonthly: true } } },
     });
@@ -147,7 +148,7 @@ export default async function billingRoutes(app: FastifyInstance, opts: Opts) {
       });
       if (price.error) return reply.code(500).send({ ok: false, error: "stripe_price_failed" });
 
-      const tier = await (prisma as any).lobbyTier.create({
+      const tier = await prisma.lobbyTier.create({
         data: {
           lobbyId: ctx.lobby.id,
           name,
@@ -161,7 +162,7 @@ export default async function billingRoutes(app: FastifyInstance, opts: Opts) {
         },
       });
 
-      await (prisma as any).lobbyAudit.create({
+      await prisma.lobbyAudit.create({
         data: {
           id: randomUUID(),
           lobbyId: ctx.lobby.id,
@@ -188,7 +189,7 @@ export default async function billingRoutes(app: FastifyInstance, opts: Opts) {
       const ctx = await lobbyAdminAccess(req, reply, 5);
       if (!ctx) return;
       const tierId = String((req as any).params?.tierId || "");
-      const existing = await (prisma as any).lobbyTier.findFirst({
+      const existing = await prisma.lobbyTier.findFirst({
         where: { id: tierId, lobbyId: ctx.lobby.id },
       });
       if (!existing) return reply.code(404).send({ ok: false, error: "tier_not_found" });
@@ -203,9 +204,9 @@ export default async function billingRoutes(app: FastifyInstance, opts: Opts) {
       if (body.sortOrder !== undefined) data.sortOrder = Number(body.sortOrder) || 0;
       if (body.active !== undefined) data.active = Boolean(body.active);
 
-      const tier = await (prisma as any).lobbyTier.update({ where: { id: tierId }, data });
+      const tier = await prisma.lobbyTier.update({ where: { id: tierId }, data });
 
-      await (prisma as any).lobbyAudit.create({
+      await prisma.lobbyAudit.create({
         data: {
           id: randomUUID(),
           lobbyId: ctx.lobby.id,
@@ -279,7 +280,7 @@ export default async function billingRoutes(app: FastifyInstance, opts: Opts) {
   app.get("/subscribe/status", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
-    const sub = await (prisma as any).subscription.findUnique({ where: { userId: u.id } });
+    const sub = await prisma.subscription.findUnique({ where: { userId: u.id } });
     if (!sub) return reply.send({ ok: true, tier: "FREE", status: "inactive" });
     return reply.send({
       ok: true,
@@ -305,7 +306,7 @@ export default async function billingRoutes(app: FastifyInstance, opts: Opts) {
       const priceId = STRIPE_PRICES[tier];
       if (!priceId) return reply.code(400).send({ ok: false, error: "invalid_tier" });
 
-      let sub = await (prisma as any).subscription.findUnique({ where: { userId: u.id } });
+      let sub = await prisma.subscription.findUnique({ where: { userId: u.id } });
       let customerId = sub?.stripeCustomerId;
 
       if (!customerId || customerId === "") {
@@ -319,7 +320,7 @@ export default async function billingRoutes(app: FastifyInstance, opts: Opts) {
           "metadata[weered_user_id]": u.id,
         });
         customerId = customer.id;
-        sub = await (prisma as any).subscription.upsert({
+        sub = await prisma.subscription.upsert({
           where: { userId: u.id },
           update: { stripeCustomerId: customerId },
           create: { userId: u.id, stripeCustomerId: customerId, tier: "FREE" },
@@ -349,7 +350,7 @@ export default async function billingRoutes(app: FastifyInstance, opts: Opts) {
     async (req, reply) => {
       const u = authFromHeader((req as any).headers?.authorization);
       if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
-      const sub = await (prisma as any).subscription.findUnique({ where: { userId: u.id } });
+      const sub = await prisma.subscription.findUnique({ where: { userId: u.id } });
       if (!sub?.stripeCustomerId)
         return reply.code(400).send({ ok: false, error: "no_subscription" });
 
@@ -377,13 +378,13 @@ export default async function billingRoutes(app: FastifyInstance, opts: Opts) {
       const lobbyId = String((req as any).params?.id || "");
       const tierId = String((req as any).params?.tierId || "");
 
-      const tier = await (prisma as any).lobbyTier.findFirst({
+      const tier = await prisma.lobbyTier.findFirst({
         where: { id: tierId, lobbyId, active: true },
       });
       if (!tier || !tier.stripePriceId)
         return reply.code(404).send({ ok: false, error: "tier_not_found" });
 
-      const existingSub = await (prisma as any).lobbyTierSub.findUnique({
+      const existingSub = await prisma.lobbyTierSub.findUnique({
         where: { lobbyId_userId: { lobbyId, userId: u.id } },
       });
       if (existingSub && existingSub.status === "active") {
@@ -391,7 +392,7 @@ export default async function billingRoutes(app: FastifyInstance, opts: Opts) {
       }
 
       let customerId: string | null = null;
-      const platformSub = await (prisma as any).subscription.findUnique({
+      const platformSub = await prisma.subscription.findUnique({
         where: { userId: u.id },
       });
       customerId = platformSub?.stripeCustomerId || null;
@@ -407,7 +408,7 @@ export default async function billingRoutes(app: FastifyInstance, opts: Opts) {
           "metadata[weered_user_id]": u.id,
         });
         customerId = customer.id;
-        await (prisma as any).subscription.upsert({
+        await prisma.subscription.upsert({
           where: { userId: u.id },
           update: { stripeCustomerId: customerId },
           create: { userId: u.id, stripeCustomerId: customerId, tier: "FREE" },
@@ -441,7 +442,7 @@ export default async function billingRoutes(app: FastifyInstance, opts: Opts) {
       if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
       const lobbyId = String((req as any).params?.id || "");
 
-      const sub = await (prisma as any).lobbyTierSub.findUnique({
+      const sub = await prisma.lobbyTierSub.findUnique({
         where: { lobbyId_userId: { lobbyId, userId: u.id } },
       });
       if (!sub?.stripeCustomerId)
@@ -508,7 +509,7 @@ export default async function billingRoutes(app: FastifyInstance, opts: Opts) {
           const lobbyTierId = session?.metadata?.lobby_tier_id;
           if (userId && subId && lobbyId && lobbyTierId) {
             const stripeSub = await stripeReq("GET", `/subscriptions/${subId}`);
-            await (prisma as any).lobbyTierSub.upsert({
+            await prisma.lobbyTierSub.upsert({
               where: { lobbyId_userId: { lobbyId, userId } },
               update: {
                 lobbyTierId,
@@ -531,7 +532,7 @@ export default async function billingRoutes(app: FastifyInstance, opts: Opts) {
                   : null,
               },
             });
-            const lobbyTier = await (prisma as any).lobbyTier.findUnique({
+            const lobbyTier = await prisma.lobbyTier.findUnique({
               where: { id: lobbyTierId },
             });
             if (lobbyTier) {
@@ -563,7 +564,7 @@ export default async function billingRoutes(app: FastifyInstance, opts: Opts) {
                 });
               }
             }
-            await (prisma as any).lobbyAudit.create({
+            await prisma.lobbyAudit.create({
               data: {
                 id: randomUUID(),
                 lobbyId,
@@ -578,7 +579,7 @@ export default async function billingRoutes(app: FastifyInstance, opts: Opts) {
           const tier = session?.metadata?.tier || "INDICTED";
           if (userId && subId) {
             const stripeSub = await stripeReq("GET", `/subscriptions/${subId}`);
-            await (prisma as any).subscription.upsert({
+            await prisma.subscription.upsert({
               where: { userId },
               update: {
                 tier,
@@ -615,11 +616,11 @@ export default async function billingRoutes(app: FastifyInstance, opts: Opts) {
         const stripeSub = event.data?.object;
         const subId = stripeSub?.id;
         if (subId) {
-          const dbSub = await (prisma as any).subscription.findUnique({
+          const dbSub = await prisma.subscription.findUnique({
             where: { stripeSubId: subId },
           });
           if (dbSub) {
-            await (prisma as any).subscription.update({
+            await prisma.subscription.update({
               where: { stripeSubId: subId },
               data: {
                 status: stripeSub.status,
@@ -630,11 +631,11 @@ export default async function billingRoutes(app: FastifyInstance, opts: Opts) {
               },
             });
           }
-          const lobbyTierSub = await (prisma as any).lobbyTierSub.findUnique({
+          const lobbyTierSub = await prisma.lobbyTierSub.findUnique({
             where: { stripeSubId: subId },
           });
           if (lobbyTierSub) {
-            await (prisma as any).lobbyTierSub.update({
+            await prisma.lobbyTierSub.update({
               where: { stripeSubId: subId },
               data: {
                 status: stripeSub.status,
@@ -652,26 +653,26 @@ export default async function billingRoutes(app: FastifyInstance, opts: Opts) {
         const stripeSub = event.data?.object;
         const subId = stripeSub?.id;
         if (subId) {
-          const dbSub = await (prisma as any).subscription.findUnique({
+          const dbSub = await prisma.subscription.findUnique({
             where: { stripeSubId: subId },
           });
           if (dbSub) {
-            await (prisma as any).subscription.update({
+            await prisma.subscription.update({
               where: { stripeSubId: subId },
               data: { status: "canceled", tier: "FREE" },
             });
             await prisma.user.update({ where: { id: dbSub.userId }, data: { tier: "INNOCENT" } });
             await globalAudit("system", "Stripe", "subscription_canceled", dbSub.userId);
           }
-          const lobbyTierSub = await (prisma as any).lobbyTierSub.findUnique({
+          const lobbyTierSub = await prisma.lobbyTierSub.findUnique({
             where: { stripeSubId: subId },
           });
           if (lobbyTierSub) {
-            await (prisma as any).lobbyTierSub.update({
+            await prisma.lobbyTierSub.update({
               where: { stripeSubId: subId },
               data: { status: "canceled" },
             });
-            const lobbyTier = await (prisma as any).lobbyTier.findUnique({
+            const lobbyTier = await prisma.lobbyTier.findUnique({
               where: { id: lobbyTierSub.lobbyTierId },
             });
             if (lobbyTier) {
@@ -689,7 +690,7 @@ export default async function billingRoutes(app: FastifyInstance, opts: Opts) {
                 });
               }
             }
-            await (prisma as any).lobbyAudit.create({
+            await prisma.lobbyAudit.create({
               data: {
                 id: randomUUID(),
                 lobbyId: lobbyTierSub.lobbyId,
@@ -725,10 +726,14 @@ export default async function billingRoutes(app: FastifyInstance, opts: Opts) {
       if (!targetId || !["FREE", "INDICTED", "FELON", "KINGPIN"].includes(tier)) {
         return reply.code(400).send({ ok: false, error: "invalid" });
       }
-      await (prisma as any).subscription.upsert({
+      await prisma.subscription.upsert({
         where: { userId: targetId },
-        update: { tier, status: tier === "FREE" ? "inactive" : "active" },
-        create: { userId: targetId, tier, status: tier === "FREE" ? "inactive" : "active" },
+        update: { tier: tier as SubTier, status: tier === "FREE" ? "inactive" : "active" },
+        create: {
+          userId: targetId,
+          tier: tier as SubTier,
+          status: tier === "FREE" ? "inactive" : "active",
+        },
       });
       const userTier =
         tier === "KINGPIN"
@@ -749,7 +754,7 @@ export default async function billingRoutes(app: FastifyInstance, opts: Opts) {
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const role = await getGlobalRole(u.id);
     if (!canAccessStaff(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
-    const subs = await (prisma as any).subscription.findMany({
+    const subs = await prisma.subscription.findMany({
       orderBy: { updatedAt: "desc" },
       take: 200,
     });

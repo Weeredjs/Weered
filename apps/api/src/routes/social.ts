@@ -1,3 +1,4 @@
+import { ReportTargetType, ReportReason } from "@prisma/client";
 import { log } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
@@ -75,7 +76,7 @@ export default async function socialRoutes(app: FastifyInstance, opts: Opts) {
         )
       : new Set<string>();
     const memberships = peerIds.length
-      ? await (prisma as any).crewMember.findMany({
+      ? await prisma.crewMember.findMany({
           where: { userId: { in: peerIds } },
           orderBy: { joinedAt: "asc" },
           include: {
@@ -275,7 +276,7 @@ export default async function socialRoutes(app: FastifyInstance, opts: Opts) {
       const policy = String(target.invitePolicy || "FRIENDS");
       if (policy === "OFF") return reply.code(403).send({ ok: false, error: "invites_off" });
       if (policy === "FRIENDS") {
-        const fr = await (prisma as any).friendRequest.findFirst({
+        const fr = await prisma.friendRequest.findFirst({
           where: {
             status: "ACCEPTED",
             OR: [
@@ -510,7 +511,7 @@ export default async function socialRoutes(app: FastifyInstance, opts: Opts) {
   app.get("/me/favorites", async (req, reply) => {
     const user = authFromHeader((req as any).headers?.authorization);
     if (!user) return reply.code(401).send({ ok: false, error: "unauthorized" });
-    const me = await (prisma as any).user.findUnique({
+    const me = await prisma.user.findUnique({
       where: { id: user.id },
       select: { favoriteLobbyIds: true },
     });
@@ -551,13 +552,13 @@ export default async function socialRoutes(app: FastifyInstance, opts: Opts) {
       if (!user) return reply.code(401).send({ ok: false, error: "unauthorized" });
       const id = String((req.params as any).id || "").trim();
       if (!id) return reply.code(400).send({ ok: false, error: "missing_id" });
-      const me = await (prisma as any).user.findUnique({
+      const me = await prisma.user.findUnique({
         where: { id: user.id },
         select: { favoriteLobbyIds: true },
       });
       const cur: string[] = me?.favoriteLobbyIds ?? [];
       if (!cur.includes(id)) {
-        await (prisma as any).user.update({
+        await prisma.user.update({
           where: { id: user.id },
           data: { favoriteLobbyIds: [id, ...cur].slice(0, 200) },
         });
@@ -579,12 +580,12 @@ export default async function socialRoutes(app: FastifyInstance, opts: Opts) {
       const user = authFromHeader((req as any).headers?.authorization);
       if (!user) return reply.code(401).send({ ok: false, error: "unauthorized" });
       const id = String((req.params as any).id || "").trim();
-      const me = await (prisma as any).user.findUnique({
+      const me = await prisma.user.findUnique({
         where: { id: user.id },
         select: { favoriteLobbyIds: true },
       });
       const cur: string[] = me?.favoriteLobbyIds ?? [];
-      await (prisma as any).user.update({
+      await prisma.user.update({
         where: { id: user.id },
         data: { favoriteLobbyIds: cur.filter((x: string) => x !== id) },
       });
@@ -604,13 +605,13 @@ export default async function socialRoutes(app: FastifyInstance, opts: Opts) {
       const incoming: string[] = Array.isArray(body.ids)
         ? body.ids.filter((x: any) => typeof x === "string")
         : [];
-      const me = await (prisma as any).user.findUnique({
+      const me = await prisma.user.findUnique({
         where: { id: user.id },
         select: { favoriteLobbyIds: true },
       });
       const cur: string[] = me?.favoriteLobbyIds ?? [];
       const union = Array.from(new Set([...incoming, ...cur])).slice(0, 200);
-      await (prisma as any).user.update({
+      await prisma.user.update({
         where: { id: user.id },
         data: { favoriteLobbyIds: union },
       });
@@ -621,7 +622,7 @@ export default async function socialRoutes(app: FastifyInstance, opts: Opts) {
   app.get("/blocks", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
-    const rows = await (prisma as any).userBlock.findMany({
+    const rows = await prisma.userBlock.findMany({
       where: { blockerId: u.id },
       orderBy: { createdAt: "desc" },
     });
@@ -663,7 +664,7 @@ export default async function socialRoutes(app: FastifyInstance, opts: Opts) {
       const body: any = (req as any).body || {};
       const reason = typeof body.reason === "string" ? body.reason.slice(0, 200) : null;
       try {
-        await (prisma as any).userBlock.upsert({
+        await prisma.userBlock.upsert({
           where: { blockerId_blockedId: { blockerId: u.id, blockedId: targetId } },
           update: { reason },
           create: { blockerId: u.id, blockedId: targetId, reason },
@@ -690,7 +691,7 @@ export default async function socialRoutes(app: FastifyInstance, opts: Opts) {
       const targetId = String((req as any).params?.userId || "");
       if (!targetId) return reply.code(400).send({ ok: false, error: "invalid_target" });
       try {
-        await (prisma as any).userBlock.deleteMany({
+        await prisma.userBlock.deleteMany({
           where: { blockerId: u.id, blockedId: targetId },
         });
         return reply.send({ ok: true });
@@ -745,7 +746,7 @@ export default async function socialRoutes(app: FastifyInstance, opts: Opts) {
       if (!VALID_REPORT_REASONS.has(reason))
         return reply.code(400).send({ ok: false, error: "invalid_reason" });
 
-      const recent = await (prisma as any).report.count({
+      const recent = await prisma.report.count({
         where: { reporterId: u.id, createdAt: { gt: new Date(Date.now() - 10 * 60 * 1000) } },
       });
       if (recent >= 5) return reply.code(429).send({ ok: false, error: "report_rate_limit" });
@@ -753,7 +754,7 @@ export default async function socialRoutes(app: FastifyInstance, opts: Opts) {
       let bodySnapshot: string | null = null;
       if (targetType === "MESSAGE") {
         try {
-          const m = await (prisma as any).roomMessage.findUnique({
+          const m = await prisma.roomMessage.findUnique({
             where: { id: targetId },
             select: { body: true },
           });
@@ -761,7 +762,7 @@ export default async function socialRoutes(app: FastifyInstance, opts: Opts) {
         } catch {}
         if (!bodySnapshot) {
           try {
-            const dm = await (prisma as any).directMessage.findUnique({
+            const dm = await prisma.directMessage.findUnique({
               where: { id: targetId },
               select: { body: true },
             });
@@ -770,7 +771,7 @@ export default async function socialRoutes(app: FastifyInstance, opts: Opts) {
         }
         if (!bodySnapshot) {
           try {
-            const cm = await (prisma as any).crewMessage.findUnique({
+            const cm = await prisma.crewMessage.findUnique({
               where: { id: targetId },
               select: { body: true },
             });
@@ -779,8 +780,16 @@ export default async function socialRoutes(app: FastifyInstance, opts: Opts) {
         }
       }
 
-      const row = await (prisma as any).report.create({
-        data: { reporterId: u.id, targetType, targetId, context, reason, note, bodySnapshot },
+      const row = await prisma.report.create({
+        data: {
+          reporterId: u.id,
+          targetType: targetType as ReportTargetType,
+          targetId,
+          context,
+          reason: reason as ReportReason,
+          note,
+          bodySnapshot,
+        },
       });
       return reply.send({ ok: true, id: row.id });
     },

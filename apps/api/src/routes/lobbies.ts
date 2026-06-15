@@ -131,7 +131,7 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
     if (!q || q.length < 2) return reply.send({ ok: true, pinned: [], rooms: [] });
 
     const [allPinned, matchingRooms] = await Promise.all([
-      (prisma as any).lobby.findMany({
+      prisma.lobby.findMany({
         where: { pinned: true },
         select: {
           id: true,
@@ -150,7 +150,7 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
         },
         take: 100,
       }),
-      (prisma as any).room.findMany({
+      prisma.room.findMany({
         where: { name: { contains: q, mode: "insensitive" } },
         select: {
           id: true,
@@ -177,7 +177,7 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
   });
 
   app.get("/lobbies", async (_req, reply) => {
-    const lobbies = await (prisma as any).lobby.findMany({
+    const lobbies = await prisma.lobby.findMany({
       select: {
         id: true,
         name: true,
@@ -204,13 +204,13 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
   app.get("/me/lobbies", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.send({ ok: true, lobbies: [] });
-    const memberships = await (prisma as any).lobbyMember.findMany({
+    const memberships = await prisma.lobbyMember.findMany({
       where: { userId: u.id },
       select: { lobbyId: true, role: true, roleLevel: true },
     });
     if (memberships.length === 0) return reply.send({ ok: true, lobbies: [] });
     const lobbyIds = memberships.map((m: any) => m.lobbyId);
-    const lobbies = await (prisma as any).lobby.findMany({
+    const lobbies = await prisma.lobby.findMany({
       where: { id: { in: lobbyIds } },
       select: {
         id: true,
@@ -236,7 +236,7 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
 
   app.get("/lobbies/:id", async (req, reply) => {
     const id = (req.params as any).id as string;
-    const lobby = await (prisma as any).lobby.findUnique({
+    const lobby = await prisma.lobby.findUnique({
       where: { id },
       select: {
         id: true,
@@ -304,14 +304,14 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
     let joinRequest: any = null;
     const u = authFromHeader((req as any).headers?.authorization);
     if (u) {
-      const member = await (prisma as any).lobbyMember.findUnique({
+      const member = await prisma.lobbyMember.findUnique({
         where: { lobbyId_userId: { lobbyId: id, userId: u.id } },
         select: { role: true, roleLevel: true },
       });
       if (member) {
         membership = { role: member.role, roleLevel: member.roleLevel };
       } else if (lobby.joinMode === "APPROVAL") {
-        const req2 = await (prisma as any).lobbyJoinRequest.findUnique({
+        const req2 = await prisma.lobbyJoinRequest.findUnique({
           where: { lobbyId_userId: { lobbyId: id, userId: u.id } },
           select: { status: true, createdAt: true, denyReason: true },
         });
@@ -337,13 +337,13 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
       const u = authFromHeader((req as any).headers?.authorization);
       if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
 
-      const lobby = await (prisma as any).lobby.findUnique({
+      const lobby = await prisma.lobby.findUnique({
         where: { id: lobbyId },
         select: { id: true, joinMode: true, joinPassword: true, name: true },
       });
       if (!lobby) return reply.code(404).send({ ok: false, error: "not_found" });
 
-      const ban = await (prisma as any).lobbyBan.findUnique({
+      const ban = await prisma.lobbyBan.findUnique({
         where: { lobbyId_userId: { lobbyId, userId: u.id } },
       });
       if (ban)
@@ -351,7 +351,7 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
           .code(403)
           .send({ ok: false, error: "banned", message: "You are banned from this lobby." });
 
-      const existing = await (prisma as any).lobbyMember.findUnique({
+      const existing = await prisma.lobbyMember.findUnique({
         where: { lobbyId_userId: { lobbyId, userId: u.id } },
       });
       if (existing)
@@ -383,13 +383,13 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
       }
 
       if (mode === "APPROVAL") {
-        const existingReq = await (prisma as any).lobbyJoinRequest.findUnique({
+        const existingReq = await prisma.lobbyJoinRequest.findUnique({
           where: { lobbyId_userId: { lobbyId, userId: u.id } },
         });
         if (existingReq) {
           if (existingReq.status === "PENDING") return reply.send({ ok: true, pending: true });
           if (existingReq.status === "DENIED") {
-            await (prisma as any).lobbyJoinRequest.update({
+            await prisma.lobbyJoinRequest.update({
               where: { id: existingReq.id },
               data: {
                 status: "PENDING",
@@ -404,7 +404,7 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
           }
         }
         const user = await prisma.user.findUnique({ where: { id: u.id }, select: { name: true } });
-        await (prisma as any).lobbyJoinRequest.create({
+        await prisma.lobbyJoinRequest.create({
           data: {
             lobbyId,
             userId: u.id,
@@ -416,7 +416,7 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
       }
 
       const user = await prisma.user.findUnique({ where: { id: u.id }, select: { name: true } });
-      const member = await (prisma as any).lobbyMember.create({
+      const member = await prisma.lobbyMember.create({
         data: {
           lobbyId,
           userId: u.id,
@@ -426,7 +426,7 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
         },
       });
 
-      await (prisma as any).lobbyAudit.create({
+      await prisma.lobbyAudit.create({
         data: {
           id: `audit_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
           lobbyId,
@@ -452,7 +452,7 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
       const u = authFromHeader((req as any).headers?.authorization);
       if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
 
-      const member = await (prisma as any).lobbyMember.findUnique({
+      const member = await prisma.lobbyMember.findUnique({
         where: { lobbyId_userId: { lobbyId, userId: u.id } },
         select: { id: true, role: true, roleLevel: true },
       });
@@ -466,22 +466,22 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
         });
       }
 
-      await (prisma as any).lobbyMember.delete({ where: { id: member.id } });
+      await prisma.lobbyMember.delete({ where: { id: member.id } });
 
-      await (prisma as any).lobbyTierSub.updateMany({
+      await prisma.lobbyTierSub.updateMany({
         where: { lobbyId, userId: u.id, status: "active" },
         data: { status: "canceled", cancelAtPeriodEnd: true },
       });
 
       const user = await prisma.user.findUnique({ where: { id: u.id }, select: { name: true } });
-      await (prisma as any).lobbyAudit.create({
+      await prisma.lobbyAudit.create({
         data: {
           id: `audit_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
           lobbyId,
           type: "member_leave",
           actorId: u.id,
           actorName: user?.name || "Unknown",
-          detail: "Left lobby",
+          note: "Left lobby",
           ts: new Date(),
         },
       });
@@ -493,7 +493,7 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
   app.get("/lobbies/:id/admin/join-requests", async (req, reply) => {
     const ctx = await lobbyAdminAccess(req, reply, 3);
     if (!ctx) return;
-    const requests = await (prisma as any).lobbyJoinRequest.findMany({
+    const requests = await prisma.lobbyJoinRequest.findMany({
       where: { lobbyId: ctx.lobby.id },
       orderBy: { createdAt: "desc" },
       take: 100,
@@ -513,13 +513,13 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
       const ctx = await lobbyAdminAccess(req, reply, 3);
       if (!ctx) return;
       const reqId = (req.params as any).reqId as string;
-      const jr = await (prisma as any).lobbyJoinRequest.findUnique({ where: { id: reqId } });
+      const jr = await prisma.lobbyJoinRequest.findUnique({ where: { id: reqId } });
       if (!jr || jr.lobbyId !== ctx.lobby.id)
         return reply.code(404).send({ ok: false, error: "not_found" });
       if (jr.status !== "PENDING")
         return reply.code(400).send({ ok: false, error: "already_reviewed" });
 
-      await (prisma as any).lobbyJoinRequest.update({
+      await prisma.lobbyJoinRequest.update({
         where: { id: reqId },
         data: {
           status: "APPROVED",
@@ -528,7 +528,7 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
           reviewedAt: new Date(),
         },
       });
-      await (prisma as any).lobbyMember.create({
+      await prisma.lobbyMember.create({
         data: {
           lobbyId: ctx.lobby.id,
           userId: jr.userId,
@@ -538,14 +538,14 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
         },
       });
 
-      await (prisma as any).lobbyAudit.create({
+      await prisma.lobbyAudit.create({
         data: {
           id: `audit_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
           lobbyId: ctx.lobby.id,
           type: "join_request_approved",
           actorId: ctx.member.userId,
           actorName: ctx.member.name,
-          detail: `Approved join request from ${jr.userName}`,
+          note: `Approved join request from ${jr.userName}`,
           ts: new Date(),
         },
       });
@@ -566,14 +566,14 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
       const ctx = await lobbyAdminAccess(req, reply, 3);
       if (!ctx) return;
       const reqId = (req.params as any).reqId as string;
-      const jr = await (prisma as any).lobbyJoinRequest.findUnique({ where: { id: reqId } });
+      const jr = await prisma.lobbyJoinRequest.findUnique({ where: { id: reqId } });
       if (!jr || jr.lobbyId !== ctx.lobby.id)
         return reply.code(404).send({ ok: false, error: "not_found" });
       if (jr.status !== "PENDING")
         return reply.code(400).send({ ok: false, error: "already_reviewed" });
 
       const body = (req.body || {}) as any;
-      await (prisma as any).lobbyJoinRequest.update({
+      await prisma.lobbyJoinRequest.update({
         where: { id: reqId },
         data: {
           status: "DENIED",
@@ -584,14 +584,14 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
         },
       });
 
-      await (prisma as any).lobbyAudit.create({
+      await prisma.lobbyAudit.create({
         data: {
           id: `audit_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
           lobbyId: ctx.lobby.id,
           type: "join_request_denied",
           actorId: ctx.member.userId,
           actorName: ctx.member.name,
-          detail: `Denied join request from ${jr.userName}`,
+          note: `Denied join request from ${jr.userName}`,
           ts: new Date(),
         },
       });
@@ -621,16 +621,16 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
       } else {
         data.joinPassword = null;
       }
-      await (prisma as any).lobby.update({ where: { id: ctx.lobby.id }, data });
+      await prisma.lobby.update({ where: { id: ctx.lobby.id }, data });
 
-      await (prisma as any).lobbyAudit.create({
+      await prisma.lobbyAudit.create({
         data: {
           id: `audit_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
           lobbyId: ctx.lobby.id,
           type: "join_mode_changed",
           actorId: ctx.member.userId,
           actorName: ctx.member.name,
-          detail: `Join mode set to ${mode}`,
+          note: `Join mode set to ${mode}`,
           ts: new Date(),
         },
       });
@@ -667,7 +667,7 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
             message: "Indicted tier or higher required to create lobbies.",
           });
         }
-        const ownedCount = await (prisma as any).lobby.count({ where: { ownerId: u.id } });
+        const ownedCount = await prisma.lobby.count({ where: { ownerId: u.id } });
         const maxLobbies = tier === "KINGPIN" ? 999 : tier === "FELON" ? 3 : 1;
         if (ownedCount >= maxLobbies) {
           return reply.code(403).send({
@@ -705,7 +705,7 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
 
       const shouldPin = isStaff ? Boolean(pinned) : false;
 
-      const lobby = await (prisma as any).lobby.upsert({
+      const lobby = await prisma.lobby.upsert({
         where: { id: String(id) },
         update: {
           name: String(name),
@@ -784,7 +784,7 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
     if (!u) return reply.code(401).send({ error: "Unauthorized" });
 
     const { lobbyId, userId: targetUserId } = req.params as any;
-    const lobby = await (prisma as any).lobby.findUnique({
+    const lobby = await prisma.lobby.findUnique({
       where: { id: lobbyId },
       select: { moduleType: true },
     });
@@ -793,7 +793,7 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
       return reply.send({ ok: true, hasCard: false });
     }
 
-    const account = await (prisma as any).userGameAccount.findUnique({
+    const account = await prisma.userGameAccount.findUnique({
       where: { userId_gameType: { userId: targetUserId, gameType: lobby.moduleType } },
       select: { displayName: true, platform: true, cardData: true, cardCachedAt: true },
     });
@@ -842,7 +842,7 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
     const lobbyId = lobby.id;
 
     const [members, roomList, auditList, banList] = await Promise.all([
-      (prisma as any).lobbyMember.findMany({
+      prisma.lobbyMember.findMany({
         where: { lobbyId },
         orderBy: [{ roleLevel: "desc" }, { name: "asc" }],
         select: {
@@ -854,7 +854,7 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
           createdAt: true,
         },
       }),
-      (prisma as any).room.findMany({
+      prisma.room.findMany({
         where: { lobbyId },
         orderBy: { updatedAt: "desc" },
         select: {
@@ -865,12 +865,12 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
           _count: { select: { members: true } },
         },
       }),
-      (prisma as any).lobbyAudit.findMany({
+      prisma.lobbyAudit.findMany({
         where: { lobbyId },
         orderBy: { ts: "desc" },
         take: 100,
       }),
-      (prisma as any).lobbyBan.findMany({
+      prisma.lobbyBan.findMany({
         where: { lobbyId },
         select: { id: true, userId: true, reason: true, createdAt: true },
       }),
@@ -950,8 +950,8 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
       if (Object.keys(data).length === 0)
         return reply.code(400).send({ ok: false, error: "nothing_to_update" });
 
-      await (prisma as any).lobby.update({ where: { id: ctx.lobby.id }, data });
-      await (prisma as any).lobbyAudit.create({
+      await prisma.lobby.update({ where: { id: ctx.lobby.id }, data });
+      await prisma.lobbyAudit.create({
         data: {
           id: randomUUID(),
           lobbyId: ctx.lobby.id,
@@ -991,11 +991,11 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
         .map((p: string) => p.trim().slice(0, 80))
         .filter((p: string) => p.length > 0)
         .slice(0, 5);
-      await (prisma as any).lobby.update({
+      await prisma.lobby.update({
         where: { id: ctx.lobby.id },
         data: { memberPerks: perks },
       });
-      await (prisma as any).lobbyAudit.create({
+      await prisma.lobbyAudit.create({
         data: {
           id: randomUUID(),
           lobbyId: ctx.lobby.id,
@@ -1060,8 +1060,8 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
       if (Object.keys(data).length === 0)
         return reply.code(400).send({ ok: false, error: "no_changes" });
 
-      await (prisma as any).lobby.update({ where: { id: ctx.lobby.id }, data });
-      await (prisma as any).lobbyAudit.create({
+      await prisma.lobby.update({ where: { id: ctx.lobby.id }, data });
+      await prisma.lobbyAudit.create({
         data: {
           id: randomUUID(),
           lobbyId: ctx.lobby.id,
@@ -1112,8 +1112,8 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
       if (!enabledModules)
         return reply.code(400).send({ ok: false, error: "enabledModules required" });
 
-      await (prisma as any).lobby.update({ where: { id: ctx.lobby.id }, data: { enabledModules } });
-      await (prisma as any).lobbyAudit.create({
+      await prisma.lobby.update({ where: { id: ctx.lobby.id }, data: { enabledModules } });
+      await prisma.lobbyAudit.create({
         data: {
           id: randomUUID(),
           lobbyId: ctx.lobby.id,
@@ -1154,11 +1154,11 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
           typeof roleNames[k] === "string" ? roleNames[k].slice(0, 24) : DEFAULT_ROLE_NAMES[k];
       }
 
-      await (prisma as any).lobby.update({
+      await prisma.lobby.update({
         where: { id: ctx.lobby.id },
         data: { roleNames: clean },
       });
-      await (prisma as any).lobbyAudit.create({
+      await prisma.lobbyAudit.create({
         data: {
           id: randomUUID(),
           lobbyId: ctx.lobby.id,
@@ -1175,7 +1175,7 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
   app.get("/lobbies/:id/admin/members", async (req, reply) => {
     const ctx = await lobbyAdminAccess(req, reply, 2);
     if (!ctx) return;
-    const members = await (prisma as any).lobbyMember.findMany({
+    const members = await prisma.lobbyMember.findMany({
       where: { lobbyId: ctx.lobby.id },
       orderBy: [{ roleLevel: "desc" }, { name: "asc" }],
       select: { id: true, userId: true, name: true, role: true, roleLevel: true, createdAt: true },
@@ -1203,7 +1203,7 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
       const newLevel = Math.min(Math.max(Number(body.roleLevel) || 1, 1), 5);
       if (newLevel >= myLevel && !ctx.overrideRole)
         return reply.code(403).send({ ok: false, error: "cannot_promote_to_own_level" });
-      const target = await (prisma as any).lobbyMember.findUnique({
+      const target = await prisma.lobbyMember.findUnique({
         where: { lobbyId_userId: { lobbyId: ctx.lobby.id, userId: targetUserId } },
       });
       if (!target) return reply.code(404).send({ ok: false, error: "member_not_found" });
@@ -1212,11 +1212,11 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
 
       const lobbyRole =
         newLevel >= 4 ? LobbyRole.OWNER : newLevel >= 3 ? LobbyRole.MOD : LobbyRole.MEMBER;
-      await (prisma as any).lobbyMember.update({
+      await prisma.lobbyMember.update({
         where: { lobbyId_userId: { lobbyId: ctx.lobby.id, userId: targetUserId } },
         data: { roleLevel: newLevel, role: lobbyRole },
       });
-      await (prisma as any).lobbyAudit.create({
+      await prisma.lobbyAudit.create({
         data: {
           id: randomUUID(),
           lobbyId: ctx.lobby.id,
@@ -1246,16 +1246,16 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
       if (!hasLobbyPerm(myLevel, "kick", ctx.overrideRole))
         return reply.code(403).send({ ok: false, error: "no_permission" });
       const targetUserId = String((req as any).params?.userId || "");
-      const target = await (prisma as any).lobbyMember.findUnique({
+      const target = await prisma.lobbyMember.findUnique({
         where: { lobbyId_userId: { lobbyId: ctx.lobby.id, userId: targetUserId } },
       });
       if (!target) return reply.code(404).send({ ok: false, error: "member_not_found" });
       if ((target.roleLevel ?? 1) >= myLevel && !ctx.overrideRole)
         return reply.code(403).send({ ok: false, error: "cannot_kick_peer_or_above" });
-      await (prisma as any).lobbyMember.delete({
+      await prisma.lobbyMember.delete({
         where: { lobbyId_userId: { lobbyId: ctx.lobby.id, userId: targetUserId } },
       });
-      await (prisma as any).lobbyAudit.create({
+      await prisma.lobbyAudit.create({
         data: {
           id: randomUUID(),
           lobbyId: ctx.lobby.id,
@@ -1287,15 +1287,15 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
       const targetUserId = String((req as any).params?.userId || "");
       const body: any = (req as any).body || {};
       const reason = typeof body.reason === "string" ? body.reason.slice(0, 200) : "";
-      await (prisma as any).lobbyMember.deleteMany({
+      await prisma.lobbyMember.deleteMany({
         where: { lobbyId: ctx.lobby.id, userId: targetUserId },
       });
-      await (prisma as any).lobbyBan.upsert({
+      await prisma.lobbyBan.upsert({
         where: { lobbyId_userId: { lobbyId: ctx.lobby.id, userId: targetUserId } },
         update: { reason },
         create: { lobbyId: ctx.lobby.id, userId: targetUserId, reason },
       });
-      await (prisma as any).lobbyAudit.create({
+      await prisma.lobbyAudit.create({
         data: {
           id: randomUUID(),
           lobbyId: ctx.lobby.id,
@@ -1325,10 +1325,10 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
       if (!hasLobbyPerm(myLevel, "ban", ctx.overrideRole))
         return reply.code(403).send({ ok: false, error: "no_permission" });
       const targetUserId = String((req as any).params?.userId || "");
-      await (prisma as any).lobbyBan.deleteMany({
+      await prisma.lobbyBan.deleteMany({
         where: { lobbyId: ctx.lobby.id, userId: targetUserId },
       });
-      await (prisma as any).lobbyAudit.create({
+      await prisma.lobbyAudit.create({
         data: {
           id: randomUUID(),
           lobbyId: ctx.lobby.id,
@@ -1360,7 +1360,7 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
       const body: any = (req as any).body || {};
       const pinned = body.pinned !== false;
 
-      const roomRow = await (prisma as any).room.findUnique({ where: { id: roomId } });
+      const roomRow = await prisma.room.findUnique({ where: { id: roomId } });
       if (!roomRow || roomRow.lobbyId !== ctx.lobby.id) {
         return reply.code(404).send({ ok: false, error: "room_not_in_lobby" });
       }
@@ -1369,12 +1369,12 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
       if (room) room.pinned = pinned;
 
       try {
-        await (prisma as any).room.update({ where: { id: roomId }, data: { pinned } });
+        await prisma.room.update({ where: { id: roomId }, data: { pinned } });
       } catch (e) {
         log.error("[lobby pin] db update failed", e);
       }
 
-      await (prisma as any).lobbyAudit.create({
+      await prisma.lobbyAudit.create({
         data: {
           id: randomUUID(),
           lobbyId: ctx.lobby.id,
@@ -1406,7 +1406,7 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
       const body: any = (req as any).body || {};
       const isEvent = body.isEvent !== false;
 
-      const roomRow = await (prisma as any).room.findUnique({ where: { id: roomId } });
+      const roomRow = await prisma.room.findUnique({ where: { id: roomId } });
       if (!roomRow || roomRow.lobbyId !== ctx.lobby.id) {
         return reply.code(404).send({ ok: false, error: "room_not_in_lobby" });
       }
@@ -1415,12 +1415,12 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
       if (room) room.isEvent = isEvent;
 
       try {
-        await (prisma as any).room.update({ where: { id: roomId }, data: { isEvent } });
+        await prisma.room.update({ where: { id: roomId }, data: { isEvent } });
       } catch (e) {
         log.error("[lobby event] db update failed", e);
       }
 
-      await (prisma as any).lobbyAudit.create({
+      await prisma.lobbyAudit.create({
         data: {
           id: randomUUID(),
           lobbyId: ctx.lobby.id,
@@ -1449,7 +1449,7 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
       if (!hasLobbyPerm(myLevel, "manage_rooms", ctx.overrideRole))
         return reply.code(403).send({ ok: false, error: "no_permission" });
       const roomId = String((req as any).params?.roomId || "");
-      const room = await (prisma as any).room.findUnique({
+      const room = await prisma.room.findUnique({
         where: { id: roomId },
         select: { lobbyId: true, name: true, pinned: true },
       });
@@ -1471,8 +1471,8 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
         }
         rooms.delete(roomId);
       }
-      await (prisma as any).room.delete({ where: { id: roomId } });
-      await (prisma as any).lobbyAudit.create({
+      await prisma.room.delete({ where: { id: roomId } });
+      await prisma.lobbyAudit.create({
         data: {
           id: randomUUID(),
           lobbyId: ctx.lobby.id,
@@ -1490,7 +1490,7 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
   app.get("/lobbies/:id/admin/audit", async (req, reply) => {
     const ctx = await lobbyAdminAccess(req, reply, 3);
     if (!ctx) return;
-    const logs = await (prisma as any).lobbyAudit.findMany({
+    const logs = await prisma.lobbyAudit.findMany({
       where: { lobbyId: ctx.lobby.id },
       orderBy: { ts: "desc" },
       take: 200,

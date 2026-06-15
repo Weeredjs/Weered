@@ -1,3 +1,4 @@
+import { EventStatus, PromotionStatus } from "@prisma/client";
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
 import { randomUUID } from "crypto";
@@ -45,7 +46,7 @@ export default async function eventsRoutes(app: FastifyInstance, opts: Opts) {
     if (q.scope === "global") where.lobbyId = null;
     else if (q.scope === "lobby") where.lobbyId = { not: null };
     if (q.q) where.title = { contains: String(q.q), mode: "insensitive" };
-    const events = await (prisma as any).event.findMany({
+    const events = await prisma.event.findMany({
       where,
       orderBy: { startsAt: "desc" },
       take: Math.min(Number(q.limit) || 50, 200),
@@ -60,7 +61,7 @@ export default async function eventsRoutes(app: FastifyInstance, opts: Opts) {
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const role = await getGlobalRole(u.id);
     if (!canAssignRoles(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
-    const events = await (prisma as any).event.findMany({
+    const events = await prisma.event.findMany({
       where: { promotionStatus: "PENDING" },
       orderBy: { createdAt: "desc" },
       include: { lobby: { select: { id: true, name: true } } },
@@ -76,7 +77,7 @@ export default async function eventsRoutes(app: FastifyInstance, opts: Opts) {
     const body: any = (req as any).body || {};
     const title = String(body.title || "").trim();
     if (!title) return reply.code(400).send({ ok: false, error: "title_required" });
-    const event = await (prisma as any).event.create({
+    const event = await prisma.event.create({
       data: {
         title,
         description: String(body.description || "").trim(),
@@ -85,9 +86,9 @@ export default async function eventsRoutes(app: FastifyInstance, opts: Opts) {
         startsAt: new Date(body.startsAt || Date.now()),
         endsAt: body.endsAt ? new Date(body.endsAt) : null,
         timezone: String(body.timezone || "UTC"),
-        status: ["DRAFT", "PUBLISHED"].includes(String(body.status || "").toUpperCase())
+        status: (["DRAFT", "PUBLISHED"].includes(String(body.status || "").toUpperCase())
           ? String(body.status).toUpperCase()
-          : "DRAFT",
+          : "DRAFT") as EventStatus,
         broadcastOnPublish: Boolean(body.broadcastOnPublish),
         createdById: u.id,
         createdByName: u.name,
@@ -110,7 +111,7 @@ export default async function eventsRoutes(app: FastifyInstance, opts: Opts) {
     const role = await getGlobalRole(u.id);
     if (!canAssignRoles(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
     const eventId = String((req as any).params?.id || "");
-    const existing = await (prisma as any).event.findUnique({ where: { id: eventId } });
+    const existing = await prisma.event.findUnique({ where: { id: eventId } });
     if (!existing) return reply.code(404).send({ ok: false, error: "event_not_found" });
     const body: any = (req as any).body || {};
     const data: any = {};
@@ -125,7 +126,7 @@ export default async function eventsRoutes(app: FastifyInstance, opts: Opts) {
     if (body.status !== undefined) data.status = String(body.status).toUpperCase();
     if (body.broadcastOnPublish !== undefined)
       data.broadcastOnPublish = Boolean(body.broadcastOnPublish);
-    const event = await (prisma as any).event.update({ where: { id: eventId }, data });
+    const event = await prisma.event.update({ where: { id: eventId }, data });
     if (
       data.status === "PUBLISHED" &&
       existing.status !== "PUBLISHED" &&
@@ -145,9 +146,9 @@ export default async function eventsRoutes(app: FastifyInstance, opts: Opts) {
     const role = await getGlobalRole(u.id);
     if (!canAssignRoles(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
     const eventId = String((req as any).params?.id || "");
-    const event = await (prisma as any).event.findUnique({ where: { id: eventId } });
+    const event = await prisma.event.findUnique({ where: { id: eventId } });
     if (!event) return reply.code(404).send({ ok: false, error: "event_not_found" });
-    await (prisma as any).event.delete({ where: { id: eventId } });
+    await prisma.event.delete({ where: { id: eventId } });
     await globalAudit(u.id, u.name, "event_delete", eventId, event.title);
     return reply.send({ ok: true });
   });
@@ -158,7 +159,7 @@ export default async function eventsRoutes(app: FastifyInstance, opts: Opts) {
     const role = await getGlobalRole(u.id);
     if (!canAssignRoles(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
     const eventId = String((req as any).params?.id || "");
-    const event = await (prisma as any).event.findUnique({ where: { id: eventId } });
+    const event = await prisma.event.findUnique({ where: { id: eventId } });
     if (!event) return reply.code(404).send({ ok: false, error: "event_not_found" });
     if (event.promotionStatus !== "PENDING")
       return reply.code(400).send({ ok: false, error: "not_pending" });
@@ -166,10 +167,10 @@ export default async function eventsRoutes(app: FastifyInstance, opts: Opts) {
     const decision = String(body.decision || "").toUpperCase();
     if (!["APPROVED", "DENIED"].includes(decision))
       return reply.code(400).send({ ok: false, error: "invalid_decision" });
-    const updated = await (prisma as any).event.update({
+    const updated = await prisma.event.update({
       where: { id: eventId },
       data: {
-        promotionStatus: decision,
+        promotionStatus: decision as PromotionStatus,
         promotionReviewedById: u.id,
         promotionReviewedByName: u.name,
         promotionReviewedAt: new Date(),
@@ -201,7 +202,7 @@ export default async function eventsRoutes(app: FastifyInstance, opts: Opts) {
     }
     const where: any = { lobbyId };
     if (!showAll) where.status = "PUBLISHED";
-    const events = await (prisma as any).event.findMany({
+    const events = await prisma.event.findMany({
       where,
       orderBy: { startsAt: "asc" },
       take: Math.min(Number(q.limit) || 50, 200),
@@ -215,7 +216,7 @@ export default async function eventsRoutes(app: FastifyInstance, opts: Opts) {
     const body: any = (req as any).body || {};
     const title = String(body.title || "").trim();
     if (!title) return reply.code(400).send({ ok: false, error: "title_required" });
-    const event = await (prisma as any).event.create({
+    const event = await prisma.event.create({
       data: {
         title,
         description: String(body.description || "").trim(),
@@ -224,15 +225,15 @@ export default async function eventsRoutes(app: FastifyInstance, opts: Opts) {
         startsAt: new Date(body.startsAt || Date.now()),
         endsAt: body.endsAt ? new Date(body.endsAt) : null,
         timezone: String(body.timezone || "UTC"),
-        status: ["DRAFT", "PUBLISHED"].includes(String(body.status || "").toUpperCase())
+        status: (["DRAFT", "PUBLISHED"].includes(String(body.status || "").toUpperCase())
           ? String(body.status).toUpperCase()
-          : "DRAFT",
+          : "DRAFT") as EventStatus,
         createdById: ctx.user.id,
         createdByName: ctx.user.name,
         lobbyId: ctx.lobby.id,
       },
     });
-    await (prisma as any).lobbyAudit.create({
+    await prisma.lobbyAudit.create({
       data: {
         id: randomUUID(),
         lobbyId: ctx.lobby.id,
@@ -249,7 +250,7 @@ export default async function eventsRoutes(app: FastifyInstance, opts: Opts) {
     const ctx = await lobbyAdminAccess(req, reply, 4);
     if (!ctx) return;
     const eventId = String((req as any).params?.eventId || "");
-    const existing = await (prisma as any).event.findFirst({
+    const existing = await prisma.event.findFirst({
       where: { id: eventId, lobbyId: ctx.lobby.id },
     });
     if (!existing) return reply.code(404).send({ ok: false, error: "event_not_found" });
@@ -264,8 +265,8 @@ export default async function eventsRoutes(app: FastifyInstance, opts: Opts) {
     if (body.endsAt !== undefined) data.endsAt = body.endsAt ? new Date(body.endsAt) : null;
     if (body.timezone !== undefined) data.timezone = String(body.timezone);
     if (body.status !== undefined) data.status = String(body.status).toUpperCase();
-    const event = await (prisma as any).event.update({ where: { id: eventId }, data });
-    await (prisma as any).lobbyAudit.create({
+    const event = await prisma.event.update({ where: { id: eventId }, data });
+    await prisma.lobbyAudit.create({
       data: {
         id: randomUUID(),
         lobbyId: ctx.lobby.id,
@@ -283,12 +284,12 @@ export default async function eventsRoutes(app: FastifyInstance, opts: Opts) {
     const ctx = await lobbyAdminAccess(req, reply, 4);
     if (!ctx) return;
     const eventId = String((req as any).params?.eventId || "");
-    const event = await (prisma as any).event.findFirst({
+    const event = await prisma.event.findFirst({
       where: { id: eventId, lobbyId: ctx.lobby.id },
     });
     if (!event) return reply.code(404).send({ ok: false, error: "event_not_found" });
-    await (prisma as any).event.delete({ where: { id: eventId } });
-    await (prisma as any).lobbyAudit.create({
+    await prisma.event.delete({ where: { id: eventId } });
+    await prisma.lobbyAudit.create({
       data: {
         id: randomUUID(),
         lobbyId: ctx.lobby.id,
@@ -305,7 +306,7 @@ export default async function eventsRoutes(app: FastifyInstance, opts: Opts) {
     const ctx = await lobbyAdminAccess(req, reply, 5);
     if (!ctx) return;
     const eventId = String((req as any).params?.eventId || "");
-    const event = await (prisma as any).event.findFirst({
+    const event = await prisma.event.findFirst({
       where: { id: eventId, lobbyId: ctx.lobby.id },
     });
     if (!event) return reply.code(404).send({ ok: false, error: "event_not_found" });
@@ -314,7 +315,7 @@ export default async function eventsRoutes(app: FastifyInstance, opts: Opts) {
     if (event.promotionStatus !== "NONE")
       return reply.code(400).send({ ok: false, error: "already_requested" });
     const body: any = (req as any).body || {};
-    const updated = await (prisma as any).event.update({
+    const updated = await prisma.event.update({
       where: { id: eventId },
       data: {
         promotionStatus: "PENDING",
@@ -324,7 +325,7 @@ export default async function eventsRoutes(app: FastifyInstance, opts: Opts) {
             .slice(0, 500) || null,
       },
     });
-    await (prisma as any).lobbyAudit.create({
+    await prisma.lobbyAudit.create({
       data: {
         id: randomUUID(),
         lobbyId: ctx.lobby.id,
@@ -339,7 +340,7 @@ export default async function eventsRoutes(app: FastifyInstance, opts: Opts) {
 
   app.get("/events/upcoming", async (req, reply) => {
     const q: any = (req as any).query || {};
-    const events = await (prisma as any).event.findMany({
+    const events = await prisma.event.findMany({
       where: {
         status: "PUBLISHED",
         startsAt: { gte: new Date() },
@@ -354,7 +355,7 @@ export default async function eventsRoutes(app: FastifyInstance, opts: Opts) {
 
   app.get("/events/:id", async (req, reply) => {
     const eventId = String((req as any).params?.id || "");
-    const event = await (prisma as any).event.findUnique({
+    const event = await prisma.event.findUnique({
       where: { id: eventId },
       include: { lobby: { select: { id: true, name: true, logoUrl: true } } },
     });

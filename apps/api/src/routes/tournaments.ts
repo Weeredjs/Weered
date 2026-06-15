@@ -47,7 +47,7 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
       for (const r of arr) if (r?.kind === "FLAIR" && r?.itemId) ids.add(r.itemId);
     }
     if (ids.size === 0) return;
-    const items: any[] = await (prisma as any).storeItem.findMany({
+    const items: any[] = await prisma.storeItem.findMany({
       where: { id: { in: Array.from(ids) } },
       select: { id: true, name: true, imageUrl: true, category: true, rarity: true },
     });
@@ -411,7 +411,7 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
       for (const r of incoming) {
         if (!r || typeof r !== "object") continue;
         if (r.kind === "FLAIR" && typeof r.itemId === "string" && r.itemId) {
-          const exists = await (prisma as any).storeItem.findUnique({ where: { id: r.itemId } });
+          const exists = await prisma.storeItem.findUnique({ where: { id: r.itemId } });
           if (!exists) continue;
           sanitized.push({ kind: "FLAIR", itemId: r.itemId, rank: Number(r.rank) || 1 });
         }
@@ -436,7 +436,7 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
         return reply.code(403).send({ ok: false, error: "forbidden" });
       const id = String((req as any).params?.id || "");
 
-      const tournament = await (prisma as any).tournament.findUnique({ where: { id } });
+      const tournament = await prisma.tournament.findUnique({ where: { id } });
       if (!tournament) return reply.code(404).send({ ok: false, error: "not_found" });
       if (tournament.status === "COMPLETED" || tournament.status === "CANCELED") {
         return reply.code(400).send({ ok: false, error: "already_finalized" });
@@ -450,7 +450,7 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
         });
       } else {
         const allEntries = await prisma.tournamentEntry.findMany({ where: { tournamentId: id } });
-        const matches = await (prisma as any).tournamentMatch.findMany({
+        const matches = await prisma.tournamentMatch.findMany({
           where: { tournamentId: id, status: "CONFIRMED" },
         });
         const stats: Record<string, { wins: number; losses: number; diff: number }> = {};
@@ -528,10 +528,10 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
         }
         if (p.notoriety > 0) {
           try {
-            await (prisma as any).notorietyEvent.create({
+            await prisma.notorietyEvent.create({
               data: { userId: e.userId, action: `TOURNAMENT_${t}`, points: p.notoriety, refId: id },
             });
-            await (prisma as any).user.update({
+            await prisma.user.update({
               where: { id: e.userId },
               data: { notoriety: { increment: p.notoriety } },
             });
@@ -542,11 +542,11 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
           try {
             const rankLabel = i + 1 === 1 ? "Champion" : i + 1 === 2 ? "Runner-Up" : "3rd Place";
             const badgeName = `${tournament.title} · ${rankLabel}`;
-            let badge = await (prisma as any).challengeBadge.findFirst({
+            let badge = await prisma.challengeBadge.findFirst({
               where: { name: badgeName },
             });
             if (!badge) {
-              badge = await (prisma as any).challengeBadge.create({
+              badge = await prisma.challengeBadge.create({
                 data: {
                   name: badgeName,
                   description: `Top ${i + 1} finish · ${tournament.format}`,
@@ -554,7 +554,7 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
                 },
               });
             }
-            await (prisma as any).userBadge.upsert({
+            await prisma.userBadge.upsert({
               where: { userId_badgeId: { userId: e.userId, badgeId: badge.id } },
               update: {},
               create: { userId: e.userId, badgeId: badge.id },
@@ -595,15 +595,15 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
         const winner = entries[targetRank - 1];
         if (!winner || !winner.userId) continue;
         const tag = `tournament:${id}`;
-        const already = await (prisma as any).userItem.findFirst({
+        const already = await prisma.userItem.findFirst({
           where: { userId: winner.userId, itemId: r.itemId, acquiredFrom: tag },
         });
         if (already) continue;
         try {
-          await (prisma as any).userItem.create({
+          await prisma.userItem.create({
             data: { userId: winner.userId, itemId: r.itemId, acquiredFrom: tag, acquiredPrice: 0 },
           });
-          await (prisma as any).storeItem.update({
+          await prisma.storeItem.update({
             where: { id: r.itemId },
             data: { totalMinted: { increment: 1 } },
           });
@@ -627,7 +627,7 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
     const where: any = { status: "COMPLETED" };
     if (lobbyId) where.lobbyId = lobbyId;
 
-    const tournaments = await (prisma as any).tournament.findMany({
+    const tournaments = await prisma.tournament.findMany({
       where,
       orderBy: { updatedAt: "desc" },
       take: limit,
@@ -699,7 +699,7 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
       const id = String((req as any).params?.id || "");
       const body: any = (req as any).body || {};
 
-      const tourney = await (prisma as any).tournament.findUnique({ where: { id } });
+      const tourney = await prisma.tournament.findUnique({ where: { id } });
       if (!tourney) return reply.code(404).send({ ok: false, error: "not_found" });
       if (!["BRACKET", "BRACKET_DOUBLE", "ROUND_ROBIN"].includes(tourney.format)) {
         return reply.code(400).send({
@@ -712,13 +712,13 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
         return reply.code(400).send({ ok: false, error: "tournament_closed" });
       }
 
-      const existing = await (prisma as any).tournamentMatch.count({ where: { tournamentId: id } });
+      const existing = await prisma.tournamentMatch.count({ where: { tournamentId: id } });
       if (existing > 0)
         return reply
           .code(400)
           .send({ ok: false, error: "bracket_exists", message: "Draw already generated." });
 
-      const entries = await (prisma as any).tournamentEntry.findMany({
+      const entries = await prisma.tournamentEntry.findMany({
         where: { tournamentId: id },
       });
       if (entries.length < (tourney.minEntries || 2)) {
@@ -736,7 +736,7 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
       } else if (seedingMode === "rank") {
         const userIds = entries.map((e: any) => e.userId).filter(Boolean);
         const users = userIds.length
-          ? await (prisma as any).user.findMany({
+          ? await prisma.user.findMany({
               where: { id: { in: userIds } },
               select: { id: true, notoriety: true },
             })
@@ -758,7 +758,7 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
         }
         let pos = 0;
         for (const [aId, bId] of pairs) {
-          await (prisma as any).tournamentMatch.create({
+          await prisma.tournamentMatch.create({
             data: {
               tournamentId: id,
               round: 1,
@@ -769,7 +769,7 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
             },
           });
         }
-        await (prisma as any).tournament.update({ where: { id }, data: { status: "ACTIVE" } });
+        await prisma.tournament.update({ where: { id }, data: { status: "ACTIVE" } });
         return reply.send({ ok: true, format: "ROUND_ROBIN", totalMatches: pairs.length });
       }
 
@@ -808,14 +808,13 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
       const wbCreated: any[][] = [];
       for (const round of wb) {
         const created: any[] = [];
-        for (const m of round)
-          created.push(await (prisma as any).tournamentMatch.create({ data: m }));
+        for (const m of round) created.push(await prisma.tournamentMatch.create({ data: m }));
         wbCreated.push(created);
       }
       for (let r = 0; r < wbCreated.length - 1; r++) {
         for (let pos = 0; pos < wbCreated[r].length; pos++) {
           const next = wbCreated[r + 1][Math.floor(pos / 2)];
-          await (prisma as any).tournamentMatch.update({
+          await prisma.tournamentMatch.update({
             where: { id: wbCreated[r][pos].id },
             data: { nextMatchId: next.id },
           });
@@ -844,8 +843,7 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
         }
         for (const round of lb) {
           const created: any[] = [];
-          for (const m of round)
-            created.push(await (prisma as any).tournamentMatch.create({ data: m }));
+          for (const m of round) created.push(await prisma.tournamentMatch.create({ data: m }));
           lbCreated.push(created);
         }
         for (let lr = 0; lr < lbCreated.length - 1; lr++) {
@@ -856,14 +854,14 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
               Math.floor(pos / (cur.length / next.length)),
               next.length - 1,
             );
-            await (prisma as any).tournamentMatch.update({
+            await prisma.tournamentMatch.update({
               where: { id: cur[pos].id },
               data: { nextMatchId: next[targetPos].id },
             });
           }
         }
 
-        grandFinal = await (prisma as any).tournamentMatch.create({
+        grandFinal = await prisma.tournamentMatch.create({
           data: {
             tournamentId: id,
             round: numWinnerRounds + 1,
@@ -873,13 +871,13 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
           },
         });
         const wbFinal = wbCreated[wbCreated.length - 1][0];
-        await (prisma as any).tournamentMatch.update({
+        await prisma.tournamentMatch.update({
           where: { id: wbFinal.id },
           data: { nextMatchId: grandFinal.id },
         });
         if (lbCreated.length > 0) {
           const lbFinal = lbCreated[lbCreated.length - 1][0];
-          await (prisma as any).tournamentMatch.update({
+          await prisma.tournamentMatch.update({
             where: { id: lbFinal.id },
             data: { nextMatchId: grandFinal.id },
           });
@@ -895,7 +893,7 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
               Math.floor(pos / Math.max(1, wbRound.length / lbRound.length)),
               lbRound.length - 1,
             );
-            await (prisma as any).tournamentMatch.update({
+            await prisma.tournamentMatch.update({
               where: { id: wbRound[pos].id },
               data: { loserMatchId: lbRound[targetPos].id },
             });
@@ -908,7 +906,7 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
         if (m.status === "CONFIRMED" && m.winnerEntryId && wbCreated.length > 1) {
           const next = wbCreated[1][Math.floor(pos / 2)];
           const slot = pos % 2 === 0 ? "entryAId" : "entryBId";
-          await (prisma as any).tournamentMatch.update({
+          await prisma.tournamentMatch.update({
             where: { id: next.id },
             data: { [slot]: m.winnerEntryId },
           });
@@ -916,9 +914,10 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
       }
       if (wbCreated.length > 1) {
         for (const m of wbCreated[1]) {
-          const fresh = await (prisma as any).tournamentMatch.findUnique({ where: { id: m.id } });
+          const fresh = await prisma.tournamentMatch.findUnique({ where: { id: m.id } });
+          if (!fresh) continue;
           if (fresh.entryAId && fresh.entryBId && fresh.status === "PENDING") {
-            await (prisma as any).tournamentMatch.update({
+            await prisma.tournamentMatch.update({
               where: { id: m.id },
               data: { status: "READY" },
             });
@@ -926,7 +925,7 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
         }
       }
 
-      await (prisma as any).tournament.update({ where: { id }, data: { status: "ACTIVE" } });
+      await prisma.tournament.update({ where: { id }, data: { status: "ACTIVE" } });
 
       const totalMatches = wbCreated.flat().length + lbCreated.flat().length + (grandFinal ? 1 : 0);
       return reply.send({
@@ -941,10 +940,10 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
 
   app.get("/tournaments/:id/standings", async (req, reply) => {
     const id = String((req as any).params?.id || "");
-    const tourney = await (prisma as any).tournament.findUnique({ where: { id } });
+    const tourney = await prisma.tournament.findUnique({ where: { id } });
     if (!tourney) return reply.code(404).send({ ok: false, error: "not_found" });
-    const entries = await (prisma as any).tournamentEntry.findMany({ where: { tournamentId: id } });
-    const matches = await (prisma as any).tournamentMatch.findMany({
+    const entries = await prisma.tournamentEntry.findMany({ where: { tournamentId: id } });
+    const matches = await prisma.tournamentMatch.findMany({
       where: { tournamentId: id, status: "CONFIRMED" },
     });
     const stats: Record<
@@ -995,7 +994,7 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
 
   app.get("/tournaments/:id/matches", async (req, reply) => {
     const id = String((req as any).params?.id || "");
-    const matches = await (prisma as any).tournamentMatch.findMany({
+    const matches = await prisma.tournamentMatch.findMany({
       where: { tournamentId: id },
       orderBy: [{ round: "asc" }, { bracketPosition: "asc" }],
     });
@@ -1006,7 +1005,7 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
       if (m.winnerEntryId) entryIds.add(m.winnerEntryId);
     }
     const entries = entryIds.size
-      ? await (prisma as any).tournamentEntry.findMany({ where: { id: { in: [...entryIds] } } })
+      ? await prisma.tournamentEntry.findMany({ where: { id: { in: [...entryIds] } } })
       : [];
     const byId = new Map(entries.map((e: any) => [e.id, e]));
     const enriched = matches.map((m: any) => ({
@@ -1018,12 +1017,12 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
   });
 
   async function advanceWinner(matchId: string) {
-    const m = await (prisma as any).tournamentMatch.findUnique({ where: { id: matchId } });
+    const m = await prisma.tournamentMatch.findUnique({ where: { id: matchId } });
     if (!m || !m.winnerEntryId) return;
     const loserId = m.winnerEntryId === m.entryAId ? m.entryBId : m.entryAId;
 
     if (m.nextMatchId) {
-      const next = await (prisma as any).tournamentMatch.findUnique({
+      const next = await prisma.tournamentMatch.findUnique({
         where: { id: m.nextMatchId },
       });
       if (next) {
@@ -1032,14 +1031,14 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
           const update: any = { [slot]: m.winnerEntryId };
           const otherSlot = slot === "entryAId" ? "entryBId" : "entryAId";
           if (next[otherSlot]) update.status = "READY";
-          await (prisma as any).tournamentMatch.update({ where: { id: next.id }, data: update });
+          await prisma.tournamentMatch.update({ where: { id: next.id }, data: update });
           if (next[otherSlot]) await notifyMatchReady(next.id);
         }
       }
     }
 
     if (m.loserMatchId && loserId) {
-      const lm = await (prisma as any).tournamentMatch.findUnique({
+      const lm = await prisma.tournamentMatch.findUnique({
         where: { id: m.loserMatchId },
       });
       if (lm) {
@@ -1048,7 +1047,7 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
           const update: any = { [slot]: loserId };
           const otherSlot = slot === "entryAId" ? "entryBId" : "entryAId";
           if (lm[otherSlot]) update.status = "READY";
-          await (prisma as any).tournamentMatch.update({ where: { id: lm.id }, data: update });
+          await prisma.tournamentMatch.update({ where: { id: lm.id }, data: update });
           if (lm[otherSlot]) await notifyMatchReady(lm.id);
         }
       }
@@ -1058,13 +1057,13 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
   async function notifyMatchReady(matchId: string) {
     if (!createNotification) return;
     try {
-      const m = await (prisma as any).tournamentMatch.findUnique({
+      const m = await prisma.tournamentMatch.findUnique({
         where: { id: matchId },
         include: { tournament: { select: { id: true, title: true, lobbyId: true } } },
       });
       if (!m) return;
-      const entryIds = [m.entryAId, m.entryBId].filter(Boolean);
-      const entries = await (prisma as any).tournamentEntry.findMany({
+      const entryIds = [m.entryAId, m.entryBId].filter((x): x is string => Boolean(x));
+      const entries = await prisma.tournamentEntry.findMany({
         where: { id: { in: entryIds } },
         select: { userId: true, displayName: true },
       });
@@ -1104,13 +1103,13 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
       const matchId = String((req as any).params?.matchId || "");
       const body: any = (req as any).body || {};
 
-      const m = await (prisma as any).tournamentMatch.findUnique({ where: { id: matchId } });
+      const m = await prisma.tournamentMatch.findUnique({ where: { id: matchId } });
       if (!m) return reply.code(404).send({ ok: false, error: "not_found" });
       if (m.status === "CONFIRMED" || m.status === "CANCELED") {
         return reply.code(400).send({ ok: false, error: "match_closed" });
       }
-      const participantIds = await (prisma as any).tournamentEntry.findMany({
-        where: { id: { in: [m.entryAId, m.entryBId].filter(Boolean) } },
+      const participantIds = await prisma.tournamentEntry.findMany({
+        where: { id: { in: [m.entryAId, m.entryBId].filter((x): x is string => Boolean(x)) } },
         select: { userId: true },
       });
       const staffOk = await isStaffUser(u.id);
@@ -1124,7 +1123,7 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
       const scoreA = body.scoreA != null ? Math.max(0, Math.min(99, parseInt(body.scoreA))) : null;
       const scoreB = body.scoreB != null ? Math.max(0, Math.min(99, parseInt(body.scoreB))) : null;
 
-      await (prisma as any).tournamentMatch.update({
+      await prisma.tournamentMatch.update({
         where: { id: matchId },
         data: {
           winnerEntryId,
@@ -1137,7 +1136,7 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
       });
 
       if (staffOk) {
-        await (prisma as any).tournamentMatch.update({
+        await prisma.tournamentMatch.update({
           where: { id: matchId },
           data: { status: "CONFIRMED", confirmedAt: new Date() },
         });
@@ -1160,7 +1159,7 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
       const u = authFromHeader((req as any).headers?.authorization);
       if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
       const matchId = String((req as any).params?.matchId || "");
-      const m = await (prisma as any).tournamentMatch.findUnique({ where: { id: matchId } });
+      const m = await prisma.tournamentMatch.findUnique({ where: { id: matchId } });
       if (!m) return reply.code(404).send({ ok: false, error: "not_found" });
       if (m.status !== "REPORTED")
         return reply.code(400).send({ ok: false, error: "not_reported" });
@@ -1170,15 +1169,15 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
           return reply
             .code(403)
             .send({ ok: false, error: "self_confirm", message: "Opponent must confirm." });
-        const participantIds = await (prisma as any).tournamentEntry.findMany({
-          where: { id: { in: [m.entryAId, m.entryBId].filter(Boolean) } },
+        const participantIds = await prisma.tournamentEntry.findMany({
+          where: { id: { in: [m.entryAId, m.entryBId].filter((x): x is string => Boolean(x)) } },
           select: { userId: true },
         });
         const isParticipant = participantIds.some((p: any) => p.userId === u.id);
         if (!isParticipant) return reply.code(403).send({ ok: false, error: "forbidden" });
       }
 
-      await (prisma as any).tournamentMatch.update({
+      await prisma.tournamentMatch.update({
         where: { id: matchId },
         data: { status: "CONFIRMED", confirmedAt: new Date() },
       });
@@ -1199,11 +1198,11 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
       const u = authFromHeader((req as any).headers?.authorization);
       if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
       const matchId = String((req as any).params?.matchId || "");
-      const m = await (prisma as any).tournamentMatch.findUnique({ where: { id: matchId } });
+      const m = await prisma.tournamentMatch.findUnique({ where: { id: matchId } });
       if (!m) return reply.code(404).send({ ok: false, error: "not_found" });
       if (m.status !== "REPORTED")
         return reply.code(400).send({ ok: false, error: "not_reported" });
-      await (prisma as any).tournamentMatch.update({
+      await prisma.tournamentMatch.update({
         where: { id: matchId },
         data: { status: "DISPUTED" },
       });
@@ -1223,11 +1222,11 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
       const u = authFromHeader((req as any).headers?.authorization);
       if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
       const matchId = String((req as any).params?.matchId || "");
-      const m = await (prisma as any).tournamentMatch.findUnique({ where: { id: matchId } });
+      const m = await prisma.tournamentMatch.findUnique({ where: { id: matchId } });
       if (!m) return reply.code(404).send({ ok: false, error: "not_found" });
       if (m.status !== "READY" && m.status !== "LIVE")
         return reply.code(400).send({ ok: false, error: "not_ready" });
-      await (prisma as any).tournamentMatch.update({
+      await prisma.tournamentMatch.update({
         where: { id: matchId },
         data: { status: "LIVE", liveAt: new Date() },
       });
@@ -1259,7 +1258,7 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
         data.notes = body.notes ? String(body.notes).slice(0, 500) : null;
       if (Object.keys(data).length === 0)
         return reply.code(400).send({ ok: false, error: "no_fields" });
-      const updated = await (prisma as any).tournamentMatch.update({
+      const updated = await prisma.tournamentMatch.update({
         where: { id: matchId },
         data,
       });
@@ -1282,7 +1281,7 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
         return reply.code(403).send({ ok: false, error: "forbidden" });
       const matchId = String((req as any).params?.matchId || "");
       const body: any = (req as any).body || {};
-      const m = await (prisma as any).tournamentMatch.findUnique({ where: { id: matchId } });
+      const m = await prisma.tournamentMatch.findUnique({ where: { id: matchId } });
       if (!m) return reply.code(404).send({ ok: false, error: "not_found" });
       const winnerEntryId = String(body.winnerEntryId || "");
       if (![m.entryAId, m.entryBId].includes(winnerEntryId)) {
@@ -1290,7 +1289,7 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
       }
       const scoreA = body.scoreA != null ? Math.max(0, Math.min(99, parseInt(body.scoreA))) : null;
       const scoreB = body.scoreB != null ? Math.max(0, Math.min(99, parseInt(body.scoreB))) : null;
-      await (prisma as any).tournamentMatch.update({
+      await prisma.tournamentMatch.update({
         where: { id: matchId },
         data: {
           winnerEntryId,

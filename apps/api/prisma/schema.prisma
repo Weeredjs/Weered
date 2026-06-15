@@ -633,6 +633,7 @@ model NotorietyEvent {
   userId    String
   action    String
   points    Int
+  refId     String?  // optional source linkage (e.g. tournamentId that awarded this)
   createdAt DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)

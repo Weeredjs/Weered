@@ -1,3 +1,4 @@
+import { OrderSide } from "@prisma/client";
 import { log } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 import { fetchWithTimeout } from "../lib/fetchWithTimeout";
@@ -129,7 +130,7 @@ export default async function tradingRoutes(app: FastifyInstance, opts: Opts) {
     const mode = parseMode(req);
     const startBal = startBalanceFor(mode);
 
-    let account = await (prisma as any).paperAccount.findFirst({
+    let account = await prisma.paperAccount.findFirst({
       where: { userId: u.id, lobbyId, competitionId: null, mode },
       include: {
         positions: { where: { status: "OPEN" } },
@@ -138,7 +139,7 @@ export default async function tradingRoutes(app: FastifyInstance, opts: Opts) {
     });
 
     if (!account) {
-      account = await (prisma as any).paperAccount.create({
+      account = await prisma.paperAccount.create({
         data: {
           userId: u.id,
           lobbyId,
@@ -248,12 +249,12 @@ export default async function tradingRoutes(app: FastifyInstance, opts: Opts) {
       const mode = parseMode(req);
       const startBal = startBalanceFor(mode);
       const paperMul = paperRateMultiplierFor(mode);
-      let account = await (prisma as any).paperAccount.findFirst({
+      let account = await prisma.paperAccount.findFirst({
         where: { userId: u.id, lobbyId, competitionId: null, mode },
         include: { positions: { where: { status: "OPEN", symbol } } },
       });
       if (!account) {
-        account = await (prisma as any).paperAccount.create({
+        account = await prisma.paperAccount.create({
           data: {
             userId: u.id,
             lobbyId,
@@ -270,11 +271,11 @@ export default async function tradingRoutes(app: FastifyInstance, opts: Opts) {
         if (!limitPrice || limitPrice <= 0) {
           return reply.code(400).send({ ok: false, error: "limit_price_required" });
         }
-        const order = await (prisma as any).paperOrder.create({
+        const order = await prisma.paperOrder.create({
           data: {
             accountId: account.id,
             symbol,
-            side,
+            side: side as OrderSide,
             orderType,
             quantity,
             price: limitPrice,
@@ -342,7 +343,7 @@ export default async function tradingRoutes(app: FastifyInstance, opts: Opts) {
               required: cost,
             });
           }
-          await (prisma as any).$transaction(async (tx: any) => {
+          await prisma.$transaction(async (tx: any) => {
             const existing = account.positions.find((p: any) => p.side === "BUY");
             if (existing) {
               // Averaging into an existing long: debit the added cost (guarded) THEN grow the position.
@@ -427,7 +428,7 @@ export default async function tradingRoutes(app: FastifyInstance, opts: Opts) {
             }
           });
         } else {
-          await (prisma as any).$transaction(async (tx: any) => {
+          await prisma.$transaction(async (tx: any) => {
             const longPos = account.positions.find((p: any) => p.side === "BUY");
             if (longPos) {
               if (quantity >= longPos.quantity) {
@@ -547,11 +548,11 @@ export default async function tradingRoutes(app: FastifyInstance, opts: Opts) {
         awardPaper(u.id, "EARN_FAKEOUT", a.paper, a.desc, a.refId).catch(() => {});
         if (mode === "RANKED") awardNotoriety(u.id, "FAKEOUT_PROFIT").catch(() => {});
       }
-      await (prisma as any).paperOrder.create({
+      await prisma.paperOrder.create({
         data: {
           accountId: account.id,
           symbol,
-          side,
+          side: side as OrderSide,
           orderType: "MARKET",
           quantity,
           filledPrice: currentPrice,
@@ -581,7 +582,7 @@ export default async function tradingRoutes(app: FastifyInstance, opts: Opts) {
       if (operatorCommentateOnTrade) {
         (async () => {
           try {
-            const recentClose = await (prisma as any).paperPosition.findFirst({
+            const recentClose = await prisma.paperPosition.findFirst({
               where: {
                 accountId: account.id,
                 status: "CLOSED",
@@ -616,7 +617,7 @@ export default async function tradingRoutes(app: FastifyInstance, opts: Opts) {
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const positionId = String((req as any).params?.positionId || "");
 
-    const pos = await (prisma as any).paperPosition.findUnique({
+    const pos = await prisma.paperPosition.findUnique({
       where: { id: positionId },
       include: { account: true },
     });
@@ -634,7 +635,7 @@ export default async function tradingRoutes(app: FastifyInstance, opts: Opts) {
 
     // Idempotent close: only the request that actually flips OPEN->CLOSED credits
     // the account, so two concurrent closes cannot double-pay.
-    const claimed = await (prisma as any).paperPosition.updateMany({
+    const claimed = await prisma.paperPosition.updateMany({
       where: { id: positionId, status: "OPEN" },
       data: {
         status: "CLOSED",
@@ -645,7 +646,7 @@ export default async function tradingRoutes(app: FastifyInstance, opts: Opts) {
       },
     });
     if (claimed.count === 0) return reply.code(400).send({ ok: false, error: "already_closed" });
-    await (prisma as any).paperAccount.update({
+    await prisma.paperAccount.update({
       where: { id: pos.accountId },
       data: { cashBalance: { increment: pos.entryValue + pnl }, realizedPnl: { increment: pnl } },
     });
@@ -685,7 +686,7 @@ export default async function tradingRoutes(app: FastifyInstance, opts: Opts) {
     const positionId = String((req as any).params?.positionId || "");
     const body: any = (req as any).body || {};
 
-    const pos = await (prisma as any).paperPosition.findUnique({
+    const pos = await prisma.paperPosition.findUnique({
       where: { id: positionId },
       include: { account: true },
     });
@@ -741,7 +742,7 @@ export default async function tradingRoutes(app: FastifyInstance, opts: Opts) {
     if (Object.keys(data).length === 0)
       return reply.code(400).send({ ok: false, error: "no_changes" });
 
-    const updated = await (prisma as any).paperPosition.update({
+    const updated = await prisma.paperPosition.update({
       where: { id: positionId },
       data,
     });
@@ -755,7 +756,7 @@ export default async function tradingRoutes(app: FastifyInstance, opts: Opts) {
     const lobbyId = String((req as any).params?.lobbyId || "");
     const mode = parseMode(req);
 
-    const accounts = await (prisma as any).paperAccount.findMany({
+    const accounts = await prisma.paperAccount.findMany({
       where: { lobbyId, competitionId: null, mode },
       include: { positions: { where: { status: "OPEN" } } },
     });
@@ -808,18 +809,18 @@ export default async function tradingRoutes(app: FastifyInstance, opts: Opts) {
     const lobbyId = String((req as any).params?.lobbyId || "");
     const mode = parseMode(req);
 
-    const account = await (prisma as any).paperAccount.findFirst({
+    const account = await prisma.paperAccount.findFirst({
       where: { userId: u.id, lobbyId, competitionId: null, mode },
     });
     if (!account) return reply.send({ ok: true, orders: [], closedPositions: [] });
 
-    const orders = await (prisma as any).paperOrder.findMany({
+    const orders = await prisma.paperOrder.findMany({
       where: { accountId: account.id },
       orderBy: { createdAt: "desc" },
       take: 100,
     });
 
-    const closedPositions = await (prisma as any).paperPosition.findMany({
+    const closedPositions = await prisma.paperPosition.findMany({
       where: { accountId: account.id, status: "CLOSED" },
       orderBy: { closedAt: "desc" },
       take: 50,
@@ -847,7 +848,7 @@ export default async function tradingRoutes(app: FastifyInstance, opts: Opts) {
     const since = new Date(Date.now() - 6 * 60 * 60 * 1000);
 
     const [orders, closedPositions] = await Promise.all([
-      (prisma as any).paperOrder.findMany({
+      prisma.paperOrder.findMany({
         where: {
           status: "FILLED",
           filledAt: { gte: since },
@@ -857,7 +858,7 @@ export default async function tradingRoutes(app: FastifyInstance, opts: Opts) {
         orderBy: { filledAt: "desc" },
         take: 60,
       }),
-      (prisma as any).paperPosition.findMany({
+      prisma.paperPosition.findMany({
         where: {
           status: "CLOSED",
           closedAt: { gte: since },
@@ -942,14 +943,14 @@ export default async function tradingRoutes(app: FastifyInstance, opts: Opts) {
     const mode = parseMode(req);
     const startBal = startBalanceFor(mode);
 
-    const account = await (prisma as any).paperAccount.findFirst({
+    const account = await prisma.paperAccount.findFirst({
       where: { userId: u.id, lobbyId, competitionId: null, mode },
     });
     if (!account) return reply.send({ ok: true });
 
-    await (prisma as any).paperPosition.deleteMany({ where: { accountId: account.id } });
-    await (prisma as any).paperOrder.deleteMany({ where: { accountId: account.id } });
-    await (prisma as any).paperAccount.update({
+    await prisma.paperPosition.deleteMany({ where: { accountId: account.id } });
+    await prisma.paperOrder.deleteMany({ where: { accountId: account.id } });
+    await prisma.paperAccount.update({
       where: { id: account.id },
       data: { cashBalance: startBal, startBalance: startBal, realizedPnl: 0 },
     });
@@ -963,7 +964,7 @@ export default async function tradingRoutes(app: FastifyInstance, opts: Opts) {
     const lobbyId = String((req as any).params?.lobbyId || "");
     const body: any = (req as any).body || {};
 
-    const comp = await (prisma as any).tradingCompetition.create({
+    const comp = await prisma.tradingCompetition.create({
       data: {
         lobbyId,
         name: String(body.name || "Trading Competition").slice(0, 100),
@@ -990,7 +991,7 @@ export default async function tradingRoutes(app: FastifyInstance, opts: Opts) {
   app.get("/trading/competitions/:lobbyId", async (req, reply) => {
     const lobbyId = String((req as any).params?.lobbyId || "");
 
-    const comps = await (prisma as any).tradingCompetition.findMany({
+    const comps = await prisma.tradingCompetition.findMany({
       where: { lobbyId },
       orderBy: { startTime: "desc" },
       take: 20,
@@ -1012,18 +1013,18 @@ export default async function tradingRoutes(app: FastifyInstance, opts: Opts) {
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const compId = String((req as any).params?.compId || "");
 
-    const comp = await (prisma as any).tradingCompetition.findUnique({ where: { id: compId } });
+    const comp = await prisma.tradingCompetition.findUnique({ where: { id: compId } });
     if (!comp) return reply.code(404).send({ ok: false, error: "not_found" });
     if (comp.status === "ENDED")
       return reply.code(400).send({ ok: false, error: "competition_ended" });
 
-    const existing = await (prisma as any).paperAccount.findFirst({
+    const existing = await prisma.paperAccount.findFirst({
       where: { userId: u.id, lobbyId: comp.lobbyId, competitionId: compId },
     });
     if (existing)
       return reply.send({ ok: true, accountId: existing.id, message: "already_enrolled" });
 
-    const account = await (prisma as any).paperAccount.create({
+    const account = await prisma.paperAccount.create({
       data: {
         userId: u.id,
         lobbyId: comp.lobbyId,
@@ -1040,7 +1041,7 @@ export default async function tradingRoutes(app: FastifyInstance, opts: Opts) {
   app.get("/trading/competition/:compId/leaderboard", async (req, reply) => {
     const compId = String((req as any).params?.compId || "");
 
-    const accounts = await (prisma as any).paperAccount.findMany({
+    const accounts = await prisma.paperAccount.findMany({
       where: { competitionId: compId },
       include: { positions: { where: { status: "OPEN" } } },
     });
@@ -1086,19 +1087,19 @@ export default async function tradingRoutes(app: FastifyInstance, opts: Opts) {
   setInterval(async () => {
     try {
       const now = new Date();
-      await (prisma as any).tradingCompetition.updateMany({
+      await prisma.tradingCompetition.updateMany({
         where: { status: "UPCOMING", startTime: { lte: now } },
         data: { status: "ACTIVE" },
       });
-      const ending = await (prisma as any).tradingCompetition.findMany({
+      const ending = await prisma.tradingCompetition.findMany({
         where: { status: "ACTIVE", endTime: { lte: now } },
       });
       for (const comp of ending) {
-        await (prisma as any).tradingCompetition.update({
+        await prisma.tradingCompetition.update({
           where: { id: comp.id },
           data: { status: "ENDED" },
         });
-        const accounts = await (prisma as any).paperAccount.findMany({
+        const accounts = await prisma.paperAccount.findMany({
           where: { competitionId: comp.id },
           include: { positions: { where: { status: "OPEN" } } },
         });
@@ -1137,13 +1138,14 @@ export default async function tradingRoutes(app: FastifyInstance, opts: Opts) {
 
   setInterval(async () => {
     try {
-      const pending = await (prisma as any).paperOrder.findMany({
+      const pending = await prisma.paperOrder.findMany({
         where: { status: "PENDING" },
         include: { account: { include: { positions: { where: { status: "OPEN" } } } } },
       });
       for (const order of pending) {
         const cp = getLivePrice(order.symbol);
         if (!cp) continue;
+        if (order.price == null) continue;
 
         let shouldFill = false;
         if (order.orderType === "LIMIT") {
@@ -1161,7 +1163,7 @@ export default async function tradingRoutes(app: FastifyInstance, opts: Opts) {
           // Guarded margin debit + fill in one transaction: a concurrent market order
           // can't overdraft the account, and a filled order can't be double-counted.
           try {
-            await (prisma as any).$transaction(async (tx: any) => {
+            await prisma.$transaction(async (tx: any) => {
               const debited = await tx.paperAccount.updateMany({
                 where: { id: order.accountId, cashBalance: { gte: cost } },
                 data: { cashBalance: { decrement: cost } },
@@ -1204,7 +1206,7 @@ export default async function tradingRoutes(app: FastifyInstance, opts: Opts) {
 
   setInterval(async () => {
     try {
-      const positions = await (prisma as any).paperPosition.findMany({
+      const positions = await prisma.paperPosition.findMany({
         where: {
           status: "OPEN",
           OR: [{ stopLoss: { not: null } }, { takeProfit: { not: null } }],
@@ -1226,13 +1228,14 @@ export default async function tradingRoutes(app: FastifyInstance, opts: Opts) {
         if (!trigger) continue;
 
         const exitPrice = trigger === "STOP_LOSS" ? pos.stopLoss : pos.takeProfit;
+        if (exitPrice == null) continue;
         const pnl =
           pos.side === "BUY"
             ? (exitPrice - pos.entryPrice) * pos.quantity
             : (pos.entryPrice - exitPrice) * pos.quantity;
 
         try {
-          await (prisma as any).paperPosition.update({
+          await prisma.paperPosition.update({
             where: { id: pos.id },
             data: {
               status: "CLOSED",
@@ -1242,7 +1245,7 @@ export default async function tradingRoutes(app: FastifyInstance, opts: Opts) {
               closeReason: trigger,
             },
           });
-          await (prisma as any).paperAccount.update({
+          await prisma.paperAccount.update({
             where: { id: pos.accountId },
             data: {
               cashBalance: { increment: pos.entryValue + pnl },

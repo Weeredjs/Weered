@@ -25,7 +25,7 @@ export default async function groupRoutes(app: FastifyInstance, opts: Opts) {
     opts;
 
   async function activeMemberIds(threadId: string): Promise<string[]> {
-    const rows = await (prisma as any).groupMember.findMany({
+    const rows = await prisma.groupMember.findMany({
       where: { threadId, leftAt: null },
       select: { userId: true },
     });
@@ -33,7 +33,7 @@ export default async function groupRoutes(app: FastifyInstance, opts: Opts) {
   }
 
   async function requireMember(threadId: string, userId: string) {
-    const m = await (prisma as any).groupMember.findUnique({
+    const m = await prisma.groupMember.findUnique({
       where: { threadId_userId: { threadId, userId } },
     });
     if (!m || m.leftAt) return null;
@@ -52,7 +52,7 @@ export default async function groupRoutes(app: FastifyInstance, opts: Opts) {
     const viewer = authFromHeader((req.headers as any).authorization);
     if (!viewer) return reply.code(401).send({ error: "Unauthorized" });
     try {
-      const memberships = await (prisma as any).groupMember.findMany({
+      const memberships = await prisma.groupMember.findMany({
         where: { userId: viewer.id, leftAt: null },
         include: {
           thread: {
@@ -77,7 +77,7 @@ export default async function groupRoutes(app: FastifyInstance, opts: Opts) {
       const threadIds = memberships.map((m: any) => m.threadId);
       const unreadCounts: Record<string, number> = {};
       if (threadIds.length) {
-        const grouped = await (prisma as any).groupMessage
+        const grouped = await prisma.groupMessage
           .groupBy({
             by: ["threadId"],
             where: {
@@ -90,7 +90,7 @@ export default async function groupRoutes(app: FastifyInstance, opts: Opts) {
           })
           .catch(() => [] as any[]);
         for (const m of memberships) {
-          const c = await (prisma as any).groupMessage.count({
+          const c = await prisma.groupMessage.count({
             where: {
               threadId: m.threadId,
               deletedAt: null,
@@ -165,14 +165,14 @@ export default async function groupRoutes(app: FastifyInstance, opts: Opts) {
       }
 
       try {
-        const users = await (prisma as any).user.findMany({
+        const users = await prisma.user.findMany({
           where: { id: { in: memberIds } },
           select: { id: true },
         });
         const validIds = users.map((u: any) => u.id);
         if (validIds.length === 0) return reply.code(400).send({ error: "No valid members" });
 
-        const thread = await (prisma as any).groupThread.create({
+        const thread = await prisma.groupThread.create({
           data: {
             name: name || null,
             createdById: viewer.id,
@@ -228,7 +228,7 @@ export default async function groupRoutes(app: FastifyInstance, opts: Opts) {
     const m = await requireMember(id, viewer.id);
     if (!m) return reply.code(403).send({ error: "Not a member" });
     try {
-      const latest = await (prisma as any).groupMessage.findMany({
+      const latest = await prisma.groupMessage.findMany({
         where: { threadId: id },
         orderBy: { createdAt: "desc" },
         take: 50,
@@ -247,7 +247,7 @@ export default async function groupRoutes(app: FastifyInstance, opts: Opts) {
         },
       });
       const messages = latest.reverse();
-      await (prisma as any).groupMember.update({
+      await prisma.groupMember.update({
         where: { threadId_userId: { threadId: id, userId: viewer.id } },
         data: { lastReadAt: new Date() },
       });
@@ -290,12 +290,12 @@ export default async function groupRoutes(app: FastifyInstance, opts: Opts) {
       const rawReplyToId = typeof body.replyToId === "string" ? body.replyToId : "";
       if (rawReplyToId) {
         try {
-          const parent = await (prisma as any).groupMessage.findUnique({
+          const parent = await prisma.groupMessage.findUnique({
             where: { id: rawReplyToId },
             select: { id: true, threadId: true, senderId: true, body: true, deletedAt: true },
           });
           if (parent && !parent.deletedAt && parent.threadId === id) {
-            const parentUser = await (prisma as any).user.findUnique({
+            const parentUser = await prisma.user.findUnique({
               where: { id: parent.senderId },
               select: { name: true },
             });
@@ -310,7 +310,7 @@ export default async function groupRoutes(app: FastifyInstance, opts: Opts) {
       }
 
       try {
-        const msg = await (prisma as any).groupMessage.create({
+        const msg = await prisma.groupMessage.create({
           data: { threadId: id, senderId: viewer.id, body: text, ...replyData },
           select: {
             id: true,
@@ -324,11 +324,11 @@ export default async function groupRoutes(app: FastifyInstance, opts: Opts) {
             replyToBody: true,
           },
         });
-        await (prisma as any).groupThread.update({
+        await prisma.groupThread.update({
           where: { id },
           data: { lastMessageAt: msg.createdAt },
         });
-        await (prisma as any).groupMember.update({
+        await prisma.groupMember.update({
           where: { threadId_userId: { threadId: id, userId: viewer.id } },
           data: { lastReadAt: msg.createdAt },
         });
@@ -406,7 +406,7 @@ export default async function groupRoutes(app: FastifyInstance, opts: Opts) {
       const text = typeof body.body === "string" ? body.body.trim().slice(0, MAX_BODY) : "";
       if (!text) return reply.code(400).send({ error: "Empty message" });
       try {
-        const existing = await (prisma as any).groupMessage.findUnique({
+        const existing = await prisma.groupMessage.findUnique({
           where: { id: msgId },
           select: {
             id: true,
@@ -425,7 +425,7 @@ export default async function groupRoutes(app: FastifyInstance, opts: Opts) {
         if (Date.now() - new Date(existing.createdAt).getTime() > 15 * 60 * 1000) {
           return reply.code(400).send({ error: "Too old to edit" });
         }
-        const updated = await (prisma as any).groupMessage.update({
+        const updated = await prisma.groupMessage.update({
           where: { id: msgId },
           data: { body: text, editedAt: new Date() },
           select: { id: true, threadId: true, body: true, editedAt: true },
@@ -436,7 +436,7 @@ export default async function groupRoutes(app: FastifyInstance, opts: Opts) {
           threadId: id,
           msgId,
           body: updated.body,
-          editedAt: updated.editedAt.toISOString(),
+          editedAt: updated.editedAt?.toISOString(),
         });
         return reply.send({ ok: true });
       } catch (e) {
@@ -461,7 +461,7 @@ export default async function groupRoutes(app: FastifyInstance, opts: Opts) {
       const m = await requireMember(id, viewer.id);
       if (!m) return reply.code(403).send({ error: "Not a member" });
       try {
-        const existing = await (prisma as any).groupMessage.findUnique({
+        const existing = await prisma.groupMessage.findUnique({
           where: { id: msgId },
           select: { id: true, threadId: true, senderId: true, deletedAt: true },
         });
@@ -471,7 +471,7 @@ export default async function groupRoutes(app: FastifyInstance, opts: Opts) {
         const isOwn = existing.senderId === viewer.id;
         if (!isOwn && m.role !== "OWNER") return reply.code(403).send({ error: "Not allowed" });
         const now = new Date();
-        await (prisma as any).groupMessage.update({
+        await prisma.groupMessage.update({
           where: { id: msgId },
           data: { deletedAt: now, body: "" },
         });
@@ -502,7 +502,7 @@ export default async function groupRoutes(app: FastifyInstance, opts: Opts) {
       const m = await requireMember(id, viewer.id);
       if (!m) return reply.code(403).send({ error: "Not a member" });
       try {
-        await (prisma as any).groupMember.update({
+        await prisma.groupMember.update({
           where: { threadId_userId: { threadId: id, userId: viewer.id } },
           data: { lastReadAt: new Date() },
         });
@@ -529,7 +529,7 @@ export default async function groupRoutes(app: FastifyInstance, opts: Opts) {
       const body: any = (req as any).body || {};
       const name = typeof body.name === "string" ? body.name.trim().slice(0, MAX_NAME) : "";
       try {
-        const updated = await (prisma as any).groupThread.update({
+        const updated = await prisma.groupThread.update({
           where: { id },
           data: { name: name || null },
           select: { id: true, name: true },
@@ -562,12 +562,12 @@ export default async function groupRoutes(app: FastifyInstance, opts: Opts) {
       if (cleaned.length === 0) return reply.code(400).send({ error: "No members to add" });
 
       try {
-        const existing = await (prisma as any).groupMember.findMany({
+        const existing = await prisma.groupMember.findMany({
           where: { threadId: id, userId: { in: cleaned } },
         });
         const existingMap = new Map(existing.map((r: any) => [r.userId, r]));
 
-        const activeCount = await (prisma as any).groupMember.count({
+        const activeCount = await prisma.groupMember.count({
           where: { threadId: id, leftAt: null },
         });
         const room = MAX_MEMBERS - activeCount;
@@ -583,13 +583,13 @@ export default async function groupRoutes(app: FastifyInstance, opts: Opts) {
         }
 
         if (adds.length) {
-          await (prisma as any).groupMember.createMany({
+          await prisma.groupMember.createMany({
             data: adds.map((userId) => ({ threadId: id, userId, role: "MEMBER" })),
             skipDuplicates: true,
           });
         }
         if (reactivations.length) {
-          await (prisma as any).groupMember.updateMany({
+          await prisma.groupMember.updateMany({
             where: { threadId: id, userId: { in: reactivations } },
             data: { leftAt: null, joinedAt: new Date(), lastReadAt: new Date() },
           });
@@ -629,7 +629,7 @@ export default async function groupRoutes(app: FastifyInstance, opts: Opts) {
       if (!isSelf && me.role !== "OWNER") return reply.code(403).send({ error: "Owner only" });
 
       try {
-        await (prisma as any).groupMember.update({
+        await prisma.groupMember.update({
           where: { threadId_userId: { threadId: id, userId } },
           data: { leftAt: new Date() },
         });

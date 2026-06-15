@@ -23,13 +23,13 @@ export async function notifyMatchReady(
   const { createNotification } = opts;
   if (!createNotification) return;
   try {
-    const m = await (prisma as any).tournamentMatch.findUnique({
+    const m = await prisma.tournamentMatch.findUnique({
       where: { id: matchId },
       include: { tournament: { select: { id: true, title: true, lobbyId: true } } },
     });
     if (!m) return;
-    const entryIds = [m.entryAId, m.entryBId].filter(Boolean);
-    const entries = await (prisma as any).tournamentEntry.findMany({
+    const entryIds = [m.entryAId, m.entryBId].filter((x): x is string => Boolean(x));
+    const entries = await prisma.tournamentEntry.findMany({
       where: { id: { in: entryIds } },
       select: { userId: true, displayName: true },
     });
@@ -58,33 +58,33 @@ export async function advanceWinner(
   matchId: string,
   opts: BracketAdvanceOpts = {},
 ) {
-  const m = await (prisma as any).tournamentMatch.findUnique({ where: { id: matchId } });
+  const m = await prisma.tournamentMatch.findUnique({ where: { id: matchId } });
   if (!m || !m.winnerEntryId) return;
   const loserId = m.winnerEntryId === m.entryAId ? m.entryBId : m.entryAId;
 
   if (m.nextMatchId) {
-    const next = await (prisma as any).tournamentMatch.findUnique({ where: { id: m.nextMatchId } });
+    const next = await prisma.tournamentMatch.findUnique({ where: { id: m.nextMatchId } });
     if (next) {
       const slot = m.bracketPosition % 2 === 0 ? "entryAId" : "entryBId";
       if (!next[slot]) {
         const update: any = { [slot]: m.winnerEntryId };
         const otherSlot = slot === "entryAId" ? "entryBId" : "entryAId";
         if (next[otherSlot]) update.status = "READY";
-        await (prisma as any).tournamentMatch.update({ where: { id: next.id }, data: update });
+        await prisma.tournamentMatch.update({ where: { id: next.id }, data: update });
         if (next[otherSlot]) await notifyMatchReady(prisma, next.id, opts);
       }
     }
   }
 
   if (m.loserMatchId && loserId) {
-    const lm = await (prisma as any).tournamentMatch.findUnique({ where: { id: m.loserMatchId } });
+    const lm = await prisma.tournamentMatch.findUnique({ where: { id: m.loserMatchId } });
     if (lm) {
       const slot = !lm.entryAId ? "entryAId" : !lm.entryBId ? "entryBId" : null;
       if (slot) {
         const update: any = { [slot]: loserId };
         const otherSlot = slot === "entryAId" ? "entryBId" : "entryAId";
         if (lm[otherSlot]) update.status = "READY";
-        await (prisma as any).tournamentMatch.update({ where: { id: lm.id }, data: update });
+        await prisma.tournamentMatch.update({ where: { id: lm.id }, data: update });
         if (lm[otherSlot]) await notifyMatchReady(prisma, lm.id, opts);
       }
     }

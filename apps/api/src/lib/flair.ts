@@ -9,22 +9,22 @@ export async function grantFlairToUser(
   flairItemId: string,
   acquiredFrom?: string,
 ): Promise<{ granted: boolean; alreadyOwned: boolean; equipped: boolean }> {
-  const existing = await (prisma as any).userFlair.findUnique({
+  const existing = await prisma.userFlair.findUnique({
     where: { userId_flairItemId: { userId, flairItemId } },
   });
   if (existing) return { granted: false, alreadyOwned: true, equipped: false };
 
-  await (prisma as any).userFlair.create({
+  await prisma.userFlair.create({
     data: { userId, flairItemId, acquiredFrom: acquiredFrom || "manual" },
   });
 
-  const u = await (prisma as any).user.findUnique({
+  const u = await prisma.user.findUnique({
     where: { id: userId },
     select: { equippedFlairId: true },
   });
   let equipped = false;
   if (!u?.equippedFlairId) {
-    await (prisma as any).user.update({
+    await prisma.user.update({
       where: { id: userId },
       data: { equippedFlairId: flairItemId },
     });
@@ -46,12 +46,12 @@ export async function getEquippedFlair(
   color: string | null;
   rarity: string;
 } | null> {
-  const u = await (prisma as any).user.findUnique({
+  const u = await prisma.user.findUnique({
     where: { id: userId },
     select: { equippedFlairId: true },
   });
   if (!u?.equippedFlairId) return null;
-  const f = await (prisma as any).flairItem.findUnique({
+  const f = await prisma.flairItem.findUnique({
     where: { id: u.equippedFlairId },
     select: {
       id: true,
@@ -84,13 +84,13 @@ export async function getEquippedFlairBatch(
   >
 > {
   if (userIds.length === 0) return {};
-  const users = await (prisma as any).user.findMany({
+  const users = await prisma.user.findMany({
     where: { id: { in: userIds }, equippedFlairId: { not: null } },
     select: { id: true, equippedFlairId: true },
   });
   const flairIds = users.map((u: any) => u.equippedFlairId).filter(Boolean);
   if (flairIds.length === 0) return {};
-  const flairs = await (prisma as any).flairItem.findMany({
+  const flairs = await prisma.flairItem.findMany({
     where: { id: { in: flairIds } },
     select: {
       id: true,
@@ -106,7 +106,7 @@ export async function getEquippedFlairBatch(
   for (const f of flairs) fById[f.id] = f;
   const out: Record<string, any> = {};
   for (const u of users) {
-    const f = fById[u.equippedFlairId];
+    const f = u.equippedFlairId ? fById[u.equippedFlairId] : null;
     if (f) out[u.id] = f;
   }
   return out;
@@ -128,7 +128,7 @@ export async function mintFlairItem(
     meta?: any;
   },
 ): Promise<{ id: string; slug: string }> {
-  const created = await (prisma as any).flairItem.create({
+  const created = await prisma.flairItem.create({
     data: {
       slug: data.slug,
       name: data.name,

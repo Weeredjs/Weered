@@ -126,7 +126,7 @@ export default async function windroseRoutes(app: FastifyInstance, opts: Opts) {
       });
       if (!user) return reply.code(404).send({ ok: false, error: "not_found" });
 
-      const all = await (prisma as any).windroseBounty.findMany({
+      const all = await prisma.windroseBounty.findMany({
         where: { lobbyId: "windrose" },
         take: 5000,
       });
@@ -253,14 +253,14 @@ export default async function windroseRoutes(app: FastifyInstance, opts: Opts) {
           | "crew_publish"
           | "server_list"
           | "lfg_raise";
-        ts: string;
+        ts: string | Date;
         actor?: string | null;
         subject?: string | null;
         amount?: number | null;
         meta?: Record<string, any>;
       };
       const [bounties, crews, servers, lfg] = await Promise.all([
-        (prisma as any).windroseBounty
+        prisma.windroseBounty
           .findMany({
             where: {
               lobbyId: "windrose",
@@ -274,14 +274,14 @@ export default async function windroseRoutes(app: FastifyInstance, opts: Opts) {
             take: 80,
           })
           .catch(() => []),
-        (prisma as any).crew
+        prisma.crew
           .findMany({
             where: { publicInLobbies: { has: "windrose" }, updatedAt: { gte: since } },
             select: { id: true, name: true, tag: true, recruiting: true, updatedAt: true },
             take: 30,
           })
           .catch(() => []),
-        (prisma as any).communityServer
+        prisma.communityServer
           .findMany({
             where: { lobbyId: "windrose", createdAt: { gte: since } },
             select: {
@@ -295,11 +295,11 @@ export default async function windroseRoutes(app: FastifyInstance, opts: Opts) {
             take: 30,
           })
           .catch(() => []),
-        (prisma as any).lfgPost
+        prisma.lfgPost
           .findMany({
             where: { lobbyId: "windrose", createdAt: { gte: since } },
             orderBy: { createdAt: "desc" },
-            select: { id: true, userName: true, mode: true, slotsWanted: true, createdAt: true },
+            select: { id: true, userName: true, gameMode: true, maxPlayers: true, createdAt: true },
             take: 30,
           })
           .catch(() => []),
@@ -366,8 +366,8 @@ export default async function windroseRoutes(app: FastifyInstance, opts: Opts) {
           kind: "lfg_raise",
           ts: p.createdAt,
           actor: p.userName,
-          subject: p.mode || "a run",
-          meta: { slots: p.slotsWanted },
+          subject: p.gameMode || "a run",
+          meta: { slots: p.maxPlayers },
         });
       }
 
@@ -395,13 +395,13 @@ export default async function windroseRoutes(app: FastifyInstance, opts: Opts) {
       const since = new Date(Date.now() - WEEK_MS);
 
       const [bountiesAll, crews, servers, lfg] = await Promise.all([
-        (prisma as any).windroseBounty
+        prisma.windroseBounty
           .findMany({
             where: { lobbyId: "windrose", createdAt: { gte: since } },
             take: 500,
           })
           .catch(() => []),
-        (prisma as any).crew
+        prisma.crew
           .findMany({
             where: { publicInLobbies: { has: "windrose" }, updatedAt: { gte: since } },
             select: {
@@ -414,17 +414,17 @@ export default async function windroseRoutes(app: FastifyInstance, opts: Opts) {
             take: 50,
           })
           .catch(() => []),
-        (prisma as any).communityServer
+        prisma.communityServer
           .findMany({
             where: { lobbyId: "windrose", createdAt: { gte: since } },
             select: { name: true, region: true, framework: true, createdAt: true },
             take: 50,
           })
           .catch(() => []),
-        (prisma as any).lfgPost
+        prisma.lfgPost
           .findMany({
             where: { lobbyId: "windrose", createdAt: { gte: since } },
-            select: { mode: true, region: true, createdAt: true },
+            select: { gameMode: true, region: true, createdAt: true },
             take: 200,
           })
           .catch(() => []),
@@ -456,7 +456,10 @@ export default async function windroseRoutes(app: FastifyInstance, opts: Opts) {
         .slice(0, 5)
         .map((s: any) => ({ name: s.name, region: s.region, framework: s.framework }));
       const lfgCount = lfg.length;
-      const lfgModes = Array.from(new Set(lfg.map((p: any) => p.mode).filter(Boolean))).slice(0, 5);
+      const lfgModes = Array.from(new Set(lfg.map((p: any) => p.gameMode).filter(Boolean))).slice(
+        0,
+        5,
+      );
 
       const payload = {
         period: "last 7 days",
@@ -565,7 +568,7 @@ Rules:
 
   app.get("/windrose/servers", async (req, reply) => {
     try {
-      const servers = await (prisma as any).communityServer.findMany({
+      const servers = await prisma.communityServer.findMany({
         where: { lobbyId: "windrose" },
         orderBy: [{ status: "desc" }, { lastSeenAt: "desc" }, { createdAt: "desc" }],
         select: {
@@ -620,7 +623,7 @@ Rules:
       const tags = Array.isArray(body.tags)
         ? body.tags.map((t: any) => String(t).slice(0, 24)).slice(0, 10)
         : [];
-      const existing = await (prisma as any).communityServer.count({
+      const existing = await prisma.communityServer.count({
         where: { ownerId: u.id, lobbyId: "windrose" },
       });
       if (existing >= 5)
@@ -628,7 +631,7 @@ Rules:
           .code(400)
           .send({ ok: false, error: "limit_reached", message: "Max 5 servers per user." });
       try {
-        const created = await (prisma as any).communityServer.create({
+        const created = await prisma.communityServer.create({
           data: {
             lobbyId: "windrose",
             ownerId: u.id,
@@ -661,7 +664,7 @@ Rules:
       const u = authFromHeader((req as any).headers?.authorization);
       if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
       const id = (req.params as any).id as string;
-      const existing = await (prisma as any).communityServer.findUnique({ where: { id } });
+      const existing = await prisma.communityServer.findUnique({ where: { id } });
       if (!existing) return reply.code(404).send({ ok: false, error: "not_found" });
       const isOwner = existing.ownerId === u.id;
       const isStaff = ["GOD", "STAFF", "SUPPORT"].includes(u.globalRole || "");
@@ -683,7 +686,7 @@ Rules:
       if (Array.isArray(body.tags))
         data.tags = body.tags.map((t: any) => String(t).slice(0, 24)).slice(0, 10);
       try {
-        const updated = await (prisma as any).communityServer.update({ where: { id }, data });
+        const updated = await prisma.communityServer.update({ where: { id }, data });
         return reply.send({ ok: true, server: updated });
       } catch (e) {
         log.error("[windrose/servers PATCH]", e);
@@ -701,13 +704,13 @@ Rules:
       const u = authFromHeader((req as any).headers?.authorization);
       if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
       const id = (req.params as any).id as string;
-      const existing = await (prisma as any).communityServer.findUnique({ where: { id } });
+      const existing = await prisma.communityServer.findUnique({ where: { id } });
       if (!existing) return reply.code(404).send({ ok: false, error: "not_found" });
       const isOwner = existing.ownerId === u.id;
       const isStaff = ["GOD", "STAFF", "SUPPORT"].includes(u.globalRole || "");
       if (!isOwner && !isStaff) return reply.code(403).send({ ok: false, error: "forbidden" });
       try {
-        await (prisma as any).communityServer.delete({ where: { id } });
+        await prisma.communityServer.delete({ where: { id } });
         return reply.send({ ok: true });
       } catch (e) {
         log.error("[windrose/servers DELETE]", e);
@@ -731,7 +734,7 @@ Rules:
     if (mine && u) where.OR = [{ posterId: u.id }, { claimantId: u.id }];
     if (target) where.targetHandle = { equals: target, mode: "insensitive" };
     try {
-      const rows = await (prisma as any).windroseBounty.findMany({
+      const rows = await prisma.windroseBounty.findMany({
         where,
         orderBy: [{ status: "asc" }, { createdAt: "desc" }],
         take: 200,
@@ -747,7 +750,7 @@ Rules:
     const id = String((req.params as any).id || "");
     if (!id) return reply.code(400).send({ ok: false, error: "id_required" });
     try {
-      const b = await (prisma as any).windroseBounty.findUnique({ where: { id } });
+      const b = await prisma.windroseBounty.findUnique({ where: { id } });
       if (!b) return reply.code(404).send({ ok: false, error: "not_found" });
       return reply.send({ ok: true, bounty: b });
     } catch (e) {
@@ -789,7 +792,7 @@ Rules:
           message: `Maximum bounty is ${BOUNTY_MAX.toLocaleString()} Paper.`,
         });
 
-      const openCount = await (prisma as any).windroseBounty.count({
+      const openCount = await prisma.windroseBounty.count({
         where: { posterId: u.id, status: { in: ["OPEN", "CLAIMED"] } },
       });
       if (openCount >= BOUNTY_CAP_OPEN_PER_USER) {
@@ -812,7 +815,7 @@ Rules:
         const posterName =
           (await prisma.user.findUnique({ where: { id: u.id }, select: { name: true } }))?.name ||
           u.id;
-        const created = await (prisma as any).windroseBounty.create({
+        const created = await prisma.windroseBounty.create({
           data: {
             lobbyId: "windrose",
             posterId: u.id,
@@ -832,7 +835,7 @@ Rules:
         if (amount >= MOST_WANTED_THRESHOLD) {
           void (async () => {
             try {
-              const members = await (prisma as any).lobbyMember.findMany({
+              const members = await prisma.lobbyMember.findMany({
                 where: { lobbyId: "windrose" },
                 select: { userId: true },
                 take: 2000,
@@ -892,7 +895,7 @@ Rules:
         : null;
       if (!proofNote) return reply.code(400).send({ ok: false, error: "proof_required" });
 
-      const b = await (prisma as any).windroseBounty.findUnique({ where: { id } });
+      const b = await prisma.windroseBounty.findUnique({ where: { id } });
       if (!b) return reply.code(404).send({ ok: false, error: "not_found" });
       if (b.status !== "OPEN")
         return reply
@@ -909,7 +912,7 @@ Rules:
         const claimantName =
           (await prisma.user.findUnique({ where: { id: u.id }, select: { name: true } }))?.name ||
           u.id;
-        const updated = await (prisma as any).windroseBounty.update({
+        const updated = await prisma.windroseBounty.update({
           where: { id },
           data: {
             status: "CLAIMED",
@@ -954,7 +957,7 @@ Rules:
       const u = authFromHeader((req as any).headers?.authorization);
       if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
       const id = (req.params as any).id as string;
-      const b = await (prisma as any).windroseBounty.findUnique({ where: { id } });
+      const b = await prisma.windroseBounty.findUnique({ where: { id } });
       if (!b) return reply.code(404).send({ ok: false, error: "not_found" });
       if (b.posterId !== u.id) return reply.code(403).send({ ok: false, error: "forbidden" });
       if (b.status !== "CLAIMED" || !b.claimantId)
@@ -968,7 +971,7 @@ Rules:
       );
       if (!credit) return reply.code(500).send({ ok: false, error: "payout_failed" });
       try {
-        const updated = await (prisma as any).windroseBounty.update({
+        const updated = await prisma.windroseBounty.update({
           where: { id },
           data: { status: "SETTLED", settledAt: new Date() },
         });
@@ -999,13 +1002,13 @@ Rules:
       const u = authFromHeader((req as any).headers?.authorization);
       if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
       const id = (req.params as any).id as string;
-      const b = await (prisma as any).windroseBounty.findUnique({ where: { id } });
+      const b = await prisma.windroseBounty.findUnique({ where: { id } });
       if (!b) return reply.code(404).send({ ok: false, error: "not_found" });
       if (b.posterId !== u.id) return reply.code(403).send({ ok: false, error: "forbidden" });
       if (b.status !== "CLAIMED") return reply.code(400).send({ ok: false, error: "not_claimed" });
       try {
         const rejectedClaimantId = b.claimantId;
-        const updated = await (prisma as any).windroseBounty.update({
+        const updated = await prisma.windroseBounty.update({
           where: { id },
           data: {
             status: "OPEN",
@@ -1042,7 +1045,7 @@ Rules:
       const u = authFromHeader((req as any).headers?.authorization);
       if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
       const id = (req.params as any).id as string;
-      const b = await (prisma as any).windroseBounty.findUnique({ where: { id } });
+      const b = await prisma.windroseBounty.findUnique({ where: { id } });
       if (!b) return reply.code(404).send({ ok: false, error: "not_found" });
       if (b.posterId !== u.id) return reply.code(403).send({ ok: false, error: "forbidden" });
       if (b.status !== "OPEN")
@@ -1060,7 +1063,7 @@ Rules:
       );
       if (!refund) return reply.code(500).send({ ok: false, error: "refund_failed" });
       try {
-        const updated = await (prisma as any).windroseBounty.update({
+        const updated = await prisma.windroseBounty.update({
           where: { id },
           data: { status: "CANCELLED", cancelledAt: new Date() },
         });
@@ -1078,7 +1081,7 @@ Rules:
   async function sweepExpiredBounties() {
     try {
       const cutoff = new Date(Date.now() - BOUNTY_EXPIRY_DAYS * 24 * 60 * 60 * 1000);
-      const stale = await (prisma as any).windroseBounty.findMany({
+      const stale = await prisma.windroseBounty.findMany({
         where: { lobbyId: "windrose", status: "OPEN", createdAt: { lt: cutoff } },
         take: 100,
       });
@@ -1093,7 +1096,7 @@ Rules:
         );
         if (!refund) continue;
         try {
-          await (prisma as any).windroseBounty.update({
+          await prisma.windroseBounty.update({
             where: { id: b.id },
             data: { status: "CANCELLED", cancelledAt: new Date() },
           });
@@ -1136,7 +1139,7 @@ Rules:
     const cached = wrCacheGet(cacheKey);
     if (cached) return reply.send(cached);
     try {
-      const rows: any[] = await (prisma as any).windroseBounty.findMany({
+      const rows: any[] = await prisma.windroseBounty.findMany({
         where: { lobbyId: "windrose" },
         take: 5000,
       });
@@ -1221,7 +1224,7 @@ Rules:
 
   async function pollWindroseServers() {
     try {
-      const servers = await (prisma as any).communityServer.findMany({
+      const servers = await prisma.communityServer.findMany({
         where: { lobbyId: "windrose", queryUrl: { not: null } },
         select: { id: true, queryUrl: true },
         take: 200,
@@ -1231,20 +1234,20 @@ Rules:
         try {
           const res = await fetchWithTimeout(s.queryUrl, { signal: AbortSignal.timeout(5000) });
           if (!res.ok) {
-            await (prisma as any).communityServer
+            await prisma.communityServer
               .update({ where: { id: s.id }, data: { status: "offline" } })
               .catch(() => {});
             continue;
           }
           const json: any = await res.json().catch(() => null);
-          await (prisma as any).communityServer
+          await prisma.communityServer
             .update({
               where: { id: s.id },
               data: { status: "online", lastSeenAt: new Date(), lastState: json as any },
             })
             .catch(() => {});
         } catch {
-          await (prisma as any).communityServer
+          await prisma.communityServer
             .update({ where: { id: s.id }, data: { status: "offline" } })
             .catch(() => {});
         }

@@ -146,7 +146,15 @@ import bcrypt from "bcryptjs";
 import { WebSocketServer, WebSocket as WsClient } from "ws";
 import type { WebSocket } from "ws";
 import { randomUUID, randomBytes, createHmac, timingSafeEqual } from "crypto";
-import { PrismaClient, RoomRole, GlobalRole, LobbyRole, ModuleType, Prisma } from "@prisma/client";
+import {
+  PrismaClient,
+  RoomRole,
+  GlobalRole,
+  LobbyRole,
+  ModuleType,
+  Prisma,
+  NotificationType,
+} from "@prisma/client";
 import { OAuth2Client } from "google-auth-library";
 import {
   syncManifest,
@@ -985,7 +993,7 @@ async function isNameReserved(
 ): Promise<boolean> {
   const normalized = name.toLowerCase().replace(/[^a-z0-9]/g, "");
   if (!normalized) return false;
-  const match = await (prisma as any).reservedName.findFirst({
+  const match = await prisma.reservedName.findFirst({
     where: {
       name: normalized,
       scope: { in: scope === "BOTH" ? ["BOTH", "LOBBY", "USERNAME"] : ["BOTH", scope] },
@@ -1831,7 +1839,7 @@ const SEED_ROOMS: {
 async function seedLobbies() {
   for (const l of SEED_LOBBIES) {
     try {
-      await (prisma as any).lobby.upsert({
+      await prisma.lobby.upsert({
         where: { id: l.id },
         update: { pinned: true, moduleType: l.moduleType, moduleConfig: l.moduleConfig as any },
         create: {
@@ -1905,12 +1913,12 @@ async function globalAudit(
   } catch {}
 }
 async function getSiteConfig(key: string): Promise<string | null> {
-  const row = await (prisma as any).siteConfig.findUnique({ where: { key } });
+  const row = await prisma.siteConfig.findUnique({ where: { key } });
   return row?.value ?? null;
 }
 
 async function setSiteConfig(key: string, value: string): Promise<void> {
-  await (prisma as any).siteConfig.upsert({
+  await prisma.siteConfig.upsert({
     where: { key },
     update: { value },
     create: { key, value },
@@ -1918,7 +1926,7 @@ async function setSiteConfig(key: string, value: string): Promise<void> {
 }
 
 async function getAllSiteConfig(): Promise<Record<string, string>> {
-  const rows = await (prisma as any).siteConfig.findMany();
+  const rows = await prisma.siteConfig.findMany();
   const config: Record<string, string> = {};
   for (const r of rows) config[r.key] = r.value;
   return config;
@@ -2047,7 +2055,7 @@ async function ensureRoomLoaded(roomId: string): Promise<RoomState> {
     try {
       const msgIds = r.msgs.map((m) => m.id);
       if (msgIds.length > 0) {
-        const rxRows = await (prisma as any).reaction.findMany({
+        const rxRows = await prisma.reaction.findMany({
           where: { targetType: "ROOM_MESSAGE", targetId: { in: msgIds } },
           select: { targetId: true, emoji: true, userId: true },
         });
@@ -2388,7 +2396,7 @@ function leaveRoom(ws: Sock) {
       if (existed) broadcast(room, { type: "presence:leave", roomId, userId: ws.user.id });
       const userId = ws.user.id;
       const location = (room as any).name || roomId;
-      (prisma as any).user
+      prisma.user
         .update({
           where: { id: userId },
           data: { lastSeenAt: new Date(), lastSeenLocation: location },
@@ -2578,22 +2586,22 @@ async function toggleReactionOnTarget(
   emoji: string,
 ): Promise<{ ok: true; reactions: ReactionAgg[] } | { ok: false; reason: string }> {
   try {
-    const existing = await (prisma as any).reaction.findUnique({
+    const existing = await prisma.reaction.findUnique({
       where: { targetType_targetId_userId_emoji: { targetType, targetId, userId, emoji } },
     });
     if (existing) {
-      await (prisma as any).reaction.delete({ where: { id: existing.id } });
+      await prisma.reaction.delete({ where: { id: existing.id } });
     } else {
-      const distinctRows = await (prisma as any).reaction.groupBy({
+      const distinctRows = await prisma.reaction.groupBy({
         by: ["emoji"],
         where: { targetType, targetId },
       });
       if (distinctRows.length >= 20 && !distinctRows.find((d: any) => d.emoji === emoji)) {
         return { ok: false, reason: "Too many different reactions on this message." };
       }
-      await (prisma as any).reaction.create({ data: { targetType, targetId, userId, emoji } });
+      await prisma.reaction.create({ data: { targetType, targetId, userId, emoji } });
     }
-    const rows = await (prisma as any).reaction.findMany({
+    const rows = await prisma.reaction.findMany({
       where: { targetType, targetId },
       select: { emoji: true, userId: true },
     });
@@ -2622,7 +2630,7 @@ async function fetchReactionsForTargets(
   const byMsg: Record<string, ReactionAgg[]> = {};
   if (targetIds.length === 0) return byMsg;
   try {
-    const rows = await (prisma as any).reaction.findMany({
+    const rows = await prisma.reaction.findMany({
       where: { targetType, targetId: { in: targetIds } },
       select: { targetId: true, emoji: true, userId: true },
     });
@@ -3066,7 +3074,7 @@ async function sendExpoPush(
   userId: string,
   data: { title: string; body: string; url?: string; tag?: string },
 ) {
-  const tokens = await (prisma as any).expoPushToken.findMany({ where: { userId } });
+  const tokens = await prisma.expoPushToken.findMany({ where: { userId } });
   if (tokens.length === 0) return;
   const messages = tokens.map((t: any) => ({
     to: t.token,
@@ -3089,7 +3097,7 @@ async function sendExpoPush(
       const token = tokens[i];
       if (!token) continue;
       if (ticket?.status === "error" && ticket?.details?.error === "DeviceNotRegistered") {
-        await (prisma as any).expoPushToken.delete({ where: { id: token.id } }).catch(() => {});
+        await prisma.expoPushToken.delete({ where: { id: token.id } }).catch(() => {});
       }
     }
   } catch {}
@@ -3113,10 +3121,10 @@ async function createNotification(opts: {
   meta?: any;
 }) {
   try {
-    const notif = await (prisma as any).notification.create({
+    const notif = await prisma.notification.create({
       data: {
         userId: opts.userId,
-        type: opts.type,
+        type: opts.type as NotificationType,
         title: opts.title,
         body: opts.body || "",
         actionUrl: opts.actionUrl || null,
@@ -3856,7 +3864,7 @@ async function main() {
       return null;
     }
     const lobbyId = String((req as any).params?.id || (req as any).params?.lobbyId || "");
-    const lobby = await (prisma as any).lobby.findUnique({ where: { id: lobbyId } });
+    const lobby = await prisma.lobby.findUnique({ where: { id: lobbyId } });
     if (!lobby) {
       reply.code(404).send({ ok: false, error: "lobby_not_found" });
       return null;
@@ -3864,7 +3872,7 @@ async function main() {
     const gr = await getGlobalRole(u.id);
     if (canAccessStaff(gr))
       return { user: u, lobby, member: null, globalRole: gr, overrideRole: gr };
-    const member = await (prisma as any).lobbyMember.findUnique({
+    const member = await prisma.lobbyMember.findUnique({
       where: { lobbyId_userId: { lobbyId, userId: u.id } },
     });
     if (!member || (member.roleLevel ?? 1) < minLevel) {
