@@ -1447,6 +1447,7 @@ const NOTORIETY_ACTIONS: Record<string, { points: number; once?: boolean; cooldo
   FAKEOUT_TRADE:       { points: 5,    once: false, cooldown: 60000  },
   FAKEOUT_PROFIT:      { points: 25,   once: false, cooldown: 0      },
   LFG_COMPLETED:       { points: 20,   once: false, cooldown: 600000 },
+  HD2_MAJOR_ORDER:     { points: 50,   once: false },
 };
 
 const NOTORIETY_RANKS = [
@@ -3009,7 +3010,7 @@ async function main() {
 
   await app.register(lfgRoutes, { authFromHeader, getGlobalRole, canAccessStaff, broadcastToLobby, awardNotoriety, createNotification } as any);
   await app.register(redditRoutes);
-  await app.register(helldiversMoRoutes, { authFromHeader, awardPaper } as any);
+  await app.register(helldiversMoRoutes, { authFromHeader, awardPaper, awardNotoriety } as any);
 
   await app.register(paperRoutes, { authFromHeader, awardPaper } as any);
 
