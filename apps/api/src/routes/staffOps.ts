@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
+import { z } from "zod";
 
 type Opts = {
   authFromHeader: (h?: string) => { id: string; name: string } | null;
@@ -31,7 +32,9 @@ app.get("/staff/outreach", async (req, reply) => {
   return reply.send({ ok: true, contacts });
 });
 
-app.post("/staff/outreach", async (req, reply) => {
+app.post("/staff/outreach", {
+  schema: { tags: ["staff"], summary: "Create an outreach contact", body: z.object({ name: z.string().min(1), company: z.string().min(1), email: z.string().optional(), role: z.string().optional(), category: z.string().optional(), status: z.string().optional(), notes: z.string().optional(), postUrl: z.string().optional(), lastContact: z.string().nullish(), nextFollowUp: z.string().nullish() }).passthrough() },
+}, async (req, reply) => {
   const u = authFromHeader((req as any).headers?.authorization);
   if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
   const role = await getGlobalRole(u.id);
@@ -58,7 +61,9 @@ app.post("/staff/outreach", async (req, reply) => {
   return reply.send({ ok: true, contact });
 });
 
-app.patch("/staff/outreach/:id", async (req, reply) => {
+app.patch("/staff/outreach/:id", {
+  schema: { tags: ["staff"], summary: "Update an outreach contact", params: z.object({ id: z.string().min(1) }), body: z.object({ name: z.string().optional(), company: z.string().optional(), email: z.string().optional(), role: z.string().optional(), category: z.string().optional(), status: z.string().optional(), notes: z.string().optional(), postUrl: z.string().optional(), lastContact: z.string().nullish(), nextFollowUp: z.string().nullish() }).passthrough() },
+}, async (req, reply) => {
   const u = authFromHeader((req as any).headers?.authorization);
   if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
   const role = await getGlobalRole(u.id);
@@ -84,7 +89,9 @@ app.patch("/staff/outreach/:id", async (req, reply) => {
   } catch { return reply.code(404).send({ ok: false, error: "not_found" }); }
 });
 
-app.delete("/staff/outreach/:id", async (req, reply) => {
+app.delete("/staff/outreach/:id", {
+  schema: { tags: ["staff"], summary: "Delete an outreach contact", params: z.object({ id: z.string().min(1) }) },
+}, async (req, reply) => {
   const u = authFromHeader((req as any).headers?.authorization);
   if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
   const role = await getGlobalRole(u.id);
