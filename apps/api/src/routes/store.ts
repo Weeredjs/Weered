@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
+import { z } from "zod";
 
 type Opts = {
   authFromHeader: (h?: string) => { id: string } | null;
@@ -38,7 +39,9 @@ export default async function storeRoutes(app: FastifyInstance, opts: Opts) {
     });
   });
 
-  app.post("/store/buy/:itemId", async (req, reply) => {
+  app.post("/store/buy/:itemId", {
+    schema: { tags: ["store"], summary: "Buy a store item with Paper", params: z.object({ itemId: z.string().min(1) }) },
+  }, async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const itemId = String((req as any).params?.itemId || "");
@@ -155,7 +158,9 @@ export default async function storeRoutes(app: FastifyInstance, opts: Opts) {
     });
   });
 
-  app.post("/inventory/equip/:userItemId", async (req, reply) => {
+  app.post("/inventory/equip/:userItemId", {
+    schema: { tags: ["store"], summary: "Equip an owned item", params: z.object({ userItemId: z.string().min(1) }) },
+  }, async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const userItemId = String((req as any).params?.userItemId || "");
@@ -179,7 +184,9 @@ export default async function storeRoutes(app: FastifyInstance, opts: Opts) {
     return reply.send({ ok: true, equipped: !ui.equipped });
   });
 
-  app.post("/inventory/consume/:userItemId", async (req, reply) => {
+  app.post("/inventory/consume/:userItemId", {
+    schema: { tags: ["store"], summary: "Consume a consumable item", params: z.object({ userItemId: z.string().min(1) }) },
+  }, async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const userItemId = String((req as any).params?.userItemId || "");
@@ -244,7 +251,12 @@ export default async function storeRoutes(app: FastifyInstance, opts: Opts) {
     });
   });
 
-  app.post("/market/list", async (req, reply) => {
+  app.post("/market/list", {
+    schema: {
+      tags: ["market"], summary: "List an owned item on the market",
+      body: z.object({ userItemId: z.string().min(1), price: z.coerce.number() }).passthrough(),
+    },
+  }, async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const body: any = (req as any).body || {};
@@ -281,7 +293,9 @@ export default async function storeRoutes(app: FastifyInstance, opts: Opts) {
     return reply.send({ ok: true, listing: { ...listing, createdAt: listing.createdAt?.toISOString() } });
   });
 
-  app.post("/market/buy/:listingId", async (req, reply) => {
+  app.post("/market/buy/:listingId", {
+    schema: { tags: ["market"], summary: "Buy a market listing", params: z.object({ listingId: z.string().min(1) }) },
+  }, async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const listingId = String((req as any).params?.listingId || "");
@@ -343,7 +357,9 @@ export default async function storeRoutes(app: FastifyInstance, opts: Opts) {
     }
   });
 
-  app.post("/market/cancel/:listingId", async (req, reply) => {
+  app.post("/market/cancel/:listingId", {
+    schema: { tags: ["market"], summary: "Cancel your market listing", params: z.object({ listingId: z.string().min(1) }) },
+  }, async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const listingId = String((req as any).params?.listingId || "");

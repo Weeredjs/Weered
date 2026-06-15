@@ -77,6 +77,15 @@ describe("POST /market/buy — concurrency / double-sell + lost-update guard", (
     expect(earn).toBe(1);
   });
 
+  it("rejects /market/list with a missing required field (Zod 400)", async () => {
+    const res = await app.inject({
+      method: "POST", url: "/market/list",
+      headers: { authorization: `Bearer ${testToken(sellerId)}`, "content-type": "application/json" },
+      payload: { price: 100 }, // userItemId missing -> Zod body schema rejects
+    });
+    expect(res.statusCode).toBe(400);
+  });
+
   it("refuses buying your own listing (400 cant_buy_own)", async () => {
     const res = await app.inject({
       method: "POST", url: `/market/buy/${listingId}`,
