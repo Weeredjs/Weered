@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
+import { z } from "zod";
 import { isStaffUser } from "../lib/isStaffUser";
 import { grantFlairToUser, getEquippedFlair, mintFlairItem } from "../lib/flair";
 
@@ -57,7 +58,9 @@ export default async function flairRoutes(app: FastifyInstance, opts: Opts) {
     return reply.send({ ok: true, inventory, equippedFlairId: equippedId });
   });
 
-  app.post("/flair/equip", async (req, reply) => {
+  app.post("/flair/equip", {
+  schema: { tags: ["flair"] },
+}, async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const body = (req.body || {}) as any;
@@ -91,7 +94,9 @@ export default async function flairRoutes(app: FastifyInstance, opts: Opts) {
     return reply.send({ ok: true, flair: f });
   });
 
-  app.post("/flair/mint", async (req, reply) => {
+  app.post("/flair/mint", {
+  schema: { tags: ["flair"], body: z.object({ slug: z.string().min(1), name: z.string().min(1), kind: z.string().optional(), source: z.string().optional() }).passthrough() },
+}, async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     if (!(await isStaff(u.id))) return reply.code(403).send({ ok: false, error: "forbidden" });
@@ -130,7 +135,9 @@ export default async function flairRoutes(app: FastifyInstance, opts: Opts) {
     }
   });
 
-  app.post("/flair/grant", async (req, reply) => {
+  app.post("/flair/grant", {
+  schema: { tags: ["flair"], body: z.object({ userId: z.string().min(1), flairItemId: z.string().min(1), acquiredFrom: z.string().optional() }).passthrough() },
+}, async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     if (!(await isStaff(u.id))) return reply.code(403).send({ ok: false, error: "forbidden" });

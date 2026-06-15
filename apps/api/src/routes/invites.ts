@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
+import { z } from "zod";
 
 type Opts = {
   authFromHeader: (h?: string) => { id: string; name: string } | null;
@@ -12,7 +13,9 @@ type Opts = {
 export default async function invitesRoutes(app: FastifyInstance, opts: Opts) {
   const { authFromHeader, awardNotoriety, getGlobalRole, canAssignRoles, WEB_URL } = opts;
 
-  app.post("/invites", async (req, reply) => {
+  app.post("/invites", {
+  schema: { tags: ["invites"] },
+}, async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const body: any = (req.body as any) || {};
@@ -67,7 +70,9 @@ export default async function invitesRoutes(app: FastifyInstance, opts: Opts) {
     return reply.send({ ok: true, invite: { ...invite, targetName, creatorName: creator?.name || creator?.usernameKey || "unknown" } });
   });
 
-  app.post("/invites/:token/accept", async (req, reply) => {
+  app.post("/invites/:token/accept", {
+  schema: { tags: ["invites"], params: z.object({ token: z.string().min(1) }) },
+}, async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const token = String((req as any).params?.token || "");
@@ -115,7 +120,9 @@ export default async function invitesRoutes(app: FastifyInstance, opts: Opts) {
     return reply.send({ ok: true, redirect, type: invite.type, targetId: invite.targetId });
   });
 
-  app.post("/invites/send", async (req, reply) => {
+  app.post("/invites/send", {
+  schema: { tags: ["invites"] },
+}, async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const body: any = (req.body as any) || {};
@@ -137,7 +144,9 @@ export default async function invitesRoutes(app: FastifyInstance, opts: Opts) {
     return reply.send({ ok: true, token: invite.token, url: inviteUrl, sentTo: target.name });
   });
 
-  app.delete("/invites/:token", async (req, reply) => {
+  app.delete("/invites/:token", {
+  schema: { tags: ["invites"], params: z.object({ token: z.string().min(1) }) },
+}, async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const token = String((req as any).params?.token || "");

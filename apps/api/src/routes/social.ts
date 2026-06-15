@@ -364,7 +364,7 @@ export default async function socialRoutes(app: FastifyInstance, opts: Opts) {
   });
 
   app.post("/me/favorites/merge", {
-    schema: { tags: ["social"], summary: "Merge favorite lobby ids", body: z.object({ ids: z.array(z.string()).optional() }).passthrough() },
+    schema: { tags: ["social"], summary: "Merge favorite lobby ids" },
   }, async (req, reply) => {
     const user = authFromHeader((req as any).headers?.authorization);
     if (!user) return reply.code(401).send({ ok: false, error: "unauthorized" });

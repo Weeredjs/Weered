@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
+import { z } from "zod";
 import { LobbyRole, GlobalRole } from "@prisma/client";
 
 type Opts = {
@@ -46,7 +47,9 @@ export default async function challengesRoutes(app: FastifyInstance, opts: Opts)
     return reply.send({ ok: true, challenge: instance, enrollment });
   });
 
-  app.post("/challenges/:instanceId/enroll", async (req, reply) => {
+  app.post("/challenges/:instanceId/enroll", {
+  schema: { tags: ["challenges"], params: z.object({ instanceId: z.string().min(1) }) },
+}, async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
 
@@ -78,7 +81,9 @@ export default async function challengesRoutes(app: FastifyInstance, opts: Opts)
     }
   });
 
-  app.delete("/challenges/:instanceId/enroll", async (req, reply) => {
+  app.delete("/challenges/:instanceId/enroll", {
+  schema: { tags: ["challenges"], params: z.object({ instanceId: z.string().min(1) }) },
+}, async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const instanceId = String((req as any).params?.instanceId || "");
@@ -137,7 +142,9 @@ export default async function challengesRoutes(app: FastifyInstance, opts: Opts)
     return false;
   }
 
-  app.post("/challenges/definitions", async (req, reply) => {
+  app.post("/challenges/definitions", {
+  schema: { tags: ["challenges"] },
+}, async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
 
@@ -182,7 +189,9 @@ export default async function challengesRoutes(app: FastifyInstance, opts: Opts)
     return reply.send({ ok: true, definition: def });
   });
 
-  app.post("/challenges/member-create", async (req, reply) => {
+  app.post("/challenges/member-create", {
+  schema: { tags: ["challenges"] },
+}, async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const body = req.body as any;
@@ -289,7 +298,9 @@ export default async function challengesRoutes(app: FastifyInstance, opts: Opts)
     return reply.send({ ok: true, definition: def });
   });
 
-  app.patch("/challenges/definitions/:id", async (req, reply) => {
+  app.patch("/challenges/definitions/:id", {
+  schema: { tags: ["challenges"], params: z.object({ id: z.string().min(1) }) },
+}, async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const id = String((req as any).params?.id || "");
@@ -346,7 +357,9 @@ export default async function challengesRoutes(app: FastifyInstance, opts: Opts)
     return reply.send({ ok: true, definition: updated });
   });
 
-  app.delete("/challenges/definitions/:id", async (req, reply) => {
+  app.delete("/challenges/definitions/:id", {
+  schema: { tags: ["challenges"], params: z.object({ id: z.string().min(1) }) },
+}, async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const id = String((req as any).params?.id || "");
@@ -370,7 +383,9 @@ export default async function challengesRoutes(app: FastifyInstance, opts: Opts)
     return reply.send({ ok: true, mode: "deleted" });
   });
 
-  app.patch("/challenges/instances/:id", async (req, reply) => {
+  app.patch("/challenges/instances/:id", {
+  schema: { tags: ["challenges"], params: z.object({ id: z.string().min(1) }) },
+}, async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const id = String((req as any).params?.id || "");
@@ -392,7 +407,9 @@ export default async function challengesRoutes(app: FastifyInstance, opts: Opts)
     return reply.send({ ok: true, instance: updated });
   });
 
-  app.delete("/challenges/instances/:id", async (req, reply) => {
+  app.delete("/challenges/instances/:id", {
+  schema: { tags: ["challenges"], params: z.object({ id: z.string().min(1) }) },
+}, async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const id = String((req as any).params?.id || "");
@@ -420,7 +437,9 @@ export default async function challengesRoutes(app: FastifyInstance, opts: Opts)
     return reply.send({ ok: true, modifiers: DESTINY_MODIFIERS });
   });
 
-  app.post("/challenges/definitions/:id/activate", async (req, reply) => {
+  app.post("/challenges/definitions/:id/activate", {
+  schema: { tags: ["challenges"], params: z.object({ id: z.string().min(1) }) },
+}, async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     if (!["GOD", "ADMIN", "STAFF"].includes(u.globalRole || "")) {

@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
+import { z } from "zod";
 
 type Opts = {
   authFromHeader: (h?: string) => { id: string; name: string } | null;
@@ -127,7 +128,9 @@ export default async function groupRoutes(app: FastifyInstance, opts: Opts) {
     }
   });
 
-  app.post("/groups", async (req, reply) => {
+  app.post("/groups", {
+  schema: { tags: ["groups"], body: z.object({ name: z.string().optional(), memberIds: z.array(z.string()).optional() }).passthrough() },
+}, async (req, reply) => {
     const viewer = authFromHeader((req.headers as any).authorization);
     if (!viewer) return reply.code(401).send({ error: "Unauthorized" });
     const body: any = (req as any).body || {};
@@ -232,7 +235,9 @@ export default async function groupRoutes(app: FastifyInstance, opts: Opts) {
     }
   });
 
-  app.post("/groups/:id/messages", async (req, reply) => {
+  app.post("/groups/:id/messages", {
+  schema: { tags: ["groups"], params: z.object({ id: z.string().min(1) }), body: z.object({ body: z.string().min(1) }).passthrough() },
+}, async (req, reply) => {
     const viewer = authFromHeader((req.headers as any).authorization);
     if (!viewer) return reply.code(401).send({ error: "Unauthorized" });
     const { id } = req.params as any;
@@ -334,7 +339,9 @@ export default async function groupRoutes(app: FastifyInstance, opts: Opts) {
     }
   });
 
-  app.patch("/groups/:id/messages/:msgId", async (req, reply) => {
+  app.patch("/groups/:id/messages/:msgId", {
+  schema: { tags: ["groups"], params: z.object({ id: z.string().min(1), msgId: z.string().min(1) }) },
+}, async (req, reply) => {
     const viewer = authFromHeader((req.headers as any).authorization);
     if (!viewer) return reply.code(401).send({ error: "Unauthorized" });
     const { id, msgId } = req.params as any;
@@ -374,7 +381,9 @@ export default async function groupRoutes(app: FastifyInstance, opts: Opts) {
     }
   });
 
-  app.delete("/groups/:id/messages/:msgId", async (req, reply) => {
+  app.delete("/groups/:id/messages/:msgId", {
+  schema: { tags: ["groups"], params: z.object({ id: z.string().min(1), msgId: z.string().min(1) }) },
+}, async (req, reply) => {
     const viewer = authFromHeader((req.headers as any).authorization);
     if (!viewer) return reply.code(401).send({ error: "Unauthorized" });
     const { id, msgId } = req.params as any;
@@ -408,7 +417,9 @@ export default async function groupRoutes(app: FastifyInstance, opts: Opts) {
     }
   });
 
-  app.patch("/groups/:id/read", async (req, reply) => {
+  app.patch("/groups/:id/read", {
+  schema: { tags: ["groups"], params: z.object({ id: z.string().min(1) }) },
+}, async (req, reply) => {
     const viewer = authFromHeader((req.headers as any).authorization);
     if (!viewer) return reply.code(401).send({ error: "Unauthorized" });
     const { id } = req.params as any;
@@ -426,7 +437,9 @@ export default async function groupRoutes(app: FastifyInstance, opts: Opts) {
     }
   });
 
-  app.patch("/groups/:id", async (req, reply) => {
+  app.patch("/groups/:id", {
+  schema: { tags: ["groups"], params: z.object({ id: z.string().min(1) }) },
+}, async (req, reply) => {
     const viewer = authFromHeader((req.headers as any).authorization);
     if (!viewer) return reply.code(401).send({ error: "Unauthorized" });
     const { id } = req.params as any;
@@ -450,7 +463,9 @@ export default async function groupRoutes(app: FastifyInstance, opts: Opts) {
     }
   });
 
-  app.post("/groups/:id/members", async (req, reply) => {
+  app.post("/groups/:id/members", {
+  schema: { tags: ["groups"], params: z.object({ id: z.string().min(1) }) },
+}, async (req, reply) => {
     const viewer = authFromHeader((req.headers as any).authorization);
     if (!viewer) return reply.code(401).send({ error: "Unauthorized" });
     const { id } = req.params as any;
@@ -503,7 +518,9 @@ export default async function groupRoutes(app: FastifyInstance, opts: Opts) {
     }
   });
 
-  app.delete("/groups/:id/members/:userId", async (req, reply) => {
+  app.delete("/groups/:id/members/:userId", {
+  schema: { tags: ["groups"], params: z.object({ id: z.string().min(1), userId: z.string().min(1) }) },
+}, async (req, reply) => {
     const viewer = authFromHeader((req.headers as any).authorization);
     if (!viewer) return reply.code(401).send({ error: "Unauthorized" });
     const { id, userId } = req.params as any;

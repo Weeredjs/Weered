@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
+import { z } from "zod";
 import { isStaffUser as sharedIsStaffUser } from "../lib/isStaffUser";
 
 type Opts = {
@@ -75,7 +76,9 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
     return reply.send({ ok: true, tournament });
   });
 
-  app.post("/tournaments", async (req, reply) => {
+  app.post("/tournaments", {
+  schema: { tags: ["tournaments"] },
+}, async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const body = req.body as any;
@@ -131,7 +134,9 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
     return reply.send({ ok: true, tournament });
   });
 
-  app.post("/tournaments/:id/register", async (req, reply) => {
+  app.post("/tournaments/:id/register", {
+  schema: { tags: ["tournaments"], params: z.object({ id: z.string().min(1) }) },
+}, async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const id = String((req as any).params?.id || "");
@@ -188,7 +193,9 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
     }
   });
 
-  app.delete("/tournaments/:id/register", async (req, reply) => {
+  app.delete("/tournaments/:id/register", {
+  schema: { tags: ["tournaments"], params: z.object({ id: z.string().min(1) }) },
+}, async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const id = String((req as any).params?.id || "");
@@ -309,7 +316,9 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
     });
   });
 
-  app.post("/tournaments/:id/activate", async (req, reply) => {
+  app.post("/tournaments/:id/activate", {
+  schema: { tags: ["tournaments"], params: z.object({ id: z.string().min(1) }) },
+}, async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     if (!(await isStaffUser(u.id))) {
@@ -323,7 +332,9 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
     return reply.send({ ok: true, tournament });
   });
 
-  app.post("/tournaments/:id/rewards", async (req, reply) => {
+  app.post("/tournaments/:id/rewards", {
+  schema: { tags: ["tournaments"], params: z.object({ id: z.string().min(1) }) },
+}, async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     if (!(await isStaffUser(u.id))) return reply.code(403).send({ ok: false, error: "forbidden" });
@@ -346,7 +357,9 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
     return reply.send({ ok: true, tournament });
   });
 
-  app.post("/tournaments/:id/complete", async (req, reply) => {
+  app.post("/tournaments/:id/complete", {
+  schema: { tags: ["tournaments"], params: z.object({ id: z.string().min(1) }) },
+}, async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     if (!(await isStaffUser(u.id))) return reply.code(403).send({ ok: false, error: "forbidden" });
@@ -562,7 +575,9 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
     return pairs;
   }
 
-  app.post("/tournaments/:id/bracket/start", async (req, reply) => {
+  app.post("/tournaments/:id/bracket/start", {
+  schema: { tags: ["tournaments"], params: z.object({ id: z.string().min(1) }) },
+}, async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     if (!(await isStaffUser(u.id))) return reply.code(403).send({ ok: false, error: "forbidden" });
@@ -908,7 +923,9 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
     } catch {}
   }
 
-  app.post("/tournaments/:id/matches/:matchId/report", async (req, reply) => {
+  app.post("/tournaments/:id/matches/:matchId/report", {
+  schema: { tags: ["tournaments"], params: z.object({ id: z.string().min(1), matchId: z.string().min(1) }) },
+}, async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const matchId = String((req as any).params?.matchId || "");
@@ -955,7 +972,9 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
     return reply.send({ ok: true, autoConfirmed: staffOk });
   });
 
-  app.post("/tournaments/:id/matches/:matchId/confirm", async (req, reply) => {
+  app.post("/tournaments/:id/matches/:matchId/confirm", {
+  schema: { tags: ["tournaments"], params: z.object({ id: z.string().min(1), matchId: z.string().min(1) }) },
+}, async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const matchId = String((req as any).params?.matchId || "");
@@ -981,7 +1000,9 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
     return reply.send({ ok: true });
   });
 
-  app.post("/tournaments/:id/matches/:matchId/dispute", async (req, reply) => {
+  app.post("/tournaments/:id/matches/:matchId/dispute", {
+  schema: { tags: ["tournaments"], params: z.object({ id: z.string().min(1), matchId: z.string().min(1) }) },
+}, async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const matchId = String((req as any).params?.matchId || "");
@@ -995,7 +1016,9 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
     return reply.send({ ok: true });
   });
 
-  app.post("/tournaments/:id/matches/:matchId/live", async (req, reply) => {
+  app.post("/tournaments/:id/matches/:matchId/live", {
+  schema: { tags: ["tournaments"], params: z.object({ id: z.string().min(1), matchId: z.string().min(1) }) },
+}, async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const matchId = String((req as any).params?.matchId || "");
@@ -1009,7 +1032,9 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
     return reply.send({ ok: true });
   });
 
-  app.patch("/tournaments/:id/matches/:matchId", async (req, reply) => {
+  app.patch("/tournaments/:id/matches/:matchId", {
+  schema: { tags: ["tournaments"], params: z.object({ id: z.string().min(1), matchId: z.string().min(1) }) },
+}, async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     if (!(await isStaffUser(u.id))) return reply.code(403).send({ ok: false, error: "forbidden" });
@@ -1024,7 +1049,9 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
     return reply.send({ ok: true, match: updated });
   });
 
-  app.post("/tournaments/:id/matches/:matchId/admin-set", async (req, reply) => {
+  app.post("/tournaments/:id/matches/:matchId/admin-set", {
+  schema: { tags: ["tournaments"], params: z.object({ id: z.string().min(1), matchId: z.string().min(1) }) },
+}, async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     if (!(await isStaffUser(u.id))) return reply.code(403).send({ ok: false, error: "forbidden" });

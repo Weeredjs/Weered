@@ -4,6 +4,7 @@ import { join } from "path";
 import { createHash } from "crypto";
 import sharp from "sharp";
 import { prisma } from "../lib/prisma";
+import { z } from "zod";
 import { LobbyRole } from "@prisma/client";
 import { applyAutoModSideEffects, fileAutoModReport } from "./forum-mod";
 
@@ -136,7 +137,9 @@ app.get("/forum/posts", async (req, reply) => {
   return reply.send({ ok: true, posts: out, nextCursor });
 });
 
-app.post("/forum/posts", async (req, reply) => {
+app.post("/forum/posts", {
+  schema: { tags: ["forum"], body: z.object({ title: z.string().min(1), body: z.string().min(1), category: z.string().optional(), lobbyId: z.string().optional(), sectionId: z.string().optional(), tags: z.any().optional() }).passthrough() },
+}, async (req, reply) => {
   const u = authFromHeader((req as any).headers?.authorization);
   if (!u) return reply.code(401).send({ error: "Unauthorized" });
   const { title, body, category, lobbyId, sectionId, tags } = (req as any).body || {};
@@ -316,7 +319,9 @@ app.get("/forum/posts/:postId", async (req, reply) => {
   });
 });
 
-app.post("/forum/posts/:postId/vote", async (req, reply) => {
+app.post("/forum/posts/:postId/vote", {
+  schema: { tags: ["forum"], params: z.object({ postId: z.string().min(1) }) },
+}, async (req, reply) => {
   const u = authFromHeader((req as any).headers?.authorization);
   if (!u) return reply.code(401).send({ error: "Unauthorized" });
   const postId = String((req as any).params?.postId || "");
@@ -342,7 +347,9 @@ app.post("/forum/posts/:postId/vote", async (req, reply) => {
   return reply.send({ ok: true, score: post?.score || 0 });
 });
 
-app.post("/forum/posts/:postId/comments", async (req, reply) => {
+app.post("/forum/posts/:postId/comments", {
+  schema: { tags: ["forum"], params: z.object({ postId: z.string().min(1) }), body: z.object({ body: z.string().min(1), parentId: z.string().optional() }).passthrough() },
+}, async (req, reply) => {
   const u = authFromHeader((req as any).headers?.authorization);
   if (!u) return reply.code(401).send({ error: "Unauthorized" });
   const postId = String((req as any).params?.postId || "");
@@ -441,7 +448,9 @@ app.post("/forum/posts/:postId/comments", async (req, reply) => {
   });
 });
 
-app.post("/forum/comments/:commentId/vote", async (req, reply) => {
+app.post("/forum/comments/:commentId/vote", {
+  schema: { tags: ["forum"], params: z.object({ commentId: z.string().min(1) }) },
+}, async (req, reply) => {
   const u = authFromHeader((req as any).headers?.authorization);
   if (!u) return reply.code(401).send({ error: "Unauthorized" });
   const commentId = String((req as any).params?.commentId || "");
@@ -467,7 +476,9 @@ app.post("/forum/comments/:commentId/vote", async (req, reply) => {
   return reply.send({ ok: true, score: comment?.score || 0 });
 });
 
-app.patch("/forum/posts/:postId", async (req, reply) => {
+app.patch("/forum/posts/:postId", {
+  schema: { tags: ["forum"], params: z.object({ postId: z.string().min(1) }) },
+}, async (req, reply) => {
   const u = authFromHeader((req as any).headers?.authorization);
   if (!u) return reply.code(401).send({ error: "Unauthorized" });
 
@@ -491,7 +502,9 @@ app.patch("/forum/posts/:postId", async (req, reply) => {
   return reply.send({ ok: true, post });
 });
 
-app.delete("/forum/posts/:postId", async (req, reply) => {
+app.delete("/forum/posts/:postId", {
+  schema: { tags: ["forum"], params: z.object({ postId: z.string().min(1) }) },
+}, async (req, reply) => {
   const u = authFromHeader((req as any).headers?.authorization);
   if (!u) return reply.code(401).send({ error: "Unauthorized" });
   const postId = String((req as any).params?.postId || "");
@@ -505,7 +518,9 @@ app.delete("/forum/posts/:postId", async (req, reply) => {
   return reply.send({ ok: true });
 });
 
-app.delete("/forum/comments/:commentId", async (req, reply) => {
+app.delete("/forum/comments/:commentId", {
+  schema: { tags: ["forum"], params: z.object({ commentId: z.string().min(1) }) },
+}, async (req, reply) => {
   const u = authFromHeader((req as any).headers?.authorization);
   if (!u) return reply.code(401).send({ error: "Unauthorized" });
   const commentId = String((req as any).params?.commentId || "");
@@ -526,7 +541,9 @@ app.delete("/forum/comments/:commentId", async (req, reply) => {
   return reply.send({ ok: true });
 });
 
-app.post("/forum/posts/:postId/bookmark", async (req, reply) => {
+app.post("/forum/posts/:postId/bookmark", {
+  schema: { tags: ["forum"], params: z.object({ postId: z.string().min(1) }) },
+}, async (req, reply) => {
   const u = authFromHeader((req as any).headers?.authorization);
   if (!u) return reply.code(401).send({ error: "Unauthorized" });
   const postId = String((req as any).params?.postId || "");
@@ -542,7 +559,9 @@ app.post("/forum/posts/:postId/bookmark", async (req, reply) => {
   return reply.send({ ok: true, bookmarked: true });
 });
 
-app.delete("/forum/posts/:postId/bookmark", async (req, reply) => {
+app.delete("/forum/posts/:postId/bookmark", {
+  schema: { tags: ["forum"], params: z.object({ postId: z.string().min(1) }) },
+}, async (req, reply) => {
   const u = authFromHeader((req as any).headers?.authorization);
   if (!u) return reply.code(401).send({ error: "Unauthorized" });
   const postId = String((req as any).params?.postId || "");
@@ -591,7 +610,9 @@ app.get("/forum/me/bookmarks", async (req, reply) => {
   return reply.send({ ok: true, posts: out, total });
 });
 
-app.post("/forum/posts/:postId/subscribe", async (req, reply) => {
+app.post("/forum/posts/:postId/subscribe", {
+  schema: { tags: ["forum"], params: z.object({ postId: z.string().min(1) }) },
+}, async (req, reply) => {
   const u = authFromHeader((req as any).headers?.authorization);
   if (!u) return reply.code(401).send({ error: "Unauthorized" });
   const postId = String((req as any).params?.postId || "");
@@ -608,7 +629,9 @@ app.post("/forum/posts/:postId/subscribe", async (req, reply) => {
   return reply.send({ ok: true, subscribed: true, subscriberCount: count });
 });
 
-app.delete("/forum/posts/:postId/subscribe", async (req, reply) => {
+app.delete("/forum/posts/:postId/subscribe", {
+  schema: { tags: ["forum"], params: z.object({ postId: z.string().min(1) }) },
+}, async (req, reply) => {
   const u = authFromHeader((req as any).headers?.authorization);
   if (!u) return reply.code(401).send({ error: "Unauthorized" });
   const postId = String((req as any).params?.postId || "");
@@ -724,7 +747,9 @@ app.get("/forum/sections", async (req, reply) => {
   return reply.send({ ok: true, sections: out });
 });
 
-app.post("/forum/sections", async (req, reply) => {
+app.post("/forum/sections", {
+  schema: { tags: ["forum"] },
+}, async (req, reply) => {
   const u = authFromHeader((req as any).headers?.authorization);
   if (!u) return reply.code(401).send({ error: "Unauthorized" });
   const { lobbyId, slug, name, description, color, icon, order, postsOnly } = (req as any).body || {};
@@ -752,7 +777,9 @@ app.post("/forum/sections", async (req, reply) => {
   return reply.send({ ok: true, section });
 });
 
-app.patch("/forum/sections/:id", async (req, reply) => {
+app.patch("/forum/sections/:id", {
+  schema: { tags: ["forum"], params: z.object({ id: z.string().min(1) }) },
+}, async (req, reply) => {
   const u = authFromHeader((req as any).headers?.authorization);
   if (!u) return reply.code(401).send({ error: "Unauthorized" });
   const id = String((req as any).params?.id || "");
@@ -782,7 +809,9 @@ app.patch("/forum/sections/:id", async (req, reply) => {
   return reply.send({ ok: true, section });
 });
 
-app.delete("/forum/sections/:id", async (req, reply) => {
+app.delete("/forum/sections/:id", {
+  schema: { tags: ["forum"], params: z.object({ id: z.string().min(1) }) },
+}, async (req, reply) => {
   const u = authFromHeader((req as any).headers?.authorization);
   if (!u) return reply.code(401).send({ error: "Unauthorized" });
   const id = String((req as any).params?.id || "");
@@ -800,7 +829,9 @@ app.delete("/forum/sections/:id", async (req, reply) => {
   return reply.send({ ok: true, postCount });
 });
 
-app.post("/forum/sections/reorder", async (req, reply) => {
+app.post("/forum/sections/reorder", {
+  schema: { tags: ["forum"] },
+}, async (req, reply) => {
   const u = authFromHeader((req as any).headers?.authorization);
   if (!u) return reply.code(401).send({ error: "Unauthorized" });
   const { lobbyId, order } = (req as any).body || {};

@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
+import { z } from "zod";
 
 type Opts = {
   authFromHeader: (h?: string) => { id: string; name: string } | null;
@@ -127,7 +128,9 @@ app.get("/dm/:peerId", async (req, reply) => {
   }
 });
 
-app.post("/dm/:peerId", async (req, reply) => {
+app.post("/dm/:peerId", {
+  schema: { tags: ["dm"], params: z.object({ peerId: z.string().min(1) }), body: z.object({ body: z.string().min(1) }).passthrough() },
+}, async (req, reply) => {
   const viewer = authFromHeader((req.headers as any).authorization);
   if (!viewer) return reply.code(401).send({ error: "Unauthorized" });
   const { peerId: rawPeerId } = req.params as any;
@@ -175,7 +178,9 @@ app.post("/dm/:peerId", async (req, reply) => {
   }
 });
 
-app.patch("/dm/:peerId/read", async (req, reply) => {
+app.patch("/dm/:peerId/read", {
+  schema: { tags: ["dm"], params: z.object({ peerId: z.string().min(1) }) },
+}, async (req, reply) => {
   const viewer = authFromHeader((req.headers as any).authorization);
   if (!viewer) return reply.code(401).send({ error: "Unauthorized" });
   const { peerId } = req.params as any;
