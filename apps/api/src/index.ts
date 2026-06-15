@@ -2556,9 +2556,9 @@ async function main() {
   }
 
   await app.register(publicMiscRoutes, { getSiteConfig, applyWindroseReel } as any);
-  app.get("/health", async () => {
+  app.get("/health", async (_req, reply) => {
     try { await prisma.$queryRaw`SELECT 1`; return { ok: true, db: "ok" }; }
-    catch { return { ok: true, db: "down" }; }
+    catch { return reply.code(503).send({ ok: false, db: "down" }); }
   });
 
   await app.register(authRoutes, { authFromHeader, JWT_SECRET, isNameReserved, getSiteConfig, seedWelcomeDM } as any);
@@ -2772,11 +2772,26 @@ async function main() {
 
   await app.register(modsRoutes, { verifyToken } as any);
 
-  wss = new WebSocketServer({ port: WS_PORT });
+  wss = new WebSocketServer({ port: WS_PORT, maxPayload: 256 * 1024 });
   app.log.info(`WS listening on ws://127.0.0.1:${WS_PORT}`);
+
+  // 30s heartbeat: ping every client, terminate any that didn't pong since the
+  // previous tick. Reaps stale half-open sockets that otherwise tax all the
+  // wss.clients-iterating fanout sites. Browsers/ws auto-reply to ping.
+  const wsHeartbeat = setInterval(() => {
+    for (const c of wss.clients) {
+      const s = c as any;
+      if (s.isAlive === false) { try { s.terminate(); } catch {} continue; }
+      s.isAlive = false;
+      try { s.ping(); } catch {}
+    }
+  }, 30000);
+  wss.on("close", () => clearInterval(wsHeartbeat));
 
   wss.on("connection", (rawWs) => {
     const ws = rawWs as Sock;
+    (ws as any).isAlive = true;
+    ws.on("pong", () => { (ws as any).isAlive = true; });
 
     ws.on("message", (raw) => {
       (async () => {
