@@ -102,12 +102,15 @@ if [ "$PM2_WEB_UP" = "online" ]; then
   ok "weered-web online · ${mem_mb}MB · uptime ${age_s}s · $PM2_WEB_RESTARTS restarts"
 else fail "weered-web status: $PM2_WEB_UP"; fi
 
-# Recent error volume (last 5 min, excluding known noisy upstream failures)
-ERR_COUNT=$(pm2 logs weered-api --nostream --lines 500 --err 2>&1 | \
-  grep -ciE 'error|throw|uncaught|unhandled' | head -1)
-ERR_NOISE=$(pm2 logs weered-api --nostream --lines 500 --err 2>&1 | \
-  grep -ciE '\[news\]|reuters|cbc|ENOTFOUND|ETIMEDOUT' | head -1)
-REAL_ERRS=$((ERR_COUNT - ERR_NOISE))
+# Recent error volume (last 500 err lines), excluding known noisy upstream
+# failures (news feeds + game-integration APIs that flap/rate-limit upstream).
+# REAL_ERRS = error-lines that are NOT upstream noise (computed directly so it
+# can never go negative when the noise set outgrows the raw error matches).
+ERR_NOISE_RE='\[news\]|reuters|cbc|ENOTFOUND|ETIMEDOUT|HeadersTimeoutError|UND_ERR|aborted due to timeout|\[helldivers2\]|\[eve\]|\[poe\]|\[pubg\]|\[fortnite\]|\[riot\]|\[bungie\]|\[steam\]|\[twitch\]|\[mlb\]|\[pga\]|\[scryfall\]|\[mtg\]'
+ERR_LINES=$(pm2 logs weered-api --nostream --lines 500 --err 2>&1 | grep -iE 'error|throw|uncaught|unhandled')
+ERR_COUNT=$(printf '%s\n' "$ERR_LINES" | grep -c . || true)
+REAL_ERRS=$(printf '%s\n' "$ERR_LINES" | grep -ivE "$ERR_NOISE_RE" | grep -c . || true)
+ERR_NOISE=$((ERR_COUNT - REAL_ERRS))
 if [ "$REAL_ERRS" -lt 10 ]; then ok "api error log clean ($REAL_ERRS non-noise errors in last 500 lines, $ERR_NOISE upstream-fetch noise filtered)"
 elif [ "$REAL_ERRS" -lt 30 ]; then warn "api error log: $REAL_ERRS non-noise errors in last 500 lines"
 else fail "api error log: $REAL_ERRS non-noise errors — investigate"; fi
