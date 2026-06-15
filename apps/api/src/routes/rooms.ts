@@ -1,4 +1,5 @@
 import type { FastifyInstance } from "fastify";
+import { fetchWithTimeout } from "../lib/fetchWithTimeout";
 import { prisma } from "../lib/prisma";
 import { z } from "zod";
 import { LobbyRole, RoomRole } from "@prisma/client";
@@ -429,7 +430,7 @@ app.post("/rooms/:roomId/npcs/:npcId/messages", {
   if (!ANTHROPIC_KEY) return reply.code(500).send({ ok: false, error: "ai_not_configured" });
 
   try {
-    const aiRes = await fetch("https://api.anthropic.com/v1/messages", {
+    const aiRes = await fetchWithTimeout("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01" },
       body: JSON.stringify({
@@ -438,7 +439,7 @@ app.post("/rooms/:roomId/npcs/:npcId/messages", {
         system: buildNpcSystemPrompt(npc.name, cfg),
         messages: claudeMessages,
       }),
-    });
+    }, 30000);
     const aiData: any = await aiRes.json();
     const aiText = aiData?.content?.[0]?.text || "*says nothing*";
 

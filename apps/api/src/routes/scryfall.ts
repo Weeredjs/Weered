@@ -1,4 +1,5 @@
 import type { FastifyInstance } from "fastify";
+import { fetchWithTimeout } from "../lib/fetchWithTimeout";
 
 type Opts = {};
 
@@ -70,7 +71,7 @@ export default async function scryfallRoutes(app: FastifyInstance, _opts: Opts) 
     await throttle();
     try {
       const url = `${SCRYFALL_BASE}/cards/named?fuzzy=${encodeURIComponent(name)}`;
-      const res = await fetch(url, { headers: { "User-Agent": SCRYFALL_UA, Accept: "application/json" } });
+      const res = await fetchWithTimeout(url, { headers: { "User-Agent": SCRYFALL_UA, Accept: "application/json" } });
       if (res.status === 404) {
         cache.set(key, { ok: false, data: null, expiresAt: Date.now() + NEGATIVE_CACHE_TTL_MS });
         return { ok: false, data: null };

@@ -1,4 +1,5 @@
 import type { FastifyInstance } from "fastify";
+import { fetchWithTimeout } from "../lib/fetchWithTimeout";
 
 const ALLOWED_SUBS: Record<string, string> = {
   gta6: "GTA6",
@@ -81,7 +82,7 @@ export default async function redditRoutes(app: FastifyInstance) {
 
     try {
       const url = `https://www.reddit.com/r/${encodeURIComponent(sub)}/${sort}.rss?limit=25`;
-      const res = await fetch(url, { headers: { "User-Agent": "weered:lobby-feed:v1 (by /u/weeeered)" } });
+      const res = await fetchWithTimeout(url, { headers: { "User-Agent": "weered:lobby-feed:v1 (by /u/weeeered)" } });
       if (!res.ok) {
         if (cached) return reply.send({ ok: true, sub, posts: cached.posts, updatedAt: new Date(cached.cachedAt).toISOString(), stale: true });
         return reply.code(502).send({ ok: false, error: "reddit_upstream", status: res.status });

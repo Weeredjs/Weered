@@ -1,4 +1,5 @@
 import type { FastifyInstance } from "fastify";
+import { fetchWithTimeout } from "../lib/fetchWithTimeout";
 import { z } from "zod";
 import { prisma } from "../lib/prisma";
 import { createHmac, timingSafeEqual, randomUUID } from "crypto";
@@ -165,7 +166,7 @@ async function stripeReq(method: string, path: string, body?: any) {
   if (body) {
     const clean: Record<string,string> = {}; for (const [k,v] of Object.entries(body)) { if (v !== undefined && v !== null && v !== '') clean[k] = String(v); } opts.body = new URLSearchParams(clean).toString();
   }
-  const res = await fetch(url, opts);
+  const res = await fetchWithTimeout(url, opts);
   const j = await res.json(); if (j.error) console.error("[stripeReq]", path, JSON.stringify(j.error)); return j;
 }
 

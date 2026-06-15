@@ -1,4 +1,5 @@
 import type { FastifyInstance } from "fastify";
+import { fetchWithTimeout } from "../lib/fetchWithTimeout";
 
 type Opts = {};
 
@@ -21,7 +22,7 @@ type DeckLite = {
 
 async function fetchMoxfield(deckId: string): Promise<DeckLite | null> {
   try {
-    const res = await fetch(`https://api.moxfield.com/v2/decks/all/${encodeURIComponent(deckId)}`, {
+    const res = await fetchWithTimeout(`https://api.moxfield.com/v2/decks/all/${encodeURIComponent(deckId)}`, {
       headers: { "User-Agent": UA, Accept: "application/json" },
     });
     if (!res.ok) return null;
@@ -54,7 +55,7 @@ async function fetchMoxfield(deckId: string): Promise<DeckLite | null> {
 
 async function fetchArchidekt(deckId: string): Promise<DeckLite | null> {
   try {
-    const res = await fetch(`https://archidekt.com/api/decks/${encodeURIComponent(deckId)}/`, {
+    const res = await fetchWithTimeout(`https://archidekt.com/api/decks/${encodeURIComponent(deckId)}/`, {
       headers: { "User-Agent": UA, Accept: "application/json" },
     });
     if (!res.ok) return null;

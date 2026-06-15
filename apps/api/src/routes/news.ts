@@ -1,4 +1,5 @@
 import type { FastifyInstance } from "fastify";
+import { fetchWithTimeout } from "../lib/fetchWithTimeout";
 import { prisma } from "../lib/prisma";
 import { assertSafeUrl } from "../lib/ssrfGuard";
 
@@ -58,7 +59,7 @@ export default async function newsRoutes(app: FastifyInstance) {
     }
 
     try {
-      const res = await fetch(url, {
+      const res = await fetchWithTimeout(url, {
         headers: { "User-Agent": "Mozilla/5.0 (compatible; Weered/1.0; +https://weered.ca)" },
         redirect: "follow",
       });

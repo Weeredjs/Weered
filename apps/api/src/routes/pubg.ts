@@ -1,4 +1,5 @@
 import type { FastifyInstance } from "fastify";
+import { fetchWithTimeout } from "../lib/fetchWithTimeout";
 
 export default async function pubgRoutes(app: FastifyInstance) {
   const PUBG_API_BASE = "https://api.pubg.com";
@@ -16,7 +17,7 @@ export default async function pubgRoutes(app: FastifyInstance) {
 
   async function pubgGet(path: string) {
     if (!PUBG_API_KEY) { console.warn("[pubg] No API key configured"); return null; }
-    const res = await fetch(`${PUBG_API_BASE}${path}`, {
+    const res = await fetchWithTimeout(`${PUBG_API_BASE}${path}`, {
       headers: { Authorization: `Bearer ${PUBG_API_KEY}`, Accept: "application/vnd.api+json" },
     });
     if (res.status === 429) { console.warn("[pubg] Rate limited on", path); return null; }

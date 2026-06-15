@@ -1,4 +1,5 @@
 import type { FastifyInstance } from "fastify";
+import { fetchWithTimeout } from "../lib/fetchWithTimeout";
 
 export default async function tenorRoutes(app: FastifyInstance) {
   const GIPHY_KEY = process.env.GIPHY_API_KEY || "";
@@ -11,7 +12,7 @@ export default async function tenorRoutes(app: FastifyInstance) {
     const hit = gifCache.get(cacheKey);
     if (hit && hit.expiresAt > Date.now()) return hit.data;
     try {
-      const res = await fetch(`https://api.giphy.com/v1/gifs/${endpoint}?${qs}`);
+      const res = await fetchWithTimeout(`https://api.giphy.com/v1/gifs/${endpoint}?${qs}`);
       const j = await res.json();
       gifCache.set(cacheKey, { data: j, expiresAt: Date.now() + 10 * 60 * 1000 });
       return j;

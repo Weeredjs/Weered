@@ -1,4 +1,5 @@
 import type { FastifyInstance } from "fastify";
+import { fetchWithTimeout } from "../lib/fetchWithTimeout";
 import { prisma } from "../lib/prisma";
 import { z } from "zod";
 
@@ -41,7 +42,7 @@ app.get("/trading/candles", async (req, reply) => {
 
   try {
     const url = `${BINANCE_REST}/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=${limit}`;
-    const resp = await fetch(url);
+    const resp = await fetchWithTimeout(url);
     const data = await resp.json();
     if (!Array.isArray(data)) return reply.send({ ok: false, error: "binance_error" });
 

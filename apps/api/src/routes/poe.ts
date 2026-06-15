@@ -1,4 +1,5 @@
 import type { FastifyInstance } from "fastify";
+import { fetchWithTimeout } from "../lib/fetchWithTimeout";
 import { prisma } from "../lib/prisma";
 import crypto from "node:crypto";
 
@@ -24,7 +25,7 @@ function b64url(buf: Buffer): string { return buf.toString("base64url"); }
 
 async function poeAuthedGet<T = any>(path: string, token: string): Promise<T | null> {
   try {
-    const r = await fetch(`${POE_API}${path}`, {
+    const r = await fetchWithTimeout(`${POE_API}${path}`, {
       headers: { Authorization: `Bearer ${token}`, "User-Agent": userAgent(), Accept: "application/json" },
     });
     if (!r.ok) return null;
@@ -34,7 +35,7 @@ async function poeAuthedGet<T = any>(path: string, token: string): Promise<T | n
 
 async function poeFetch(path: string, token: string): Promise<{ status: number; body: any }> {
   try {
-    const r = await fetch(`${POE_API}${path}`, {
+    const r = await fetchWithTimeout(`${POE_API}${path}`, {
       headers: { Authorization: `Bearer ${token}`, "User-Agent": userAgent(), Accept: "application/json" },
     });
     const body = await r.json().catch(() => null);
@@ -54,7 +55,7 @@ async function ensureToken(acct: any): Promise<string | null> {
       grant_type: "refresh_token",
       refresh_token: acct.refreshToken,
     });
-    const r = await fetch(OAUTH_TOKEN, {
+    const r = await fetchWithTimeout(OAUTH_TOKEN, {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded", "User-Agent": userAgent(), Accept: "application/json" },
       body: form.toString(),
@@ -98,7 +99,7 @@ async function getAppToken(): Promise<string | null> {
       client_id: POE_CLIENT_ID, client_secret: POE_CLIENT_SECRET,
       grant_type: "client_credentials", scope: POE_SERVICE_SCOPES,
     });
-    const r = await fetch(OAUTH_TOKEN, {
+    const r = await fetchWithTimeout(OAUTH_TOKEN, {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded", "User-Agent": userAgent(), Accept: "application/json" },
       body: form.toString(),
@@ -115,7 +116,7 @@ async function serviceGet(path: string): Promise<{ status: number; body: any }> 
   const token = await getAppToken();
   if (!token) return { status: 0, body: null };
   try {
-    const r = await fetch(`${POE_API}${path}`, {
+    const r = await fetchWithTimeout(`${POE_API}${path}`, {
       headers: { Authorization: `Bearer ${token}`, "User-Agent": userAgent(), Accept: "application/json" },
     });
     const body = await r.json().catch(() => null);
@@ -133,7 +134,7 @@ async function currencyStatic(): Promise<Record<string, { name: string; icon: st
   if (_cxStatic && _cxStatic.exp > Date.now()) return _cxStatic.map;
   const map: Record<string, { name: string; icon: string; cat: string }> = {};
   try {
-    const r = await fetch("https://www.pathofexile.com/api/trade/data/static", {
+    const r = await fetchWithTimeout("https://www.pathofexile.com/api/trade/data/static", {
       headers: { "User-Agent": userAgent(), Accept: "application/json" },
     });
     const j: any = await r.json().catch(() => null);
@@ -162,7 +163,7 @@ let _treeCache: { data: any; exp: number } | null = null;
 
 async function buildPassiveTree(): Promise<any> {
   if (_treeCache && _treeCache.exp > Date.now()) return _treeCache.data;
-  const r = await fetch("https://raw.githubusercontent.com/grindinggear/skilltree-export/master/data.json", {
+  const r = await fetchWithTimeout("https://raw.githubusercontent.com/grindinggear/skilltree-export/master/data.json", {
     headers: { "User-Agent": userAgent(), Accept: "application/json" },
   });
   const t: any = await r.json();
@@ -301,7 +302,7 @@ export default async function poeRoutes(app: FastifyInstance, opts: Opts) {
         scope: POE_SCOPES,
         code_verifier: pk.verifier,
       });
-      const tokenRes = await fetch(OAUTH_TOKEN, {
+      const tokenRes = await fetchWithTimeout(OAUTH_TOKEN, {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded", "User-Agent": userAgent(), Accept: "application/json" },
         body: form.toString(),
@@ -379,7 +380,7 @@ export default async function poeRoutes(app: FastifyInstance, opts: Opts) {
     for (const realm of ["pc", "xbox", "sony"]) {
       const qs = new URLSearchParams({ accountName, realm }).toString();
       try {
-        const r = await fetch(`https://www.pathofexile.com/character-window/get-characters?${qs}`, {
+        const r = await fetchWithTimeout(`https://www.pathofexile.com/character-window/get-characters?${qs}`, {
           headers: { "User-Agent": userAgent(), Accept: "application/json" },
         });
         const body: any = await r.json().catch(() => null);
@@ -532,7 +533,7 @@ export default async function poeRoutes(app: FastifyInstance, opts: Opts) {
     if (!name) return reply.send({ ok: false, error: "character required" });
     try {
       const qs = new URLSearchParams({ accountName, character: name, realm }).toString();
-      const r = await fetch(`https://www.pathofexile.com/character-window/get-passive-skills?${qs}`, {
+      const r = await fetchWithTimeout(`https://www.pathofexile.com/character-window/get-passive-skills?${qs}`, {
         headers: { "User-Agent": userAgent(), Accept: "application/json" },
       });
       if (!r.ok) return reply.send({ ok: false, error: `poe ${r.status}` });
@@ -566,7 +567,7 @@ export default async function poeRoutes(app: FastifyInstance, opts: Opts) {
 
     const qs = new URLSearchParams({ accountName, character: name, realm }).toString();
     try {
-      const r = await fetch(`https://www.pathofexile.com/character-window/get-items?${qs}`, {
+      const r = await fetchWithTimeout(`https://www.pathofexile.com/character-window/get-items?${qs}`, {
         headers: { "User-Agent": userAgent(), Accept: "application/json" },
       });
       if (r.status !== 200) {

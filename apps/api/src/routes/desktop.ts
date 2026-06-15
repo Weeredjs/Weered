@@ -1,4 +1,5 @@
 import type { FastifyInstance } from "fastify";
+import { fetchWithTimeout } from "../lib/fetchWithTimeout";
 
 // Tauri desktop auto-updater endpoints (extracted from index.ts). Polls the
 // GitHub releases of the desktop repo for the latest desktop-v* build and serves
@@ -47,7 +48,7 @@ export default async function desktopRoutes(app: FastifyInstance) {
         Accept: "application/vnd.github+json",
       };
       if (process.env.GITHUB_TOKEN) headers["Authorization"] = `Bearer ${process.env.GITHUB_TOKEN}`;
-      const res = await fetch(url, { headers });
+      const res = await fetchWithTimeout(url, { headers });
       if (!res.ok) throw new Error(`GitHub releases ${res.status}`);
       const releases = (await res.json()) as GhRelease[];
 
@@ -65,7 +66,7 @@ export default async function desktopRoutes(app: FastifyInstance) {
           let signature = "";
           if (sigAsset) {
             try {
-              const sigRes = await fetch(sigAsset.browser_download_url, { headers: { "User-Agent": "Weered-API/1.0" } });
+              const sigRes = await fetchWithTimeout(sigAsset.browser_download_url, { headers: { "User-Agent": "Weered-API/1.0" } });
               if (sigRes.ok) signature = (await sigRes.text()).trim();
             } catch {}
           }

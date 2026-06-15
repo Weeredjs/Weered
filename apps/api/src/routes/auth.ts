@@ -1,4 +1,5 @@
 import type { FastifyInstance } from "fastify";
+import { fetchWithTimeout } from "../lib/fetchWithTimeout";
 import { z } from "zod";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
@@ -42,7 +43,7 @@ export default async function authRoutes(app: FastifyInstance, opts: Opts) {
     if (!secret) return { ok: true };
     if (typeof token !== "string" || !token) return { ok: false, reason: "missing_captcha" };
     try {
-      const r = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
+      const r = await fetchWithTimeout("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
         body: new URLSearchParams({ secret, response: token, remoteip: ip }).toString(),

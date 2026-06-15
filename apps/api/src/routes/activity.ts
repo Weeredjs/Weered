@@ -1,4 +1,5 @@
 import type { FastifyInstance } from "fastify";
+import { fetchWithTimeout } from "../lib/fetchWithTimeout";
 import { prisma } from "../lib/prisma";
 
 type Opts = {
@@ -86,7 +87,7 @@ app.get("/unfurl", async (req, reply) => {
 
   if (/^https?:\/\/(www\.)?(youtube\.com|youtu\.be)\//i.test(url)) {
     try {
-      const oe = await fetch(`https://www.youtube.com/oembed?url=${encodeURIComponent(url)}&format=json`, {
+      const oe = await fetchWithTimeout(`https://www.youtube.com/oembed?url=${encodeURIComponent(url)}&format=json`, {
         headers: { "User-Agent": "Mozilla/5.0 (compatible; Twitterbot/1.0)" },
       });
       if (oe.ok) {
@@ -110,7 +111,7 @@ app.get("/unfurl", async (req, reply) => {
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 4000);
-    const res = await fetch(url, {
+    const res = await fetchWithTimeout(url, {
       headers: {
         "User-Agent": "Mozilla/5.0 (compatible; Twitterbot/1.0)",
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",

@@ -1,4 +1,5 @@
 import type { FastifyInstance } from "fastify";
+import { fetchWithTimeout } from "../lib/fetchWithTimeout";
 import { z } from "zod";
 import { prisma } from "../lib/prisma";
 
@@ -25,7 +26,7 @@ export default async function fortniteRoutes(app: FastifyInstance, opts: Opts) {
   async function fnGet(path: string) {
     const headers: Record<string, string> = {};
     if (FN_API_KEY) headers["Authorization"] = FN_API_KEY;
-    const res = await fetch(`${FN_API_BASE}${path}`, { headers });
+    const res = await fetchWithTimeout(`${FN_API_BASE}${path}`, { headers });
     if (res.status === 429) { console.warn("[fortnite] Rate limited"); return null; }
     if (res.status === 404) return null;
     if (!res.ok) { console.error(`[fortnite] ${res.status} — ${path}`); return null; }

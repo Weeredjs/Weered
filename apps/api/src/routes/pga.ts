@@ -1,11 +1,12 @@
 import type { FastifyInstance } from "fastify";
+import { fetchWithTimeout } from "../lib/fetchWithTimeout";
 
 export default async function pgaRoutes(app: FastifyInstance) {
   const ESPN_PGA = "https://site.api.espn.com/apis/site/v2/sports/golf/pga";
 
   app.get("/pga/leaderboard", async (req, reply) => {
     try {
-      const res = await fetch(`${ESPN_PGA}/scoreboard`);
+      const res = await fetchWithTimeout(`${ESPN_PGA}/scoreboard`);
       const data = await res.json();
       const event = data?.events?.[0];
       if (!event) return reply.send({ ok: true, event: null, players: [] });
@@ -53,7 +54,7 @@ export default async function pgaRoutes(app: FastifyInstance) {
   app.get("/pga/news", async (req, reply) => {
     try {
       const limit = Math.min(Number((req as any).query?.limit) || 15, 30);
-      const res = await fetch(`${ESPN_PGA}/news?limit=${limit}`);
+      const res = await fetchWithTimeout(`${ESPN_PGA}/news?limit=${limit}`);
       const data = await res.json();
       const articles = (data?.articles || []).map((a: any) => ({
         headline: a.headline,
@@ -73,7 +74,7 @@ export default async function pgaRoutes(app: FastifyInstance) {
   app.get("/pga/schedule", async (req, reply) => {
     try {
       const year = new Date().getFullYear();
-      const calRes = await fetch(`https://site.api.espn.com/apis/site/v2/sports/golf/pga/calendar?dates=${year}`);
+      const calRes = await fetchWithTimeout(`https://site.api.espn.com/apis/site/v2/sports/golf/pga/calendar?dates=${year}`);
       const calData = await calRes.json();
 
       let events: any[] = [];
@@ -101,7 +102,7 @@ export default async function pgaRoutes(app: FastifyInstance) {
 
   app.get("/pga/field", async (req, reply) => {
     try {
-      const res = await fetch(`${ESPN_PGA}/scoreboard`);
+      const res = await fetchWithTimeout(`${ESPN_PGA}/scoreboard`);
       const data = await res.json();
       const event = data?.events?.[0];
       if (!event) return reply.send({ ok: true, event: null, field: [] });

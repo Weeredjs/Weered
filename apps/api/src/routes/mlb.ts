@@ -1,4 +1,5 @@
 import type { FastifyInstance } from "fastify";
+import { fetchWithTimeout } from "../lib/fetchWithTimeout";
 
 export default async function mlbRoutes(app: FastifyInstance) {
   const MLB_API = "https://statsapi.mlb.com/api/v1";
@@ -6,7 +7,7 @@ export default async function mlbRoutes(app: FastifyInstance) {
   app.get("/mlb/scoreboard", async (req, reply) => {
     try {
       const date = String((req as any).query?.date || new Date().toISOString().slice(0, 10));
-      const res = await fetch(`${MLB_API}/schedule?sportId=1&date=${date}&hydrate=linescore,team,probablePitcher`);
+      const res = await fetchWithTimeout(`${MLB_API}/schedule?sportId=1&date=${date}&hydrate=linescore,team,probablePitcher`);
       const data = await res.json();
       const games = (data?.dates?.[0]?.games || []).map((g: any) => ({
         gameId: g.gamePk,
@@ -63,7 +64,7 @@ export default async function mlbRoutes(app: FastifyInstance) {
   app.get("/mlb/standings", async (req, reply) => {
     try {
       const season = String((req as any).query?.season || new Date().getFullYear());
-      const res = await fetch(`${MLB_API}/standings?leagueId=103,104&season=${season}&standingsTypes=regularSeason&hydrate=team`);
+      const res = await fetchWithTimeout(`${MLB_API}/standings?leagueId=103,104&season=${season}&standingsTypes=regularSeason&hydrate=team`);
       const data = await res.json();
       const divisions = (data?.records || []).map((div: any) => ({
         divisionId: div.division?.id,
@@ -105,7 +106,7 @@ export default async function mlbRoutes(app: FastifyInstance) {
       ];
       const results: any[] = [];
       for (const cat of categories) {
-        const res = await fetch(`${MLB_API}/stats/leaders?leaderCategories=${cat.stat}&season=${season}&sportId=1&limit=10`);
+        const res = await fetchWithTimeout(`${MLB_API}/stats/leaders?leaderCategories=${cat.stat}&season=${season}&sportId=1&limit=10`);
         const data = await res.json();
         const leaders = (data?.leagueLeaders?.[0]?.leaders || []).map((l: any) => ({
           rank: l.rank,
@@ -128,7 +129,7 @@ export default async function mlbRoutes(app: FastifyInstance) {
     try {
       const q = String((req as any).query?.q || "");
       if (!q) return reply.send({ ok: true, players: [] });
-      const res = await fetch(`${MLB_API}/people/search?names=${encodeURIComponent(q)}&sportId=1&active=true&hydrate=currentTeam`);
+      const res = await fetchWithTimeout(`${MLB_API}/people/search?names=${encodeURIComponent(q)}&sportId=1&active=true&hydrate=currentTeam`);
       const data = await res.json();
       const players = (data?.people || []).slice(0, 15).map((p: any) => ({
         id: p.id,
@@ -159,8 +160,8 @@ export default async function mlbRoutes(app: FastifyInstance) {
       const id = (req as any).params.id;
       const season = String((req as any).query?.season || new Date().getFullYear());
       const [bioRes, statsRes] = await Promise.all([
-        fetch(`${MLB_API}/people/${id}`),
-        fetch(`${MLB_API}/people/${id}/stats?stats=season,career&group=hitting,pitching,fielding&season=${season}`),
+        fetchWithTimeout(`${MLB_API}/people/${id}`),
+        fetchWithTimeout(`${MLB_API}/people/${id}/stats?stats=season,career&group=hitting,pitching,fielding&season=${season}`),
       ]);
       const bio = await bioRes.json();
       const stats = await statsRes.json();
@@ -209,7 +210,7 @@ export default async function mlbRoutes(app: FastifyInstance) {
   app.get("/mlb/game/:id/boxscore", async (req, reply) => {
     try {
       const id = (req as any).params.id;
-      const res = await fetch(`${MLB_API.replace("/v1", "/v1.1")}/game/${id}/feed/live`);
+      const res = await fetchWithTimeout(`${MLB_API.replace("/v1", "/v1.1")}/game/${id}/feed/live`);
       const data = await res.json();
       const gd = data?.gameData;
       const ld = data?.liveData;
@@ -272,7 +273,7 @@ export default async function mlbRoutes(app: FastifyInstance) {
   app.get("/mlb/highlights", async (req, reply) => {
     try {
       const date = String((req as any).query?.date || new Date().toISOString().slice(0, 10));
-      const schedRes = await fetch(`${MLB_API}/schedule?sportId=1&date=${date}`);
+      const schedRes = await fetchWithTimeout(`${MLB_API}/schedule?sportId=1&date=${date}`);
       const schedData = await schedRes.json();
       const gameIds = (schedData?.dates?.[0]?.games || []).map((g: any) => g.gamePk);
 
@@ -280,7 +281,7 @@ export default async function mlbRoutes(app: FastifyInstance) {
       const subset = gameIds.slice(0, 6);
       await Promise.all(subset.map(async (gid: number) => {
         try {
-          const res = await fetch(`${MLB_API}/game/${gid}/content`);
+          const res = await fetchWithTimeout(`${MLB_API}/game/${gid}/content`);
           const data = await res.json();
           const items = data?.highlights?.highlights?.items || [];
           for (const item of items) {
@@ -312,14 +313,14 @@ export default async function mlbRoutes(app: FastifyInstance) {
   app.get("/mlb/matchups", async (req, reply) => {
     try {
       const date = String((req as any).query?.date || new Date().toISOString().slice(0, 10));
-      const schedRes = await fetch(`${MLB_API}/schedule?sportId=1&date=${date}&hydrate=probablePitcher(stats(type=season)),team,linescore,weather`);
+      const schedRes = await fetchWithTimeout(`${MLB_API}/schedule?sportId=1&date=${date}&hydrate=probablePitcher(stats(type=season)),team,linescore,weather`);
       const schedData = await schedRes.json();
       const games = schedData?.dates?.[0]?.games || [];
 
       const matchups = await Promise.all(games.map(async (g: any) => {
         let weather: any = null;
         try {
-          const feedRes = await fetch(`https://statsapi.mlb.com/api/v1.1/game/${g.gamePk}/feed/live`);
+          const feedRes = await fetchWithTimeout(`https://statsapi.mlb.com/api/v1.1/game/${g.gamePk}/feed/live`);
           const feed = await feedRes.json();
           const w = feed?.gameData?.weather;
           if (w) weather = { temp: w.temp, condition: w.condition, wind: w.wind };

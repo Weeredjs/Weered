@@ -1,4 +1,5 @@
 import type { FastifyInstance } from "fastify";
+import { fetchWithTimeout } from "../lib/fetchWithTimeout";
 
 export default async function youtubeRoutes(app: FastifyInstance) {
   // YT Data API default quota is ~100 search calls/day TOTAL. Cache aggressively
@@ -22,7 +23,7 @@ export default async function youtubeRoutes(app: FastifyInstance) {
 
     try {
       const apiUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=8&q=${encodeURIComponent(q)}&key=${ytKey}`;
-      const res = await fetch(apiUrl);
+      const res = await fetchWithTimeout(apiUrl);
       const data = await res.json();
       if (data.error) {
         console.error("[yt-search] API error:", data.error.message);

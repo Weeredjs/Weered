@@ -1,4 +1,5 @@
 import type { FastifyInstance } from "fastify";
+import { fetchWithTimeout } from "../lib/fetchWithTimeout";
 import { prisma } from "../lib/prisma";
 
 type Opts = {
@@ -16,7 +17,7 @@ export default async function twitchRoutes(app: FastifyInstance, opts: Opts = {}
     if (twitchAppToken && Date.now() < twitchTokenExp) return twitchAppToken;
     if (!TWITCH_CLIENT_ID || !TWITCH_CLIENT_SECRET) return "";
     try {
-      const res = await fetch("https://id.twitch.tv/oauth2/token", {
+      const res = await fetchWithTimeout("https://id.twitch.tv/oauth2/token", {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
         body: new URLSearchParams({
@@ -40,7 +41,7 @@ export default async function twitchRoutes(app: FastifyInstance, opts: Opts = {}
     const token = await getTwitchAppToken();
     if (!token) return null;
     try {
-      const res = await fetch(`https://api.twitch.tv/helix/${path}`, {
+      const res = await fetchWithTimeout(`https://api.twitch.tv/helix/${path}`, {
         headers: { "Client-ID": TWITCH_CLIENT_ID, "Authorization": `Bearer ${token}` },
       });
       if (!res.ok) return null;

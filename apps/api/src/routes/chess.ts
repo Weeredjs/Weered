@@ -1,4 +1,5 @@
 import type { FastifyInstance } from "fastify";
+import { fetchWithTimeout } from "../lib/fetchWithTimeout";
 import { prisma } from "../lib/prisma";
 
 type Opts = {
@@ -30,7 +31,7 @@ export default async function chessRoutes(app: FastifyInstance, opts: Opts) {
     }
 
     try {
-      const r = await fetch(`https://lichess.org/api/user/${encodeURIComponent(raw)}`);
+      const r = await fetchWithTimeout(`https://lichess.org/api/user/${encodeURIComponent(raw)}`);
       if (r.status === 404) {
         return reply.code(404).send({ ok: false, error: "lichess_user_not_found", message: `Lichess user "${raw}" doesn't exist.` });
       }
@@ -65,7 +66,7 @@ export default async function chessRoutes(app: FastifyInstance, opts: Opts) {
     }
 
     try {
-      const r = await fetch(`https://api.chess.com/pub/player/${encodeURIComponent(raw.toLowerCase())}`, {
+      const r = await fetchWithTimeout(`https://api.chess.com/pub/player/${encodeURIComponent(raw.toLowerCase())}`, {
         headers: { "User-Agent": "Weered (https://weered.ca)" },
       });
       if (r.status === 404) {
@@ -99,7 +100,7 @@ export default async function chessRoutes(app: FastifyInstance, opts: Opts) {
     const ua = { "User-Agent": "Weered (https://weered.ca)" };
     if (lichessUsername) {
       try {
-        const r = await fetch(`https://lichess.org/api/user/${encodeURIComponent(lichessUsername)}`);
+        const r = await fetchWithTimeout(`https://lichess.org/api/user/${encodeURIComponent(lichessUsername)}`);
         if (r.ok) {
           const d = await r.json();
           result.lichess = {
@@ -115,7 +116,7 @@ export default async function chessRoutes(app: FastifyInstance, opts: Opts) {
     }
     if (chessComUsername) {
       try {
-        const r = await fetch(`https://api.chess.com/pub/player/${encodeURIComponent(chessComUsername.toLowerCase())}/stats`, { headers: ua });
+        const r = await fetchWithTimeout(`https://api.chess.com/pub/player/${encodeURIComponent(chessComUsername.toLowerCase())}/stats`, { headers: ua });
         if (r.ok) {
           const d = await r.json();
           result.chessCom = {
@@ -164,7 +165,7 @@ export default async function chessRoutes(app: FastifyInstance, opts: Opts) {
     const rows: any[] = [];
     for (const u of users) {
       try {
-        const r = await fetch(`https://lichess.org/api/user/${encodeURIComponent(u.lichessUsername!)}`);
+        const r = await fetchWithTimeout(`https://lichess.org/api/user/${encodeURIComponent(u.lichessUsername!)}`);
         if (!r.ok) continue;
         const d = await r.json();
         const rating = d?.perfs?.[perf]?.rating;

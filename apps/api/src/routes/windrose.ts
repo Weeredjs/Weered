@@ -1,4 +1,5 @@
 import type { FastifyInstance } from "fastify";
+import { fetchWithTimeout } from "../lib/fetchWithTimeout";
 import { z } from "zod";
 import { prisma } from "../lib/prisma";
 
@@ -32,7 +33,7 @@ app.get("/windrose/live-players", async (req, reply) => {
   if (cached) return reply.send(cached);
   try {
     const url = `https://api.steampowered.com/ISteamUserStats/GetNumberOfCurrentPlayers/v1/?appid=${WINDROSE_APPID}`;
-    const res = await fetch(url);
+    const res = await fetchWithTimeout(url);
     if (!res.ok) return reply.send({ ok: false, error: "steam_fetch_failed" });
     const j: any = await res.json();
     const count = j?.response?.player_count;
@@ -54,7 +55,7 @@ app.get("/windrose/public-servers", async (req, reply) => {
     if (!STEAM_API_KEY) return reply.send({ ok: false, error: "steam_key_missing", servers: [] });
     const filter = encodeURIComponent(`\\appid\\${WINDROSE_APPID}`);
     const url = `https://api.steampowered.com/IGameServersService/GetServerList/v1/?key=${STEAM_API_KEY}&filter=${filter}&limit=200`;
-    const res = await fetch(url);
+    const res = await fetchWithTimeout(url);
     if (!res.ok) {
       return reply.send({ ok: false, error: `steam_status_${res.status}`, servers: [] });
     }
@@ -412,7 +413,7 @@ app.get("/windrose/news", async (req, reply) => {
   if (cached) return reply.send(cached);
   try {
     const url = `https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=${WINDROSE_APPID}&count=12&maxlength=600&format=json`;
-    const res = await fetch(url);
+    const res = await fetchWithTimeout(url);
     if (!res.ok) return reply.send({ ok: false, error: "steam_fetch_failed" });
     const j: any = await res.json();
     const items: any[] = j?.appnews?.newsitems || [];
@@ -916,7 +917,7 @@ async function pollWindroseServers() {
     for (const s of servers) {
       if (!s.queryUrl) continue;
       try {
-        const res = await fetch(s.queryUrl, { signal: AbortSignal.timeout(5000) });
+        const res = await fetchWithTimeout(s.queryUrl, { signal: AbortSignal.timeout(5000) });
         if (!res.ok) {
           await (prisma as any).communityServer.update({ where: { id: s.id }, data: { status: "offline" } }).catch(() => {});
           continue;

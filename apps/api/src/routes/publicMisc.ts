@@ -1,4 +1,5 @@
 import type { FastifyInstance } from "fastify";
+import { fetchWithTimeout } from "../lib/fetchWithTimeout";
 import { prisma } from "../lib/prisma";
 
 // Public, unauthenticated read endpoints extracted from index.ts.
@@ -89,7 +90,7 @@ export default async function publicMiscRoutes(app: FastifyInstance, opts: Opts)
     if (cached) return reply.send(cached);
     try {
       const url = `https://api.steampowered.com/ISteamUserStats/GetNumberOfCurrentPlayers/v1/?appid=${DESTINY2_APPID}`;
-      const res = await fetch(url);
+      const res = await fetchWithTimeout(url);
       if (!res.ok) return reply.send({ ok: false, error: "steam_fetch_failed" });
       const j: any = await res.json();
       const count = j?.response?.player_count;

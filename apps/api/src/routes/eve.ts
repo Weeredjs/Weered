@@ -1,4 +1,5 @@
 import type { FastifyInstance } from "fastify";
+import { fetchWithTimeout } from "../lib/fetchWithTimeout";
 import { prisma } from "../lib/prisma";
 import { signOAuthState, verifyOAuthState } from "../lib/oauthState";
 
@@ -38,7 +39,7 @@ function decodeJwtSub(jwt: string): string | null {
 
 async function esiGet<T = any>(path: string): Promise<T | null> {
   try {
-    const r = await fetch(`${ESI_BASE}${path}`, {
+    const r = await fetchWithTimeout(`${ESI_BASE}${path}`, {
       headers: { "User-Agent": ESI_USER_AGENT, Accept: "application/json" },
     });
     if (!r.ok) return null;
@@ -50,7 +51,7 @@ async function esiGet<T = any>(path: string): Promise<T | null> {
 
 async function zkillGet<T = any>(path: string): Promise<T | null> {
   try {
-    const r = await fetch(`${ZKILL_BASE}${path}`, {
+    const r = await fetchWithTimeout(`${ZKILL_BASE}${path}`, {
       headers: { "User-Agent": ESI_USER_AGENT, Accept: "application/json" },
     });
     if (!r.ok) return null;
@@ -62,7 +63,7 @@ async function zkillGet<T = any>(path: string): Promise<T | null> {
 
 async function esiAuthedGet<T = any>(path: string, token: string): Promise<T | null> {
   try {
-    const r = await fetch(`${ESI_BASE}${path}`, {
+    const r = await fetchWithTimeout(`${ESI_BASE}${path}`, {
       headers: {
         "User-Agent": ESI_USER_AGENT,
         Accept: "application/json",
@@ -80,7 +81,7 @@ async function esiResolveNames(ids: number[]): Promise<Record<number, { name: st
   const unique = Array.from(new Set(ids.filter(n => typeof n === "number" && n > 0)));
   if (unique.length === 0) return {};
   try {
-    const r = await fetch(`${ESI_BASE}/universe/names/`, {
+    const r = await fetchWithTimeout(`${ESI_BASE}/universe/names/`, {
       method: "POST",
       headers: { "User-Agent": ESI_USER_AGENT, Accept: "application/json", "Content-Type": "application/json" },
       body: JSON.stringify(unique),
@@ -122,7 +123,7 @@ export default async function eveRoutes(app: FastifyInstance, opts: Opts) {
 
     try {
       const basic = Buffer.from(`${EVE_CLIENT_ID}:${EVE_CLIENT_SECRET}`).toString("base64");
-      const tokenRes = await fetch(`${OAUTH_BASE}/token`, {
+      const tokenRes = await fetchWithTimeout(`${OAUTH_BASE}/token`, {
         method: "POST",
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
@@ -260,7 +261,7 @@ export default async function eveRoutes(app: FastifyInstance, opts: Opts) {
     const q = String((req as any).query?.q || "").trim();
     if (!q) return reply.send({ ok: true, results: [] });
     try {
-      const r = await fetch(`${ESI_BASE}/universe/ids/`, {
+      const r = await fetchWithTimeout(`${ESI_BASE}/universe/ids/`, {
         method: "POST",
         headers: { "User-Agent": ESI_USER_AGENT, Accept: "application/json", "Content-Type": "application/json" },
         body: JSON.stringify([q]),
@@ -419,7 +420,7 @@ export default async function eveRoutes(app: FastifyInstance, opts: Opts) {
   app.get("/eve/market/signals", async (_req, reply) => {
     try {
       const types = MARKET_WATCH.map(w => w.id).join(",");
-      const r = await fetch(`https://market.fuzzwork.co.uk/aggregates/?region=10000002&types=${types}`, {
+      const r = await fetchWithTimeout(`https://market.fuzzwork.co.uk/aggregates/?region=10000002&types=${types}`, {
         headers: { "User-Agent": ESI_USER_AGENT, Accept: "application/json" },
       });
       if (!r.ok) return reply.send({ ok: true, items: [], region: "Jita / The Forge" });
@@ -477,7 +478,7 @@ export default async function eveRoutes(app: FastifyInstance, opts: Opts) {
 
   app.get("/eve/news", async (_req, reply) => {
     try {
-      const r = await fetch(
+      const r = await fetchWithTimeout(
         `https://news.google.com/rss/search?q=%22EVE+Online%22+when:7d&hl=en-US&gl=US&ceid=US:en`,
         { headers: { "User-Agent": ESI_USER_AGENT, Accept: "application/xml" } }
       );

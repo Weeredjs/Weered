@@ -1,4 +1,5 @@
 import type { FastifyInstance } from "fastify";
+import { fetchWithTimeout } from "../lib/fetchWithTimeout";
 import { z } from "zod";
 import { prisma } from "../lib/prisma";
 import { Prisma } from "@prisma/client";
@@ -289,7 +290,7 @@ export default async function profileRoutes(app: FastifyInstance, opts: Opts) {
     } else if (STEAM_API_KEY) {
       try {
         const resolveUrl = `https://api.steampowered.com/ISteamUser/ResolveVanityURL/v0001/?key=${STEAM_API_KEY}&vanityurl=${encodeURIComponent(raw)}`;
-        const res = await fetch(resolveUrl);
+        const res = await fetchWithTimeout(resolveUrl);
         if (res.ok) {
           const j: any = await res.json();
           if (j?.response?.success === 1 && typeof j?.response?.steamid === "string") {
