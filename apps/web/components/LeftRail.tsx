@@ -288,9 +288,10 @@ export default function LeftRail() {
   const recentsLoaded = useRef(false);
 
   useEffect(() => {
-    const token = typeof window !== "undefined" ? localStorage.getItem("weered_token") : null;
-    if (!token || !me?.id) return;
-    fetch(`${API_BASE}/recents`, { headers: { Authorization: `Bearer ${token}` } })
+    // Auth via the httpOnly cookie (global fetch-patch adds credentials+cookie
+    // for api.weered.ca); gate on the user, not the boot-deleted weered_token.
+    if (!me?.id) return;
+    fetch(`${API_BASE}/recents`)
       .then(r => r.json())
       .then(j => { if (Array.isArray(j?.recents)) { setServerRecents(j.recents); recentsLoaded.current = true; } })
       .catch(() => {});
@@ -300,26 +301,25 @@ export default function LeftRail() {
     const raw = normRoomKey(joinedRoomId || activeRoomId || "");
     if (!raw || raw === "lobby") return;
     const room = raw.startsWith("room:") ? raw.slice(5) : raw;
-    const token = typeof window !== "undefined" ? localStorage.getItem("weered_token") : null;
-    if (!token) return;
+    if (!me?.id) return;
 
     const isLobbySlug = /^[a-z][a-z0-9._/-]*$/.test(room) && room.length > 2;
     const body = isLobbySlug ? { lobbyId: room } : { roomId: room };
 
     fetch(`${API_BASE}/recents`, {
       method: "POST",
-      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     })
       .then(r => r.json())
       .then(() => {
-        fetch(`${API_BASE}/recents`, { headers: { Authorization: `Bearer ${token}` } })
+        fetch(`${API_BASE}/recents`)
           .then(r => r.json())
           .then(j => { if (Array.isArray(j?.recents)) setServerRecents(j.recents); })
           .catch(() => {});
       })
       .catch(() => {});
-  }, [joinedRoomId, activeRoomId]);
+  }, [joinedRoomId, activeRoomId, me?.id]);
 
   const recents = useMemo(() =>
     serverRecents.map(r => r.lobbyId || r.roomId).filter(Boolean),

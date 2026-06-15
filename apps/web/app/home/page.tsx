@@ -860,12 +860,15 @@ export default function HomePage() {
   React.useEffect(() => {
     const base = "https://api.weered.ca";
     const token = localStorage.getItem("weered_token") ?? "";
+    const loggedIn = !!localStorage.getItem("weered_user");
     const headers: any = token ? { Authorization: `Bearer ${token}` } : {};
     Promise.all([
       fetch(`${base}/lobbies`, { headers }).then(r => r.json()).catch(() => ({})),
       fetch(`${base}/rooms`, { headers }).then(r => r.json()).catch(() => ({})),
       fetch(`${base}/featured`, { headers }).then(r => r.json()).catch(() => ({})),
-      token ? fetch(`${base}/recents`, { headers }).then(r => r.json()).catch(() => ({})) : Promise.resolve({}),
+      // Auth rides the httpOnly cookie via the global fetch-patch; gate on the
+      // login marker, NOT weered_token (boot-deleted since the cookie migration).
+      loggedIn ? fetch(`${base}/recents`, { headers }).then(r => r.json()).catch(() => ({})) : Promise.resolve({}),
     ]).then(([lobbyData, roomData, featuredData, recentsData]) => {
       const lobbies = Array.isArray(lobbyData?.lobbies)
         ? lobbyData.lobbies.map((l: any) => ({ ...l, pinned: true, onlineCount: l._count?.members ?? 0 }))
@@ -1027,11 +1030,10 @@ export default function HomePage() {
       else router.push(`/lobby/${encodeURIComponent(clean)}`);
       return;
     }
-    const token = localStorage.getItem("weered_token") ?? "";
-    if (token) {
+    if (localStorage.getItem("weered_user")) {
       fetch("https://api.weered.ca/recents", {
         method: "POST",
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ roomId: clean }),
       }).catch(() => {});
     }
@@ -1041,11 +1043,10 @@ export default function HomePage() {
   }
 
   function handleLobbyVisit(lobbyId: string) {
-    const token = localStorage.getItem("weered_token") ?? "";
-    if (token && lobbyId) {
+    if (lobbyId && localStorage.getItem("weered_user")) {
       fetch("https://api.weered.ca/recents", {
         method: "POST",
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ lobbyId }),
       }).catch(() => {});
     }
