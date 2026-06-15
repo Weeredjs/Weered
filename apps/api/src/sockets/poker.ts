@@ -1,5 +1,3 @@
-import { prisma } from "../lib/prisma";
-
 // Poker WS handlers extracted from the index.ts main message handler:
 // poker:join/spectate/leave/start/action. The poker engine helpers + the
 // pokerTables Map + the PokerTable types remain in index.ts (shared with the
@@ -116,36 +114,21 @@ export async function handlePoker(ws: any, msg: any, opts: Opts): Promise<void> 
 
     if (table.handInProgress && seat.cards.length > 0 && !seat.folded) {
       seat.folded = true;
-      if (table.turnIndex === seatIdx) {
-      }
     }
 
-    if (seat.chips > 0) {
-      try {
-        const user = await prisma.user.findUnique({ where: { id: ws.user.id }, select: { paper: true } });
-        if (user) {
-          const newBalance = (user as any).paper + seat.chips;
-          await prisma.$transaction([
-            (prisma as any).paperTransaction.create({
-              data: {
-                userId: ws.user.id,
-                type: "POKER_CASHOUT",
-                amount: seat.chips,
-                balance: newBalance,
-                description: `Left poker table ${tableId} with ${seat.chips} chips`,
-                refId: tableId,
-              },
-            }),
-            prisma.user.update({ where: { id: ws.user.id }, data: { paper: newBalance } }),
-          ]);
-        }
-      } catch (e) {
-        console.error("[poker:leave] Chip return failed:", e);
-      }
-    }
-
+    // Claim the seat SYNCHRONOUSLY before any await. The WS dispatcher runs a
+    // detached async IIFE per message with no per-socket serialization, so two
+    // near-simultaneous poker:leave frames would both pass the seat check, both
+    // read seat.chips, and double-credit the cash-out (a paper-minting TOCTOU +
+    // doubled POKER_CASHOUT ledger rows). Null the seat first so a concurrent
+    // leave finds nothing, then credit via the atomic, guarded awardPaper.
+    const chipsToReturn = seat.chips;
     const wasTheirTurn = table.turnIndex === seatIdx;
     table.seats[seatIdx] = null;
+
+    if (chipsToReturn > 0) {
+      await awardPaper(ws.user.id, "POKER_CASHOUT", chipsToReturn, `Left poker table ${tableId} with ${chipsToReturn} chips`, tableId);
+    }
 
     console.log(`[poker] ${ws.user.name} left table ${tableId}`);
 
