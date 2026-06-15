@@ -27,13 +27,17 @@ export default async function helldiversRoutes(app: FastifyInstance, _opts: Opts
 
   async function hd2Get(path: string): Promise<any | null> {
     try {
-      const res = await fetch(`${HD2_BASE}${path}`, { headers: HD2_HEADERS });
+      // Bound the upstream call so a hung/slow community API can't pin the
+      // handler; expected upstream failures (rate-limit / 5xx / network) are
+      // operational WARNINGS, not errors — graceful degradation returns null
+      // and the route serves stale/empty cache.
+      const res = await fetch(`${HD2_BASE}${path}`, { headers: HD2_HEADERS, signal: AbortSignal.timeout(8000) });
       if (res.status === 429) { console.warn("[helldivers2] rate limited", path); return null; }
       if (res.status === 404) return null;
-      if (!res.ok) { console.error(`[helldivers2] ${res.status} — ${path}`); return null; }
+      if (!res.ok) { console.warn(`[helldivers2] upstream ${res.status} ${path}`); return null; }
       return await res.json();
     } catch (e) {
-      console.error(`[helldivers2] fetch failed ${path}`, e);
+      console.warn(`[helldivers2] fetch failed ${path}: ${(e as any)?.message || e}`);
       return null;
     }
   }
@@ -53,7 +57,7 @@ export default async function helldiversRoutes(app: FastifyInstance, _opts: Opts
       if (campaigns) cacheSet("campaigns", campaigns);
       if (planets) cacheSet("planets", planets);
     } catch (e) {
-      console.error("[helldivers2] warmCache error", e);
+      console.warn(`[helldivers2] warmCache failed: ${(e as any)?.message || e}`);
     }
   }
 
