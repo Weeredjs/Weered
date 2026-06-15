@@ -1,4 +1,5 @@
 import { log, swallow } from "../lib/logger";
+import { logLobbyAudit } from "../lib/lobbyAudit";
 import type { FastifyInstance } from "fastify";
 import { randomUUID } from "node:crypto";
 import { prisma } from "../lib/prisma";
@@ -426,16 +427,12 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
         },
       });
 
-      await prisma.lobbyAudit.create({
-        data: {
-          id: `audit_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-          lobbyId,
-          type: "member_join",
-          actorId: u.id,
-          actorName: user?.name || "Unknown",
-          note: `Joined lobby (${mode})`,
-          ts: new Date(),
-        },
+      await logLobbyAudit({
+        lobbyId,
+        type: "member_join",
+        actorId: u.id,
+        actorName: user?.name || "Unknown",
+        note: `Joined lobby (${mode})`,
       });
 
       return reply.send({ ok: true, role: member.role, roleLevel: member.roleLevel });
@@ -474,16 +471,12 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
       });
 
       const user = await prisma.user.findUnique({ where: { id: u.id }, select: { name: true } });
-      await prisma.lobbyAudit.create({
-        data: {
-          id: `audit_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-          lobbyId,
-          type: "member_leave",
-          actorId: u.id,
-          actorName: user?.name || "Unknown",
-          note: "Left lobby",
-          ts: new Date(),
-        },
+      await logLobbyAudit({
+        lobbyId,
+        type: "member_leave",
+        actorId: u.id,
+        actorName: user?.name || "Unknown",
+        note: "Left lobby",
       });
 
       return reply.send({ ok: true });
@@ -538,16 +531,12 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
         },
       });
 
-      await prisma.lobbyAudit.create({
-        data: {
-          id: `audit_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-          lobbyId: ctx.lobby.id,
-          type: "join_request_approved",
-          actorId: ctx.member.userId,
-          actorName: ctx.member.name,
-          note: `Approved join request from ${jr.userName}`,
-          ts: new Date(),
-        },
+      await logLobbyAudit({
+        lobbyId: ctx.lobby.id,
+        type: "join_request_approved",
+        actorId: ctx.member.userId,
+        actorName: ctx.member.name,
+        note: `Approved join request from ${jr.userName}`,
       });
 
       return reply.send({ ok: true });
@@ -584,16 +573,12 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
         },
       });
 
-      await prisma.lobbyAudit.create({
-        data: {
-          id: `audit_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-          lobbyId: ctx.lobby.id,
-          type: "join_request_denied",
-          actorId: ctx.member.userId,
-          actorName: ctx.member.name,
-          note: `Denied join request from ${jr.userName}`,
-          ts: new Date(),
-        },
+      await logLobbyAudit({
+        lobbyId: ctx.lobby.id,
+        type: "join_request_denied",
+        actorId: ctx.member.userId,
+        actorName: ctx.member.name,
+        note: `Denied join request from ${jr.userName}`,
       });
 
       return reply.send({ ok: true });
@@ -623,16 +608,12 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
       }
       await prisma.lobby.update({ where: { id: ctx.lobby.id }, data });
 
-      await prisma.lobbyAudit.create({
-        data: {
-          id: `audit_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-          lobbyId: ctx.lobby.id,
-          type: "join_mode_changed",
-          actorId: ctx.member.userId,
-          actorName: ctx.member.name,
-          note: `Join mode set to ${mode}`,
-          ts: new Date(),
-        },
+      await logLobbyAudit({
+        lobbyId: ctx.lobby.id,
+        type: "join_mode_changed",
+        actorId: ctx.member.userId,
+        actorName: ctx.member.name,
+        note: `Join mode set to ${mode}`,
       });
 
       return reply.send({ ok: true, joinMode: mode });
@@ -951,15 +932,12 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
         return reply.code(400).send({ ok: false, error: "nothing_to_update" });
 
       await prisma.lobby.update({ where: { id: ctx.lobby.id }, data });
-      await prisma.lobbyAudit.create({
-        data: {
-          id: randomUUID(),
-          lobbyId: ctx.lobby.id,
-          type: "branding_update",
-          actorId: ctx.user.id,
-          actorName: ctx.user.name,
-          note: Object.keys(data).join(", "),
-        },
+      await logLobbyAudit({
+        lobbyId: ctx.lobby.id,
+        type: "branding_update",
+        actorId: ctx.user.id,
+        actorName: ctx.user.name,
+        note: Object.keys(data).join(", "),
       });
       return reply.send({ ok: true, updated: Object.keys(data) });
     },
@@ -995,15 +973,12 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
         where: { id: ctx.lobby.id },
         data: { memberPerks: perks },
       });
-      await prisma.lobbyAudit.create({
-        data: {
-          id: randomUUID(),
-          lobbyId: ctx.lobby.id,
-          type: "perks_update",
-          actorId: ctx.user.id,
-          actorName: ctx.user.name,
-          note: `${perks.length} perks`,
-        },
+      await logLobbyAudit({
+        lobbyId: ctx.lobby.id,
+        type: "perks_update",
+        actorId: ctx.user.id,
+        actorName: ctx.user.name,
+        note: `${perks.length} perks`,
       });
       return reply.send({ ok: true, memberPerks: perks });
     },
@@ -1061,15 +1036,12 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
         return reply.code(400).send({ ok: false, error: "no_changes" });
 
       await prisma.lobby.update({ where: { id: ctx.lobby.id }, data });
-      await prisma.lobbyAudit.create({
-        data: {
-          id: randomUUID(),
-          lobbyId: ctx.lobby.id,
-          type: "moderation_update",
-          actorId: ctx.user.id,
-          actorName: ctx.user.name,
-          note: JSON.stringify(data),
-        },
+      await logLobbyAudit({
+        lobbyId: ctx.lobby.id,
+        type: "moderation_update",
+        actorId: ctx.user.id,
+        actorName: ctx.user.name,
+        note: JSON.stringify(data),
       });
       return reply.send({ ok: true, ...data });
     },
@@ -1113,15 +1085,12 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
         return reply.code(400).send({ ok: false, error: "enabledModules required" });
 
       await prisma.lobby.update({ where: { id: ctx.lobby.id }, data: { enabledModules } });
-      await prisma.lobbyAudit.create({
-        data: {
-          id: randomUUID(),
-          lobbyId: ctx.lobby.id,
-          type: "modules_update",
-          actorId: ctx.user.id,
-          actorName: ctx.user.name,
-          note: enabledModules.join(", "),
-        },
+      await logLobbyAudit({
+        lobbyId: ctx.lobby.id,
+        type: "modules_update",
+        actorId: ctx.user.id,
+        actorName: ctx.user.name,
+        note: enabledModules.join(", "),
       });
       return reply.send({ ok: true, enabledModules });
     },
@@ -1158,15 +1127,12 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
         where: { id: ctx.lobby.id },
         data: { roleNames: clean },
       });
-      await prisma.lobbyAudit.create({
-        data: {
-          id: randomUUID(),
-          lobbyId: ctx.lobby.id,
-          type: "roles_renamed",
-          actorId: ctx.user.id,
-          actorName: ctx.user.name,
-          note: JSON.stringify(clean),
-        },
+      await logLobbyAudit({
+        lobbyId: ctx.lobby.id,
+        type: "roles_renamed",
+        actorId: ctx.user.id,
+        actorName: ctx.user.name,
+        note: JSON.stringify(clean),
       });
       return reply.send({ ok: true, roleNames: clean });
     },
@@ -1216,16 +1182,13 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
         where: { lobbyId_userId: { lobbyId: ctx.lobby.id, userId: targetUserId } },
         data: { roleLevel: newLevel, role: lobbyRole },
       });
-      await prisma.lobbyAudit.create({
-        data: {
-          id: randomUUID(),
-          lobbyId: ctx.lobby.id,
-          type: "member_role_change",
-          actorId: ctx.user.id,
-          actorName: ctx.user.name,
-          targetId: targetUserId,
-          note: `level ${newLevel}`,
-        },
+      await logLobbyAudit({
+        lobbyId: ctx.lobby.id,
+        type: "member_role_change",
+        actorId: ctx.user.id,
+        actorName: ctx.user.name,
+        targetId: targetUserId,
+        note: `level ${newLevel}`,
       });
       return reply.send({ ok: true, userId: targetUserId, roleLevel: newLevel });
     },
@@ -1255,16 +1218,13 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
       await prisma.lobbyMember.delete({
         where: { lobbyId_userId: { lobbyId: ctx.lobby.id, userId: targetUserId } },
       });
-      await prisma.lobbyAudit.create({
-        data: {
-          id: randomUUID(),
-          lobbyId: ctx.lobby.id,
-          type: "member_kicked",
-          actorId: ctx.user.id,
-          actorName: ctx.user.name,
-          targetId: targetUserId,
-          note: target.name,
-        },
+      await logLobbyAudit({
+        lobbyId: ctx.lobby.id,
+        type: "member_kicked",
+        actorId: ctx.user.id,
+        actorName: ctx.user.name,
+        targetId: targetUserId,
+        note: target.name,
       });
       return reply.send({ ok: true });
     },
@@ -1295,16 +1255,13 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
         update: { reason },
         create: { lobbyId: ctx.lobby.id, userId: targetUserId, reason },
       });
-      await prisma.lobbyAudit.create({
-        data: {
-          id: randomUUID(),
-          lobbyId: ctx.lobby.id,
-          type: "member_banned",
-          actorId: ctx.user.id,
-          actorName: ctx.user.name,
-          targetId: targetUserId,
-          note: reason || undefined,
-        },
+      await logLobbyAudit({
+        lobbyId: ctx.lobby.id,
+        type: "member_banned",
+        actorId: ctx.user.id,
+        actorName: ctx.user.name,
+        targetId: targetUserId,
+        note: reason || undefined,
       });
       return reply.send({ ok: true });
     },
@@ -1328,15 +1285,12 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
       await prisma.lobbyBan.deleteMany({
         where: { lobbyId: ctx.lobby.id, userId: targetUserId },
       });
-      await prisma.lobbyAudit.create({
-        data: {
-          id: randomUUID(),
-          lobbyId: ctx.lobby.id,
-          type: "member_unbanned",
-          actorId: ctx.user.id,
-          actorName: ctx.user.name,
-          targetId: targetUserId,
-        },
+      await logLobbyAudit({
+        lobbyId: ctx.lobby.id,
+        type: "member_unbanned",
+        actorId: ctx.user.id,
+        actorName: ctx.user.name,
+        targetId: targetUserId,
       });
       return reply.send({ ok: true });
     },
@@ -1374,15 +1328,12 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
         log.error("[lobby pin] db update failed", e);
       }
 
-      await prisma.lobbyAudit.create({
-        data: {
-          id: randomUUID(),
-          lobbyId: ctx.lobby.id,
-          type: pinned ? "room_pinned" : "room_unpinned",
-          actorId: ctx.user.id,
-          actorName: ctx.user.name,
-          targetId: roomId,
-        },
+      await logLobbyAudit({
+        lobbyId: ctx.lobby.id,
+        type: pinned ? "room_pinned" : "room_unpinned",
+        actorId: ctx.user.id,
+        actorName: ctx.user.name,
+        targetId: roomId,
       });
       return reply.send({ ok: true, roomId, pinned });
     },
@@ -1420,15 +1371,12 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
         log.error("[lobby event] db update failed", e);
       }
 
-      await prisma.lobbyAudit.create({
-        data: {
-          id: randomUUID(),
-          lobbyId: ctx.lobby.id,
-          type: isEvent ? "room_event_on" : "room_event_off",
-          actorId: ctx.user.id,
-          actorName: ctx.user.name,
-          targetId: roomId,
-        },
+      await logLobbyAudit({
+        lobbyId: ctx.lobby.id,
+        type: isEvent ? "room_event_on" : "room_event_off",
+        actorId: ctx.user.id,
+        actorName: ctx.user.name,
+        targetId: roomId,
       });
       return reply.send({ ok: true, roomId, isEvent });
     },
@@ -1474,16 +1422,13 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
         rooms.delete(roomId);
       }
       await prisma.room.delete({ where: { id: roomId } });
-      await prisma.lobbyAudit.create({
-        data: {
-          id: randomUUID(),
-          lobbyId: ctx.lobby.id,
-          type: "room_deleted",
-          actorId: ctx.user.id,
-          actorName: ctx.user.name,
-          targetId: roomId,
-          note: room.name,
-        },
+      await logLobbyAudit({
+        lobbyId: ctx.lobby.id,
+        type: "room_deleted",
+        actorId: ctx.user.id,
+        actorName: ctx.user.name,
+        targetId: roomId,
+        note: room.name,
       });
       return reply.send({ ok: true });
     },
