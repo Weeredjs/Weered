@@ -1,5 +1,7 @@
-// Notoriety (XP) action types. Must stay in sync with NOTORIETY_ACTIONS
-// in apps/api/src/index.ts.
+// Notoriety (XP) action types — a MIRROR of the source-of-truth config in
+// apps/api/src/index.ts (the `NOTORIETY_ACTIONS` Record). The parity test in
+// apps/api/test/unit/notoriety.test.ts text-parses the API's keys + ranks and
+// fails CI if this mirror drifts, so the two can't silently diverge again.
 
 export const NOTORIETY_ACTIONS = [
   "BIO_COMPLETE",
@@ -21,6 +23,7 @@ export const NOTORIETY_ACTIONS = [
   "FIRST_FAKEOUT_TRADE",
   "FAKEOUT_TRADE",
   "FAKEOUT_PROFIT",
+  "LFG_COMPLETED",
 ] as const;
 
 export type NotorietyAction = (typeof NOTORIETY_ACTIONS)[number];
