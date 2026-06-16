@@ -1217,7 +1217,7 @@ async function main() {
 
   wss = new WebSocketServer({ port: WS_PORT, maxPayload: 256 * 1024 });
   setRoomStateDeps({ wss, isAIAvailable });
-  setPokerTableDeps({ wss, broadcastToLobby: broadcastToLobbyRef });
+  setPokerTableDeps({ wss, broadcastToLobby });
   setNotorietyDeps({ wss, createNotification });
   setNotificationsWss(wss);
   setPresenceWss(wss);

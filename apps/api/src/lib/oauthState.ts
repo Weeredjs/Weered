@@ -11,7 +11,12 @@ function b64url(s: string): string {
   return Buffer.from(s).toString("base64url");
 }
 function secret(): string {
-  return process.env.JWT_SECRET || "dev-secret-change-me";
+  const s = process.env.JWT_SECRET;
+  if (s) return s;
+  if (process.env.NODE_ENV === "development") return "weered-dev-secret";
+  throw new Error(
+    "FATAL: JWT_SECRET is not set — refusing to sign OAuth state with a default secret.",
+  );
 }
 
 export function signOAuthState(userId: string): string {
