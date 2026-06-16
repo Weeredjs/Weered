@@ -8,7 +8,10 @@ import { NOTORIETY_ACTIONS, NOTORIETY_RANKS } from "../../../../packages/shared/
 // what turns the shared mirror from a parallel copy that can silently drift into
 // a CI-enforced guard.
 function prodNotoriety(): { actions: string[]; ranks: { title: string; min: number }[] } {
-  const src = readFileSync(fileURLToPath(new URL("../../src/index.ts", import.meta.url)), "utf8");
+  const src = readFileSync(
+    fileURLToPath(new URL("../../src/lib/notoriety.ts", import.meta.url)),
+    "utf8",
+  );
 
   const aStart = src.indexOf("const NOTORIETY_ACTIONS");
   const aBody = src.slice(aStart, src.indexOf("};", aStart) + 2);
