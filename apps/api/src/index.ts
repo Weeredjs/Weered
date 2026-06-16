@@ -181,6 +181,7 @@ import {
   setRoomStateDeps,
   rooms,
   articleRoomMeta,
+  _lobbyActivityAt,
   makeEmptyRoom,
   normalizeRoomId,
   ensureRoomLoaded,
@@ -1355,6 +1356,13 @@ async function main() {
           return;
         }
         if (msg.type === "reaction:toggle") {
+          // reaction:toggle runs several prisma queries; cap per-socket so one
+          // connection can't amplify DB load (20 per 5s >> any human cadence).
+          const rxNow = Date.now();
+          const rx = ((ws as any)._rx || []).filter((t: number) => rxNow - t < 5000);
+          if (rx.length >= 20) return;
+          rx.push(rxNow);
+          (ws as any)._rx = rx;
           await handleReactionToggle(ws, msg, {
             normalizeRoomId,
             ensureRoomLoaded,
@@ -1901,6 +1909,8 @@ async function main() {
 
     for (const roomId of toDelete) {
       rooms.delete(roomId);
+      articleRoomMeta.delete(roomId);
+      _lobbyActivityAt.delete(roomId);
       try {
         await prisma.room.delete({ where: { id: roomId } }).catch(swallow);
         await prisma.roomMessage.deleteMany({ where: { roomId } }).catch(swallow);
