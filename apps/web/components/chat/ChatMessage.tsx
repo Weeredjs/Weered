@@ -1,4 +1,5 @@
 "use client";
+import { type Ctx } from "../WeeredProvider";
 
 import React from "react";
 import { avatarBg } from "../../lib/avatarColor";
@@ -15,7 +16,7 @@ type ChatMessageProps = {
   m: any;
   i: number;
   msgs: any[];
-  ctx: any;
+  ctx: Ctx;
   effectiveRoomId: string;
   meta: any;
   liveRoomUsers: any[];

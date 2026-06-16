@@ -1,4 +1,5 @@
 "use client";
+import { type Ctx } from "../WeeredProvider";
 
 import React from "react";
 import { fmtTime, fmtDateSep, linkify } from "./shellHelpers";
@@ -9,7 +10,7 @@ export function DmMessage(props: {
   i: number;
   arr: DmMsg[];
   me: any;
-  ctx: any;
+  ctx: Ctx;
   dmActive: DmThread | null;
   dmInputRef: React.RefObject<HTMLInputElement | null>;
   dmEditingMsgId: string;

@@ -44,7 +44,7 @@ export type LaunchSnapshot = {
   firedBy: string | null;
 };
 
-type Ctx = {
+export type Ctx = {
   apiBase: string; wsUrl: string;
   token: string; me: any; authed: boolean; globalRole: string;
   wsReady: boolean; wsState: number;
