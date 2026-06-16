@@ -161,6 +161,7 @@ import {
   canAssignRoles,
   isGloballyBanned,
   isNameReserved,
+  hydrateGlobalRole,
 } from "./lib/lobbyAuth";
 import {
   getSiteConfig,
@@ -417,55 +418,6 @@ function removePending(room: RoomState, userId: string) {
 
 function removeKnock(room: RoomState, userId: string) {
   room.knocks = room.knocks.filter((k) => k.userId !== userId);
-}
-
-async function hydrateGlobalRole(user: AuthedUser): Promise<AuthedUser> {
-  try {
-    const u = await prisma.user.findUnique({
-      where: { id: user.id },
-      select: {
-        usernameKey: true,
-        globalRole: true,
-        tier: true,
-        avatarColor: true,
-        avatar: true,
-        steamId: true,
-        twitchLogin: true,
-        xboxGamertag: true,
-        livePresence: true,
-        panelBgColor: true,
-        panelAccentColor: true,
-        pillBgColor: true,
-        pillAccentColor: true,
-        statusText: true,
-        statusEmoji: true,
-        nameEffect: true,
-        avatarFrame: true,
-      } as any,
-    });
-    return {
-      ...user,
-      usernameKey: (u as any)?.usernameKey ?? undefined,
-      globalRole: String(u?.globalRole ?? "USER"),
-      tier: String(u?.tier ?? "INNOCENT"),
-      avatarColor: u?.avatarColor ?? undefined,
-      avatar: u?.avatar ?? undefined,
-      steamId: u?.steamId ?? undefined,
-      twitchLogin: u?.twitchLogin ?? undefined,
-      xboxGamertag: u?.xboxGamertag ?? undefined,
-      livePresence: u?.livePresence ?? null,
-      panelBgColor: (u as any)?.panelBgColor ?? undefined,
-      panelAccentColor: (u as any)?.panelAccentColor ?? undefined,
-      pillBgColor: (u as any)?.pillBgColor ?? undefined,
-      pillAccentColor: (u as any)?.pillAccentColor ?? undefined,
-      statusText: (u as any)?.statusText ?? undefined,
-      statusEmoji: (u as any)?.statusEmoji ?? undefined,
-      nameEffect: (u as any)?.nameEffect ?? undefined,
-      avatarFrame: (u as any)?.avatarFrame ?? undefined,
-    } as any;
-  } catch {
-    return user;
-  }
 }
 
 function verifyToken(token?: string): AuthedUser | null {

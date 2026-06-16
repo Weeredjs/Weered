@@ -1,5 +1,6 @@
 import { prisma } from "./prisma";
 import { GlobalRole, LobbyRole } from "@prisma/client";
+import { type AuthedUser } from "./roomState";
 
 // Role/permission helpers (staff + lobby owner/mod). Extracted from
 // index.ts so the authorization logic is importable + unit-testable.
@@ -70,4 +71,53 @@ export async function isNameReserved(
     },
   });
   return Boolean(match);
+}
+
+export async function hydrateGlobalRole(user: AuthedUser): Promise<AuthedUser> {
+  try {
+    const u = await prisma.user.findUnique({
+      where: { id: user.id },
+      select: {
+        usernameKey: true,
+        globalRole: true,
+        tier: true,
+        avatarColor: true,
+        avatar: true,
+        steamId: true,
+        twitchLogin: true,
+        xboxGamertag: true,
+        livePresence: true,
+        panelBgColor: true,
+        panelAccentColor: true,
+        pillBgColor: true,
+        pillAccentColor: true,
+        statusText: true,
+        statusEmoji: true,
+        nameEffect: true,
+        avatarFrame: true,
+      } as any,
+    });
+    return {
+      ...user,
+      usernameKey: (u as any)?.usernameKey ?? undefined,
+      globalRole: String(u?.globalRole ?? "USER"),
+      tier: String(u?.tier ?? "INNOCENT"),
+      avatarColor: u?.avatarColor ?? undefined,
+      avatar: u?.avatar ?? undefined,
+      steamId: u?.steamId ?? undefined,
+      twitchLogin: u?.twitchLogin ?? undefined,
+      xboxGamertag: u?.xboxGamertag ?? undefined,
+      livePresence: u?.livePresence ?? null,
+      panelBgColor: (u as any)?.panelBgColor ?? undefined,
+      panelAccentColor: (u as any)?.panelAccentColor ?? undefined,
+      pillBgColor: (u as any)?.pillBgColor ?? undefined,
+      pillAccentColor: (u as any)?.pillAccentColor ?? undefined,
+      statusText: (u as any)?.statusText ?? undefined,
+      statusEmoji: (u as any)?.statusEmoji ?? undefined,
+      nameEffect: (u as any)?.nameEffect ?? undefined,
+      avatarFrame: (u as any)?.avatarFrame ?? undefined,
+    } as any;
+  } catch {
+    return user;
+  }
 }
