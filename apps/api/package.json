@@ -13,7 +13,8 @@
     "start:tsx": "tsx src/index.ts",
     "test": "vitest run test/unit",
     "test:unit": "vitest run test/unit",
-    "test:integration": "vitest run --config test/integration/vitest.config.ts"
+    "test:integration": "vitest run --config test/integration/vitest.config.ts",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",
@@ -47,6 +48,7 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "25.2.3",
     "@types/ws": "^8.18.1",
+    "@vitest/coverage-v8": "4.1.5",
     "esbuild": "^0.28.0",
     "prisma": "^5.22.0",
     "tsx": "^4.19.1",
