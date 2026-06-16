@@ -491,9 +491,7 @@ export function PortCard({ row }: { row: PortRow }) {
           type="button"
           style={{ ...S.btn, fontSize: 10, padding: "6px 12px" }}
           onClick={() => {
-            try {
-              navigator.clipboard.writeText(row.addr);
-            } catch {}
+            navigator.clipboard?.writeText?.(row.addr)?.catch(() => {});
           }}
         >
           Copy Address

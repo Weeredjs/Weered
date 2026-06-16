@@ -31,7 +31,7 @@ function YouTubeIcon({ size = 11, color = "#FF0000", style }: { size?: number; c
 }
 
 function safeCopy(s: string) {
-  try { navigator.clipboard?.writeText?.(s); } catch {}
+  navigator.clipboard?.writeText?.(s)?.catch(() => {});
 }
 
 function safeJsonParse<T>(s: string | null, fallback: T): T {

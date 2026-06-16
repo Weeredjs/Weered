@@ -1092,7 +1092,7 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
   }
 
   function logout() {
-    try { fetch(`${API}/auth/logout`, { method: "POST" }).catch(() => {}); } catch {}
+    fetch(`${API}/auth/logout`, { method: "POST" }).catch(() => {});
     try { localStorage.removeItem("weered_token"); localStorage.removeItem("weered_user"); document.documentElement.removeAttribute("data-weered-authed"); } catch {}
     try { router.replace("/"); } catch {}
     setToken(""); setMe(null);

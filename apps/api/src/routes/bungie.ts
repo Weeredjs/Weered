@@ -430,7 +430,7 @@ export default async function bungieRoutes(app: FastifyInstance, opts: Opts) {
         if (/match game|equipment locked|togetherness|epitaph|locked loadout/i.test(name))
           return "rules";
         if (/^overcharged/i.test(name)) return "overcharged";
-        if (/^shielded foes|shielded combatants/i.test(name)) return "shields";
+        if (/^(?:shielded foes|shielded combatants)/i.test(name)) return "shields";
         return "other";
       }
 
