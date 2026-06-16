@@ -34,7 +34,6 @@ export function TournamentCard({
   const statusColor = STATUS_COLORS[t.status] || "#94a3b8";
   const startsAt = new Date(t.startsAt);
   const endsAt = new Date(t.endsAt);
-  const now = Date.now();
   const isLive = t.status === "ACTIVE";
   const isOpen = t.status === "REGISTRATION";
 

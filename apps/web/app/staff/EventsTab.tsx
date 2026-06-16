@@ -1,7 +1,7 @@
 "use client";
 import { StaffEvent } from "./BroadcastTab";
 import { useState, useEffect, useCallback } from "react";
-import { GlobalRole, S, apiFetch, fmtDate } from "./shared";
+import { GlobalRole, S, apiFetch } from "./shared";
 
 export const EVENT_STATUS_COLORS: Record<string, { bg: string; border: string; color: string }> = {
   DRAFT: {

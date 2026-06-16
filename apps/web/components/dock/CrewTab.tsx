@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { avatarBg } from "../../lib/avatarColor";
 import CrewChatPanel from "../CrewChatPanel";
 import EmptyState from "../EmptyState";

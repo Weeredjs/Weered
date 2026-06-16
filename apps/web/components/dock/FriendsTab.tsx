@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React from "react";
 import EmptyState from "../EmptyState";
 import { Avatar } from "./shellHelpers";
 

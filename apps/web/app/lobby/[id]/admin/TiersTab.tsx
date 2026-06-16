@@ -127,7 +127,6 @@ export function TiersTab({
         )}
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {tiers.map((t) => {
-            const lc = LEVEL_COLORS[t.grantLevel] || LEVEL_COLORS[1];
             return (
               <div
                 key={t.id}

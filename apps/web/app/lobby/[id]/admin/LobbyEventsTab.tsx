@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
-import { S, apiFetch, fmtDate } from "./shared";
+import { S, apiFetch } from "./shared";
 import { EventStatusBadge } from "./ChallengesTab";
 import { LobbyEvent } from "./TiersTab";
 

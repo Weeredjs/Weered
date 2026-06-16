@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useParams } from "next/navigation";
 import { useWeered } from "../../../../components/WeeredProvider";
 import LobbyChatPanel from "../../../../components/LobbyChatPanel";
 import RoomStage from "../../../../components/room/RoomStage";
@@ -20,7 +20,6 @@ import { TiersTab } from "./TiersTab";
 import { TournamentsTab } from "./TournamentsTab";
 
 export default function LobbyAdminPage() {
-  const router = useRouter();
   const params = useParams();
   const ctx = useWeered() as any;
 
