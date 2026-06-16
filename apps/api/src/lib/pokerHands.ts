@@ -1,6 +1,8 @@
 // Pure Texas Hold'em hand math — no I/O, no shared state. Extracted from
 // index.ts so the evaluator can be unit-tested and the entrypoint shrinks.
 
+import { randomInt } from "node:crypto";
+
 export type Card = { rank: string; suit: string };
 
 export const RANKS = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"];
@@ -19,7 +21,7 @@ export function createDeck(): Card[] {
 export function shuffleDeck(deck: Card[]): Card[] {
   const d = [...deck];
   for (let i = d.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
+    const j = randomInt(i + 1); // CSPRNG shuffle (fair-play for the card game)
     [d[i], d[j]] = [d[j], d[i]];
   }
   return d;
