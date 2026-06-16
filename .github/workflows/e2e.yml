@@ -25,6 +25,7 @@ jobs:
       JWT_SECRET: ci-e2e-secret
       PORT: "4000"
       WS_PORT: "4001"
+      ENABLE_CORS: "1"
     steps:
       - uses: actions/checkout@v6
       - uses: pnpm/action-setup@v6

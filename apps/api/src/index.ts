@@ -146,6 +146,7 @@ import {
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import { WebSocketServer, WebSocket as WsClient } from "ws";
+import cors from "@fastify/cors";
 import type { WebSocket } from "ws";
 import { randomUUID, randomBytes, createHmac, timingSafeEqual } from "crypto";
 import {
@@ -2757,6 +2758,14 @@ async function runFeedWorker() {
 
 async function main() {
   const app = Fastify({ loggerInstance: logger });
+
+  // CORS is normally added at the Caddy edge in production. Non-prod stacks
+  // with no edge (e.g. the E2E CI job, where the browser calls the API
+  // cross-origin) opt in via ENABLE_CORS — kept OFF in prod so it never
+  // duplicates the edge headers.
+  if (process.env.ENABLE_CORS === "1") {
+    await app.register(cors, { origin: true, credentials: true });
+  }
   app.addHook("onRequest", async (req: any) => {
     if (!req.headers.authorization) {
       const c = readCookieToken(req);
