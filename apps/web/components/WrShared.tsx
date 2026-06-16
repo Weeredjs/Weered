@@ -1,23 +1,6 @@
 "use client";
-
-export const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
-
-export function authHeaders(): Record<string, string> {
-  try {
-    const t = localStorage.getItem("weered_token") || "";
-    return t ? { Authorization: `Bearer ${t}` } : {};
-  } catch {
-    return {};
-  }
-}
-
-export async function apiFetch(path: string, opts?: RequestInit) {
-  const r = await fetch(`${API}${path}`, {
-    ...opts,
-    headers: { "Content-Type": "application/json", ...authHeaders(), ...(opts?.headers || {}) },
-  });
-  return r.json();
-}
+import { API, authHeaders, apiFetch } from "../lib/apiClient";
+export { API, authHeaders, apiFetch };
 
 export const PAL = {
   abyss: "#0e1826",

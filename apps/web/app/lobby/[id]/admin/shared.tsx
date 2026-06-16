@@ -1,7 +1,7 @@
 "use client";
+import { API, authHeaders, apiFetch } from "../../../../lib/apiClient";
+export { API, authHeaders, apiFetch };
 import React from "react";
-
-export const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
 export type AdminMember = {
   id: string;
@@ -71,23 +71,6 @@ export function fmtDate(s: string) {
   } catch {
     return s;
   }
-}
-
-export function authHeaders(): Record<string, string> {
-  try {
-    const t = localStorage.getItem("weered_token") || "";
-    return t ? { Authorization: `Bearer ${t}` } : {};
-  } catch {
-    return {};
-  }
-}
-
-export async function apiFetch(path: string, opts?: RequestInit) {
-  const r = await fetch(`${API}${path}`, {
-    ...opts,
-    headers: { "Content-Type": "application/json", ...authHeaders(), ...(opts?.headers || {}) },
-  });
-  return r.json();
 }
 
 export const S = {
