@@ -1,0 +1,80 @@
+name: E2E
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: weered
+          POSTGRES_PASSWORD: weered
+          POSTGRES_DB: weered_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+    env:
+      DATABASE_URL: postgresql://weered:weered@localhost:5432/weered_test
+      JWT_SECRET: ci-e2e-secret
+      PORT: "4000"
+      WS_PORT: "4001"
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 10.29.3
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      - name: Prisma generate + push schema to the test DB
+        run: cd apps/api && pnpm prisma generate && pnpm prisma db push --skip-generate
+
+      - name: Build API (esbuild)
+        run: pnpm --filter @weered/api build
+
+      - name: Build web (pointed at the CI API)
+        run: cd apps/web && pnpm exec next build
+        env:
+          NEXT_PUBLIC_API_BASE: http://localhost:4000
+          NEXT_PUBLIC_WS_URL: ws://localhost:4001
+
+      - name: Install Playwright Chromium
+        run: cd apps/web && pnpm exec playwright install --with-deps chromium
+
+      - name: Start API + web and wait for ready
+        run: |
+          node --enable-source-maps apps/api/dist/index.js > /tmp/api.log 2>&1 &
+          (cd apps/web && pnpm exec next start -p 3000 > /tmp/web.log 2>&1 &)
+          echo "waiting for API :4000/health ..."
+          for i in $(seq 1 60); do curl -sf http://localhost:4000/health >/dev/null && break; sleep 1; done
+          echo "waiting for web :3000 ..."
+          for i in $(seq 1 60); do curl -sf http://localhost:3000/ >/dev/null && break; sleep 1; done
+          curl -sf http://localhost:4000/health >/dev/null || { echo "API never came up"; cat /tmp/api.log; exit 1; }
+          curl -sf http://localhost:3000/ >/dev/null || { echo "web never came up"; cat /tmp/web.log; exit 1; }
+
+      - name: Run Playwright E2E
+        run: cd apps/web && pnpm exec playwright test
+        env:
+          E2E_BASE_URL: http://localhost:3000
+
+      - name: Dump server logs on failure
+        if: failure()
+        run: echo "--- API ---"; cat /tmp/api.log || true; echo "--- WEB ---"; cat /tmp/web.log || true
+
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: apps/web/playwright-report/
+          retention-days: 7
