@@ -617,7 +617,9 @@ async function main() {
     if (status >= 500 && process.env.SENTRY_DSN_API) {
       Sentry.captureException(err, { tags: { route: req.routeOptions?.url || req.url } });
     }
-    reply.status(status).send({ ok: false, error: e.message || "Internal error" });
+    reply
+      .status(status)
+      .send({ ok: false, error: status >= 500 ? "internal_error" : e.message || "error" });
   });
 
   // Unknown routes get the same { ok:false, error, message } envelope as the rest

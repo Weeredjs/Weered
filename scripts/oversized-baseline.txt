@@ -1,9 +1,4 @@
 apps/api/src/index.ts
-apps/web/app/lobby/[id]/admin/page.tsx
-apps/web/app/staff/page.tsx
 apps/web/app/styles/60-lobby-themes.css
 apps/web/app/styles/80-chrome-min.css
 apps/web/components/DockShell.tsx
-apps/web/components/LobbyChatPanel.tsx
-apps/web/components/LobbyModulesPanel.tsx
-apps/web/components/WindroseModulesPanel.tsx
