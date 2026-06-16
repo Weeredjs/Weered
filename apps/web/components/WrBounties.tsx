@@ -994,7 +994,7 @@ export function LeaderboardColumn({
                   style={{
                     fontFamily: WR_FONT_DISPLAY,
                     fontSize: 14,
-                    color: r.rank === 1 ? PAL.parchment : PAL.parchment,
+                    color: PAL.parchment,
                     letterSpacing: "0.3px",
                     overflow: "hidden",
                     textOverflow: "ellipsis",

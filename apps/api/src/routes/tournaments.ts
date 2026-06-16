@@ -573,9 +573,7 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
             title:
               t === "CHAMPION"
                 ? `🏆 You won ${tournament.title}`
-                : t === "PODIUM"
-                  ? `Top ${i + 1} in ${tournament.title}`
-                  : `Top ${i + 1} in ${tournament.title}`,
+                : `Top ${i + 1} in ${tournament.title}`,
             body:
               p.paper > 0 || p.notoriety > 0
                 ? `Awarded ${p.paper > 0 ? `${p.paper}P` : ""}${p.paper > 0 && p.notoriety > 0 ? " + " : ""}${p.notoriety > 0 ? `${p.notoriety} Notoriety` : ""}.`

@@ -122,6 +122,7 @@ export default function ProfilePage() {
   const [editing, setEditing] = useState(false);
   const [bio, setBio] = useState("");
   const [saving, setSaving] = useState(false);
+  const equippedFlair = useEquippedFlair(profile?.id ?? "");
 
   useEffect(() => {
     if (!resolvedId) return;
@@ -195,7 +196,6 @@ export default function ProfilePage() {
     month: "short",
   });
   const rank = notorietyRank(profile.notoriety);
-  const equippedFlair = useEquippedFlair(profile.id);
 
   return (
     <div style={pageWrap}>

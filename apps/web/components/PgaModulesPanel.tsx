@@ -90,7 +90,7 @@ function HoleByHole({ holes, accentColor }: { holes: any[]; accentColor: string 
         const isDouble = parseInt(tp) >= 2;
         const bg = isEagle ? "#eab308" : isBirdie ? "#ef4444" : isBogey ? "#3b82f6" : isDouble ? "#1d4ed8" : "rgba(255,255,255,.08)";
         const border = isEagle ? "#eab30880" : isBirdie ? "#ef444460" : isBogey ? "#3b82f660" : isDouble ? "#1d4ed860" : "rgba(255,255,255,.06)";
-        const shape = isEagle ? "50%" : isBirdie ? "50%" : isBogey ? "3px" : isDouble ? "3px" : "3px";
+        const shape = isEagle || isBirdie ? "50%" : "3px";
         return (
           <div key={h.hole} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1 }}>
             <div style={{ fontSize: 8, opacity: 0.35, fontWeight: 600 }}>{h.hole}</div>

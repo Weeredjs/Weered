@@ -289,7 +289,7 @@ async function buildPassiveTree(): Promise<any> {
   const classes = (t.classes || []).map((c: any, i: number) => ({
     i,
     name: c.name,
-    base: c.base_str != null ? undefined : undefined,
+    base: c.base_str ?? undefined,
     ascendancies: (c.ascendancies || []).map((a: any) => a.name),
   }));
 

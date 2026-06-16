@@ -705,7 +705,6 @@ function RoomsPanel({ currentRoomId, lobbyId }: { currentRoomId: string; lobbyId
 
 function LobbyModPanel({ globalRole, lobbyId }: { globalRole: string; lobbyId: string }) {
   const canMod = ["GOD", "STAFF", "ADMIN", "SUPPORT"].includes(globalRole);
-  if (!canMod) return null;
 
   const ctx = useWeered() as any;
   const ctxLocked: boolean | null = typeof ctx?.meta?.locked === "boolean" ? ctx.meta.locked : null;
@@ -732,6 +731,9 @@ function LobbyModPanel({ globalRole, lobbyId }: { globalRole: string; lobbyId: s
 
   const [note, setNote]     = React.useState("");
   const [loading, setLoad]  = React.useState(false);
+
+  // Every hook above runs unconditionally; only bail out after them (Rules of Hooks).
+  if (!canMod) return null;
   const isLocked = chatLocked === true;
 
   async function action(type: "lock" | "unlock") {
