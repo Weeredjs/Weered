@@ -26,7 +26,7 @@ import { OutreachTab } from "./OutreachTab";
 
 export default function StaffPage() {
   const router = useRouter();
-  const ctx = useWeered() as any;
+  const ctx = useWeered();
 
   const [myRole, setMyRole] = useState<GlobalRole | null>(null);
   const [loading, setLoading] = useState(true);

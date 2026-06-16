@@ -83,8 +83,8 @@ export function DmMessage(props: {
         </div>
       )}
       {(() => {
-        const isDeleted = !!(m as any).deletedAt;
-        const isEdited = !!(m as any).editedAt && !isDeleted;
+        const isDeleted = !!m.deletedAt;
+        const isEdited = !!m.editedAt && !isDeleted;
         const createdTs = new Date(m.createdAt).getTime();
         const editable = isMe && !isDeleted && Date.now() - createdTs < 15 * 60 * 1000;
         const deletable = isMe && !isDeleted;
@@ -137,13 +137,13 @@ export function DmMessage(props: {
               alignSelf: isMe ? "flex-end" : "flex-start",
             }}
           >
-            {(m as any).replyToId && !isDeleted && (
+            {m.replyToId && !isDeleted && (
               <button
                 type="button"
                 onClick={() => {
                   try {
                     const el = document.querySelector(
-                      `[data-msg-id="${(m as any).replyToId}"]`,
+                      `[data-msg-id="${m.replyToId}"]`,
                     ) as HTMLElement | null;
                     if (el) {
                       el.scrollIntoView({
@@ -182,7 +182,7 @@ export function DmMessage(props: {
                     fontWeight: 700,
                   }}
                 >
-                  ↩ {(m as any).replyToUserName || "?"}
+                  ↩ {m.replyToUserName || "?"}
                 </span>
                 <span
                   style={{
@@ -192,7 +192,7 @@ export function DmMessage(props: {
                     whiteSpace: "nowrap",
                   }}
                 >
-                  {(m as any).replyToBody || ""}
+                  {m.replyToBody || ""}
                 </span>
               </button>
             )}
@@ -326,11 +326,7 @@ export function DmMessage(props: {
                 </span>
                 {isEdited && (
                   <span
-                    title={
-                      (m as any).editedAt
-                        ? new Date((m as any).editedAt).toLocaleString()
-                        : undefined
-                    }
+                    title={m.editedAt ? new Date(m.editedAt).toLocaleString() : undefined}
                     style={{ fontSize: 9, color: "var(--weered-muted)" }}
                   >
                     (edited)
@@ -511,58 +507,56 @@ export function DmMessage(props: {
                 ))}
               </div>
             )}
-            {Array.isArray((m as any).reactions) &&
-              (m as any).reactions.length > 0 &&
-              !isDeleted && (
-                <div
-                  data-reaction-ui
-                  style={{
-                    display: "flex",
-                    flexWrap: "wrap",
-                    gap: 4,
-                    marginTop: 4,
-                    justifyContent: isMe ? "flex-end" : "flex-start",
-                  }}
-                >
-                  {(m as any).reactions.map((r: any) => {
-                    const mine = Array.isArray(r.users) && r.users.includes(String(me?.id || ""));
-                    return (
-                      <button
-                        key={r.emoji}
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          try {
-                            (ctx as any)?.sendRaw?.({
-                              type: "dm:react",
-                              msgId: m.id,
-                              emoji: r.emoji,
-                            });
-                          } catch {}
-                        }}
-                        style={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: 3,
-                          padding: "1px 6px",
-                          borderRadius: 10,
-                          border: `1px solid ${mine ? "var(--weered-accent-ring)" : "var(--weered-bd)"}`,
-                          background: mine ? "var(--weered-accent-bg)" : "rgba(255,255,255,.04)",
-                          color: mine ? "var(--weered-accent-text)" : "var(--weered-muted)",
-                          fontSize: 10,
-                          fontWeight: 700,
-                          cursor: "pointer",
-                          fontFamily: "inherit",
-                          lineHeight: 1.1,
-                        }}
-                      >
-                        <span style={{ fontSize: 12 }}>{r.emoji}</span>
-                        <span style={{ fontVariantNumeric: "tabular-nums" }}>{r.count}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
+            {Array.isArray(m.reactions) && m.reactions.length > 0 && !isDeleted && (
+              <div
+                data-reaction-ui
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: 4,
+                  marginTop: 4,
+                  justifyContent: isMe ? "flex-end" : "flex-start",
+                }}
+              >
+                {m.reactions.map((r: any) => {
+                  const mine = Array.isArray(r.users) && r.users.includes(String(me?.id || ""));
+                  return (
+                    <button
+                      key={r.emoji}
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        try {
+                          (ctx as any)?.sendRaw?.({
+                            type: "dm:react",
+                            msgId: m.id,
+                            emoji: r.emoji,
+                          });
+                        } catch {}
+                      }}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 3,
+                        padding: "1px 6px",
+                        borderRadius: 10,
+                        border: `1px solid ${mine ? "var(--weered-accent-ring)" : "var(--weered-bd)"}`,
+                        background: mine ? "var(--weered-accent-bg)" : "rgba(255,255,255,.04)",
+                        color: mine ? "var(--weered-accent-text)" : "var(--weered-muted)",
+                        fontSize: 10,
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        fontFamily: "inherit",
+                        lineHeight: 1.1,
+                      }}
+                    >
+                      <span style={{ fontSize: 12 }}>{r.emoji}</span>
+                      <span style={{ fontVariantNumeric: "tabular-nums" }}>{r.count}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
         );
       })()}

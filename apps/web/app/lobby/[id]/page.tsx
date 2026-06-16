@@ -598,7 +598,7 @@ export default function LobbyIdPage() {
   const lobbyId = decodeURIComponent(String(params?.id ?? "lobby"));
   const isVerified = VERIFIED_DOMAINS.has(lobbyId);
 
-  const { join, globalRole, me } = useWeered() as any;
+  const { join, globalRole, me } = useWeered();
   const [lobbyInfo, setLobbyInfo] = useState<LobbyInfo | null>(null);
   const [membership, setMembership] = useState<Membership>(null);
   const [joinRequest, setJoinRequest] = useState<JoinRequestStatus>(null);

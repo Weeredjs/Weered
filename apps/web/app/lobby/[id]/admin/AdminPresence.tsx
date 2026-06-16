@@ -3,7 +3,7 @@ import { useWeered, useRoomUsers } from "../../../../components/WeeredProvider";
 import { S } from "./shared";
 
 export function AdminPresence() {
-  const ctx = useWeered() as any;
+  const ctx = useWeered();
   const users: any[] = useRoomUsers(ctx?.activeRoomId);
 
   return (

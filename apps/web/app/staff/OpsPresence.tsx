@@ -3,7 +3,7 @@ import { useWeered, useRoomUsers } from "../../components/WeeredProvider";
 import { S, roleColor } from "./shared";
 
 export function OpsPresence() {
-  const ctx = useWeered() as any;
+  const ctx = useWeered();
   const users: any[] = useRoomUsers(ctx?.activeRoomId);
   return (
     <div>

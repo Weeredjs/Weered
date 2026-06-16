@@ -639,13 +639,13 @@ export function ChatMessage(props: ChatMessageProps) {
               </div>
             );
           })()}
-          {(m as any).replyTo?.id && !deletedAt && (
+          {m.replyTo?.id && !deletedAt && (
             <button
               type="button"
               onClick={() => {
                 try {
                   const el = document.querySelector(
-                    `[data-msg-id="${(m as any).replyTo.id}"]`,
+                    `[data-msg-id="${m.replyTo.id}"]`,
                   ) as HTMLElement | null;
                   if (el) {
                     el.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -684,7 +684,7 @@ export function ChatMessage(props: ChatMessageProps) {
                   fontWeight: 700,
                 }}
               >
-                ↩ {(m as any).replyTo.userName}
+                ↩ {m.replyTo.userName}
               </span>
               <span
                 style={{
@@ -694,7 +694,7 @@ export function ChatMessage(props: ChatMessageProps) {
                   whiteSpace: "nowrap",
                 }}
               >
-                {(m as any).replyTo.body}
+                {m.replyTo.body}
               </span>
             </button>
           )}
@@ -801,21 +801,21 @@ export function ChatMessage(props: ChatMessageProps) {
                 text={m?.body || m?.text || ""}
                 onMentionClick={(h) => replaceTop("profile", { userId: h })}
               />
-              {(m as any).attachment && (
+              {m.attachment && (
                 <AttachmentBlock
-                  att={(m as any).attachment as ChatAtt}
+                  att={m.attachment as ChatAtt}
                   mine={String(m?.user?.id || "") === String(ctx?.me?.id || "")}
                   onOpen={(a) => setLightbox(a)}
                 />
               )}
             </>
           )}
-          {Array.isArray((m as any).reactions) && (m as any).reactions.length > 0 && !deletedAt && (
+          {Array.isArray(m.reactions) && m.reactions.length > 0 && !deletedAt && (
             <div
               data-reaction-ui
               style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 4 }}
             >
-              {(m as any).reactions.map((r: any) => {
+              {m.reactions.map((r: any) => {
                 const mine =
                   Array.isArray(r.users) &&
                   String(ctx?.me?.id || "") &&

@@ -21,7 +21,7 @@ import { TournamentsTab } from "./TournamentsTab";
 
 export default function LobbyAdminPage() {
   const params = useParams();
-  const ctx = useWeered() as any;
+  const ctx = useWeered();
 
   const lobbyId = decodeURIComponent(String(params?.id || ""));
 
