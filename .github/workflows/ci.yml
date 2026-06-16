@@ -67,3 +67,58 @@ jobs:
         run: cd apps/api && pnpm prisma db push --skip-generate
       - name: Integration tests (Fastify inject against Postgres)
         run: pnpm --filter @weered/api test:integration
+
+  # Generates coverage (unit + integration + web) and runs the SonarCloud scan.
+  # The scan step is gated on the SONAR_TOKEN secret, so until you create the
+  # SonarCloud project + add SONAR_TOKEN this job still runs the coverage
+  # generation (proving it works) and simply skips the scan.
+  sonar:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: weered
+          POSTGRES_PASSWORD: weered
+          POSTGRES_DB: weered_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://weered:weered@localhost:5432/weered_test
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0 # Sonar needs full history for blame / new-code detection
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 10.29.3
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Generate Prisma client
+        run: cd apps/api && pnpm prisma generate
+      - name: Push schema to the test database
+        run: cd apps/api && pnpm prisma db push --skip-generate
+      - name: API unit coverage -> apps/api/coverage/unit/lcov.info
+        run: cd apps/api && npx vitest run --coverage
+      - name: API integration coverage -> apps/api/coverage/integration/lcov.info
+        run: >-
+          cd apps/api && npx vitest run --config test/integration/vitest.config.ts
+          --coverage --coverage.provider=v8 --coverage.reporter=lcov
+          --coverage.include='src/**/*.ts' --coverage.reportsDirectory=./coverage/integration
+      - name: Web unit coverage -> apps/web/coverage/lcov.info
+        run: cd apps/web && npx vitest run --coverage
+      - name: SonarCloud scan (skipped until SONAR_TOKEN is configured)
+        if: ${{ env.SONAR_TOKEN != '' }}
+        uses: SonarSource/sonarqube-scan-action@v4
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: https://sonarcloud.io
