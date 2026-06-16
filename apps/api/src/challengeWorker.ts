@@ -100,7 +100,10 @@ function hasHighTierMarker(modifierHashes: string[]): boolean {
   return false;
 }
 
-function matchesFilters(activity: ActivityEntry, filters: ObjectiveSpec["filters"]): boolean {
+export function matchesFilters(
+  activity: ActivityEntry,
+  filters: ObjectiveSpec["filters"],
+): boolean {
   if (filters.modes?.length && !filters.modes.includes(activity.mode)) return false;
   if (filters.activityHashes && filters.activityHashes.length > 0) {
     if (!filters.activityHashes.includes(String(activity.activityHash))) return false;
@@ -125,7 +128,7 @@ function matchesFilters(activity: ActivityEntry, filters: ObjectiveSpec["filters
   return true;
 }
 
-function definitionRequirementsMet(
+export function definitionRequirementsMet(
   activityModifierHashes: string[],
   activityDifficultyTier: number | null,
   requiredModifiers: string[],
