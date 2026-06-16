@@ -84,3 +84,9 @@ _drain_baseline/
 # Runtime + build artifacts (untracked)
 .build/
 apps/desktop/dist/
+
+# Playwright E2E
+apps/web/test-results/
+apps/web/playwright-report/
+apps/web/blob-report/
+apps/web/.playwright/
