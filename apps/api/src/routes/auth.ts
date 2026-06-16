@@ -7,7 +7,14 @@ import bcrypt from "bcryptjs";
 import { randomBytes } from "crypto";
 import { OAuth2Client } from "google-auth-library";
 import { prisma } from "../lib/prisma";
-import { setAuthCookie, clearAuthCookie } from "../lib/authCookie";
+import { setAuthCookie, clearAuthCookie, isWebClient } from "../lib/authCookie";
+
+// Web auth lives in the httpOnly cookie (set via setAuthCookie); only non-web
+// clients (mobile/desktop, which don't use cookies) get the token in the body.
+// Web is identified by the x-client:web header the browser fetch-patch sends.
+function authedSend(req: any, reply: any, token: string, extra: Record<string, any> = {}) {
+  return reply.send(isWebClient(req) ? extra : { token, ...extra });
+}
 import { sendMail, buildVerifyEmail, buildResetEmail } from "../lib/email";
 
 // Auth routes (extracted from index.ts): local register/login/logout, email
@@ -179,7 +186,7 @@ export default async function authRoutes(app: FastifyInstance, opts: Opts) {
       seedWelcomeDM(user.id).catch(swallow);
       const token = jwt.sign({ sub: user.id, name: user.name }, JWT_SECRET, { expiresIn: "7d" });
       setAuthCookie(reply, token);
-      return reply.send({ token, user, pendingVerification: Boolean(email) });
+      return authedSend(req, reply, token, { user, pendingVerification: Boolean(email) });
     },
   );
 
@@ -210,7 +217,7 @@ export default async function authRoutes(app: FastifyInstance, opts: Opts) {
         expiresIn: "7d",
       });
       setAuthCookie(reply, sessionToken);
-      return reply.send({ ok: true, token: sessionToken, user });
+      return authedSend(req, reply, sessionToken, { ok: true, user });
     },
   );
 
@@ -337,7 +344,7 @@ export default async function authRoutes(app: FastifyInstance, opts: Opts) {
           .send({ ok: false, error: "banned", message: "Your account has been suspended." });
       const token = jwt.sign({ sub: user.id, name: user.name }, JWT_SECRET, { expiresIn: "7d" });
       setAuthCookie(reply, token);
-      return reply.send({ token, user });
+      return authedSend(req, reply, token, { user });
     },
   );
 
