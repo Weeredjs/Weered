@@ -99,7 +99,7 @@ export function DmMessage(props: {
             return;
           }
           try {
-            (ctx as any)?.sendRaw?.({
+            ctx?.sendRaw?.({
               type: "dm:edit",
               msgId: m.id,
               body: next,
@@ -118,7 +118,7 @@ export function DmMessage(props: {
           });
           if (!ok) return;
           try {
-            (ctx as any)?.sendRaw?.({ type: "dm:delete", msgId: m.id });
+            ctx?.sendRaw?.({ type: "dm:delete", msgId: m.id });
           } catch {}
         };
 
@@ -481,7 +481,7 @@ export function DmMessage(props: {
                     type="button"
                     onClick={() => {
                       try {
-                        (ctx as any)?.sendRaw?.({
+                        ctx?.sendRaw?.({
                           type: "dm:react",
                           msgId: m.id,
                           emoji: e,
@@ -527,7 +527,7 @@ export function DmMessage(props: {
                       onClick={(e) => {
                         e.stopPropagation();
                         try {
-                          (ctx as any)?.sendRaw?.({
+                          ctx?.sendRaw?.({
                             type: "dm:react",
                             msgId: m.id,
                             emoji: r.emoji,

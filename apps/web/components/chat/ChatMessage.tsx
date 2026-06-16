@@ -461,7 +461,7 @@ export function ChatMessage(props: ChatMessageProps) {
     }
     if (next !== String(m?.body || "")) {
       try {
-        (ctx as any)?.sendRaw?.({
+        ctx?.sendRaw?.({
           type: "chat:edit",
           roomId: effectiveRoomId,
           msgId: mId,
@@ -482,7 +482,7 @@ export function ChatMessage(props: ChatMessageProps) {
     });
     if (!ok) return;
     try {
-      (ctx as any)?.sendRaw?.({
+      ctx?.sendRaw?.({
         type: "chat:delete",
         roomId: effectiveRoomId,
         msgId: mId,
@@ -1045,7 +1045,7 @@ export function ChatMessage(props: ChatMessageProps) {
                 }}
                 onTogglePin={() => {
                   try {
-                    (ctx as any)?.sendRaw?.({
+                    ctx?.sendRaw?.({
                       type: isPinned ? "chat:unpin" : "chat:pin",
                       msgId: mId,
                     });
