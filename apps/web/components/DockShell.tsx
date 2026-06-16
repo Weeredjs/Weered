@@ -1691,8 +1691,6 @@ export default function DockShell(props: { forceMode?: "rail" | "floating" } = {
           <FriendsTab
             apiBase={apiBase}
             tokenMaybe={tokenMaybe}
-            myId={String(me?.id || "")}
-            rooms={userArr}
             onMessage={(peerName, peerId) => {
               setTab("dms");
               setDmThreads((cur) => {

@@ -276,7 +276,7 @@ export default function LobbyAdminPage() {
               borderTop: "1px solid rgba(255,255,255,.06)",
             }}
           >
-            <AdminPresence lobbyId={lobbyId} roleNames={roleNames} />
+            <AdminPresence />
           </div>
         </div>
 
@@ -331,7 +331,7 @@ export default function LobbyAdminPage() {
                 onRefresh={load}
               />
             )}
-            {nav === "audit" && <AuditTab lobbyId={lobbyId} initialLogs={audit} />}
+            {nav === "audit" && <AuditTab initialLogs={audit} />}
           </div>
         </div>
 

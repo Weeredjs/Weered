@@ -8,16 +8,12 @@ import { Avatar } from "./shellHelpers";
 export function FriendsTab({
   apiBase,
   tokenMaybe,
-  myId,
   myRoomId,
-  rooms: roomUsers,
   onMessage,
   onJoin,
 }: {
   apiBase: string;
   tokenMaybe: string;
-  myId: string;
-  rooms: any[];
   onMessage: (pn: string, pi: string) => void;
   onJoin: (r: string) => void;
   myRoomId?: string;

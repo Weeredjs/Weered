@@ -888,12 +888,7 @@ export function MyGuardian({ accentColor }: { accentColor?: string }) {
           <VaultView items={vault} onItemClick={setSelectedItem} />
         ) : char ? (
           subTab === "equipped" ? (
-            <EquippedView
-              char={char}
-              hasManifest={hasManifest}
-              accent={accent}
-              onItemClick={setSelectedItem}
-            />
+            <EquippedView char={char} hasManifest={hasManifest} onItemClick={setSelectedItem} />
           ) : (
             <InventoryGrid
               items={char.inventory || []}
@@ -927,12 +922,10 @@ export function MyGuardian({ accentColor }: { accentColor?: string }) {
 export function EquippedView({
   char,
   hasManifest,
-  accent,
   onItemClick,
 }: {
   char: any;
   hasManifest: boolean;
-  accent: string;
   onItemClick?: (item: any) => void;
 }) {
   const weapons = char.weapons || [];

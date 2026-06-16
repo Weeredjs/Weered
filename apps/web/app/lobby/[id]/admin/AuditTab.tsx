@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { AdminAudit, S, fmtDate } from "./shared";
 
-export function AuditTab({ lobbyId, initialLogs }: { lobbyId: string; initialLogs: AdminAudit[] }) {
+export function AuditTab({ initialLogs }: { initialLogs: AdminAudit[] }) {
   const [logs] = useState(initialLogs);
   const [filter, setFilter] = useState("");
 

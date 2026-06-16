@@ -1,7 +1,7 @@
 "use client";
 import { StaffEvent } from "./BroadcastTab";
 import { useState, useEffect, useCallback } from "react";
-import { GlobalRole, S, apiFetch } from "./shared";
+import { S, apiFetch } from "./shared";
 
 export const EVENT_STATUS_COLORS: Record<string, { bg: string; border: string; color: string }> = {
   DRAFT: {
@@ -78,7 +78,7 @@ export function PromoBadge({ status }: { status: string }) {
   );
 }
 
-export function EventsTab({ myRole }: { myRole: GlobalRole }) {
+export function EventsTab() {
   const [view, setView] = useState<"all" | "promotions" | "create">("all");
   const [events, setEvents] = useState<StaffEvent[]>([]);
   const [promos, setPromos] = useState<StaffEvent[]>([]);

@@ -2,13 +2,7 @@
 import { useWeered, useRoomUsers } from "../../../../components/WeeredProvider";
 import { S } from "./shared";
 
-export function AdminPresence({
-  lobbyId,
-  roleNames,
-}: {
-  lobbyId: string;
-  roleNames: Record<string, string>;
-}) {
+export function AdminPresence() {
   const ctx = useWeered() as any;
   const users: any[] = useRoomUsers(ctx?.activeRoomId);
 

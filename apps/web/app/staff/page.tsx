@@ -262,7 +262,7 @@ export default function StaffPage() {
             {nav === "subs" && <SubsTab />}
             {nav === "rooms" && <RoomsTab myRole={myRole} />}
             {nav === "lobbies" && <LobbiesTab myRole={myRole} />}
-            {nav === "events" && <EventsTab myRole={myRole} />}
+            {nav === "events" && <EventsTab />}
             {nav === "audit" && <AuditTab />}
             {nav === "broadcast" && <BroadcastTab />}
             {nav === "reports" && <ReportsTab />}
