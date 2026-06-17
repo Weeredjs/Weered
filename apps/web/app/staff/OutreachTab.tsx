@@ -400,6 +400,14 @@ export function OutreachTab() {
             <div key={c.id}>
               <div
                 onClick={() => setExpandedContact(isExpanded ? null : c.id)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    setExpandedContact(isExpanded ? null : c.id);
+                  }
+                }}
+                role="button"
+                tabIndex={0}
                 style={{
                   display: "grid",
                   gridTemplateColumns: "2fr 1.2fr 90px 90px 40px",
@@ -473,7 +481,17 @@ export function OutreachTab() {
                 >
                   {c.status.replace("_", " ")}
                 </span>
-                <div onClick={(e) => e.stopPropagation()}>
+                <div
+                  onClick={(e) => e.stopPropagation()}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }
+                  }}
+                  role="button"
+                  tabIndex={0}
+                >
                   {c.status === "LEAD" && (
                     <button
                       style={{ ...S.btnPri, fontSize: 9, padding: "2px 7px" }}

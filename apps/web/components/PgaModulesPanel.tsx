@@ -730,6 +730,9 @@ function GolfTwitchStreams({ lobbyId, accentColor }: { lobbyId?: string; accentC
           <div
             key={s.id}
             onClick={() => handleCardClick(s)}
+            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleCardClick(s); } }}
+            tabIndex={0}
+            role="button"
             style={{
               ...S.card,
               cursor: "pointer",
@@ -825,6 +828,9 @@ function PgaYouTube({ accentColor }: { accentColor?: string }) {
             <div
               key={v.videoId}
               onClick={() => setActiveId(v.videoId)}
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setActiveId(v.videoId); } }}
+              tabIndex={0}
+              role="button"
               style={{
                 ...S.card,
                 cursor: "pointer",

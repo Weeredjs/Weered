@@ -417,6 +417,9 @@ export default function ForumPage({ lobbyId, lobbyName }: { lobbyId?: string; lo
                     cursor: "pointer", transition: "border-color 0.15s, background 0.15s",
                   }}
                   onClick={() => router.push(`/forum/${post.id}`)}
+                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); router.push(`/forum/${post.id}`); } }}
+                  tabIndex={0}
+                  role="button"
                   onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.05)"; }}
                   onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.025)"; }}
                 >
@@ -425,6 +428,7 @@ export default function ForumPage({ lobbyId, lobbyName }: { lobbyId?: string; lo
                     flexShrink: 0, width: 36,
                   }}
                     onClick={e => e.stopPropagation()}
+                    onKeyDown={e => e.stopPropagation()}
                   >
                     <button onClick={() => handleVote(post.id, post.myVote === 1 ? 0 : 1)} style={{
                       background: "none", border: "none", cursor: "pointer", padding: 2,
@@ -582,6 +586,9 @@ function SectionSidebar({
       {drawerOpen && (
         <div
           onClick={onCloseDrawer}
+          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onCloseDrawer(); } }}
+          tabIndex={0}
+          role="button"
           style={{
             position: "fixed", inset: 0, zIndex: 200,
             background: "rgba(0,0,0,.6)",
@@ -590,6 +597,7 @@ function SectionSidebar({
         >
           <aside
             onClick={e => e.stopPropagation()}
+            onKeyDown={e => e.stopPropagation()}
             style={{
               width: 240, height: "100%",
               background: "#0b0d11",
@@ -792,12 +800,12 @@ function SectionManageModal({
   }
 
   return (
-    <div onClick={onClose} style={{
+    <div onClick={onClose} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClose(); } }} tabIndex={0} role="button" style={{
       position: "fixed", inset: 0, zIndex: 300,
       background: "rgba(0,0,0,.7)", display: "flex", alignItems: "center", justifyContent: "center",
       padding: 20,
     }}>
-      <div onClick={e => e.stopPropagation()} style={{
+      <div onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()} style={{
         width: "100%", maxWidth: 560, maxHeight: "85vh",
         background: "#0b0d11", border: "1px solid rgba(255,255,255,.1)", borderRadius: 12,
         padding: 18, overflow: "auto", fontFamily: FONT, color: "rgba(243,244,246,.92)",

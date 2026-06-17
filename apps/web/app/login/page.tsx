@@ -594,6 +594,15 @@ function LoginForm() {
                     setMode(mode === "login" ? "register" : "login");
                     setErr("");
                   }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      setMode(mode === "login" ? "register" : "login");
+                      setErr("");
+                    }
+                  }}
+                  role="button"
+                  tabIndex={0}
                 >
                   {mode === "login" ? "register" : "sign in"}
                 </span>

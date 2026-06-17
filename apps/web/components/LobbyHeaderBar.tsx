@@ -255,6 +255,18 @@ export default function LobbyHeaderBar({
             return (
               <div
                 onClick={isTier2 ? replaySplash : undefined}
+                onKeyDown={
+                  isTier2
+                    ? (e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          replaySplash();
+                        }
+                      }
+                    : undefined
+                }
+                tabIndex={0}
+                role="button"
                 title={tier2Title}
                 className={isTier2 ? "weered-tier2-logo" : undefined}
                 style={{
@@ -306,6 +318,18 @@ export default function LobbyHeaderBar({
               {logoUrl ? (
                 <div
                   onClick={isTier2 ? replaySplash : undefined}
+                  onKeyDown={
+                    isTier2
+                      ? (e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            replaySplash();
+                          }
+                        }
+                      : undefined
+                  }
+                  tabIndex={0}
+                  role="button"
                   title={tier2Title}
                   className={isTier2 ? "weered-tier2-logo" : undefined}
                   style={{
@@ -332,6 +356,18 @@ export default function LobbyHeaderBar({
               ) : (
                 <div
                   onClick={isTier2 ? replaySplash : undefined}
+                  onKeyDown={
+                    isTier2
+                      ? (e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            replaySplash();
+                          }
+                        }
+                      : undefined
+                  }
+                  tabIndex={0}
+                  role="button"
                   title={tier2Title}
                   className={isTier2 ? "weered-tier2-logo" : undefined}
                   style={{

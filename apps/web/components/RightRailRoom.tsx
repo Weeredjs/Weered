@@ -98,6 +98,9 @@ function FriendsPanel() {
               <div
                 key={f.id}
                 onClick={() => userId && openSheet("profile", { userId })}
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); userId && openSheet("profile", { userId }); } }}
+                tabIndex={0}
+                role="button"
                 style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 10px", borderRadius: 9, background: "rgba(255,255,255,.03)", border: "1px solid rgba(255,255,255,.06)", cursor: "pointer", transition: "background 0.12s" }}
                 onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.07)"; }}
                 onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.03)"; }}
@@ -136,6 +139,9 @@ function FriendsPanel() {
               <div
                 key={f.id}
                 onClick={() => userId && openSheet("profile", { userId })}
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); userId && openSheet("profile", { userId }); } }}
+                tabIndex={0}
+                role="button"
                 style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 10px", borderRadius: 9, opacity: 0.4, cursor: "pointer" }}
                 onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = "0.7"; }}
                 onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = "0.4"; }}
@@ -191,6 +197,9 @@ function CrewPanel() {
                   <div
                     key={m.userId}
                     onClick={() => userId && openSheet("profile", { userId })}
+                    onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); userId && openSheet("profile", { userId }); } }}
+                    tabIndex={0}
+                    role="button"
                     style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 10px", borderRadius: 8, background: "rgba(255,255,255,.03)", border: "1px solid rgba(255,255,255,.06)", opacity: m.online ? 1 : 0.4, cursor: "pointer", transition: "background 0.12s" }}
                     onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.07)"; }}
                     onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.03)"; }}

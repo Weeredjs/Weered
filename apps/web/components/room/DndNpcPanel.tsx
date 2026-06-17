@@ -490,6 +490,14 @@ export default function DndNpcPanel({ roomId }: { roomId: string }) {
                   transition: "all .18s",
                 }}
                 onClick={() => openChat(npc)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    openChat(npc);
+                  }
+                }}
+                tabIndex={0}
+                role="button"
               >
                 <div style={{ fontSize: 36, marginBottom: 6 }}>{npc.portrait || "🧙"}</div>
                 <div

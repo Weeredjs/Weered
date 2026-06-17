@@ -220,6 +220,12 @@ export default function WindroseBuildDetail({
     <Backdrop onClose={onClose}>
       <div
         onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            e.stopPropagation();
+          }
+        }}
         style={{
           width: "min(1240px, 100%)",
           maxHeight: "92vh",
@@ -703,6 +709,13 @@ function Backdrop({ children, onClose }: { children: React.ReactNode; onClose: (
       role="dialog"
       aria-modal="true"
       onClick={onClose}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onClose();
+        }
+      }}
+      tabIndex={0}
       style={{
         position: "fixed",
         inset: 0,
@@ -855,6 +868,12 @@ function ReportDialog({ slug, onClose }: { slug: string; onClose: () => void }) 
     <Backdrop onClose={onClose}>
       <div
         onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            e.stopPropagation();
+          }
+        }}
         style={{
           width: "min(440px, 100%)",
           padding: 20,
@@ -984,6 +1003,12 @@ function ConfirmDialog({
     <Backdrop onClose={onCancel}>
       <div
         onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            e.stopPropagation();
+          }
+        }}
         style={{
           width: "min(380px, 100%)",
           padding: 20,

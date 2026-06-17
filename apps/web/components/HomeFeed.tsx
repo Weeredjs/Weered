@@ -179,6 +179,15 @@ function FeedRow({
         const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
         onEnter(item, rect);
       }}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+          onEnter(item, rect);
+        }
+      }}
+      tabIndex={0}
+      role="button"
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{

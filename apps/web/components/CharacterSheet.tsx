@@ -418,7 +418,18 @@ function PartyRow({
         boxShadow: isSelected ? `0 0 14px ${ACCENT}22` : undefined,
       }}
     >
-      <div onClick={onSelect} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+      <div
+        onClick={onSelect}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            onSelect();
+          }
+        }}
+        role="button"
+        tabIndex={0}
+        style={{ display: "flex", alignItems: "center", gap: 10 }}
+      >
         <div style={{ flex: 1, minWidth: 0 }}>
           <div className="dnd-heading" style={{ fontSize: 16, lineHeight: 1.1 }}>
             {c.name}
@@ -1116,6 +1127,14 @@ function RollPrompt({
   return (
     <div
       onClick={onCancel}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onCancel();
+        }
+      }}
+      role="button"
+      tabIndex={0}
       style={{
         position: "fixed",
         inset: 0,
@@ -1128,6 +1147,11 @@ function RollPrompt({
     >
       <div
         onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => {
+          e.stopPropagation();
+        }}
+        role="button"
+        tabIndex={0}
         className="dnd-card weered-dnd-modules"
         style={{
           padding: 24,

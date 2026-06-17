@@ -47,6 +47,15 @@ export function AttachmentBlock({
           if (needsBlur) setRevealed(true);
           else onOpen(att);
         }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            if (needsBlur) setRevealed(true);
+            else onOpen(att);
+          }
+        }}
+        role="button"
+        tabIndex={0}
         style={{
           position: "relative",
           width: maxW,
@@ -317,6 +326,15 @@ export function renderInline(
             e.stopPropagation();
             if (onMentionClick) onMentionClick(handle);
           }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              e.stopPropagation();
+              if (onMentionClick) onMentionClick(handle);
+            }
+          }}
+          role="button"
+          tabIndex={0}
           style={{
             display: "inline-block",
             padding: "0 4px",

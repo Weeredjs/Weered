@@ -261,6 +261,14 @@ function TwitchStreams({
           <div
             key={s.userLogin}
             onClick={() => setInterceptStream(s)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                setInterceptStream(s);
+              }
+            }}
+            tabIndex={0}
+            role="button"
             style={{
               ...S.card,
               cursor: "pointer",
@@ -1049,6 +1057,14 @@ function RecentMatches({ accent }: { accent: string }) {
               <div key={m.match?.id}>
                 <div
                   onClick={() => setExpanded(isExpanded ? null : m.match?.id)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      setExpanded(isExpanded ? null : m.match?.id);
+                    }
+                  }}
+                  tabIndex={0}
+                  role="button"
                   style={{
                     ...S.card,
                     cursor: "pointer",

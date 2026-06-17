@@ -661,6 +661,9 @@ export default function ProfileSheet({ userId }: { userId: string }) {
       <div style={{ display: "flex", alignItems: "flex-end", gap: 16, marginTop: -44, marginBottom: 12 }}>
         <div
           onClick={isMe ? () => setShowGallery(!showGallery) : undefined}
+          onKeyDown={isMe ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setShowGallery(!showGallery); } } : undefined}
+          tabIndex={0}
+          role="button"
           className={(profile as any).avatarFrame ? "weered-frame-" + (profile as any).avatarFrame : undefined}
           style={{
             width: 96, height: 96, borderRadius: "50%", flexShrink: 0,
@@ -800,6 +803,9 @@ export default function ProfileSheet({ userId }: { userId: string }) {
                 cursor: "pointer",
                 transition: "all 0.15s",
               }}
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); (e.currentTarget as HTMLElement).click(); } }}
+                tabIndex={0}
+                role="button"
                 onClick={() => {
                   const input = document.createElement("input");
                   input.type = "file";

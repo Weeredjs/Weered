@@ -148,6 +148,13 @@ export default function WindroseBuildBuilder({
       role="dialog"
       aria-modal="true"
       onClick={onClose}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onClose();
+        }
+      }}
+      tabIndex={0}
       style={{
         position: "fixed",
         inset: 0,
@@ -164,6 +171,14 @@ export default function WindroseBuildBuilder({
     >
       <div
         onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            e.stopPropagation();
+          }
+        }}
+        tabIndex={0}
+        role="button"
         style={{
           width: "min(960px, 100%)",
           background: "linear-gradient(180deg, rgba(28,22,12,.97), rgba(14,10,6,.99))",
@@ -553,6 +568,14 @@ function DropZone({
   return (
     <div
       onClick={onClick}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onClick();
+        }
+      }}
+      tabIndex={0}
+      role="button"
       onDragOver={(e) => {
         e.preventDefault();
         setHover(true);

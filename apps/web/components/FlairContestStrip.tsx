@@ -70,6 +70,14 @@ export default function FlairContestStrip({ lobbyId }: { lobbyId: string }) {
     >
       <div
         onClick={() => setCollapsed((c) => !c)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            setCollapsed((c) => !c);
+          }
+        }}
+        tabIndex={0}
+        role="button"
         style={{
           padding: "8px 14px",
           display: "flex",
@@ -108,6 +116,14 @@ export default function FlairContestStrip({ lobbyId }: { lobbyId: string }) {
               <div
                 key={c.id}
                 onClick={openContestsTab}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    openContestsTab();
+                  }
+                }}
+                tabIndex={0}
+                role="button"
                 style={{
                   display: "flex",
                   alignItems: "center",

@@ -852,6 +852,14 @@ export default function UserHoverCard({
         {lobbyModuleType === "WINDROSE" && modCount !== null && modCount > 0 && (
           <div
             onClick={() => onViewProfile?.(userId)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                onViewProfile?.(userId);
+              }
+            }}
+            tabIndex={0}
+            role="button"
             style={{
               marginBottom: 10,
               padding: "5px 10px",

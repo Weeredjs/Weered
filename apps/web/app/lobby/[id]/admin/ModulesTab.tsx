@@ -55,6 +55,14 @@ export function ModulesTab({ lobby, onRefresh }: { lobby: LobbyData; onRefresh: 
             <div
               key={mod.key}
               onClick={() => toggle(mod.key)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  toggle(mod.key);
+                }
+              }}
+              role="button"
+              tabIndex={0}
               style={{
                 ...S.card,
                 cursor: "pointer",

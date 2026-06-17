@@ -123,6 +123,9 @@ function HeroBanner({ lobby, onJoin }: { lobby: any; onJoin: (id: string, pinned
   return (
     <div
       onClick={() => onJoin(roomId(lobby), Boolean(lobby?.pinned))}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onJoin(roomId(lobby), Boolean(lobby?.pinned)); } }}
+      role="button"
+      tabIndex={0}
       className="weered-featured-card"
       style={{
         position: "relative", borderRadius: 2, overflow: "hidden",
@@ -580,6 +583,9 @@ function LobbyCard({ room, idx, onJoin }: { room: any; idx: number; onJoin: (id:
   return (
     <div
       onClick={() => onJoin(roomId(room))}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onJoin(roomId(room)); } }}
+      role="button"
+      tabIndex={0}
       style={{
         background: "#14161A",
         border: "1px solid rgba(255,255,255,.06)",
@@ -690,6 +696,9 @@ function FriendStrip({ friends, onDm, onJoin }: { friends: any[]; onDm: (u: any)
             <div
               key={u?.id || i}
               onClick={() => onDm(u)}
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onDm(u); } }}
+              role="button"
+              tabIndex={0}
               style={{
                 flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "center",
                 gap: 5, padding: "10px 14px", borderRadius: 2,
@@ -737,6 +746,9 @@ function RecentRow({ room, onJoin }: { room: any; onJoin: (id: string, pinned: b
   return (
     <div
       onClick={() => onJoin(roomId(room), pinned)}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onJoin(roomId(room), pinned); } }}
+      role="button"
+      tabIndex={0}
       style={{
         display: "flex", alignItems: "center", gap: 12,
         padding: "9px 12px", background: "rgba(255,255,255,.02)",
@@ -791,6 +803,9 @@ function LobbyRow({ room, onJoin }: { room: any; onJoin: (id: string) => void })
   return (
     <div
       onClick={() => onJoin(roomId(room))}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onJoin(roomId(room)); } }}
+      role="button"
+      tabIndex={0}
       style={{
         display: "flex", alignItems: "center", gap: 10,
         padding: "7px 10px", background: "rgba(255,255,255,.02)",
@@ -1141,6 +1156,9 @@ export default function HomePage() {
 
                 <div
                   onClick={() => { try { window.dispatchEvent(new CustomEvent("weered:lobby:browse")); } catch {} }}
+                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); try { window.dispatchEvent(new CustomEvent("weered:lobby:browse")); } catch {} } }}
+                  role="button"
+                  tabIndex={0}
                   style={{
                     background: "linear-gradient(135deg, rgba(124,58,237,.10), rgba(255,255,255,.02))",
                     border: "1px solid rgba(124,58,237,.3)",
@@ -1161,6 +1179,9 @@ export default function HomePage() {
 
                 <div
                   onClick={() => router.push(canCreate ? "/lobby/create" : "/subscribe")}
+                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); router.push(canCreate ? "/lobby/create" : "/subscribe"); } }}
+                  role="button"
+                  tabIndex={0}
                   style={{
                     background: "linear-gradient(135deg, rgba(245,183,0,.12), rgba(88,0,229,.10))",
                     border: "1px solid rgba(245,183,0,.30)",
@@ -1190,6 +1211,9 @@ export default function HomePage() {
         {me && String(me?.tier || "INNOCENT").toUpperCase() === "INNOCENT" && (
           <div
             onClick={() => router.push("/subscribe")}
+            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); router.push("/subscribe"); } }}
+            role="button"
+            tabIndex={0}
             style={{
               marginTop: 14, padding: "14px 20px",
               borderRadius: 2, cursor: "pointer",

@@ -685,6 +685,14 @@ function TwitchStreams({
           <div
             key={s.userLogin}
             onClick={() => handleCardClick(s)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                handleCardClick(s);
+              }
+            }}
+            tabIndex={0}
+            role="button"
             style={{
               ...S.card,
               cursor: "pointer",

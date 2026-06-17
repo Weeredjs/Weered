@@ -737,6 +737,11 @@ export default function CrewChatPanel({ crewId, crewName, myId, myName }: Props)
                         <div
                           data-reaction-ui
                           onClick={(e) => e.stopPropagation()}
+                          onKeyDown={(e) => {
+                            e.stopPropagation();
+                          }}
+                          role="button"
+                          tabIndex={0}
                           style={{
                             position: "absolute",
                             top: 22,

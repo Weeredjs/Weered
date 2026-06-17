@@ -150,6 +150,14 @@ function ToastCard({ item, onDismiss }: { item: ToastItem; onDismiss: () => void
   return (
     <div
       onClick={onDismiss}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onDismiss();
+        }
+      }}
+      tabIndex={0}
+      role="button"
       style={{
         pointerEvents: "auto",
         cursor: "pointer",

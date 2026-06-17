@@ -466,8 +466,27 @@ function SetupDialog({
   }
 
   return (
-    <div style={dialogBackdropStyle} onClick={onClose}>
-      <div style={dialogStyle} onClick={(e) => e.stopPropagation()}>
+    <div
+      style={dialogBackdropStyle}
+      onClick={onClose}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onClose();
+        }
+      }}
+      tabIndex={0}
+      role="button"
+    >
+      <div
+        style={dialogStyle}
+        onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.stopPropagation();
+          }
+        }}
+      >
         <div
           style={{
             fontSize: 11,

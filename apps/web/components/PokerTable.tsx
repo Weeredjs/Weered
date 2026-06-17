@@ -594,8 +594,27 @@ function BuyInDialog({
   };
 
   return (
-    <div style={dlg} onClick={onCancel}>
-      <div style={panel} onClick={(e) => e.stopPropagation()}>
+    <div
+      style={dlg}
+      onClick={onCancel}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onCancel();
+        }
+      }}
+      tabIndex={0}
+      role="button"
+    >
+      <div
+        style={panel}
+        onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.stopPropagation();
+          }
+        }}
+      >
         <h3
           style={{
             margin: "0 0 8px",

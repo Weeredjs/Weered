@@ -327,6 +327,14 @@ function RuleEditor({
   return (
     <div
       onClick={onClose}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onClose();
+        }
+      }}
+      role="button"
+      tabIndex={0}
       style={{
         position: "fixed",
         inset: 0,
@@ -341,6 +349,14 @@ function RuleEditor({
     >
       <div
         onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            e.stopPropagation();
+          }
+        }}
+        role="button"
+        tabIndex={0}
         style={{
           width: "100%",
           maxWidth: 540,

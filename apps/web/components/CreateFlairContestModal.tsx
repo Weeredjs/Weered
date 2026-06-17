@@ -82,6 +82,13 @@ export default function CreateFlairContestModal({
   return (
     <div
       onClick={onClose}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onClose();
+        }
+      }}
+      tabIndex={0}
       role="dialog"
       aria-modal="true"
       style={{
@@ -99,6 +106,11 @@ export default function CreateFlairContestModal({
     >
       <div
         onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => {
+          e.stopPropagation();
+        }}
+        role="button"
+        tabIndex={0}
         style={{
           width: "min(560px, 100%)",
           padding: 20,

@@ -358,6 +358,13 @@ export default function TournamentGuide({
   return (
     <div
       onClick={onClose}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onClose();
+        }
+      }}
+      tabIndex={0}
       role="dialog"
       aria-modal="true"
       style={{
@@ -375,6 +382,14 @@ export default function TournamentGuide({
     >
       <div
         onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            e.stopPropagation();
+          }
+        }}
+        tabIndex={0}
+        role="button"
         style={{
           width: 640,
           maxWidth: "100%",

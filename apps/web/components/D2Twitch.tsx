@@ -107,6 +107,14 @@ export function TwitchStreams({
           <div
             key={s.id}
             onClick={() => handleCardClick(s)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                handleCardClick(s);
+              }
+            }}
+            tabIndex={0}
+            role="button"
             style={{
               ...S.card,
               cursor: "pointer",

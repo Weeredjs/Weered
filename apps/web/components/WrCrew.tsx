@@ -762,6 +762,14 @@ export function CrewLeaderboardModal({
   return (
     <div
       onClick={onClose}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onClose();
+        }
+      }}
+      tabIndex={0}
+      role="button"
       style={{
         position: "fixed",
         inset: 0,
@@ -776,6 +784,12 @@ export function CrewLeaderboardModal({
     >
       <div
         onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            e.stopPropagation();
+          }
+        }}
         style={{
           ...S.card,
           width: "min(860px, 100%)",
@@ -1131,6 +1145,14 @@ export function CrewProfileEditor({
   return (
     <div
       onClick={onClose}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onClose();
+        }
+      }}
+      tabIndex={0}
+      role="button"
       style={{
         position: "fixed",
         inset: 0,
@@ -1145,6 +1167,12 @@ export function CrewProfileEditor({
     >
       <div
         onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            e.stopPropagation();
+          }
+        }}
         style={{
           ...S.card,
           width: "min(560px, 100%)",

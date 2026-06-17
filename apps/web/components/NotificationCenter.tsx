@@ -348,6 +348,14 @@ export function NotificationsView({ onBack }: { onBack: () => void }) {
             <div
               key={n.id}
               onClick={() => handleClick(n)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  handleClick(n);
+                }
+              }}
+              tabIndex={0}
+              role="button"
               style={{
                 display: "flex",
                 gap: 10,

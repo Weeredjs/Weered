@@ -647,6 +647,14 @@ export default function StudyQuiz() {
                 onClick={() => {
                   if (!checked) setSelectedAnswer(opt);
                 }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    if (!checked) setSelectedAnswer(opt);
+                  }
+                }}
+                tabIndex={0}
+                role="button"
               >
                 <div
                   style={{
@@ -730,6 +738,14 @@ export default function StudyQuiz() {
                 <div
                   style={S.resultRow(results[i])}
                   onClick={() => setExpandedResult(expandedResult === i ? null : i)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      setExpandedResult(expandedResult === i ? null : i);
+                    }
+                  }}
+                  tabIndex={0}
+                  role="button"
                 >
                   <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                     <span

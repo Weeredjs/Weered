@@ -242,10 +242,28 @@ export default function FeatureShowcase({ open, onClose }: Props) {
         }
       `}</style>
 
-      <div className="showcase-overlay" onClick={onClose}>
+      <div
+        className="showcase-overlay"
+        onClick={onClose}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            onClose();
+          }
+        }}
+        tabIndex={0}
+        role="button"
+      >
         <div
           className="showcase-card"
           onClick={(e) => e.stopPropagation()}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.stopPropagation();
+            }
+          }}
+          tabIndex={0}
+          role="button"
           style={{ position: "relative" }}
         >
           <button className="showcase-close" onClick={onClose}>

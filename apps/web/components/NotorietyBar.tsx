@@ -78,6 +78,14 @@ export default function NotorietyBar({ score: propScore, compact = false, onClic
     return (
       <div
         onClick={onClick}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            onClick && onClick();
+          }
+        }}
+        tabIndex={0}
+        role="button"
         style={{
           display: "flex",
           alignItems: "center",
@@ -125,6 +133,14 @@ export default function NotorietyBar({ score: propScore, compact = false, onClic
   return (
     <div
       onClick={onClick}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onClick && onClick();
+        }
+      }}
+      tabIndex={0}
+      role="button"
       style={{
         padding: "10px 12px",
         borderRadius: 10,

@@ -866,6 +866,17 @@ export default function UserCorner() {
                   window.location.href = `/crew/${encodeURIComponent(primaryCrew.id)}`;
                 } catch {}
               }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  try {
+                    window.location.href = `/crew/${encodeURIComponent(primaryCrew.id)}`;
+                  } catch {}
+                }
+              }}
+              tabIndex={0}
+              role="button"
               title={`${primaryCrew.name} — open crew`}
               style={{
                 display: "flex",

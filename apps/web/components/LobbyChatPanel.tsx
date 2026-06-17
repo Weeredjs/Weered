@@ -797,6 +797,14 @@ export default function LobbyChatPanel(
           {lightbox && (
             <div
               onClick={() => setLightbox(null)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  setLightbox(null);
+                }
+              }}
+              tabIndex={0}
+              role="button"
               style={{
                 position: "fixed",
                 inset: 0,
@@ -820,6 +828,13 @@ export default function LobbyChatPanel(
                   boxShadow: "0 24px 80px rgba(0,0,0,.6)",
                 }}
                 onClick={(e) => e.stopPropagation()}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    e.stopPropagation();
+                  }
+                }}
+                tabIndex={0}
               />
               <div
                 style={{ position: "absolute", bottom: 18, display: "flex", gap: 14, fontSize: 12 }}
@@ -844,6 +859,21 @@ export default function LobbyChatPanel(
                       .catch(() => {});
                     setLightbox(null);
                   }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      fetch(`${API}/chat/attachments/${lightbox.id}/report`, {
+                        method: "POST",
+                        headers: { ...authHeadersChat() },
+                      })
+                        .then(() => weeredToast.success("Reported."))
+                        .catch(() => {});
+                      setLightbox(null);
+                    }
+                  }}
+                  tabIndex={0}
+                  role="button"
                   style={{ color: "rgba(252,165,165,.8)", cursor: "pointer" }}
                 >
                   Report
@@ -918,6 +948,14 @@ export default function LobbyChatPanel(
         {damagePicker && (
           <div
             onClick={() => setDamagePicker(null)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                setDamagePicker(null);
+              }
+            }}
+            tabIndex={0}
+            role="button"
             style={{
               position: "fixed",
               inset: 0,
@@ -930,6 +968,14 @@ export default function LobbyChatPanel(
           >
             <div
               onClick={(e) => e.stopPropagation()}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }
+              }}
+              tabIndex={0}
+              role="button"
               style={{
                 background: "#1a1410",
                 color: "#f3f4f6",

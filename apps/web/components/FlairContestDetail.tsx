@@ -352,6 +352,15 @@ export default function FlairContestDetail({
                   if (canVote) castVote(s.id);
                   else setLightbox(s);
                 }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    if (canVote) castVote(s.id);
+                    else setLightbox(s);
+                  }
+                }}
+                tabIndex={0}
+                role="button"
                 style={{
                   position: "relative",
                   background: "rgba(28,20,48,.6)",
@@ -539,6 +548,14 @@ export default function FlairContestDetail({
       {lightbox && (
         <div
           onClick={() => setLightbox(null)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              setLightbox(null);
+            }
+          }}
+          tabIndex={0}
+          role="button"
           style={{
             position: "fixed",
             inset: 0,
@@ -704,6 +721,13 @@ function SubmitModal({
   return (
     <div
       onClick={onClose}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onClose();
+        }
+      }}
+      tabIndex={0}
       role="dialog"
       aria-modal="true"
       style={{
@@ -721,6 +745,13 @@ function SubmitModal({
     >
       <div
         onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.stopPropagation();
+          }
+        }}
+        tabIndex={0}
+        role="button"
         style={{
           width: "min(520px, 100%)",
           padding: 20,

@@ -106,6 +106,14 @@ export default function BugReportButton() {
       {open && (
         <div
           onClick={() => setOpen(false)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              setOpen(false);
+            }
+          }}
+          tabIndex={0}
+          role="button"
           style={{
             position: "fixed",
             inset: 0,
@@ -120,6 +128,11 @@ export default function BugReportButton() {
         >
           <div
             onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => {
+              e.stopPropagation();
+            }}
+            role="button"
+            tabIndex={0}
             style={{
               width: "min(520px, 100%)",
               background: "rgba(20,18,28,0.96)",

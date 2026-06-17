@@ -168,6 +168,14 @@ export default function StoryInterceptModal({ item, originRect, onClose }: Props
 
       <div
         onClick={handleClose}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            handleClose();
+          }
+        }}
+        tabIndex={0}
+        role="button"
         style={{
           position: "fixed",
           inset: 0,

@@ -129,6 +129,14 @@ export default function BookmarksPage() {
                   cursor: "pointer",
                 }}
                 onClick={() => router.push(`/forum/${post.id}`)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    router.push(`/forum/${post.id}`);
+                  }
+                }}
+                tabIndex={0}
+                role="button"
                 onMouseEnter={(e) => {
                   (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.05)";
                 }}

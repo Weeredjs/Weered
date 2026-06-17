@@ -606,6 +606,17 @@ export function NexusModEmbed({ id, href }: { id: string; href: string }) {
                   window.location.href = nxmHref;
                 } catch {}
               }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  try {
+                    window.location.href = nxmHref;
+                  } catch {}
+                }
+              }}
+              role="button"
+              tabIndex={0}
               style={{
                 fontSize: 9,
                 fontWeight: 800,

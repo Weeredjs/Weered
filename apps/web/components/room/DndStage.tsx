@@ -611,6 +611,14 @@ function InitiativeTracker({ roomId }: { roomId: string }) {
                       <span
                         key={cond}
                         onClick={() => toggleCondition(c.id, cond)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            toggleCondition(c.id, cond);
+                          }
+                        }}
+                        tabIndex={0}
+                        role="button"
                         style={{
                           fontSize: 9,
                           padding: "2px 5px",

@@ -522,8 +522,8 @@ function RunAuditModal({ onClose }: { onClose: () => void }) {
   }, []);
 
   return (
-    <div onClick={onClose} role="dialog" aria-modal="true" style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(8,5,2,.82)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-      <div onClick={e => e.stopPropagation()} style={{
+    <div onClick={onClose} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClose(); } }} tabIndex={0} role="dialog" aria-modal="true" style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(8,5,2,.82)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+      <div onClick={e => e.stopPropagation()} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); } }} tabIndex={0} role="button" style={{
         width: "min(720px, 100%)", maxHeight: "90vh", overflowY: "auto", padding: 20,
         background: "linear-gradient(180deg, rgba(28,20,12,.97), rgba(14,10,6,.99))",
         border: "2px solid rgba(245,130,32,.6)", borderRadius: 6, color: "rgba(255,255,255,.92)", fontFamily: "inherit",
@@ -1193,8 +1193,8 @@ function TournamentFormModal({
   }
 
   return (
-    <div onClick={onClose} role="dialog" aria-modal="true" style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(8,5,2,.82)", backdropFilter: "blur(4px)", WebkitBackdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-      <div onClick={e => e.stopPropagation()} style={{
+    <div onClick={onClose} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClose(); } }} tabIndex={0} role="dialog" aria-modal="true" style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(8,5,2,.82)", backdropFilter: "blur(4px)", WebkitBackdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+      <div onClick={e => e.stopPropagation()} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); } }} tabIndex={0} role="button" style={{
         width: "min(560px, 100%)", padding: 20,
         maxHeight: "90vh", overflowY: "auto",
         background: "linear-gradient(180deg, rgba(28,20,12,.97), rgba(14,10,6,.99))",

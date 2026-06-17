@@ -1105,6 +1105,14 @@ export default function SessionZero({ open, onClose }: { open: boolean; onClose:
   return (
     <div
       onClick={dismiss}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          dismiss();
+        }
+      }}
+      tabIndex={0}
+      role="button"
       style={{
         position: "fixed",
         inset: 0,
@@ -1119,6 +1127,11 @@ export default function SessionZero({ open, onClose }: { open: boolean; onClose:
     >
       <div
         onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.stopPropagation();
+          }
+        }}
         className="weered-session-zero-modal"
         style={{
           width: "100%",

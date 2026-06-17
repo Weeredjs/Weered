@@ -599,7 +599,7 @@ function PlayerLookup({ accent, heroMap }: { accent: string; heroMap: Record<num
         <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
           <div style={{ ...S.label, marginBottom: 6 }}>RESULTS ({results.length})</div>
           {results.map(p => (
-            <div key={p.account_id} onClick={() => selectPlayer(p)} style={{
+            <div key={p.account_id} onClick={() => selectPlayer(p)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); selectPlayer(p); } }} tabIndex={0} role="button" style={{
               ...S.card, cursor: "pointer", display: "flex", alignItems: "center", gap: 12,
               transition: "border-color .12s",
             }}
@@ -962,7 +962,7 @@ function TwitchStreams({ lobbyId, accentColor }: { lobbyId: string; accentColor:
 
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         {streams.map(s => (
-          <div key={s.userLogin} onClick={() => handleCardClick(s)} style={{
+          <div key={s.userLogin} onClick={() => handleCardClick(s)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleCardClick(s); } }} tabIndex={0} role="button" style={{
             ...S.card, cursor: "pointer", display: "flex", gap: 10, alignItems: "center",
             transition: "border-color .12s",
           }}

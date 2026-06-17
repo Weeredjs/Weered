@@ -737,6 +737,14 @@ export default function StorePage() {
             zIndex: 9999,
           }}
           onClick={() => setListingItem(null)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              setListingItem(null);
+            }
+          }}
+          role="button"
+          tabIndex={0}
         >
           <div
             style={{
@@ -748,6 +756,14 @@ export default function StorePage() {
               width: "90%",
             }}
             onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                e.stopPropagation();
+              }
+            }}
+            role="button"
+            tabIndex={0}
           >
             <div style={{ fontWeight: 700, fontSize: 18, marginBottom: 16 }}>List for Sale</div>
             <div style={{ fontSize: 14, marginBottom: 4 }}>

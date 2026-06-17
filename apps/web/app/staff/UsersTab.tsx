@@ -133,6 +133,14 @@ export function UsersTab({ myRole }: { myRole: GlobalRole }) {
             <div
               key={u.id}
               onClick={() => loadNotes(u)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  loadNotes(u);
+                }
+              }}
+              role="button"
+              tabIndex={0}
               style={{ ...(selected?.id === u.id ? S.cardHov : S.card), cursor: "pointer" }}
             >
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>

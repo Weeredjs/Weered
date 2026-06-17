@@ -50,10 +50,23 @@ export default function LandingLobbyPreviewModal({
   const banner = lobby.bannerUrl || "";
 
   return (
-    <div className="lp-modal-back" onClick={onClose} role="dialog" aria-modal="true">
+    <div
+      className="lp-modal-back"
+      onClick={onClose}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onClose();
+        }
+      }}
+      tabIndex={0}
+      role="dialog"
+      aria-modal="true"
+    >
       <div
         className="lp-modal-card"
         onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => e.stopPropagation()}
         style={{ ["--lp-modal-accent" as any]: accent }}
       >
         <button className="lp-modal-close" onClick={onClose} aria-label="Close">

@@ -143,6 +143,9 @@ function Scoreboard({ accentColor }: { accentColor: string }) {
             <div key={gid}>
               <div
                 onClick={() => toggleExpand(String(gid))}
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleExpand(String(gid)); } }}
+                tabIndex={0}
+                role="button"
                 style={{
                   ...S.card,
                   cursor: "pointer",
@@ -403,6 +406,9 @@ function Leaders({ accentColor, onPlayerClick }: { accentColor: string; onPlayer
             <div
               key={p.id || p.playerId || i}
               onClick={() => (p.id || p.playerId) && onPlayerClick(p.id || p.playerId, p.name || p.playerName || "")}
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); (p.id || p.playerId) && onPlayerClick(p.id || p.playerId, p.name || p.playerName || ""); } }}
+              tabIndex={0}
+              role="button"
               style={{
                 display: "flex", alignItems: "center", gap: 6, padding: "3px 4px", borderRadius: 2,
                 cursor: (p.id || p.playerId) ? "pointer" : "default",
@@ -697,6 +703,9 @@ function PlayerSearch({ accentColor, initialPlayerId, initialPlayerName }: {
             <div
               key={pid || i}
               onClick={() => selectPlayer(p)}
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); selectPlayer(p); } }}
+              tabIndex={0}
+              role="button"
               style={{
                 ...S.card,
                 display: "flex", alignItems: "center", gap: 12,
@@ -810,6 +819,9 @@ function MlbTwitchStreams({ lobbyId, accentColor }: { lobbyId?: string; accentCo
           <div
             key={s.id}
             onClick={() => handleCardClick(s)}
+            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleCardClick(s); } }}
+            tabIndex={0}
+            role="button"
             style={{
               ...S.card,
               cursor: "pointer",
@@ -890,6 +902,9 @@ function Highlights({ accentColor }: { accentColor: string }) {
           <div
             key={h.id}
             onClick={() => setPlaying(h.videoUrl)}
+            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setPlaying(h.videoUrl); } }}
+            tabIndex={0}
+            role="button"
             style={{
               ...S.card,
               padding: 0,
@@ -980,6 +995,9 @@ function Matchups({ accentColor }: { accentColor: string }) {
               borderColor: isLive ? `${accentColor}50` : "rgba(255,255,255,.08)",
             }}
             onClick={() => setExpanded(isExpanded ? null : m.gameId)}
+            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setExpanded(isExpanded ? null : m.gameId); } }}
+            tabIndex={0}
+            role="button"
           >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>

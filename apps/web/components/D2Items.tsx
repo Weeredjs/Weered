@@ -108,6 +108,14 @@ export function PerkDetail({ perk }: { perk: any }) {
     <div>
       <div
         onClick={() => hasAlts && setExpanded((v) => !v)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            hasAlts && setExpanded((v) => !v);
+          }
+        }}
+        tabIndex={0}
+        role="button"
         style={{
           display: "flex",
           alignItems: "flex-start",
@@ -528,6 +536,14 @@ export function ItemTile({
       <div
         title={`${item.name || "?"}${item.primaryStat ? ` (${item.primaryStat})` : ""}`}
         onClick={onClick}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            onClick?.();
+          }
+        }}
+        tabIndex={0}
+        role="button"
         style={{
           width: 44,
           height: 44,
@@ -586,6 +602,14 @@ export function ItemTile({
   return (
     <div
       onClick={onClick}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onClick?.();
+        }
+      }}
+      tabIndex={0}
+      role="button"
       style={{
         display: "flex",
         alignItems: "center",

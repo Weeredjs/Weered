@@ -94,6 +94,13 @@ function ConfirmDialog({
       role="dialog"
       aria-modal="true"
       onClick={onCancel}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onCancel();
+        }
+      }}
+      tabIndex={0}
       style={{
         position: "fixed",
         inset: 0,
@@ -111,6 +118,12 @@ function ConfirmDialog({
     >
       <div
         onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            e.stopPropagation();
+          }
+        }}
         style={{
           width: "100%",
           maxWidth: 380,

@@ -128,6 +128,14 @@ export function StreamsTab({ gameName, lobbyId }: { gameName: string; lobbyId: s
             key={s.userLogin}
             style={{ ...S.card, padding: 0, overflow: "hidden", cursor: "pointer" }}
             onClick={() => setIntercept(s)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                setIntercept(s);
+              }
+            }}
+            tabIndex={0}
+            role="button"
           >
             <div
               style={{

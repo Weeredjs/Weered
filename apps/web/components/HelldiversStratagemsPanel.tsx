@@ -440,6 +440,14 @@ export default function HelldiversStratagemsPanel({
                 transition: "border-color .15s, background .15s",
               }}
               onClick={() => setSelected(isOpen ? null : s)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  setSelected(isOpen ? null : s);
+                }
+              }}
+              tabIndex={0}
+              role="button"
             >
               <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
                 <div

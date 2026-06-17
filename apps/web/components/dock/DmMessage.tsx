@@ -462,6 +462,13 @@ export function DmMessage(props: {
               <div
                 data-reaction-ui
                 onClick={(e) => e.stopPropagation()}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.stopPropagation();
+                  }
+                }}
+                tabIndex={0}
+                role="button"
                 style={{
                   position: "absolute",
                   top: 16,

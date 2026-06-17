@@ -176,6 +176,11 @@ export function MoreMenu({
       data-reaction-ui
       data-more-menu
       onClick={(e) => e.stopPropagation()}
+      onKeyDown={(e) => {
+        e.stopPropagation();
+      }}
+      role="button"
+      tabIndex={0}
       style={{
         position: "absolute",
         top: 22,

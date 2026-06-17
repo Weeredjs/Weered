@@ -36,6 +36,14 @@ export function HunterDossierModal({ userId, onClose }: { userId: string; onClos
   return (
     <div
       onClick={onClose}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onClose();
+        }
+      }}
+      tabIndex={0}
+      role="button"
       style={{
         position: "fixed",
         inset: 0,
@@ -50,6 +58,12 @@ export function HunterDossierModal({ userId, onClose }: { userId: string; onClos
     >
       <div
         onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            e.stopPropagation();
+          }
+        }}
         style={{
           ...S.card,
           width: "min(620px, 100%)",
@@ -478,6 +492,14 @@ export function ClaimModal({
   return (
     <div
       onClick={onClose}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onClose();
+        }
+      }}
+      tabIndex={0}
+      role="button"
       style={{
         position: "fixed",
         inset: 0,
@@ -491,6 +513,12 @@ export function ClaimModal({
     >
       <div
         onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            e.stopPropagation();
+          }
+        }}
         style={{ ...S.card, width: "min(520px, calc(100% - 32px))", padding: "22px 26px" }}
       >
         <div style={{ ...S.label, marginBottom: 6 }}>Claiming bounty on</div>

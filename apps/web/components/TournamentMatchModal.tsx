@@ -146,6 +146,14 @@ export default function TournamentMatchModal({
     <Backdrop onClose={onClose}>
       <div
         onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            e.stopPropagation();
+          }
+        }}
+        tabIndex={0}
+        role="button"
         style={{
           width: "min(880px, 100%)",
           maxHeight: "90vh",
@@ -605,6 +613,13 @@ function Backdrop({ children, onClose }: { children: React.ReactNode; onClose: (
   return (
     <div
       onClick={onClose}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onClose();
+        }
+      }}
+      tabIndex={0}
       role="dialog"
       aria-modal="true"
       style={{

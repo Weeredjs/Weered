@@ -170,6 +170,13 @@ export default function LobbySplash({
         aria-modal="true"
         aria-label={ariaLabel}
         onClick={handleClose}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            handleClose();
+          }
+        }}
+        tabIndex={0}
         className="weered-lobby-splash-root"
         style={{
           position: "fixed",
@@ -244,6 +251,14 @@ export default function LobbySplash({
         <div
           className="weered-lobby-splash-inner"
           onClick={(e) => e.stopPropagation()}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              e.stopPropagation();
+            }
+          }}
+          tabIndex={0}
+          role="button"
           style={{
             position: "relative",
             maxWidth: 960,

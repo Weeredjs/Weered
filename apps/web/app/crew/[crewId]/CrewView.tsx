@@ -563,6 +563,14 @@ export default function CrewView({ crewId, initial }: { crewId: string; initial:
               <div style={{ ...plaqueStyle(), padding: "14px 22px", marginBottom: 14 }}>
                 <div
                   onClick={() => setLoadoutOpen((o) => !o)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      setLoadoutOpen((o) => !o);
+                    }
+                  }}
+                  role="button"
+                  tabIndex={0}
                   style={{
                     display: "flex",
                     alignItems: "center",
@@ -1059,6 +1067,14 @@ function AddModDialog({
   return (
     <div
       onClick={onClose}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onClose();
+        }
+      }}
+      role="button"
+      tabIndex={0}
       style={{
         position: "fixed",
         inset: 0,
@@ -1073,6 +1089,14 @@ function AddModDialog({
     >
       <div
         onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            e.stopPropagation();
+          }
+        }}
+        role="button"
+        tabIndex={0}
         style={{
           ...plaqueStyle(),
           maxWidth: 560,

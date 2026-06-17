@@ -449,6 +449,14 @@ function ToolkitCard({ section }: { section: (typeof TOOLKIT_SECTIONS)[0] }) {
     >
       <div
         onClick={() => setExpanded(!expanded)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            setExpanded(!expanded);
+          }
+        }}
+        role="button"
+        tabIndex={0}
         style={{
           padding: "14px 16px",
           cursor: "pointer",

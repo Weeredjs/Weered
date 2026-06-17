@@ -403,6 +403,14 @@ export function ChallengeBuilder({
   return (
     <div
       onClick={onClose}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onClose();
+        }
+      }}
+      tabIndex={0}
+      role="button"
       style={{
         position: "fixed",
         inset: 0,
@@ -417,6 +425,13 @@ export function ChallengeBuilder({
     >
       <div
         onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.stopPropagation();
+          }
+        }}
+        tabIndex={0}
+        role="button"
         style={{
           width: 560,
           maxWidth: "100%",

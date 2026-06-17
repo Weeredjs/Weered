@@ -360,6 +360,14 @@ function LoadoutCard({ loadout, onClick }: { loadout: Loadout; onClick: () => vo
   return (
     <div
       onClick={onClick}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onClick();
+        }
+      }}
+      tabIndex={0}
+      role="button"
       style={{
         cursor: "pointer",
         border: `2px solid ${meta.color}`,

@@ -125,6 +125,14 @@ export default function DockDrawer() {
     <>
       <div
         onClick={() => setOpen(false)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            setOpen(false);
+          }
+        }}
+        tabIndex={0}
+        role="button"
         style={{
           position: "fixed",
           inset: 0,

@@ -231,6 +231,14 @@ export default function LobbyChatDrawer({ roomId, title = "Lobby Chat", accentCo
         <div
           className={`lobby-chat-tab${open ? " open" : ""}${hasUnread && !open ? " has-unread" : ""}`}
           onClick={handleToggle}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              handleToggle();
+            }
+          }}
+          tabIndex={0}
+          role="button"
           style={{ right: open ? "min(340px, 90%)" : 0 }}
         >
           CHAT
@@ -398,7 +406,18 @@ export default function LobbyChatDrawer({ roomId, title = "Lobby Chat", accentCo
                 )}
               </button>
               {!fullscreen && (
-                <div className="lobby-drawer-close" onClick={() => setOpen(false)}>
+                <div
+                  className="lobby-drawer-close"
+                  onClick={() => setOpen(false)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      setOpen(false);
+                    }
+                  }}
+                  tabIndex={0}
+                  role="button"
+                >
                   ✕
                 </div>
               )}

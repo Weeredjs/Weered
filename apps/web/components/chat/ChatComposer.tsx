@@ -126,6 +126,14 @@ export function ChatComposer({
       {lockOpen && (
         <div
           onClick={() => setLockOpen(false)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              setLockOpen(false);
+            }
+          }}
+          role="button"
+          tabIndex={0}
           style={{
             display: "flex",
             alignItems: "center",

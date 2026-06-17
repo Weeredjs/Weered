@@ -436,6 +436,21 @@ export default function LobbyHeroBar({
                     gameName: twitchGame,
                   })
                 }
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    setInterceptStream({
+                      userLogin: stream.streamer?.toLowerCase() || "",
+                      userName: stream.streamer || "",
+                      title: stream.title || "",
+                      viewerCount: stream.viewers || 0,
+                      thumbnailUrl: stream.thumbnail || "",
+                      gameName: twitchGame,
+                    });
+                  }
+                }}
+                tabIndex={0}
+                role="button"
                 style={{ cursor: "pointer" }}
               >
                 <LiveStreamCard stream={stream} accent={accent} />

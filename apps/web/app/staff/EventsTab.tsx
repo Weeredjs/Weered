@@ -365,6 +365,14 @@ export function EventsTab() {
                   borderColor: selected === ev.id ? "rgba(124,58,237,.35)" : undefined,
                 }}
                 onClick={() => setSelected(selected === ev.id ? null : ev.id)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    setSelected(selected === ev.id ? null : ev.id);
+                  }
+                }}
+                role="button"
+                tabIndex={0}
               >
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                   <div style={{ flex: 1, minWidth: 0 }}>

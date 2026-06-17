@@ -474,6 +474,14 @@ function ArticleInterceptModal({
     <>
       <div
         onClick={onClose}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            onClose();
+          }
+        }}
+        tabIndex={0}
+        role="button"
         style={{
           position: "fixed",
           inset: 0,

@@ -198,6 +198,14 @@ export default function CharacterSheetEditor({
   return (
     <div
       onClick={onClose}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onClose();
+        }
+      }}
+      role="button"
+      tabIndex={0}
       className="weered-dnd-modules"
       style={{
         position: "fixed",
@@ -212,6 +220,11 @@ export default function CharacterSheetEditor({
     >
       <div
         onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => {
+          e.stopPropagation();
+        }}
+        role="button"
+        tabIndex={0}
         className="dnd-card"
         style={{
           width: "min(720px, 100%)",

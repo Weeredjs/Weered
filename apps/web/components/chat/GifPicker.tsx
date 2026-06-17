@@ -137,6 +137,15 @@ export function GifPicker({
                 onSelect(full);
                 onClose();
               }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  onSelect(full);
+                  onClose();
+                }
+              }}
+              role="button"
+              tabIndex={0}
               style={{
                 width: "100%",
                 height: 80,

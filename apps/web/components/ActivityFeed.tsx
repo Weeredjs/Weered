@@ -239,6 +239,14 @@ export default function ActivityFeed({ initialCount = 10 }: { initialCount?: num
               <div
                 key={item.id}
                 onClick={() => handleClick(item)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    handleClick(item);
+                  }
+                }}
+                role="button"
+                tabIndex={0}
                 style={{
                   display: "flex",
                   alignItems: "flex-start",

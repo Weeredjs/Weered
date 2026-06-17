@@ -124,6 +124,15 @@ export default function VerticalPicker() {
       onClick={(e) => {
         if (e.target === e.currentTarget) skip();
       }}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          if (e.target === e.currentTarget) {
+            e.preventDefault();
+            skip();
+          }
+        }
+      }}
+      tabIndex={0}
       style={{
         position: "fixed",
         inset: 0,

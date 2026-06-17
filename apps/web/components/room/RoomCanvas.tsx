@@ -906,6 +906,9 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
 
         <div
           onClick={() => { setChatOpen(o => !o); setChatUnread(false); }}
+          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setChatOpen(o => !o); setChatUnread(false); } }}
+          tabIndex={0}
+          role="button"
           style={{
             position: isMobile ? "fixed" : "absolute",
             right: chatOpen ? (isMobile ? "100%" : CHAT_WIDTH) : 0,

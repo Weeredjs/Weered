@@ -120,6 +120,13 @@ function ReportDialog({
       role="dialog"
       aria-modal="true"
       onClick={() => !submitting && onDone(null)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          if (!submitting) onDone(null);
+        }
+      }}
+      tabIndex={0}
       style={{
         position: "fixed",
         inset: 0,
@@ -137,6 +144,12 @@ function ReportDialog({
     >
       <div
         onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            e.stopPropagation();
+          }
+        }}
         style={{
           width: "100%",
           maxWidth: 440,

@@ -152,7 +152,18 @@ export default function InviteModal({ type, targetId, targetName, onClose }: Pro
   };
 
   return (
-    <div style={S.overlay} onClick={(e) => e.target === e.currentTarget && onClose()}>
+    <div
+      style={S.overlay}
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onClose();
+        }
+      }}
+      tabIndex={0}
+      role="button"
+    >
       <div style={S.modal}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div>

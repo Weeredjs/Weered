@@ -59,7 +59,18 @@ export default function OverlayHost() {
 
   return (
     <div className="fixed inset-0 z-[1000]">
-      <div className="absolute inset-0 bg-black/50" onClick={() => closeSheet()} />
+      <div
+        className="absolute inset-0 bg-black/50"
+        onClick={() => closeSheet()}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            closeSheet();
+          }
+        }}
+        tabIndex={0}
+        role="button"
+      />
 
       <div
         className={`absolute right-0 top-0 h-full ${top.type === "settings" ? "w-[640px]" : "w-[420px]"} max-w-[92vw] border-l border-white/10 bg-[var(--weered-bg,#0f1117)] shadow-2xl`}

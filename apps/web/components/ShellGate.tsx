@@ -273,7 +273,18 @@ function OverlayPanel({
   if (!open) return null;
   return (
     <>
-      <div className="weered-overlay-backdrop" onClick={onClose} />
+      <div
+        className="weered-overlay-backdrop"
+        onClick={onClose}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            onClose();
+          }
+        }}
+        tabIndex={0}
+        role="button"
+      />
       <div ref={panelRef} className={`weered-overlay-panel weered-overlay-panel-${side}`}>
         <button
           type="button"

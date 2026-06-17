@@ -1265,9 +1265,12 @@ const renameRoom = (name: string)   => sendAdmin("room:rename",  { name });
             position: "fixed", inset: 0, zIndex: 99999,
             background: "rgba(0,0,0,.65)", backdropFilter: "blur(6px)",
             display: "flex", alignItems: "center", justifyContent: "center",
-          }} onClick={() => setPasswordRoomId("")}>
+          }} onClick={() => setPasswordRoomId("")} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setPasswordRoomId(""); } }} tabIndex={0} role="button">
             <div
               onClick={e => e.stopPropagation()}
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); } }}
+              tabIndex={0}
+              role="button"
               style={{
                 background: "rgba(18,18,24,.97)", border: "1px solid rgba(88,0,229,.35)",
                 borderRadius: 16, padding: "28px 24px", width: 340,

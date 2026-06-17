@@ -105,6 +105,14 @@ export function MembersTab({
             <div
               key={m.id}
               onClick={() => setSelected(m)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  setSelected(m);
+                }
+              }}
+              role="button"
+              tabIndex={0}
               style={{
                 ...(selected?.id === m.id ? S.cardHov : S.card),
                 cursor: "pointer",

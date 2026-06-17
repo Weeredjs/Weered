@@ -946,6 +946,14 @@ export function LeaderboardColumn({
             <div
               key={r.key}
               onClick={r.onClick}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  r.onClick?.();
+                }
+              }}
+              tabIndex={0}
+              role="button"
               title={r.onClick ? "See all bounties on this target" : undefined}
               style={{
                 display: "flex",
