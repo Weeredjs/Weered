@@ -599,7 +599,6 @@ function LoginForm() {
                     setMode(mode === "login" ? "register" : "login");
                     setErr("");
                   })}
-                  role="button"
                   tabIndex={0}
                 >
                   {mode === "login" ? "register" : "sign in"}
