@@ -222,7 +222,7 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
         room.on(RoomEvent.TrackSubscribed, (track) => {
           if (!track.sid) return;
           if (track.kind === Track.Kind.Audio) {
-            const el = track.attach() as HTMLAudioElement;
+            const el = track.attach();
             el.autoplay = true;
             el.volume = 1;
             document.body.appendChild(el);

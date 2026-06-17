@@ -16,7 +16,7 @@ export function useWatchHere(handler: (channel: string) => void) {
       const ch = (e as CustomEvent).detail?.channel;
       if (typeof ch === "string" && ch) {
         try {
-          (window as any)[PENDING_KEY] = { channel: ch, ts: Date.now() } as PendingStash;
+          (window as any)[PENDING_KEY] = { channel: ch, ts: Date.now() };
         } catch {}
         handler(ch);
       }

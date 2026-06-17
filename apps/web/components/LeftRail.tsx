@@ -361,7 +361,7 @@ export default function LeftRail() {
       try {
         const r = await fetch(
           `${API_BASE}/lobbies/${encodeURIComponent(lobbyPresenceId)}/presence`,
-          { headers: authHeaders() as any },
+          { headers: authHeaders() },
         );
         const j = await r.json();
         if (!cancelled && j.ok && Array.isArray(j.users)) setLobbyPresence(j.users);
@@ -843,8 +843,7 @@ export default function LeftRail() {
               <div
                 key={rid}
                 onMouseEnter={(e) => {
-                  if (uid)
-                    openHover(uid, nm, e.currentTarget as HTMLElement, { isAway: !!u?.isAway });
+                  if (uid) openHover(uid, nm, e.currentTarget, { isAway: !!u?.isAway });
                 }}
                 onMouseLeave={() => scheduleClose(160)}
                 style={you ? { background: "rgba(124,58,237,0.04)", borderRadius: 10 } : undefined}

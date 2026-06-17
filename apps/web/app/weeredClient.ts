@@ -30,7 +30,6 @@ function safeNow() {
   return Date.now();
 }
 function makeId() {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const g: any = globalThis as any;
   if (g?.crypto?.randomUUID) return g.crypto.randomUUID();
   return `${safeNow()}_${Math.random().toString(16).slice(2)}`;

@@ -148,7 +148,7 @@ export default function DockShell(props: { forceMode?: "rail" | "floating" } = {
   const meName = pickFirstString(me?.name, me?.username, "Guest");
   const roomTitle = pickFirstString(meta?.name, viewId, "");
   const roomRole = normRole(pickFirstString(role, joinStatus?.role));
-  const apiBase = pickFirstString(ctx?.apiBase, (ctx as any)?.api, "") || "";
+  const apiBase = pickFirstString(ctx?.apiBase, ctx?.api, "") || "";
 
   const [dmThreads, setDmThreads] = useState<DmThread[]>([]);
   const [dmActivePeerId, setDmActivePeerId] = useState("");
@@ -471,8 +471,8 @@ export default function DockShell(props: { forceMode?: "rail" | "floating" } = {
           else roomInputRef.current?.focus();
         } catch {}
       }, 0);
-    window.addEventListener("weered:dock:opened", h as any);
-    return () => window.removeEventListener("weered:dock:opened", h as any);
+    window.addEventListener("weered:dock:opened", h);
+    return () => window.removeEventListener("weered:dock:opened", h);
   }, [tab, dmActivePeerId]);
 
   useEffect(() => {
@@ -483,7 +483,7 @@ export default function DockShell(props: { forceMode?: "rail" | "floating" } = {
       if (typeof d.tab === "string") {
         const t = String(d.tab).toLowerCase();
         if (t === "room" || t === "dms" || t === "friends" || t === "crew") {
-          setTab(t as any);
+          setTab(t);
           setOpen(true);
           return;
         }
@@ -611,8 +611,8 @@ export default function DockShell(props: { forceMode?: "rail" | "floating" } = {
       cur.map((t) => (t.peerId === dmActive.peerId ? { ...t, msgs: [...t.msgs, optimistic] } : t)),
     );
     try {
-      if (typeof (ctx as any)?.sendRaw === "function")
-        (ctx as any).sendRaw({
+      if (typeof ctx?.sendRaw === "function")
+        ctx.sendRaw({
           type: "dm:send",
           toId: dmActive.peerId,
           body,
@@ -1702,10 +1702,10 @@ export default function DockShell(props: { forceMode?: "rail" | "floating" } = {
             }}
             onJoin={(roomId) => {
               try {
-                (ctx as any)?.join?.(roomId);
+                ctx?.join?.(roomId);
               } catch {}
             }}
-            myRoomId={String((ctx as any)?.joinedRoomId || "")}
+            myRoomId={String(ctx?.joinedRoomId || "")}
           />
         ) : tab === "crew" ? (
           <CrewTab
@@ -1715,7 +1715,7 @@ export default function DockShell(props: { forceMode?: "rail" | "floating" } = {
             myName={meName}
             onJoin={(roomId) => {
               try {
-                (ctx as any)?.join?.(roomId);
+                ctx?.join?.(roomId);
               } catch {}
             }}
           />

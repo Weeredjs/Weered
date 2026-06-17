@@ -78,8 +78,8 @@ export default function VoicePanel({ roomId }: { roomId: string }) {
       room.on(RoomEvent.TrackSubscribed, (track) => {
         if (track.kind !== Track.Kind.Audio) return;
         const el = track.attach();
-        (el as HTMLMediaElement).autoplay = true;
-        (el as HTMLMediaElement).controls = false;
+        el.autoplay = true;
+        el.controls = false;
         audioRootRef.current?.appendChild(el);
       });
 

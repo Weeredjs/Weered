@@ -264,7 +264,7 @@ function LobbyPreview({ value, accent }: { value: BrandingValue; accent: string 
                 overflow: "hidden",
                 display: "-webkit-box",
                 WebkitLineClamp: 2,
-                WebkitBoxOrient: "vertical" as any,
+                WebkitBoxOrient: "vertical",
               }}
             >
               {value.description}

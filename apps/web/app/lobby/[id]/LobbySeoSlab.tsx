@@ -62,7 +62,7 @@ export default async function LobbySeoSlab({ lobbyId }: { lobbyId: string }) {
       : Promise.resolve({ articles: [] as News[] }),
   ]);
 
-  const lobby: Lobby = (lobbyRes as any).lobby ?? (lobbyRes as Lobby);
+  const lobby: Lobby = (lobbyRes as any).lobby ?? lobbyRes;
   const rooms = (roomsRes.rooms ?? []).slice(0, 8);
   const posts = (postsRes.posts ?? []).slice(0, 6);
   const challenges = (challengesRes.challenges ?? [])

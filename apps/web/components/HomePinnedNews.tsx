@@ -394,7 +394,7 @@ export default function HomePinnedNews() {
                     overflow: "hidden",
                     display: "-webkit-box",
                     WebkitLineClamp: 2,
-                    WebkitBoxOrient: "vertical" as any,
+                    WebkitBoxOrient: "vertical",
                   }}
                 >
                   {lead.title}

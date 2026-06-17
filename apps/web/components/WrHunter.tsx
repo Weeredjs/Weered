@@ -514,14 +514,12 @@ export function ClaimModal({
           value={proofNote}
           onChange={(e) => setProofNote(e.target.value.slice(0, 500))}
           placeholder="Sank their galleon / Dropped off the rum / Brought back the Kraken tooth — whatever the bounty asked for. Link a screenshot or clip below if you've got one."
-          style={
-            {
-              ...S.input,
-              minHeight: 90,
-              fontFamily: WR_FONT_SERIF,
-              fontStyle: "italic",
-            } as React.CSSProperties
-          }
+          style={{
+            ...S.input,
+            minHeight: 90,
+            fontFamily: WR_FONT_SERIF,
+            fontStyle: "italic",
+          }}
         />
 
         <div style={{ ...S.label, fontSize: 9, marginBottom: 4, marginTop: 12 }}>
@@ -531,7 +529,7 @@ export function ClaimModal({
           value={proofImageUrl}
           onChange={(e) => setProofImageUrl(e.target.value.slice(0, 300))}
           placeholder="https://imgur.com/... or https://clips.twitch.tv/..."
-          style={S.input as React.CSSProperties}
+          style={S.input}
         />
 
         {err && (

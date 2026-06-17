@@ -40,8 +40,8 @@ export default function ChessModulesPanel({
 
   useEffect(() => {
     const handler = () => setTab("tournaments");
-    window.addEventListener("weered:openTournamentsTab", handler as any);
-    return () => window.removeEventListener("weered:openTournamentsTab", handler as any);
+    window.addEventListener("weered:openTournamentsTab", handler);
+    return () => window.removeEventListener("weered:openTournamentsTab", handler);
   }, []);
 
   return (

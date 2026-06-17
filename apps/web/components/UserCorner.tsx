@@ -114,7 +114,7 @@ function UserCornerFlair({ userId }: { userId?: string }) {
         color: f.color || "rgba(243,244,246,.85)",
       }}
     >
-      <FlairBadge flair={f as any} size="sm" />
+      <FlairBadge flair={f} size="sm" />
       <span style={{ textTransform: "uppercase", letterSpacing: "1px" }}>{f.name}</span>
     </div>
   );
@@ -598,7 +598,7 @@ export default function UserCorner() {
                     letterSpacing: "1.8px",
                   }}
                 >
-                  <TierIcon tier={tier as any} size={10} />
+                  <TierIcon tier={tier} size={10} />
                   {tier}
                 </span>
               </span>
@@ -852,7 +852,7 @@ export default function UserCorner() {
                   whiteSpace: "nowrap",
                 }}
               >
-                <TierIcon tier={tierU as any} size={11} />
+                <TierIcon tier={tierU} size={11} />
                 {tierU.replace("_", " ")}
               </div>
             );

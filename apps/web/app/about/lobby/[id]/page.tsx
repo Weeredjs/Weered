@@ -47,7 +47,7 @@ async function loadLobbyBundle(id: string) {
       challenges: [],
     }),
   ]);
-  const lobby: Lobby = (lobbyRes as any).lobby ?? (lobbyRes as Lobby);
+  const lobby: Lobby = (lobbyRes as any).lobby ?? lobbyRes;
   return {
     lobby,
     rooms: (roomsRes.rooms ?? []).slice(0, 12),

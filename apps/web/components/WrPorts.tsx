@@ -183,13 +183,13 @@ export function PortsOfCallTab() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search by name, address, or tag..."
-            style={{ ...S.input, width: 260, flex: "0 1 260px" } as React.CSSProperties}
+            style={{ ...S.input, width: 260, flex: "0 1 260px" }}
           />
           <span style={{ ...S.label, fontSize: 9 }}>Region</span>
           <select
             value={filterRegion}
             onChange={(e) => setFilterRegion(e.target.value)}
-            style={{ ...S.input, width: "auto" } as React.CSSProperties}
+            style={{ ...S.input, width: "auto" }}
           >
             <option value="">Any</option>
             {WR_REGIONS_LIST.map((r) => (
@@ -581,7 +581,7 @@ export function LinkServerForm({ onClose }: { onClose: () => void }) {
             value={name}
             onChange={(e) => setName(e.target.value.slice(0, 60))}
             placeholder="Kraken's Fury"
-            style={S.input as React.CSSProperties}
+            style={S.input}
           />
         </Labeled>
         <Labeled label="Server address *">
@@ -589,15 +589,11 @@ export function LinkServerForm({ onClose }: { onClose: () => void }) {
             value={host}
             onChange={(e) => setHost(e.target.value.slice(0, 120))}
             placeholder="play.myserver.com:28000"
-            style={S.input as React.CSSProperties}
+            style={S.input}
           />
         </Labeled>
         <Labeled label="Region">
-          <select
-            value={region}
-            onChange={(e) => setRegion(e.target.value)}
-            style={S.input as React.CSSProperties}
-          >
+          <select value={region} onChange={(e) => setRegion(e.target.value)} style={S.input}>
             <option value="">Choose...</option>
             {WR_REGIONS_LIST.map((r) => (
               <option key={r} value={r}>
@@ -607,11 +603,7 @@ export function LinkServerForm({ onClose }: { onClose: () => void }) {
           </select>
         </Labeled>
         <Labeled label="Framework">
-          <select
-            value={framework}
-            onChange={(e) => setFramework(e.target.value)}
-            style={S.input as React.CSSProperties}
-          >
+          <select value={framework} onChange={(e) => setFramework(e.target.value)} style={S.input}>
             {WR_FRAMEWORKS.map((f) => (
               <option key={f} value={f}>
                 {f}
@@ -626,7 +618,7 @@ export function LinkServerForm({ onClose }: { onClose: () => void }) {
             max={64}
             value={maxSlots}
             onChange={(e) => setMaxSlots(Math.max(1, Math.min(64, Number(e.target.value) || 8)))}
-            style={S.input as React.CSSProperties}
+            style={S.input}
           />
         </Labeled>
         <Labeled label="Tags (comma-separated)">
@@ -634,7 +626,7 @@ export function LinkServerForm({ onClose }: { onClose: () => void }) {
             value={tags}
             onChange={(e) => setTags(e.target.value)}
             placeholder="chill, 2xloot, pve-only"
-            style={S.input as React.CSSProperties}
+            style={S.input}
           />
         </Labeled>
         <Labeled label="Public dashboard URL (optional)" span={2}>
@@ -642,7 +634,7 @@ export function LinkServerForm({ onClose }: { onClose: () => void }) {
             value={dashboardUrl}
             onChange={(e) => setDashboardUrl(e.target.value.slice(0, 300))}
             placeholder="https://play.myserver.com:8080"
-            style={S.input as React.CSSProperties}
+            style={S.input}
           />
         </Labeled>
         <Labeled label="Public query/status URL (optional — live polling)" span={2}>
@@ -650,7 +642,7 @@ export function LinkServerForm({ onClose }: { onClose: () => void }) {
             value={queryUrl}
             onChange={(e) => setQueryUrl(e.target.value.slice(0, 300))}
             placeholder="https://play.myserver.com:8080/status.json"
-            style={S.input as React.CSSProperties}
+            style={S.input}
           />
         </Labeled>
         <Labeled label="Description" span={2}>
@@ -658,14 +650,12 @@ export function LinkServerForm({ onClose }: { onClose: () => void }) {
             value={description}
             onChange={(e) => setDescription(e.target.value.slice(0, 500))}
             placeholder="Casual PvE, 2x loot weekends, active crew, no-wipe policy for a year. All welcome."
-            style={
-              {
-                ...S.input,
-                minHeight: 70,
-                fontFamily: WR_FONT_SERIF,
-                fontStyle: "italic",
-              } as React.CSSProperties
-            }
+            style={{
+              ...S.input,
+              minHeight: 70,
+              fontFamily: WR_FONT_SERIF,
+              fontStyle: "italic",
+            }}
           />
         </Labeled>
       </div>

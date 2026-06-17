@@ -12,8 +12,8 @@ const CHIME_DEBOUNCE_MS = 1500;
 function findFaviconLink(): HTMLLinkElement | null {
   if (typeof document === "undefined") return null;
   return (
-    (document.querySelector('link[rel~="icon"]') as HTMLLinkElement) ||
-    (document.querySelector('link[rel="shortcut icon"]') as HTMLLinkElement) ||
+    document.querySelector('link[rel~="icon"]') ||
+    document.querySelector('link[rel="shortcut icon"]') ||
     null
   );
 }
@@ -105,7 +105,7 @@ export function useUnreadIndicator() {
 
     document.addEventListener("visibilitychange", onVisibility);
     window.addEventListener("focus", onFocus);
-    window.addEventListener("weered:unread-tick", onTick as EventListener);
+    window.addEventListener("weered:unread-tick", onTick);
 
     function onSwMessage(e: MessageEvent) {
       if (e?.data?.type === "weered:push-suppressed") bump();
@@ -117,7 +117,7 @@ export function useUnreadIndicator() {
     return () => {
       document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("focus", onFocus);
-      window.removeEventListener("weered:unread-tick", onTick as EventListener);
+      window.removeEventListener("weered:unread-tick", onTick);
       if ("serviceWorker" in navigator) {
         navigator.serviceWorker.removeEventListener("message", onSwMessage);
       }

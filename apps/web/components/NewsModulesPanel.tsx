@@ -164,7 +164,7 @@ function HeroStory({
               opacity: 0.7,
               display: "-webkit-box",
               WebkitLineClamp: 2,
-              WebkitBoxOrient: "vertical" as any,
+              WebkitBoxOrient: "vertical",
               overflow: "hidden",
             }}
           >
@@ -226,7 +226,7 @@ function PrimaryCard({
             lineHeight: 1.35,
             display: "-webkit-box",
             WebkitLineClamp: 3,
-            WebkitBoxOrient: "vertical" as any,
+            WebkitBoxOrient: "vertical",
             overflow: "hidden",
           }}
         >
@@ -240,7 +240,7 @@ function PrimaryCard({
               opacity: 0.45,
               display: "-webkit-box",
               WebkitLineClamp: 2,
-              WebkitBoxOrient: "vertical" as any,
+              WebkitBoxOrient: "vertical",
               overflow: "hidden",
             }}
           >
@@ -669,7 +669,7 @@ export default function NewsModulesPanel({
       <ModuleTabBar
         tabs={CATEGORIES}
         active={category}
-        onSelect={(id) => setCategory(id as any)}
+        onSelect={(id) => setCategory(id)}
         accent={accent}
       />
 

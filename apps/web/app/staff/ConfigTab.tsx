@@ -31,8 +31,7 @@ export function ConfigTab() {
   if (loading) return <div style={{ opacity: 0.4 }}>Loading…</div>;
   if (!config) return <div style={{ opacity: 0.4 }}>Config unavailable.</div>;
 
-  const toggle = (key: keyof SiteConfig) =>
-    setConfig((c) => (c ? { ...c, [key]: !c[key as keyof SiteConfig] } : c));
+  const toggle = (key: keyof SiteConfig) => setConfig((c) => (c ? { ...c, [key]: !c[key] } : c));
   const num = (key: keyof SiteConfig, val: string) =>
     setConfig((c) => (c ? { ...c, [key]: Number(val) } : c));
 

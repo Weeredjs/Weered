@@ -122,8 +122,8 @@ export default function LobbySplash({
       setClosing(false);
       setOpen(true);
     };
-    window.addEventListener("weered:splash:open", onOpenEvent as EventListener);
-    return () => window.removeEventListener("weered:splash:open", onOpenEvent as EventListener);
+    window.addEventListener("weered:splash:open", onOpenEvent);
+    return () => window.removeEventListener("weered:splash:open", onOpenEvent);
   }, [lobbyId]);
 
   if (!open) return null;

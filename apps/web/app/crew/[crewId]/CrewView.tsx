@@ -151,7 +151,7 @@ export default function CrewView({ crewId, initial }: { crewId: string; initial:
   }, [crewId]);
 
   useEffect(() => {
-    if (isOfficer) refreshRequests(); /* eslint-disable-next-line */
+    if (isOfficer) refreshRequests();
   }, [isOfficer, crewId]);
 
   function copyLink() {

@@ -453,7 +453,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
   };
 
   const stageActive = stageMode !== null;
-  const isFullStageMode = stageActive && !["youtube","browser","twitch","article","chess"].includes(stageMode!);
+  const isFullStageMode = stageActive && !["youtube","browser","twitch","article","chess"].includes(stageMode);
 
   const shareUrl = typeof window !== "undefined"
     ? `${window.location.origin}/room/${encodeURIComponent(roomId)}`
@@ -644,7 +644,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
                   <YouTubeIcon size={48} color="rgba(255,0,0,0.3)" />
                   <div style={{ fontSize: 14, fontWeight: 700, color: "rgba(226,232,240,0.7)" }}>YouTube blocks direct embedding</div>
                   <div style={{ fontSize: 12, color: "rgba(148,163,184,0.5)", textAlign: "center", maxWidth: 320 }}>Use the YouTube tab above to sync playback for everyone</div>
-                  <button onClick={() => { handleModuleClick("youtube" as any); setStageMode("youtube"); }} style={{ marginTop: 8, padding: "10px 24px", borderRadius: 8, background: "rgba(239,68,68,0.2)", border: "1px solid rgba(239,68,68,0.4)", color: "rgba(252,165,165,0.9)", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+                  <button onClick={() => { handleModuleClick("youtube"); setStageMode("youtube"); }} style={{ marginTop: 8, padding: "10px 24px", borderRadius: 8, background: "rgba(239,68,68,0.2)", border: "1px solid rgba(239,68,68,0.4)", color: "rgba(252,165,165,0.9)", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
                     Open YouTube tab
                   </button>
                 </div>

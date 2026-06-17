@@ -85,7 +85,7 @@ export function ChatMembers({ ctx, liveRoomUsers, openHover, hoverClose }: ChatM
                       } catch {}
                     }}
                     onMouseEnter={(e) => {
-                      if (u.id) openHover(u.id, u.name, e.currentTarget as HTMLElement);
+                      if (u.id) openHover(u.id, u.name, e.currentTarget);
                     }}
                     onMouseLeave={() => hoverClose(160)}
                     style={{

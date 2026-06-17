@@ -444,8 +444,8 @@ function PlanetModal({
 }) {
   const color = factionColor(detail?.currentOwner);
   const biomeName =
-    (detail?.biome as any)?.name || (typeof detail?.biome === "string" ? detail?.biome : "Unknown");
-  const biomeDesc = (detail?.biome as any)?.description || "";
+    detail?.biome?.name || (typeof detail?.biome === "string" ? detail?.biome : "Unknown");
+  const biomeDesc = detail?.biome?.description || "";
 
   return (
     <div

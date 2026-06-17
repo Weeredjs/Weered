@@ -202,7 +202,7 @@ export default function ProfilePage() {
       <div style={card}>
         {equippedFlair && equippedFlair.kind === "BANNER" && (
           <div style={{ padding: "10px 10px 0" }}>
-            <FlairBadge flair={equippedFlair as any} size="lg" />
+            <FlairBadge flair={equippedFlair} size="lg" />
           </div>
         )}
         <div
@@ -330,13 +330,13 @@ export default function ProfilePage() {
               }}
             >
               {equippedFlair && equippedFlair.kind === "NAMEPLATE" ? (
-                <FlairBadge flair={equippedFlair as any}>{profile.name}</FlairBadge>
+                <FlairBadge flair={equippedFlair}>{profile.name}</FlairBadge>
               ) : (
                 profile.name
               )}
             </h1>
             {equippedFlair && equippedFlair.kind === "BADGE" && (
-              <FlairBadge flair={equippedFlair as any} size="md" />
+              <FlairBadge flair={equippedFlair} size="md" />
             )}
 
             <span

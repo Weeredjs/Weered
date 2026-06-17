@@ -3,7 +3,7 @@ import React, { use } from "react";
 import { useRouter } from "next/navigation";
 
 export default function SubredditRoute(props: { params: Promise<{ sub: string }> }) {
-  const params = use(props.params) as { sub: string };
+  const params = use(props.params);
   const router = useRouter();
   React.useEffect(() => {
     const raw = String(params?.sub || "").trim();

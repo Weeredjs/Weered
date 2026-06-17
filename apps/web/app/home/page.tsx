@@ -191,7 +191,7 @@ function HeroBanner({ lobby, onJoin }: { lobby: any; onJoin: (id: string, pinned
           <div style={{
             fontSize: 12, color: "rgba(232,232,236,.6)", marginBottom: 14, maxWidth: 480,
             lineHeight: 1.4, textShadow: banner ? "0 1px 4px rgba(0,0,0,.5)" : "none",
-            display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical" as any, overflow: "hidden",
+            display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden",
           }}>{desc}</div>
         )}
         <button
@@ -1085,8 +1085,8 @@ export default function HomePage() {
               letterSpacing: "0.02em", transition: "all 0.15s", fontFamily: "inherit", textDecoration: "none",
               display: "inline-flex", alignItems: "center", gap: 6,
             }}
-            onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.background = "linear-gradient(135deg, rgba(245,183,0,0.22), rgba(245,183,0,0.08))"; (e.currentTarget as HTMLAnchorElement).style.borderColor = "rgba(245,183,0,0.45)"; }}
-            onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.background = "linear-gradient(135deg, rgba(245,183,0,0.12), rgba(245,183,0,0.04))"; (e.currentTarget as HTMLAnchorElement).style.borderColor = "rgba(245,183,0,0.25)"; }}
+            onMouseEnter={e => { (e.currentTarget).style.background = "linear-gradient(135deg, rgba(245,183,0,0.22), rgba(245,183,0,0.08))"; (e.currentTarget).style.borderColor = "rgba(245,183,0,0.45)"; }}
+            onMouseLeave={e => { (e.currentTarget).style.background = "linear-gradient(135deg, rgba(245,183,0,0.12), rgba(245,183,0,0.04))"; (e.currentTarget).style.borderColor = "rgba(245,183,0,0.25)"; }}
           >
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>
             Desktop app

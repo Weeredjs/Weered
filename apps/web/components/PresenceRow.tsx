@@ -8,7 +8,7 @@ import { useEquippedFlair } from "../lib/useEquippedFlair";
 function PresenceFlair({ userId }: { userId?: string }) {
   const f = useEquippedFlair(userId || null);
   if (!f || f.kind !== "BADGE") return null;
-  return <FlairBadge flair={f as any} size="sm" />;
+  return <FlairBadge flair={f} size="sm" />;
 }
 import { avatarBg } from "../lib/avatarColor";
 

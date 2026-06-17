@@ -386,18 +386,16 @@ export default function LobbyHeroBar({
               </div>
               {description && (
                 <div
-                  style={
-                    {
-                      fontSize: 12,
-                      color: "rgba(148,163,184,0.72)",
-                      lineHeight: 1.4,
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      display: "-webkit-box",
-                      WebkitLineClamp: 2,
-                      WebkitBoxOrient: "vertical",
-                    } as React.CSSProperties
-                  }
+                  style={{
+                    fontSize: 12,
+                    color: "rgba(148,163,184,0.72)",
+                    lineHeight: 1.4,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    display: "-webkit-box",
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: "vertical",
+                  }}
                 >
                   {description}
                 </div>

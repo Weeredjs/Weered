@@ -184,7 +184,7 @@ export default function ForumPage({ lobbyId, lobbyName }: { lobbyId?: string; lo
         minWidth: 0,
         padding: embedded ? "12px 14px 40px" : "20px 16px 60px",
         overflow: "auto",
-        scrollbarWidth: "thin" as any,
+        scrollbarWidth: "thin",
         scrollbarColor: "rgba(255,255,255,.08) transparent",
       }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: embedded ? 12 : 20, gap: 8 }}>
@@ -539,7 +539,7 @@ function SectionSidebar({
       gap: 2,
       padding: "12px 8px",
       height: "100%", overflow: "auto",
-      scrollbarWidth: "thin" as any,
+      scrollbarWidth: "thin",
       scrollbarColor: "rgba(255,255,255,.08) transparent",
     }}>
       <SectionRow active={!activeId} onClick={() => onSelect("")} icon="📋" name="All" count={sections.reduce((sum, s) => sum + s.postCount, 0)} description="All posts in this lobby" />

@@ -84,7 +84,7 @@ export default function LobbyHeaderBar({
   const [roomResults, setRoomResults] = React.useState<RoomResult[]>([]);
   const [searching, setSearching] = React.useState(false);
 
-  const people: PersonLite[] = useRoomUsers(w?.activeRoomId) as any;
+  const people: PersonLite[] = useRoomUsers(w?.activeRoomId);
 
   const searchRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 

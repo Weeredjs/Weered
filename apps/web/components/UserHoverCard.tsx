@@ -505,7 +505,7 @@ export default function UserHoverCard({
               marginBottom: 8,
               display: "-webkit-box",
               WebkitLineClamp: 2,
-              WebkitBoxOrient: "vertical" as any,
+              WebkitBoxOrient: "vertical",
               overflow: "hidden",
             }}
           >

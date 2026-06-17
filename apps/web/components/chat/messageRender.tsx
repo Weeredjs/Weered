@@ -72,7 +72,7 @@ export function AttachmentBlock({
             transition: "filter .25s",
           }}
           onError={(e) => {
-            (e.currentTarget as HTMLImageElement).style.opacity = "0.2";
+            e.currentTarget.style.opacity = "0.2";
           }}
         />
         {needsBlur && (
@@ -178,7 +178,7 @@ export function ChatBody({
               display: "block",
             }}
             onError={(e) => {
-              (e.currentTarget as HTMLImageElement).style.display = "none";
+              e.currentTarget.style.display = "none";
             }}
           />
         </a>

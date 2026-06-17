@@ -757,5 +757,5 @@ const dialogInputStyle: React.CSSProperties = {
   fontFamily: "inherit",
   fontSize: 13,
   outline: "none",
-  boxSizing: "border-box" as any,
+  boxSizing: "border-box",
 };

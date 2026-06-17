@@ -872,7 +872,7 @@ function PgaYouTube({ accentColor }: { accentColor?: string }) {
                   overflow: "hidden", textOverflow: "ellipsis",
                   display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical",
                   lineHeight: 1.35, marginBottom: 4,
-                } as React.CSSProperties}>
+                }}>
                   {v.title}
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 6 }}>

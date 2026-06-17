@@ -38,7 +38,7 @@ export default function PushPrompt() {
           sub = await reg.pushManager.subscribe({
             userVisibleOnly: true,
             applicationServerKey: vapidData.key,
-          } as any);
+          });
         }
         if (!sub) return;
         await fetch(`${API}/push/subscribe`, {
@@ -112,7 +112,7 @@ export default function PushPrompt() {
       const sub = await reg.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: vapidData.key,
-      } as any);
+      });
 
       const token = localStorage.getItem("weered_token") || "";
       await fetch(`${API}/push/subscribe`, {

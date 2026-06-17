@@ -1186,7 +1186,7 @@ function TavernBoard({ lobbyId }: { lobbyId: string }) {
 
           <input style={S.input} value={activity} onChange={e => setActivity(e.target.value)} placeholder="Quest title (e.g. 'Lost Mine of Phandelver — Session 0')" maxLength={200} />
           <textarea
-            style={{ ...S.input, minHeight: 60, resize: "vertical" } as React.CSSProperties}
+            style={{ ...S.input, minHeight: 60, resize: "vertical" }}
             value={description}
             onChange={e => setDescription(e.target.value)}
             placeholder="Describe your quest, setting, expectations, schedule..."

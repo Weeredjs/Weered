@@ -88,7 +88,7 @@ export default function OverlayHost() {
         </div>
 
         <div className="h-[calc(100%-52px)] overflow-auto">
-          <SheetBody sheet={top as any} onClose={closeSheet} />
+          <SheetBody sheet={top} onClose={closeSheet} />
         </div>
       </div>
     </div>

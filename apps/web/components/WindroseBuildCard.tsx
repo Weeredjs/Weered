@@ -118,7 +118,7 @@ export default function WindroseBuildCard({
               transition: "opacity .35s",
             }}
             onLoad={(e) => {
-              (e.currentTarget as HTMLImageElement).style.opacity = "1";
+              e.currentTarget.style.opacity = "1";
             }}
           />
         )}

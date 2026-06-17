@@ -37,12 +37,12 @@ export function ModsTab() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search mods, authors, summaries..."
-          style={{ ...S.input, flex: 1, minWidth: 220 } as React.CSSProperties}
+          style={{ ...S.input, flex: 1, minWidth: 220 }}
         />
         <select
           value={sort}
           onChange={(e) => setSort(e.target.value as any)}
-          style={{ ...S.input, fontFamily: WR_FONT_MONO, minWidth: 130 } as React.CSSProperties}
+          style={{ ...S.input, fontFamily: WR_FONT_MONO, minWidth: 130 }}
         >
           <option value="endorsed">Most endorsed</option>
           <option value="downloads">Most downloaded</option>

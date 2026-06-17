@@ -12,7 +12,7 @@ async function fetchBuild(slug: string) {
     if (!r.ok) return null;
     const j = await r.json();
     if (!j?.ok) return null;
-    return j.build as any;
+    return j.build;
   } catch {
     return null;
   }

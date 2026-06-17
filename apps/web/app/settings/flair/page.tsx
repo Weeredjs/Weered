@@ -186,7 +186,7 @@ export default function FlairSettingsPage() {
                   transition: "background .12s, border-color .12s",
                 }}
               >
-                <FlairBadge flair={f as any} size={f.kind === "BANNER" ? "md" : "lg"} />
+                <FlairBadge flair={f} size={f.kind === "BANNER" ? "md" : "lg"} />
                 <div
                   style={{ fontSize: 13, fontWeight: 800, color: "var(--weered-text, #f5f5f4)" }}
                 >

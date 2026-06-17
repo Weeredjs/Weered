@@ -52,7 +52,7 @@ type Rule = {
 
 export default function AutoModAdminPage() {
   const router = useRouter();
-  const params = useParams() as any;
+  const params = useParams();
   const lobbyId = String(params?.id || "");
 
   const [rules, setRules] = useState<Rule[]>([]);

@@ -47,7 +47,7 @@ export function useEquippedFlair(
   userId: string | null | undefined,
   apiBase?: string,
 ): EquippedFlair | null {
-  const base = apiBase || (process.env.NEXT_PUBLIC_API_BASE as string) || "http://127.0.0.1:4000";
+  const base = apiBase || process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
   const [flair, setFlair] = useState<EquippedFlair | null>(() => {
     if (!userId) return null;
     const e = cache.get(userId);

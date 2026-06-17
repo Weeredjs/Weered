@@ -135,7 +135,7 @@ export default function FlairBadge({ flair, size = "sm", children }: FlairBadgeP
           alt=""
           style={{ width: "100%", height: "100%", objectFit: "cover" }}
           onError={(e) => {
-            (e.currentTarget as HTMLImageElement).style.display = "none";
+            e.currentTarget.style.display = "none";
           }}
         />
       ) : (

@@ -335,10 +335,10 @@ export default function AnalyticsTab() {
             transition: "border-color .2s",
           }}
           onMouseEnter={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.borderColor = C.purple;
+            e.currentTarget.style.borderColor = C.purple;
           }}
           onMouseLeave={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.borderColor = C.border;
+            e.currentTarget.style.borderColor = C.border;
           }}
         >
           <svg

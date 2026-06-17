@@ -522,7 +522,7 @@ export function BountiesTab() {
               value={target}
               onChange={(e) => setTarget(e.target.value.slice(0, 60))}
               placeholder="BlackbeardXL · Kraken tooth · Rum run to Tortuga"
-              style={S.input as React.CSSProperties}
+              style={S.input}
             />
             <div style={{ fontSize: 9, color: PAL.parchDim, marginTop: 3, fontStyle: "italic" }}>
               Sailor, beast, cargo, location — whatever you want hunted.
@@ -534,7 +534,7 @@ export function BountiesTab() {
               value={server}
               onChange={(e) => setServer(e.target.value.slice(0, 120))}
               placeholder="play.myserver.com"
-              style={S.input as React.CSSProperties}
+              style={S.input}
             />
           </div>
           <div>
@@ -548,7 +548,7 @@ export function BountiesTab() {
               onChange={(e) =>
                 setAmount(Math.max(100, Math.min(500000, Number(e.target.value) || 100)))
               }
-              style={{ ...S.input, fontVariantNumeric: "tabular-nums" } as React.CSSProperties}
+              style={{ ...S.input, fontVariantNumeric: "tabular-nums" }}
             />
           </div>
         </div>
@@ -558,14 +558,12 @@ export function BountiesTab() {
             value={reason}
             onChange={(e) => setReason(e.target.value.slice(0, 400))}
             placeholder="What counts as delivered. A grudge, a trade, a dare — spell it out so the hunter knows what proof you'll accept."
-            style={
-              {
-                ...S.input,
-                minHeight: 54,
-                fontFamily: WR_FONT_SERIF,
-                fontStyle: "italic",
-              } as React.CSSProperties
-            }
+            style={{
+              ...S.input,
+              minHeight: 54,
+              fontFamily: WR_FONT_SERIF,
+              fontStyle: "italic",
+            }}
           />
         </div>
         {err && (

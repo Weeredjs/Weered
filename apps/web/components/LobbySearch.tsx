@@ -569,10 +569,10 @@ export default function LobbySearch({
           setOpen(true);
         }}
         onFocus={(e) => {
-          (e.target as HTMLInputElement).style.borderColor = "rgba(255,255,255,.15)";
+          e.target.style.borderColor = "rgba(255,255,255,.15)";
           if (q.trim().length >= 2) setOpen(true);
         }}
-        onBlur={(e) => ((e.target as HTMLInputElement).style.borderColor = "rgba(255,255,255,.07)")}
+        onBlur={(e) => (e.target.style.borderColor = "rgba(255,255,255,.07)")}
         onKeyDown={onKeyDown}
         placeholder={placeholder}
         style={{

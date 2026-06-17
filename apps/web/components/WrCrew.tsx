@@ -184,15 +184,13 @@ export function CrewTab({ lobbyId }: { lobbyId: string }) {
           value={note}
           onChange={(e) => setNote(e.target.value.slice(0, 240))}
           placeholder="Looking for 3 for a lighthouse run. Mic preferred. PvE, chill pace."
-          style={
-            {
-              ...S.input,
-              minHeight: 64,
-              fontFamily: WR_FONT_SERIF,
-              fontSize: 14,
-              fontStyle: "italic",
-            } as React.CSSProperties
-          }
+          style={{
+            ...S.input,
+            minHeight: 64,
+            fontFamily: WR_FONT_SERIF,
+            fontSize: 14,
+            fontStyle: "italic",
+          }}
         />
         <div
           style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap", alignItems: "center" }}
@@ -200,7 +198,7 @@ export function CrewTab({ lobbyId }: { lobbyId: string }) {
           <select
             value={mode}
             onChange={(e) => setMode(e.target.value)}
-            style={{ ...S.input, width: "auto" } as React.CSSProperties}
+            style={{ ...S.input, width: "auto" }}
           >
             {WR_MODES.map((m) => (
               <option key={m} value={m}>
@@ -211,7 +209,7 @@ export function CrewTab({ lobbyId }: { lobbyId: string }) {
           <select
             value={region}
             onChange={(e) => setRegion(e.target.value)}
-            style={{ ...S.input, width: "auto" } as React.CSSProperties}
+            style={{ ...S.input, width: "auto" }}
           >
             {WR_REGIONS.map((r) => (
               <option key={r} value={r}>
@@ -227,7 +225,7 @@ export function CrewTab({ lobbyId }: { lobbyId: string }) {
               max={7}
               value={slots}
               onChange={(e) => setSlots(Math.max(1, Math.min(7, Number(e.target.value) || 1)))}
-              style={{ ...S.input, width: 60, textAlign: "center" } as React.CSSProperties}
+              style={{ ...S.input, width: 60, textAlign: "center" }}
             />
           </div>
           <div style={{ flex: 1 }} />
@@ -1173,7 +1171,7 @@ export function CrewProfileEditor({
             <input
               value={name}
               onChange={(e) => setName(e.target.value.slice(0, 60))}
-              style={S.input as React.CSSProperties}
+              style={S.input}
             />
           </Labeled>
           <Labeled label="Tag">
@@ -1181,7 +1179,7 @@ export function CrewProfileEditor({
               value={tag}
               onChange={(e) => setTag(e.target.value.toUpperCase().slice(0, 8))}
               placeholder="[WR]"
-              style={S.input as React.CSSProperties}
+              style={S.input}
             />
           </Labeled>
         </div>
@@ -1191,14 +1189,12 @@ export function CrewProfileEditor({
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value.slice(0, 800))}
-              style={
-                {
-                  ...S.input,
-                  minHeight: 70,
-                  fontFamily: WR_FONT_SERIF,
-                  fontStyle: "italic",
-                } as React.CSSProperties
-              }
+              style={{
+                ...S.input,
+                minHeight: 70,
+                fontFamily: WR_FONT_SERIF,
+                fontStyle: "italic",
+              }}
             />
           </Labeled>
         </div>
@@ -1209,7 +1205,7 @@ export function CrewProfileEditor({
               value={logoUrl}
               onChange={(e) => setLogoUrl(e.target.value.slice(0, 500))}
               placeholder="https://..."
-              style={S.input as React.CSSProperties}
+              style={S.input}
             />
           </Labeled>
           <Labeled label="Banner URL">
@@ -1217,7 +1213,7 @@ export function CrewProfileEditor({
               value={bannerUrl}
               onChange={(e) => setBannerUrl(e.target.value.slice(0, 500))}
               placeholder="https://..."
-              style={S.input as React.CSSProperties}
+              style={S.input}
             />
           </Labeled>
         </div>
@@ -1230,20 +1226,18 @@ export function CrewProfileEditor({
               value={accentColor}
               onChange={(e) => setAccentColor(e.target.value.slice(0, 7))}
               placeholder="#c9a066"
-              style={
-                {
-                  ...S.input,
-                  fontFamily: WR_FONT_MONO,
-                  textTransform: "lowercase",
-                } as React.CSSProperties
-              }
+              style={{
+                ...S.input,
+                fontFamily: WR_FONT_MONO,
+                textTransform: "lowercase",
+              }}
             />
           </Labeled>
           <Labeled label="Tag shape">
             <select
               value={tagShape}
               onChange={(e) => setTagShape(e.target.value)}
-              style={{ ...S.input, fontFamily: WR_FONT_MONO } as React.CSSProperties}
+              style={{ ...S.input, fontFamily: WR_FONT_MONO }}
             >
               <option value="rounded">Rounded</option>
               <option value="square">Square</option>
@@ -1255,7 +1249,7 @@ export function CrewProfileEditor({
               value={homePort}
               onChange={(e) => setHomePort(e.target.value.slice(0, 80))}
               placeholder="Tortuga · EU-3"
-              style={S.input as React.CSSProperties}
+              style={S.input}
             />
           </Labeled>
         </div>
@@ -1293,15 +1287,13 @@ export function CrewProfileEditor({
                 value={recruitingNote}
                 onChange={(e) => setRecruitingNote(e.target.value.slice(0, 400))}
                 placeholder="Looking for 2 cannoneers, 40+ level, mic preferred. No drama."
-                style={
-                  {
-                    ...S.input,
-                    minHeight: 50,
-                    fontFamily: WR_FONT_SERIF,
-                    fontStyle: "italic",
-                    fontSize: 12,
-                  } as React.CSSProperties
-                }
+                style={{
+                  ...S.input,
+                  minHeight: 50,
+                  fontFamily: WR_FONT_SERIF,
+                  fontStyle: "italic",
+                  fontSize: 12,
+                }}
               />
             </div>
           )}

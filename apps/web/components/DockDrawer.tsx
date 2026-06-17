@@ -93,13 +93,13 @@ export default function DockDrawer() {
     const onToggle = () => setOpen((v) => !v);
     const onOpen = () => setOpen(true);
     const onClose = () => setOpen(false);
-    window.addEventListener("weered:dock:toggle", onToggle as any);
-    window.addEventListener("weered:dock:open", onOpen as any);
-    window.addEventListener("weered:dock:close", onClose as any);
+    window.addEventListener("weered:dock:toggle", onToggle);
+    window.addEventListener("weered:dock:open", onOpen);
+    window.addEventListener("weered:dock:close", onClose);
     return () => {
-      window.removeEventListener("weered:dock:toggle", onToggle as any);
-      window.removeEventListener("weered:dock:open", onOpen as any);
-      window.removeEventListener("weered:dock:close", onClose as any);
+      window.removeEventListener("weered:dock:toggle", onToggle);
+      window.removeEventListener("weered:dock:open", onOpen);
+      window.removeEventListener("weered:dock:close", onClose);
     };
   }, []);
 

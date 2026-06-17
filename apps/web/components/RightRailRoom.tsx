@@ -45,7 +45,7 @@ function extractParticipants(ctx: any, roomId: string, liveUsers?: any[]): Perso
   ];
   for (const v of tries) {
     if (!v) continue;
-    const arr = Array.isArray(v) ? v : Object.values(v as any);
+    const arr = Array.isArray(v) ? v : Object.values(v);
     if (arr.length) return arr.map(normUser).filter(Boolean);
   }
   const me = ctx?.me ?? ctx?.user;

@@ -387,7 +387,7 @@ export function ChatComposer({
             outline: "none",
             fontFamily: "inherit",
             cursor: canType ? "text" : "not-allowed",
-            boxSizing: "border-box" as any,
+            boxSizing: "border-box",
           }}
           onKeyDown={(e) => {
             if (mentionState && mentionCandidates.length > 0) {

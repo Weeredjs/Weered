@@ -51,11 +51,7 @@ function extractParticipants(ctx: any, roomId?: string): Person[] {
   for (const path of tries) {
     const v = get(ctx, path.filter(Boolean));
     if (!v) continue;
-    const vv: any = Array.isArray(v)
-      ? v
-      : v && typeof v === "object"
-        ? Object.values(v as any)
-        : null;
+    const vv: any = Array.isArray(v) ? v : v && typeof v === "object" ? Object.values(v) : null;
     if (Array.isArray(vv) && vv.length) return vv.map(normUser).filter(Boolean);
   }
 

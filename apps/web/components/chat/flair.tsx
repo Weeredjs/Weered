@@ -8,7 +8,7 @@ import { API } from "./chatShared";
 export function ChatFlair({ userId, size = "sm" }: { userId: string; size?: "sm" | "md" | "lg" }) {
   const f = useEquippedFlair(userId);
   if (!f || f.kind !== "BADGE") return null;
-  return <FlairBadge flair={f as any} size={size} />;
+  return <FlairBadge flair={f} size={size} />;
 }
 
 export type CrewFlairData = {

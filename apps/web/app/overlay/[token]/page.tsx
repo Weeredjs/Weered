@@ -42,7 +42,7 @@ function initials(name: string): string {
 
 export default function OverlayPage() {
   const params = useParams<{ token: string }>();
-  const token = (params?.token as string) || "";
+  const token = params?.token || "";
   const [state, setState] = useState<OverlayState | null>(null);
   const [phase, setPhase] = useState<"loading" | "ok" | "notfound" | "error">("loading");
   const [errMsg, setErrMsg] = useState<string>("");

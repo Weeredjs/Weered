@@ -186,7 +186,7 @@ export default function MapContent() {
         const fillOpacity = 0.08 + intensity * 0.3;
         const borderOpacity = 0.15 + intensity * 0.35;
 
-        const polygon = L.polygon(hex.boundary as [number, number][], {
+        const polygon = L.polygon(hex.boundary, {
           color,
           weight: 1,
           fillColor: color,
