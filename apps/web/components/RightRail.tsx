@@ -80,8 +80,8 @@ function useLobbyPresence(lobbyId: string) {
         if (j?.ok && Array.isArray(j.users)) setUsers(j.users);
       } catch {}
     };
-    load();
-    loadRef.current = load;
+    void load();
+    loadRef.current = () => void load();
     const t = setInterval(load, 60000);
     return () => { alive = false; clearInterval(t); };
   }, [lobbyId]);
