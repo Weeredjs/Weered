@@ -97,9 +97,7 @@ function LoginForm() {
       });
       const j = await r.json().catch(() => ({}) as any);
       if (!r.ok) throw new Error(j?.error || j?.message || `Error ${r.status}`);
-      const tok = String(j?.token || "");
-      if (!tok) throw new Error("No token returned.");
-      void 0;
+      // Web auth is the httpOnly cookie set by the server; no token in body.
       try {
         document.documentElement.setAttribute("data-weered-authed", "1");
       } catch {}
