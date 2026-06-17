@@ -1,5 +1,22 @@
 # Weered
 
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=Weeredjs_Weered&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=Weeredjs_Weered)
+[![Reliability](https://sonarcloud.io/api/project_badges/measure?project=Weeredjs_Weered&metric=reliability_rating)](https://sonarcloud.io/summary/new_code?id=Weeredjs_Weered)
+[![Security](https://sonarcloud.io/api/project_badges/measure?project=Weeredjs_Weered&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=Weeredjs_Weered)
+[![Maintainability](https://sonarcloud.io/api/project_badges/measure?project=Weeredjs_Weered&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=Weeredjs_Weered)
+[![CI](https://github.com/Weeredjs/Weered/actions/workflows/ci.yml/badge.svg)](https://github.com/Weeredjs/Weered/actions/workflows/ci.yml)
+[![License: Elastic 2.0](https://img.shields.io/badge/license-Elastic%202.0-2f6df6.svg)](./LICENSE)
+
+> **State of the project (June 2026): public beta, now source-available.**
+> The whole platform is on GitHub under the Elastic License 2.0. The Minecraft
+> mod and the shared types package are MIT. Read it, build it, self-host it,
+> send patches. The one thing you cannot do is resell it as a hosted service.
+> See [LICENSING.md](./LICENSING.md).
+>
+> Run it through SonarCloud, CodeRabbit, or whatever you trust. The architecture
+> is opinionated, the business logic is server-side only, and it ships most days.
+> Constructive teardowns are welcome. See [Code quality](#code-quality) below.
+
 Real-time community platform for gaming — lobbies, rooms, crews, presence, and game-aware modules. A modern take on the MPlayer-era game lobby (1996), rebuilt for 2026.
 
 [weered.ca](https://weered.ca) · [About](https://weered.ca/about) · [Desktop](https://weered.ca/desktop)
@@ -23,6 +40,30 @@ packages/
   shared/    TypeScript types + constants shared across clients
 .github/
   workflows/ CI — cross-platform desktop release builds
+```
+
+```
+                          ┌──────────────────────────────┐
+   Steam / Xbox / PSN     │            CLIENTS           │
+   Twitch / Bungie / Riot │  web   mobile   desktop  mod │
+   EVE / PoE / Helldivers │   │       │        │      │  │
+          presence +      └───┼───────┼────────┼──────┼──┘
+          game data           │  HTTPS (REST) + WebSocket  (cookie auth)
+                              ▼       ▼        ▼      ▼
+                       ┌────────────────────────────────────┐
+                       │     apps/api  (Fastify 5)           │
+                       │  ALL business logic lives here:     │
+                       │  permissions · scoring · paper      │
+                       │  economy · lobby state · notoriety  │
+                       │  routes/*  ·  sockets/*  ·  lib/*    │
+                       └───────┬───────────────────┬─────────┘
+                               │                   │
+                      Prisma   ▼                   ▼  LiveKit
+                       ┌──────────────┐     ┌──────────────┐
+                       │  PostgreSQL  │     │ voice / video│
+                       └──────────────┘     └──────────────┘
+
+   Edge: Caddy (TLS + CORS allowlist) · Process mgmt: PM2 · Errors: Sentry
 ```
 
 **The architectural rule:** business logic lives in the API. Permissions, scoring, the paper economy, friend logic, lobby joining, notoriety — every rule is server-side, decomposed across `apps/api/src/routes/*`. Clients render and submit; they never decide.
@@ -72,6 +113,27 @@ Closed-loop virtual economy:
 
 Sits alongside a Stripe-backed tier system (Innocent / Indicted / Felon / Kingpin) for paid features.
 
+## Code quality
+
+Continuous analysis runs in CI on every push (see the badges above). Current
+standing on the full monorepo:
+
+- **Reliability A, Security A, Maintainability A.**
+- **0 bugs, 0 vulnerabilities, 0 open security hotspots.**
+- Technical-debt ratio under 0.5% (the threshold for an A is 5%).
+
+There is still a backlog of low-severity maintainability findings, mostly
+redundant-cast and cognitive-complexity flags. A note on those, since people
+will run their own scanners: a large share of the `S4325` "redundant cast"
+findings are false positives against this codebase. SonarQube's type model is
+weaker than the TypeScript compiler's, so it flags casts that `tsc` actually
+requires to narrow `unknown` / `{}` from JSON, Prisma rows, and third-party game
+APIs. Removing them blindly breaks the build. We clear the genuinely-redundant
+ones in supervised batches and accept the rest as a stability tradeoff. The
+ratings and the quality gate are what we hold the line on, and those are green.
+
+If you find something real, open an issue. That is the point of going public.
+
 ## Deploying
 
 Guardrails gate every deploy: the API type gate (`tsc --noEmit`) must be clean and no source file may exceed the size tripwire (`scripts/check.sh`). One command:
@@ -83,9 +145,22 @@ bash scripts/deploy.sh api    # API only: guardrails -> restart api -> smoke tes
 
 Runtime: the API is esbuild-bundled to `dist/` and run with Node; the web app is `next build` + `next start`; both run under PM2 on the droplet. Full procedures in [`DEVELOPMENT.md`](./DEVELOPMENT.md).
 
+Local setup, prerequisites, and the dev loop are in [`DEVELOPMENT.md`](./DEVELOPMENT.md). Contribution conventions are in [`CONTRIBUTING.md`](./CONTRIBUTING.md).
+
+## License
+
+Source-available. The core platform is under the **Elastic License 2.0**
+([`LICENSE`](./LICENSE)); `apps/mod` and `packages/shared` are **MIT**. The
+short version: read it, build it, self-host it for yourself, send patches. You
+may not offer it to third parties as a hosted or managed service. Full
+directory-by-directory mapping in [`LICENSING.md`](./LICENSING.md).
+
+Security reports: see [`SECURITY.md`](./SECURITY.md). Licensing questions:
+**legal@weered.ca**.
+
 ## Status
 
-Public beta, live at [weered.ca](https://weered.ca). In active development — ships most days. Closed-source for now.
+Public beta, live at [weered.ca](https://weered.ca). In active development — ships most days. Source-available as of June 2026.
 
 ## Contact
 

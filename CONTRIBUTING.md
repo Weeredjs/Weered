@@ -1,6 +1,25 @@
 # Contributing to Weered
 
-Closed-source, but these are the conventions the codebase actually enforces.
+Weered is source-available (see [`LICENSING.md`](./LICENSING.md)). The code is
+open to read, fork, and patch. These are the conventions the codebase actually
+enforces.
+
+## Scope of contributions
+
+This is a live platform run by a small team, so be realistic about what lands:
+
+- **Bug reports and security reports are the most valuable thing you can send.**
+  For security, follow [`SECURITY.md`](./SECURITY.md) — do not open a public issue.
+- **Small, focused PRs** (a real bug fix, a missing edge case, a doc fix) are
+  welcome and reviewed when time allows.
+- **Large or speculative PRs** (new modules, architecture changes) will probably
+  not be merged without prior discussion — open an issue first so nobody wastes
+  effort. Direction is opinionated and held deliberately tight.
+- By opening a PR you agree your contribution is licensed under the same license
+  as the files you touch (Elastic License 2.0 for the core; MIT for `apps/mod`
+  and `packages/shared`).
+
+There is no guaranteed response SLA. Issues and PRs are triaged in batches.
 
 ## Golden rules
 
