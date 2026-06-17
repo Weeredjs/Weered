@@ -60,7 +60,9 @@ describe("notoriety / economy ladder", () => {
   it("shared NOTORIETY_ACTIONS mirrors the API config (no drift)", () => {
     const { actions } = prodNotoriety();
     expect(actions.length).toBeGreaterThan(0);
-    expect([...actions].sort()).toEqual([...NOTORIETY_ACTIONS].sort());
+    expect([...actions].sort((a, b) => a.localeCompare(b))).toEqual(
+      [...NOTORIETY_ACTIONS].sort((a, b) => a.localeCompare(b)),
+    );
   });
 
   it("shared NOTORIETY_RANKS mirrors the API config (no drift)", () => {

@@ -833,7 +833,7 @@ function SheetBody({
           <div className="dnd-section-label">Spell Slots</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
             {Object.keys(c.spellSlots)
-              .sort()
+              .sort((a, b) => Number(a) - Number(b))
               .map((level) => {
                 const slot = c.spellSlots[level];
                 if (!slot || slot.max <= 0) return null;
