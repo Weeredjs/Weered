@@ -274,6 +274,8 @@ export default function SettingsSheet({ initialTab }: { initialTab?: string } = 
                 }}
                 onMouseOver={(e) => { if (!active) (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.04)"; }}
                 onMouseOut={(e) => { if (!active) (e.currentTarget as HTMLElement).style.background = "transparent"; }}
+                onFocus={(e) => { if (!active) (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.04)"; }}
+                onBlur={(e) => { if (!active) (e.currentTarget as HTMLElement).style.background = "transparent"; }}
               >
                 <span style={{ width: 16, textAlign: "center", opacity: 0.85, color: active ? "var(--weered-accent-text, rgba(196,181,253,.95))" : "inherit" }}>{t.icon}</span>
                 {t.label}
@@ -512,6 +514,8 @@ export function Section({ title, children, onReset }: { title: string; children:
             title={`Reset ${title} to defaults`}
             onMouseOver={(e) => { (e.currentTarget as HTMLElement).style.color = "var(--weered-text, rgba(243,244,246,.9))"; }}
             onMouseOut={(e) => { (e.currentTarget as HTMLElement).style.color = "var(--weered-muted, rgba(148,163,184,.6))"; }}
+            onFocus={(e) => { (e.currentTarget as HTMLElement).style.color = "var(--weered-text, rgba(243,244,246,.9))"; }}
+            onBlur={(e) => { (e.currentTarget as HTMLElement).style.color = "var(--weered-muted, rgba(148,163,184,.6))"; }}
           >
             Reset ⟲
           </button>

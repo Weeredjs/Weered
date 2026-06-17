@@ -110,6 +110,14 @@ export function ChatMembers({ ctx, liveRoomUsers, openHover, hoverClose }: ChatM
                       (e.currentTarget as HTMLElement).style.background = "transparent";
                       (e.currentTarget as HTMLElement).style.borderColor = "transparent";
                     }}
+                    onFocus={(e) => {
+                      (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.04)";
+                      (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,.08)";
+                    }}
+                    onBlur={(e) => {
+                      (e.currentTarget as HTMLElement).style.background = "transparent";
+                      (e.currentTarget as HTMLElement).style.borderColor = "transparent";
+                    }}
                   >
                     <div
                       style={{

@@ -1068,7 +1068,6 @@ async function main() {
     }
   }
 
-  const newsCache = new Map<string, { articles: any[]; cachedAt: number }>();
   const NEWS_CACHE_TTL = 5 * 60 * 1000;
 
   async function runNewsWorker() {
@@ -1108,7 +1107,6 @@ async function main() {
         where: { publishedAt: { lt: new Date(Date.now() - 72 * 3600 * 1000) } },
       });
 
-      newsCache.clear();
       log.log(`[news] worker done: ${upserted} upserted from ${deduped.length} articles`);
     } catch (e) {
       log.error("[news] worker error:", e);
