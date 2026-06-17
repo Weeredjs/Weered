@@ -45,6 +45,15 @@ import { avatarBg as avatarColor } from "../../lib/avatarColor";
 import GtaModulePanel from "./GtaModulePanel";
 import DndStage from "./DndStage";
 
+// Decode HTML entities in untrusted external titles WITHOUT executing markup:
+// a <textarea> is RCDATA, so any tags inside become inert text (no XSS).
+function decodeEntities(input: string): string {
+  if (typeof document === "undefined") return input;
+  const el = document.createElement("textarea");
+  el.innerHTML = input;
+  return el.value;
+}
+
 // Game panels are code-split: a room only downloads the module it runs.
 const stageLoading = () => (
   <div style={{ flex: 1, display: "grid", placeItems: "center", minHeight: 200, color: "rgba(148,163,184,.4)", fontSize: 12 }}>Loading module\u2026</div>
@@ -365,8 +374,7 @@ function YoutubeStage({ roomId, onClose, style }: { roomId: string; onClose: () 
                   {r.thumbnail && <img src={r.thumbnail} alt="Video thumbnail" style={{ width: 64, height: 36, objectFit: "cover", borderRadius: 4, flexShrink: 0, background: "#111" }} />}
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 10, fontWeight: 600, color: "rgba(243,244,246,.85)", lineHeight: 1.2, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as any }}
-                      dangerouslySetInnerHTML={{ __html: r.title }}
-                    />
+                    >{decodeEntities(r.title)}</div>
                     <div style={{ fontSize: 9, color: "rgba(148,163,184,.4)", marginTop: 1 }}>{r.channel}</div>
                   </div>
                 </button>
@@ -452,8 +460,7 @@ function YoutubeStage({ roomId, onClose, style }: { roomId: string; onClose: () 
                     )}
                     <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 2 }}>
                       <div style={{ fontSize: 12, fontWeight: 600, color: "rgba(243,244,246,.9)", lineHeight: 1.3, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as any }}
-                        dangerouslySetInnerHTML={{ __html: r.title }}
-                      />
+                      >{decodeEntities(r.title)}</div>
                       <div style={{ fontSize: 10, color: "rgba(148,163,184,.5)", marginTop: 2 }}>{r.channel}</div>
                     </div>
                   </button>
