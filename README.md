@@ -3,7 +3,6 @@
 [![Security](https://sonarcloud.io/api/project_badges/measure?project=Weeredjs_Weered&metric=security_rating)](https://sonarcloud.io/summary/overall?id=Weeredjs_Weered)
 [![Reliability](https://sonarcloud.io/api/project_badges/measure?project=Weeredjs_Weered&metric=reliability_rating)](https://sonarcloud.io/summary/overall?id=Weeredjs_Weered)
 [![Maintainability](https://sonarcloud.io/api/project_badges/measure?project=Weeredjs_Weered&metric=sqale_rating)](https://sonarcloud.io/summary/overall?id=Weeredjs_Weered)
-[![Security Review](https://sonarcloud.io/api/project_badges/measure?project=Weeredjs_Weered&metric=security_review_rating)](https://sonarcloud.io/summary/overall?id=Weeredjs_Weered)
 [![CI](https://github.com/Weeredjs/Weered/actions/workflows/ci.yml/badge.svg)](https://github.com/Weeredjs/Weered/actions/workflows/ci.yml)
 [![License: Elastic 2.0](https://img.shields.io/badge/license-Elastic%202.0-2f6df6.svg)](./LICENSE)
 
