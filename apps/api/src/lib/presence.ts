@@ -267,16 +267,16 @@ export async function runPresencePoll() {
     }
 
     for (const u of users) {
-      const tw = u.twitchLogin ? twitchData[(u.twitchLogin as string).toLowerCase()] : undefined;
-      const xb = u.xboxXuid ? xboxData[u.xboxXuid as string] : undefined;
-      const st = u.steamId ? steamData[u.steamId as string] : undefined;
+      const tw = u.twitchLogin ? twitchData[u.twitchLogin.toLowerCase()] : undefined;
+      const xb = u.xboxXuid ? xboxData[u.xboxXuid] : undefined;
+      const st = u.steamId ? steamData[u.steamId] : undefined;
       const primary =
         tw && tw.source === "TWITCH" ? tw : xb && xb.source === "XBOX" ? xb : (st ?? null);
       if (primary === undefined) continue;
       await prisma.user
         .update({
           where: { id: u.id },
-          data: { livePresence: primary as any, presenceCheckedAt: new Date() },
+          data: { livePresence: primary, presenceCheckedAt: new Date() },
         })
         .catch(swallow);
 
@@ -287,8 +287,8 @@ export async function runPresencePoll() {
           (entry as any).livePresence = primary ?? null;
           broadcast(room, { type: "presence:join", roomId: room.roomId, user: entry });
         }
-        for (const s of ((_wss as any)?.clients ?? []) as any) {
-          if (s?.user?.id === u.id) (s.user as any).livePresence = primary ?? null;
+        for (const s of _wss?.clients ?? []) {
+          if (s?.user?.id === u.id) s.user.livePresence = primary ?? null;
         }
       } catch (e) {
         swallow(e);

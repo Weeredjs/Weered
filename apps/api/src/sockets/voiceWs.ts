@@ -28,9 +28,9 @@ export function handleVoice(ws: any, msg: any, opts: Opts): void {
   }
   function pushVoicePermission(room: any, userId: string) {
     for (const sock of room.sockets) {
-      if ((sock as any).user?.id === userId) {
+      if (sock.user?.id === userId) {
         try {
-          send(sock as any, { type: "voice:permission", roomId: room.roomId, userId });
+          send(sock, { type: "voice:permission", roomId: room.roomId, userId });
         } catch (e) {
           swallow(e);
         }

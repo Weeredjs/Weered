@@ -737,17 +737,17 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
             tier: u.tier,
             avatarColor: u.avatarColor,
             avatar: u.avatar,
-            isAway: Boolean((u as any).isAway),
-            steamId: (u as any).steamId,
-            twitchLogin: (u as any).twitchLogin,
-            xboxGamertag: (u as any).xboxGamertag,
-            livePresence: (u as any).livePresence ?? null,
-            pillBgColor: (u as any).pillBgColor ?? null,
-            pillAccentColor: (u as any).pillAccentColor ?? null,
-            statusText: (u as any).statusText ?? null,
-            statusEmoji: (u as any).statusEmoji ?? null,
-            nameEffect: (u as any).nameEffect ?? null,
-            avatarFrame: (u as any).avatarFrame ?? null,
+            isAway: Boolean(u.isAway),
+            steamId: u.steamId,
+            twitchLogin: u.twitchLogin,
+            xboxGamertag: u.xboxGamertag,
+            livePresence: u.livePresence ?? null,
+            pillBgColor: u.pillBgColor ?? null,
+            pillAccentColor: u.pillAccentColor ?? null,
+            statusText: u.statusText ?? null,
+            statusEmoji: u.statusEmoji ?? null,
+            nameEffect: u.nameEffect ?? null,
+            avatarFrame: u.avatarFrame ?? null,
             roomId: room.roomId,
             roomName: room.name || room.roomId,
           });
@@ -878,9 +878,9 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
         roleNames,
         joinMode: lobby.joinMode || "OPEN",
         joinPassword: lobby.joinPassword || null,
-        blockedWords: (lobby as any).blockedWords || [],
-        blockedDomains: (lobby as any).blockedDomains || [],
-        newAccountChatHours: (lobby as any).newAccountChatHours ?? 0,
+        blockedWords: lobby.blockedWords || [],
+        blockedDomains: lobby.blockedDomains || [],
+        newAccountChatHours: lobby.newAccountChatHours ?? 0,
       },
       members,
       rooms: roomList.map((r: any) => ({
@@ -1413,7 +1413,7 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
         for (const s of liveRoom.sockets) {
           send(s, { type: "room:deleted", roomId });
           try {
-            (s as any).close(4000, "room:deleted");
+            s.close(4000, "room:deleted");
           } catch (e) {
             swallow(e);
           }

@@ -40,7 +40,7 @@ export default async function tradingRoutes(app: FastifyInstance, opts: Opts) {
 
   type PaperMode = "CASUAL" | "RANKED";
   function parseMode(req: any): PaperMode {
-    const m = String(req?.query?.mode || (req?.body as any)?.mode || "CASUAL").toUpperCase();
+    const m = String(req?.query?.mode || req?.body?.mode || "CASUAL").toUpperCase();
     return m === "RANKED" ? "RANKED" : "CASUAL";
   }
   function startBalanceFor(mode: PaperMode): number {

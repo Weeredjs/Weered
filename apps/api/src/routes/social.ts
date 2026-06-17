@@ -58,7 +58,7 @@ export default async function socialRoutes(app: FastifyInstance, opts: Opts) {
           presenceMap.set((p as any).id, {
             roomId: rid,
             roomName: rs.name || rid,
-            isAway: Boolean((entry as any).isAway),
+            isAway: Boolean(entry.isAway),
           });
           break;
         }
@@ -95,7 +95,7 @@ export default async function socialRoutes(app: FastifyInstance, opts: Opts) {
       const roomId = pres?.roomId ?? null;
       const roomName = pres?.roomName ?? null;
       const crew = crewByUser.get(p.id) || null;
-      const joinOff = String((p as any).joinPolicy || "FRIENDS") === "OFF";
+      const joinOff = String(p.joinPolicy || "FRIENDS") === "OFF";
       return {
         ...p,
         joinPolicy: undefined,
@@ -639,8 +639,8 @@ export default async function socialRoutes(app: FastifyInstance, opts: Opts) {
         id: r.id,
         userId: r.blockedId,
         createdAt: r.createdAt.toISOString(),
-        name: (nameMap.get(r.blockedId) as any)?.name || r.blockedId,
-        avatarColor: (nameMap.get(r.blockedId) as any)?.avatarColor || null,
+        name: nameMap.get(r.blockedId)?.name || r.blockedId,
+        avatarColor: nameMap.get(r.blockedId)?.avatarColor || null,
         reason: r.reason || null,
       })),
     });

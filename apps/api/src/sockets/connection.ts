@@ -49,10 +49,10 @@ export async function handleAuthHello(
         tier: ws.user.tier || "INNOCENT",
         avatarColor: ws.user.avatarColor,
         avatar: ws.user.avatar,
-        panelBgColor: (ws.user as any).panelBgColor,
-        panelAccentColor: (ws.user as any).panelAccentColor,
-        pillBgColor: (ws.user as any).pillBgColor,
-        pillAccentColor: (ws.user as any).pillAccentColor,
+        panelBgColor: ws.user.panelBgColor,
+        panelAccentColor: ws.user.panelAccentColor,
+        pillBgColor: ws.user.pillBgColor,
+        pillAccentColor: ws.user.pillAccentColor,
       },
     });
     awardNotoriety(ws.user.id, "DAILY_ACTIVE").catch(swallow);
@@ -76,7 +76,7 @@ export async function handleAuthHello(
         };
         for (const mate of mates) {
           for (const sock of wss.clients) {
-            if ((sock as any).user?.id === mate.userId) send(sock as any, payload);
+            if (sock.user?.id === mate.userId) send(sock, payload);
           }
         }
       } catch (e) {
@@ -132,7 +132,7 @@ export function handleClose(
             };
             for (const mate of mates) {
               for (const sock of wss.clients) {
-                if ((sock as any).user?.id === mate.userId) send(sock as any, payload);
+                if (sock.user?.id === mate.userId) send(sock, payload);
               }
             }
           } catch (e) {

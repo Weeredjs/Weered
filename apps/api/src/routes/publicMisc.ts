@@ -69,7 +69,7 @@ export default async function publicMiscRoutes(app: FastifyInstance, opts: Opts)
   });
 
   app.get("/feed/hot", async (req, reply) => {
-    const qs = (req as any).query as any;
+    const qs = (req as any).query;
     const category = qs?.category && qs.category !== "all" ? String(qs.category) : undefined;
     const domain = qs?.domain ? String(qs.domain) : undefined;
     const sort = qs?.sort === "new" ? { postedAt: "desc" as const } : { heat: "desc" as const };

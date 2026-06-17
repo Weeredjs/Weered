@@ -415,17 +415,17 @@ export default async function roomsRoutes(app: FastifyInstance, opts: Opts) {
             live.activeModule = null;
             live.ytState = null;
             for (const sock of live.sockets)
-              send(sock as any, { type: "module:state", roomId: live.roomId, activeModule: null });
+              send(sock, { type: "module:state", roomId: live.roomId, activeModule: null });
           }
           for (const sock of live.sockets)
-            send(sock as any, {
+            send(sock, {
               type: "room:settings",
               roomId: live.roomId,
               disabledModules: live.disabledModules,
             });
         }
         const payload = buildStatePayload(live);
-        for (const sock of live.sockets) send(sock as any, payload);
+        for (const sock of live.sockets) send(sock, payload);
       }
 
       return reply.send({
@@ -437,9 +437,7 @@ export default async function roomsRoutes(app: FastifyInstance, opts: Opts) {
           iconUrl: updated.iconUrl || null,
           bannerUrl: updated.bannerUrl || null,
           accentColor: updated.accentColor || null,
-          disabledModules: Array.isArray((updated as any).disabledModules)
-            ? (updated as any).disabledModules
-            : [],
+          disabledModules: Array.isArray(updated.disabledModules) ? updated.disabledModules : [],
         },
       });
     },

@@ -613,18 +613,18 @@ export default async function flairContestsRoutes(app: FastifyInstance, opts: Op
 
     let rewardFlair: any = null;
     try {
-      rewardFlair = await mintFlairItem(prisma as any, {
+      rewardFlair = await mintFlairItem(prisma, {
         slug: `contest-${contestId}-winner-${winner.userId}`,
         name: `${c.title} Winner`,
         description: `Winning ${String(c.kind).toLowerCase()} from "${c.title}". Designed by ${winnerUser?.name || "an artist"}.`,
-        kind: c.kind as any,
+        kind: c.kind,
         imageUrl: winner.imageUrl,
         rarity: "EPIC",
         source: "CONTEST",
         sourceRefId: contestId,
         createdById: winner.userId,
       });
-      await grantFlairToUser(prisma as any, winner.userId, rewardFlair.id, `contest:${contestId}`);
+      await grantFlairToUser(prisma, winner.userId, rewardFlair.id, `contest:${contestId}`);
     } catch (e: any) {
       log.error("[flair-contests] mint/grant failed:", e?.message || e);
     }

@@ -22,8 +22,8 @@ if (VAPID_PUBLIC && VAPID_PRIVATE) {
 
 export function dmDeliver(toUserId: string, payload: object) {
   for (const sock of (_wss as any)?.clients ?? []) {
-    if ((sock as any).user?.id === toUserId) {
-      send(sock as any, payload);
+    if (sock.user?.id === toUserId) {
+      send(sock, payload);
     }
   }
 }
@@ -34,7 +34,7 @@ export function send_to_user(userId: string, payload: object) {
 
 export function isUserOnline(userId: string): boolean {
   for (const sock of (_wss as any)?.clients ?? []) {
-    if ((sock as any).user?.id === userId) return true;
+    if (sock.user?.id === userId) return true;
   }
   return false;
 }
@@ -178,7 +178,7 @@ export async function createNotification(opts: {
     let matched = 0;
     const socketUserIds: string[] = [];
     for (const sock of (_wss as any)?.clients ?? []) {
-      const sid = (sock as any).user?.id;
+      const sid = sock.user?.id;
       if (sid) socketUserIds.push(sid);
       if (sid === opts.userId) {
         matched++;

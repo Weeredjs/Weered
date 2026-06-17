@@ -74,9 +74,9 @@ export default async function overlayRoutes(app: FastifyInstance, opts: Opts) {
 
     let found: { roomId: string; room: RoomEntry; isAway: boolean } | null = null;
     for (const [rid, rs] of rooms) {
-      const entry = (rs.users as Map<string, any>)?.get?.(user.id);
+      const entry = rs.users?.get?.(user.id);
       if (entry) {
-        found = { roomId: rid, room: rs, isAway: Boolean((entry as any).isAway) };
+        found = { roomId: rid, room: rs, isAway: Boolean(entry.isAway) };
         break;
       }
     }
@@ -95,7 +95,7 @@ export default async function overlayRoutes(app: FastifyInstance, opts: Opts) {
     }
 
     const { roomId, room, isAway } = found;
-    const roomCount = (room.users as Map<string, any>)?.size ?? 0;
+    const roomCount = room.users?.size ?? 0;
 
     const lobbyIdHint =
       (room as any).lobbyId || (roomId.startsWith("lobby:") ? roomId.slice(6) : null);

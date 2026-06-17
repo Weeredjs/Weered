@@ -271,7 +271,7 @@ export default async function challengesRoutes(app: FastifyInstance, opts: Opts)
           const p = path.join(process.cwd(), "manifest-cache", "skulls.json");
           const raw = JSON.parse(fs.readFileSync(p, "utf-8"));
           const map: Record<string, string> = {};
-          for (const [sid, v] of Object.entries(raw as any)) {
+          for (const [sid, v] of Object.entries(raw)) {
             const nm = ((v as any)?.name || "").trim();
             if (nm && !map[nm]) map[nm] = sid;
           }

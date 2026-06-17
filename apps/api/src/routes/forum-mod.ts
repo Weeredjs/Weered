@@ -136,7 +136,7 @@ export async function runAutoMod(
   }
 
   for (const rule of rules) {
-    const cfg = (rule.config as any) || {};
+    const cfg = rule.config || {};
     let trigger = false;
     let reason = "";
     try {
@@ -232,7 +232,7 @@ export async function autoModTick() {
       if (ua && new Date(ua).getTime() <= now.getTime()) {
         await prisma.forumPost.update({
           where: { id: p.id },
-          data: { locked: false, tags: { ...t, unlockAt: null } as any },
+          data: { locked: false, tags: { ...t, unlockAt: null } },
         });
         await recordModAction(
           p.lobbyId || null,
@@ -608,7 +608,7 @@ export default async function forumModRoutes(app: FastifyInstance, opts: Opts) {
         lobbyId,
         name: String(name).slice(0, 100),
         kind: kind as ForumAutoModKind,
-        config: cfg.value as any,
+        config: cfg.value,
         action: action as ForumAutoModAction,
         enabled: enabled !== false,
         createdById: u.id,
@@ -634,7 +634,7 @@ export default async function forumModRoutes(app: FastifyInstance, opts: Opts) {
     if (body.config !== undefined) {
       const cfg = validateAutoModConfig(data.kind || existing.kind, body.config);
       if (cfg.error) return reply.code(400).send({ error: cfg.error });
-      data.config = cfg.value as any;
+      data.config = cfg.value;
     }
     const rule = await prisma.forumAutoModRule.update({ where: { id }, data });
     return reply.send({ ok: true, rule });

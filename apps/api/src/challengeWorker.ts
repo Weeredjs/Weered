@@ -448,20 +448,20 @@ export function startChallengeWorker(
                 select: { weaponKills: true, modifierHashes: true, difficultyTier: true },
               });
               const existingMods = Array.isArray(existing?.modifierHashes)
-                ? (existing!.modifierHashes as any[]).map(String)
+                ? (existing.modifierHashes as any[]).map(String)
                 : [];
               const haveWeapons =
-                Array.isArray(existing?.weaponKills) && (existing!.weaponKills as any[]).length > 0;
+                Array.isArray(existing?.weaponKills) && (existing.weaponKills as any[]).length > 0;
               const haveMods = existingMods.length > 0;
               const haveTier = existing?.difficultyTier != null;
               if (haveWeapons && haveMods && haveTier) {
-                act.weaponKills = existing!.weaponKills as any;
+                act.weaponKills = existing.weaponKills as any;
                 skullByInstance.set(act.activityInstanceId, existingMods);
-                tierByInstance.set(act.activityInstanceId, existing!.difficultyTier);
+                tierByInstance.set(act.activityInstanceId, existing.difficultyTier);
                 continue;
               }
               const detail = await fetchPGCRDetail(act.activityInstanceId, acct.externalId);
-              if (detail.weaponKills.length > 0) act.weaponKills = detail.weaponKills as any;
+              if (detail.weaponKills.length > 0) act.weaponKills = detail.weaponKills;
               skullByInstance.set(act.activityInstanceId, detail.selectedSkullHashes);
               tierByInstance.set(act.activityInstanceId, detail.activityDifficultyTier);
             }
@@ -549,7 +549,7 @@ export function startChallengeWorker(
               const tier = pgcrTier != null ? pgcrTier : (actDef?.difficultyTier ?? null);
               if (!definitionRequirementsMet(mods, tier, reqMods, reqTier)) return false;
               if (minPS != null || maxPS != null) {
-                const size = (act as any).fireteamIds?.length || 0;
+                const size = act.fireteamIds?.length || 0;
                 if (minPS != null && size < minPS) return false;
                 if (maxPS != null && size > maxPS) return false;
               }
@@ -673,7 +673,7 @@ export function startChallengeWorker(
       });
       for (const t of expiredRace) {
         try {
-          await completeTournament(prisma as any, t.id, { awardPaper, createNotification });
+          await completeTournament(prisma, t.id, { awardPaper, createNotification });
           log.log(`[tournaments] CHALLENGE_RACE "${t.title}" expired — auto-completed`);
         } catch (err: any) {
           log.warn(`[tournaments] expiry complete failed for ${t.id}:`, err?.message || err);

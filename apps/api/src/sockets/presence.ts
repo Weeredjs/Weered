@@ -145,11 +145,11 @@ export async function handlePresence(ws: any, msg: any, opts: Opts): Promise<voi
   if (msg.type === "presence:idle") {
     if (!ws.user) return;
     const away = Boolean(msg.away);
-    (ws.user as any).isAway = away;
+    ws.user.isAway = away;
     for (const [, room] of rooms) {
       const entry = room.users.get(ws.user.id);
       if (entry) {
-        (entry as any).isAway = away;
+        entry.isAway = away;
         broadcast(room, { type: "presence:join", roomId: room.roomId, user: entry });
       }
     }

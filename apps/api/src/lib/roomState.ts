@@ -225,14 +225,14 @@ export async function ensureRoomLoaded(roomId: string): Promise<RoomState> {
       ? (dbRoom as any).disabledModules
       : [];
     const vm = String((dbRoom as any).voiceMode || "OPEN").toUpperCase();
-    r.voiceMode = vm === "QUEUED" || vm === "LISTEN_ONLY" ? (vm as any) : "OPEN";
+    r.voiceMode = vm === "QUEUED" || vm === "LISTEN_ONLY" ? vm : "OPEN";
     for (const m of dbRoom.members) {
       if (m.role === "MOD") r.mods.add(m.userId);
     }
     for (const b of dbRoom.bans) r.banned.add(b.userId);
     r.msgs = dbRoom.messages.map((m) => ({
       id: m.id,
-      user: { id: m.userId, name: m.userName || "?", role: "member" as Role },
+      user: { id: m.userId, name: m.userName || "?", role: "member" },
       body: m.body,
       ts: new Date(m.ts).getTime(),
       editedAt: (m as any).editedAt ? new Date((m as any).editedAt).getTime() : undefined,
@@ -339,13 +339,8 @@ export function safeJson(raw: any): any | null {
     const s = typeof raw === "string" ? raw : raw?.toString?.("utf8");
     if (!s) return null;
     const o = JSON.parse(s);
-    if (
-      o &&
-      typeof o === "object" &&
-      (o as any).payload &&
-      typeof (o as any).payload === "object"
-    ) {
-      return { ...(o as any), ...(o as any).payload };
+    if (o && typeof o === "object" && o.payload && typeof o.payload === "object") {
+      return { ...o, ...o.payload };
     }
     return o;
   } catch {
@@ -356,10 +351,10 @@ export function safeJson(raw: any): any | null {
 export function withPayload(msg: any) {
   try {
     if (!msg || typeof msg !== "object") return msg;
-    if ((msg as any).payload) return msg;
-    const { type, ...rest } = msg as any;
+    if (msg.payload) return msg;
+    const { type, ...rest } = msg;
     if (!type) return msg;
-    return { ...(msg as any), payload: rest };
+    return { ...msg, payload: rest };
   } catch {
     return msg;
   }
@@ -389,7 +384,7 @@ export function broadcast(room: RoomState, msg: any) {
       });
       for (const sock of (_wss as any)?.clients ?? []) {
         try {
-          if ((sock as any).readyState === 1) sock.send(ping);
+          if (sock.readyState === 1) sock.send(ping);
         } catch (e) {
           swallow(e);
         }

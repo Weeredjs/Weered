@@ -191,14 +191,14 @@ export function buildPokerStateForUser(table: PokerTable, userId?: string): any 
 export function broadcastToPokerTable(tableId: string, event: any) {
   const table = pokerTables.get(tableId);
   if (!table) return;
-  for (const sock of (_wss as any)?.clients ?? []) {
-    const su = (sock as any).user as AuthedUser | undefined;
+  for (const sock of _wss?.clients ?? []) {
+    const su = sock.user as AuthedUser | undefined;
     if (!su) continue;
     const isSeated = table.seats.some((s) => s && s.userId === su.id);
     const isSpectator = table.spectators.has(su.id);
     if (isSeated || isSpectator) {
       try {
-        send(sock as any, event);
+        send(sock, event);
       } catch (e) {
         swallow(e);
       }
@@ -210,13 +210,13 @@ export function broadcastPokerState(tableId: string) {
   const table = pokerTables.get(tableId);
   if (!table) return;
 
-  for (const sock of (_wss as any)?.clients ?? []) {
-    const su = (sock as any).user as AuthedUser | undefined;
+  for (const sock of _wss?.clients ?? []) {
+    const su = sock.user as AuthedUser | undefined;
     if (!su) continue;
     const isSeated = table.seats.some((s) => s && s.userId === su.id);
     const isSpectator = table.spectators.has(su.id);
     if (isSeated || isSpectator) {
-      send(sock as any, {
+      send(sock, {
         type: "poker:state",
         ...buildPokerStateForUser(table, su.id),
       });

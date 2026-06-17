@@ -638,7 +638,7 @@ async function main() {
     return lobby;
   }
 
-  await app.register(publicMiscRoutes, { getSiteConfig, applyWindroseReel } as any);
+  await app.register(publicMiscRoutes, { getSiteConfig, applyWindroseReel });
   app.get("/health", async (_req, reply) => {
     try {
       await prisma.$queryRaw`SELECT 1`;
@@ -654,7 +654,7 @@ async function main() {
     isNameReserved,
     getSiteConfig,
     seedWelcomeDM,
-  } as any);
+  });
 
   const WEB_URL = process.env.APP_URL || "https://weered.ca";
 
@@ -665,7 +665,7 @@ async function main() {
     normalizeRoomId,
     isModOrOwner,
     awardNotoriety,
-  } as any);
+  });
   async function lobbyAdminAccess(
     req: any,
     reply: any,
@@ -677,12 +677,12 @@ async function main() {
     globalRole: any;
     overrideRole: string | null;
   } | null> {
-    const u = authFromHeader((req as any).headers?.authorization);
+    const u = authFromHeader(req.headers?.authorization);
     if (!u) {
       reply.code(401).send({ ok: false, error: "unauthorized" });
       return null;
     }
-    const lobbyId = String((req as any).params?.id || (req as any).params?.lobbyId || "");
+    const lobbyId = String(req.params?.id || req.params?.lobbyId || "");
     const lobby = await prisma.lobby.findUnique({ where: { id: lobbyId } });
     if (!lobby) {
       reply.code(404).send({ ok: false, error: "lobby_not_found" });
@@ -758,7 +758,7 @@ async function main() {
     canAccessStaff,
     globalAudit,
     rooms,
-  } as any);
+  });
   await app.register(profileRoutes, {
     authFromHeader,
     getNotorietyRank,
@@ -774,9 +774,9 @@ async function main() {
     STEAM_API_KEY,
     TWITCH_CLIENT_ID,
     OPENXBL_API_KEY,
-  } as any);
+  });
 
-  await app.register(geoRoutes, { authFromHeader } as any);
+  await app.register(geoRoutes, { authFromHeader });
 
   const onAvatarChanged = (userId: string, avatarUrl: string) => {
     for (const sock of wss.clients) {
@@ -799,9 +799,9 @@ async function main() {
     awardNotoriety,
     canAccessStaff,
     onAvatarChanged,
-  } as any);
+  });
 
-  await app.register(notorietyRoutes, { authFromHeader, getNotorietyRank, NOTORIETY_RANKS } as any);
+  await app.register(notorietyRoutes, { authFromHeader, getNotorietyRank, NOTORIETY_RANKS });
   await app.register(crewsRoutes, {
     authFromHeader,
     verifyToken,
@@ -819,7 +819,7 @@ async function main() {
     canAssignRoles,
     WEB_URL,
   } as any);
-  await app.register(chessRoutes, { authFromHeader } as any);
+  await app.register(chessRoutes, { authFromHeader });
 
   await app.register(dmRoutes, {
     authFromHeader,
@@ -837,7 +837,7 @@ async function main() {
     sendPush,
     resolveMentions,
     createNotification,
-  } as any);
+  });
 
   runFeedWorker();
   setInterval(runFeedWorker, 20 * 60 * 1000);
@@ -1144,14 +1144,14 @@ async function main() {
 
   await app.register(youtubeRoutes);
 
-  await app.register(aiRoutes, { authFromHeader, isAIAvailable, getAI, rooms } as any);
+  await app.register(aiRoutes, { authFromHeader, isAIAvailable, getAI, rooms });
 
   runNewsWorker();
   setInterval(runNewsWorker, 15 * 60 * 1000);
 
   await seedLobbies();
 
-  await app.register(modsRoutes, { verifyToken } as any);
+  await app.register(modsRoutes, { verifyToken });
 
   wss = new WebSocketServer({ port: WS_PORT, maxPayload: 256 * 1024 });
   setRoomStateDeps({ wss, isAIAvailable });
@@ -1427,7 +1427,7 @@ async function main() {
     awardNotoriety,
     createNotification,
     rooms,
-  } as any);
+  });
 
   await app.register(usersSearchRoutes, {} as any);
 
@@ -1476,9 +1476,9 @@ async function main() {
     lobbyAdminAccess,
   } as any);
 
-  await app.register(notificationsRoutes, { authFromHeader, VAPID_PUBLIC, sendPush } as any);
+  await app.register(notificationsRoutes, { authFromHeader, VAPID_PUBLIC, sendPush });
 
-  await app.register(activityRoutes, { authFromHeader } as any);
+  await app.register(activityRoutes, { authFromHeader });
 
   await app.register(staffOpsRoutes, {
     authFromHeader,
@@ -1488,7 +1488,7 @@ async function main() {
   } as any);
 
   await app.register(tenorRoutes);
-  await app.register(twitchRoutes, { rooms } as any);
+  await app.register(twitchRoutes, { rooms });
 
   await app.register(mlbRoutes);
 
@@ -1557,15 +1557,15 @@ async function main() {
     }
   });
 
-  await app.register(bungieRoutes, { authFromHeader, awardNotoriety } as any);
-  await app.register(eveRoutes, { authFromHeader, awardNotoriety } as any);
-  await app.register(poeRoutes, { authFromHeader, awardNotoriety } as any);
+  await app.register(bungieRoutes, { authFromHeader, awardNotoriety });
+  await app.register(eveRoutes, { authFromHeader, awardNotoriety });
+  await app.register(poeRoutes, { authFromHeader, awardNotoriety });
   await app.register(chatMediaRoutes, {
     authFromHeader,
     isStaff: isElevatedGlobal,
     createNotification,
-  } as any);
-  await app.register(mcRoutes, { authFromHeader } as any);
+  });
+  await app.register(mcRoutes, { authFromHeader });
 
   if (process.env.BUNGIE_API_KEY) {
     syncManifest(process.env.BUNGIE_API_KEY)
@@ -1580,9 +1580,9 @@ async function main() {
     getGlobalRole,
     canAccessStaff,
     getLobbyRole,
-  } as any);
+  });
 
-  await app.register(badgesRoutes, { authFromHeader } as any);
+  await app.register(badgesRoutes, { authFromHeader });
   await app.register(tournamentsRoutes, {
     authFromHeader,
     awardNotoriety,
@@ -1607,9 +1607,9 @@ async function main() {
 
   await app.register(leagueRoutes);
 
-  await app.register(fortniteRoutes, { authFromHeader, sendPush } as any);
-  await app.register(scryfallRoutes, {} as any);
-  await app.register(mtgRoutes, {} as any);
+  await app.register(fortniteRoutes, { authFromHeader, sendPush });
+  await app.register(scryfallRoutes, {});
+  await app.register(mtgRoutes, {});
 
   await app.register(pubgRoutes);
 
@@ -1620,11 +1620,11 @@ async function main() {
     isAIAvailable,
     getAI,
     broadcastToLobby,
-  } as any);
-  await app.register((await import("./routes/helldivers")).default, { authFromHeader } as any);
+  });
+  await app.register((await import("./routes/helldivers")).default, { authFromHeader });
   await app.register(helldiversStratagemsRoutes);
-  await app.register(helldiversLoadoutsRoutes, { authFromHeader } as any);
-  await app.register(steamRoutes, { authFromHeader, createNotification } as any);
+  await app.register(helldiversLoadoutsRoutes, { authFromHeader });
+  await app.register(steamRoutes, { authFromHeader, createNotification });
   await app.register(windroseBuildsRoutes, {
     authFromHeader,
     awardNotoriety,
@@ -1642,9 +1642,9 @@ async function main() {
     createNotification,
   } as any);
   await app.register(redditRoutes);
-  await app.register(helldiversMoRoutes, { authFromHeader, awardPaper, awardNotoriety } as any);
+  await app.register(helldiversMoRoutes, { authFromHeader, awardPaper, awardNotoriety });
 
-  await app.register(paperRoutes, { authFromHeader, awardPaper } as any);
+  await app.register(paperRoutes, { authFromHeader, awardPaper });
 
   await app.register(pokerRoutes, {
     authFromHeader,
@@ -1652,9 +1652,9 @@ async function main() {
     buildPokerStateForUser,
     broadcastPokerState,
     awardPaper,
-  } as any);
+  });
 
-  await app.register(storeRoutes, { authFromHeader } as any);
+  await app.register(storeRoutes, { authFromHeader });
 
   for (const sym of DEFAULT_SYMBOLS) subscribeBinanceSymbol(sym);
 
@@ -1710,7 +1710,7 @@ async function main() {
     for (const sock of wss.clients) {
       if ((sock as any).user?.id === userId) {
         try {
-          send(sock as Sock, event);
+          send(sock, event);
         } catch (e) {
           swallow(e);
         }
@@ -1750,28 +1750,28 @@ async function main() {
     broadcastToLobby,
     notifyUser,
     operatorCommentateOnTrade,
-  } as any);
+  });
 
   await app.register(campaignsRoutes, {
     authFromHeader,
     broadcastToLobby,
-  } as any);
+  });
 
   await app.register(characterRoutes, {
     authFromHeader,
     getGlobalRole,
     canAccessStaff,
-  } as any);
+  });
 
   await app.register(diceRoutes, {
     authFromHeader,
     broadcastToLobby,
-  } as any);
+  });
 
   await app.register(mapsRoutes, {
     authFromHeader,
     broadcastToRoom,
-  } as any);
+  });
 
   await app.register(supportRoutes, {
     authFromHeader,
@@ -1788,7 +1788,7 @@ async function main() {
   await app.register(overlayRoutes, {
     rooms,
     verifyToken,
-  } as any);
+  });
 
   setupTradingSocket(wss, {
     send,
@@ -1871,7 +1871,7 @@ async function main() {
       (userId, event) => {
         for (const sock of wss.clients) {
           if ((sock as any).user?.id === userId) {
-            send(sock as any, event);
+            send(sock, event);
             startChessWorker(prisma);
             startChessChallengeWorker(prisma, awardNotoriety, awardPaper, broadcastToLobby);
           }
@@ -1885,7 +1885,7 @@ async function main() {
     const autoDetect = startTournamentAutoDetect(prisma, {
       notify: (userId, event) => {
         for (const sock of wss.clients) {
-          if ((sock as any).user?.id === userId) send(sock as any, event);
+          if ((sock as any).user?.id === userId) send(sock, event);
         }
       },
       createNotification,

@@ -52,7 +52,7 @@ export default async function modsRoutes(app: FastifyInstance, opts: Opts) {
       });
       if (!mod) {
         try {
-          await fetchAndUpsertMod(prisma as any, Number(sourceId));
+          await fetchAndUpsertMod(prisma, Number(sourceId));
         } catch (e) {
           swallow(e);
         }

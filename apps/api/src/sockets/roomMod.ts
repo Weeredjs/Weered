@@ -226,17 +226,17 @@ export async function handleRoomMod(
           for (const s of findSocketsByUser(r, targetId)) {
             send(s, { type: "staff:kicked", roomId: r.roomId });
             try {
-              (s as any).roomId = undefined;
+              s.roomId = undefined;
             } catch (e) {
               swallow(e);
             }
             try {
-              (s as any).pendingRoomId = undefined;
+              s.pendingRoomId = undefined;
             } catch (e) {
               swallow(e);
             }
             try {
-              (s as any).close(4001, "staff:kick");
+              s.close(4001, "staff:kick");
             } catch (e) {
               swallow(e);
             }
@@ -251,7 +251,7 @@ export async function handleRoomMod(
     }
     try {
       for (const c of wss.clients) {
-        const s = c as any;
+        const s = c;
         if (s?.user?.id && String(s.user.id) === targetId) {
           send(s, { type: "staff:kicked" });
           try {
@@ -306,7 +306,7 @@ export async function handleRoomMod(
     for (const s of findSocketsByUser(room, targetId)) {
       send(s, { type: "mod:kicked", roomId });
       try {
-        (s as any).roomId = undefined;
+        s.roomId = undefined;
       } catch (e) {
         swallow(e);
       }
@@ -336,7 +336,7 @@ export async function handleRoomMod(
     for (const s of findSocketsByUser(room, targetId)) {
       send(s, { type: "mod:banned", roomId });
       try {
-        (s as any).roomId = undefined;
+        s.roomId = undefined;
       } catch (e) {
         swallow(e);
       }

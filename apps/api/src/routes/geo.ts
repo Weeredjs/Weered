@@ -90,7 +90,7 @@ export default async function geoRoutes(app: FastifyInstance, opts: Opts) {
     let users: { locationH3: string | null }[];
     if (gameFilter) {
       const members = await prisma.lobbyMember.findMany({
-        where: { lobby: { moduleType: gameFilter as any } },
+        where: { lobby: { moduleType: gameFilter } },
         select: { userId: true },
       });
       const memberIds = [...new Set(members.map((m) => m.userId))];

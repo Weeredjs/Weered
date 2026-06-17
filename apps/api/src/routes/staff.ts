@@ -121,13 +121,13 @@ export default async function staffRoutes(app: FastifyInstance, opts: Opts) {
       from: target.globalRole,
       to: newRole,
     });
-    for (const sock of (getWss()?.clients ?? []) as any) {
-      if ((sock as any).user?.id === targetId) (sock as any).user.globalRole = newRole;
+    for (const sock of getWss()?.clients ?? []) {
+      if (sock.user?.id === targetId) sock.user.globalRole = newRole;
     }
     for (const [, room] of rooms) {
       const entry = room.users.get(targetId);
       if (entry) {
-        (entry as any).globalRole = newRole;
+        entry.globalRole = newRole;
         broadcast(room, { type: "presence:join", roomId: room.roomId, user: entry });
       }
     }
@@ -281,7 +281,7 @@ export default async function staffRoutes(app: FastifyInstance, opts: Opts) {
         for (const s of findSocketsByUser(room, targetId)) {
           send(s, { type: "staff:kicked", roomId: room.roomId });
           try {
-            (s as any).close(4001, "staff:kick");
+            s.close(4001, "staff:kick");
           } catch (e) {
             swallow(e);
           }
@@ -327,7 +327,7 @@ export default async function staffRoutes(app: FastifyInstance, opts: Opts) {
         for (const s of findSocketsByUser(room, targetId)) {
           send(s, { type: "staff:banned", roomId: room.roomId, reason });
           try {
-            (s as any).close(4002, "staff:ban");
+            s.close(4002, "staff:ban");
           } catch (e) {
             swallow(e);
           }
@@ -382,7 +382,7 @@ export default async function staffRoutes(app: FastifyInstance, opts: Opts) {
       for (const s of liveRoom.sockets) {
         send(s, { type: "room:deleted", roomId });
         try {
-          (s as any).close(4000, "room:deleted");
+          s.close(4000, "room:deleted");
         } catch (e) {
           swallow(e);
         }

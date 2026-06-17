@@ -309,8 +309,8 @@ export default async function storeRoutes(app: FastifyInstance, opts: Opts) {
     return reply.send({
       ok: true,
       listings: listings.map((l: any) => {
-        const seller = sellerMap.get(l.sellerId) as any;
-        const item = itemMap.get(l.itemId) as any;
+        const seller = sellerMap.get(l.sellerId);
+        const item = itemMap.get(l.itemId);
         return {
           ...l,
           sellerName: seller?.name || "Unknown",

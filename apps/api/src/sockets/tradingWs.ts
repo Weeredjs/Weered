@@ -18,7 +18,7 @@ export default function setupTradingSocket(wss: WebSocketServer, opts: Opts) {
 
   wss.on("connection", (rawWs) => {
     const ws = rawWs as any;
-    (ws as any)._tradingSubs = new Set<string>();
+    ws._tradingSubs = new Set<string>();
 
     ws.on("message", (raw: any) => {
       const msg = safeJson(raw);
@@ -30,7 +30,7 @@ export default function setupTradingSocket(wss: WebSocketServer, opts: Opts) {
         subscribeBinanceSymbol(sym);
         if (!symbolSubscribers.has(sym)) symbolSubscribers.set(sym, new Set());
         symbolSubscribers.get(sym)!.add(ws);
-        (ws as any)._tradingSubs.add(sym);
+        ws._tradingSubs.add(sym);
         const p = livePrices.get(sym);
         if (p)
           send(ws, {
@@ -44,12 +44,12 @@ export default function setupTradingSocket(wss: WebSocketServer, opts: Opts) {
       if (msg.type === "trading:unsubscribe") {
         const sym = String(msg.symbol || "").toLowerCase();
         symbolSubscribers.get(sym)?.delete(ws);
-        (ws as any)._tradingSubs?.delete(sym);
+        ws._tradingSubs?.delete(sym);
       }
     });
 
     ws.on("close", () => {
-      const subs = (ws as any)._tradingSubs as Set<string> | undefined;
+      const subs = ws._tradingSubs as Set<string> | undefined;
       if (subs) {
         for (const sym of subs) {
           symbolSubscribers.get(sym)?.delete(ws);

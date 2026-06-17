@@ -107,11 +107,11 @@ export async function awardNotoriety(userId: string, action: string): Promise<nu
     const scoreAfter = scoreBefore + cfg.points;
     const rankAfter = getNotorietyRank(scoreAfter);
 
-    for (const sock of (_wss as any)?.clients ?? []) {
-      if ((sock as any).user?.id === userId) {
-        send(sock as any, { type: "notoriety:award", action, points: cfg.points });
+    for (const sock of _wss?.clients ?? []) {
+      if (sock.user?.id === userId) {
+        send(sock, { type: "notoriety:award", action, points: cfg.points });
         if (rankAfter.title !== rankBefore.title) {
-          send(sock as any, {
+          send(sock, {
             type: "notoriety:rankup",
             oldRank: rankBefore.title,
             newRank: rankAfter.title,

@@ -28,9 +28,7 @@ export function handleCanvas(ws: any, msg: any, opts: Opts): boolean {
       broadcast(room, { type: "module:state", roomId, activeModule: null });
       return true;
     }
-    const disabled: string[] = Array.isArray((room as any).disabledModules)
-      ? (room as any).disabledModules
-      : [];
+    const disabled: string[] = Array.isArray(room.disabledModules) ? room.disabledModules : [];
     if (disabled.includes(mode) && !isModOrOwner(room, ws.user.id, ws.user?.globalRole)) {
       try {
         send(ws, { type: "module:rejected", roomId, mode, reason: "module_disabled" });

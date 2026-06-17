@@ -379,7 +379,7 @@ export function enrichVendorSales(
 ) {
   const items: any[] = [];
   for (const [vendorItemIndex, sale] of Object.entries(salesData)) {
-    const itemHash = (sale as any).itemHash;
+    const itemHash = sale.itemHash;
     if (!itemHash) continue;
     const def = resolveItem(itemHash);
     if (!def) continue;
@@ -426,7 +426,7 @@ export function enrichVendorSales(
       description: def.description,
       watermark: def.watermark ? `${BUNGIE_BASE}${def.watermark}` : "",
       perks,
-      costs: (sale as any).costs || [],
+      costs: sale.costs || [],
     });
   }
   items.sort((a, b) => (b.tierType || 0) - (a.tierType || 0));

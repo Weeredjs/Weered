@@ -49,22 +49,22 @@ export async function handleChat(ws: any, msg: any, opts: Opts): Promise<void> {
     const room = rooms.get(ws.roomId);
     if (!room) return;
     if (!isModOrOwner(room, ws.user.id, ws.user.globalRole)) return;
-    const msgId = String((msg as any).msgId || "");
+    const msgId = String(msg.msgId || "");
     if (!msgId) return;
-    (room as any).pinned = (room as any).pinned || new Set<string>();
+    room.pinned = room.pinned || new Set<string>();
     if (msg.type === "chat:pin") {
-      if ((room as any).pinned.size >= 10) {
+      if (room.pinned.size >= 10) {
         send(ws, { type: "chat:pin:error", reason: "Pinned limit is 10. Unpin one first." });
         return;
       }
-      (room as any).pinned.add(msgId);
+      room.pinned.add(msgId);
     } else {
-      (room as any).pinned.delete(msgId);
+      room.pinned.delete(msgId);
     }
     broadcast(room, {
       type: "chat:pins",
       roomId: room.roomId,
-      pinned: Array.from((room as any).pinned),
+      pinned: Array.from(room.pinned),
     });
     return;
   }
@@ -84,7 +84,7 @@ export async function handleChat(ws: any, msg: any, opts: Opts): Promise<void> {
   if (msg.type === "chat:send") {
     const roomId = normalizeRoomId(String(msg.roomId || ""));
     const body = String(msg.body || "").trim();
-    const attachmentId = String((msg as any).attachmentId || "").slice(0, 40);
+    const attachmentId = String(msg.attachmentId || "").slice(0, 40);
     if (!roomId || (!body && !attachmentId)) return;
     const room = await ensureRoomLoaded(roomId);
     if (!room.users.has(ws.user.id)) return;
@@ -101,7 +101,7 @@ export async function handleChat(ws: any, msg: any, opts: Opts): Promise<void> {
       return;
     }
     if (room.lobbyId) {
-      const cache = (room as any).modPolicy as
+      const cache = room.modPolicy as
         | {
             blockedWords: string[];
             blockedDomains: string[];
@@ -122,7 +122,7 @@ export async function handleChat(ws: any, msg: any, opts: Opts): Promise<void> {
             newAccountChatHours: Number(l?.newAccountChatHours || 0),
             expiresAt: Date.now() + 60_000,
           };
-          (room as any).modPolicy = policy;
+          room.modPolicy = policy;
         } catch {
           policy = {
             blockedWords: [],
@@ -162,9 +162,7 @@ export async function handleChat(ws: any, msg: any, opts: Opts): Promise<void> {
       if (policy.blockedDomains.length > 0) {
         const urls = body.match(/https?:\/\/[^\s)]+/gi) || [];
         const bad = urls.find((u) =>
-          policy!.blockedDomains.some(
-            (d) => d && u.toLowerCase().includes(String(d).toLowerCase()),
-          ),
+          policy.blockedDomains.some((d) => d && u.toLowerCase().includes(String(d).toLowerCase())),
         );
         if (bad) {
           send(ws, { type: "chat:rejected", roomId, reason: "blocked_domain" });
@@ -224,8 +222,8 @@ export async function handleChat(ws: any, msg: any, opts: Opts): Promise<void> {
         id: u.id,
         name: u.name,
         role: roleOf(room, u.id),
-        avatarColor: (u as any).avatarColor,
-        avatar: (u as any).avatar,
+        avatarColor: u.avatarColor,
+        avatar: u.avatar,
       },
       body,
       ts: Date.now(),
@@ -486,9 +484,9 @@ export async function handleCrewDm(
         message: { ...message, createdAt: message.createdAt.toISOString() },
       };
       for (const sock of wss.clients) {
-        const sockUser = (sock as any).user;
+        const sockUser = sock.user;
         if (sockUser && members.some((m: any) => m.userId === sockUser.id)) {
-          send(sock as any, payload);
+          send(sock, payload);
         }
       }
 
@@ -567,8 +565,8 @@ export async function handleCrewDm(
         editedAt: editedAt.toISOString(),
       };
       for (const sock of wss.clients) {
-        const sockUser = (sock as any).user;
-        if (sockUser && memberIds.has(sockUser.id)) send(sock as any, payload);
+        const sockUser = sock.user;
+        if (sockUser && memberIds.has(sockUser.id)) send(sock, payload);
       }
     } catch (e) {
       log.error("[crew:edit]", e);
@@ -603,8 +601,8 @@ export async function handleCrewDm(
         deletedAt: deletedAt.toISOString(),
       };
       for (const sock of wss.clients) {
-        const sockUser = (sock as any).user;
-        if (sockUser && memberIds.has(sockUser.id)) send(sock as any, payload);
+        const sockUser = sock.user;
+        if (sockUser && memberIds.has(sockUser.id)) send(sock, payload);
       }
     } catch (e) {
       log.error("[crew:delete]", e);
@@ -644,8 +642,8 @@ export async function handleCrewDm(
         reactions: res.reactions,
       };
       for (const sock of wss.clients) {
-        const sockUser = (sock as any).user;
-        if (sockUser && memberIds.has(sockUser.id)) send(sock as any, payload);
+        const sockUser = sock.user;
+        if (sockUser && memberIds.has(sockUser.id)) send(sock, payload);
       }
     } catch (e) {
       log.error("[crew:react]", e);

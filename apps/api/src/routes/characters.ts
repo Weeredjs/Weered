@@ -378,7 +378,7 @@ function sanitizeSpellSlots(v: any): any {
   if (!v || typeof v !== "object") return {};
   const out: any = {};
   for (const k of Object.keys(v).slice(0, 9)) {
-    const entry: any = (v as any)[k] || {};
+    const entry: any = v[k] || {};
     const max = clampInt(entry.max, 0, 99, 0);
     const current = Math.min(max, clampInt(entry.current, 0, 99, 0));
     out[String(k)] = { current, max };

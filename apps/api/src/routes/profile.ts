@@ -338,28 +338,26 @@ export default async function profileRoutes(app: FastifyInstance, opts: Opts) {
           if (avatar !== undefined && avatar)
             awardNotoriety(viewer.id, "AVATAR_SET").catch(swallow);
           for (const sock of getWss().clients) {
-            const s = sock as any;
+            const s = sock;
             if (s.user?.id === viewer.id) {
               if (avatarColor !== undefined) s.user.avatarColor = avatarColor;
               if (avatar !== undefined) s.user.avatar = avatar || undefined;
-              if (panelBgColor !== undefined)
-                (s.user as any).panelBgColor = panelBgColor || undefined;
+              if (panelBgColor !== undefined) s.user.panelBgColor = panelBgColor || undefined;
               if (panelAccentColor !== undefined)
-                (s.user as any).panelAccentColor = panelAccentColor || undefined;
-              if (pillBgColor !== undefined) (s.user as any).pillBgColor = pillBgColor || undefined;
+                s.user.panelAccentColor = panelAccentColor || undefined;
+              if (pillBgColor !== undefined) s.user.pillBgColor = pillBgColor || undefined;
               if (pillAccentColor !== undefined)
-                (s.user as any).pillAccentColor = pillAccentColor || undefined;
+                s.user.pillAccentColor = pillAccentColor || undefined;
               if (s.roomId) {
                 const room = rooms.get(s.roomId);
                 if (room) {
                   const entry = room.users.get(viewer.id);
                   if (entry) {
-                    if (avatarColor !== undefined) (entry as any).avatarColor = avatarColor;
-                    if (avatar !== undefined) (entry as any).avatar = avatar || undefined;
-                    if (pillBgColor !== undefined)
-                      (entry as any).pillBgColor = pillBgColor || undefined;
+                    if (avatarColor !== undefined) entry.avatarColor = avatarColor;
+                    if (avatar !== undefined) entry.avatar = avatar || undefined;
+                    if (pillBgColor !== undefined) entry.pillBgColor = pillBgColor || undefined;
                     if (pillAccentColor !== undefined)
-                      (entry as any).pillAccentColor = pillAccentColor || undefined;
+                      entry.pillAccentColor = pillAccentColor || undefined;
                   }
                   publishState(room);
                 }
@@ -626,7 +624,7 @@ export default async function profileRoutes(app: FastifyInstance, opts: Opts) {
         await prisma.user
           .update({
             where: { id: row.id },
-            data: { livePresence: primary as any, presenceCheckedAt: new Date() },
+            data: { livePresence: primary, presenceCheckedAt: new Date() },
           })
           .catch(swallow);
       }
@@ -687,9 +685,9 @@ export default async function profileRoutes(app: FastifyInstance, opts: Opts) {
 
         try {
           for (const sock of getWss().clients) {
-            if ((sock as any).user?.id === userId) {
+            if (sock.user?.id === userId) {
               try {
-                (sock as any).close();
+                sock.close();
               } catch (e) {
                 swallow(e);
               }

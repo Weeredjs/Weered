@@ -162,8 +162,8 @@ export default async function dmRoutes(app: FastifyInstance, opts: Opts) {
           ...m,
           createdAt: m.createdAt.toISOString(),
           readAt: m.readAt?.toISOString() ?? null,
-          editedAt: (m as any).editedAt?.toISOString() ?? null,
-          deletedAt: (m as any).deletedAt?.toISOString() ?? null,
+          editedAt: m.editedAt?.toISOString() ?? null,
+          deletedAt: m.deletedAt?.toISOString() ?? null,
           reactions: reactionsByMsg[m.id] || [],
         })),
       });

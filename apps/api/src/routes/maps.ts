@@ -44,7 +44,7 @@ export default async function mapsRoutes(app: FastifyInstance, opts: Opts) {
         const txt = typeof body === "string" ? body : body.toString("utf8");
         done(null, txt ? JSON.parse(txt) : {});
       } catch (e) {
-        done(e as Error, undefined);
+        done(e, undefined);
       }
     },
   );

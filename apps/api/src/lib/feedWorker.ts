@@ -49,7 +49,7 @@ export async function fetchHackerNews(): Promise<RawItem[]> {
     const res = await fetch(
       "https://hn.algolia.com/api/v1/search?tags=story&hitsPerPage=15&numericFilters=points>50",
     );
-    const data = (await res.json()) as any;
+    const data = await res.json();
     return (data.hits || [])
       .filter((h: any) => h.url)
       .map((h: any) => ({
@@ -114,7 +114,7 @@ export async function fetchItunesPodcasts(): Promise<RawItem[]> {
     const res = await fetch(
       `https://itunes.apple.com/search?media=podcast&entity=podcastEpisode&term=${term}&limit=10&sort=recent`,
     );
-    const data = (await res.json()) as any;
+    const data = await res.json();
     return (data.results || [])
       .map((r: any) => ({
         url: r.trackViewUrl || r.collectionViewUrl,

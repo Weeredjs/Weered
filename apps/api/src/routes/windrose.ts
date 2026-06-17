@@ -1247,7 +1247,7 @@ Rules:
           await prisma.communityServer
             .update({
               where: { id: s.id },
-              data: { status: "online", lastSeenAt: new Date(), lastState: json as any },
+              data: { status: "online", lastSeenAt: new Date(), lastState: json },
             })
             .catch(swallow);
         } catch {
