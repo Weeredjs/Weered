@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useWeered, useRoomUsers, useRoomMsgs } from "../WeeredProvider";
 import BungieLinkPill from "../BungieLinkPill";
 import RoomHeader from "./RoomHeader";
@@ -10,7 +10,6 @@ import LaunchPad from "./LaunchPad";
 import { useOverlay } from "../overlays/OverlayProvider";
 import { useVoice } from "../VoiceContext";
 import ArticleReader from "./ArticleReader";
-import CopyButton from "../CopyButton";
 import { weeredToast } from "../../lib/toast";
 
 function TwitchIcon({ size = 11, color = "#9146FF", style }: { size?: number; color?: string; style?: React.CSSProperties }) {

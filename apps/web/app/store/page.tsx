@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useWeered } from "../../components/WeeredProvider";
 import LoadingState from "../../components/LoadingState";
 import { weeredToast } from "../../lib/toast";

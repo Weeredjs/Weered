@@ -1,15 +1,7 @@
 "use client";
 
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
-import {
-  Room,
-  RoomEvent,
-  Track,
-  LocalParticipant,
-  RemoteParticipant,
-  TrackPublication,
-  RemoteTrackPublication,
-} from "livekit-client";
+import { Room, RoomEvent, Track, TrackPublication } from "livekit-client";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 

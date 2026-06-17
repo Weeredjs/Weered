@@ -2,6 +2,7 @@ import js from "@eslint/js";
 import tseslint from "typescript-eslint";
 import reactHooks from "eslint-plugin-react-hooks";
 import nextPlugin from "@next/eslint-plugin-next";
+import unusedImports from "eslint-plugin-unused-imports";
 
 export default [
   {
@@ -45,6 +46,10 @@ export default [
       "no-constant-condition": ["warn", { checkLoops: false }],
       "prefer-const": "warn",
     },
+  },
+  {
+    plugins: { "unused-imports": unusedImports },
+    rules: { "unused-imports/no-unused-imports": "warn" },
   },
   // Web app: register the React-hooks + Next plugins so the inline
   // eslint-disable directives in the Next code resolve, and surface their

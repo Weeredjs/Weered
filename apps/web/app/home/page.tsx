@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState, useEffect, useRef } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
@@ -10,7 +10,6 @@ import DmPreviewStrip from "../../components/DmPreviewStrip";
 import ActivityFeed from "../../components/ActivityFeed";
 import FeatureShowcase from "../../components/FeatureShowcase";
 import EmptyState from "../../components/EmptyState";
-import VerticalPicker from "../../components/VerticalPicker";
 import LobbyChatDrawer from "../../components/LobbyChatDrawer";
 import HomeActivityTicker from "../../components/HomeActivityTicker";
 import FirstTimePrompt from "../../components/FirstTimePrompt";

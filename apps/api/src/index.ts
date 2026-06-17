@@ -1,7 +1,6 @@
 import { log, logger, swallow } from "./lib/logger";
 import dotenv from "dotenv";
 dotenv.config({ override: true });
-import nodeHttps from "https";
 import * as Sentry from "@sentry/node";
 if (process.env.SENTRY_DSN_API) {
   Sentry.init({
@@ -45,7 +44,6 @@ process.on("uncaughtException", (err: any) => {
   }
 });
 import Fastify from "fastify";
-import { z } from "zod";
 import {
   serializerCompiler,
   validatorCompiler,
@@ -139,24 +137,13 @@ import publicRoutes from "./routes/public";
 import overlayRoutes from "./routes/overlay";
 import { seedSyntheticActivity, capturePublicActivity } from "./lib/publicActivity";
 import jwt from "jsonwebtoken";
-import bcrypt from "bcryptjs";
-import { WebSocketServer, WebSocket as WsClient } from "ws";
+import { WebSocketServer } from "ws";
 import cors from "@fastify/cors";
-import type { WebSocket } from "ws";
-import { randomUUID, randomBytes, createHmac, timingSafeEqual } from "crypto";
-import {
-  PrismaClient,
-  RoomRole,
-  GlobalRole,
-  LobbyRole,
-  ModuleType,
-  Prisma,
-  NotificationType,
-} from "@prisma/client";
+import { randomBytes } from "crypto";
+import { RoomRole } from "@prisma/client";
 import {
   canAccessStaff,
   getLobbyRole,
-  canModLobby,
   getGlobalRole,
   canAssignRoles,
   isGloballyBanned,
@@ -175,27 +162,22 @@ import {
   fetchReactionsForTargets,
   checkChatRateLimit,
   checkUrlSpam,
-  type ReactionAgg,
 } from "./lib/chatHelpers";
 import {
   setRoomStateDeps,
   rooms,
   articleRoomMeta,
   _lobbyActivityAt,
-  makeEmptyRoom,
   normalizeRoomId,
   ensureRoomLoaded,
   safeJson,
-  withPayload,
   send,
   broadcast,
   isOwner,
-  isMod,
   isElevatedGlobal,
   isModOrOwner,
   roleOf,
   ensureLaunch,
-  serializeLaunch,
   broadcastLaunch,
   audit,
   buildStatePayload,
@@ -203,11 +185,7 @@ import {
   publishState,
   leaveRoom,
   type Sock,
-  type Role,
-  type RoomUser,
   type AuthedUser,
-  type AuditItem,
-  type LaunchState,
   type RoomState,
 } from "./lib/roomState";
 import {
@@ -232,33 +210,19 @@ import { runFeedWorker, recencyScore } from "./lib/feedWorker";
 import {
   setPokerTableDeps,
   pokerTables,
-  determineWinners,
   getOrCreatePokerTable,
   activeSeatCount,
   activePlayersInHand,
-  nextActiveIndex,
-  nextOccupiedIndex,
-  resetForNewHand,
   buildPokerStateForUser,
   broadcastToPokerTable,
   broadcastPokerState,
-  collectBetsIntoPot,
-  buildSidePots,
-  dealCommunityCards,
-  isBettingRoundComplete,
   advancePokerGame,
-  resolveShowdown,
-  scheduleAutoStart,
   startPokerHand,
-  type PokerSeat,
-  type SidePot,
-  type PokerTable,
 } from "./lib/pokerTable";
 import {
   setNotorietyDeps,
   awardNotoriety,
   getNotorietyRank,
-  NOTORIETY_ACTIONS,
   NOTORIETY_RANKS,
 } from "./lib/notoriety";
 import {
@@ -272,41 +236,12 @@ import {
   pollTwitchPresenceBatch,
   pollXboxPresenceOne,
 } from "./lib/presence";
-import {
-  Card,
-  RANKS,
-  SUITS,
-  createDeck,
-  shuffleDeck,
-  rankValue,
-  combinations,
-  evaluate5,
-  evaluateHand,
-  compareHands,
-} from "./lib/pokerHands";
+
 import { SEED_LOBBIES, SEED_ROOMS } from "./seedData";
-import { OAuth2Client } from "google-auth-library";
-import {
-  syncManifest,
-  enrichProfile,
-  enrichMilestones,
-  enrichVendorSales,
-  resolveItem,
-  resolveBucket,
-  resolveDamageType,
-  isLoaded as manifestLoaded,
-  manifestVersion,
-  WEAPON_BUCKETS,
-  ARMOR_BUCKETS,
-  ARMOR_STAT_HASHES,
-} from "./manifest";
-import { existsSync, mkdirSync, writeFileSync } from "fs";
-import { latLngToCell, cellToBoundary, gridDisk, getResolution } from "h3-js";
-import { join } from "path";
+import { syncManifest } from "./manifest";
 import { startChallengeWorker, setBungieApiKey } from "./challengeWorker";
 import { startTournamentAutoDetect } from "./tournamentAutoDetect";
-import { startNexusPoller, fetchAndUpsertMod } from "./nexusPoller";
-import { sendMail, buildVerifyEmail, buildResetEmail } from "./lib/email";
+import { startNexusPoller } from "./nexusPoller";
 
 import { prisma } from "./lib/prisma";
 import { readCookieToken } from "./lib/authCookie";

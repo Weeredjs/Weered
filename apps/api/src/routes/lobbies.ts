@@ -1,7 +1,6 @@
 import { log, swallow } from "../lib/logger";
 import { logLobbyAudit } from "../lib/lobbyAudit";
 import type { FastifyInstance } from "fastify";
-import { randomUUID } from "node:crypto";
 import { prisma } from "../lib/prisma";
 import { z } from "zod";
 import { LobbyRole } from "@prisma/client";

@@ -1,6 +1,5 @@
 "use client";
 import InviteModal from "./InviteModal";
-import HelldiversPlayerCountPill from "./HelldiversPlayerCountPill";
 import SteamLobbyHeader from "./SteamLobbyHeader";
 
 import React from "react";

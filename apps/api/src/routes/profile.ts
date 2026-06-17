@@ -1,7 +1,6 @@
 import { log, swallow } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 import { fetchWithTimeout } from "../lib/fetchWithTimeout";
-import { z } from "zod";
 import { prisma } from "../lib/prisma";
 import { Prisma } from "@prisma/client";
 

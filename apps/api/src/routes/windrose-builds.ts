@@ -1,6 +1,6 @@
 import { log, swallow } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
-import { PrismaClient, Prisma } from "@prisma/client";
+import { PrismaClient } from "@prisma/client";
 import { existsSync, mkdirSync, writeFileSync, readFileSync } from "fs";
 import { join } from "path";
 import sharp from "sharp";

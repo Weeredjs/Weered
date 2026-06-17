@@ -1,6 +1,5 @@
 import { swallow } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
-import { z } from "zod";
 import { AccessToken } from "livekit-server-sdk";
 
 // LiveKit voice token minting (extracted from index.ts). The LIVEKIT_* config

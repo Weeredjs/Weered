@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -15,7 +15,6 @@ import { api } from "@/lib/api";
 import { Avatar } from "@/components/Avatar";
 import type {
   Friend,
-  FriendRequest,
   FriendsResponse,
   FriendRequestsResponse as RequestsResponse,
 } from "@weered/shared";

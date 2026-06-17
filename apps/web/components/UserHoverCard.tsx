@@ -4,7 +4,7 @@ import React, { useEffect, useState, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { avatarBg } from "../lib/avatarColor";
 import RoleIcon, { TierIcon, getRoleDisplayName, getRoleColor } from "./RoleIcon";
-import { SteamIcon, TwitchIcon, XboxIcon, PlaystationIcon } from "./PresenceRow";
+import { SteamIcon, TwitchIcon, XboxIcon } from "./PresenceRow";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 const FONT =

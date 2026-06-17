@@ -33,7 +33,6 @@ import { GenericGamePanel } from "@/components/GenericGamePanel";
 import { PokerPanel } from "@/components/PokerPanel";
 import { LobbyPresence } from "@/components/LobbyPresence";
 import type {
-  Lobby,
   Room,
   LobbyMembership,
   JoinRequest,

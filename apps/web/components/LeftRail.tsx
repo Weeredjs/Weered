@@ -7,9 +7,8 @@ import { useOverlay } from "./overlays/OverlayProvider";
 import { useWeered, useRoomUsers } from "./WeeredProvider";
 import UserCorner from "./UserCorner";
 import { useUserHover } from "./UserHoverCard";
-import RoleIcon, { getRoleDisplayName, TierIcon } from "./RoleIcon";
+import RoleIcon, { TierIcon } from "./RoleIcon";
 import PresenceRow from "./PresenceRow";
-import { avatarBg } from "../lib/avatarColor";
 
 function pickFirstString(...vals: any[]): string {
   for (const v of vals) if (typeof v === "string" && v.trim()) return v.trim();

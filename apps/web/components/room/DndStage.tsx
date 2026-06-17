@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useWeered } from "../WeeredProvider";
 import DndNpcPanel from "./DndNpcPanel";
 import CampaignLedger from "../CampaignLedger";

@@ -2,13 +2,9 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useWeered } from "./WeeredProvider";
-import { avatarBg } from "../lib/avatarColor";
-import CrewChatPanel from "./CrewChatPanel";
 import EmptyState from "./EmptyState";
 import LoadingState from "./LoadingState";
 import GroupsTab from "./GroupsTab";
-import LinkPreviewCard from "./LinkPreviewCard";
-import { weeredConfirm } from "../lib/confirm";
 import {
   linkify,
   __id,
@@ -20,7 +16,6 @@ import {
   decodeJwtClaims,
   fmtTime,
   fmtRelative,
-  fmtDateSep,
   Avatar,
   StatusDot,
   GroupAvatarStack,

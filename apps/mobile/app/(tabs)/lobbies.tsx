@@ -17,7 +17,7 @@ import { useAuth } from "@/stores/auth";
 import { LobbyLogo } from "@/components/LobbyLogo";
 import { ModuleBadge } from "@/components/ModuleBadge";
 import { SiteBanner } from "@/components/SiteBanner";
-import { StampHeader, StreetCard, Tag } from "@/components/Brand";
+import { StampHeader, Tag } from "@/components/Brand";
 import { resolveImageUrl } from "@/lib/config";
 import { Ionicons } from "@expo/vector-icons";
 import type { Lobby, LobbiesResponse, LobbySearchResponse as SearchResponse } from "@weered/shared";

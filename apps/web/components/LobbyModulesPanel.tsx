@@ -3,7 +3,7 @@ import React, { useState, useCallback } from "react";
 import TournamentsPanel from "./TournamentsPanel";
 import ModuleTabBar from "./ModuleTabBar";
 import { useWatchHere } from "../lib/useWatchHere";
-import { ACCENT_DESTINY, currentUserId } from "./D2Shared";
+import { ACCENT_DESTINY } from "./D2Shared";
 import { ChallengeBoard } from "./D2Challenges";
 import { BungieWeekly, GuardianLookup, MyGuardian } from "./D2Guardian";
 import { LfgBoard } from "./D2Lfg";

@@ -8,7 +8,6 @@ import {
   Image,
   ScrollView,
   Alert,
-  FlatList,
 } from "react-native";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";

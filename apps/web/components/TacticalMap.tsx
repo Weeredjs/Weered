@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useWeered } from "./WeeredProvider";
 import TacticalMapToolbar from "./TacticalMapToolbar";
 

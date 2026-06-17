@@ -1,6 +1,6 @@
 import { WebSocket, WebSocketServer } from "ws";
 import { prisma } from "./prisma";
-import { log, swallow } from "./logger";
+import { swallow } from "./logger";
 import { randomUUID } from "node:crypto";
 import { type ReactionAgg } from "./chatHelpers";
 

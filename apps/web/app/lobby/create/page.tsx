@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import LobbyBranding, { type BrandingValue } from "../../../components/LobbyBranding";
 import { useRouter } from "next/navigation";
 

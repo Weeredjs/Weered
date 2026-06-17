@@ -5,7 +5,6 @@ import { useParams, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import { useWeered } from "../../../components/WeeredProvider";
 import { weeredConfirm } from "../../../lib/confirm";
-import LobbyContent from "../../../components/LobbyContent";
 import LobbyHeaderBar from "../../../components/LobbyHeaderBar";
 import JoinLobbyOverlay from "../../../components/JoinLobbyOverlay";
 import LobbyChatDrawer from "../../../components/LobbyChatDrawer";

@@ -2,34 +2,17 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useOverlay } from "./overlays/OverlayProvider";
-import { useWeered, useRoomMsgs, useRoomUsers, useRoomTyping } from "./WeeredProvider";
-import { avatarBg } from "../lib/avatarColor";
+import { useWeered, useRoomMsgs, useRoomUsers } from "./WeeredProvider";
 import { useUserHover } from "./UserHoverCard";
 import EmptyState from "./EmptyState";
-import { weeredConfirm } from "../lib/confirm";
-import { weeredReport } from "../lib/report";
 import { weeredToast } from "../lib/toast";
-import RoleIcon, { TierIcon } from "./RoleIcon";
-import FlairBadge from "./FlairBadge";
-import { useEquippedFlair } from "../lib/useEquippedFlair";
-import { ChatFlair, CrewFlair } from "./chat/flair";
-import { AttachmentBlock, ChatBody } from "./chat/messageRender";
-import { GifPicker } from "./chat/GifPicker";
 import { Icons } from "./chat/Icons";
-import { EMOJI_CATEGORIES } from "./chat/emoji";
-import { MoreMenu } from "./chat/MoreMenu";
 import { TypingIndicator } from "./chat/TypingIndicator";
 import { runSlashCommand } from "./chat/slashCommands";
 import { ChatComposer } from "./chat/ChatComposer";
 import { ChatMembers } from "./chat/ChatMembers";
 import { ChatMessage } from "./chat/ChatMessage";
-import {
-  API,
-  ChatAtt,
-  authHeadersChat,
-  detectMentionAtCaret,
-  nameStyleFor,
-} from "./chat/chatShared";
+import { API, ChatAtt, authHeadersChat } from "./chat/chatShared";
 
 // Client-side screen — nsfwjs (lazy; the model ships in the package).
 let _nsfwModel: any = null;

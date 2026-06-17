@@ -4,7 +4,6 @@ import { resolveActivity, resolveItem } from "./manifest";
 import {
   bungieGet,
   fetchRecentActivities,
-  fetchPGCR,
   fetchPGCRDetail,
   MODE_NAMES,
   setBungieApiKey as _setBungieApiKey,

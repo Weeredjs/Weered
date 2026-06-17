@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback } from "react";
+import React, { useState } from "react";
 import HelldiversStratagemsPanel from "./HelldiversStratagemsPanel";
 import HelldiversSquadFinder from "./HelldiversSquadFinder";
 

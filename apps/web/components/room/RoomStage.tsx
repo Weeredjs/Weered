@@ -2,14 +2,8 @@
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
-import {
-  Room,
-  RoomEvent,
-  Track,
-  LocalParticipant,
-  RemoteParticipant,
-  Participant,
-} from "livekit-client";
+
+
 import { useWeered } from "../WeeredProvider";
 import { useVoice } from "../VoiceContext";
 import MicSettings from "../MicSettings";

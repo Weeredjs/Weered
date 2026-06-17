@@ -12,7 +12,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Stack, router } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import type { NewsArticle as Article, NewsFeedResponse as FeedResp } from "@weered/shared";
+import type { NewsFeedResponse as FeedResp } from "@weered/shared";
 
 const CATEGORIES = ["top", "gaming", "tech", "world", "sports", "finance"];
 

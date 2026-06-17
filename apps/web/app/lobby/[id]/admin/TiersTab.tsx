@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
-import { LEVEL_COLORS, LevelBadge, S, apiFetch } from "./shared";
+import { LevelBadge, S, apiFetch } from "./shared";
 import { AdminTier } from "./MembersTab";
 
 export function TiersTab({

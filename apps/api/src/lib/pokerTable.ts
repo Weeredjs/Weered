@@ -1,14 +1,6 @@
-import { send, type Sock, type AuthedUser } from "./roomState";
+import { send, type AuthedUser } from "./roomState";
 import { swallow } from "./logger";
-import {
-  createDeck,
-  shuffleDeck,
-  evaluateHand,
-  compareHands,
-  RANKS,
-  SUITS,
-  type Card,
-} from "./pokerHands";
+import { createDeck, evaluateHand, compareHands, type Card } from "./pokerHands";
 
 // Poker table engine (game-flow + chip pots) extracted from index.ts. The
 // paper-economy buy-in/cashout lives in the WS handler, not here. wss is

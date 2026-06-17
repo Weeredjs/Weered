@@ -1,6 +1,3 @@
-import { log } from "./logger";
-import { rooms } from "./roomState";
-
 // Builds the per-lobby system prompt for the AI Operator, extracted from
 // index.ts. Reads live room context from the in-memory `rooms` map.
 

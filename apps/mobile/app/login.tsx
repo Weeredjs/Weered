@@ -7,7 +7,6 @@ import { router } from "expo-router";
 import { API_BASE } from "@/lib/config";
 import { useAuth } from "@/stores/auth";
 import { api } from "@/lib/api";
-import { StreetButton } from "@/components/Brand";
 
 WebBrowser.maybeCompleteAuthSession();
 

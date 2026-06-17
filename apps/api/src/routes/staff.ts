@@ -2,7 +2,6 @@ import { log, swallow } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
 import { GlobalRole, ReportStatus, SubTier } from "@prisma/client";
-import { randomUUID } from "crypto";
 
 type Opts = {
   authFromHeader: (h?: string) => { id: string; name: string } | null;

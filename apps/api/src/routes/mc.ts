@@ -1,5 +1,4 @@
 import type { FastifyInstance } from "fastify";
-import { z } from "zod";
 import crypto from "node:crypto";
 import { prisma } from "../lib/prisma";
 

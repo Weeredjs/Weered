@@ -3,7 +3,7 @@ import type { FastifyInstance } from "fastify";
 import { fetchWithTimeout } from "../lib/fetchWithTimeout";
 import { prisma } from "../lib/prisma";
 import { z } from "zod";
-import { LobbyRole, RoomRole } from "@prisma/client";
+import { RoomRole } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
 type Opts = {
