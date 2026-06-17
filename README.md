@@ -1,9 +1,9 @@
 # Weered
 
-[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=Weeredjs_Weered&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=Weeredjs_Weered)
-[![Reliability](https://sonarcloud.io/api/project_badges/measure?project=Weeredjs_Weered&metric=reliability_rating)](https://sonarcloud.io/summary/new_code?id=Weeredjs_Weered)
-[![Security](https://sonarcloud.io/api/project_badges/measure?project=Weeredjs_Weered&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=Weeredjs_Weered)
-[![Maintainability](https://sonarcloud.io/api/project_badges/measure?project=Weeredjs_Weered&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=Weeredjs_Weered)
+[![Security](https://sonarcloud.io/api/project_badges/measure?project=Weeredjs_Weered&metric=security_rating)](https://sonarcloud.io/summary/overall?id=Weeredjs_Weered)
+[![Reliability](https://sonarcloud.io/api/project_badges/measure?project=Weeredjs_Weered&metric=reliability_rating)](https://sonarcloud.io/summary/overall?id=Weeredjs_Weered)
+[![Maintainability](https://sonarcloud.io/api/project_badges/measure?project=Weeredjs_Weered&metric=sqale_rating)](https://sonarcloud.io/summary/overall?id=Weeredjs_Weered)
+[![Security Review](https://sonarcloud.io/api/project_badges/measure?project=Weeredjs_Weered&metric=security_review_rating)](https://sonarcloud.io/summary/overall?id=Weeredjs_Weered)
 [![CI](https://github.com/Weeredjs/Weered/actions/workflows/ci.yml/badge.svg)](https://github.com/Weeredjs/Weered/actions/workflows/ci.yml)
 [![License: Elastic 2.0](https://img.shields.io/badge/license-Elastic%202.0-2f6df6.svg)](./LICENSE)
 
@@ -115,28 +115,21 @@ Sits alongside a Stripe-backed tier system (Innocent / Indicted / Felon / Kingpi
 
 ## Code quality
 
-Continuous analysis runs in CI on every push. The badges above are live and
-self-updating, so they are the source of truth, not this paragraph.
+Continuous analysis runs in CI on every push; the badges above are live.
 
-Where things stand: **Maintainability is A with a technical-debt ratio under
-0.5%** (the A threshold is 5%). Security and Reliability carry open findings
-under SonarCloud's Clean Code model, and we are working them down in the open
-rather than hiding the dashboard.
+**Security A · Reliability A · Maintainability A · Security Review A** — 0 bugs,
+0 vulnerabilities, 0 open security hotspots, technical-debt ratio under 0.5%.
 
-A note for anyone running their own scanner, because you should: a large share
-of the findings here are false positives or accepted tradeoffs against a strict
-TypeScript monorepo that talks to a dozen game APIs.
+A note for anyone running their own scanner, because you should: where a finding
+was suppressed instead of code-changed, the reason is committed in
+[`sonar-project.properties`](./sonar-project.properties) for you to read — for
+example, the "hardcoded credentials" are test-fixture and CI test-database
+passwords (not real secrets), and a few `S4325` "redundant" casts are
+load-bearing type-narrowing the TypeScript compiler actually requires. Test
+coverage is modest and we don't gate on it; we hold the line on the ratings and
+zero defects instead.
 
-- The flagged "hardcoded credentials" are **test-fixture and CI test-database
-  passwords**, not real secrets. Nothing live is committed.
-- The `S4325` "redundant cast" rule flags casts the TypeScript compiler actually
-  needs to narrow `unknown` / `{}` from JSON, Prisma rows, and third-party
-  payloads. Removing them blindly breaks the build.
-- A chunk of the Reliability findings are React accessibility rules. Real, worth
-  doing, not crashes.
-
-We fix the genuine issues in supervised batches and annotate the rest. If you
-find something real, open an issue. That is the point of going public.
+If you find something real, open an issue. That is the point of going public.
 
 ## Deploying
 
