@@ -3,6 +3,7 @@
 import React from "react";
 import { useOverlay } from "./overlays/OverlayProvider";
 import { useWeered } from "./WeeredProvider";
+import { onActivate } from "@/lib/a11y";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 const ACCENT = "#c9a066";
@@ -220,12 +221,9 @@ export default function WindroseBuildDetail({
     <Backdrop onClose={onClose}>
       <div
         onClick={(e) => e.stopPropagation()}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            e.stopPropagation();
-          }
-        }}
+        onKeyDown={onActivate((e) => {
+          e.stopPropagation();
+        })}
         style={{
           width: "min(1240px, 100%)",
           maxHeight: "92vh",
@@ -709,12 +707,9 @@ function Backdrop({ children, onClose }: { children: React.ReactNode; onClose: (
       role="dialog"
       aria-modal="true"
       onClick={onClose}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          onClose();
-        }
-      }}
+      onKeyDown={onActivate(() => {
+        onClose();
+      })}
       tabIndex={0}
       style={{
         position: "fixed",
@@ -868,12 +863,9 @@ function ReportDialog({ slug, onClose }: { slug: string; onClose: () => void }) 
     <Backdrop onClose={onClose}>
       <div
         onClick={(e) => e.stopPropagation()}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            e.stopPropagation();
-          }
-        }}
+        onKeyDown={onActivate((e) => {
+          e.stopPropagation();
+        })}
         style={{
           width: "min(440px, 100%)",
           padding: 20,
@@ -1003,12 +995,9 @@ function ConfirmDialog({
     <Backdrop onClose={onCancel}>
       <div
         onClick={(e) => e.stopPropagation()}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            e.stopPropagation();
-          }
-        }}
+        onKeyDown={onActivate((e) => {
+          e.stopPropagation();
+        })}
         style={{
           width: "min(380px, 100%)",
           padding: 20,

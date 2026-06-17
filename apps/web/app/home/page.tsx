@@ -15,6 +15,7 @@ import HomeActivityTicker from "../../components/HomeActivityTicker";
 import FirstTimePrompt from "../../components/FirstTimePrompt";
 import HomePinnedNews from "../../components/HomePinnedNews";
 import LobbySearch from "../../components/LobbySearch";
+import { onActivate } from "@/lib/a11y";
 
 function pickFirst(...vals: any[]): string {
   for (const v of vals) if (typeof v === "string" && v.trim()) return v.trim();
@@ -123,7 +124,7 @@ function HeroBanner({ lobby, onJoin }: { lobby: any; onJoin: (id: string, pinned
   return (
     <div
       onClick={() => onJoin(roomId(lobby), Boolean(lobby?.pinned))}
-      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onJoin(roomId(lobby), Boolean(lobby?.pinned)); } }}
+      onKeyDown={onActivate(() => onJoin(roomId(lobby), Boolean(lobby?.pinned)))}
       role="button"
       tabIndex={0}
       className="weered-featured-card"
@@ -583,7 +584,7 @@ function LobbyCard({ room, idx, onJoin }: { room: any; idx: number; onJoin: (id:
   return (
     <div
       onClick={() => onJoin(roomId(room))}
-      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onJoin(roomId(room)); } }}
+      onKeyDown={onActivate(() => onJoin(roomId(room)))}
       role="button"
       tabIndex={0}
       style={{
@@ -696,7 +697,7 @@ function FriendStrip({ friends, onDm, onJoin }: { friends: any[]; onDm: (u: any)
             <div
               key={u?.id || i}
               onClick={() => onDm(u)}
-              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onDm(u); } }}
+              onKeyDown={onActivate(() => onDm(u))}
               role="button"
               tabIndex={0}
               style={{
@@ -746,7 +747,7 @@ function RecentRow({ room, onJoin }: { room: any; onJoin: (id: string, pinned: b
   return (
     <div
       onClick={() => onJoin(roomId(room), pinned)}
-      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onJoin(roomId(room), pinned); } }}
+      onKeyDown={onActivate(() => onJoin(roomId(room), pinned))}
       role="button"
       tabIndex={0}
       style={{
@@ -803,7 +804,7 @@ function LobbyRow({ room, onJoin }: { room: any; onJoin: (id: string) => void })
   return (
     <div
       onClick={() => onJoin(roomId(room))}
-      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onJoin(roomId(room)); } }}
+      onKeyDown={onActivate(() => onJoin(roomId(room)))}
       role="button"
       tabIndex={0}
       style={{
@@ -1156,7 +1157,7 @@ export default function HomePage() {
 
                 <div
                   onClick={() => { try { window.dispatchEvent(new CustomEvent("weered:lobby:browse")); } catch {} }}
-                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); try { window.dispatchEvent(new CustomEvent("weered:lobby:browse")); } catch {} } }}
+                  onKeyDown={onActivate(() => { try { window.dispatchEvent(new CustomEvent("weered:lobby:browse")); } catch {} })}
                   role="button"
                   tabIndex={0}
                   style={{
@@ -1179,7 +1180,7 @@ export default function HomePage() {
 
                 <div
                   onClick={() => router.push(canCreate ? "/lobby/create" : "/subscribe")}
-                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); router.push(canCreate ? "/lobby/create" : "/subscribe"); } }}
+                  onKeyDown={onActivate(() => router.push(canCreate ? "/lobby/create" : "/subscribe"))}
                   role="button"
                   tabIndex={0}
                   style={{
@@ -1211,7 +1212,7 @@ export default function HomePage() {
         {me && String(me?.tier || "INNOCENT").toUpperCase() === "INNOCENT" && (
           <div
             onClick={() => router.push("/subscribe")}
-            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); router.push("/subscribe"); } }}
+            onKeyDown={onActivate(() => router.push("/subscribe"))}
             role="button"
             tabIndex={0}
             style={{

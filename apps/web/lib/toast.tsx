@@ -2,6 +2,7 @@
 
 import React from "react";
 import { createRoot, Root } from "react-dom/client";
+import { onActivate } from "@/lib/a11y";
 
 export type ToastKind = "info" | "success" | "error" | "warn";
 export type ToastOptions = {
@@ -150,12 +151,9 @@ function ToastCard({ item, onDismiss }: { item: ToastItem; onDismiss: () => void
   return (
     <div
       onClick={onDismiss}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          onDismiss();
-        }
-      }}
+      onKeyDown={onActivate(() => {
+        onDismiss();
+      })}
       tabIndex={0}
       role="button"
       style={{

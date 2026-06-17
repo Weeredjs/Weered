@@ -9,6 +9,7 @@ import { apiFetch } from "../lib/api";
 import { weeredConfirm } from "../lib/confirm";
 import { weeredToast } from "../lib/toast";
 import TournamentGuide from "./TournamentGuide";
+import { onActivate } from "@/lib/a11y";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 const ACCENT = "#f58220";
@@ -230,7 +231,7 @@ function TournamentRow({ t, onOpen, muted, canManage, onEdit, onDelete }: { t: T
   const statusColor = t.status === "ACTIVE" ? "#4ade80" : t.status === "REGISTRATION" ? ACCENT : "rgba(255,255,255,.4)";
   return (
     <div role="button" tabIndex={0} onClick={onOpen}
-      onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpen(); } }}
+      onKeyDown={onActivate(() => onOpen())}
       style={{
         width: "100%", padding: "10px 14px",
         background: muted ? "rgba(20,14,8,.4)" : "rgba(28,20,12,.92)",
@@ -522,8 +523,8 @@ function RunAuditModal({ onClose }: { onClose: () => void }) {
   }, []);
 
   return (
-    <div onClick={onClose} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClose(); } }} tabIndex={0} role="dialog" aria-modal="true" style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(8,5,2,.82)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-      <div onClick={e => e.stopPropagation()} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); } }} tabIndex={0} role="button" style={{
+    <div onClick={onClose} onKeyDown={onActivate(() => onClose())} tabIndex={0} role="dialog" aria-modal="true" style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(8,5,2,.82)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+      <div onClick={e => e.stopPropagation()} onKeyDown={onActivate((e) => { e.stopPropagation(); })} tabIndex={0} role="button" style={{
         width: "min(720px, 100%)", maxHeight: "90vh", overflowY: "auto", padding: 20,
         background: "linear-gradient(180deg, rgba(28,20,12,.97), rgba(14,10,6,.99))",
         border: "2px solid rgba(245,130,32,.6)", borderRadius: 6, color: "rgba(255,255,255,.92)", fontFamily: "inherit",
@@ -1193,8 +1194,8 @@ function TournamentFormModal({
   }
 
   return (
-    <div onClick={onClose} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClose(); } }} tabIndex={0} role="dialog" aria-modal="true" style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(8,5,2,.82)", backdropFilter: "blur(4px)", WebkitBackdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-      <div onClick={e => e.stopPropagation()} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); } }} tabIndex={0} role="button" style={{
+    <div onClick={onClose} onKeyDown={onActivate(() => onClose())} tabIndex={0} role="dialog" aria-modal="true" style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(8,5,2,.82)", backdropFilter: "blur(4px)", WebkitBackdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+      <div onClick={e => e.stopPropagation()} onKeyDown={onActivate((e) => { e.stopPropagation(); })} tabIndex={0} role="button" style={{
         width: "min(560px, 100%)", padding: 20,
         maxHeight: "90vh", overflowY: "auto",
         background: "linear-gradient(180deg, rgba(28,20,12,.97), rgba(14,10,6,.99))",

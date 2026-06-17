@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { API } from "./chatShared";
+import { onActivate } from "@/lib/a11y";
 
 const WEERED_BOUNTY_RE = /(?:https?:\/\/[^\s/]+)?\/windrose\/bounty\/([^\s/?#]+)/i;
 const WEERED_HUNTER_RE = /(?:https?:\/\/[^\s/]+)?\/windrose\/hunter\/([^\s/?#]+)/i;
@@ -606,15 +607,12 @@ export function NexusModEmbed({ id, href }: { id: string; href: string }) {
                   window.location.href = nxmHref;
                 } catch {}
               }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  try {
-                    window.location.href = nxmHref;
-                  } catch {}
-                }
-              }}
+              onKeyDown={onActivate((e) => {
+                e.stopPropagation();
+                try {
+                  window.location.href = nxmHref;
+                } catch {}
+              })}
               role="button"
               tabIndex={0}
               style={{

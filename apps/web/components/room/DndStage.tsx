@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { useWeered } from "../WeeredProvider";
+import { onActivate } from "@/lib/a11y";
 import DndNpcPanel from "./DndNpcPanel";
 import CampaignLedger from "../CampaignLedger";
 import CharacterSheet from "../CharacterSheet";
@@ -611,12 +612,9 @@ function InitiativeTracker({ roomId }: { roomId: string }) {
                       <span
                         key={cond}
                         onClick={() => toggleCondition(c.id, cond)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" || e.key === " ") {
-                            e.preventDefault();
-                            toggleCondition(c.id, cond);
-                          }
-                        }}
+                        onKeyDown={onActivate(() => {
+                          toggleCondition(c.id, cond);
+                        })}
                         tabIndex={0}
                         role="button"
                         style={{

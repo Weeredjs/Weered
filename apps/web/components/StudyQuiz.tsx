@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useCallback, useRef, useState } from "react";
+import { onActivate } from "@/lib/a11y";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 const ACCENT = "#6366F1";
@@ -647,12 +648,9 @@ export default function StudyQuiz() {
                 onClick={() => {
                   if (!checked) setSelectedAnswer(opt);
                 }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    if (!checked) setSelectedAnswer(opt);
-                  }
-                }}
+                onKeyDown={onActivate(() => {
+                  if (!checked) setSelectedAnswer(opt);
+                })}
                 tabIndex={0}
                 role="button"
               >
@@ -738,12 +736,7 @@ export default function StudyQuiz() {
                 <div
                   style={S.resultRow(results[i])}
                   onClick={() => setExpandedResult(expandedResult === i ? null : i)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      setExpandedResult(expandedResult === i ? null : i);
-                    }
-                  }}
+                  onKeyDown={onActivate(() => setExpandedResult(expandedResult === i ? null : i))}
                   tabIndex={0}
                   role="button"
                 >

@@ -13,6 +13,7 @@ import {
   apiFetch,
 } from "./WrShared";
 import { ClaimModal, HunterDossierModal } from "./WrHunter";
+import { onActivate } from "@/lib/a11y";
 
 export type TierInfo = { label: string; color: string; glow: string; min: number };
 
@@ -946,12 +947,9 @@ export function LeaderboardColumn({
             <div
               key={r.key}
               onClick={r.onClick}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  r.onClick?.();
-                }
-              }}
+              onKeyDown={onActivate(() => {
+                r.onClick?.();
+              })}
               tabIndex={0}
               role="button"
               title={r.onClick ? "See all bounties on this target" : undefined}

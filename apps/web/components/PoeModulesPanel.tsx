@@ -6,6 +6,7 @@ import EmptyState from "./EmptyState";
 import ModuleTabBar from "./ModuleTabBar";
 import PassiveTree from "./PassiveTree";
 import { useWatchHere, consumePendingStream } from "../lib/useWatchHere";
+import { onActivate } from "@/lib/a11y";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 const POE_NINJA = "https://poe.ninja/api/data";
@@ -895,7 +896,7 @@ function TwitchStreams({ lobbyId, accent }: { lobbyId: string; accent: string })
 
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         {streams.map(s => (
-          <div key={s.userLogin} onClick={() => handleCardClick(s)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleCardClick(s); } }} tabIndex={0} role="button" style={{
+          <div key={s.userLogin} onClick={() => handleCardClick(s)} onKeyDown={onActivate(() => handleCardClick(s))} tabIndex={0} role="button" style={{
             ...S.card, cursor: "pointer", display: "flex", gap: 10, alignItems: "center",
             transition: "border-color .12s",
           }}
@@ -1057,7 +1058,7 @@ function PoeAccountTab({ accent }: { accent: string }) {
               const open = selChar === c.name;
               return (
                 <div key={c.id || c.name}>
-                  <div onClick={() => openChar(c)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openChar(c); } }} tabIndex={0} role="button" style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", background: open ? `${accent}14` : "rgba(255,255,255,.03)", border: `1px solid ${open ? accent + "44" : "rgba(255,255,255,.07)"}`, borderRadius: 4, cursor: "pointer" }}>
+                  <div onClick={() => openChar(c)} onKeyDown={onActivate(() => openChar(c))} tabIndex={0} role="button" style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", background: open ? `${accent}14` : "rgba(255,255,255,.03)", border: `1px solid ${open ? accent + "44" : "rgba(255,255,255,.07)"}`, borderRadius: 4, cursor: "pointer" }}>
                     <span style={{ width: 10, color: "rgba(255,255,255,.4)", fontSize: 10 }}>{open ? "▾" : "▸"}</span>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: 13, fontWeight: 700, color: "#fff" }}>{c.name}</div>

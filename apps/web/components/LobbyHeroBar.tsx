@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import StreamInterceptModal, { type StreamInfo } from "./StreamInterceptModal";
+import { onActivate } from "@/lib/a11y";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
@@ -436,19 +437,16 @@ export default function LobbyHeroBar({
                     gameName: twitchGame,
                   })
                 }
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    setInterceptStream({
-                      userLogin: stream.streamer?.toLowerCase() || "",
-                      userName: stream.streamer || "",
-                      title: stream.title || "",
-                      viewerCount: stream.viewers || 0,
-                      thumbnailUrl: stream.thumbnail || "",
-                      gameName: twitchGame,
-                    });
-                  }
-                }}
+                onKeyDown={onActivate(() => {
+                  setInterceptStream({
+                    userLogin: stream.streamer?.toLowerCase() || "",
+                    userName: stream.streamer || "",
+                    title: stream.title || "",
+                    viewerCount: stream.viewers || 0,
+                    thumbnailUrl: stream.thumbnail || "",
+                    gameName: twitchGame,
+                  });
+                })}
                 tabIndex={0}
                 role="button"
                 style={{ cursor: "pointer" }}

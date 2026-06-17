@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { onActivate } from "@/lib/a11y";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 const ACCENT = "#FFD700";
@@ -440,12 +441,7 @@ export default function HelldiversStratagemsPanel({
                 transition: "border-color .15s, background .15s",
               }}
               onClick={() => setSelected(isOpen ? null : s)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  setSelected(isOpen ? null : s);
-                }
-              }}
+              onKeyDown={onActivate(() => setSelected(isOpen ? null : s))}
               tabIndex={0}
               role="button"
             >

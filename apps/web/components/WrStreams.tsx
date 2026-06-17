@@ -5,6 +5,7 @@ import { consumePendingStream } from "../lib/useWatchHere";
 import EmptyState from "./EmptyState";
 import LoadingState from "./LoadingState";
 import { PAL, S, WR_FONT_DISPLAY, WR_FONT_MONO, apiFetch } from "./WrShared";
+import { onActivate } from "@/lib/a11y";
 
 export function Labeled({
   label,
@@ -128,12 +129,7 @@ export function StreamsTab({ gameName, lobbyId }: { gameName: string; lobbyId: s
             key={s.userLogin}
             style={{ ...S.card, padding: 0, overflow: "hidden", cursor: "pointer" }}
             onClick={() => setIntercept(s)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") {
-                e.preventDefault();
-                setIntercept(s);
-              }
-            }}
+            onKeyDown={onActivate(() => setIntercept(s))}
             tabIndex={0}
             role="button"
           >

@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { avatarBg } from "../lib/avatarColor";
 import RoleIcon, { TierIcon, getRoleDisplayName, getRoleColor } from "./RoleIcon";
 import { SteamIcon, TwitchIcon, XboxIcon } from "./PresenceRow";
+import { onActivate } from "@/lib/a11y";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 const FONT =
@@ -852,12 +853,7 @@ export default function UserHoverCard({
         {lobbyModuleType === "WINDROSE" && modCount !== null && modCount > 0 && (
           <div
             onClick={() => onViewProfile?.(userId)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") {
-                e.preventDefault();
-                onViewProfile?.(userId);
-              }
-            }}
+            onKeyDown={onActivate(() => onViewProfile?.(userId))}
             tabIndex={0}
             role="button"
             style={{

@@ -2,6 +2,7 @@
 import { StaffEvent } from "./BroadcastTab";
 import { useState, useEffect, useCallback } from "react";
 import { S, apiFetch } from "./shared";
+import { onActivate } from "@/lib/a11y";
 
 export const EVENT_STATUS_COLORS: Record<string, { bg: string; border: string; color: string }> = {
   DRAFT: {
@@ -365,12 +366,7 @@ export function EventsTab() {
                   borderColor: selected === ev.id ? "rgba(124,58,237,.35)" : undefined,
                 }}
                 onClick={() => setSelected(selected === ev.id ? null : ev.id)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    setSelected(selected === ev.id ? null : ev.id);
-                  }
-                }}
+                onKeyDown={onActivate(() => setSelected(selected === ev.id ? null : ev.id))}
                 role="button"
                 tabIndex={0}
               >

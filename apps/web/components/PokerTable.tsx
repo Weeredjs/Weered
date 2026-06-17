@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState, useCallback, useMemo, CSSProperties } from "react";
 import { avatarBg } from "../lib/avatarColor";
+import { onActivate } from "@/lib/a11y";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 function getToken() {
@@ -597,23 +598,18 @@ function BuyInDialog({
     <div
       style={dlg}
       onClick={onCancel}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          onCancel();
-        }
-      }}
+      onKeyDown={onActivate(() => {
+        onCancel();
+      })}
       tabIndex={0}
       role="button"
     >
       <div
         style={panel}
         onClick={(e) => e.stopPropagation()}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.stopPropagation();
-          }
-        }}
+        onKeyDown={onActivate((e) => {
+          e.stopPropagation();
+        })}
       >
         <h3
           style={{

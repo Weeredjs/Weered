@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { onActivate } from "@/lib/a11y";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 const ACCENT = "#f58220";
@@ -146,12 +147,9 @@ export default function TournamentMatchModal({
     <Backdrop onClose={onClose}>
       <div
         onClick={(e) => e.stopPropagation()}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            e.stopPropagation();
-          }
-        }}
+        onKeyDown={onActivate((e) => {
+          e.stopPropagation();
+        })}
         tabIndex={0}
         role="button"
         style={{
@@ -613,12 +611,7 @@ function Backdrop({ children, onClose }: { children: React.ReactNode; onClose: (
   return (
     <div
       onClick={onClose}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          onClose();
-        }
-      }}
+      onKeyDown={onActivate(() => onClose())}
       tabIndex={0}
       role="dialog"
       aria-modal="true"

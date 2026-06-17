@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import StreamInterceptModal, { type StreamInfo } from "./StreamInterceptModal";
 import { useWatchHere, consumePendingStream } from "../lib/useWatchHere";
 import ModuleTabBar from "./ModuleTabBar";
+import { onActivate } from "@/lib/a11y";
 
 function TwitchIcon({ size = 13, color = "#9146FF", style }: { size?: number; color?: string; style?: React.CSSProperties }) {
   return (
@@ -110,7 +111,7 @@ function TwitchStreams({ lobbyId, accentColor }: { lobbyId?: string; accentColor
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 8 }}>
         {streams.map(s => (
-          <div key={s.id} onClick={() => handleCardClick(s)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleCardClick(s); } }} tabIndex={0} role="button" style={{
+          <div key={s.id} onClick={() => handleCardClick(s)} onKeyDown={onActivate(() => handleCardClick(s))} tabIndex={0} role="button" style={{
             ...S.card, cursor: "pointer", transition: "border-color .15s, background .15s",
             border: activeStream === s.userLogin ? `1px solid ${M.accentMid}` : `1px solid ${M.border}`,
           }}>
@@ -393,7 +394,7 @@ function RunnerDatabase() {
       <div style={{ ...S.label, marginBottom: 2 }}>7 RUNNER SHELLS — TAU CETI IV DEPLOYMENT ROSTER</div>
 
       {RUNNERS.map((r, i) => (
-        <div key={r.name} onClick={() => setSelected(selected === i ? null : i)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setSelected(selected === i ? null : i); } }} tabIndex={0} role="button" style={{
+        <div key={r.name} onClick={() => setSelected(selected === i ? null : i)} onKeyDown={onActivate(() => setSelected(selected === i ? null : i))} tabIndex={0} role="button" style={{
           ...S.card, cursor: "pointer", transition: "all .15s",
           border: selected === i ? `1px solid ${r.color}55` : `1px solid ${M.border}`,
           background: selected === i ? `${r.color}08` : M.card,
@@ -603,7 +604,7 @@ function ZoneMap() {
       </div>
       <div
         onClick={() => { setFullscreen(true); setZoom(1); setPan({ x: 0, y: 0 }); }}
-        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setFullscreen(true); setZoom(1); setPan({ x: 0, y: 0 }); } }}
+        onKeyDown={onActivate(() => { setFullscreen(true); setZoom(1); setPan({ x: 0, y: 0 }); })}
         tabIndex={0}
         role="button"
         style={{

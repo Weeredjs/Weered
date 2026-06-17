@@ -13,6 +13,7 @@ import { ChatComposer } from "./chat/ChatComposer";
 import { ChatMembers } from "./chat/ChatMembers";
 import { ChatMessage } from "./chat/ChatMessage";
 import { API, ChatAtt, authHeadersChat } from "./chat/chatShared";
+import { onActivate } from "@/lib/a11y";
 
 // Client-side screen — nsfwjs (lazy; the model ships in the package).
 let _nsfwModel: any = null;
@@ -797,12 +798,7 @@ export default function LobbyChatPanel(
           {lightbox && (
             <div
               onClick={() => setLightbox(null)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  setLightbox(null);
-                }
-              }}
+              onKeyDown={onActivate(() => setLightbox(null))}
               tabIndex={0}
               role="button"
               style={{
@@ -828,12 +824,9 @@ export default function LobbyChatPanel(
                   boxShadow: "0 24px 80px rgba(0,0,0,.6)",
                 }}
                 onClick={(e) => e.stopPropagation()}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    e.stopPropagation();
-                  }
-                }}
+                onKeyDown={onActivate((e) => {
+                  e.stopPropagation();
+                })}
                 tabIndex={0}
               />
               <div
@@ -859,19 +852,16 @@ export default function LobbyChatPanel(
                       .catch(() => {});
                     setLightbox(null);
                   }}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      fetch(`${API}/chat/attachments/${lightbox.id}/report`, {
-                        method: "POST",
-                        headers: { ...authHeadersChat() },
-                      })
-                        .then(() => weeredToast.success("Reported."))
-                        .catch(() => {});
-                      setLightbox(null);
-                    }
-                  }}
+                  onKeyDown={onActivate((e) => {
+                    e.stopPropagation();
+                    fetch(`${API}/chat/attachments/${lightbox.id}/report`, {
+                      method: "POST",
+                      headers: { ...authHeadersChat() },
+                    })
+                      .then(() => weeredToast.success("Reported."))
+                      .catch(() => {});
+                    setLightbox(null);
+                  })}
                   tabIndex={0}
                   role="button"
                   style={{ color: "rgba(252,165,165,.8)", cursor: "pointer" }}
@@ -948,12 +938,7 @@ export default function LobbyChatPanel(
         {damagePicker && (
           <div
             onClick={() => setDamagePicker(null)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") {
-                e.preventDefault();
-                setDamagePicker(null);
-              }
-            }}
+            onKeyDown={onActivate(() => setDamagePicker(null))}
             tabIndex={0}
             role="button"
             style={{
@@ -968,12 +953,9 @@ export default function LobbyChatPanel(
           >
             <div
               onClick={(e) => e.stopPropagation()}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  e.stopPropagation();
-                }
-              }}
+              onKeyDown={onActivate((e) => {
+                e.stopPropagation();
+              })}
               tabIndex={0}
               role="button"
               style={{

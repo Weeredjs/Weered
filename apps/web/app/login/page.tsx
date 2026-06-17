@@ -2,6 +2,7 @@
 
 import React, { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { onActivate } from "@/lib/a11y";
 
 const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || "";
 
@@ -594,13 +595,10 @@ function LoginForm() {
                     setMode(mode === "login" ? "register" : "login");
                     setErr("");
                   }}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      setMode(mode === "login" ? "register" : "login");
-                      setErr("");
-                    }
-                  }}
+                  onKeyDown={onActivate(() => {
+                    setMode(mode === "login" ? "register" : "login");
+                    setErr("");
+                  })}
                   role="button"
                   tabIndex={0}
                 >

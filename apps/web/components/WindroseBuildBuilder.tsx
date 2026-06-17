@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { onActivate } from "@/lib/a11y";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 const ACCENT = "#c9a066";
@@ -148,12 +149,7 @@ export default function WindroseBuildBuilder({
       role="dialog"
       aria-modal="true"
       onClick={onClose}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          onClose();
-        }
-      }}
+      onKeyDown={onActivate(() => onClose())}
       tabIndex={0}
       style={{
         position: "fixed",
@@ -171,12 +167,9 @@ export default function WindroseBuildBuilder({
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            e.stopPropagation();
-          }
-        }}
+        onKeyDown={onActivate((e) => {
+          e.stopPropagation();
+        })}
         tabIndex={0}
         role="button"
         style={{
@@ -568,12 +561,7 @@ function DropZone({
   return (
     <div
       onClick={onClick}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          onClick();
-        }
-      }}
+      onKeyDown={onActivate(() => onClick())}
       tabIndex={0}
       role="button"
       onDragOver={(e) => {

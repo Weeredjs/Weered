@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useWeered } from "../WeeredProvider";
 import { forumFetch, timeAgo, CATEGORY_CONFIG, TIER_COLORS, FONT } from "./ForumHelpers";
 import { avatarBg } from "../../lib/avatarColor";
+import { onActivate } from "@/lib/a11y";
 
 type Post = {
   id: string;
@@ -129,12 +130,7 @@ export default function BookmarksPage() {
                   cursor: "pointer",
                 }}
                 onClick={() => router.push(`/forum/${post.id}`)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    router.push(`/forum/${post.id}`);
-                  }
-                }}
+                onKeyDown={onActivate(() => router.push(`/forum/${post.id}`))}
                 tabIndex={0}
                 role="button"
                 onMouseEnter={(e) => {

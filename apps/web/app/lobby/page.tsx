@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import LobbyHeaderBar from "../../components/LobbyHeaderBar";
 import LobbyChatDrawer from "../../components/LobbyChatDrawer";
+import { onActivate } from "@/lib/a11y";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "https://api.weered.ca";
 function authHeaders(): Record<string, string> {
@@ -449,12 +450,7 @@ function ToolkitCard({ section }: { section: (typeof TOOLKIT_SECTIONS)[0] }) {
     >
       <div
         onClick={() => setExpanded(!expanded)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            setExpanded(!expanded);
-          }
-        }}
+        onKeyDown={onActivate(() => setExpanded(!expanded))}
         role="button"
         tabIndex={0}
         style={{

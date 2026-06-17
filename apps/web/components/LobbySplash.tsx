@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
+import { onActivate } from "@/lib/a11y";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "https://api.weered.ca";
 
@@ -170,12 +171,7 @@ export default function LobbySplash({
         aria-modal="true"
         aria-label={ariaLabel}
         onClick={handleClose}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            handleClose();
-          }
-        }}
+        onKeyDown={onActivate(() => handleClose())}
         tabIndex={0}
         className="weered-lobby-splash-root"
         style={{
@@ -251,12 +247,9 @@ export default function LobbySplash({
         <div
           className="weered-lobby-splash-inner"
           onClick={(e) => e.stopPropagation()}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" || e.key === " ") {
-              e.preventDefault();
-              e.stopPropagation();
-            }
-          }}
+          onKeyDown={onActivate((e) => {
+            e.stopPropagation();
+          })}
           tabIndex={0}
           role="button"
           style={{

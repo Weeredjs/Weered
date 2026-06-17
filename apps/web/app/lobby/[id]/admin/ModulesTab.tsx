@@ -1,6 +1,7 @@
 "use client";
 import React, { useState } from "react";
 import { LobbyData, S, apiFetch } from "./shared";
+import { onActivate } from "@/lib/a11y";
 
 export const ALL_MODULES = [
   { key: "voice", label: "Voice (LiveKit)", desc: "Real-time voice chat in rooms" },
@@ -55,12 +56,7 @@ export function ModulesTab({ lobby, onRefresh }: { lobby: LobbyData; onRefresh: 
             <div
               key={mod.key}
               onClick={() => toggle(mod.key)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  toggle(mod.key);
-                }
-              }}
+              onKeyDown={onActivate(() => toggle(mod.key))}
               role="button"
               tabIndex={0}
               style={{

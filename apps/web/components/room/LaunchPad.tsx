@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { useWeered, useRoomUsers, type LaunchSnapshot, type LaunchTarget } from "../WeeredProvider";
+import { onActivate } from "@/lib/a11y";
 
 const STEAM_LAUNCH_MODULE_TYPES = new Set(["WINDROSE"]);
 
@@ -469,23 +470,18 @@ function SetupDialog({
     <div
       style={dialogBackdropStyle}
       onClick={onClose}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          onClose();
-        }
-      }}
+      onKeyDown={onActivate(() => {
+        onClose();
+      })}
       tabIndex={0}
       role="button"
     >
       <div
         style={dialogStyle}
         onClick={(e) => e.stopPropagation()}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.stopPropagation();
-          }
-        }}
+        onKeyDown={onActivate((e) => {
+          e.stopPropagation();
+        })}
       >
         <div
           style={{

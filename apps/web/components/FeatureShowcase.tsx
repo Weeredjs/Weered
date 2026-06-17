@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { onActivate } from "@/lib/a11y";
 
 interface Props {
   open: boolean;
@@ -245,23 +246,16 @@ export default function FeatureShowcase({ open, onClose }: Props) {
       <div
         className="showcase-overlay"
         onClick={onClose}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            onClose();
-          }
-        }}
+        onKeyDown={onActivate(() => onClose())}
         tabIndex={0}
         role="button"
       >
         <div
           className="showcase-card"
           onClick={(e) => e.stopPropagation()}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" || e.key === " ") {
-              e.stopPropagation();
-            }
-          }}
+          onKeyDown={onActivate((e) => {
+            e.stopPropagation();
+          })}
           tabIndex={0}
           role="button"
           style={{ position: "relative" }}

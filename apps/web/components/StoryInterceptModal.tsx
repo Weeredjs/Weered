@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { onActivate } from "@/lib/a11y";
 import type { FeedItem } from "./HomeFeed";
 
 interface Props {
@@ -168,12 +169,7 @@ export default function StoryInterceptModal({ item, originRect, onClose }: Props
 
       <div
         onClick={handleClose}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            handleClose();
-          }
-        }}
+        onKeyDown={onActivate(() => handleClose())}
         tabIndex={0}
         role="button"
         style={{

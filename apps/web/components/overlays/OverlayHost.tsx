@@ -7,6 +7,7 @@ import RoomDetailsSheet from "./sheets/RoomDetailsSheet";
 import DockSheet from "./sheets/DockSheet";
 import ProfileSheet from "./sheets/ProfileSheet";
 import SettingsSheet from "./sheets/SettingsSheet";
+import { onActivate } from "@/lib/a11y";
 
 function sheetTitle(type: string | undefined) {
   if (type === "roomDetails") return "Room Details";
@@ -62,12 +63,7 @@ export default function OverlayHost() {
       <div
         className="absolute inset-0 bg-black/50"
         onClick={() => closeSheet()}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            closeSheet();
-          }
-        }}
+        onKeyDown={onActivate(() => closeSheet())}
         tabIndex={0}
         role="button"
       />

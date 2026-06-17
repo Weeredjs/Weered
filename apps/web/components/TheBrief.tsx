@@ -1,5 +1,6 @@
 "use client";
 import React, { useEffect, useState } from "react";
+import { onActivate } from "@/lib/a11y";
 
 const STORAGE_KEY = "weered:fakeout:brief:seen";
 const ACCENT = "#F5C518";
@@ -665,12 +666,7 @@ export default function TheBrief({ open, onClose }: { open: boolean; onClose: ()
   return (
     <div
       onClick={dismiss}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          dismiss();
-        }
-      }}
+      onKeyDown={onActivate(() => dismiss())}
       tabIndex={0}
       role="button"
       style={{
@@ -687,12 +683,9 @@ export default function TheBrief({ open, onClose }: { open: boolean; onClose: ()
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            e.stopPropagation();
-          }
-        }}
+        onKeyDown={onActivate((e) => {
+          e.stopPropagation();
+        })}
         tabIndex={0}
         role="button"
         style={{

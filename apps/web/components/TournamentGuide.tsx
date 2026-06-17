@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { onActivate } from "@/lib/a11y";
 
 const CHAMFER =
   "polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px)";
@@ -358,12 +359,7 @@ export default function TournamentGuide({
   return (
     <div
       onClick={onClose}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          onClose();
-        }
-      }}
+      onKeyDown={onActivate(() => onClose())}
       tabIndex={0}
       role="dialog"
       aria-modal="true"
@@ -382,12 +378,9 @@ export default function TournamentGuide({
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            e.stopPropagation();
-          }
-        }}
+        onKeyDown={onActivate((e) => {
+          e.stopPropagation();
+        })}
         tabIndex={0}
         role="button"
         style={{

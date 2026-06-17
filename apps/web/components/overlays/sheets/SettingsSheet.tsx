@@ -3,6 +3,7 @@
 import React from "react";
 import { openConsentBanner } from "../../CookieConsent";
 import PresenceSection from "./PresenceSection";
+import { onActivate } from "@/lib/a11y";
 
 type Settings = {
   theme: "stone" | "slate" | "zinc" | "gray" | "ishimura" | "broadcast" | "press";
@@ -261,7 +262,7 @@ export default function SettingsSheet({ initialTab }: { initialTab?: string } = 
                 key={t.id}
                 type="button"
                 onClick={() => setTab(t.id)}
-                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setTab(t.id); } }}
+                onKeyDown={onActivate(() => setTab(t.id))}
                 style={{
                   display: "flex", alignItems: "center", gap: 9,
                   padding: "8px 11px", borderRadius: 7, width: "100%",
@@ -503,7 +504,7 @@ export function Section({ title, children, onReset }: { title: string; children:
           <button
             type="button"
             onClick={onReset}
-            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onReset(); } }}
+            onKeyDown={onActivate(() => onReset())}
             style={{
               background: "transparent", border: "none", cursor: "pointer",
               fontFamily: "inherit", fontSize: 10, fontWeight: 700,

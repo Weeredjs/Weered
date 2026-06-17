@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useWeered } from "./WeeredProvider";
 import LobbyChatPanel from "./LobbyChatPanel";
+import { onActivate } from "@/lib/a11y";
 
 interface Props {
   roomId: string;
@@ -231,12 +232,7 @@ export default function LobbyChatDrawer({ roomId, title = "Lobby Chat", accentCo
         <div
           className={`lobby-chat-tab${open ? " open" : ""}${hasUnread && !open ? " has-unread" : ""}`}
           onClick={handleToggle}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" || e.key === " ") {
-              e.preventDefault();
-              handleToggle();
-            }
-          }}
+          onKeyDown={onActivate(() => handleToggle())}
           tabIndex={0}
           role="button"
           style={{ right: open ? "min(340px, 90%)" : 0 }}
@@ -409,12 +405,7 @@ export default function LobbyChatDrawer({ roomId, title = "Lobby Chat", accentCo
                 <div
                   className="lobby-drawer-close"
                   onClick={() => setOpen(false)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      setOpen(false);
-                    }
-                  }}
+                  onKeyDown={onActivate(() => setOpen(false))}
                   tabIndex={0}
                   role="button"
                 >

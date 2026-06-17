@@ -6,6 +6,7 @@ import StreamInterceptModal, { type StreamInfo } from "./StreamInterceptModal";
 import EmptyState from "./EmptyState";
 import { useWatchHere, consumePendingStream } from "../lib/useWatchHere";
 import ModuleTabBar from "./ModuleTabBar";
+import { onActivate } from "@/lib/a11y";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
@@ -143,7 +144,7 @@ function Scoreboard({ accentColor }: { accentColor: string }) {
             <div key={gid}>
               <div
                 onClick={() => toggleExpand(String(gid))}
-                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleExpand(String(gid)); } }}
+                onKeyDown={onActivate(() => toggleExpand(String(gid)))}
                 tabIndex={0}
                 role="button"
                 style={{
@@ -406,7 +407,7 @@ function Leaders({ accentColor, onPlayerClick }: { accentColor: string; onPlayer
             <div
               key={p.id || p.playerId || i}
               onClick={() => (p.id || p.playerId) && onPlayerClick(p.id || p.playerId, p.name || p.playerName || "")}
-              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); (p.id || p.playerId) && onPlayerClick(p.id || p.playerId, p.name || p.playerName || ""); } }}
+              onKeyDown={onActivate(() => { (p.id || p.playerId) && onPlayerClick(p.id || p.playerId, p.name || p.playerName || ""); })}
               tabIndex={0}
               role="button"
               style={{
@@ -703,7 +704,7 @@ function PlayerSearch({ accentColor, initialPlayerId, initialPlayerName }: {
             <div
               key={pid || i}
               onClick={() => selectPlayer(p)}
-              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); selectPlayer(p); } }}
+              onKeyDown={onActivate(() => selectPlayer(p))}
               tabIndex={0}
               role="button"
               style={{
@@ -819,7 +820,7 @@ function MlbTwitchStreams({ lobbyId, accentColor }: { lobbyId?: string; accentCo
           <div
             key={s.id}
             onClick={() => handleCardClick(s)}
-            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleCardClick(s); } }}
+            onKeyDown={onActivate(() => handleCardClick(s))}
             tabIndex={0}
             role="button"
             style={{
@@ -902,7 +903,7 @@ function Highlights({ accentColor }: { accentColor: string }) {
           <div
             key={h.id}
             onClick={() => setPlaying(h.videoUrl)}
-            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setPlaying(h.videoUrl); } }}
+            onKeyDown={onActivate(() => setPlaying(h.videoUrl))}
             tabIndex={0}
             role="button"
             style={{
@@ -995,7 +996,7 @@ function Matchups({ accentColor }: { accentColor: string }) {
               borderColor: isLive ? `${accentColor}50` : "rgba(255,255,255,.08)",
             }}
             onClick={() => setExpanded(isExpanded ? null : m.gameId)}
-            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setExpanded(isExpanded ? null : m.gameId); } }}
+            onKeyDown={onActivate(() => setExpanded(isExpanded ? null : m.gameId))}
             tabIndex={0}
             role="button"
           >

@@ -7,6 +7,7 @@ import { forumFetch, timeAgo, CATEGORY_CONFIG, TIER_COLORS, FONT } from "./Forum
 import { apiFetch } from "../../lib/api";
 import { avatarBg } from "../../lib/avatarColor";
 import { weeredForumReport } from "../../lib/forumReport";
+import { onActivate } from "@/lib/a11y";
 
 type Post = {
   id: string; title: string; body: string; category: string;
@@ -417,7 +418,7 @@ export default function ForumPage({ lobbyId, lobbyName }: { lobbyId?: string; lo
                     cursor: "pointer", transition: "border-color 0.15s, background 0.15s",
                   }}
                   onClick={() => router.push(`/forum/${post.id}`)}
-                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); router.push(`/forum/${post.id}`); } }}
+                  onKeyDown={onActivate(() => router.push(`/forum/${post.id}`))}
                   tabIndex={0}
                   role="button"
                   onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.05)"; }}
@@ -586,7 +587,7 @@ function SectionSidebar({
       {drawerOpen && (
         <div
           onClick={onCloseDrawer}
-          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onCloseDrawer(); } }}
+          onKeyDown={onActivate(() => onCloseDrawer())}
           tabIndex={0}
           role="button"
           style={{
@@ -800,7 +801,7 @@ function SectionManageModal({
   }
 
   return (
-    <div onClick={onClose} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClose(); } }} tabIndex={0} role="button" style={{
+    <div onClick={onClose} onKeyDown={onActivate(() => onClose())} tabIndex={0} role="button" style={{
       position: "fixed", inset: 0, zIndex: 300,
       background: "rgba(0,0,0,.7)", display: "flex", alignItems: "center", justifyContent: "center",
       padding: 20,

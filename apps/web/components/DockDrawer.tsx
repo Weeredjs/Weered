@@ -2,6 +2,7 @@
 
 import React from "react";
 import DockShell from "./DockShell";
+import { onActivate } from "@/lib/a11y";
 
 function useSwipeClose(
   ref: React.RefObject<HTMLDivElement | null>,
@@ -125,12 +126,7 @@ export default function DockDrawer() {
     <>
       <div
         onClick={() => setOpen(false)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            setOpen(false);
-          }
-        }}
+        onKeyDown={onActivate(() => setOpen(false))}
         tabIndex={0}
         role="button"
         style={{

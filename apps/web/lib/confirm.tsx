@@ -2,6 +2,7 @@
 
 import React from "react";
 import { createRoot, Root } from "react-dom/client";
+import { onActivate } from "@/lib/a11y";
 
 export type ConfirmOptions = {
   title?: string;
@@ -94,12 +95,9 @@ function ConfirmDialog({
       role="dialog"
       aria-modal="true"
       onClick={onCancel}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          onCancel();
-        }
-      }}
+      onKeyDown={onActivate(() => {
+        onCancel();
+      })}
       tabIndex={0}
       style={{
         position: "fixed",
@@ -118,12 +116,9 @@ function ConfirmDialog({
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            e.stopPropagation();
-          }
-        }}
+        onKeyDown={onActivate((e) => {
+          e.stopPropagation();
+        })}
         style={{
           width: "100%",
           maxWidth: 380,

@@ -4,6 +4,7 @@ import { type Ctx } from "../WeeredProvider";
 import React from "react";
 import { fmtTime, fmtDateSep, linkify } from "./shellHelpers";
 import type { DmMsg, DmReplyTo, DmThread } from "./types";
+import { onActivate } from "@/lib/a11y";
 
 export function DmMessage(props: {
   m: DmMsg;
@@ -462,11 +463,9 @@ export function DmMessage(props: {
               <div
                 data-reaction-ui
                 onClick={(e) => e.stopPropagation()}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.stopPropagation();
-                  }
-                }}
+                onKeyDown={onActivate((e) => {
+                  e.stopPropagation();
+                })}
                 tabIndex={0}
                 role="button"
                 style={{

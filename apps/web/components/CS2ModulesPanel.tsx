@@ -5,6 +5,7 @@ import StreamInterceptModal, { type StreamInfo } from "./StreamInterceptModal";
 import EmptyState from "./EmptyState";
 import ModuleTabBar from "./ModuleTabBar";
 import { useWatchHere, consumePendingStream } from "../lib/useWatchHere";
+import { onActivate } from "@/lib/a11y";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
@@ -685,12 +686,9 @@ function TwitchStreams({
           <div
             key={s.userLogin}
             onClick={() => handleCardClick(s)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") {
-                e.preventDefault();
-                handleCardClick(s);
-              }
-            }}
+            onKeyDown={onActivate(() => {
+              handleCardClick(s);
+            })}
             tabIndex={0}
             role="button"
             style={{

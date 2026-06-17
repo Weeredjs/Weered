@@ -4,6 +4,7 @@ import React from "react";
 import { createRoot, Root } from "react-dom/client";
 import { apiFetch } from "./api";
 import { weeredToast } from "./toast";
+import { onActivate } from "@/lib/a11y";
 
 const FORUM_REASONS: { id: string; label: string; hint: string }[] = [
   { id: "SPAM", label: "Spam", hint: "Repeated posts, links, advertising." },
@@ -98,12 +99,9 @@ function ForumReportDialog({
       role="dialog"
       aria-modal="true"
       onClick={() => !submitting && onDone(null)}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          if (!submitting) onDone(null);
-        }
-      }}
+      onKeyDown={onActivate(() => {
+        if (!submitting) onDone(null);
+      })}
       tabIndex={0}
       style={{
         position: "fixed",
@@ -122,12 +120,9 @@ function ForumReportDialog({
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            e.stopPropagation();
-          }
-        }}
+        onKeyDown={onActivate((e) => {
+          e.stopPropagation();
+        })}
         style={{
           width: "100%",
           maxWidth: 440,

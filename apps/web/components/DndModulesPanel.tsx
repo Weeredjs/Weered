@@ -5,6 +5,7 @@ import StreamInterceptModal, { type StreamInfo } from "./StreamInterceptModal";
 import { useWatchHere, consumePendingStream } from "../lib/useWatchHere";
 import EmptyState from "./EmptyState";
 import SessionZero, { useSessionZero } from "./SessionZero";
+import { onActivate } from "@/lib/a11y";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 const OPEN5E = "https://api.open5e.com/v1";
@@ -279,7 +280,7 @@ function SpellBrowser() {
               const schoolClr = SCHOOL_COLORS[s.school] || ACCENT;
               const schoolIcon = SCHOOL_ICONS[s.school];
               return (
-                <div key={s.slug} onClick={() => setSelected(s)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setSelected(s); } }} tabIndex={0} role="button" style={{ ...S.card, cursor: "pointer", transition: "border-color .12s", borderColor: "rgba(255,255,255,.08)", display: "flex", gap: 10, alignItems: "center" }}
+                <div key={s.slug} onClick={() => setSelected(s)} onKeyDown={onActivate(() => setSelected(s))} tabIndex={0} role="button" style={{ ...S.card, cursor: "pointer", transition: "border-color .12s", borderColor: "rgba(255,255,255,.08)", display: "flex", gap: 10, alignItems: "center" }}
                   onMouseEnter={e => (e.currentTarget.style.borderColor = `${schoolClr}44`)}
                   onMouseLeave={e => (e.currentTarget.style.borderColor = "rgba(255,255,255,.08)")}
                 >
@@ -482,7 +483,7 @@ function MonsterBrowser() {
               const typeKey = (m.type || "").toLowerCase();
               const typeIcon = MONSTER_ICONS[typeKey];
               return (
-                <div key={m.slug} onClick={() => setSelected(m)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setSelected(m); } }} tabIndex={0} role="button" style={{ ...S.card, cursor: "pointer", transition: "border-color .12s", display: "flex", gap: 10, alignItems: "center" }}
+                <div key={m.slug} onClick={() => setSelected(m)} onKeyDown={onActivate(() => setSelected(m))} tabIndex={0} role="button" style={{ ...S.card, cursor: "pointer", transition: "border-color .12s", display: "flex", gap: 10, alignItems: "center" }}
                   onMouseEnter={e => (e.currentTarget.style.borderColor = `${cc}44`)}
                   onMouseLeave={e => (e.currentTarget.style.borderColor = "rgba(255,255,255,.08)")}
                 >
@@ -627,7 +628,7 @@ function ClassBrowser() {
       {CLASS_DATA.map(c => {
         const cc = CLASS_COLORS[c.name] || ACCENT;
         return (
-          <div key={c.name} onClick={() => { setSelected(c); loadClass(c.name.toLowerCase()); }} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setSelected(c); loadClass(c.name.toLowerCase()); } }} tabIndex={0} role="button" style={{ ...S.card, cursor: "pointer", transition: "border-color .12s", display: "flex", gap: 10, alignItems: "flex-start" }}
+          <div key={c.name} onClick={() => { setSelected(c); loadClass(c.name.toLowerCase()); }} onKeyDown={onActivate(() => { setSelected(c); loadClass(c.name.toLowerCase()); })} tabIndex={0} role="button" style={{ ...S.card, cursor: "pointer", transition: "border-color .12s", display: "flex", gap: 10, alignItems: "flex-start" }}
             onMouseEnter={e => (e.currentTarget.style.borderColor = `${cc}44`)}
             onMouseLeave={e => (e.currentTarget.style.borderColor = "rgba(255,255,255,.08)")}
           >
@@ -717,7 +718,7 @@ function MagicItemBrowser() {
             {items.map(it => {
               const rc = RARITY_COLORS[it.rarity?.toLowerCase()] || "rgba(255,255,255,.6)";
               return (
-                <div key={it.slug} onClick={() => setSelected(it)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setSelected(it); } }} tabIndex={0} role="button" style={{ ...S.card, cursor: "pointer", transition: "border-color .12s" }}
+                <div key={it.slug} onClick={() => setSelected(it)} onKeyDown={onActivate(() => setSelected(it))} tabIndex={0} role="button" style={{ ...S.card, cursor: "pointer", transition: "border-color .12s" }}
                   onMouseEnter={e => (e.currentTarget.style.borderColor = `${rc}44`)}
                   onMouseLeave={e => (e.currentTarget.style.borderColor = "rgba(255,255,255,.08)")}
                 >
@@ -1307,7 +1308,7 @@ function TwitchStreams({ lobbyId }: { lobbyId: string }) {
       )}
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         {streams.map(s => (
-          <div key={s.userLogin} onClick={() => setInterceptStream(s)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setInterceptStream(s); } }} tabIndex={0} role="button" style={{ ...S.card, cursor: "pointer", display: "flex", gap: 10, alignItems: "center", transition: "border-color .12s" }}
+          <div key={s.userLogin} onClick={() => setInterceptStream(s)} onKeyDown={onActivate(() => setInterceptStream(s))} tabIndex={0} role="button" style={{ ...S.card, cursor: "pointer", display: "flex", gap: 10, alignItems: "center", transition: "border-color .12s" }}
             onMouseEnter={e => (e.currentTarget.style.borderColor = `${ACCENT}44`)}
             onMouseLeave={e => (e.currentTarget.style.borderColor = "rgba(255,255,255,.08)")}
           >

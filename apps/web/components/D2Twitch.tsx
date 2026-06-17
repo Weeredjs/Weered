@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import StreamInterceptModal, { type StreamInfo } from "./StreamInterceptModal";
 import { consumePendingStream } from "../lib/useWatchHere";
 import { S, apiFetch } from "./D2Shared";
+import { onActivate } from "@/lib/a11y";
 
 export function TwitchStreams({
   gameName = "Destiny 2",
@@ -107,12 +108,9 @@ export function TwitchStreams({
           <div
             key={s.id}
             onClick={() => handleCardClick(s)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") {
-                e.preventDefault();
-                handleCardClick(s);
-              }
-            }}
+            onKeyDown={onActivate(() => {
+              handleCardClick(s);
+            })}
             tabIndex={0}
             role="button"
             style={{

@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { onActivate } from "@/lib/a11y";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 const ACCENT = "#a78bfa";
@@ -70,12 +71,7 @@ export default function FlairContestStrip({ lobbyId }: { lobbyId: string }) {
     >
       <div
         onClick={() => setCollapsed((c) => !c)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            setCollapsed((c) => !c);
-          }
-        }}
+        onKeyDown={onActivate(() => setCollapsed((c) => !c))}
         tabIndex={0}
         role="button"
         style={{
@@ -116,12 +112,7 @@ export default function FlairContestStrip({ lobbyId }: { lobbyId: string }) {
               <div
                 key={c.id}
                 onClick={openContestsTab}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    openContestsTab();
-                  }
-                }}
+                onKeyDown={onActivate(() => openContestsTab())}
                 tabIndex={0}
                 role="button"
                 style={{

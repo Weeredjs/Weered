@@ -3,6 +3,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import EmptyState from "./EmptyState";
 import LoadingState from "./LoadingState";
 import { ACCENT_DESTINY, S, apiFetch, currentUserId } from "./D2Shared";
+import { onActivate } from "@/lib/a11y";
 
 export const DIFFICULTY_STARS = ["", "★", "★★", "★★★", "★★★★", "★★★★★"];
 export const CATEGORY_COLORS: Record<string, string> = {
@@ -403,12 +404,7 @@ export function ChallengeBuilder({
   return (
     <div
       onClick={onClose}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          onClose();
-        }
-      }}
+      onKeyDown={onActivate(() => onClose())}
       tabIndex={0}
       role="button"
       style={{
@@ -425,11 +421,9 @@ export function ChallengeBuilder({
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.stopPropagation();
-          }
-        }}
+        onKeyDown={onActivate((e) => {
+          e.stopPropagation();
+        })}
         tabIndex={0}
         role="button"
         style={{

@@ -12,6 +12,7 @@ import {
   LinkPreviewCard,
 } from "./embeds";
 import { MTG_DECK_URL_RE, MtgDeckChip, MtgCardChip } from "./mtg";
+import { onActivate } from "@/lib/a11y";
 
 const MENTION_BODY_RE = /@([a-zA-Z0-9][a-zA-Z0-9_-]{1,31})/g;
 const BOLD_RE = /\*\*([^*\n]+?)\*\*/g;
@@ -47,13 +48,10 @@ export function AttachmentBlock({
           if (needsBlur) setRevealed(true);
           else onOpen(att);
         }}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            if (needsBlur) setRevealed(true);
-            else onOpen(att);
-          }
-        }}
+        onKeyDown={onActivate(() => {
+          if (needsBlur) setRevealed(true);
+          else onOpen(att);
+        })}
         role="button"
         tabIndex={0}
         style={{
@@ -326,13 +324,10 @@ export function renderInline(
             e.stopPropagation();
             if (onMentionClick) onMentionClick(handle);
           }}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" || e.key === " ") {
-              e.preventDefault();
-              e.stopPropagation();
-              if (onMentionClick) onMentionClick(handle);
-            }
-          }}
+          onKeyDown={onActivate((e) => {
+            e.stopPropagation();
+            if (onMentionClick) onMentionClick(handle);
+          })}
           role="button"
           tabIndex={0}
           style={{

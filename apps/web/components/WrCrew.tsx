@@ -15,6 +15,7 @@ import {
 import { StatTile, timeAgo } from "./WrBounties";
 import { LfgPost } from "./WrLog";
 import { Labeled } from "./WrStreams";
+import { onActivate } from "@/lib/a11y";
 
 export const WR_MODES = [
   "Any",
@@ -762,12 +763,9 @@ export function CrewLeaderboardModal({
   return (
     <div
       onClick={onClose}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          onClose();
-        }
-      }}
+      onKeyDown={onActivate(() => {
+        onClose();
+      })}
       tabIndex={0}
       role="button"
       style={{
@@ -784,12 +782,9 @@ export function CrewLeaderboardModal({
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            e.stopPropagation();
-          }
-        }}
+        onKeyDown={onActivate((e) => {
+          e.stopPropagation();
+        })}
         style={{
           ...S.card,
           width: "min(860px, 100%)",
@@ -1145,12 +1140,9 @@ export function CrewProfileEditor({
   return (
     <div
       onClick={onClose}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          onClose();
-        }
-      }}
+      onKeyDown={onActivate(() => {
+        onClose();
+      })}
       tabIndex={0}
       role="button"
       style={{
@@ -1167,12 +1159,9 @@ export function CrewProfileEditor({
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            e.stopPropagation();
-          }
-        }}
+        onKeyDown={onActivate((e) => {
+          e.stopPropagation();
+        })}
         style={{
           ...S.card,
           width: "min(560px, 100%)",

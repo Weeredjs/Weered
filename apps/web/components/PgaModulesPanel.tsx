@@ -6,6 +6,7 @@ import StreamInterceptModal, { type StreamInfo } from "./StreamInterceptModal";
 import EmptyState from "./EmptyState";
 import ModuleTabBar from "./ModuleTabBar";
 import { useWatchHere, consumePendingStream } from "../lib/useWatchHere";
+import { onActivate } from "@/lib/a11y";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
@@ -730,7 +731,7 @@ function GolfTwitchStreams({ lobbyId, accentColor }: { lobbyId?: string; accentC
           <div
             key={s.id}
             onClick={() => handleCardClick(s)}
-            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleCardClick(s); } }}
+            onKeyDown={onActivate(() => handleCardClick(s))}
             tabIndex={0}
             role="button"
             style={{
@@ -828,7 +829,7 @@ function PgaYouTube({ accentColor }: { accentColor?: string }) {
             <div
               key={v.videoId}
               onClick={() => setActiveId(v.videoId)}
-              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setActiveId(v.videoId); } }}
+              onKeyDown={onActivate(() => setActiveId(v.videoId))}
               tabIndex={0}
               role="button"
               style={{

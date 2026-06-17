@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { onActivate } from "@/lib/a11y";
 
 const TENOR_API_KEY = process.env.NEXT_PUBLIC_TENOR_API_KEY || "";
 const TENOR_URL = "https://tenor.googleapis.com/v2";
@@ -137,13 +138,10 @@ export function GifPicker({
                 onSelect(full);
                 onClose();
               }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  onSelect(full);
-                  onClose();
-                }
-              }}
+              onKeyDown={onActivate(() => {
+                onSelect(full);
+                onClose();
+              })}
               role="button"
               tabIndex={0}
               style={{

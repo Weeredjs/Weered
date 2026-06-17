@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { S, TIER_BORDER, TIER_COLORS } from "./D2Shared";
+import { onActivate } from "@/lib/a11y";
 
 export function PerkRow({ perks, max = 6 }: { perks?: any[]; max?: number }) {
   if (!perks?.length) return null;
@@ -108,12 +109,9 @@ export function PerkDetail({ perk }: { perk: any }) {
     <div>
       <div
         onClick={() => hasAlts && setExpanded((v) => !v)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            hasAlts && setExpanded((v) => !v);
-          }
-        }}
+        onKeyDown={onActivate(() => {
+          hasAlts && setExpanded((v) => !v);
+        })}
         tabIndex={0}
         role="button"
         style={{
@@ -536,12 +534,7 @@ export function ItemTile({
       <div
         title={`${item.name || "?"}${item.primaryStat ? ` (${item.primaryStat})` : ""}`}
         onClick={onClick}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            onClick?.();
-          }
-        }}
+        onKeyDown={onActivate(() => onClick?.())}
         tabIndex={0}
         role="button"
         style={{
@@ -602,12 +595,7 @@ export function ItemTile({
   return (
     <div
       onClick={onClick}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          onClick?.();
-        }
-      }}
+      onKeyDown={onActivate(() => onClick?.())}
       tabIndex={0}
       role="button"
       style={{

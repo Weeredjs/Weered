@@ -8,6 +8,7 @@ import { avatarBg } from "../lib/avatarColor";
 import NotorietyBar from "./NotorietyBar";
 import FlairBadge from "./FlairBadge";
 import { useEquippedFlair } from "../lib/useEquippedFlair";
+import { onActivate } from "@/lib/a11y";
 
 function useFitText(ref: any, text: string, sizes: number[]): number {
   const [size, setSize] = useState(sizes[0]);
@@ -739,13 +740,10 @@ export default function UserCorner() {
                 e.stopPropagation();
                 if (typeof setAway === "function") setAway(!isAway);
               }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  if (typeof setAway === "function") setAway(!isAway);
-                }
-              }}
+              onKeyDown={onActivate((e) => {
+                e.stopPropagation();
+                if (typeof setAway === "function") setAway(!isAway);
+              })}
               title={
                 isAway ? "Lying low — click to come back online." : "Online — click to lie low."
               }
@@ -866,15 +864,12 @@ export default function UserCorner() {
                   window.location.href = `/crew/${encodeURIComponent(primaryCrew.id)}`;
                 } catch {}
               }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  try {
-                    window.location.href = `/crew/${encodeURIComponent(primaryCrew.id)}`;
-                  } catch {}
-                }
-              }}
+              onKeyDown={onActivate((e) => {
+                e.stopPropagation();
+                try {
+                  window.location.href = `/crew/${encodeURIComponent(primaryCrew.id)}`;
+                } catch {}
+              })}
               tabIndex={0}
               role="button"
               title={`${primaryCrew.name} — open crew`}

@@ -4,6 +4,7 @@ import { avatarBg } from "../../lib/avatarColor";
 import CrewChatPanel from "../CrewChatPanel";
 import EmptyState from "../EmptyState";
 import { weeredConfirm } from "../../lib/confirm";
+import { onActivate } from "@/lib/a11y";
 
 // Crew tab extracted from DockShell.
 
@@ -320,12 +321,7 @@ export function CrewTab({
             <div key={crew.id} style={{ borderBottom: "1px solid var(--weered-bd)" }}>
               <div
                 onClick={() => setExpandedCrew(isExpanded ? null : crew.id)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    setExpandedCrew(isExpanded ? null : crew.id);
-                  }
-                }}
+                onKeyDown={onActivate(() => setExpandedCrew(isExpanded ? null : crew.id))}
                 tabIndex={0}
                 role="button"
                 style={{

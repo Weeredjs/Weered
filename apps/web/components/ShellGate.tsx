@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import SiteFooter from "./SiteFooter";
 import { LogoMenu } from "./LogoMenu";
+import { onActivate } from "@/lib/a11y";
 
 function LeftRailScroll({ children }: { children: React.ReactNode }) {
   const [hovered, setHovered] = useState(false);
@@ -276,12 +277,9 @@ function OverlayPanel({
       <div
         className="weered-overlay-backdrop"
         onClick={onClose}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            onClose();
-          }
-        }}
+        onKeyDown={onActivate(() => {
+          onClose();
+        })}
         tabIndex={0}
         role="button"
       />

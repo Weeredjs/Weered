@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useCallback } from "react";
+import { onActivate } from "@/lib/a11y";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 function getToken() {
@@ -239,12 +240,7 @@ export default function ActivityFeed({ initialCount = 10 }: { initialCount?: num
               <div
                 key={item.id}
                 onClick={() => handleClick(item)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    handleClick(item);
-                  }
-                }}
+                onKeyDown={onActivate(() => handleClick(item))}
                 role="button"
                 tabIndex={0}
                 style={{

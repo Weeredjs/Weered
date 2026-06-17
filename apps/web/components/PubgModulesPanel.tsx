@@ -5,6 +5,7 @@ import StreamInterceptModal, { type StreamInfo } from "./StreamInterceptModal";
 import EmptyState from "./EmptyState";
 import ModuleTabBar from "./ModuleTabBar";
 import { useWatchHere, consumePendingStream } from "../lib/useWatchHere";
+import { onActivate } from "@/lib/a11y";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
@@ -261,12 +262,9 @@ function TwitchStreams({
           <div
             key={s.userLogin}
             onClick={() => setInterceptStream(s)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") {
-                e.preventDefault();
-                setInterceptStream(s);
-              }
-            }}
+            onKeyDown={onActivate(() => {
+              setInterceptStream(s);
+            })}
             tabIndex={0}
             role="button"
             style={{
@@ -1057,12 +1055,9 @@ function RecentMatches({ accent }: { accent: string }) {
               <div key={m.match?.id}>
                 <div
                   onClick={() => setExpanded(isExpanded ? null : m.match?.id)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      setExpanded(isExpanded ? null : m.match?.id);
-                    }
-                  }}
+                  onKeyDown={onActivate(() => {
+                    setExpanded(isExpanded ? null : m.match?.id);
+                  })}
                   tabIndex={0}
                   role="button"
                   style={{

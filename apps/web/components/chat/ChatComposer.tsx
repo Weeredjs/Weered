@@ -7,6 +7,7 @@ import { GifPicker } from "./GifPicker";
 import { Icons } from "./Icons";
 import { EMOJI_CATEGORIES } from "./emoji";
 import { API, ChatAtt, detectMentionAtCaret, nameStyleFor } from "./chatShared";
+import { onActivate } from "@/lib/a11y";
 
 type ChatComposerProps = {
   ctx: any;
@@ -126,12 +127,7 @@ export function ChatComposer({
       {lockOpen && (
         <div
           onClick={() => setLockOpen(false)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" || e.key === " ") {
-              e.preventDefault();
-              setLockOpen(false);
-            }
-          }}
+          onKeyDown={onActivate(() => setLockOpen(false))}
           role="button"
           tabIndex={0}
           style={{

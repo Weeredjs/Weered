@@ -2,6 +2,7 @@
 
 import React from "react";
 import { useRouter } from "next/navigation";
+import { onActivate } from "@/lib/a11y";
 import { useWeered } from "./WeeredProvider";
 
 export interface StreamInfo {
@@ -57,12 +58,7 @@ export default function StreamInterceptModal({
     <>
       <div
         onClick={onClose}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            onClose();
-          }
-        }}
+        onKeyDown={onActivate(() => onClose())}
         tabIndex={0}
         role="button"
         style={{

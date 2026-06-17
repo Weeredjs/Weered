@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useWeered } from "./WeeredProvider";
 import CharacterSheetEditor from "./CharacterSheetEditor";
+import { onActivate } from "@/lib/a11y";
 
 type Character = {
   id: string;
@@ -420,12 +421,7 @@ function PartyRow({
     >
       <div
         onClick={onSelect}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            onSelect();
-          }
-        }}
+        onKeyDown={onActivate(() => onSelect())}
         role="button"
         tabIndex={0}
         style={{ display: "flex", alignItems: "center", gap: 10 }}
@@ -1127,12 +1123,7 @@ function RollPrompt({
   return (
     <div
       onClick={onCancel}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          onCancel();
-        }
-      }}
+      onKeyDown={onActivate(() => onCancel())}
       role="button"
       tabIndex={0}
       style={{

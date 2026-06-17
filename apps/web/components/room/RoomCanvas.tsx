@@ -11,6 +11,7 @@ import { useOverlay } from "../overlays/OverlayProvider";
 import { useVoice } from "../VoiceContext";
 import ArticleReader from "./ArticleReader";
 import { weeredToast } from "../../lib/toast";
+import { onActivate } from "@/lib/a11y";
 
 function TwitchIcon({ size = 11, color = "#9146FF", style }: { size?: number; color?: string; style?: React.CSSProperties }) {
   return (
@@ -906,7 +907,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
 
         <div
           onClick={() => { setChatOpen(o => !o); setChatUnread(false); }}
-          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setChatOpen(o => !o); setChatUnread(false); } }}
+          onKeyDown={onActivate(() => { setChatOpen(o => !o); setChatUnread(false); })}
           tabIndex={0}
           role="button"
           style={{

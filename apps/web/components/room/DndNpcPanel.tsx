@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { weeredConfirm } from "../../lib/confirm";
+import { onActivate } from "@/lib/a11y";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
@@ -490,12 +491,9 @@ export default function DndNpcPanel({ roomId }: { roomId: string }) {
                   transition: "all .18s",
                 }}
                 onClick={() => openChat(npc)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    openChat(npc);
-                  }
-                }}
+                onKeyDown={onActivate(() => {
+                  openChat(npc);
+                })}
                 tabIndex={0}
                 role="button"
               >

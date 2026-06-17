@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { avatarBg } from "../lib/avatarColor";
+import { onActivate } from "@/lib/a11y";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 function getToken() {
@@ -148,12 +149,7 @@ function DmCard({ preview }: { preview: DmPreview }) {
   return (
     <div
       onClick={handleClick}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          handleClick();
-        }
-      }}
+      onKeyDown={onActivate(() => handleClick())}
       tabIndex={0}
       role="button"
       onMouseEnter={() => setHovered(true)}

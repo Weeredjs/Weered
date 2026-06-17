@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { weeredConfirm } from "../../../../lib/confirm";
 import { AdminMember, LevelBadge, S, apiFetch, fmtDate } from "./shared";
+import { onActivate } from "@/lib/a11y";
 
 export function MembersTab({
   lobbyId,
@@ -105,12 +106,7 @@ export function MembersTab({
             <div
               key={m.id}
               onClick={() => setSelected(m)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  setSelected(m);
-                }
-              }}
+              onKeyDown={onActivate(() => setSelected(m))}
               role="button"
               tabIndex={0}
               style={{

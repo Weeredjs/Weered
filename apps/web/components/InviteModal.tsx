@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { onActivate } from "@/lib/a11y";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
@@ -155,12 +156,7 @@ export default function InviteModal({ type, targetId, targetName, onClose }: Pro
     <div
       style={S.overlay}
       onClick={(e) => e.target === e.currentTarget && onClose()}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          onClose();
-        }
-      }}
+      onKeyDown={onActivate(() => onClose())}
       tabIndex={0}
       role="button"
     >

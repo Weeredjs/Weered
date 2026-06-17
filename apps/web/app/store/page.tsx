@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useWeered } from "../../components/WeeredProvider";
 import LoadingState from "../../components/LoadingState";
 import { weeredToast } from "../../lib/toast";
+import { onActivate } from "@/lib/a11y";
 
 const GOLD = "#F5C518";
 const GREEN = "#22c55e";
@@ -737,12 +738,7 @@ export default function StorePage() {
             zIndex: 9999,
           }}
           onClick={() => setListingItem(null)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" || e.key === " ") {
-              e.preventDefault();
-              setListingItem(null);
-            }
-          }}
+          onKeyDown={onActivate(() => setListingItem(null))}
           role="button"
           tabIndex={0}
         >
@@ -756,12 +752,9 @@ export default function StorePage() {
               width: "90%",
             }}
             onClick={(e) => e.stopPropagation()}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") {
-                e.preventDefault();
-                e.stopPropagation();
-              }
-            }}
+            onKeyDown={onActivate((e) => {
+              e.stopPropagation();
+            })}
             role="button"
             tabIndex={0}
           >

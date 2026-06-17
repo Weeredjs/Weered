@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import { S, apiFetch } from "./shared";
+import { onActivate } from "@/lib/a11y";
 
 export const OUTREACH_STATUSES = [
   "LEAD",
@@ -400,12 +401,7 @@ export function OutreachTab() {
             <div key={c.id}>
               <div
                 onClick={() => setExpandedContact(isExpanded ? null : c.id)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    setExpandedContact(isExpanded ? null : c.id);
-                  }
-                }}
+                onKeyDown={onActivate(() => setExpandedContact(isExpanded ? null : c.id))}
                 role="button"
                 tabIndex={0}
                 style={{
@@ -483,12 +479,9 @@ export function OutreachTab() {
                 </span>
                 <div
                   onClick={(e) => e.stopPropagation()}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      e.stopPropagation();
-                    }
-                  }}
+                  onKeyDown={onActivate((e) => {
+                    e.stopPropagation();
+                  })}
                   role="button"
                   tabIndex={0}
                 >

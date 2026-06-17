@@ -3,6 +3,7 @@
 import React, { useEffect, useState, useCallback } from "react";
 import EmptyState from "./EmptyState";
 import LoadingState from "./LoadingState";
+import { onActivate } from "@/lib/a11y";
 
 const API_BASE = (process.env.NEXT_PUBLIC_API_BASE as string) || "http://127.0.0.1:4000";
 
@@ -348,12 +349,7 @@ export function NotificationsView({ onBack }: { onBack: () => void }) {
             <div
               key={n.id}
               onClick={() => handleClick(n)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  handleClick(n);
-                }
-              }}
+              onKeyDown={onActivate(() => handleClick(n))}
               tabIndex={0}
               role="button"
               style={{

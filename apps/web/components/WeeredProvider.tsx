@@ -6,6 +6,7 @@ import NotorietyToast from "./NotorietyToast";
 import RankUpCelebration from "./RankUpCelebration";
 import SystemBroadcast from "./SystemBroadcast";
 import { weeredToast } from "../lib/toast";
+import { onActivate } from "@/lib/a11y";
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 
 const API    = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
@@ -1265,10 +1266,10 @@ const renameRoom = (name: string)   => sendAdmin("room:rename",  { name });
             position: "fixed", inset: 0, zIndex: 99999,
             background: "rgba(0,0,0,.65)", backdropFilter: "blur(6px)",
             display: "flex", alignItems: "center", justifyContent: "center",
-          }} onClick={() => setPasswordRoomId("")} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setPasswordRoomId(""); } }} tabIndex={0} role="button">
+          }} onClick={() => setPasswordRoomId("")} onKeyDown={onActivate(() => setPasswordRoomId(""))} tabIndex={0} role="button">
             <div
               onClick={e => e.stopPropagation()}
-              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); } }}
+              onKeyDown={onActivate((e) => { e.stopPropagation(); })}
               tabIndex={0}
               role="button"
               style={{

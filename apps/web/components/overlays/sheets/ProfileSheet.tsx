@@ -5,6 +5,7 @@ import React, { useEffect, useState, useMemo, useCallback } from "react";
 import { useWeered } from "../../WeeredProvider";
 import { useOverlay } from "../OverlayProvider";
 import { weeredToast } from "../../../lib/toast";
+import { onActivate } from "@/lib/a11y";
 
 const WEERED_THEME_KEY = "weered_theme_v2";
 type WeeredThemeName = "slate" | "zinc" | "stone" | "gray" | "ishimura" | "broadcast" | "press";
@@ -661,7 +662,7 @@ export default function ProfileSheet({ userId }: { userId: string }) {
       <div style={{ display: "flex", alignItems: "flex-end", gap: 16, marginTop: -44, marginBottom: 12 }}>
         <div
           onClick={isMe ? () => setShowGallery(!showGallery) : undefined}
-          onKeyDown={isMe ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setShowGallery(!showGallery); } } : undefined}
+          onKeyDown={isMe ? onActivate(() => { setShowGallery(!showGallery); }) : undefined}
           tabIndex={0}
           role="button"
           className={(profile as any).avatarFrame ? "weered-frame-" + (profile as any).avatarFrame : undefined}
@@ -803,7 +804,7 @@ export default function ProfileSheet({ userId }: { userId: string }) {
                 cursor: "pointer",
                 transition: "all 0.15s",
               }}
-                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); (e.currentTarget as HTMLElement).click(); } }}
+                onKeyDown={onActivate((e) => { (e.currentTarget as HTMLElement).click(); })}
                 tabIndex={0}
                 role="button"
                 onClick={() => {

@@ -3,6 +3,7 @@
 import React, { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { useWeered } from "../../../components/WeeredProvider";
+import { onActivate } from "@/lib/a11y";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "https://api.weered.ca";
 
@@ -563,12 +564,7 @@ export default function CrewView({ crewId, initial }: { crewId: string; initial:
               <div style={{ ...plaqueStyle(), padding: "14px 22px", marginBottom: 14 }}>
                 <div
                   onClick={() => setLoadoutOpen((o) => !o)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      setLoadoutOpen((o) => !o);
-                    }
-                  }}
+                  onKeyDown={onActivate(() => setLoadoutOpen((o) => !o))}
                   role="button"
                   tabIndex={0}
                   style={{
@@ -1067,12 +1063,7 @@ function AddModDialog({
   return (
     <div
       onClick={onClose}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          onClose();
-        }
-      }}
+      onKeyDown={onActivate(() => onClose())}
       role="button"
       tabIndex={0}
       style={{
@@ -1089,12 +1080,9 @@ function AddModDialog({
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            e.stopPropagation();
-          }
-        }}
+        onKeyDown={onActivate((e) => {
+          e.stopPropagation();
+        })}
         role="button"
         tabIndex={0}
         style={{

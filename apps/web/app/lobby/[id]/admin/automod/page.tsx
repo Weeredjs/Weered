@@ -5,6 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import { apiFetch } from "../../../../../lib/api";
 import { weeredToast } from "../../../../../lib/toast";
 import { weeredConfirm } from "../../../../../lib/confirm";
+import { onActivate } from "@/lib/a11y";
 
 const FONT =
   '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
@@ -327,12 +328,7 @@ function RuleEditor({
   return (
     <div
       onClick={onClose}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          onClose();
-        }
-      }}
+      onKeyDown={onActivate(() => onClose())}
       role="button"
       tabIndex={0}
       style={{
@@ -349,12 +345,9 @@ function RuleEditor({
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            e.stopPropagation();
-          }
-        }}
+        onKeyDown={onActivate((e) => {
+          e.stopPropagation();
+        })}
         role="button"
         tabIndex={0}
         style={{

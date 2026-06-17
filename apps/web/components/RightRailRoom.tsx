@@ -5,6 +5,7 @@ import { useWeered, useRoomUsers } from "./WeeredProvider";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { weeredConfirm } from "../lib/confirm";
 import EmptyState from "./EmptyState";
+import { onActivate } from "@/lib/a11y";
 
 type Person = { id?: string; name?: string; handle?: string; role?: string };
 const API_BASE = (process.env.NEXT_PUBLIC_API_BASE as string) || "https://api.weered.ca";
@@ -98,7 +99,7 @@ function FriendsPanel() {
               <div
                 key={f.id}
                 onClick={() => userId && openSheet("profile", { userId })}
-                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); userId && openSheet("profile", { userId }); } }}
+                onKeyDown={onActivate(() => { userId && openSheet("profile", { userId }); })}
                 tabIndex={0}
                 role="button"
                 style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 10px", borderRadius: 9, background: "rgba(255,255,255,.03)", border: "1px solid rgba(255,255,255,.06)", cursor: "pointer", transition: "background 0.12s" }}
@@ -139,7 +140,7 @@ function FriendsPanel() {
               <div
                 key={f.id}
                 onClick={() => userId && openSheet("profile", { userId })}
-                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); userId && openSheet("profile", { userId }); } }}
+                onKeyDown={onActivate(() => { userId && openSheet("profile", { userId }); })}
                 tabIndex={0}
                 role="button"
                 style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 10px", borderRadius: 9, opacity: 0.4, cursor: "pointer" }}
@@ -197,7 +198,7 @@ function CrewPanel() {
                   <div
                     key={m.userId}
                     onClick={() => userId && openSheet("profile", { userId })}
-                    onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); userId && openSheet("profile", { userId }); } }}
+                    onKeyDown={onActivate(() => { userId && openSheet("profile", { userId }); })}
                     tabIndex={0}
                     role="button"
                     style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 10px", borderRadius: 8, background: "rgba(255,255,255,.03)", border: "1px solid rgba(255,255,255,.06)", opacity: m.online ? 1 : 0.4, cursor: "pointer", transition: "background 0.12s" }}

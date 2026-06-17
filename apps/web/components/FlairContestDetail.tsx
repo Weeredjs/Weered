@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { onActivate } from "@/lib/a11y";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 const ACCENT = "#a78bfa";
@@ -352,13 +353,10 @@ export default function FlairContestDetail({
                   if (canVote) castVote(s.id);
                   else setLightbox(s);
                 }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    if (canVote) castVote(s.id);
-                    else setLightbox(s);
-                  }
-                }}
+                onKeyDown={onActivate(() => {
+                  if (canVote) castVote(s.id);
+                  else setLightbox(s);
+                })}
                 tabIndex={0}
                 role="button"
                 style={{
@@ -548,12 +546,7 @@ export default function FlairContestDetail({
       {lightbox && (
         <div
           onClick={() => setLightbox(null)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" || e.key === " ") {
-              e.preventDefault();
-              setLightbox(null);
-            }
-          }}
+          onKeyDown={onActivate(() => setLightbox(null))}
           tabIndex={0}
           role="button"
           style={{
@@ -721,12 +714,7 @@ function SubmitModal({
   return (
     <div
       onClick={onClose}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          onClose();
-        }
-      }}
+      onKeyDown={onActivate(() => onClose())}
       tabIndex={0}
       role="dialog"
       aria-modal="true"
@@ -745,11 +733,9 @@ function SubmitModal({
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.stopPropagation();
-          }
-        }}
+        onKeyDown={onActivate((e) => {
+          e.stopPropagation();
+        })}
         tabIndex={0}
         role="button"
         style={{

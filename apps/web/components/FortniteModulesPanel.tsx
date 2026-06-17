@@ -6,6 +6,7 @@ import EmptyState from "./EmptyState";
 import LoadingState from "./LoadingState";
 import ModuleTabBar from "./ModuleTabBar";
 import { useWatchHere, consumePendingStream } from "../lib/useWatchHere";
+import { onActivate } from "@/lib/a11y";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
@@ -149,7 +150,7 @@ function TwitchStreams({ gameName, lobbyId, accentColor }: { gameName: string; l
       )}
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         {streams.map(s => (
-          <div key={s.userLogin} onClick={() => setInterceptStream(s)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setInterceptStream(s); } }} tabIndex={0} role="button" style={{ ...S.card, cursor: "pointer", display: "flex", gap: 10, alignItems: "center", transition: "border-color .12s" }}
+          <div key={s.userLogin} onClick={() => setInterceptStream(s)} onKeyDown={onActivate(() => setInterceptStream(s))} tabIndex={0} role="button" style={{ ...S.card, cursor: "pointer", display: "flex", gap: 10, alignItems: "center", transition: "border-color .12s" }}
             onMouseEnter={e => (e.currentTarget.style.borderColor = `${accentColor}44`)}
             onMouseLeave={e => (e.currentTarget.style.borderColor = "rgba(255,255,255,.08)")}
           >

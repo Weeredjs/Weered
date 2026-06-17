@@ -10,6 +10,7 @@ import {
   apiFetch,
   fmtDate,
 } from "./shared";
+import { onActivate } from "@/lib/a11y";
 
 export function UsersTab({ myRole }: { myRole: GlobalRole }) {
   const [q, setQ] = useState("");
@@ -133,12 +134,7 @@ export function UsersTab({ myRole }: { myRole: GlobalRole }) {
             <div
               key={u.id}
               onClick={() => loadNotes(u)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  loadNotes(u);
-                }
-              }}
+              onKeyDown={onActivate(() => loadNotes(u))}
               role="button"
               tabIndex={0}
               style={{ ...(selected?.id === u.id ? S.cardHov : S.card), cursor: "pointer" }}

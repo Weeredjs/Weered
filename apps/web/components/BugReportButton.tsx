@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { usePathname } from "next/navigation";
+import { onActivate } from "@/lib/a11y";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "https://api.weered.ca";
 
@@ -106,12 +107,7 @@ export default function BugReportButton() {
       {open && (
         <div
           onClick={() => setOpen(false)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" || e.key === " ") {
-              e.preventDefault();
-              setOpen(false);
-            }
-          }}
+          onKeyDown={onActivate(() => setOpen(false))}
           tabIndex={0}
           role="button"
           style={{

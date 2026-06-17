@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { onActivate } from "@/lib/a11y";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
@@ -78,12 +79,9 @@ export default function NotorietyBar({ score: propScore, compact = false, onClic
     return (
       <div
         onClick={onClick}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            onClick && onClick();
-          }
-        }}
+        onKeyDown={onActivate(() => {
+          onClick && onClick();
+        })}
         tabIndex={0}
         role="button"
         style={{
@@ -133,12 +131,9 @@ export default function NotorietyBar({ score: propScore, compact = false, onClic
   return (
     <div
       onClick={onClick}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          onClick && onClick();
-        }
-      }}
+      onKeyDown={onActivate(() => {
+        onClick && onClick();
+      })}
       tabIndex={0}
       role="button"
       style={{

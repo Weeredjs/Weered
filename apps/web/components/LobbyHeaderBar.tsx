@@ -8,6 +8,7 @@ import { useWeered, useRoomUsers } from "./WeeredProvider";
 import { ui } from "./weeredUi";
 import { weeredReport } from "../lib/report";
 import { weeredToast } from "../lib/toast";
+import { onActivate } from "@/lib/a11y";
 
 type Mode = "rooms" | "people";
 
@@ -257,12 +258,9 @@ export default function LobbyHeaderBar({
                 onClick={isTier2 ? replaySplash : undefined}
                 onKeyDown={
                   isTier2
-                    ? (e) => {
-                        if (e.key === "Enter" || e.key === " ") {
-                          e.preventDefault();
-                          replaySplash();
-                        }
-                      }
+                    ? onActivate(() => {
+                        replaySplash();
+                      })
                     : undefined
                 }
                 tabIndex={0}
@@ -320,12 +318,9 @@ export default function LobbyHeaderBar({
                   onClick={isTier2 ? replaySplash : undefined}
                   onKeyDown={
                     isTier2
-                      ? (e) => {
-                          if (e.key === "Enter" || e.key === " ") {
-                            e.preventDefault();
-                            replaySplash();
-                          }
-                        }
+                      ? onActivate(() => {
+                          replaySplash();
+                        })
                       : undefined
                   }
                   tabIndex={0}
@@ -358,12 +353,9 @@ export default function LobbyHeaderBar({
                   onClick={isTier2 ? replaySplash : undefined}
                   onKeyDown={
                     isTier2
-                      ? (e) => {
-                          if (e.key === "Enter" || e.key === " ") {
-                            e.preventDefault();
-                            replaySplash();
-                          }
-                        }
+                      ? onActivate(() => {
+                          replaySplash();
+                        })
                       : undefined
                   }
                   tabIndex={0}

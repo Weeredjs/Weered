@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { onActivate } from "@/lib/a11y";
 
 type Character = {
   id: string;
@@ -198,12 +199,7 @@ export default function CharacterSheetEditor({
   return (
     <div
       onClick={onClose}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          onClose();
-        }
-      }}
+      onKeyDown={onActivate(() => onClose())}
       role="button"
       tabIndex={0}
       className="weered-dnd-modules"
