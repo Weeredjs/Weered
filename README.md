@@ -115,24 +115,28 @@ Sits alongside a Stripe-backed tier system (Innocent / Indicted / Felon / Kingpi
 
 ## Code quality
 
-Continuous analysis runs in CI on every push (see the badges above). Current
-standing on the full monorepo:
+Continuous analysis runs in CI on every push. The badges above are live and
+self-updating, so they are the source of truth, not this paragraph.
 
-- **Reliability A, Security A, Maintainability A.**
-- **0 bugs, 0 vulnerabilities, 0 open security hotspots.**
-- Technical-debt ratio under 0.5% (the threshold for an A is 5%).
+Where things stand: **Maintainability is A with a technical-debt ratio under
+0.5%** (the A threshold is 5%). Security and Reliability carry open findings
+under SonarCloud's Clean Code model, and we are working them down in the open
+rather than hiding the dashboard.
 
-There is still a backlog of low-severity maintainability findings, mostly
-redundant-cast and cognitive-complexity flags. A note on those, since people
-will run their own scanners: a large share of the `S4325` "redundant cast"
-findings are false positives against this codebase. SonarQube's type model is
-weaker than the TypeScript compiler's, so it flags casts that `tsc` actually
-requires to narrow `unknown` / `{}` from JSON, Prisma rows, and third-party game
-APIs. Removing them blindly breaks the build. We clear the genuinely-redundant
-ones in supervised batches and accept the rest as a stability tradeoff. The
-ratings and the quality gate are what we hold the line on, and those are green.
+A note for anyone running their own scanner, because you should: a large share
+of the findings here are false positives or accepted tradeoffs against a strict
+TypeScript monorepo that talks to a dozen game APIs.
 
-If you find something real, open an issue. That is the point of going public.
+- The flagged "hardcoded credentials" are **test-fixture and CI test-database
+  passwords**, not real secrets. Nothing live is committed.
+- The `S4325` "redundant cast" rule flags casts the TypeScript compiler actually
+  needs to narrow `unknown` / `{}` from JSON, Prisma rows, and third-party
+  payloads. Removing them blindly breaks the build.
+- A chunk of the Reliability findings are React accessibility rules. Real, worth
+  doing, not crashes.
+
+We fix the genuine issues in supervised batches and annotate the rest. If you
+find something real, open an issue. That is the point of going public.
 
 ## Deploying
 
