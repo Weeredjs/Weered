@@ -21,9 +21,8 @@ async function userFromModToken(
   authHeader: string | undefined,
 ): Promise<{ userId: string; mcUuid: string | null } | null> {
   if (!authHeader) return null;
-  const m = authHeader.match(/^Bearer\s+(.+)$/);
-  if (!m) return null;
-  const token = m[1].trim();
+  if (!/^Bearer\s/.test(authHeader)) return null;
+  const token = authHeader.replace(/^Bearer\s+/, "").trim();
   if (!token) return null;
   const acct = await prisma.userGameAccount.findFirst({
     where: { gameType: "MINECRAFT", accessToken: token },

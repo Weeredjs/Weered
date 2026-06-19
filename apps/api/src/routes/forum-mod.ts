@@ -658,6 +658,7 @@ function validateAutoModConfig(kind: string, raw: any): { value?: any; error?: s
   if (kind === "REGEX_FILTER") {
     const pattern = String(cfg.pattern || "");
     if (!pattern) return { error: "pattern_required" };
+    if (pattern.length > 200) return { error: "pattern_too_long" };
     try {
       new RegExp(pattern, String(cfg.flags || "i"));
     } catch {

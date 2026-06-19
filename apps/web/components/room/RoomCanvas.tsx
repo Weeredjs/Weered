@@ -13,6 +13,17 @@ import ArticleReader from "./ArticleReader";
 import { weeredToast } from "../../lib/toast";
 import { onActivate } from "@/lib/a11y";
 
+// Only allow https lichess.org URLs to reach the chess <iframe>/<a> sinks,
+// no matter the source (user input, server module state, or WS update). Blocks
+// javascript:/arbitrary-URL injection (CodeQL js/xss, js/client-side-url-redirect).
+function safeChessUrl(s: string): string {
+  try {
+    const u = new URL(s);
+    if (u.protocol === "https:" && (u.hostname === "lichess.org" || u.hostname.endsWith(".lichess.org"))) return s;
+  } catch {}
+  return "";
+}
+
 function TwitchIcon({ size = 11, color = "#9146FF", style }: { size?: number; color?: string; style?: React.CSSProperties }) {
   return (
     <svg width={size} height={size} viewBox="0 0 256 268" style={{ display: "inline-block", verticalAlign: "middle", flexShrink: 0, ...style }}>
@@ -298,17 +309,17 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
   function toEmbedUrl(url: string): string {
     try {
       const u = new URL(url);
-      if (u.hostname.includes("youtube.com") && u.searchParams.get("v")) {
+      if ((u.hostname === "youtube.com" || u.hostname.endsWith(".youtube.com")) && u.searchParams.get("v")) {
         return `https://www.youtube.com/embed/${u.searchParams.get("v")}?autoplay=0`;
       }
-      if (u.hostname.includes("youtube.com") && u.pathname.startsWith("/shorts/")) {
+      if ((u.hostname === "youtube.com" || u.hostname.endsWith(".youtube.com")) && u.pathname.startsWith("/shorts/")) {
         const id = u.pathname.replace("/shorts/", "").split("/")[0];
         if (id) return `https://www.youtube.com/embed/${id}?autoplay=0`;
       }
       if (u.hostname.includes("youtu.be")) {
         return `https://www.youtube.com/embed${u.pathname}?autoplay=0`;
       }
-      if (u.hostname.includes("youtube.com")) {
+      if ((u.hostname === "youtube.com" || u.hostname.endsWith(".youtube.com"))) {
         return "__youtube_blocked__";
       }
     } catch {}
@@ -361,10 +372,10 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
     if (!articleUrl) return null;
     try {
       const u = new URL(articleUrl);
-      if (u.hostname.includes("youtube.com") && u.searchParams.get("v")) {
+      if ((u.hostname === "youtube.com" || u.hostname.endsWith(".youtube.com")) && u.searchParams.get("v")) {
         return `https://img.youtube.com/vi/${u.searchParams.get("v")}/hqdefault.jpg`;
       }
-      if (u.hostname.includes("youtube.com") && u.pathname.startsWith("/shorts/")) {
+      if ((u.hostname === "youtube.com" || u.hostname.endsWith(".youtube.com")) && u.pathname.startsWith("/shorts/")) {
         const id = u.pathname.replace("/shorts/", "").split("/")[0];
         if (id) return `https://img.youtube.com/vi/${id}/hqdefault.jpg`;
       }
@@ -781,14 +792,14 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
                 placeholder="Paste a Lichess URL (game / study / broadcast)..."
                 style={{ flex: 1, minWidth: 160, padding: "4px 8px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(124,58,237,0.18)", borderRadius: 6, color: "rgba(203,213,225,0.85)", fontSize: 11, outline: "none", fontFamily: "monospace" }}
               />
-              {chessSource && (
-                <a href={chessSource.replace("/frame", "").replace("/embed/", "/").split("?")[0]} target="_blank" rel="noopener noreferrer" style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid rgba(124,58,237,0.18)", background: "rgba(124,58,237,0.08)", color: "rgba(216,180,254,0.8)", fontSize: 11, cursor: "pointer", textDecoration: "none" }}>↗ Lichess</a>
+              {safeChessUrl(chessSource) && (
+                <a href={safeChessUrl(chessSource).replace("/frame", "").replace("/embed/", "/").split("?")[0]} target="_blank" rel="noopener noreferrer" style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid rgba(124,58,237,0.18)", background: "rgba(124,58,237,0.08)", color: "rgba(216,180,254,0.8)", fontSize: 11, cursor: "pointer", textDecoration: "none" }}>↗ Lichess</a>
               )}
               <button onClick={() => { setChessSource(""); setChessInput(""); setStageMode(null); selfSetRef.current = true; w?.setModuleState?.(null); }} style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.04)", color: "rgba(148,163,184,0.6)", fontSize: 11, cursor: "pointer" }}>&times;</button>
             </div>
-            {chessSource ? (
+            {safeChessUrl(chessSource) ? (
               <iframe
-                src={chessSource}
+                src={safeChessUrl(chessSource)}
                 style={{ flex: 1, border: "none", display: "block", width: "100%", background: "#262421" }}
                 allow="autoplay"
                 title="Lichess"

@@ -372,8 +372,7 @@ function verifyToken(token?: string): AuthedUser | null {
 function authFromHeader(authHeader?: string): AuthedUser | null {
   if (!authHeader) return null;
   const raw = String(authHeader).trim();
-  const m = raw.match(/^Bearer\s+(.+)$/i);
-  if (m) return verifyToken(m[1]);
+  if (/^Bearer\s/i.test(raw)) return verifyToken(raw.replace(/^Bearer\s+/i, ""));
   return verifyToken(raw);
 }
 
