@@ -12,6 +12,7 @@ import { useVoice } from "../VoiceContext";
 import ArticleReader from "./ArticleReader";
 import { weeredToast } from "../../lib/toast";
 import { onActivate } from "@/lib/a11y";
+import { safeUrl } from "@/lib/safeUrl";
 
 // Only allow https lichess.org URLs to reach the chess <iframe>/<a> sinks,
 // no matter the source (user input, server module state, or WS update). Blocks
@@ -624,14 +625,14 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
                   if (e.key === "Enter") {
                     let u = browserInput.trim();
                     if (!u.startsWith("http")) u = "https://" + u;
-                    setBrowserUrl(u); setBrowserInput(u); setIframeBlocked(false);
+                    setBrowserUrl(safeUrl(u)); setBrowserInput(u); setIframeBlocked(false);
                     selfSetRef.current = true;
                     w?.setModuleState?.("browser", { url: u });
                   }
                 }}
                 style={{ flex: 1, padding: "4px 8px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 6, color: "rgba(203,213,225,0.8)", fontSize: 11, outline: "none", fontFamily: "monospace" }}
               />
-              <button onClick={() => window.open(browserUrl, "_blank")} style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.04)", color: "rgba(148,163,184,0.6)", fontSize: 11, cursor: "pointer" }}>&#8599;</button>
+              <button onClick={() => window.open(safeUrl(browserUrl), "_blank")} style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.04)", color: "rgba(148,163,184,0.6)", fontSize: 11, cursor: "pointer" }}>&#8599;</button>
               <button onClick={() => { setStageMode(null); selfSetRef.current = true; w?.setModuleState?.(null); }} style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.04)", color: "rgba(148,163,184,0.6)", fontSize: 11, cursor: "pointer" }}>&times;</button>
             </div>
             {(() => {
@@ -642,7 +643,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
                   <div style={{ fontSize: 40 }}>🚫</div>
                   <div style={{ fontSize: 14, fontWeight: 700, color: "rgba(226,232,240,0.7)" }}>This site blocks embedding</div>
                   <div style={{ fontSize: 12, color: "rgba(148,163,184,0.5)", textAlign: "center", maxWidth: 320 }}>{browserUrl}</div>
-                  <button onClick={() => window.open(browserUrl, "_blank")} style={{ marginTop: 8, padding: "10px 24px", borderRadius: 8, background: "rgba(124,58,237,0.3)", border: "1px solid rgba(124,58,237,0.5)", color: "rgba(167,139,250,0.9)", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+                  <button onClick={() => window.open(safeUrl(browserUrl), "_blank")} style={{ marginTop: 8, padding: "10px 24px", borderRadius: 8, background: "rgba(124,58,237,0.3)", border: "1px solid rgba(124,58,237,0.5)", color: "rgba(167,139,250,0.9)", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
                     Open in new tab
                   </button>
                   <div style={{ fontSize: 11, color: "rgba(100,116,139,0.4)", marginTop: 4 }}>

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { safeUrl } from "@/lib/safeUrl";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
@@ -88,7 +89,7 @@ export default function ArticleReader({ url, onClose }: { url: string; onClose?:
       >
         <div style={{ fontSize: 12, opacity: 0.4 }}>{error || "Could not load article"}</div>
         <a
-          href={url}
+          href={safeUrl(url)}
           target="_blank"
           rel="noopener noreferrer"
           style={{
@@ -143,7 +144,7 @@ export default function ArticleReader({ url, onClose }: { url: string; onClose?:
           {article.siteName || new URL(url).hostname}
         </span>
         <a
-          href={url}
+          href={safeUrl(url)}
           target="_blank"
           rel="noopener noreferrer"
           style={{
@@ -349,7 +350,7 @@ export default function ArticleReader({ url, onClose }: { url: string; onClose?:
             via {article.siteName || new URL(url).hostname}
           </span>
           <a
-            href={url}
+            href={safeUrl(url)}
             target="_blank"
             rel="noopener noreferrer"
             style={{

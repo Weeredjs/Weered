@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import HomeFeed from "./HomeFeed";
+import { safeUrl } from "@/lib/safeUrl";
 
 const FEED_DOMAINS = new Set([
   "ign.com",
@@ -156,7 +157,7 @@ export default function LobbyContent({ lobbyId, initialUrl }: Props) {
         </div>
 
         <button
-          onClick={() => window.open(iframeUrl, "_blank")}
+          onClick={() => window.open(safeUrl(iframeUrl), "_blank")}
           style={{ ...navBtnStyle, fontSize: 14 }}
           title="Open in new tab"
         >
@@ -185,7 +186,7 @@ export default function LobbyContent({ lobbyId, initialUrl }: Props) {
           <BlockedState
             domain={lobbyId}
             url={iframeUrl}
-            onOpenExternal={() => window.open(iframeUrl, "_blank")}
+            onOpenExternal={() => window.open(safeUrl(iframeUrl), "_blank")}
           />
         ) : (
           <>
@@ -213,7 +214,7 @@ export default function LobbyContent({ lobbyId, initialUrl }: Props) {
             )}
             <iframe
               ref={iframeRef}
-              src={iframeUrl}
+              src={safeUrl(iframeUrl)}
               style={{
                 width: "100%",
                 height: "100%",
