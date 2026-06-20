@@ -17,6 +17,7 @@ type Post = {
   tags?: any;
   author: { name: string; avatar?: string; avatarColor?: string; tier?: string; globalRole?: string } | null;
   myVote: number;
+  lobby?: { id: string; name: string; logoUrl?: string | null; accentColor?: string | null } | null;
 };
 
 type Section = {
@@ -449,6 +450,18 @@ export default function ForumPage({ lobbyId, lobbyName }: { lobbyId?: string; lo
 
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginBottom: 4 }}>
+                      {!embedded && (
+                        <span style={{
+                          display: "inline-flex", alignItems: "center", gap: 4, fontSize: 9, fontWeight: 800,
+                          padding: "1px 7px", borderRadius: 999, whiteSpace: "nowrap",
+                          background: post.lobby?.accentColor ? `${post.lobby.accentColor}1f` : "rgba(124,58,237,.16)",
+                          color: post.lobby?.accentColor || "rgba(196,181,253,.95)",
+                          border: `1px solid ${post.lobby?.accentColor ? post.lobby.accentColor + "55" : "rgba(124,58,237,.4)"}`,
+                        }}>
+                          {post.lobby?.logoUrl && <img src={post.lobby.logoUrl} alt="" style={{ width: 12, height: 12, borderRadius: "50%", objectFit: "cover" }} />}
+                          {post.lobby ? post.lobby.name : "Weered"}
+                        </span>
+                      )}
                       {post.pinned && <span style={{ fontSize: 9, color: "#f59e0b", fontWeight: 800 }}>&#128204; PINNED</span>}
                       {post.locked && <span style={{ fontSize: 9, color: "#ef4444", fontWeight: 800 }}>&#128274; LOCKED</span>}
                       {sec && (

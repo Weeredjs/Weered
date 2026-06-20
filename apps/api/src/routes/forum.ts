@@ -161,12 +161,23 @@ export default async function forumRoutes(app: FastifyInstance, opts: Opts) {
       for (const b of bms) myBookmarks[b.postId] = true;
     }
 
+    const fLobbyIds = [...new Set(posts.map((p: any) => p.lobbyId).filter(Boolean))] as string[];
+    const fLobbyMap: Record<string, any> = {};
+    if (fLobbyIds.length) {
+      const lobs = await prisma.lobby.findMany({
+        where: { id: { in: fLobbyIds } },
+        select: { id: true, name: true, logoUrl: true, accentColor: true },
+      });
+      for (const l of lobs) fLobbyMap[l.id] = l;
+    }
+
     const out = posts.map((p: any) => ({
       ...p,
       body: p.removedAt ? "[removed by mod]" : p.body.slice(0, 200),
       author: authorMap[p.authorId] || null,
       myVote: myVotes[p.id] || 0,
       myBookmarked: !!myBookmarks[p.id],
+      lobby: p.lobbyId ? fLobbyMap[p.lobbyId] || null : null,
     }));
 
     const nextCursor =
