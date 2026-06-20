@@ -2,6 +2,7 @@
 
 import { useRouter, usePathname } from "next/navigation";
 import { VoiceProvider } from "./VoiceContext";
+import VoiceDock from "./VoiceDock";
 import NotorietyToast from "./NotorietyToast";
 import RankUpCelebration from "./RankUpCelebration";
 import SystemBroadcast from "./SystemBroadcast";
@@ -1259,6 +1260,7 @@ const renameRoom = (name: string)   => sendAdmin("room:rename",  { name });
       <VoiceProvider>
         <SystemBroadcast />
         {children}
+        <VoiceDock />
         <NotorietyToast />
         <RankUpCelebration />
         {passwordRoomId && (

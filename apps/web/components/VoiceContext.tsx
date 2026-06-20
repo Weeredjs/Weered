@@ -38,6 +38,7 @@ interface VoiceContextValue {
   activeRoomId: string | null;
   tiles: ParticipantTile[];
   muted: boolean;
+  deafened: boolean;
   cameraOn: boolean;
   screenShareOn: boolean;
   errorMsg: string;
@@ -47,6 +48,7 @@ interface VoiceContextValue {
   connect: (roomId: string, opts?: { mic?: boolean }) => Promise<void>;
   disconnect: () => void;
   toggleMute: () => void;
+  toggleDeafen: () => void;
   toggleCamera: () => void;
   toggleScreenShare: () => void;
   setMic: (deviceId: string) => Promise<void>;
@@ -65,6 +67,9 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
   const [activeRoomId, setActiveRoomId] = useState<string | null>(null);
   const [tiles, setTiles] = useState<ParticipantTile[]>([]);
   const [muted, setMuted] = useState(false);
+  const [deafened, setDeafened] = useState(false);
+  const deafenedRef = useRef(false);
+  const mutedBeforeDeafenRef = useRef(false);
   const [cameraOn, setCameraOn] = useState(false);
   const [screenShareOn, setScreenShareOn] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
@@ -225,6 +230,7 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
             const el = track.attach();
             el.autoplay = true;
             el.volume = 1;
+            el.muted = deafenedRef.current;
             document.body.appendChild(el);
             audioRefs.current.set(track.sid, el);
           } else if (track.kind === Track.Kind.Video) {
@@ -385,7 +391,42 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
     setMuted(next);
     rebuildTiles(room);
     if (next) stopLevelMeter();
-    else setTimeout(() => startLevelMeter(room), 200);
+    else {
+      setTimeout(() => startLevelMeter(room), 200);
+      // Unmuting lifts deafen — you can't speak-but-not-hear (Discord behaviour).
+      if (deafenedRef.current) {
+        deafenedRef.current = false;
+        setDeafened(false);
+        audioRefs.current.forEach((el) => {
+          el.muted = false;
+        });
+      }
+    }
+  }, [muted, rebuildTiles, startLevelMeter, stopLevelMeter]);
+
+  const toggleDeafen = useCallback(() => {
+    const room = roomRef.current;
+    const next = !deafenedRef.current;
+    deafenedRef.current = next;
+    setDeafened(next);
+    audioRefs.current.forEach((el) => {
+      el.muted = next;
+    });
+    if (next) {
+      // Deafening also mutes your mic; remember the prior state to restore it.
+      mutedBeforeDeafenRef.current = muted;
+      if (room && !muted) {
+        room.localParticipant.setMicrophoneEnabled(false);
+        setMuted(true);
+        stopLevelMeter();
+        rebuildTiles(room);
+      }
+    } else if (room && !mutedBeforeDeafenRef.current && muted) {
+      room.localParticipant.setMicrophoneEnabled(true);
+      setMuted(false);
+      setTimeout(() => startLevelMeter(room), 200);
+      rebuildTiles(room);
+    }
   }, [muted, rebuildTiles, startLevelMeter, stopLevelMeter]);
 
   const setMic = useCallback(
@@ -454,6 +495,7 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
         activeRoomId,
         tiles,
         muted,
+        deafened,
         cameraOn,
         screenShareOn,
         errorMsg,
@@ -463,6 +505,7 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
         connect,
         disconnect,
         toggleMute,
+        toggleDeafen,
         toggleCamera,
         toggleScreenShare,
         setMic,
