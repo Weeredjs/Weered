@@ -84,6 +84,7 @@ export default function ForumPage({ lobbyId, lobbyName }: { lobbyId?: string; lo
   const [sectionModalOpen, setSectionModalOpen] = useState(false);
   const [editingSection, setEditingSection] = useState<Section | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [lobbyFilter, setLobbyFilter] = useState<{ id: string; name: string } | null>(null);
 
   const loadSections = useCallback(async () => {
     if (!lobbyId) { setSections([]); return; }
@@ -96,11 +97,12 @@ export default function ForumPage({ lobbyId, lobbyName }: { lobbyId?: string; lo
     let params = `sort=${sort}&limit=25`;
     if (sectionId) params += `&sectionId=${encodeURIComponent(sectionId)}`;
     if (category && !sectionId) params += `&category=${category}`;
-    if (lobbyId) params += `&lobbyId=${encodeURIComponent(lobbyId)}`;
+    const effLobby = lobbyId || lobbyFilter?.id;
+    if (effLobby) params += `&lobbyId=${encodeURIComponent(effLobby)}`;
     const data = await forumFetch(`/forum/posts?${params}`);
     if (data?.ok) setPosts(data.posts || []);
     setLoading(false);
-  }, [sort, category, sectionId, lobbyId]);
+  }, [sort, category, sectionId, lobbyId, lobbyFilter]);
 
   useEffect(() => { loadSections(); }, [loadSections]);
   useEffect(() => { if (!searchActive) load(); }, [load, searchActive]);
@@ -380,6 +382,22 @@ export default function ForumPage({ lobbyId, lobbyName }: { lobbyId?: string; lo
           </div>
         )}
 
+        {!embedded && lobbyFilter && !searchActive && (
+          <div style={{
+            display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10,
+            marginBottom: 12, padding: "8px 12px", borderRadius: 10,
+            background: "rgba(124,58,237,.10)", border: "1px solid rgba(124,58,237,.28)",
+          }}>
+            <span style={{ fontSize: 12, color: "rgba(226,232,240,.85)" }}>
+              Viewing <b style={{ color: "rgba(196,181,253,.95)" }}>{lobbyFilter.name}</b> forum
+            </span>
+            <button onClick={() => setLobbyFilter(null)} style={{
+              background: "rgba(255,255,255,.06)", border: "1px solid rgba(255,255,255,.12)",
+              borderRadius: 6, color: "rgba(226,232,240,.8)", fontSize: 11, fontWeight: 700,
+              padding: "3px 10px", cursor: "pointer",
+            }}>&times; All communities</button>
+          </div>
+        )}
         {searchActive ? (
           <SearchResultsView
             results={searchResults}
@@ -450,18 +468,29 @@ export default function ForumPage({ lobbyId, lobbyName }: { lobbyId?: string; lo
 
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginBottom: 4 }}>
-                      {!embedded && (
-                        <span style={{
-                          display: "inline-flex", alignItems: "center", gap: 4, fontSize: 9, fontWeight: 800,
-                          padding: "1px 7px", borderRadius: 999, whiteSpace: "nowrap",
-                          background: post.lobby?.accentColor ? `${post.lobby.accentColor}1f` : "rgba(124,58,237,.16)",
-                          color: post.lobby?.accentColor || "rgba(196,181,253,.95)",
-                          border: `1px solid ${post.lobby?.accentColor ? post.lobby.accentColor + "55" : "rgba(124,58,237,.4)"}`,
-                        }}>
-                          {post.lobby?.logoUrl && <img src={post.lobby.logoUrl} alt="" style={{ width: 12, height: 12, borderRadius: "50%", objectFit: "cover" }} />}
-                          {post.lobby ? post.lobby.name : "Weered"}
+                      {!embedded && (post.lobby ? (
+                        <span
+                          onClick={(e) => { e.stopPropagation(); setLobbyFilter({ id: post.lobby!.id, name: post.lobby!.name }); }}
+                          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.stopPropagation(); e.preventDefault(); setLobbyFilter({ id: post.lobby!.id, name: post.lobby!.name }); } }}
+                          role="button" tabIndex={0} title={`View ${post.lobby.name} forum`}
+                          style={{
+                            display: "inline-flex", alignItems: "center", gap: 4, fontSize: 9, fontWeight: 800,
+                            padding: "1px 7px", borderRadius: 999, whiteSpace: "nowrap", cursor: "pointer",
+                            background: post.lobby.accentColor ? `${post.lobby.accentColor}1f` : "rgba(124,58,237,.16)",
+                            color: post.lobby.accentColor || "rgba(196,181,253,.95)",
+                            border: `1px solid ${post.lobby.accentColor ? post.lobby.accentColor + "55" : "rgba(124,58,237,.4)"}`,
+                          }}>
+                          {post.lobby.logoUrl && <img src={post.lobby.logoUrl} alt="" style={{ width: 12, height: 12, borderRadius: "50%", objectFit: "cover" }} />}
+                          {post.lobby.name}
                         </span>
-                      )}
+                      ) : (
+                        <span style={{
+                          display: "inline-flex", alignItems: "center", fontSize: 9, fontWeight: 800,
+                          padding: "1px 7px", borderRadius: 999, whiteSpace: "nowrap",
+                          background: "rgba(124,58,237,.16)", color: "rgba(196,181,253,.95)",
+                          border: "1px solid rgba(124,58,237,.4)",
+                        }}>Weered</span>
+                      ))}
                       {post.pinned && <span style={{ fontSize: 9, color: "#f59e0b", fontWeight: 800 }}>&#128204; PINNED</span>}
                       {post.locked && <span style={{ fontSize: 9, color: "#ef4444", fontWeight: 800 }}>&#128274; LOCKED</span>}
                       {sec && (
