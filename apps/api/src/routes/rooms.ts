@@ -428,6 +428,10 @@ export default async function roomsRoutes(app: FastifyInstance, opts: Opts) {
         for (const sock of live.sockets) send(sock, payload);
       }
 
+      // Notify the lobby so the right-rail room list refetches the new
+      // icon/banner/accent (room-only sockets above don't reach lobby viewers).
+      if (r.lobbyId) broadcastToLobby?.(r.lobbyId, { type: "lobby:activity", roomId });
+
       return reply.send({
         ok: true,
         room: {

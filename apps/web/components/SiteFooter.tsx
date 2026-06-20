@@ -27,7 +27,7 @@ export default function SiteFooter() {
           padding: 0 16px;
           background: rgba(5,8,16,0.96);
           border-top: 1px solid rgba(255,255,255,0.05);
-          font-family: 'DM Mono', monospace, monospace;
+          font-family: var(--font-rajdhani), var(--font-barlow), sans-serif;
         }
         .site-footer-left {
           display: flex;

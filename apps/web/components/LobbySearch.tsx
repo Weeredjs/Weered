@@ -508,7 +508,11 @@ export default function LobbySearch({
           })}
           <button
             type="button"
-            onClick={() => router.push("/explore")}
+            onClick={() => {
+              try {
+                window.dispatchEvent(new CustomEvent("weered:lobby:browse"));
+              } catch {}
+            }}
             style={{
               display: "inline-flex",
               alignItems: "center",
