@@ -748,7 +748,7 @@ export default function LobbyChatPanel(
             style={{
               border: props.embedded ? "none" : "1px solid var(--weered-border)",
               borderRadius: props.embedded ? 0 : 14,
-              padding: props.embedded ? "0 10px" : 10,
+              padding: props.embedded ? "0 16px 0 10px" : 10,
               flex: 1,
               minHeight: 0,
               overflow: "auto",

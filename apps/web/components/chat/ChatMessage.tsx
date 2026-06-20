@@ -864,8 +864,8 @@ export function ChatMessage(props: ChatMessageProps) {
             data-more-menu
             style={{
               position: "absolute",
-              top: -14,
-              right: 4,
+              top: 2,
+              right: 6,
               display: "flex",
               gap: 1,
               padding: 2,
@@ -1104,7 +1104,7 @@ export function ChatMessage(props: ChatMessageProps) {
             tabIndex={0}
             style={{
               position: "absolute",
-              top: 18,
+              top: 30,
               right: 4,
               display: "flex",
               gap: 2,
