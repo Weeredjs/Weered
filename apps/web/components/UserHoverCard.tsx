@@ -254,7 +254,7 @@ export default function UserHoverCard({
   position,
   lobbyModuleType,
   isAway,
-  onClose,
+  onClose: _onClose,
   onMouseEnter,
   onMouseLeave,
   onViewProfile,

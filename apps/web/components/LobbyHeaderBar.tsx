@@ -53,7 +53,7 @@ const MODULE_LABELS: Record<string, string> = {
 
 export default function LobbyHeaderBar({
   title = "Lobby",
-  subtitle,
+  subtitle: _subtitle,
   lobbyId,
   accentColor,
   logoUrl,

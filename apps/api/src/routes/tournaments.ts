@@ -31,7 +31,7 @@ type Opts = {
 export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts) {
   const {
     authFromHeader,
-    awardNotoriety,
+    awardNotoriety: _awardNotoriety,
     awardPaper,
     createNotification,
     getGlobalRole,

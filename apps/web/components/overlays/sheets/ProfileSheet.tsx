@@ -130,13 +130,6 @@ function formatLastSeen(iso: string): string {
   return `Active ${new Date(iso).toLocaleDateString("en-CA", { month: "short", day: "numeric" })}`;
 }
 
-function formatPlaytime(minutes: number): string {
-  if (minutes < 60) return `${minutes}m`;
-  const h = Math.floor(minutes / 60);
-  if (h < 24) return `${h}h`;
-  const d = Math.floor(h / 24);
-  return `${d}d ${h % 24}h`;
-}
 
 function relColor(tier: string): string {
   switch (tier) {
@@ -397,7 +390,7 @@ export default function ProfileSheet({ userId }: { userId: string }) {
   const [activeTab,   setActiveTab  ] = useState<"gta" | "gallery" | "color" | "upload">("gta");
   const [uploading,   setUploading  ] = useState(false);
   const [uploadError, setUploadError] = useState("");
-  const [theme,       setTheme      ] = useState<WeeredThemeName>("press");
+  const [_theme,       setTheme      ] = useState<WeeredThemeName>("press");
 
   useEffect(() => {
     try {
@@ -851,7 +844,7 @@ export default function ProfileSheet({ userId }: { userId: string }) {
                       } else {
                         setUploadError(res.message || res.error || "Upload failed");
                       }
-                    } catch (e) {
+                    } catch (_e) {
                       setUploadError("Upload failed. Please try again.");
                     }
                     setUploading(false);

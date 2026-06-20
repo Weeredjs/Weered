@@ -1,7 +1,5 @@
 "use client";
 
-import React from "react";
-
 type Build = {
   id: string;
   slug: string;
@@ -23,15 +21,6 @@ type Build = {
   author: { id: string; name: string; avatar: string | null; avatarColor: string | null };
 };
 
-const BIOME_LABEL: Record<string, string> = {
-  PLAINS: "Plains",
-  COAST: "Coast",
-  CLIFFS: "Cliffs",
-  SWAMP: "Swamp",
-  CAVE: "Cave",
-  MOUNTAIN: "Mountain",
-  ISLAND: "Island",
-};
 const TYPE_LABEL: Record<string, string> = {
   SHIP: "Ship",
   DOCK: "Dock",

@@ -71,7 +71,6 @@ public class WeeredServerHook {
     private static void onDisconnect(MinecraftClient client) {
         WeeredState s = WeeredConnectClient.STATE;
         if (s.currentServerAddress != null && WeeredConnectClient.CONFIG.isLinked()) {
-            // Fire-and-forget leave so other Weered users see us drop off.
             String addr = s.currentServerAddress;
             WeeredConnectClient.API.presenceLeave(addr).whenComplete((res, err) -> {
                 if (err != null) WeeredConnectClient.LOG.debug("[Weered] presenceLeave failed (non-fatal)", err);

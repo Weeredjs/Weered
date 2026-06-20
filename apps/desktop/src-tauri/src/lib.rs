@@ -65,7 +65,6 @@ pub fn run() {
 
     builder
         .setup(|app| {
-            // Build the system tray.
             build_tray(app.handle())?;
 
             // Register the global shortcut.

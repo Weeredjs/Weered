@@ -3,7 +3,6 @@
 import React from "react";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
-const ACCENT = "#f58220";
 
 type ArchiveEntry = {
   id: string;
@@ -119,7 +118,7 @@ export default function TournamentArchive({ lobbyId }: { lobbyId: string }) {
 }
 
 function PodiumChip({
-  rank,
+  rank: _rank,
   name,
   color,
   emoji,

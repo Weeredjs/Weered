@@ -125,7 +125,6 @@ const ITEMS = [
     }
   }
 
-  console.log("Done.");
   await prisma.$disconnect();
 })().catch(async (e) => {
   console.error(e);

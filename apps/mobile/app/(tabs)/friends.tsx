@@ -130,7 +130,7 @@ function FriendsList() {
       data={flat}
       style={{ backgroundColor: "#0c0b0a" }}
       contentContainerStyle={{ backgroundColor: "#0c0b0a" }}
-      keyExtractor={(item: any, i) => (item.header ? `h-${item.header}` : item.id)}
+      keyExtractor={(item: any, _i) => (item.header ? `h-${item.header}` : item.id)}
       refreshControl={
         <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor="#5800E5" />
       }

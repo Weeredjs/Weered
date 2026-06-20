@@ -55,7 +55,7 @@ export default async function desktopRoutes(app: FastifyInstance) {
       const releases = (await res.json()) as GhRelease[];
 
       const latest = releases.find(
-        (r) => !r.draft && !r.prerelease && /^desktop-v/.test(r.tag_name),
+        (r) => !r.draft && !r.prerelease && r.tag_name.startsWith("desktop-v"),
       );
       if (!latest) {
         manifest = null;

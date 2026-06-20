@@ -112,7 +112,7 @@ function MeInner() {
     let ImagePicker: any;
     try {
       ImagePicker = require("expo-image-picker");
-    } catch (e: any) {
+    } catch (_e: any) {
       Alert.alert("Image picker unavailable", "Reload the app after installing expo-image-picker.");
       return;
     }

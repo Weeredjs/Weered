@@ -57,15 +57,6 @@ function greeting(): string {
   return "Late night";
 }
 
-function timeAgo(ts: number | string): string {
-  const diff = Date.now() - (typeof ts === "string" ? new Date(ts).getTime() : ts);
-  const m = Math.floor(diff / 60000);
-  if (m < 1) return "just now";
-  if (m < 60) return `${m}m ago`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h ago`;
-  return `${Math.floor(h / 24)}d ago`;
-}
 
 function heatColor(count: number): string {
   if (count >= 10) return "#ef4444";
@@ -680,7 +671,7 @@ function LobbyCard({ room, idx, onJoin }: { room: any; idx: number; onJoin: (id:
   );
 }
 
-function FriendStrip({ friends, onDm, onJoin }: { friends: any[]; onDm: (u: any) => void; onJoin: (u: any) => void }) {
+function FriendStrip({ friends, onDm, onJoin: _onJoin }: { friends: any[]; onDm: (u: any) => void; onJoin: (u: any) => void }) {
   if (friends.length === 0) return null;
   return (
     <div style={{ marginTop: 24 }}>
@@ -796,42 +787,6 @@ function RecentRow({ room, onJoin }: { room: any; onJoin: (id: string, pinned: b
   );
 }
 
-function LobbyRow({ room, onJoin }: { room: any; onJoin: (id: string) => void }) {
-  const name = roomName(room);
-  const cnt = onlineCount(room);
-  const accent = lobbyAccent(room, 0);
-  const logo = room?.logoUrl;
-  return (
-    <div
-      onClick={() => onJoin(roomId(room))}
-      onKeyDown={onActivate(() => onJoin(roomId(room)))}
-      role="button"
-      tabIndex={0}
-      style={{
-        display: "flex", alignItems: "center", gap: 10,
-        padding: "7px 10px", background: "rgba(255,255,255,.02)",
-        border: "1px solid rgba(255,255,255,.06)", borderRadius: 2,
-        cursor: "pointer", transition: "all .15s",
-      }}
-      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = `${accent}40`; (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.04)"; }}
-      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,.06)"; (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.02)"; }}
-    >
-      {logo ? (
-        <img src={logo} alt="" style={{ width: 24, height: 24, borderRadius: 2, objectFit: "contain", background: "rgba(0,0,0,.3)", flexShrink: 0 }} />
-      ) : (
-        <div style={{ width: 24, height: 24, borderRadius: 2, background: `${accent}12`, border: `1px solid ${accent}18`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 900, color: accent, flexShrink: 0 }}>
-          {name.slice(0, 1).toUpperCase()}
-        </div>
-      )}
-      <div style={{ flex: 1, minWidth: 0, fontFamily: "var(--font-barlow), 'Barlow Condensed', sans-serif", textTransform: "uppercase", fontWeight: 700, fontSize: 13, letterSpacing: "0.02em", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{name}</div>
-      {cnt > 0 && (
-        <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10, fontFamily: "monospace", color: "#22c55e", flexShrink: 0 }}>
-          <PulseDot color="#22c55e" size={4} />{cnt}
-        </span>
-      )}
-    </div>
-  );
-}
 
 function SectionHeader({ icon, label, count, sub }: { icon: string; label: string; count?: number; sub?: string }) {
   return (

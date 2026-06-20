@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 const STORAGE_KEY = "weered:vertical:v1";
 const SETTINGS_KEY = "weered:settings:v0";

@@ -1,6 +1,5 @@
 "use client";
 
-import React from "react";
 import { avatarBg } from "../../lib/avatarColor";
 import RoleIcon from "../RoleIcon";
 import { CrewFlair } from "./flair";

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback } from "react";
 import EmptyState from "./EmptyState";
 import LoadingState from "./LoadingState";
 import { onActivate } from "@/lib/a11y";

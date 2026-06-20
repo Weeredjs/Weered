@@ -1,6 +1,5 @@
 "use client";
 
-import React from "react";
 import { useVoice } from "./VoiceContext";
 import MicSettings from "./MicSettings";
 

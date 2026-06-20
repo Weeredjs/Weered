@@ -1,6 +1,5 @@
 "use client";
 
-import React from "react";
 import { avatarBg } from "../../lib/avatarColor";
 
 export type RoomTab = "chat" | "media" | "activity" | "details";

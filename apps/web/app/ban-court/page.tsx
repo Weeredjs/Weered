@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "https://api.weered.ca";
 

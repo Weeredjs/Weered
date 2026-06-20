@@ -1005,7 +1005,7 @@ interface Props {
 
 export default function Dota2ModulesPanel({
   lobbyId,
-  gameName = "Dota 2",
+  gameName: _gameName = "Dota 2",
   accentColor = ACCENT_DOTA,
   style,
 }: Props) {

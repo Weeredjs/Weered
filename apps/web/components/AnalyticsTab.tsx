@@ -190,7 +190,7 @@ export default function AnalyticsTab() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [lastUpdated, setLastUpdated] = useState(0);
-  const [tick, setTick] = useState(0);
+  const [_tick, setTick] = useState(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
 

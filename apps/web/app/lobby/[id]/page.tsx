@@ -171,30 +171,6 @@ function authHeaders(): Record<string, string> {
   }
 }
 
-function TwitchIcon({
-  size = 12,
-  color = "#9146FF",
-  style,
-}: {
-  size?: number;
-  color?: string;
-  style?: React.CSSProperties;
-}) {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 256 268"
-      style={{ display: "inline-block", verticalAlign: "middle", flexShrink: 0, ...style }}
-    >
-      <path
-        d="M17.458 0L0 46.556v185.81h63.983v34.934h34.932l34.898-34.934h52.36L256 162.954V0H17.458zm23.259 23.263H232.73v128.029l-40.739 40.736H128L93.113 226.93v-34.902H40.717V23.263zm64.008 116.405H128V69.844h-23.275v69.824zm63.997 0h23.275V69.844h-23.275v69.824z"
-        fill={color}
-      />
-    </svg>
-  );
-}
-
 const VERIFIED_DOMAINS = new Set([
   "ign.com",
   "espn.com",

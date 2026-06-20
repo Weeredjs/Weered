@@ -934,7 +934,7 @@ const TOURNAMENT_TEMPLATES: Record<string, TournamentTemplate[]> = {
       durationDays: 7,
       maxEntries: 64,
       suggestedTitle: "Weekly Rating Climb",
-      suggestedDescription: "Every +50 net blitz rating earns a credit. Most credits at the end of the week wins. Lichess only (Chess.com doesn\'t expose ratingDiff per game).",
+      suggestedDescription: "Every +50 net blitz rating earns a credit. Most credits at the end of the week wins. Lichess only (Chess.com doesn't expose ratingDiff per game).",
     },
     {
       id: "opening-month",

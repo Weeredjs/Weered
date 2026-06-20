@@ -79,7 +79,7 @@ function countryFlag(code: string | undefined): string {
   return c;
 }
 
-function HoleByHole({ holes, accentColor }: { holes: any[]; accentColor: string }) {
+function HoleByHole({ holes, accentColor: _accentColor }: { holes: any[]; accentColor: string }) {
   if (!holes?.length) return <div style={{ fontSize: 11, opacity: 0.35, padding: "4px 0" }}>No hole-by-hole data yet</div>;
   return (
     <div style={{ display: "flex", gap: 2, flexWrap: "wrap", padding: "6px 0" }}>

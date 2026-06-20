@@ -143,7 +143,7 @@ export default async function redditRoutes(app: FastifyInstance) {
       const posts = parseAtom(xml).slice(0, 25);
       cache.set(cacheKey, { posts, cachedAt: Date.now() });
       return reply.send({ ok: true, sub, posts, updatedAt: new Date().toISOString() });
-    } catch (e: any) {
+    } catch (_e: any) {
       if (cached)
         return reply.send({
           ok: true,

@@ -138,27 +138,6 @@ function maxPlayersForMode(mode: string): number {
   return 5;
 }
 
-function compRankColor(rank: string): string {
-  if (rank.startsWith("Silver")) return "#8A8A8A";
-  if (rank.startsWith("Gold Nova")) return "#D4A017";
-  if (rank.startsWith("Master Guardian") || rank.startsWith("Distinguished")) return "#4A90D9";
-  if (
-    rank.startsWith("Legendary Eagle") ||
-    rank.startsWith("Supreme") ||
-    rank.startsWith("The Global")
-  )
-    return "#B44CF0";
-  return "#8A8A8A";
-}
-
-function premierRatingColor(rating: number): string {
-  if (rating >= 20000) return "#D4A017";
-  if (rating >= 15000) return "#E76EBF";
-  if (rating >= 10000) return "#9B59B6";
-  if (rating >= 5000) return "#4A90D9";
-  return "#8A8A8A";
-}
-
 const TABS = [
   { id: "lfg" as const, label: "Squad Finder", icon: "\u{1F3AE}" },
   { id: "streams" as const, label: "Live Streams", icon: "\u{1F4FA}" },

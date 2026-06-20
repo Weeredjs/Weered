@@ -214,7 +214,6 @@ function ActivityRow({ item }: { item: FeedItem }) {
     } else if (item.type === "friend") router.push("/(tabs)/friends");
   };
 
-  // Build the title + sub-text per item type.
   let title: string;
   let subtitle: string | null = null;
   if (item.type === "dm") {

@@ -61,12 +61,12 @@ export default function DockShell(props: { forceMode?: "rail" | "floating" } = {
     role,
     joinStatus,
     sendChat,
-    logout,
+    logout: _logout,
     renameRoom,
     lockRoom,
     unlockRoom,
     knock,
-    admit,
+    admit: _admit,
   } = ctx || {};
 
   const [open, setOpen] = useState(true);

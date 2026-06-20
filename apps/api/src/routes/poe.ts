@@ -8,7 +8,6 @@ const POE_CLIENT_ID = process.env.POE_CLIENT_ID || "";
 const POE_CLIENT_SECRET = process.env.POE_CLIENT_SECRET || "";
 const POE_CONTACT = process.env.POE_CONTACT_EMAIL || "oauth@weered.ca";
 const SITE_URL = process.env.SITE_URL || "https://weered.ca";
-const API_URL = process.env.API_URL || "https://api.weered.ca";
 
 const OAUTH_AUTHORIZE = "https://www.pathofexile.com/oauth/authorize";
 const OAUTH_TOKEN = "https://www.pathofexile.com/oauth/token";

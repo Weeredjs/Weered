@@ -1,7 +1,5 @@
 "use client";
 
-import React from "react";
-
 const svgProps = {
   width: 16,
   height: 16,

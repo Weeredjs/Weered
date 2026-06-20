@@ -59,7 +59,7 @@ export function runSlashCommand(
       opts.clear();
       return true;
     case "roll": {
-      const m = args.match(/^(\d*)d(\d+)(?:\s*([+\-]\s*\d+))?$/i) || ["", "1", "20"];
+      const m = args.match(/^(\d*)d(\d+)(?:\s*([+-]\s*\d+))?$/i) || ["", "1", "20"];
       const n = Math.max(1, Math.min(20, parseInt(m[1] || "1", 10) || 1));
       const sides = Math.max(2, Math.min(1000, parseInt(m[2] || "20", 10) || 20));
       const mod = m[3] ? parseInt(m[3].replace(/\s+/g, ""), 10) : 0;

@@ -21,25 +21,7 @@ interface Props {
   style?: React.CSSProperties;
 }
 
-interface ParticipantTile {
-  sid: string;
-  identity: string;
-  name: string;
-  isSpeaking: boolean;
-  isMuted: boolean;
-  isLocal: boolean;
-}
 
-function getToken(): string {
-  try {
-    return (
-      localStorage.getItem("weered_token") ||
-      localStorage.getItem("weered:token") ||
-      sessionStorage.getItem("weered_token") ||
-      ""
-    );
-  } catch { return ""; }
-}
 
 import { avatarBg as avatarColor } from "../../lib/avatarColor";
 import GtaModulePanel from "./GtaModulePanel";
@@ -101,7 +83,7 @@ function YoutubeStage({ roomId, onClose, style }: { roomId: string; onClose: () 
   const [inputVal,  setInputVal ] = useState("");
   const [inputErr,  setInputErr ] = useState("");
   const [ytReady,   setYtReady  ] = useState(false);
-  const [playing,   setPlaying  ] = useState(false);
+  const [_playing,   setPlaying  ] = useState(false);
   const didInitFromBuffer = useRef(false);
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -647,7 +629,7 @@ function VoiceCard({ tile, moduleType, roomUsers }: { tile: any; moduleType?: st
 function VoiceStage({ roomId, moduleType, roomUsers, onClose, style }: { roomId: string; moduleType?: string; roomUsers?: { id: string; name: string; role?: string; globalRole?: string; avatarColor?: string }[]; onClose: () => void; style?: React.CSSProperties }) {
   const voice = useVoice();
   const alreadyInRoom = voice.connState === "connected" && voice.activeRoomId === roomId;
-  const [prompted, setPrompted] = useState(alreadyInRoom);
+  const [prompted, _setPrompted] = useState(alreadyInRoom);
 
   const [, forceUpdate] = useState(0);
   useEffect(() => {
@@ -860,7 +842,7 @@ function VideoStage({ roomId, onClose, style }: { roomId: string; onClose?: () =
 
 function ScreenStage({ roomId, onClose, style }: { roomId: string; onClose?: () => void; style?: React.CSSProperties }) {
   const voice = useVoice();
-  const { connState, activeRoomId, tiles, muted, screenShareOn, toggleMute, toggleScreenShare, connect, disconnect, getVideoElement } = voice;
+  const { connState, activeRoomId: _activeRoomId, tiles, muted, screenShareOn, toggleMute, toggleScreenShare, connect, disconnect, getVideoElement } = voice;
   const screenRef = useRef<HTMLDivElement>(null);
 
   const handleShareScreen = useCallback(async () => {

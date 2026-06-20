@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 export default function GuidelinesContent() {
   const [visible, setVisible] = useState(false);

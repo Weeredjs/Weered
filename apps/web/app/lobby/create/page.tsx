@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import LobbyBranding, { type BrandingValue } from "../../../components/LobbyBranding";
 import { useRouter } from "next/navigation";
 
@@ -39,24 +39,6 @@ const MODULE_TYPES = [
   { id: "NEWS", label: "News", desc: "Live news feed from global sources", icon: "🗞️" },
 ];
 
-const ACCENT_PRESETS = [
-  "#5800E5",
-  "#22c55e",
-  "#ef4444",
-  "#f97316",
-  "#eab308",
-  "#3b82f6",
-  "#ec4899",
-  "#06b6d4",
-  "#8b5cf6",
-  "#14b8a6",
-  "#d946ef",
-  "#f43f5e",
-  "#0ea5e9",
-  "#a855f7",
-  "#84cc16",
-];
-
 function slugify(s: string): string {
   return s
     .toLowerCase()
@@ -69,7 +51,7 @@ function slugify(s: string): string {
 export default function CreateLobbyPage() {
   const router = useRouter();
 
-  const [me, setMe] = useState<any>(null);
+  const [_me, setMe] = useState<any>(null);
   const [tier, setTier] = useState("INNOCENT");
   const [loading, setLoading] = useState(true);
 

@@ -427,7 +427,7 @@ export async function getHelldiversSteamPlayers(): Promise<{
     const count = Number(j?.response?.player_count ?? 0);
     _steamCache = { ts: now, count };
     return { ok: true, count, ts: now };
-  } catch (e) {
+  } catch (_e) {
     if (_steamCache) return { ok: true, count: _steamCache.count, ts: _steamCache.ts };
     return { ok: false, count: 0, ts: now };
   }

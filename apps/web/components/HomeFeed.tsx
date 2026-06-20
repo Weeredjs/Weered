@@ -104,19 +104,6 @@ function timeAgo(date: Date): string {
   return `${Math.floor(hrs / 24)}d ago`;
 }
 
-function roomIdFromUrl(url: string): string {
-  let hash = 0;
-  for (let i = 0; i < url.length; i++) {
-    hash = (hash << 5) - hash + url.charCodeAt(i);
-    hash |= 0;
-  }
-  return `article_${Math.abs(hash).toString(36).slice(0, 10)}`;
-}
-
-function lobbyIdFromDomain(domain: string): string {
-  return domain.replace(/^www\./, "");
-}
-
 function HeatBar({ heat, color }: { heat: number; color: string }) {
   const [width, setWidth] = useState(0);
   useEffect(() => {

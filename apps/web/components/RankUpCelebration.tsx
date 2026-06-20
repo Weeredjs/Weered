@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 
 const RANK_COLORS: Record<string, string> = {

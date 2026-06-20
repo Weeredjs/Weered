@@ -129,13 +129,6 @@ const ROLE_DISPLAY_HELLDIVERS: Record<string, string> = {
   MOD: "Drill Sergeant",
   OWNER: "Dive Lead",
 };
-function roleDisplay(dbRole: string, lobbyTheme?: string | null): string {
-  if (lobbyTheme === "windrose" && ROLE_DISPLAY_WINDROSE[dbRole])
-    return ROLE_DISPLAY_WINDROSE[dbRole];
-  if (lobbyTheme === "helldivers2" && ROLE_DISPLAY_HELLDIVERS[dbRole])
-    return ROLE_DISPLAY_HELLDIVERS[dbRole];
-  return ROLE_DISPLAY[dbRole] || dbRole.toLowerCase();
-}
 
 const ICON_GOD = <RoleIcon role="GOD" size={14} />;
 const ICON_ADMIN = <RoleIcon role="ADMIN" size={14} />;
@@ -146,95 +139,6 @@ const ICON_OWNER = <RoleIcon role="OWNER" size={14} />;
 const ICON_INDICTED = <TierIcon tier="INDICTED" size={12} />;
 const ICON_FELON = <TierIcon tier="FELON" size={12} />;
 const ICON_KINGPIN_TIER = <TierIcon tier="KINGPIN" size={12} />;
-
-function flairFor(u: any): Flair {
-  const g = normRole(pickFirstString(u?.globalRole, u?.global_role, u?.global));
-  const rr = normRole(pickFirstString(u?.role, u?.roomRole, u?.room_role));
-  const paid = isPaidUser(u);
-
-  if (g === "GOD")
-    return {
-      markClass: "weered-mark-god",
-      nameClass: "weered-name-god",
-      badge: "GOD",
-      badgeClass: "weered-badge-god",
-      icon: ICON_GOD,
-    };
-  if (g === "ADMIN")
-    return {
-      markClass: "weered-mark-admin",
-      nameClass: "weered-name-admin",
-      badge: "ADMIN",
-      badgeClass: "weered-badge-admin",
-      icon: ICON_ADMIN,
-    };
-  if (g === "STAFF")
-    return {
-      markClass: "weered-mark-staff",
-      nameClass: "weered-name-staff",
-      badge: "STAFF",
-      badgeClass: "weered-badge-staff",
-      icon: ICON_STAFF,
-    };
-  if (g === "SUPPORT")
-    return {
-      markClass: "weered-mark-staff",
-      nameClass: "weered-name-staff",
-      badge: "SUPPORT",
-      badgeClass: "weered-badge-staff",
-      icon: ICON_SUPPORT,
-    };
-  if (g === "MOD")
-    return {
-      markClass: "weered-mark-mod",
-      nameClass: "weered-name-mod",
-      badge: "MOD",
-      badgeClass: "weered-badge-mod",
-      icon: ICON_MOD,
-    };
-  if (rr === "OWNER")
-    return {
-      markClass: "weered-mark-owner",
-      nameClass: "weered-name-owner",
-      badge: "OWNER",
-      badgeClass: "weered-badge-owner",
-      icon: ICON_OWNER,
-    };
-  if (rr === "MOD")
-    return {
-      markClass: "weered-mark-mod",
-      nameClass: "weered-name-mod",
-      badge: "MOD",
-      badgeClass: "weered-badge-mod",
-      icon: ICON_MOD,
-    };
-  const tier = userTier(u);
-  if (tier === "KINGPIN")
-    return {
-      markClass: "weered-mark-paid",
-      nameClass: "weered-name-paid",
-      badge: "KINGPIN",
-      badgeClass: "weered-badge-kingpin",
-      icon: ICON_KINGPIN_TIER,
-    };
-  if (tier === "FELON")
-    return {
-      markClass: "weered-mark-paid",
-      nameClass: "weered-name-paid",
-      badge: "FELON",
-      badgeClass: "weered-badge-felon",
-      icon: ICON_FELON,
-    };
-  if (tier === "INDICTED")
-    return {
-      markClass: "weered-mark-paid",
-      nameClass: "weered-name-paid",
-      badge: "INDICTED",
-      badgeClass: "weered-badge-indicted",
-      icon: ICON_INDICTED,
-    };
-  return { markClass: "weered-mark-none" };
-}
 
 function groupRank(u: any): number {
   const g = normRole(pickFirstString(u?.globalRole, u?.global_role, u?.global));
@@ -266,7 +170,7 @@ function accentForRoom(id: string): string {
 }
 
 export default function LeftRail() {
-  const { openSheet, replaceTop } = useOverlay();
+  const { openSheet: _openSheet, replaceTop } = useOverlay();
   const pathname = usePathname() || "";
   const router = useRouter();
   const { joinedRoomId, activeRoomId, me, globalRole, currentLobbyId, joinStatus, leave } =
@@ -331,7 +235,7 @@ export default function LeftRail() {
   }, []);
 
   const sub = useMemo(() => {
-    const m = pathname.match(/^\/r\/([^\/?#]+)/i);
+    const m = pathname.match(/^\/r\/([^/?#]+)/i);
     return m ? `r/${m[1]}` : "";
   }, [pathname]);
 
@@ -679,7 +583,7 @@ export default function LeftRail() {
   const {
     openHover,
     scheduleClose,
-    cancelClose,
+    cancelClose: _cancelClose,
     card: hoverCard,
   } = useUserHover({
     lobbyModuleType: _lobbyMod,

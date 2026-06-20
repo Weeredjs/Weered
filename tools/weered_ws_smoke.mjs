@@ -2,10 +2,6 @@
 const WS_URL = "ws://127.0.0.1:4001";
 const ROOM = "abc123";
 
-function sleep(ms) {
-  return new Promise((r) => setTimeout(r, ms));
-}
-
 async function main() {
   // 1) dev-login
   const r = await fetch(`${API}/auth/dev-login`, {

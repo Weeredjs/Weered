@@ -53,7 +53,7 @@ const TIMEFRAMES: { id: string; label: string }[] = [
   { id: "1w",  label: "1W"  },
 ];
 
-function PriceChart({ symbol, accent, timeframe = "1m" }: { symbol: string; accent: string; timeframe?: string }) {
+function PriceChart({ symbol, accent: _accent, timeframe = "1m" }: { symbol: string; accent: string; timeframe?: string }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<any>(null);
   const candleSeriesRef = useRef<any>(null);

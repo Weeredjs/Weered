@@ -62,7 +62,7 @@ export function renderMarkdown(md: string): string {
 
   while (i < lines.length) {
     const ln = lines[i];
-    if (/^```/.test(ln)) {
+    if (ln.startsWith("```")) {
       if (inCode) {
         out.push(
           `<pre style="background:rgba(0,0,0,.4);padding:10px 12px;border-radius:8px;overflow-x:auto;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;margin:8px 0;"><code>${escapeHtml(codeBuf.join("\n"))}</code></pre>`,

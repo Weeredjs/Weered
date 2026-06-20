@@ -429,7 +429,15 @@ function LobbyBanner({ url, accent }: { url: string | null; accent: string }) {
   );
 }
 
-function RoomRow({ room, lobbyId, accent }: { room: Room; lobbyId: string; accent: string }) {
+function RoomRow({
+  room,
+  lobbyId: _lobbyId,
+  accent,
+}: {
+  room: Room;
+  lobbyId: string;
+  accent: string;
+}) {
   return (
     <Pressable
       onPress={() => router.push(`/room/${room.id}`)}

@@ -644,8 +644,6 @@ function LfgBoard({ lobbyId, accent }: { lobbyId: string; accent: string }) {
   );
 }
 
-const FEATURED_PLAYERS = ["shroud", "chocoTaco", "WackyJacky101", "Kaymind", "Swagger"];
-
 function StatsLookup({ accent }: { accent: string }) {
   const [query, setQuery] = useState("");
   const [platform, setPlatform] = useState("steam");
@@ -974,7 +972,7 @@ function WeaponMastery({ accent }: { accent: string }) {
 function RecentMatches({ accent }: { accent: string }) {
   const [query, setQuery] = useState("");
   const [platform, setPlatform] = useState("steam");
-  const [matchIds, setMatchIds] = useState<string[]>([]);
+  const [_matchIds, setMatchIds] = useState<string[]>([]);
   const [matches, setMatches] = useState<any[]>([]);
   const [playerName, setPlayerName] = useState("");
   const [loading, setLoading] = useState(false);

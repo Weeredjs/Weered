@@ -4,15 +4,6 @@ import React, { useEffect, useState } from "react";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
-const stencil: React.CSSProperties = {
-  fontFamily: 'var(--font-saira-stencil), "Stencil Std", "Impact", sans-serif',
-  letterSpacing: "1px",
-  textTransform: "uppercase",
-  WebkitFontSmoothing: "antialiased",
-  MozOsxFontSmoothing: "grayscale",
-  textRendering: "geometricPrecision",
-};
-
 type Order = {
   id: number;
   title: string;

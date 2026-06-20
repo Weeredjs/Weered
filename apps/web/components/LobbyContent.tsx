@@ -239,7 +239,7 @@ export default function LobbyContent({ lobbyId, initialUrl }: Props) {
 
 function BlockedState({
   domain,
-  url,
+  url: _url,
   onOpenExternal,
 }: {
   domain: string;

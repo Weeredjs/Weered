@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useWeered } from "./WeeredProvider";
 import LobbyChatPanel from "./LobbyChatPanel";
 import { onActivate } from "@/lib/a11y";

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { onActivate } from "@/lib/a11y";
 import type { FeedItem } from "./HomeFeed";
@@ -42,7 +42,7 @@ export default function StoryInterceptModal({ item, originRect, onClose }: Props
     globalRole?: string;
     avatarColor?: string;
   } | null>(null);
-  const [hovered, setHovered] = useState<"discuss" | "lobby" | null>(null);
+  const [_hovered, _setHovered] = useState<"discuss" | "lobby" | null>(null);
 
   useEffect(() => {
     if (item) {

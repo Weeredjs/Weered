@@ -70,7 +70,7 @@ export default async function steamRoutes(app: FastifyInstance, opts: Opts) {
       playersCache.set(appId, { count, ts: now });
       reply.header("Cache-Control", "public, max-age=30");
       return reply.send({ ok: true, count, ts: now });
-    } catch (e) {
+    } catch (_e) {
       if (cached) {
         return reply.send({ ok: true, count: cached.count, ts: cached.ts, stale: true });
       }
@@ -134,7 +134,7 @@ export default async function steamRoutes(app: FastifyInstance, opts: Opts) {
       const row: OwnedRow = { owned, hoursPlayed, lastPlayed, ts: now };
       ownedCache.set(key, row);
       return reply.send({ ok: true, linked: true, owned, hoursPlayed, lastPlayed });
-    } catch (e) {
+    } catch (_e) {
       if (cached) {
         return reply.send({
           ok: true,
@@ -256,7 +256,7 @@ export default async function steamRoutes(app: FastifyInstance, opts: Opts) {
         unlocked,
         achievements: merged,
       });
-    } catch (e: any) {
+    } catch (_e: any) {
       if (cached) {
         return reply.send({
           ok: true,
@@ -321,7 +321,7 @@ export default async function steamRoutes(app: FastifyInstance, opts: Opts) {
         }));
       playingCache.set(appId, { items, ts: now });
       return reply.send({ ok: true, items });
-    } catch (e) {
+    } catch (_e) {
       if (cached) return reply.send({ ok: true, items: cached.items, stale: true });
       return reply.code(500).send({ ok: false, error: "playing_lookup_failed" });
     }

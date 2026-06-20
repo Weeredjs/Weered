@@ -42,7 +42,7 @@ export default async function staffContentRoutes(app: FastifyInstance, opts: Opt
         _count: { select: { members: true } },
       },
     });
-    const roomsMem = new Map([...rooms.entries()]);
+    const roomsMem = new Map(rooms.entries());
     const enriched = list.map((r) => {
       const mem = roomsMem.get(r.id);
       return {

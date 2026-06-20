@@ -17,7 +17,7 @@ export default async function leagueRoutes(app: FastifyInstance) {
         ddragonVersion = versions[0];
         log.log(`[league] Data Dragon version: ${ddragonVersion}`);
       }
-    } catch (e) {
+    } catch (_e) {
       log.warn("[league] Failed to fetch DDragon version, using fallback");
     }
   })();

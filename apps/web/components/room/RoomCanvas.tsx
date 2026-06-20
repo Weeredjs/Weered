@@ -42,9 +42,6 @@ function YouTubeIcon({ size = 11, color = "#FF0000", style }: { size?: number; c
   );
 }
 
-function safeCopy(s: string) {
-  navigator.clipboard?.writeText?.(s)?.catch(() => {});
-}
 
 function safeJsonParse<T>(s: string | null, fallback: T): T {
   try { if (!s) return fallback; return JSON.parse(s) as T; } catch { return fallback; }
@@ -102,7 +99,6 @@ const ROOM_NAME_CACHE_KEY = "weered:roomnames:v1";
 const CHAT_WIDTH_DESKTOP = 580;
 const CHAT_WIDTH_MOBILE  = 300;
 const CHAT_HEIGHT_DESKTOP = 420;
-const CHAT_HEIGHT_MOBILE  = "100%";
 
 export default function RoomCanvas({ roomId }: { roomId: string }) {
   const w: any = useWeered();
@@ -110,7 +106,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
   const liveUsers = useRoomUsers(activeRid);
   const liveMsgs = useRoomMsgs(activeRid);
   const joinStatus = w?.statusByRoom?.[activeRid] || w?.statusByRoom?.["room:" + activeRid] || w?.statusByRoom?.[roomId] || "idle";
-  const { openSheet } = useOverlay();
+  const { openSheet: _openSheet } = useOverlay();
   const voice = useVoice();
   const [stageMode, setStageMode] = useState<StageMode>("voice");
 
@@ -989,8 +985,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
             (e.currentTarget as any)._swipeDx = 0;
           }}
           className={chatFullscreen ? "weered-chat-fullscreen" : ""}
-          style={{
-            ...(chatFullscreen ? {
+          style={(chatFullscreen ? {
               position: "fixed",
               top: 0, right: 0, bottom: 0,
               width: "auto",
@@ -1025,8 +1020,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
               flexDirection: "column" as const,
               zIndex: 99,
               transition: "width 0.34s cubic-bezier(0.22,1,0.36,1)",
-            })
-          }}
+            })}
         >
           {chatOpen && (
             <>

@@ -670,7 +670,7 @@ export default async function socialRoutes(app: FastifyInstance, opts: Opts) {
           create: { blockerId: u.id, blockedId: targetId, reason },
         });
         return reply.send({ ok: true });
-      } catch (e) {
+      } catch (_e) {
         return reply.code(500).send({ ok: false, error: "block_failed" });
       }
     },
@@ -695,7 +695,7 @@ export default async function socialRoutes(app: FastifyInstance, opts: Opts) {
           where: { blockerId: u.id, blockedId: targetId },
         });
         return reply.send({ ok: true });
-      } catch (e) {
+      } catch (_e) {
         return reply.code(500).send({ ok: false, error: "unblock_failed" });
       }
     },

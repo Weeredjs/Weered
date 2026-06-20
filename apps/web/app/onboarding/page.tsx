@@ -1,6 +1,6 @@
 "use client";
 
-import React, { Suspense, useState, useEffect, useCallback } from "react";
+import { Suspense, useState, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 function OnboardingForm() {

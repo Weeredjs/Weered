@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { weeredToast } from "../../lib/toast";
 
@@ -108,7 +108,7 @@ export default function SubscribeContent() {
   const searchParams = useSearchParams();
   const success = searchParams.get("success") === "true";
   const [sub, setSub] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const [_loading, setLoading] = useState(true);
   const [checking, setChecking] = useState<string | null>(null);
   const [visible, setVisible] = useState(false);
 
@@ -396,7 +396,7 @@ export default function SubscribeContent() {
           )}
 
           <div className="sub-grid">
-            {TIERS.map((tier, i) => {
+            {TIERS.map((tier, _i) => {
               const isCurrent = currentTier === tier.id;
               const isUpgrade =
                 tier.monthly > 0 &&

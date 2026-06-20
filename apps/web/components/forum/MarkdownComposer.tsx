@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { forumFetch, FONT } from "./ForumHelpers";
 import Markdown from "./Markdown";
 
@@ -47,7 +47,7 @@ export default function MarkdownComposer({
 
   async function handleFile(f: File) {
     if (!f) return;
-    if (!/^image\//.test(f.type)) {
+    if (!f.type.startsWith("image/")) {
       alert("Image files only.");
       return;
     }

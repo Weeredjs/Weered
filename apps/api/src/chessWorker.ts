@@ -4,7 +4,6 @@ import type { PrismaClient } from "@prisma/client";
 
 const POLL_INTERVAL_MS = 5 * 60 * 1000;
 const LICHESS_GAMES_PER_USER = 20;
-const CHESS_COM_MONTHS_BACK = 1;
 
 function timeControlBucket(initialSeconds: number, incrementSeconds: number): string {
   const est = initialSeconds + 40 * incrementSeconds;
@@ -190,7 +189,7 @@ export function startChessWorker(prisma: PrismaClient) {
               create: { userId: u.id, ...g },
               update: {},
             });
-          } catch (err: any) {}
+          } catch (_err: any) {}
         }
       }
     } catch (err: any) {

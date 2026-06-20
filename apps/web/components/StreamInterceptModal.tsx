@@ -1,6 +1,5 @@
 "use client";
 
-import React from "react";
 import { useRouter } from "next/navigation";
 import { onActivate } from "@/lib/a11y";
 import { useWeered } from "./WeeredProvider";

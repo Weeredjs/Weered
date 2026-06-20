@@ -1,6 +1,5 @@
 "use client";
 
-import React from "react";
 import HomeFeed from "../../components/HomeFeed";
 import LobbyHeaderBar from "../../components/LobbyHeaderBar";
 import LobbyChatDrawer from "../../components/LobbyChatDrawer";

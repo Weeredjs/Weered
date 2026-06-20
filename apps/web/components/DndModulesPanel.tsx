@@ -1327,7 +1327,7 @@ function TwitchStreams({ lobbyId }: { lobbyId: string }) {
 }
 
 export default function DndModulesPanel({
-  lobbyId, accentColor, gameName, style,
+  lobbyId, accentColor, gameName: _gameName, style,
 }: {
   lobbyId: string; accentColor?: string; gameName?: string; style?: React.CSSProperties;
 }) {

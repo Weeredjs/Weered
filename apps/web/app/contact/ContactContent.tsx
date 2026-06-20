@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 export default function ContactContent() {
   const [visible, setVisible] = useState(false);
@@ -41,7 +41,7 @@ export default function ContactContent() {
       if (j.success === "true" || j.success === true) {
         setSent(true);
       } else throw new Error("Delivery failed.");
-    } catch (e: any) {
+    } catch (_e: any) {
       setErr("Something broke. Try again.");
     } finally {
       setSending(false);

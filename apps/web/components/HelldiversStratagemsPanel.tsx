@@ -263,7 +263,7 @@ function TrainerMode({ pool }: { pool: Stratagem[] }) {
 }
 
 export default function HelldiversStratagemsPanel({
-  lobbyId,
+  lobbyId: _lobbyId,
   accentColor,
   style,
 }: {

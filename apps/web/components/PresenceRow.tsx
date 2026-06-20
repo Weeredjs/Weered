@@ -2,14 +2,7 @@
 
 import React from "react";
 import RoleIcon, { TierIcon } from "./RoleIcon";
-import FlairBadge from "./FlairBadge";
-import { useEquippedFlair } from "../lib/useEquippedFlair";
 
-function PresenceFlair({ userId }: { userId?: string }) {
-  const f = useEquippedFlair(userId || null);
-  if (!f || f.kind !== "BADGE") return null;
-  return <FlairBadge flair={f} size="sm" />;
-}
 import { avatarBg } from "../lib/avatarColor";
 
 export function SteamIcon({ size = 14 }: { size?: number }) {
@@ -127,13 +120,13 @@ export interface PresenceRowProps {
 
 export default function PresenceRow({
   name,
-  userId,
+  userId: _userId,
   avatar,
   avatarColor,
   globalRole,
   tier,
   online,
-  roomName,
+  roomName: _roomName,
   livePresence,
   secondaryText,
   statusText,
@@ -145,7 +138,7 @@ export default function PresenceRow({
   onClick,
   href,
   action,
-  activeGlow,
+  activeGlow: _activeGlow,
   compact,
   pillBgColor,
   pillAccentColor,

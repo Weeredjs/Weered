@@ -1,6 +1,3 @@
-// Shared user + profile types used by web, mobile, desktop clients.
-// Must stay in sync with API response shapes (apps/api/src/index.ts).
-
 export type GlobalRole =
   | "USER"
   | "GOD"

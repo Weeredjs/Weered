@@ -731,7 +731,7 @@ export default function CharacterSheetEditor({
 }
 
 function stripIds(c: Character): Draft {
-  const { id, ownerUserId, ...rest } = c as any;
+  const { id: _id, ownerUserId: _ownerUserId, ...rest } = c as any;
   return rest;
 }
 

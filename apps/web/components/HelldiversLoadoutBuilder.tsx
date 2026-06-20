@@ -97,7 +97,6 @@ const ARMORS_HEAVY = [
   "TR-9 Cavalier of Democracy (Heavy)",
   "CW-22 Kodiak (Heavy)",
 ];
-const ALL_ARMORS = [...ARMORS_LIGHT, ...ARMORS_MEDIUM, ...ARMORS_HEAVY];
 
 const HELMETS = [
   "B-01 Tactical Helmet",
@@ -187,15 +186,6 @@ const STRATAGEMS_VEHICLES = [
   "EXO-45 Patriot Exosuit",
   "EXO-49 Emancipator Exosuit",
   "M-102 Fast Recon Vehicle",
-];
-
-const ALL_STRATAGEMS = [
-  ...STRATAGEMS_SUPPLY,
-  ...STRATAGEMS_OFFENSIVE,
-  ...STRATAGEMS_DEFENSIVE,
-  ...STRATAGEMS_WEAPONS,
-  ...STRATAGEMS_BACKPACK,
-  ...STRATAGEMS_VEHICLES,
 ];
 
 const FACTIONS = [
@@ -292,7 +282,7 @@ export default function HelldiversLoadoutBuilder({ onSaved, onCancel }: Props) {
         return;
       }
       onSaved?.(j.loadout.slug);
-    } catch (e: any) {
+    } catch (_e: any) {
       setError("Network error");
       setSaving(false);
     }

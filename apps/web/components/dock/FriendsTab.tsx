@@ -342,7 +342,7 @@ export function FriendRow({
   f,
   onMessage,
   onJoin,
-  onRemove,
+  onRemove: _onRemove,
   onInvite,
   invited,
 }: {

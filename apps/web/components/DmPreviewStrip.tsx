@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { avatarBg } from "../lib/avatarColor";
 import { onActivate } from "@/lib/a11y";
 

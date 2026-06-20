@@ -798,7 +798,7 @@ const TAB_ICON: Record<TabId, React.ReactNode> = {
 export default function EveModulesPanel({
   lobbyId: _lobbyId,
   gameName: _gameName = "EVE Online",
-  accentColor = ACCENT_EVE,
+  accentColor: _accentColor = ACCENT_EVE,
   style,
 }: {
   lobbyId: string;

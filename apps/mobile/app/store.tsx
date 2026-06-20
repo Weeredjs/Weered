@@ -58,7 +58,7 @@ export default function Store() {
         `/store/buy/${itemId}`,
         { method: "POST" },
       ),
-    onSuccess: (res, itemId) => {
+    onSuccess: (res, _itemId) => {
       if (res.ok) {
         Alert.alert("Purchased", `New balance: ${res.balance}`);
         qc.invalidateQueries({ queryKey: ["store"] });

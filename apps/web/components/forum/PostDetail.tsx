@@ -49,7 +49,7 @@ function AuthorBadge({
   name,
   author,
   size = 20,
-  authorId,
+  authorId: _authorId,
   onHoverEnter,
   onHoverLeave,
 }: {

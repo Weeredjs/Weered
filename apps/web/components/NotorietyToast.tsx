@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 
 const ACTION_LABELS: Record<string, string> = {
   DAILY_ACTIVE: "Daily login bonus",

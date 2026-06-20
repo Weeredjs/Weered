@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import { useState } from "react";
 import { onActivate } from "@/lib/a11y";
 
 interface Props {

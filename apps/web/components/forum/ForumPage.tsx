@@ -829,7 +829,7 @@ function SectionManageModal({
     const idx = sorted.findIndex(x => x.id === s.id);
     const swapWith = sorted[idx + dir];
     if (!swapWith) return;
-    const order = sorted.map((x, i) => {
+    const order = sorted.map((x, _i) => {
       if (x.id === s.id) return { id: x.id, order: swapWith.order };
       if (x.id === swapWith.id) return { id: x.id, order: s.order };
       return { id: x.id, order: x.order };

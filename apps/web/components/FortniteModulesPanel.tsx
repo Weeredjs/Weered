@@ -68,7 +68,7 @@ function useWishlist() {
   return { items, loaded, toggle, reload: load };
 }
 
-function WishlistHeart({ cosmeticId, wishlisted, onToggle, size = 16 }: {
+function WishlistHeart({ cosmeticId: _cosmeticId, wishlisted, onToggle, size = 16 }: {
   cosmeticId: string; wishlisted: boolean; onToggle: () => void; size?: number;
 }) {
   return (
@@ -565,7 +565,7 @@ function FnNews() {
   );
 }
 
-function CosmeticSearch({ accent, wishlist }: { accent: string; wishlist: ReturnType<typeof useWishlist> }) {
+function CosmeticSearch({ accent: _accent, wishlist }: { accent: string; wishlist: ReturnType<typeof useWishlist> }) {
   const [query, setQuery] = useState("");
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);

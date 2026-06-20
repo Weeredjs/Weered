@@ -21,7 +21,7 @@ export default async function tenorRoutes(app: FastifyInstance) {
       const j = await res.json();
       gifCache.set(cacheKey, { data: j, expiresAt: Date.now() + 10 * 60 * 1000 });
       return j;
-    } catch (e) {
+    } catch (_e) {
       return { data: [] };
     }
   }

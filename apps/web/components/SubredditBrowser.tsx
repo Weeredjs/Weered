@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import EmptyState from "./EmptyState";
 import LoadingState from "./LoadingState";
 
@@ -45,7 +45,6 @@ const sortListeners = new Set<(s: string) => void>();
 let sharedPosts: RedditPost[] = [];
 let sharedSelected: RedditPost | null = null;
 let sharedSort: "hot" | "new" | "top" | "rising" = "hot";
-const sharedSub = "all";
 
 function setSharedSelected(p: RedditPost | null) {
   sharedSelected = p;

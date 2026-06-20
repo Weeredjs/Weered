@@ -341,7 +341,7 @@ export default async function bungieRoutes(app: FastifyInstance, opts: Opts) {
           .trim();
       }
 
-      function isReal(name: string, def: any): boolean {
+      function isReal(name: string, _def: any): boolean {
         if (!name) return false;
         if (/^\s*$/.test(name)) return false;
         if (/^(Classified|Z\?\?\?|\?\?\?|Test|Debug)$/i.test(name.trim())) return false;

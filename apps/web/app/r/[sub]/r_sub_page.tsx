@@ -1,4 +1,3 @@
-﻿import React from "react";
 import SubredditBrowser from "../../../components/SubredditBrowser";
 
 export default function SubPage({ params }: { params: { sub: string } }) {

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import EmptyState from "./EmptyState";
 import LoadingState from "./LoadingState";
 import { weeredConfirm } from "../lib/confirm";

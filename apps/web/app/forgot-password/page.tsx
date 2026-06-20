@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import { useState } from "react";
 
 export default function ForgotPasswordPage() {
   const API = process.env.NEXT_PUBLIC_API_BASE || "https://api.weered.ca";

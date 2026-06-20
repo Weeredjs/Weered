@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import React, { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useWeered } from "./WeeredProvider";
 
 type Person = { id?: string; name?: string; handle?: string; role?: string; flags?: any };

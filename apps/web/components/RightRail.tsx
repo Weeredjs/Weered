@@ -40,12 +40,6 @@ async function apiFetch(path: string, opts?: RequestInit) {
   return r.json();
 }
 
-function roomHref(id: string): string {
-  let clean = id || "";
-  if (clean.startsWith("room:")) clean = clean.slice(5);
-  try { clean = decodeURIComponent(clean); } catch {}
-  return `/room/${encodeURIComponent(clean)}`;
-}
 
 function presenceHref(roomId: string, roomIsLobby: boolean): string {
   let clean = roomId || "";

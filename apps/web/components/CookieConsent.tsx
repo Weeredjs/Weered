@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 const STORAGE_KEY = "weered_cookie_consent";
 const CURRENT_VERSION = 1;

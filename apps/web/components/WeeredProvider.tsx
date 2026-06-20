@@ -160,7 +160,7 @@ export function useRoomTyping(roomId?: string): { userId: string; name: string; 
 
 const WeeredContext = createContext<Ctx | null>(null);
 
-function PasswordPromptInput({ roomId, error, onSubmit, onCancel }: {
+function PasswordPromptInput({ roomId: _roomId, error, onSubmit, onCancel }: {
   roomId: string; error: string; onSubmit: (pw: string) => void; onCancel: () => void;
 }) {
   const [pw, setPw] = React.useState("");

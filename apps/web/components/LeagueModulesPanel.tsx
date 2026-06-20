@@ -88,19 +88,6 @@ const TIER_COLORS: Record<string, string> = {
   CHALLENGER: "#f0b232",
 };
 
-const TIER_ORDER = [
-  "IRON",
-  "BRONZE",
-  "SILVER",
-  "GOLD",
-  "PLATINUM",
-  "EMERALD",
-  "DIAMOND",
-  "MASTER",
-  "GRANDMASTER",
-  "CHALLENGER",
-];
-
 function tierBadgeUrl(tier: string) {
   return `https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-shared-components/global/default/images/${tier.toLowerCase()}.png`;
 }
@@ -342,7 +329,6 @@ const LOL_ACTIVITIES = [
   "Custom Game",
   "Other",
 ];
-const LOL_ROLES = ["Fill", "Top", "Jungle", "Mid", "ADC", "Support"];
 const LOL_PLATFORMS = ["any", "pc"];
 
 function TeamFinder({ lobbyId, accent }: { lobbyId: string; accent: string }) {
@@ -741,7 +727,15 @@ function SummonerLookup({ champions, accent }: { champions: any[]; accent: strin
   );
 }
 
-function RankedCard({ label, data, accent }: { label: string; data: any; accent: string }) {
+function RankedCard({
+  label,
+  data,
+  accent: _accent,
+}: {
+  label: string;
+  data: any;
+  accent: string;
+}) {
   if (!data) {
     return (
       <div style={{ ...S.card, textAlign: "center" }}>
@@ -788,9 +782,9 @@ function RankedCard({ label, data, accent }: { label: string; data: any; accent:
 
 function MatchRow({
   match: m,
-  champions,
+  champions: _champions,
   version,
-  accent,
+  accent: _accent,
 }: {
   match: any;
   champions: any[];

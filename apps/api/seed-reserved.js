@@ -106,7 +106,7 @@ async function main() {
         data: { name: entry.name, scope: entry.scope, reason: entry.reason, addedBy: "system" },
       });
       added++;
-    } catch (e) {
+    } catch (_e) {
       // P2002 = unique constraint (already exists)
       skipped++;
     }

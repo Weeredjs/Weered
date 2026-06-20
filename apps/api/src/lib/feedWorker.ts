@@ -81,7 +81,7 @@ export async function fetchESPNRss(
     const titleRx = /<title>(?:<!\[CDATA\[)?(.*?)(?:\]\]>)?<\/title>/;
     const linkRx = /<link>(?:<!\[CDATA\[)?(https?[^<]+?)(?:\]\]>)?<\/link>/;
     const dateRx = /<pubDate>(.*?)<\/pubDate>/;
-    const imgRx = /<media:thumbnail[^>]+url=\"([^"]+)\"/;
+    const imgRx = /<media:thumbnail[^>]+url="([^"]+)"/;
     let m: RegExpExecArray | null;
     while ((m = itemRx.exec(xml)) !== null) {
       const block = m[1];
@@ -143,9 +143,9 @@ export async function fetchYouTubeRss(
     const items: RawItem[] = [];
     const entryRx = /<entry>([\s\S]*?)<\/entry>/g;
     const titleRx = /<title>(.*?)<\/title>/;
-    const linkRx = /<link rel=\"alternate\" href=\"([^"]+)\"/;
+    const linkRx = /<link rel="alternate" href="([^"]+)"/;
     const dateRx = /<published>(.*?)<\/published>/;
-    const thumbRx = /<media:thumbnail url=\"([^"]+)\"/;
+    const thumbRx = /<media:thumbnail url="([^"]+)"/;
     let m: RegExpExecArray | null;
     while ((m = entryRx.exec(xml)) !== null) {
       const block = m[1];

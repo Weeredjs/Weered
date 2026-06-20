@@ -6,8 +6,6 @@ import { useOverlay } from "./overlays/OverlayProvider";
 import RoleIcon, { TierIcon } from "./RoleIcon";
 import { avatarBg } from "../lib/avatarColor";
 import NotorietyBar from "./NotorietyBar";
-import FlairBadge from "./FlairBadge";
-import { useEquippedFlair } from "../lib/useEquippedFlair";
 import { onActivate } from "@/lib/a11y";
 
 function useFitText(ref: any, text: string, sizes: number[]): number {
@@ -83,44 +81,6 @@ function roleDisplay(dbRole: string, lobbyTheme?: string | null): string {
   return ROLE_DISPLAY[dbRole] || dbRole;
 }
 
-const IconDock = () => (
-  <svg
-    width="16"
-    height="16"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <rect x="2" y="4" width="20" height="14" rx="3" />
-    <path d="M7 9.5h10M7 13h6" opacity=".6" />
-  </svg>
-);
-
-function UserCornerFlair({ userId }: { userId?: string }) {
-  const f = useEquippedFlair(userId || null);
-  if (!f) return null;
-  if (f.kind !== "BADGE" && f.kind !== "NAMEPLATE") return null;
-  return (
-    <div
-      style={{
-        marginTop: 4,
-        display: "flex",
-        alignItems: "center",
-        gap: 6,
-        fontSize: 10,
-        fontWeight: 700,
-        color: f.color || "rgba(243,244,246,.85)",
-      }}
-    >
-      <FlairBadge flair={f} size="sm" />
-      <span style={{ textTransform: "uppercase", letterSpacing: "1px" }}>{f.name}</span>
-    </div>
-  );
-}
-
 export default function UserCorner() {
   const { me, role, globalRole, currentLobbyId, isAway, setAway } = useWeered() as any;
   const { openSheet } = useOverlay();
@@ -147,7 +107,7 @@ export default function UserCorner() {
 
   const API_BASE = (process.env.NEXT_PUBLIC_API_BASE as string) || "http://127.0.0.1:4000";
   const [lobbyLogo, setLobbyLogo] = React.useState<string | null>(null);
-  const [lobbyAccent, setLobbyAccent] = React.useState<string | null>(null);
+  const [_lobbyAccent, setLobbyAccent] = React.useState<string | null>(null);
   const prevLobbyRef = React.useRef<string>("");
   React.useEffect(() => {
     const lid = currentLobbyId || "";
@@ -264,7 +224,7 @@ export default function UserCorner() {
     logoUrl: string | null;
     accentColor: string | null;
   } | null>(null);
-  const [notorietyRank, setNotorietyRank] = useState<string>("");
+  const [_notorietyRank, setNotorietyRank] = useState<string>("");
   const [notorietyScore, setNotorietyScore] = useState<number | null>(null);
   const [nameEffect, setNameEffect] = useState<string | null>(null);
   const [avatarFrame, setAvatarFrame] = useState<string | null>(null);
@@ -1166,21 +1126,6 @@ export default function UserCorner() {
     </div>
   );
 }
-
-const actionBtn: React.CSSProperties = {
-  flex: 1,
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  gap: 5,
-  padding: "8px 0",
-  background: "none",
-  border: "none",
-  cursor: "pointer",
-  color: "rgba(255,255,255,.45)",
-  fontFamily: "inherit",
-  transition: "color 0.12s, background 0.12s",
-};
 
 function FittedName({ name, effect }: { name: string; effect?: string | null }) {
   const ref = useRef<HTMLDivElement>(null);

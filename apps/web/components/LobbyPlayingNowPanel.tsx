@@ -19,7 +19,7 @@ export default function LobbyPlayingNowPanel({
   appId,
   lobbyId,
   accentColor = "#FFD700",
-  gameLabel = "this game",
+  gameLabel: _gameLabel = "this game",
 }: {
   appId?: string | null;
   lobbyId?: string;

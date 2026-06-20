@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import EmptyState from "./EmptyState";
 import LoadingState from "./LoadingState";
 import { PAL, S, WR_FONT_DISPLAY, WR_FONT_MONO, apiFetch } from "./WrShared";

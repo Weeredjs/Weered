@@ -215,7 +215,7 @@ export default function GtaLfgBoard({
     load();
   }
 
-  const label = (s: string) => ({
+  const label = (_s: string) => ({
     display: "inline-block",
     fontSize: 10,
     fontWeight: 800,

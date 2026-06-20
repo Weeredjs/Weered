@@ -632,7 +632,7 @@ export default function TacticalMap({ roomId }: Props) {
     }
   }
 
-  function onPointerUp(e: React.PointerEvent) {
+  function onPointerUp(_e: React.PointerEvent) {
     if (panRef.current) {
       panRef.current = null;
       return;

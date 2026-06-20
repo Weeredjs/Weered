@@ -2,8 +2,6 @@
 
 import React from "react";
 
-const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
-
 type Match = {
   id: string;
   round: number;
@@ -36,12 +34,12 @@ type Tournament = {
 const ACCENT = "#f58220";
 
 export default function TournamentBracket({
-  tournament,
+  tournament: _tournament,
   matches,
   currentUserId,
-  isStaff,
+  isStaff: _isStaff,
   onMatchClick,
-  onRefresh,
+  onRefresh: _onRefresh,
 }: {
   tournament: Tournament;
   matches: Match[];

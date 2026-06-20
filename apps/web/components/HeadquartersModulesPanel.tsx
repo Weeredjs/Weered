@@ -234,7 +234,7 @@ function officeStatus(room: Room): { color: string; label: string } {
 }
 
 function DirectoryTab({
-  lobbyId,
+  lobbyId: _lobbyId,
   accent,
   rooms,
   presence,

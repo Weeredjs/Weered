@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect } from "react";
+import { useEffect } from "react";
 import { useOverlay } from "./OverlayProvider";
 
 import RoomDetailsSheet from "./sheets/RoomDetailsSheet";

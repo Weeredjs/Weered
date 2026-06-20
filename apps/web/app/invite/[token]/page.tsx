@@ -50,7 +50,7 @@ export default function InvitePage() {
     "loading" | "ready" | "accepting" | "done" | "error" | "expired" | "exhausted"
   >("loading");
   const [errMsg, setErrMsg] = useState("");
-  const [redirect, setRedirect] = useState("/lobby");
+  const [_redirect, setRedirect] = useState("/lobby");
 
   useEffect(() => {
     if (!token) {

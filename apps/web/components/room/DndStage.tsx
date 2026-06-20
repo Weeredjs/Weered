@@ -1134,7 +1134,13 @@ const STAGE_TABS = [
 ];
 type StageTab = (typeof STAGE_TABS)[number]["id"];
 
-export default function DndStage({ roomId, onClose }: { roomId: string; onClose: () => void }) {
+export default function DndStage({
+  roomId,
+  onClose: _onClose,
+}: {
+  roomId: string;
+  onClose: () => void;
+}) {
   const [tab, setTab] = useState<StageTab>("sheets");
   const { currentLobbyId } = useWeered() as any;
 

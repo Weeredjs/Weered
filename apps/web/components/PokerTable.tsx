@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState, useCallback, useMemo, CSSProperties } from "react";
+import { useEffect, useRef, useState, useCallback, useMemo, CSSProperties } from "react";
 import { avatarBg } from "../lib/avatarColor";
 import { onActivate } from "@/lib/a11y";
 
@@ -944,9 +944,9 @@ function ActionBar({ state, mySeat }: { state: TableState; mySeat: Seat }) {
   );
 }
 
-export default function PokerTable({ roomId, myId, myName }: Props) {
+export default function PokerTable({ roomId, myId, myName: _myName }: Props) {
   const [state, setState] = useState<TableState | null>(null);
-  const [loaded, setLoaded] = useState(false);
+  const [_loaded, setLoaded] = useState(false);
   const [buyInSeat, setBuyInSeat] = useState<number | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
