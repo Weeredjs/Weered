@@ -108,6 +108,11 @@ pub fn run() {
 
             Ok(())
         })
+        .on_page_load(|webview, _payload| {
+            // Tell the web app this build ships custom window chrome, so it
+            // draws the in-app title bar instead of leaving the OS one.
+            let _ = webview.eval("window.__WEERED_DESKTOP_CHROME__='1';");
+        })
         .invoke_handler(tauri::generate_handler![
             cmd_show_window,
             cmd_quit,

@@ -1,0 +1,80 @@
+/* Desktop custom title bar (Tauri shell; gated on data-weered-desktop).
+   Loaded last so it layers cleanly over theme CSS. Inert in a browser:
+   --wtb-h stays 0px unless the desktop binary sets data-weered-desktop. */
+:root {
+  --wtb-h: 0px;
+}
+html[data-weered-desktop] {
+  --wtb-h: 38px;
+}
+html[data-weered-desktop] body {
+  padding-top: var(--wtb-h);
+}
+.weered-titlebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--wtb-h);
+  display: flex;
+  align-items: center;
+  z-index: 100000;
+  background: linear-gradient(180deg, #15101f 0%, #0c0b12 100%);
+  border-bottom: 1px solid rgba(124, 58, 237, 0.3);
+  -webkit-user-select: none;
+  user-select: none;
+  font-family: var(--font-rajdhani), var(--font-barlow), sans-serif;
+}
+.weered-titlebar .wtb-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 14px;
+  height: 100%;
+}
+.weered-titlebar .wtb-mark {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+  display: block;
+  pointer-events: none;
+}
+.weered-titlebar .wtb-word {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  color: #ece7ff;
+}
+.weered-titlebar .wtb-drag {
+  flex: 1 1 auto;
+  height: 100%;
+}
+.weered-titlebar .wtb-controls {
+  display: flex;
+  height: 100%;
+}
+.weered-titlebar .wtb-btn {
+  width: 46px;
+  height: 100%;
+  border: 0;
+  background: transparent;
+  color: rgba(226, 232, 240, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition:
+    background 0.12s ease,
+    color 0.12s ease;
+}
+.weered-titlebar .wtb-btn:hover {
+  background: rgba(255, 255, 255, 0.09);
+  color: #fff;
+}
+.weered-titlebar .wtb-btn.wtb-close:hover {
+  background: #e81123;
+  color: #fff;
+}
+.weered-titlebar .wtb-btn svg {
+  display: block;
+}

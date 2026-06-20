@@ -52,6 +52,7 @@ import RightRailSwitch from "../components/RightRailSwitch";
 import DockDrawer from "../components/DockDrawer";
 import ShellGate from "../components/ShellGate";
 import ThemeRestore from "../components/ThemeRestore";
+import DesktopTitleBar from "../components/DesktopTitleBar";
 import LobbyBrowser from "../components/LobbyBrowser";
 import ServiceWorkerRegister from "../components/ServiceWorkerRegister";
 import PushPrompt from "../components/PushPrompt";
@@ -249,6 +250,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body>
+        <DesktopTitleBar />
         <ThemeRestore />
         <script
           type="application/ld+json"
