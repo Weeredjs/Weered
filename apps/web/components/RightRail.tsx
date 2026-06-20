@@ -14,7 +14,7 @@ import { onActivate } from "@/lib/a11y";
 
 const API_BASE = (process.env.NEXT_PUBLIC_API_BASE as string) || "http://127.0.0.1:4000";
 
-type RoomRow = { id: string; name: string; locked: boolean; users: number; lobbyId?: string; hasPassword?: boolean; pinned?: boolean; isEvent?: boolean };
+type RoomRow = { id: string; name: string; locked: boolean; users: number; lobbyId?: string; hasPassword?: boolean; pinned?: boolean; isEvent?: boolean; iconUrl?: string | null; bannerUrl?: string | null; accentColor?: string | null };
 
 function authHeaders(): Record<string, string> {
   try { const t = localStorage.getItem("weered_token") || ""; return t ? { Authorization: `Bearer ${t}` } : {}; } catch { return {}; }
@@ -355,6 +355,9 @@ function RoomsPanel({ currentRoomId, lobbyId }: { currentRoomId: string; lobbyId
         pinned: Boolean(r.pinned),
         isEvent: Boolean(r.isEvent),
         lobbyId: r.lobbyId ?? lobbyId,
+        iconUrl: r.iconUrl ?? null,
+        bannerUrl: r.bannerUrl ?? null,
+        accentColor: r.accentColor ?? null,
       })).filter((r: RoomRow) => r.id));
     } catch (e: any) { setErr(String(e?.message || e)); }
     finally { setLoading(false); }
@@ -753,7 +756,7 @@ function LobbyModPanel({ globalRole, lobbyId }: { globalRole: string; lobbyId: s
   return (
     <div className="weered-rr-section" style={{ marginBottom: 16 }}>
       <div className="weered-rr-section-title" style={{ fontSize: 11, fontWeight: 700, opacity: 0.5, letterSpacing: ".7px", textTransform: "uppercase", marginBottom: 8 }}>Lobby Controls</div>
-      <div className="weered-rr-mod-panel" style={{ borderRadius: 12, border: "1px solid rgba(255,255,255,.08)", background: "rgba(255,255,255,.02)", padding: "12px 16px" }}>
+      <div className="weered-rr-mod-panel" style={{ borderRadius: 12, border: "1px solid rgba(255,255,255,.08)", background: "rgba(255,255,255,.02)", padding: "14px 18px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <span style={{ fontSize: 10, fontWeight: 700, opacity: 0.55, letterSpacing: ".6px", textTransform: "uppercase", flexShrink: 0 }}>Chat</span>
           <div className="weered-rr-chatlock" style={{

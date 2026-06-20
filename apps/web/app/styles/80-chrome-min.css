@@ -2210,6 +2210,7 @@ html[data-weered-chrome="min"] .weered-rr-mod-panel {
   background: #14161a !important;
   border: 1px solid rgba(255, 255, 255, 0.06) !important;
   border-radius: 0 !important;
+  padding: 14px 18px !important;
 }
 
 /* Chat OPEN/LOCKED segmented toggle — kill the green/amber. Active state
