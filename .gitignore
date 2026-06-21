@@ -94,3 +94,6 @@ apps/web/.playwright/
 # coverage + sonar scanner artifacts
 coverage/
 .scannerwork/
+
+# GSC service-account key (never commit)
+seo-tools/gsc-sa.json
