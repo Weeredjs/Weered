@@ -45,6 +45,7 @@
   },
   "bundle": {
     "active": true,
+    "createUpdaterArtifacts": true,
     "targets": "all",
     "category": "SocialNetworking",
     "shortDescription": "Weered \u2014 lobbies, crews, crime",
