@@ -206,11 +206,13 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
       setCameraOn(false);
       setScreenShareOn(false);
       try {
-        const jwt = getToken();
-        if (!jwt) throw new Error("Not authenticated");
+        // Auth is the httpOnly session cookie (credentials: include); the API's
+        // onRequest hook reads it. The old localStorage bearer was cleared by the
+        // cookie migration, so the previous getToken()/throw guard always failed.
         const res = await fetch(`${API}/voice/token`, {
           method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${jwt}` },
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ roomId }),
         });
         if (!res.ok) throw new Error(`Token error ${res.status}`);
