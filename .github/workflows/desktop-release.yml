@@ -73,11 +73,16 @@ jobs:
       - name: Install Node deps
         run: pnpm install --frozen-lockfile
 
-      # ── Build only (no release creation) ───────────────────────────
-      # tauri-action@v0 doesn't support cross-repo publish (the owner/repo
-      # inputs don't exist on this version), so we use it for build+sign only
-      # and publish via softprops below.
-      - name: Build + bundle Tauri app
+      # ── Build, sign, and publish ───────────────────────────
+      # The source repo is public, so tauri-action creates the Release here
+      # (Weeredjs/Weered) and uploads installers + signed updater bundles
+      # (.nsis.zip + .sig) + latest.json in one in-process step. The signed
+      # bundles are short-lived build artifacts cleaned between steps, so a
+      # later hand-rolled upload (softprops/gh) misses them. Letting
+      # tauri-action own the upload is the only reliable path. (Releases
+      # moved off the separate Weered-releases repo once the source repo
+      # went public, 2026-06-17.)
+      - name: Build, sign + publish Tauri app
         uses: tauri-apps/tauri-action@v0
         env:
           # Default token is fine — this step doesn't create a release.
@@ -95,65 +100,12 @@ jobs:
         with:
           projectPath: apps/desktop
           tauriScript: pnpm tauri
-          # No tagName / releaseName — tauri-action builds but skips release.
-          args: ${{ matrix.args }}
-
-      # ── Publish release to Weeredjs/Weered-releases ─────────────────
-      # softprops/action-gh-release@v3 handles cross-repo publishing
-      # cleanly. RELEASES_PUBLISH_TOKE has Contents:write on the public
-      # releases repo.
-      #
-      # Each matrix job (ubuntu + windows) uploads its own artifacts to
-      # the same release tag. First job creates the release; subsequent
-      # jobs add to it (softprops dedupes by filename).
-      #
-      # Includes .sig sibling files for every installer — these are
-      # what /desktop/latest checks before serving an update offer to
-      # Tauri clients. Without them, auto-updater returns 204 (no update).
-      - name: Publish to Weered-releases (cross-repo)
-        uses: softprops/action-gh-release@v3
-        with:
-          repository: Weeredjs/Weered-releases
-          token: ${{ secrets.RELEASES_PUBLISH_TOKE }}
-          tag_name: ${{ github.event.inputs.tag_name || github.ref_name }}
-          name: "Weered Desktop ${{ github.event.inputs.tag_name || github.ref_name }}"
-          body: |
+          tagName: ${{ github.event.inputs.tag_name || github.ref_name }}
+          releaseName: "Weered Desktop ${{ github.event.inputs.tag_name || github.ref_name }}"
+          releaseBody: |
             Automated build via GitHub Actions.
 
             See https://weered.ca/desktop for installation instructions.
-          draft: false
+          releaseDraft: false
           prerelease: false
-          # Glob captures BOTH installers AND their .sig siblings.
-          # .sig presence is what makes Tauri auto-update actually fire.
-          # Bare dir globs: softprops' matcher silently fails on literal
-          # double-dot suffixes (*.nsis.zip, *.exe.sig), so grab every bundle
-          # file per dir (installers + updater .zip + .sig). The API picks what
-          # it needs (download installer vs signed .nsis.zip updater bundle).
-          files: |
-            apps/desktop/src-tauri/target/release/bundle/nsis/*
-            apps/desktop/src-tauri/target/release/bundle/msi/*
-            apps/desktop/src-tauri/target/release/bundle/appimage/*
-            apps/desktop/src-tauri/target/release/bundle/deb/*
-            apps/desktop/src-tauri/target/release/bundle/rpm/*
-          fail_on_unmatched_files: false
-
-      # softprops' glob silently SKIPS filenames with a double-dot suffix
-      # (*.nsis.zip, *.exe.sig) — confirmed: bare nsis/* uploaded only the .exe.
-      # So the signed updater bundles never attach. Upload them explicitly with
-      # the gh CLI; bash globs handle multi-dot names fine. nullglob -> a glob
-      # with no match on this platform expands to nothing (no error).
-      - name: Attach updater bundles + signatures (gh CLI)
-        shell: bash
-        run: |
-          set -x
-          ws="$GITHUB_WORKSPACE"
-          command -v cygpath >/dev/null && ws="$(cygpath -u "$GITHUB_WORKSPACE")"
-          base="$ws/apps/desktop/src-tauri/target/release/bundle"
-          ls -la "$base"/nsis 2>/dev/null || true
-          mapfile -t files < <(find "$base" -type f \( -name '*.nsis.zip' -o -name '*.nsis.zip.sig' -o -name '*.AppImage.sig' \))
-          echo "found ${#files[@]} updater files: ${files[*]}"
-          if [ ${#files[@]} -gt 0 ]; then
-            gh release upload "${{ github.event.inputs.tag_name || github.ref_name }}" "${files[@]}" --clobber --repo Weeredjs/Weered-releases
-          fi
-        env:
-          GH_TOKEN: ${{ secrets.RELEASES_PUBLISH_TOKE }}
+          args: ${{ matrix.args }}
