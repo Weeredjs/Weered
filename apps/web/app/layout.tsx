@@ -1,4 +1,6 @@
 import "./globals.css";
+import "@fontsource/dm-mono/400.css";
+import "@fontsource/dm-mono/500.css";
 import React from "react";
 import {
   Pirata_One,

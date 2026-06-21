@@ -131,7 +131,6 @@ export default function ApplyPage() {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&display=swap');
         .mod-root {
           height: 100%;
           overflow-y: auto;

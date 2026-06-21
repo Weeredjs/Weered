@@ -9,6 +9,7 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
+    "@fontsource/dm-mono": "^5.2.7",
     "@sentry/nextjs": "^10.49.0",
     "@weered/shared": "workspace:*",
     "leaflet": "^1.9.4",

@@ -51,7 +51,6 @@ export default function ContactContent() {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&display=swap');
         .ct-root {
           min-height: 100vh;
           background: #050810;

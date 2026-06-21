@@ -10,7 +10,6 @@ export default function WhyNotDiscordContent() {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&display=swap');
         .manifesto-root {
           height: 100%;
           overflow-y: auto;

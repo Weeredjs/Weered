@@ -308,6 +308,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@fontsource/dm-mono':
+        specifier: ^5.2.7
+        version: 5.2.7
       '@sentry/nextjs':
         specifier: ^10.49.0
         version: 10.49.0(@opentelemetry/core@2.8.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.7.0(@opentelemetry/api@1.9.1))(next@15.5.19(@opentelemetry/api@1.9.1)(@playwright/test@1.61.0)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.0(react@19.2.0))(react@19.2.0))(react@19.2.0)(webpack@5.106.2(esbuild@0.28.1)(postcss@8.5.10))
@@ -1726,6 +1729,9 @@ packages:
 
   '@fastify/swagger@9.7.0':
     resolution: {integrity: sha512-Vp1SC1GC2Hrkd3faFILv86BzUNyFz5N4/xdExqtCgkGASOzn/x+eMe4qXIGq7cdT6wif/P/oa6r1Ruqx19paZA==}
+
+  '@fontsource/dm-mono@5.2.7':
+    resolution: {integrity: sha512-Ma1az2atTVgQWuOWwjuxx26p/6A6CU9HBNKq1CFV6YKpKhpswnf9ry9Ql4+T6bTZzkdtSfS6tjJvqZOljVzIFQ==}
 
   '@humanfs/core@0.19.2':
     resolution: {integrity: sha512-UhXNm+CFMWcbChXywFwkmhqjs3PRCmcSa/hfBgLIb7oQ5HNb1wS0icWsGtSAUNgefHeI+eBrA8I1fxmbHsGdvA==}
@@ -9311,6 +9317,8 @@ snapshots:
       yaml: 2.8.3
     transitivePeerDependencies:
       - supports-color
+
+  '@fontsource/dm-mono@5.2.7': {}
 
   '@humanfs/core@0.19.2':
     dependencies:

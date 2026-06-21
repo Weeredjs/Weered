@@ -108,7 +108,6 @@ function VerifyEmailInner() {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&display=swap');
         @keyframes spin { to { transform: rotate(360deg); } }
         .ve-root {
           min-height: 100vh;

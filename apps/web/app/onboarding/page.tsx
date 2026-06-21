@@ -107,7 +107,6 @@ function OnboardingForm() {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&display=swap');
         .wo-root {
           min-height: 100vh;
           background: #080810;

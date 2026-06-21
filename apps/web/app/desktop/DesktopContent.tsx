@@ -107,7 +107,6 @@ export default function DesktopContent() {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500;700&display=swap');
         .dt-root {
           height: 100%;
           overflow-y: auto;
