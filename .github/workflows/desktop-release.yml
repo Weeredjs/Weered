@@ -146,7 +146,9 @@ jobs:
         shell: bash
         run: |
           set -x
-          base="$GITHUB_WORKSPACE/apps/desktop/src-tauri/target/release/bundle"
+          ws="$GITHUB_WORKSPACE"
+          command -v cygpath >/dev/null && ws="$(cygpath -u "$GITHUB_WORKSPACE")"
+          base="$ws/apps/desktop/src-tauri/target/release/bundle"
           ls -la "$base"/nsis 2>/dev/null || true
           mapfile -t files < <(find "$base" -type f \( -name '*.nsis.zip' -o -name '*.nsis.zip.sig' -o -name '*.AppImage.sig' \))
           echo "found ${#files[@]} updater files: ${files[*]}"
