@@ -9,13 +9,13 @@ export default function BungieLinkPill({ size = "sm" }: { size?: "sm" | "xs" }) 
   );
 
   React.useEffect(() => {
-    const token = typeof window !== "undefined" ? localStorage.getItem("weered_token") || "" : "";
-    if (!token) {
+    const loggedIn = typeof window !== "undefined" && !!localStorage.getItem("weered_user");
+    if (!loggedIn) {
       setState("no-auth");
       return;
     }
     let cancelled = false;
-    fetch(`${API}/bungie/me`, { headers: { Authorization: `Bearer ${token}` } })
+    fetch(`${API}/bungie/me`, { credentials: "include" })
       .then((r) => (r.ok ? r.json() : null))
       .then((j) => {
         if (cancelled) return;

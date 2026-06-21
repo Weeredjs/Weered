@@ -476,10 +476,9 @@ export default function ShellGate({
     let cancelled = false;
     const tick = async () => {
       try {
-        const token =
-          typeof window !== "undefined" ? localStorage.getItem("weered_token") || "" : "";
-        if (!token) return;
-        const r = await fetch(`${API}/groups`, { headers: { Authorization: `Bearer ${token}` } });
+        const loggedIn = typeof window !== "undefined" && !!localStorage.getItem("weered_user");
+        if (!loggedIn) return;
+        const r = await fetch(`${API}/groups`, { credentials: "include" });
         if (!r.ok) return;
         const j = await r.json();
         if (cancelled) return;

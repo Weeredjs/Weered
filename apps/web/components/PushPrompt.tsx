@@ -24,8 +24,14 @@ export default function PushPrompt() {
     if (typeof window === "undefined") return;
     if (!("Notification" in window) || !("serviceWorker" in navigator)) return;
     if (Notification.permission !== "granted") return;
-    const token = localStorage.getItem("weered_token");
-    if (!token) return;
+    const loggedIn = (() => {
+      try {
+        return !!localStorage.getItem("weered_user");
+      } catch {
+        return false;
+      }
+    })();
+    if (!loggedIn) return;
 
     (async () => {
       try {
@@ -43,7 +49,8 @@ export default function PushPrompt() {
         if (!sub) return;
         await fetch(`${API}/push/subscribe`, {
           method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             endpoint: sub.endpoint,
             keys: {
@@ -61,8 +68,14 @@ export default function PushPrompt() {
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    const token = localStorage.getItem("weered_token");
-    if (!token) return;
+    const loggedIn = (() => {
+      try {
+        return !!localStorage.getItem("weered_user");
+      } catch {
+        return false;
+      }
+    })();
+    if (!loggedIn) return;
 
     const visits = Number(localStorage.getItem("weered_visit_count") || "0") + 1;
     localStorage.setItem("weered_visit_count", String(visits));
@@ -114,10 +127,10 @@ export default function PushPrompt() {
         applicationServerKey: vapidData.key,
       });
 
-      const token = localStorage.getItem("weered_token") || "";
       await fetch(`${API}/push/subscribe`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           endpoint: sub.endpoint,
           keys: {

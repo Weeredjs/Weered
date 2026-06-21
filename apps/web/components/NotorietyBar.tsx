@@ -44,13 +44,13 @@ export default function NotorietyBar({ score: propScore, compact = false, onClic
       return;
     }
 
-    let token = "";
+    let loggedIn = false;
     try {
-      token = localStorage.getItem("weered_token") || "";
+      loggedIn = !!localStorage.getItem("weered_user");
     } catch {}
-    if (!token) return;
+    if (!loggedIn) return;
 
-    fetch(`${API}/notoriety/me`, { headers: { Authorization: `Bearer ${token}` } })
+    fetch(`${API}/notoriety/me`, { credentials: "include" })
       .then((r) => r.json())
       .then((j) => {
         if (j.ok) {
