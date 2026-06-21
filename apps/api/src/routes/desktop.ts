@@ -20,12 +20,14 @@ export default async function desktopRoutes(app: FastifyInstance) {
     "darwin-aarch64": /Weered.*aarch64\.app\.tar\.gz$/i,
     "linux-x86_64": /weered.*amd64\.AppImage$/i,
   };
-  // Signed artifact the Tauri auto-updater downloads + verifies. Tauri 2 signs the
-  // updater BUNDLE, not the raw installer: NSIS -> *.nsis.zip (+ .sig). AppImage and
-  // .app.tar.gz are already their own updater format. Must be the signed bundle, or
-  // /desktop/updates has no signature and auto-update returns 204.
+  // Signed artifact the Tauri auto-updater downloads + verifies. With
+  // bundle.createUpdaterArtifacts=true, Tauri 2 signs the INSTALLER directly
+  // (NSIS .exe -> .exe.sig), not a separate .nsis.zip. We ship + install via
+  // NSIS, so windows updates from the setup .exe. AppImage / .app.tar.gz are
+  // their own updater formats. The sig sibling is <asset>.sig; without it
+  // /desktop/updates has no signature and returns 204.
   const UPDATER_MATCHERS: Record<string, RegExp> = {
-    "windows-x86_64": /Weered.*x64-setup\.nsis\.zip$/i,
+    "windows-x86_64": /Weered.*x64-setup\.exe$/i,
     "darwin-x86_64": /Weered.*x64\.app\.tar\.gz$/i,
     "darwin-aarch64": /Weered.*aarch64\.app\.tar\.gz$/i,
     "linux-x86_64": /weered.*amd64\.AppImage$/i,
