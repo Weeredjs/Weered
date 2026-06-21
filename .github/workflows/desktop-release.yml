@@ -145,12 +145,11 @@ jobs:
       - name: Attach updater bundles + signatures (gh CLI)
         shell: bash
         run: |
-          shopt -s nullglob
-          files=(
-            apps/desktop/src-tauri/target/release/bundle/nsis/*.nsis.zip
-            apps/desktop/src-tauri/target/release/bundle/nsis/*.nsis.zip.sig
-            apps/desktop/src-tauri/target/release/bundle/appimage/*.AppImage.sig
-          )
+          set -x
+          base="$GITHUB_WORKSPACE/apps/desktop/src-tauri/target/release/bundle"
+          ls -la "$base"/nsis 2>/dev/null || true
+          mapfile -t files < <(find "$base" -type f \( -name '*.nsis.zip' -o -name '*.nsis.zip.sig' -o -name '*.AppImage.sig' \))
+          echo "found ${#files[@]} updater files: ${files[*]}"
           if [ ${#files[@]} -gt 0 ]; then
             gh release upload "${{ github.event.inputs.tag_name || github.ref_name }}" "${files[@]}" --clobber --repo Weeredjs/Weered-releases
           fi
