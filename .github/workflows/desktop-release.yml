@@ -136,3 +136,23 @@ jobs:
             apps/desktop/src-tauri/target/release/bundle/deb/*
             apps/desktop/src-tauri/target/release/bundle/rpm/*
           fail_on_unmatched_files: false
+
+      # softprops' glob silently SKIPS filenames with a double-dot suffix
+      # (*.nsis.zip, *.exe.sig) — confirmed: bare nsis/* uploaded only the .exe.
+      # So the signed updater bundles never attach. Upload them explicitly with
+      # the gh CLI; bash globs handle multi-dot names fine. nullglob -> a glob
+      # with no match on this platform expands to nothing (no error).
+      - name: Attach updater bundles + signatures (gh CLI)
+        shell: bash
+        run: |
+          shopt -s nullglob
+          files=(
+            apps/desktop/src-tauri/target/release/bundle/nsis/*.nsis.zip
+            apps/desktop/src-tauri/target/release/bundle/nsis/*.nsis.zip.sig
+            apps/desktop/src-tauri/target/release/bundle/appimage/*.AppImage.sig
+          )
+          if [ ${#files[@]} -gt 0 ]; then
+            gh release upload "${{ github.event.inputs.tag_name || github.ref_name }}" "${files[@]}" --clobber --repo Weeredjs/Weered-releases
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.RELEASES_PUBLISH_TOKE }}
