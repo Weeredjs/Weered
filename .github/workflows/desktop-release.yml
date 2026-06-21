@@ -125,15 +125,14 @@ jobs:
           prerelease: false
           # Glob captures BOTH installers AND their .sig siblings.
           # .sig presence is what makes Tauri auto-update actually fire.
+          # Bare dir globs: softprops' matcher silently fails on literal
+          # double-dot suffixes (*.nsis.zip, *.exe.sig), so grab every bundle
+          # file per dir (installers + updater .zip + .sig). The API picks what
+          # it needs (download installer vs signed .nsis.zip updater bundle).
           files: |
-            apps/desktop/src-tauri/target/release/bundle/nsis/*-setup.exe
-            apps/desktop/src-tauri/target/release/bundle/nsis/*.nsis.zip
-            apps/desktop/src-tauri/target/release/bundle/nsis/*.nsis.zip.sig
-            apps/desktop/src-tauri/target/release/bundle/msi/*.msi
-            apps/desktop/src-tauri/target/release/bundle/msi/*.msi.zip
-            apps/desktop/src-tauri/target/release/bundle/msi/*.msi.zip.sig
-            apps/desktop/src-tauri/target/release/bundle/appimage/*.AppImage
-            apps/desktop/src-tauri/target/release/bundle/appimage/*.AppImage.sig
-            apps/desktop/src-tauri/target/release/bundle/deb/*.deb
-            apps/desktop/src-tauri/target/release/bundle/rpm/*.rpm
+            apps/desktop/src-tauri/target/release/bundle/nsis/*
+            apps/desktop/src-tauri/target/release/bundle/msi/*
+            apps/desktop/src-tauri/target/release/bundle/appimage/*
+            apps/desktop/src-tauri/target/release/bundle/deb/*
+            apps/desktop/src-tauri/target/release/bundle/rpm/*
           fail_on_unmatched_files: false
