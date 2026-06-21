@@ -10,11 +10,22 @@ export default async function desktopRoutes(app: FastifyInstance) {
     version: string;
     notes: string;
     pub_date: string;
-    platforms: Record<string, { signature: string; url: string }>;
+    platforms: Record<string, { signature: string; url: string; downloadUrl: string }>;
   };
 
-  const TAURI_TARGET_MATCHERS: Record<string, RegExp> = {
+  // Installer users download manually (served by /desktop/latest).
+  const DOWNLOAD_MATCHERS: Record<string, RegExp> = {
     "windows-x86_64": /Weered.*x64-setup\.exe$/i,
+    "darwin-x86_64": /Weered.*x64\.app\.tar\.gz$/i,
+    "darwin-aarch64": /Weered.*aarch64\.app\.tar\.gz$/i,
+    "linux-x86_64": /weered.*amd64\.AppImage$/i,
+  };
+  // Signed artifact the Tauri auto-updater downloads + verifies. Tauri 2 signs the
+  // updater BUNDLE, not the raw installer: NSIS -> *.nsis.zip (+ .sig). AppImage and
+  // .app.tar.gz are already their own updater format. Must be the signed bundle, or
+  // /desktop/updates has no signature and auto-update returns 204.
+  const UPDATER_MATCHERS: Record<string, RegExp> = {
+    "windows-x86_64": /Weered.*x64-setup\.nsis\.zip$/i,
     "darwin-x86_64": /Weered.*x64\.app\.tar\.gz$/i,
     "darwin-aarch64": /Weered.*aarch64\.app\.tar\.gz$/i,
     "linux-x86_64": /weered.*amd64\.AppImage$/i,
@@ -63,22 +74,29 @@ export default async function desktopRoutes(app: FastifyInstance) {
         const version = latest.tag_name.replace(/^desktop-v/, "");
 
         const platforms: DesktopReleaseManifest["platforms"] = {};
-        for (const [target, matcher] of Object.entries(TAURI_TARGET_MATCHERS)) {
-          const asset = latest.assets.find((a) => matcher.test(a.name));
-          if (!asset) continue;
-          const sigAsset = latest.assets.find((a) => a.name === `${asset.name}.sig`);
+        for (const target of Object.keys(DOWNLOAD_MATCHERS)) {
+          const dl = latest.assets.find((a) => DOWNLOAD_MATCHERS[target].test(a.name));
+          if (!dl) continue;
+          const upd = latest.assets.find((a) => UPDATER_MATCHERS[target].test(a.name));
           let signature = "";
-          if (sigAsset) {
-            try {
-              const sigRes = await fetchWithTimeout(sigAsset.browser_download_url, {
-                headers: { "User-Agent": "Weered-API/1.0" },
-              });
-              if (sigRes.ok) signature = (await sigRes.text()).trim();
-            } catch (e) {
-              swallow(e);
+          if (upd) {
+            const sigAsset = latest.assets.find((a) => a.name === `${upd.name}.sig`);
+            if (sigAsset) {
+              try {
+                const sigRes = await fetchWithTimeout(sigAsset.browser_download_url, {
+                  headers: { "User-Agent": "Weered-API/1.0" },
+                });
+                if (sigRes.ok) signature = (await sigRes.text()).trim();
+              } catch (e) {
+                swallow(e);
+              }
             }
           }
-          platforms[target] = { signature, url: asset.browser_download_url };
+          platforms[target] = {
+            signature,
+            url: upd ? upd.browser_download_url : dl.browser_download_url,
+            downloadUrl: dl.browser_download_url,
+          };
         }
 
         if (Object.keys(platforms).length > 0) {
@@ -122,7 +140,7 @@ export default async function desktopRoutes(app: FastifyInstance) {
         pub_date: manifest.pub_date,
         notes: manifest.notes,
         downloads: Object.fromEntries(
-          Object.entries(manifest.platforms).map(([k, v]) => [k, v.url]),
+          Object.entries(manifest.platforms).map(([k, v]) => [k, v.downloadUrl]),
         ),
       },
     });

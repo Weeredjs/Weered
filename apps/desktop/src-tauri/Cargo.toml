@@ -1,6 +1,6 @@
 [package]
 name = "weered-desktop"
-version = "0.1.5"
+version = "0.1.7"
 description = "Weered native desktop shell"
 authors = ["Weered"]
 edition = "2021"
