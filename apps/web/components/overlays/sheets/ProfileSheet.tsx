@@ -1,7 +1,7 @@
 "use client";
 
 import { AVATAR_PALETTE, avatarBg } from "../../../lib/avatarColor";
-import React, { useEffect, useState, useMemo, useCallback } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useWeered } from "../../WeeredProvider";
 import { useOverlay } from "../OverlayProvider";
 import { weeredToast } from "../../../lib/toast";
@@ -55,16 +55,17 @@ const ROLE_COLORS: Record<string, string> = {
   GOD: "#facc15", ADMIN: "#f87171", STAFF: "#60a5fa", SUPPORT: "#34d399",
 };
 
+// Self-hosted avatar styles (CC0 DiceBear art, pre-generated to /public as
+// static files; no runtime third-party call). GEN_PER_STYLE variants each.
 const AVATAR_STYLES = [
-  { id: "thumbs",       label: "Thumbs",     url: (s: string) => `https://api.dicebear.com/9.x/thumbs/svg?seed=${s}&backgroundColor=transparent` },
-  { id: "bottts",       label: "Bots",       url: (s: string) => `https://api.dicebear.com/9.x/bottts/svg?seed=${s}&backgroundColor=transparent` },
-  { id: "pixel-art",    label: "Pixel",      url: (s: string) => `https://api.dicebear.com/9.x/pixel-art/svg?seed=${s}&backgroundColor=transparent` },
-  { id: "identicon",    label: "Identity",   url: (s: string) => `https://api.dicebear.com/9.x/identicon/svg?seed=${s}&backgroundColor=transparent` },
-  { id: "shapes",       label: "Shapes",     url: (s: string) => `https://api.dicebear.com/9.x/shapes/svg?seed=${s}&backgroundColor=transparent` },
-  { id: "rings",        label: "Rings",      url: (s: string) => `https://api.dicebear.com/9.x/rings/svg?seed=${s}&backgroundColor=transparent` },
-  { id: "glass",        label: "Glass",      url: (s: string) => `https://api.dicebear.com/9.x/glass/svg?seed=${s}&backgroundColor=transparent` },
-  { id: "fun-emoji",    label: "Emoji",      url: (s: string) => `https://api.dicebear.com/9.x/fun-emoji/svg?seed=${s}&backgroundColor=transparent` },
+  { id: "identicon", label: "Identity" },
+  { id: "rings", label: "Rings" },
+  { id: "shapes", label: "Shapes" },
+  { id: "glass", label: "Glass" },
+  { id: "thumbs", label: "Thumbs" },
+  { id: "pixel-art", label: "Pixel" },
 ];
+const GEN_PER_STYLE = 16;
 
 const GTA_ICONS = [
   { id: "boss",      label: "Boss" },
@@ -86,13 +87,6 @@ const GTA_ICONS = [
   { id: "ghost",     label: "Ghost" },
 ];
 
-function gallerySeeds(username: string): string[] {
-  const seeds: string[] = [];
-  for (let i = 0; i < 12; i++) {
-    seeds.push(`${username}-${i}`);
-  }
-  return seeds;
-}
 
 function notorietyRank(n: number): { name: string; next: number; prev: number } {
   const ranks = [
@@ -162,14 +156,12 @@ function NotorietyBar({ value, color, prev, next }: { value: number; color: stri
   );
 }
 
-function AvatarGallery({ username, currentAvatar, onSelect }: {
-  username: string;
+function AvatarGallery({ currentAvatar, onSelect }: {
   currentAvatar: string | null;
   onSelect: (url: string) => void;
 }) {
   const [selectedStyle, setSelectedStyle] = useState(AVATAR_STYLES[0].id);
-  const seeds = useMemo(() => gallerySeeds(username), [username]);
-  const style = AVATAR_STYLES.find(s => s.id === selectedStyle) || AVATAR_STYLES[0];
+  const variants = Array.from({ length: GEN_PER_STYLE }, (_, i) => i + 1);
 
   return (
     <div>
@@ -199,12 +191,12 @@ function AvatarGallery({ username, currentAvatar, onSelect }: {
       <div style={{
         display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 6,
       }}>
-        {seeds.map(seed => {
-          const url = style.url(seed);
+        {variants.map(n => {
+          const url = `/brand/avatars/gen/${selectedStyle}-${n}.svg`;
           const isSelected = currentAvatar === url;
           return (
             <button
-              key={seed}
+              key={n}
               type="button"
               onClick={() => onSelect(url)}
               style={{
@@ -218,7 +210,7 @@ function AvatarGallery({ username, currentAvatar, onSelect }: {
             >
               <img
                 src={url}
-                alt={seed}
+                alt={`avatar ${n}`}
                 loading="lazy"
                 style={{ width: "100%", height: "100%", objectFit: "contain" }}
               />
@@ -780,7 +772,6 @@ export default function ProfileSheet({ userId }: { userId: string }) {
             />
           ) : activeTab === "gallery" ? (
             <AvatarGallery
-              username={profile.name}
               currentAvatar={avatarUrl}
               onSelect={saveAvatar}
             />

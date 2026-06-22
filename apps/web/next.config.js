@@ -53,7 +53,6 @@ const nextConfig = {
       { protocol: "https", hostname: "img.mlbstatic.com" },
       { protocol: "https", hostname: "a.espncdn.com" },
       // Avatars / generators
-      { protocol: "https", hostname: "api.dicebear.com" },
       { protocol: "https", hostname: "avatars.githubusercontent.com" },
       // News / misc
       { protocol: "https", hostname: "**.ctvnews.ca" },
