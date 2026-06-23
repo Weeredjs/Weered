@@ -245,6 +245,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
     prevServerModuleRef.current = serverModule;
 
     if (!serverModule || !serverModule.mode) {
+      setStageMode(null);
       return;
     }
 
