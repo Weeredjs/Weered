@@ -3,11 +3,11 @@
 import React, { useEffect, useState } from "react";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
-function getToken() {
+function isLoggedIn() {
   try {
-    return localStorage.getItem("weered_token") || "";
+    return !!localStorage.getItem("weered_user");
   } catch {
-    return "";
+    return false;
   }
 }
 
@@ -55,8 +55,7 @@ export default function ApplyPage() {
       document.head.appendChild(m);
     }
     setTimeout(() => setVisible(true), 100);
-    const token = getToken();
-    setAuthed(!!token);
+    setAuthed(isLoggedIn());
   }, []);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -102,12 +101,11 @@ export default function ApplyPage() {
 
     setSubmitting(true);
     try {
-      const token = getToken();
       const res = await fetch(`${API}/forum/posts`, {
         method: "POST",
+        credentials: "include",
         headers: {
           "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({
           title: `Mod Application \u2014 ${username.trim()}`,
