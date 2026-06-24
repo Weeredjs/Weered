@@ -1011,7 +1011,7 @@ async function main() {
       const items: any[] = [];
       const itemRx = /<item[^>]*>([\s\S]*?)<\/item>/g;
       const titleRx = /<title>(?:<!\[CDATA\[)?(.*?)(?:\]\]>)?<\/title>/;
-      const linkRx = /<link>\s*(?:<!\[CDATA\[)?\s*(https?:\/\/[^<\s]+?)\s*(?:\]\]>)?\s*<\/link>/;
+      const linkRx = /<link>\s*(?:<!\[CDATA\[)?\s*(https?:\/\/[^<\s\]]+)/i;
       const dateRx = /<pubDate>(.*?)<\/pubDate>/;
       const descRx = /<description>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/description>/;
       const imgRx1 = /<media:content[^>]+url=["']([^"']+)["']/;

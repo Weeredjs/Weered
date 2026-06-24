@@ -179,7 +179,8 @@ export default async function newsRoutes(app: FastifyInstance) {
           "emoji",
           "smiley",
         ];
-        const imgRx = /<img[^>]+src=["']([^"']+)["'][^>]*(?:alt=["']([^"']*?)["'])?[^>]*>/gi;
+        const imgRx = /<img[^>]+src=["']([^"']+)["'][^>]*>/gi;
+        const imgAltRx = /\balt=["']([^"']*)["']/i;
         const images: { src: string; alt: string }[] = [];
         let im: RegExpExecArray | null;
         while ((im = imgRx.exec(rawBody)) !== null) {
@@ -189,7 +190,7 @@ export default async function newsRoutes(app: FastifyInstance) {
           if (AD_PATTERNS.some((p) => srcLower.includes(p))) continue;
           if (!srcLower.startsWith("http") && !srcLower.startsWith("//")) continue;
           if (/\b[12]x[12]\b/.test(src)) continue;
-          images.push({ src, alt: im[2] || "" });
+          images.push({ src, alt: (imgAltRx.exec(im[0]) || [])[1] || "" });
         }
         if (images.length && body) {
           const paras = body.split("\n\n");
