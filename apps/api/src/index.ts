@@ -1,3 +1,4 @@
+import { decodeEntities, stripTags } from "./lib/htmlText";
 import { log, logger, swallow } from "./lib/logger";
 import dotenv from "dotenv";
 dotenv.config({ override: true });
@@ -1025,17 +1026,8 @@ async function main() {
         const link = linkRx.exec(block)?.[1]?.trim();
         const dateStr = dateRx.exec(block)?.[1];
         const rawDesc = descRx.exec(block)?.[1] || "";
-        const desc = rawDesc
-          .replaceAll(/&lt;/g, "<")
-          .replaceAll(/&gt;/g, ">")
-          .replaceAll(/&amp;/g, "&")
-          .replaceAll(/&quot;/g, '"')
-          .replaceAll(/&#39;/g, "'")
-          .replaceAll(/&apos;/g, "'")
-          .replaceAll(/&#x27;/g, "'")
-          .replaceAll(/<[^>]+>/g, " ")
+        const desc = decodeEntities(stripTags(rawDesc))
           .replaceAll(/https?:\/\/\S+/g, "")
-          .replaceAll(/&nbsp;/g, " ")
           .replaceAll(/\s+/g, " ")
           .trim()
           .slice(0, 250);
@@ -1522,12 +1514,7 @@ async function main() {
         if (!videoId) continue;
         entries.push({
           videoId,
-          title: tag("title")
-            .replaceAll(/&amp;/g, "&")
-            .replaceAll(/&lt;/g, "<")
-            .replaceAll(/&gt;/g, ">")
-            .replaceAll(/&#39;/g, "'")
-            .replaceAll(/&quot;/g, '"'),
+          title: decodeEntities(tag("title")),
           published: tag("published"),
           updated: tag("updated"),
           channelName: tag("name"),
@@ -1535,13 +1522,7 @@ async function main() {
           thumbnailHq: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
           views: Number.parseInt(attr("media:statistics", "views") || "0", 10),
           starRating: Number.parseFloat(attr("media:starRating", "average") || "0"),
-          description: tag("media:description")
-            .slice(0, 300)
-            .replaceAll(/&amp;/g, "&")
-            .replaceAll(/&lt;/g, "<")
-            .replaceAll(/&gt;/g, ">")
-            .replaceAll(/&#39;/g, "'")
-            .replaceAll(/&quot;/g, '"'),
+          description: decodeEntities(tag("media:description").slice(0, 300)),
         });
       }
 

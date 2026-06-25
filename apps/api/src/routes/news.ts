@@ -1,3 +1,4 @@
+import { htmlToText, decodeEntities } from "../lib/htmlText";
 import { log } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 import { fetchWithTimeout } from "../lib/fetchWithTimeout";
@@ -109,24 +110,7 @@ export default async function newsRoutes(app: FastifyInstance) {
         let bm: RegExpExecArray | null;
         while ((bm = blockRx.exec(rawBody)) !== null) {
           const tag = bm[1].toLowerCase();
-          const text = bm[2]
-            .replaceAll(/<a[^>]+href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/gi, "$2")
-            .replaceAll(/<[^>]+>/g, "")
-            .replaceAll(/&amp;/g, "&")
-            .replaceAll(/&lt;/g, "<")
-            .replaceAll(/&gt;/g, ">")
-            .replaceAll(/&quot;/g, '"')
-            .replaceAll(/&#39;/g, "'")
-            .replaceAll(/&apos;/g, "'")
-            .replaceAll(/&#x27;/g, "'")
-            .replaceAll(/&#x2F;/g, "/")
-            .replaceAll(/&#(\d+);/g, (_: string, n: string) => String.fromCodePoint(Number(n)))
-            .replaceAll(/&#x([0-9a-fA-F]+);/g, (_: string, h: string) =>
-              String.fromCodePoint(Number.parseInt(h, 16)),
-            )
-            .replaceAll(/&nbsp;/g, " ")
-            .replaceAll(/\s+/g, " ")
-            .trim();
+          const text = htmlToText(bm[2]);
           if (!text || text.length < 10) continue;
           if (tag.startsWith("h")) {
             blocks.push(`## ${text}`);
@@ -204,20 +188,7 @@ export default async function newsRoutes(app: FastifyInstance) {
         }
       }
 
-      const decode = (s: string) =>
-        s
-          .replaceAll(/&amp;/g, "&")
-          .replaceAll(/&lt;/g, "<")
-          .replaceAll(/&gt;/g, ">")
-          .replaceAll(/&quot;/g, '"')
-          .replaceAll(/&#39;/g, "'")
-          .replaceAll(/&apos;/g, "'")
-          .replaceAll(/&#x27;/g, "'")
-          .replaceAll(/&#x2F;/g, "/")
-          .replaceAll(/&#(\d+);/g, (_, n) => String.fromCodePoint(Number(n)))
-          .replaceAll(/&#x([0-9a-fA-F]+);/g, (_, h) => String.fromCodePoint(Number.parseInt(h, 16)))
-          .replaceAll(/&nbsp;/g, " ")
-          .trim();
+      const decode = (s: string) => decodeEntities(s).trim();
 
       const data = {
         ok: true,

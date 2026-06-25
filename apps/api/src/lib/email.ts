@@ -1,3 +1,4 @@
+import { stripTags } from "./htmlText";
 import { log } from "./logger";
 import nodemailer, { type Transporter } from "nodemailer";
 import { Resend } from "resend";
@@ -96,11 +97,7 @@ export async function sendMail(opts: {
 }
 
 function stripHtml(html: string): string {
-  return html
-    .replaceAll(/<style[\s\S]*?<\/style>/gi, "")
-    .replaceAll(/<[^>]+>/g, "")
-    .replaceAll(/\s+/g, " ")
-    .trim();
+  return stripTags(html).replaceAll(/\s+/g, " ").trim();
 }
 
 const BRAND_COLOR = "#5800E5";

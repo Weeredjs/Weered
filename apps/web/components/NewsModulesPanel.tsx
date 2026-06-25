@@ -41,14 +41,20 @@ function timeAgo(iso: string): string {
 }
 
 function stripHtml(s: string): string {
-  return s
-    .replaceAll(/<[^>]+>/g, " ")
-    .replaceAll(/&amp;/g, "&")
+  let prev: string;
+  let out = s;
+  do {
+    prev = out;
+    out = out.replaceAll(/<(script|style)[\s\S]*?<\/\1>/gi, " ").replaceAll(/<[^>]*>/g, " ");
+  } while (out !== prev);
+  return out
     .replaceAll(/&lt;/g, "<")
     .replaceAll(/&gt;/g, ">")
     .replaceAll(/&quot;/g, '"')
-    .replaceAll(/&#39;/g, "'")
     .replaceAll(/&apos;/g, "'")
+    .replaceAll(/&#x([0-9a-fA-F]+);/g, (_, h) => String.fromCodePoint(Number.parseInt(h, 16)))
+    .replaceAll(/&#(\d+);/g, (_, n) => String.fromCodePoint(Number(n)))
+    .replaceAll(/&amp;/g, "&")
     .replaceAll(/\s+/g, " ")
     .trim();
 }
