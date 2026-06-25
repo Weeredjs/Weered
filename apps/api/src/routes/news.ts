@@ -120,9 +120,9 @@ export default async function newsRoutes(app: FastifyInstance) {
             .replaceAll(/&apos;/g, "'")
             .replaceAll(/&#x27;/g, "'")
             .replaceAll(/&#x2F;/g, "/")
-            .replaceAll(/&#(\d+);/g, (_: string, n: string) => String.fromCharCode(Number(n)))
+            .replaceAll(/&#(\d+);/g, (_: string, n: string) => String.fromCodePoint(Number(n)))
             .replaceAll(/&#x([0-9a-fA-F]+);/g, (_: string, h: string) =>
-              String.fromCharCode(Number.parseInt(h, 16)),
+              String.fromCodePoint(Number.parseInt(h, 16)),
             )
             .replaceAll(/&nbsp;/g, " ")
             .replaceAll(/\s+/g, " ")
@@ -214,8 +214,8 @@ export default async function newsRoutes(app: FastifyInstance) {
           .replaceAll(/&apos;/g, "'")
           .replaceAll(/&#x27;/g, "'")
           .replaceAll(/&#x2F;/g, "/")
-          .replaceAll(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)))
-          .replaceAll(/&#x([0-9a-fA-F]+);/g, (_, h) => String.fromCharCode(Number.parseInt(h, 16)))
+          .replaceAll(/&#(\d+);/g, (_, n) => String.fromCodePoint(Number(n)))
+          .replaceAll(/&#x([0-9a-fA-F]+);/g, (_, h) => String.fromCodePoint(Number.parseInt(h, 16)))
           .replaceAll(/&nbsp;/g, " ")
           .trim();
 

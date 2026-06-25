@@ -712,7 +712,7 @@ function GolfTwitchStreams({ lobbyId, accentColor }: { lobbyId?: string; accentC
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
       {activeStream && (
         <div style={{ borderRadius: 2, overflow: "hidden", border: `1px solid ${accent}40`, background: "#000", marginBottom: 4 }}>
-          <iframe
+          <iframe title="PGA Tour stats"
             src={`https://player.twitch.tv/?channel=${activeStream}&parent=${typeof window !== "undefined" ? window.location.hostname : "weered.ca"}&muted=true`}
             width="100%"
             height="280"

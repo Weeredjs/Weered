@@ -21,7 +21,7 @@ function stripHtml(html: string): string {
     .replaceAll(/&lt;/g, "<")
     .replaceAll(/&gt;/g, ">")
     .replaceAll(/&quot;/g, '"')
-    .replaceAll(/&#(\d+);/g, (_, n) => String.fromCharCode(Number.parseInt(n, 10)))
+    .replaceAll(/&#(\d+);/g, (_, n) => String.fromCodePoint(Number.parseInt(n, 10)))
     .replaceAll(/\s+/g, " ")
     .trim();
 }

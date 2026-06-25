@@ -381,7 +381,7 @@ export default function PassiveTree({ accent = "#AF6025" }: { accent?: string })
     requestDraw();
   }, [requestDraw, tree, allocated, hover, spriteTick]);
   useEffect(() => {
-    if (tree && !loading && view.current.scale === 0.05) fit();
+    if (tree && !loading && Math.abs(view.current.scale - 0.05) < 0.0001) fit();
   }, [tree, loading, fit]);
 
   // resize

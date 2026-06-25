@@ -43,7 +43,7 @@ type Post = {
 function whenLabel(iso?: string | null): string | null {
   if (!iso) return null;
   const d = new Date(iso);
-  if (isNaN(d.getTime())) return null;
+  if (Number.isNaN(d.getTime())) return null;
   const now = Date.now();
   const diff = d.getTime() - now;
   const day = d.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });

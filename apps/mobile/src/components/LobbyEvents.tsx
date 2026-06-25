@@ -130,7 +130,7 @@ function EventForm({
   const create = useMutation({
     mutationFn: () => {
       const parsed = new Date(startsAt.replace(" ", "T"));
-      if (isNaN(parsed.getTime())) throw new Error("Invalid date — use YYYY-MM-DD HH:MM");
+      if (Number.isNaN(parsed.getTime())) throw new Error("Invalid date — use YYYY-MM-DD HH:MM");
       return api(`/lobbies/${lobbyId}/events`, {
         method: "POST",
         body: {

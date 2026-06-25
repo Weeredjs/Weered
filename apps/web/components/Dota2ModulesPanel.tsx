@@ -950,7 +950,7 @@ function TwitchStreams({ lobbyId, accentColor }: { lobbyId: string; accentColor:
     <>
       {activeStream && (
         <div style={{ borderRadius: 2, overflow: "hidden", border: `1px solid ${accentColor}40`, background: "#000", marginBottom: 8 }}>
-          <iframe
+          <iframe title="Dota 2 stream"
             src={`https://player.twitch.tv/?channel=${activeStream}&parent=${typeof window !== "undefined" ? window.location.hostname : "weered.ca"}&muted=true`}
             width="100%" height="280" style={{ border: "none", display: "block" }} allowFullScreen
           />

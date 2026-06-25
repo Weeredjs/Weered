@@ -492,7 +492,7 @@ function TwitchStreams({ lobbyId, accent }: { lobbyId: string; accent: string })
     <>
       {activeStream && (
         <div style={{ borderRadius: 2, overflow: "hidden", border: `1px solid ${accent}40`, background: "#000", marginBottom: 8 }}>
-          <iframe
+          <iframe title="Path of Exile stream"
             src={`https://player.twitch.tv/?channel=${activeStream}&parent=${typeof window !== "undefined" ? window.location.hostname : "weered.ca"}&muted=true`}
             width="100%" height="280" style={{ border: "none", display: "block" }} allowFullScreen
           />

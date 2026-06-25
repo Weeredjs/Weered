@@ -432,7 +432,7 @@ export default async function forumModRoutes(app: FastifyInstance, opts: Opts) {
     let unlockAt: Date | null = null;
     if (unlockAtRaw) {
       const d = new Date(unlockAtRaw);
-      if (!isNaN(d.getTime())) unlockAt = d;
+      if (!Number.isNaN(d.getTime())) unlockAt = d;
     }
     const post = await prisma.forumPost.findUnique({
       where: { id },

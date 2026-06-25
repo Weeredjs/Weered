@@ -98,7 +98,7 @@ function TwitchStreams({ lobbyId, accentColor }: { lobbyId?: string; accentColor
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
       {activeStream && (
         <div style={{ borderRadius: 2, overflow: "hidden", border: `1px solid ${M.accentMid}`, background: "#000", marginBottom: 4 }}>
-          <iframe
+          <iframe title="Marathon stream"
             src={`https://player.twitch.tv/?channel=${activeStream}&parent=${typeof window !== "undefined" ? window.location.hostname : "weered.ca"}&muted=true`}
             width="100%" height="280" style={{ border: "none", display: "block" }} allowFullScreen
           />

@@ -280,7 +280,7 @@ export default async function flairContestsRoutes(app: FastifyInstance, opts: Op
     const voteOpensAt = new Date(body.voteOpensAt);
     const voteClosesAt = new Date(body.voteClosesAt);
     for (const d of [submissionOpensAt, submissionClosesAt, voteOpensAt, voteClosesAt]) {
-      if (isNaN(d.getTime())) return reply.code(400).send({ ok: false, error: "bad_date" });
+      if (Number.isNaN(d.getTime())) return reply.code(400).send({ ok: false, error: "bad_date" });
     }
     if (
       !(
@@ -343,7 +343,8 @@ export default async function flairContestsRoutes(app: FastifyInstance, opts: Op
     for (const k of ["submissionOpensAt", "submissionClosesAt", "voteOpensAt", "voteClosesAt"]) {
       if (body[k]) {
         const d = new Date(body[k]);
-        if (isNaN(d.getTime())) return reply.code(400).send({ ok: false, error: `bad_${k}` });
+        if (Number.isNaN(d.getTime()))
+          return reply.code(400).send({ ok: false, error: `bad_${k}` });
         data[k] = d;
       }
     }
