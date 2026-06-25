@@ -215,8 +215,8 @@ export function roleDisplayDock(dbRole: string, lobbyTheme?: string | null): str
 export function b64UrlDecode(input: string): string {
   try {
     const s = String(input || "")
-      .replace(/-/g, "+")
-      .replace(/_/g, "/");
+      .replaceAll(/-/g, "+")
+      .replaceAll(/_/g, "/");
     const pad = s.length % 4 === 0 ? "" : "=".repeat(4 - (s.length % 4));
     const raw = atob(s + pad);
     return decodeURIComponent(

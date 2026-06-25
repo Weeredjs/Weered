@@ -290,7 +290,7 @@ export default async function bungieRoutes(app: FastifyInstance, opts: Opts) {
         return {
           hash: h,
           name: def?.name || "(unknown)",
-          description: (def?.description || "").replace(/\s+/g, " ").trim().slice(0, 200),
+          description: (def?.description || "").replaceAll(/\s+/g, " ").trim().slice(0, 200),
           source: skull ? "skull" : mod ? "activity-modifier" : "unknown",
         };
       });

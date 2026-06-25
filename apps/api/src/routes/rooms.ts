@@ -186,7 +186,7 @@ export default async function roomsRoutes(app: FastifyInstance, opts: Opts) {
         });
 
       let wanted = (typeof body.roomId === "string" ? body.roomId : "").trim();
-      if (wanted) wanted = wanted.replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 32);
+      if (wanted) wanted = wanted.replaceAll(/[^a-zA-Z0-9_-]/g, "").slice(0, 32);
       let id = wanted || shortRoomId(6);
       let tries = 0;
       while (tries < 10) {

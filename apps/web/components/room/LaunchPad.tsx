@@ -509,7 +509,7 @@ function SetupDialog({
         <div style={dialogFieldLabel}>Steam AppID</div>
         <input
           value={appid}
-          onChange={(e) => setAppid(e.target.value.replace(/[^0-9]/g, "").slice(0, 10))}
+          onChange={(e) => setAppid(e.target.value.replaceAll(/[^0-9]/g, "").slice(0, 10))}
           placeholder="3041230"
           style={dialogInputStyle}
         />

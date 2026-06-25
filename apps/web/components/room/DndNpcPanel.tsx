@@ -189,7 +189,7 @@ interface NpcMsg {
 function speak(text: string, pitch = 1, rate = 0.95) {
   if (typeof window === "undefined" || !window.speechSynthesis) return;
   window.speechSynthesis.cancel();
-  const clean = text.replace(/\*[^*]+\*/g, "").trim();
+  const clean = text.replaceAll(/\*[^*]+\*/g, "").trim();
   if (!clean) return;
   const utt = new SpeechSynthesisUtterance(clean);
   utt.pitch = pitch;

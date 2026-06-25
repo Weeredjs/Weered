@@ -22,25 +22,25 @@ const TTL = 5 * 60 * 1000;
 
 function decodeOnce(s: string): string {
   return s
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&apos;/g, "'")
-    .replace(/&#x([0-9a-f]+);/gi, (_, h) => {
+    .replaceAll(/&lt;/g, "<")
+    .replaceAll(/&gt;/g, ">")
+    .replaceAll(/&quot;/g, '"')
+    .replaceAll(/&apos;/g, "'")
+    .replaceAll(/&#x([0-9a-f]+);/gi, (_, h) => {
       try {
         return String.fromCodePoint(Number.parseInt(h, 16));
       } catch {
         return "";
       }
     })
-    .replace(/&#(\d+);/g, (_, n) => {
+    .replaceAll(/&#(\d+);/g, (_, n) => {
       try {
         return String.fromCodePoint(Number.parseInt(n, 10));
       } catch {
         return "";
       }
     })
-    .replace(/&amp;/g, "&");
+    .replaceAll(/&amp;/g, "&");
 }
 function decode(s: string): string {
   let prev = s,
@@ -66,14 +66,14 @@ function extractMedia(contentHtml: string): {
       c,
     )?.[0] ||
     null;
-  if (direct) thumbnail = direct.replace(/&amp;/g, "&");
+  if (direct) thumbnail = direct.replaceAll(/&amp;/g, "&");
   const excerpt = c
-    .replace(/<[^>]+>/g, " ")
-    .replace(/&nbsp;/g, " ")
+    .replaceAll(/<[^>]+>/g, " ")
+    .replaceAll(/&nbsp;/g, " ")
     .replace(/submitted by.*$/is, "")
-    .replace(/\[link\]|\[comments\]/gi, "")
-    .replace(/https?:\/\/\S+/g, "")
-    .replace(/\s+/g, " ")
+    .replaceAll(/\[link\]|\[comments\]/gi, "")
+    .replaceAll(/https?:\/\/\S+/g, "")
+    .replaceAll(/\s+/g, " ")
     .trim()
     .slice(0, 220);
   const cleanExcerpt = /[a-z0-9]/i.test(excerpt) ? excerpt : "";

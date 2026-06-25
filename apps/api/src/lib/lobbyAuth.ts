@@ -62,7 +62,7 @@ export async function isNameReserved(
   name: string,
   scope: "LOBBY" | "USERNAME" | "BOTH",
 ): Promise<boolean> {
-  const normalized = name.toLowerCase().replace(/[^a-z0-9]/g, "");
+  const normalized = name.toLowerCase().replaceAll(/[^a-z0-9]/g, "");
   if (!normalized) return false;
   const match = await prisma.reservedName.findFirst({
     where: {

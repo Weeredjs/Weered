@@ -121,7 +121,7 @@ export default function Notoriety() {
                   {e.points}
                 </Text>
                 <Text className="text-weered-text text-sm flex-1">
-                  {e.action.replace(/_/g, " ")}
+                  {e.action.replaceAll(/_/g, " ")}
                 </Text>
                 <Text className="text-weered-muted text-xs">{formatRel(e.createdAt)}</Text>
               </View>

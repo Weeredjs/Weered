@@ -34,7 +34,7 @@ export default function Login() {
       const parsed = new URL(result.url);
       const err = parsed.searchParams.get("error");
       if (err) {
-        Alert.alert("Sign-in failed", err.replace(/_/g, " "));
+        Alert.alert("Sign-in failed", err.replaceAll(/_/g, " "));
         setBusy(false);
         return;
       }

@@ -745,7 +745,7 @@ function AuditTab({
         <View key={a.id} className="px-4 py-2.5 border-b border-border/30">
           <Text className="text-weered-text text-sm">
             <Text className="font-semibold">{a.actorName}</Text>{" "}
-            <Text className="text-weered-muted">{a.type.replace(/_/g, " ")}</Text>
+            <Text className="text-weered-muted">{a.type.replaceAll(/_/g, " ")}</Text>
             {a.note ? <Text className="text-weered-muted"> — {a.note}</Text> : null}
             {a.detail ? <Text className="text-weered-muted"> — {a.detail}</Text> : null}
           </Text>

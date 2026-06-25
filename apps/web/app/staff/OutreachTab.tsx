@@ -460,7 +460,7 @@ export function OutreachTab() {
                   </div>
                 </div>
                 <span style={{ fontSize: 10, opacity: 0.45, fontFamily: "monospace" }}>
-                  {c.category.replace(/_/g, " ")}
+                  {c.category.replaceAll(/_/g, " ")}
                 </span>
                 <span
                   style={{

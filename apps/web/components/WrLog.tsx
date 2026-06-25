@@ -325,8 +325,8 @@ export function RecapStat({ label, value }: { label: string; value: number }) {
 
 export function stripBB(s: string): string {
   return s
-    .replace(/\[[^\]]+\]/g, "")
-    .replace(/\s+/g, " ")
+    .replaceAll(/\[[^\]]+\]/g, "")
+    .replaceAll(/\s+/g, " ")
     .trim();
 }
 

@@ -110,22 +110,22 @@ export default async function newsRoutes(app: FastifyInstance) {
         while ((bm = blockRx.exec(rawBody)) !== null) {
           const tag = bm[1].toLowerCase();
           const text = bm[2]
-            .replace(/<a[^>]+href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/gi, "$2")
-            .replace(/<[^>]+>/g, "")
-            .replace(/&amp;/g, "&")
-            .replace(/&lt;/g, "<")
-            .replace(/&gt;/g, ">")
-            .replace(/&quot;/g, '"')
-            .replace(/&#39;/g, "'")
-            .replace(/&apos;/g, "'")
-            .replace(/&#x27;/g, "'")
-            .replace(/&#x2F;/g, "/")
-            .replace(/&#(\d+);/g, (_: string, n: string) => String.fromCharCode(Number(n)))
-            .replace(/&#x([0-9a-fA-F]+);/g, (_: string, h: string) =>
+            .replaceAll(/<a[^>]+href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/gi, "$2")
+            .replaceAll(/<[^>]+>/g, "")
+            .replaceAll(/&amp;/g, "&")
+            .replaceAll(/&lt;/g, "<")
+            .replaceAll(/&gt;/g, ">")
+            .replaceAll(/&quot;/g, '"')
+            .replaceAll(/&#39;/g, "'")
+            .replaceAll(/&apos;/g, "'")
+            .replaceAll(/&#x27;/g, "'")
+            .replaceAll(/&#x2F;/g, "/")
+            .replaceAll(/&#(\d+);/g, (_: string, n: string) => String.fromCharCode(Number(n)))
+            .replaceAll(/&#x([0-9a-fA-F]+);/g, (_: string, h: string) =>
               String.fromCharCode(Number.parseInt(h, 16)),
             )
-            .replace(/&nbsp;/g, " ")
-            .replace(/\s+/g, " ")
+            .replaceAll(/&nbsp;/g, " ")
+            .replaceAll(/\s+/g, " ")
             .trim();
           if (!text || text.length < 10) continue;
           if (tag.startsWith("h")) {
@@ -206,17 +206,17 @@ export default async function newsRoutes(app: FastifyInstance) {
 
       const decode = (s: string) =>
         s
-          .replace(/&amp;/g, "&")
-          .replace(/&lt;/g, "<")
-          .replace(/&gt;/g, ">")
-          .replace(/&quot;/g, '"')
-          .replace(/&#39;/g, "'")
-          .replace(/&apos;/g, "'")
-          .replace(/&#x27;/g, "'")
-          .replace(/&#x2F;/g, "/")
-          .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)))
-          .replace(/&#x([0-9a-fA-F]+);/g, (_, h) => String.fromCharCode(Number.parseInt(h, 16)))
-          .replace(/&nbsp;/g, " ")
+          .replaceAll(/&amp;/g, "&")
+          .replaceAll(/&lt;/g, "<")
+          .replaceAll(/&gt;/g, ">")
+          .replaceAll(/&quot;/g, '"')
+          .replaceAll(/&#39;/g, "'")
+          .replaceAll(/&apos;/g, "'")
+          .replaceAll(/&#x27;/g, "'")
+          .replaceAll(/&#x2F;/g, "/")
+          .replaceAll(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)))
+          .replaceAll(/&#x([0-9a-fA-F]+);/g, (_, h) => String.fromCharCode(Number.parseInt(h, 16)))
+          .replaceAll(/&nbsp;/g, " ")
           .trim();
 
       const data = {

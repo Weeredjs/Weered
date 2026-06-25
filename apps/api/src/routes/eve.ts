@@ -554,7 +554,7 @@ export default async function eveRoutes(app: FastifyInstance, opts: Opts) {
       const itemRe = /<item>([\s\S]*?)<\/item>/g;
       const pick = (block: string, tag: string) => {
         const mm = new RegExp(`<${tag}[^>]*>([\\s\\S]*?)</${tag}>`).exec(block);
-        return mm ? mm[1].replace(/<!\[CDATA\[|\]\]>/g, "").trim() : "";
+        return mm ? mm[1].replaceAll(/<!\[CDATA\[|\]\]>/g, "").trim() : "";
       };
       let m: RegExpExecArray | null;
       while ((m = itemRe.exec(xml)) && items.length < 15) {

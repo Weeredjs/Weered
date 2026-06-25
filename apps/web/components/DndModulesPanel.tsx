@@ -94,7 +94,7 @@ type DiceResult = {
 };
 
 function parseDice(expr: string): { count: number; sides: number; modifier: number; advantage?: boolean; disadvantage?: boolean } | null {
-  const clean = expr.toLowerCase().trim().replace(/\s+/g, "");
+  const clean = expr.toLowerCase().trim().replaceAll(/\s+/g, "");
   let adv = false, dis = false;
   let working = clean;
   if (working.includes("adv")) { adv = true; working = working.replace(/adv(antage)?/, ""); }

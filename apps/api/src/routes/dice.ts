@@ -30,7 +30,7 @@ function parseDice(expr: string): Parsed | null {
   const clean = String(expr || "")
     .toLowerCase()
     .trim()
-    .replace(/\s+/g, "");
+    .replaceAll(/\s+/g, "");
   if (!clean || clean.length > 32) return null;
   let adv = false,
     dis = false;

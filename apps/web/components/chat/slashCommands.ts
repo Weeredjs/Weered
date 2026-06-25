@@ -32,7 +32,7 @@ export function runSlashCommand(
         return true;
       }
       const toUsername = m[1];
-      const amount = Number.parseInt(m[2].replace(/,/g, ""), 10);
+      const amount = Number.parseInt(m[2].replaceAll(/,/g, ""), 10);
       const note = (m[3] || "").trim();
       if (!Number.isFinite(amount) || amount < 1) {
         weeredToast.error("Tip amount must be at least 1 Paper.");
@@ -62,7 +62,7 @@ export function runSlashCommand(
       const m = args.match(/^(\d*)d(\d+)(?:\s*([+-]\s*\d+))?$/i) || ["", "1", "20"];
       const n = Math.max(1, Math.min(20, Number.parseInt(m[1] || "1", 10) || 1));
       const sides = Math.max(2, Math.min(1000, Number.parseInt(m[2] || "20", 10) || 20));
-      const mod = m[3] ? Number.parseInt(m[3].replace(/\s+/g, ""), 10) : 0;
+      const mod = m[3] ? Number.parseInt(m[3].replaceAll(/\s+/g, ""), 10) : 0;
       const rolls = Array.from({ length: n }, () => Math.floor(Math.random() * sides) + 1);
       const sum = rolls.reduce((a, b) => a + b, 0) + mod;
       const breakdown =

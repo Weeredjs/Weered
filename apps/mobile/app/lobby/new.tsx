@@ -70,7 +70,7 @@ export default function NewLobby() {
           </Text>
           <TextInput
             value={id}
-            onChangeText={(t) => setId(t.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
+            onChangeText={(t) => setId(t.toLowerCase().replaceAll(/[^a-z0-9-]/g, ""))}
             placeholder="my-lobby"
             placeholderTextColor="rgba(160,160,170,0.6)"
             autoCorrect={false}

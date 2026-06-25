@@ -49,8 +49,8 @@ function slugify(title: string): string {
   const base =
     title
       .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/(^-)|(-$)/g, "")
+      .replaceAll(/[^a-z0-9]+/g, "-")
+      .replaceAll(/(^-)|(-$)/g, "")
       .slice(0, 40) || "build";
   const suffix = Math.random().toString(36).slice(2, 7);
   return `${base}-${suffix}`;
@@ -100,7 +100,7 @@ async function processBuildImage(
   });
 
   if (opts.watermark && opts.watermarkText) {
-    const text = opts.watermarkText.replace(/[<>]/g, "").slice(0, 40);
+    const text = opts.watermarkText.replaceAll(/[<>]/g, "").slice(0, 40);
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="600" height="40">
       <text x="595" y="28" text-anchor="end"
             font-family="ui-monospace, monospace" font-size="18" font-weight="700"
@@ -174,7 +174,7 @@ function sanitizeTags(input: any): string[] {
     const t = raw
       .trim()
       .toLowerCase()
-      .replace(/[^a-z0-9 -]/g, "")
+      .replaceAll(/[^a-z0-9 -]/g, "")
       .slice(0, 24);
     if (t && !out.includes(t)) out.push(t);
     if (out.length >= TAG_MAX) break;
@@ -616,7 +616,7 @@ export default async function windroseBuildsRoutes(app: FastifyInstance, opts: O
   });
 
   app.get("/builds/:filename", async (req, reply) => {
-    const filename = String((req as any).params?.filename || "").replace(/[^a-zA-Z0-9._-]/g, "");
+    const filename = String((req as any).params?.filename || "").replaceAll(/[^a-zA-Z0-9._-]/g, "");
     if (!filename) return reply.code(400).send("bad request");
     const filepath = join(BUILDS_DIR, filename);
     if (!existsSync(filepath)) return reply.code(404).send("not found");

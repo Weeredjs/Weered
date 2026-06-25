@@ -274,7 +274,7 @@ export async function handleChat(ws: any, msg: any, opts: Opts): Promise<void> {
     })();
     if (body.toLowerCase().includes("@operator") || body.toLowerCase().startsWith("/ask ")) {
       const question = body
-        .replace(/@operator/gi, "")
+        .replaceAll(/@operator/gi, "")
         .replace(/^\/ask\s*/i, "")
         .trim();
       if (question.length > 0) {

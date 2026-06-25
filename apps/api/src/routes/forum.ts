@@ -920,7 +920,7 @@ export default async function forumRoutes(app: FastifyInstance, opts: Opts) {
   });
 
   app.get("/forum-img/:filename", async (req, reply) => {
-    const fn = String((req as any).params?.filename || "").replace(/[^a-zA-Z0-9._-]/g, "");
+    const fn = String((req as any).params?.filename || "").replaceAll(/[^a-zA-Z0-9._-]/g, "");
     if (!fn) return reply.code(400).send("bad request");
     const fp = join(FORUM_UPLOAD_DIR, fn);
     if (!existsSync(fp)) return reply.code(404).send("not found");

@@ -19,10 +19,10 @@ function slugify(s: string) {
     String(s || "")
       .toLowerCase()
       .normalize("NFKD")
-      .replace(/[^\w\s-]/g, "")
+      .replaceAll(/[^\w\s-]/g, "")
       .trim()
-      .replace(/\s+/g, "-")
-      .replace(/-+/g, "-")
+      .replaceAll(/\s+/g, "-")
+      .replaceAll(/-+/g, "-")
       .slice(0, 48) || "loadout"
   );
 }

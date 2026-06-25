@@ -467,7 +467,7 @@ export default async function authRoutes(app: FastifyInstance, opts: Opts) {
     const { username } = (req as any).query as { username?: string };
     const clean = (username || "")
       .toLowerCase()
-      .replace(/[^a-z0-9_]/g, "")
+      .replaceAll(/[^a-z0-9_]/g, "")
       .slice(0, 32);
     if (clean.length < 2) return reply.send({ available: false, reason: "too_short" });
     const existing = await prisma.user
@@ -483,7 +483,7 @@ export default async function authRoutes(app: FastifyInstance, opts: Opts) {
     const raw = typeof body.username === "string" ? body.username : "";
     const usernameKey = raw
       .toLowerCase()
-      .replace(/[^a-z0-9_]/g, "")
+      .replaceAll(/[^a-z0-9_]/g, "")
       .slice(0, 32);
     if (usernameKey.length < 2) return reply.code(400).send({ error: "Username too short" });
     const existing = await prisma.user.findUnique({ where: { usernameKey } }).catch(() => null);

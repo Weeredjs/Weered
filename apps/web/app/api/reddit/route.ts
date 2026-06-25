@@ -4,25 +4,25 @@ function xmlText(xml: string, tag: string): string {
   const m = xml.match(new RegExp(`<${tag}(?:\\s[^>]*)?>([\\s\\S]*?)<\\/${tag}>`, "i"));
   if (!m) return "";
   return m[1]
-    .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&amp;/g, "&")
-    .replace(/&quot;/g, '"')
+    .replaceAll(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1")
+    .replaceAll(/&lt;/g, "<")
+    .replaceAll(/&gt;/g, ">")
+    .replaceAll(/&amp;/g, "&")
+    .replaceAll(/&quot;/g, '"')
     .trim();
 }
 
 function stripHtml(html: string): string {
   return html
-    .replace(/<[^>]+>/g, " ")
-    .replace(/&#32;/g, " ")
-    .replace(/&nbsp;/g, " ")
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number.parseInt(n, 10)))
-    .replace(/\s+/g, " ")
+    .replaceAll(/<[^>]+>/g, " ")
+    .replaceAll(/&#32;/g, " ")
+    .replaceAll(/&nbsp;/g, " ")
+    .replaceAll(/&amp;/g, "&")
+    .replaceAll(/&lt;/g, "<")
+    .replaceAll(/&gt;/g, ">")
+    .replaceAll(/&quot;/g, '"')
+    .replaceAll(/&#(\d+);/g, (_, n) => String.fromCharCode(Number.parseInt(n, 10)))
+    .replaceAll(/\s+/g, " ")
     .trim();
 }
 

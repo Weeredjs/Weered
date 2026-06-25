@@ -82,7 +82,7 @@ export default function WindroseBuildBuilder({
     const t = tagInput
       .trim()
       .toLowerCase()
-      .replace(/[^a-z0-9 -]/g, "")
+      .replaceAll(/[^a-z0-9 -]/g, "")
       .slice(0, 24);
     if (!t || tags.includes(t) || tags.length >= 8) {
       setTagInput("");
@@ -415,7 +415,7 @@ export default function WindroseBuildBuilder({
             <Label style={{ marginTop: 10 }}>Parts (optional)</Label>
             <input
               value={partsCount}
-              onChange={(e) => setPartsCount(e.target.value.replace(/[^0-9]/g, "").slice(0, 6))}
+              onChange={(e) => setPartsCount(e.target.value.replaceAll(/[^0-9]/g, "").slice(0, 6))}
               placeholder="e.g. 1240"
               style={inputStyle}
             />

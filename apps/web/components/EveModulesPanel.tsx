@@ -312,7 +312,7 @@ function SystemRow({ rank, name, id, right, rightColor, pct, barColor }: { rank:
   const lead = rank === 1;
   return (
     <a
-      href={`https://evemaps.dotlan.net/system/${encodeURIComponent((name || "").replace(/ /g, "_"))}`}
+      href={`https://evemaps.dotlan.net/system/${encodeURIComponent((name || "").replaceAll(/ /g, "_"))}`}
       target="_blank" rel="noopener noreferrer"
       style={{ position: "relative", display: "flex", justifyContent: "space-between", fontSize: 12, textDecoration: "none", color: "inherit", padding: "4px 8px", overflow: "hidden", borderRadius: 2 }}
     >
@@ -483,7 +483,7 @@ function SovTab() {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12 }}>
               <div style={{ minWidth: 0 }}>
                 <a
-                  href={`https://evemaps.dotlan.net/system/${encodeURIComponent((c.system?.name || "").replace(/ /g, "_"))}`}
+                  href={`https://evemaps.dotlan.net/system/${encodeURIComponent((c.system?.name || "").replaceAll(/ /g, "_"))}`}
                   target="_blank" rel="noopener noreferrer"
                   style={{ fontSize: 13, fontWeight: 800, color: "rgb(244,212,108)", textDecoration: "none" }}
                 >

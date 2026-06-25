@@ -75,7 +75,7 @@ export default async function uploadsRoutes(app: FastifyInstance, opts: Opts) {
   });
 
   app.get("/avatars/:filename", async (req, reply) => {
-    const filename = String((req as any).params?.filename || "").replace(/[^a-zA-Z0-9._-]/g, "");
+    const filename = String((req as any).params?.filename || "").replaceAll(/[^a-zA-Z0-9._-]/g, "");
     if (!filename) return reply.code(400).send("bad request");
     const filepath = join(AVATAR_DIR, filename);
     if (!existsSync(filepath)) return reply.code(404).send("not found");
@@ -175,7 +175,7 @@ export default async function uploadsRoutes(app: FastifyInstance, opts: Opts) {
     try {
       const kind =
         String(body.kind || "img")
-          .replace(/[^a-z]/g, "")
+          .replaceAll(/[^a-z]/g, "")
           .slice(0, 8) || "img";
       const filename = `lobby-${kind}-${u.id}-${Date.now()}.${ext}`;
       const filepath = join(BANNER_DIR, filename);
@@ -189,7 +189,7 @@ export default async function uploadsRoutes(app: FastifyInstance, opts: Opts) {
   });
 
   app.get("/banners/:filename", async (req, reply) => {
-    const filename = String((req as any).params?.filename || "").replace(/[^a-zA-Z0-9._-]/g, "");
+    const filename = String((req as any).params?.filename || "").replaceAll(/[^a-zA-Z0-9._-]/g, "");
     if (!filename) return reply.code(400).send("bad request");
     const filepath = join(BANNER_DIR, filename);
     if (!existsSync(filepath)) return reply.code(404).send("not found");

@@ -88,8 +88,8 @@ export default function HelldiversMajorOrderPanel({ style }: { style?: React.CSS
                 ? "LOST"
                 : "ENDED";
           const raw = String(d.message || d.text || d.body || "")
-            .replace(/<\/?i(?:=\d+)?>/g, "")
-            .replace(/\s+/g, " ")
+            .replaceAll(/<\/?i(?:=\d+)?>/g, "")
+            .replaceAll(/\s+/g, " ")
             .trim();
           const title = raw.split(/[.!?]/)[0].slice(0, 80);
           const ts = Number(d.published || d.publishedAt || d.ts || 0) || Date.now();

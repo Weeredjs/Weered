@@ -35,7 +35,7 @@ function OnboardingForm() {
 
   const checkUsername = useCallback(
     async (val: string) => {
-      const clean = val.toLowerCase().replace(/[^a-z0-9_]/g, "");
+      const clean = val.toLowerCase().replaceAll(/[^a-z0-9_]/g, "");
       if (clean.length < 2) {
         setStatus("invalid");
         return;
@@ -86,7 +86,7 @@ function OnboardingForm() {
     }
   }
 
-  const clean = username.toLowerCase().replace(/[^a-z0-9_]/g, "");
+  const clean = username.toLowerCase().replaceAll(/[^a-z0-9_]/g, "");
 
   const statusColor = {
     idle: "transparent",
@@ -286,7 +286,9 @@ function OnboardingForm() {
               className="wo-input"
               style={{ paddingLeft: 28 }}
               value={username}
-              onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ""))}
+              onChange={(e) =>
+                setUsername(e.target.value.toLowerCase().replaceAll(/[^a-z0-9_]/g, ""))
+              }
               placeholder="your_handle"
               maxLength={24}
               autoFocus

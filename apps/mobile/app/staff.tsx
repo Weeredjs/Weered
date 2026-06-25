@@ -318,7 +318,7 @@ function AuditTab() {
         <View className="px-4 py-2.5 border-b border-border/20">
           <Text className="text-weered-text text-sm">
             <Text className="font-bold">{item.actorName}</Text>{" "}
-            <Text className="text-weered-muted">{item.action.replace(/_/g, " ")}</Text>
+            <Text className="text-weered-muted">{item.action.replaceAll(/_/g, " ")}</Text>
             {item.targetName ? (
               <Text className="text-weered-muted"> → {item.targetName}</Text>
             ) : null}

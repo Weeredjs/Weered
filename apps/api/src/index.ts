@@ -1026,17 +1026,17 @@ async function main() {
         const dateStr = dateRx.exec(block)?.[1];
         const rawDesc = descRx.exec(block)?.[1] || "";
         const desc = rawDesc
-          .replace(/&lt;/g, "<")
-          .replace(/&gt;/g, ">")
-          .replace(/&amp;/g, "&")
-          .replace(/&quot;/g, '"')
-          .replace(/&#39;/g, "'")
-          .replace(/&apos;/g, "'")
-          .replace(/&#x27;/g, "'")
-          .replace(/<[^>]+>/g, " ")
-          .replace(/https?:\/\/\S+/g, "")
-          .replace(/&nbsp;/g, " ")
-          .replace(/\s+/g, " ")
+          .replaceAll(/&lt;/g, "<")
+          .replaceAll(/&gt;/g, ">")
+          .replaceAll(/&amp;/g, "&")
+          .replaceAll(/&quot;/g, '"')
+          .replaceAll(/&#39;/g, "'")
+          .replaceAll(/&apos;/g, "'")
+          .replaceAll(/&#x27;/g, "'")
+          .replaceAll(/<[^>]+>/g, " ")
+          .replaceAll(/https?:\/\/\S+/g, "")
+          .replaceAll(/&nbsp;/g, " ")
+          .replaceAll(/\s+/g, " ")
           .trim()
           .slice(0, 250);
         const img =
@@ -1523,11 +1523,11 @@ async function main() {
         entries.push({
           videoId,
           title: tag("title")
-            .replace(/&amp;/g, "&")
-            .replace(/&lt;/g, "<")
-            .replace(/&gt;/g, ">")
-            .replace(/&#39;/g, "'")
-            .replace(/&quot;/g, '"'),
+            .replaceAll(/&amp;/g, "&")
+            .replaceAll(/&lt;/g, "<")
+            .replaceAll(/&gt;/g, ">")
+            .replaceAll(/&#39;/g, "'")
+            .replaceAll(/&quot;/g, '"'),
           published: tag("published"),
           updated: tag("updated"),
           channelName: tag("name"),
@@ -1537,11 +1537,11 @@ async function main() {
           starRating: Number.parseFloat(attr("media:starRating", "average") || "0"),
           description: tag("media:description")
             .slice(0, 300)
-            .replace(/&amp;/g, "&")
-            .replace(/&lt;/g, "<")
-            .replace(/&gt;/g, ">")
-            .replace(/&#39;/g, "'")
-            .replace(/&quot;/g, '"'),
+            .replaceAll(/&amp;/g, "&")
+            .replaceAll(/&lt;/g, "<")
+            .replaceAll(/&gt;/g, ">")
+            .replaceAll(/&#39;/g, "'")
+            .replaceAll(/&quot;/g, '"'),
         });
       }
 

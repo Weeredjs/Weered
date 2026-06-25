@@ -108,7 +108,7 @@ export default function VoiceDock() {
   if (connState !== "connected" && connState !== "connecting") return null;
 
   const live = connState === "connected";
-  const roomName = (activeRoomId || "").replace(/-/g, " ");
+  const roomName = (activeRoomId || "").replaceAll(/-/g, " ");
 
   return (
     <div className="weered-voicedock" role="region" aria-label="Voice connection">

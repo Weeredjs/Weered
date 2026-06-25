@@ -84,7 +84,7 @@ function parseDice(expr: string): {
   advantage?: boolean;
   disadvantage?: boolean;
 } | null {
-  const clean = expr.toLowerCase().trim().replace(/\s+/g, "");
+  const clean = expr.toLowerCase().trim().replaceAll(/\s+/g, "");
   let adv = false,
     dis = false;
   let working = clean;

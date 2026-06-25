@@ -405,7 +405,7 @@ function OrderEntry({ symbol, lobbyId, livePrice, mode, onTrade }: {
           <input
             style={{ ...S.input, paddingLeft: 22 }}
             value={usdAmount}
-            onChange={e => setUsdAmount(e.target.value.replace(/[^0-9.]/g, ""))}
+            onChange={e => setUsdAmount(e.target.value.replaceAll(/[^0-9.]/g, ""))}
             placeholder="USD amount"
           />
         </div>
@@ -464,7 +464,7 @@ function OrderEntry({ symbol, lobbyId, livePrice, mode, onTrade }: {
               <input
                 style={{ ...S.input, fontFamily: "monospace" }}
                 value={stopLoss}
-                onChange={e => setStopLoss(e.target.value.replace(/[^0-9.]/g, ""))}
+                onChange={e => setStopLoss(e.target.value.replaceAll(/[^0-9.]/g, ""))}
                 placeholder={side === "BUY" ? "lower trigger price" : "upper trigger price"}
               />
               {slRisk != null && Number.isFinite(slRisk) && slRisk > 0 && (
@@ -480,7 +480,7 @@ function OrderEntry({ symbol, lobbyId, livePrice, mode, onTrade }: {
               <input
                 style={{ ...S.input, fontFamily: "monospace" }}
                 value={takeProfit}
-                onChange={e => setTakeProfit(e.target.value.replace(/[^0-9.]/g, ""))}
+                onChange={e => setTakeProfit(e.target.value.replaceAll(/[^0-9.]/g, ""))}
                 placeholder={side === "BUY" ? "upper trigger price" : "lower trigger price"}
               />
               {tpReward != null && Number.isFinite(tpReward) && tpReward > 0 && (
@@ -660,7 +660,7 @@ function ExitsEditor({ position, onSaved, onCancel }: {
           <input
             style={{ ...S.input, fontFamily: "monospace", fontSize: 11, padding: "6px 8px" }}
             value={sl}
-            onChange={e => setSl(e.target.value.replace(/[^0-9.]/g, ""))}
+            onChange={e => setSl(e.target.value.replaceAll(/[^0-9.]/g, ""))}
             placeholder="—"
           />
         </div>
@@ -671,7 +671,7 @@ function ExitsEditor({ position, onSaved, onCancel }: {
           <input
             style={{ ...S.input, fontFamily: "monospace", fontSize: 11, padding: "6px 8px" }}
             value={tp}
-            onChange={e => setTp(e.target.value.replace(/[^0-9.]/g, ""))}
+            onChange={e => setTp(e.target.value.replaceAll(/[^0-9.]/g, ""))}
             placeholder="—"
           />
         </div>

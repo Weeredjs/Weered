@@ -97,9 +97,9 @@ export async function sendMail(opts: {
 
 function stripHtml(html: string): string {
   return html
-    .replace(/<style[\s\S]*?<\/style>/gi, "")
-    .replace(/<[^>]+>/g, "")
-    .replace(/\s+/g, " ")
+    .replaceAll(/<style[\s\S]*?<\/style>/gi, "")
+    .replaceAll(/<[^>]+>/g, "")
+    .replaceAll(/\s+/g, " ")
     .trim();
 }
 

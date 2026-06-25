@@ -15,7 +15,7 @@ function authHeaders(): Record<string, string> {
 }
 
 function normalizeCode(s: string): string {
-  return s.replace(/[^A-Za-z0-9]/g, "").toUpperCase();
+  return s.replaceAll(/[^A-Za-z0-9]/g, "").toUpperCase();
 }
 
 function ConnectMinecraftInner() {

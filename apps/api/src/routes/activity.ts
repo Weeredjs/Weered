@@ -109,7 +109,7 @@ export default async function activityRoutes(app: FastifyInstance, opts: Opts) {
       feed.push({
         type: "notoriety",
         id: ne.id,
-        text: `+${ne.points} XP — ${ne.action.replace(/_/g, " ").toLowerCase()}`,
+        text: `+${ne.points} XP — ${ne.action.replaceAll(/_/g, " ").toLowerCase()}`,
         points: ne.points,
         action: ne.action,
         ts: ne.createdAt,

@@ -4,11 +4,11 @@ import React from "react";
 
 function escapeHtml(s: string): string {
   return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
+    .replaceAll(/&/g, "&amp;")
+    .replaceAll(/</g, "&lt;")
+    .replaceAll(/>/g, "&gt;")
+    .replaceAll(/"/g, "&quot;")
+    .replaceAll(/'/g, "&#39;");
 }
 
 function safeUrl(url: string): string {
@@ -29,10 +29,10 @@ function renderInline(s: string): string {
     (_m, text: string, url: string) =>
       `<a href="${safeUrl(url)}" target="_blank" rel="noopener noreferrer" style="color:#a78bfa;text-decoration:underline;">${text}</a>`,
   );
-  out = out.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
-  out = out.replace(/__([^_]+)__/g, "<strong>$1</strong>");
-  out = out.replace(/(^|[^*])\*([^*\s][^*]*?)\*/g, "$1<em>$2</em>");
-  out = out.replace(/(^|[^_])_([^_\s][^_]*?)_/g, "$1<em>$2</em>");
+  out = out.replaceAll(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+  out = out.replaceAll(/__([^_]+)__/g, "<strong>$1</strong>");
+  out = out.replaceAll(/(^|[^*])\*([^*\s][^*]*?)\*/g, "$1<em>$2</em>");
+  out = out.replaceAll(/(^|[^_])_([^_\s][^_]*?)_/g, "$1<em>$2</em>");
   out = out.replace(
     /`([^`]+)`/g,
     '<code style="background:rgba(0,0,0,.35);padding:1px 5px;border-radius:4px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.92em;">$1</code>',
@@ -42,7 +42,7 @@ function renderInline(s: string): string {
 
 export function renderMarkdown(md: string): string {
   const lines = String(md || "")
-    .replace(/\r\n/g, "\n")
+    .replaceAll(/\r\n/g, "\n")
     .split("\n");
   const out: string[] = [];
   let i = 0;

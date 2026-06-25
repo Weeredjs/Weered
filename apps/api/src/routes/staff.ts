@@ -583,7 +583,7 @@ export default async function staffRoutes(app: FastifyInstance, opts: Opts) {
     const body: any = (req as any).body || {};
     const name = String(body.name || "")
       .toLowerCase()
-      .replace(/[^a-z0-9]/g, "");
+      .replaceAll(/[^a-z0-9]/g, "");
     const scope = ["BOTH", "LOBBY", "USERNAME"].includes(body.scope) ? body.scope : "BOTH";
     const reason = String(body.reason || "").slice(0, 200);
     if (!name || name.length < 2)

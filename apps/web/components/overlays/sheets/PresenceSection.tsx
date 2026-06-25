@@ -377,7 +377,7 @@ export default function PresenceSection() {
           <input
             type="text"
             value={steamId}
-            onChange={(e) => setSteamId(e.target.value.replace(/\s/g, ""))}
+            onChange={(e) => setSteamId(e.target.value.replaceAll(/\s/g, ""))}
             placeholder={linkedSteam || "weeredjs  or  76561198000000000"}
             style={stackedInputStyle}
           />
@@ -443,7 +443,7 @@ export default function PresenceSection() {
             type="text"
             value={twitchLogin}
             onChange={(e) =>
-              setTwitchLogin(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ""))
+              setTwitchLogin(e.target.value.toLowerCase().replaceAll(/[^a-z0-9_]/g, ""))
             }
             placeholder={linkedTwitch || "your_twitch_login"}
             style={stackedInputStyle}

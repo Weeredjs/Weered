@@ -42,14 +42,14 @@ function timeAgo(iso: string): string {
 
 function stripHtml(s: string): string {
   return s
-    .replace(/<[^>]+>/g, " ")
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&apos;/g, "'")
-    .replace(/\s+/g, " ")
+    .replaceAll(/<[^>]+>/g, " ")
+    .replaceAll(/&amp;/g, "&")
+    .replaceAll(/&lt;/g, "<")
+    .replaceAll(/&gt;/g, ">")
+    .replaceAll(/&quot;/g, '"')
+    .replaceAll(/&#39;/g, "'")
+    .replaceAll(/&apos;/g, "'")
+    .replaceAll(/\s+/g, " ")
     .trim();
 }
 
@@ -463,7 +463,7 @@ function ArticleInterceptModal({
   const router = useRouter();
 
   function handleReadInRoom() {
-    const hash = article.url.replace(/[^a-zA-Z0-9]/g, "").slice(-12);
+    const hash = article.url.replaceAll(/[^a-zA-Z0-9]/g, "").slice(-12);
     const roomId = `news-${hash}`;
     router.push(
       `/room/${encodeURIComponent(roomId)}?article=${encodeURIComponent(article.url)}&lobby=${encodeURIComponent(lobbyId)}`,

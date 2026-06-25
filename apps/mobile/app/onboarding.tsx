@@ -16,7 +16,7 @@ export default function Onboarding() {
 
   const clean = username
     .toLowerCase()
-    .replace(/[^a-z0-9_]/g, "")
+    .replaceAll(/[^a-z0-9_]/g, "")
     .slice(0, 32);
 
   useEffect(() => {

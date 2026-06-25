@@ -935,7 +935,7 @@ function WeaponMastery({ accent }: { accent: string }) {
                       whiteSpace: "nowrap",
                     }}
                   >
-                    {w.weapon.replace(/_/g, " ")}
+                    {w.weapon.replaceAll(/_/g, " ")}
                     {w.level > 0 && (
                       <span
                         style={{

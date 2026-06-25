@@ -36,7 +36,7 @@ export async function assertSafeUrl(raw: string): Promise<URL> {
     throw new Error("invalid_url");
   }
   if (u.protocol !== "http:" && u.protocol !== "https:") throw new Error("bad_protocol");
-  const host = u.hostname.replace(/(^\[)|(\]$)/g, "");
+  const host = u.hostname.replaceAll(/(^\[)|(\]$)/g, "");
   if (net.isIP(host)) {
     if (isPrivateIp(host)) throw new Error("private_host");
     return u;
