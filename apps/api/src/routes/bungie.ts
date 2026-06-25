@@ -751,7 +751,7 @@ export default async function bungieRoutes(app: FastifyInstance, opts: Opts) {
           ? `https://www.bungie.net${c.emblemBackgroundPath}`
           : null,
         dateLastPlayed: c.dateLastPlayed,
-        minutesPlayedTotal: parseInt(c.minutesPlayedTotal) || 0,
+        minutesPlayedTotal: Number.parseInt(c.minutesPlayedTotal) || 0,
       }));
       characters.sort(
         (a: any, b: any) =>

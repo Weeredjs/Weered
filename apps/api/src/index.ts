@@ -1533,8 +1533,8 @@ async function main() {
           channelName: tag("name"),
           thumbnail: `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`,
           thumbnailHq: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
-          views: parseInt(attr("media:statistics", "views") || "0", 10),
-          starRating: parseFloat(attr("media:starRating", "average") || "0"),
+          views: Number.parseInt(attr("media:statistics", "views") || "0", 10),
+          starRating: Number.parseFloat(attr("media:starRating", "average") || "0"),
           description: tag("media:description")
             .slice(0, 300)
             .replace(/&amp;/g, "&")

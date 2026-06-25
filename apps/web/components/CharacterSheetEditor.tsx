@@ -265,7 +265,7 @@ export default function CharacterSheetEditor({
                 min={1}
                 max={20}
                 value={draft.level}
-                onChange={(e) => patch("level", parseInt(e.target.value) || 1)}
+                onChange={(e) => patch("level", Number.parseInt(e.target.value) || 1)}
               />
             </Field>
           </Row>
@@ -307,7 +307,7 @@ export default function CharacterSheetEditor({
                   onChange={(e) =>
                     patch(
                       k.toLowerCase() as any,
-                      Math.max(1, Math.min(30, parseInt(e.target.value) || 10)),
+                      Math.max(1, Math.min(30, Number.parseInt(e.target.value) || 10)),
                     )
                   }
                 />
@@ -323,7 +323,7 @@ export default function CharacterSheetEditor({
                 className="dnd-parchment-input"
                 type="number"
                 value={draft.hpCurrent}
-                onChange={(e) => patch("hpCurrent", parseInt(e.target.value) || 0)}
+                onChange={(e) => patch("hpCurrent", Number.parseInt(e.target.value) || 0)}
               />
             </Field>
             <Field label="HP Max">
@@ -331,7 +331,7 @@ export default function CharacterSheetEditor({
                 className="dnd-parchment-input"
                 type="number"
                 value={draft.hpMax}
-                onChange={(e) => patch("hpMax", parseInt(e.target.value) || 0)}
+                onChange={(e) => patch("hpMax", Number.parseInt(e.target.value) || 0)}
               />
             </Field>
             <Field label="HP Temp">
@@ -339,7 +339,7 @@ export default function CharacterSheetEditor({
                 className="dnd-parchment-input"
                 type="number"
                 value={draft.hpTemp}
-                onChange={(e) => patch("hpTemp", parseInt(e.target.value) || 0)}
+                onChange={(e) => patch("hpTemp", Number.parseInt(e.target.value) || 0)}
               />
             </Field>
           </Row>
@@ -349,7 +349,7 @@ export default function CharacterSheetEditor({
                 className="dnd-parchment-input"
                 type="number"
                 value={draft.ac}
-                onChange={(e) => patch("ac", parseInt(e.target.value) || 10)}
+                onChange={(e) => patch("ac", Number.parseInt(e.target.value) || 10)}
               />
             </Field>
             <Field label="Speed (ft)">
@@ -357,7 +357,7 @@ export default function CharacterSheetEditor({
                 className="dnd-parchment-input"
                 type="number"
                 value={draft.speed}
-                onChange={(e) => patch("speed", parseInt(e.target.value) || 30)}
+                onChange={(e) => patch("speed", Number.parseInt(e.target.value) || 30)}
               />
             </Field>
             <Field label="Hit Dice">
@@ -497,7 +497,10 @@ export default function CharacterSheetEditor({
                     max={slot.max}
                     value={slot.current}
                     onChange={(e) => {
-                      const cur = Math.max(0, Math.min(slot.max, parseInt(e.target.value) || 0));
+                      const cur = Math.max(
+                        0,
+                        Math.min(slot.max, Number.parseInt(e.target.value) || 0),
+                      );
                       patch("spellSlots", {
                         ...draft.spellSlots,
                         [lvl]: { current: cur, max: slot.max },
@@ -512,7 +515,7 @@ export default function CharacterSheetEditor({
                     min={0}
                     value={slot.max}
                     onChange={(e) => {
-                      const max = Math.max(0, parseInt(e.target.value) || 0);
+                      const max = Math.max(0, Number.parseInt(e.target.value) || 0);
                       patch("spellSlots", {
                         ...draft.spellSlots,
                         [lvl]: { current: Math.min(slot.current, max), max },
@@ -544,7 +547,7 @@ export default function CharacterSheetEditor({
                 <select
                   className="dnd-parchment-input"
                   value={row.level}
-                  onChange={(e) => set({ ...row, level: parseInt(e.target.value) })}
+                  onChange={(e) => set({ ...row, level: Number.parseInt(e.target.value) })}
                 >
                   {Array.from({ length: 10 }).map((_, i) => (
                     <option key={i} value={i}>
@@ -565,7 +568,9 @@ export default function CharacterSheetEditor({
                   className="dnd-parchment-input"
                   type="number"
                   value={(draft as any)[k]}
-                  onChange={(e) => patch(k as any, Math.max(0, parseInt(e.target.value) || 0))}
+                  onChange={(e) =>
+                    patch(k as any, Math.max(0, Number.parseInt(e.target.value) || 0))
+                  }
                 />
               </Field>
             ))}
@@ -592,7 +597,7 @@ export default function CharacterSheetEditor({
                   type="number"
                   min={0}
                   value={row.qty}
-                  onChange={(e) => set({ ...row, qty: parseInt(e.target.value) || 1 })}
+                  onChange={(e) => set({ ...row, qty: Number.parseInt(e.target.value) || 1 })}
                 />
               </Field>
               <Field label="Notes" flex={2}>

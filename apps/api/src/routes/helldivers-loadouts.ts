@@ -127,8 +127,8 @@ export default async function helldiversLoadoutsRoutes(app: FastifyInstance, opt
     const role = q.role ? String(q.role) : null;
     const difficulty = q.difficulty ? String(q.difficulty) : null;
     const sort = String(q.sort || "top").toLowerCase();
-    const limit = Math.min(Math.max(parseInt(String(q.limit || "30"), 10) || 30, 1), 100);
-    const offset = Math.max(parseInt(String(q.offset || "0"), 10) || 0, 0);
+    const limit = Math.min(Math.max(Number.parseInt(String(q.limit || "30"), 10) || 30, 1), 100);
+    const offset = Math.max(Number.parseInt(String(q.offset || "0"), 10) || 0, 0);
     const search = clampStr(q.q || q.search, 80).trim();
 
     const where: any = {};

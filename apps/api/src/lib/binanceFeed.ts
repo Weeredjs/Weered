@@ -42,7 +42,7 @@ export function subscribeBinanceSymbol(symbol: string) {
     try {
       const data = JSON.parse(raw.toString());
       if (data.e === "trade") {
-        const price = parseFloat(data.p);
+        const price = Number.parseFloat(data.p);
         livePrices.set(sym, { price, time: Date.now() });
         const subs = symbolSubscribers.get(sym);
         if (subs && subs.size > 0) {
@@ -51,7 +51,7 @@ export function subscribeBinanceSymbol(symbol: string) {
             symbol: sym.toUpperCase(),
             price,
             time: data.T,
-            qty: parseFloat(data.q),
+            qty: Number.parseFloat(data.q),
           };
           for (const sock of subs) {
             try {
@@ -69,11 +69,11 @@ export function subscribeBinanceSymbol(symbol: string) {
             type: "trading:kline",
             symbol: sym.toUpperCase(),
             time: k.t / 1000,
-            open: parseFloat(k.o),
-            high: parseFloat(k.h),
-            low: parseFloat(k.l),
-            close: parseFloat(k.c),
-            volume: parseFloat(k.v),
+            open: Number.parseFloat(k.o),
+            high: Number.parseFloat(k.h),
+            low: Number.parseFloat(k.l),
+            close: Number.parseFloat(k.c),
+            volume: Number.parseFloat(k.v),
             closed: k.x,
           };
           for (const sock of subs) {

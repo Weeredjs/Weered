@@ -159,11 +159,11 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
           registrationOpensAt: new Date(body.registrationOpensAt || Date.now()),
           startsAt: new Date(body.startsAt),
           endsAt: new Date(body.endsAt),
-          maxEntries: parseInt(body.maxEntries) || 100,
-          minEntries: parseInt(body.minEntries) || 2,
+          maxEntries: Number.parseInt(body.maxEntries) || 100,
+          minEntries: Number.parseInt(body.minEntries) || 2,
           rewards: body.rewards || [],
           featuredMode: body.featuredMode || null,
-          pointsPerCompletion: isRace ? parseInt(body.pointsPerCompletion) || 100 : 100,
+          pointsPerCompletion: isRace ? Number.parseInt(body.pointsPerCompletion) || 100 : 100,
           pointsToWin: isRace && body.pointsToWin != null ? Number(body.pointsToWin) : null,
           raceWinCondition: isRace ? body.raceWinCondition || "DEADLINE" : null,
           challengePoolIds:
@@ -624,7 +624,7 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
   app.get("/tournaments/archive", async (req, reply) => {
     const q = (req as any).query || {};
     const lobbyId = q.lobbyId ? String(q.lobbyId) : null;
-    const limit = Math.max(1, Math.min(50, parseInt(q.limit) || 20));
+    const limit = Math.max(1, Math.min(50, Number.parseInt(q.limit) || 20));
 
     const where: any = { status: "COMPLETED" };
     if (lobbyId) where.lobbyId = lobbyId;
@@ -1124,8 +1124,10 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
       if (![m.entryAId, m.entryBId].includes(winnerEntryId)) {
         return reply.code(400).send({ ok: false, error: "bad_winner" });
       }
-      const scoreA = body.scoreA != null ? Math.max(0, Math.min(99, parseInt(body.scoreA))) : null;
-      const scoreB = body.scoreB != null ? Math.max(0, Math.min(99, parseInt(body.scoreB))) : null;
+      const scoreA =
+        body.scoreA != null ? Math.max(0, Math.min(99, Number.parseInt(body.scoreA))) : null;
+      const scoreB =
+        body.scoreB != null ? Math.max(0, Math.min(99, Number.parseInt(body.scoreB))) : null;
 
       await prisma.tournamentMatch.update({
         where: { id: matchId },
@@ -1291,8 +1293,10 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
       if (![m.entryAId, m.entryBId].includes(winnerEntryId)) {
         return reply.code(400).send({ ok: false, error: "bad_winner" });
       }
-      const scoreA = body.scoreA != null ? Math.max(0, Math.min(99, parseInt(body.scoreA))) : null;
-      const scoreB = body.scoreB != null ? Math.max(0, Math.min(99, parseInt(body.scoreB))) : null;
+      const scoreA =
+        body.scoreA != null ? Math.max(0, Math.min(99, Number.parseInt(body.scoreA))) : null;
+      const scoreB =
+        body.scoreB != null ? Math.max(0, Math.min(99, Number.parseInt(body.scoreB))) : null;
       await prisma.tournamentMatch.update({
         where: { id: matchId },
         data: {

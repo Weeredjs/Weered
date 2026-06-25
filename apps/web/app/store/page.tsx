@@ -320,7 +320,7 @@ export default function StorePage() {
     setBusy("listing");
     const d = await post("/market/list", {
       userItemId: listingItem.id,
-      price: parseInt(listingPrice),
+      price: Number.parseInt(listingPrice),
     });
     if (d.ok) {
       setListingItem(null);
@@ -807,10 +807,10 @@ export default function StorePage() {
               <button
                 style={S.btn(
                   GOLD,
-                  !listingPrice || parseInt(listingPrice) <= 0 || busy === "listing",
+                  !listingPrice || Number.parseInt(listingPrice) <= 0 || busy === "listing",
                 )}
                 onClick={listForSale}
-                disabled={!listingPrice || parseInt(listingPrice) <= 0 || busy === "listing"}
+                disabled={!listingPrice || Number.parseInt(listingPrice) <= 0 || busy === "listing"}
               >
                 {busy === "listing" ? "..." : "LIST"}
               </button>

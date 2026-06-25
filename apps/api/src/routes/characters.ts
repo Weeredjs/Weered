@@ -129,7 +129,7 @@ export default async function characterRoutes(app: FastifyInstance, opts: Opts) 
       name,
       ownerUserId: u.id,
       className: String(b.className || "").slice(0, 40),
-      level: Math.max(1, Math.min(20, parseInt(b.level) || 1)),
+      level: Math.max(1, Math.min(20, Number.parseInt(b.level) || 1)),
       race: String(b.race || "").slice(0, 40),
       alignment: String(b.alignment || "").slice(0, 40),
       campaignId: b.campaignId ? String(b.campaignId) : null,
@@ -236,7 +236,8 @@ export default async function characterRoutes(app: FastifyInstance, opts: Opts) 
     if (isOwner) {
       if (typeof b.name === "string") data.name = b.name.trim().slice(0, 80) || c.name;
       if (typeof b.className === "string") data.className = b.className.slice(0, 40);
-      if (b.level !== undefined) data.level = Math.max(1, Math.min(20, parseInt(b.level) || 1));
+      if (b.level !== undefined)
+        data.level = Math.max(1, Math.min(20, Number.parseInt(b.level) || 1));
       if (typeof b.race === "string") data.race = b.race.slice(0, 40);
       if (typeof b.alignment === "string") data.alignment = b.alignment.slice(0, 40);
       if (b.str !== undefined) data.str = clampScore(b.str);
@@ -301,8 +302,8 @@ export default async function characterRoutes(app: FastifyInstance, opts: Opts) 
     if (!isOwner && !dm) return reply.code(403).send({ ok: false, error: "forbidden" });
 
     const b: any = (req as any).body || {};
-    const delta = parseInt(b.delta);
-    const setTo = b.set !== undefined ? parseInt(b.set) : null;
+    const delta = Number.parseInt(b.delta);
+    const setTo = b.set !== undefined ? Number.parseInt(b.set) : null;
     let next = c.hpCurrent;
     if (setTo !== null && Number.isFinite(setTo)) next = setTo;
     else if (Number.isFinite(delta)) next = c.hpCurrent + delta;
@@ -331,13 +332,14 @@ export default async function characterRoutes(app: FastifyInstance, opts: Opts) 
     if (op === "use") current = Math.max(0, current - 1);
     else if (op === "restore") current = Math.min(max, current + 1);
     else if (op === "set") {
-      if (b.current !== undefined) current = Math.max(0, Math.min(max, parseInt(b.current) || 0));
+      if (b.current !== undefined)
+        current = Math.max(0, Math.min(max, Number.parseInt(b.current) || 0));
       if (b.max !== undefined) {
-        max = Math.max(0, parseInt(b.max) || 0);
+        max = Math.max(0, Number.parseInt(b.max) || 0);
         current = Math.min(current, max);
       }
     } else {
-      const idx = parseInt(b.index);
+      const idx = Number.parseInt(b.index);
       if (Number.isFinite(idx)) {
         const filled = idx < current;
         current = filled ? idx : Math.max(current, idx + 1);
@@ -351,7 +353,7 @@ export default async function characterRoutes(app: FastifyInstance, opts: Opts) 
 }
 
 function clampInt(v: any, min: number, max: number, fallback: number): number {
-  const n = parseInt(v);
+  const n = Number.parseInt(v);
   if (!Number.isFinite(n)) return fallback;
   return Math.max(min, Math.min(max, n));
 }

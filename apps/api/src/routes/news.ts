@@ -122,7 +122,7 @@ export default async function newsRoutes(app: FastifyInstance) {
             .replace(/&#x2F;/g, "/")
             .replace(/&#(\d+);/g, (_: string, n: string) => String.fromCharCode(Number(n)))
             .replace(/&#x([0-9a-fA-F]+);/g, (_: string, h: string) =>
-              String.fromCharCode(parseInt(h, 16)),
+              String.fromCharCode(Number.parseInt(h, 16)),
             )
             .replace(/&nbsp;/g, " ")
             .replace(/\s+/g, " ")
@@ -215,7 +215,7 @@ export default async function newsRoutes(app: FastifyInstance) {
           .replace(/&#x27;/g, "'")
           .replace(/&#x2F;/g, "/")
           .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)))
-          .replace(/&#x([0-9a-fA-F]+);/g, (_, h) => String.fromCharCode(parseInt(h, 16)))
+          .replace(/&#x([0-9a-fA-F]+);/g, (_, h) => String.fromCharCode(Number.parseInt(h, 16)))
           .replace(/&nbsp;/g, " ")
           .trim();
 

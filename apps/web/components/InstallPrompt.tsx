@@ -17,7 +17,7 @@ export default function InstallPrompt() {
     if ((navigator as any).standalone) return;
 
     const dismissed = localStorage.getItem("weered:install:dismissed");
-    if (dismissed && Date.now() - parseInt(dismissed, 10) < 7 * 24 * 60 * 60 * 1000) return;
+    if (dismissed && Date.now() - Number.parseInt(dismissed, 10) < 7 * 24 * 60 * 60 * 1000) return;
 
     const installed = localStorage.getItem("weered:install:done");
     if (installed) return;

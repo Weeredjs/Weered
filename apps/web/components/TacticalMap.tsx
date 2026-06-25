@@ -313,8 +313,8 @@ export default function TacticalMap({ roomId }: Props) {
         ctx.globalCompositeOperation = "destination-out";
         for (const k of fog) {
           const [xs, ys] = k.split(",");
-          const x = parseInt(xs, 10),
-            y = parseInt(ys, 10);
+          const x = Number.parseInt(xs, 10),
+            y = Number.parseInt(ys, 10);
           ctx.fillRect(x * map.gridSize, y * map.gridSize, map.gridSize, map.gridSize);
         }
         ctx.restore();
@@ -538,7 +538,7 @@ export default function TacticalMap({ roomId }: Props) {
         window.prompt("Token name?", hidden ? "Hidden" : "Token") || (hidden ? "Hidden" : "Token");
       const colorIn =
         window.prompt("Color (hex like #C4A55A) — leave blank for default", "#C4A55A") || "#C4A55A";
-      const sizeIn = parseInt(window.prompt("Size (1, 2, or 3 cells)", "1") || "1", 10);
+      const sizeIn = Number.parseInt(window.prompt("Size (1, 2, or 3 cells)", "1") || "1", 10);
       const sizeCells = [1, 2, 3].includes(sizeIn) ? sizeIn : 1;
       fetch(`${API}/maps/${map.id}/tokens`, {
         method: "POST",
@@ -641,7 +641,7 @@ export default function TacticalMap({ roomId }: Props) {
     if (fogPaintRef.current && map) {
       const cells = Array.from(fogPaintRef.current).map((k) => {
         const [x, y] = k.split(",");
-        return { x: parseInt(x, 10), y: parseInt(y, 10) };
+        return { x: Number.parseInt(x, 10), y: Number.parseInt(y, 10) };
       });
       fogPaintRef.current = null;
       const endpoint = tool === "fogReveal" ? "reveal" : "clear";

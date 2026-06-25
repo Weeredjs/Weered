@@ -13,7 +13,7 @@ function hexToRgb(hex: string): { r: number; g: number; b: number } {
       .split("")
       .map((c) => c + c)
       .join("");
-  const n = parseInt(h, 16);
+  const n = Number.parseInt(h, 16);
   if (h.length !== 6 || Number.isNaN(n)) return { r: 212, g: 175, b: 55 };
   return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
 }

@@ -164,9 +164,9 @@ export default function PresenceRow({
 
   const pillTint = (() => {
     if (!validPillBg) return null;
-    const r = parseInt(validPillBg.slice(1, 3), 16);
-    const g = parseInt(validPillBg.slice(3, 5), 16);
-    const b = parseInt(validPillBg.slice(5, 7), 16);
+    const r = Number.parseInt(validPillBg.slice(1, 3), 16);
+    const g = Number.parseInt(validPillBg.slice(3, 5), 16);
+    const b = Number.parseInt(validPillBg.slice(5, 7), 16);
     const a = pillIntensity / 100;
     if (a <= 0.01) return null;
     return `linear-gradient(90deg, rgba(${r},${g},${b},${a.toFixed(3)}) 0%, rgba(${r},${g},${b},${(a * 0.45).toFixed(3)}) 60%, transparent 100%)`;

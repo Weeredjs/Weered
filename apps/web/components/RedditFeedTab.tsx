@@ -18,7 +18,7 @@ type RedditPost = {
 
 function ago(iso: string): string {
   const t = new Date(iso).getTime();
-  if (isNaN(t)) return "";
+  if (Number.isNaN(Number(t))) return "";
   const s = Math.max(0, (Date.now() - t) / 1000);
   if (s < 3600) return `${Math.round(s / 60)}m`;
   if (s < 86400) return `${Math.round(s / 3600)}h`;

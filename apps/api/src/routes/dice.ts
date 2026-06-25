@@ -45,9 +45,9 @@ function parseDice(expr: string): Parsed | null {
   }
   const m = working.match(/^(\d*)d(\d+)([+-]\d+)?$/);
   if (!m) return null;
-  const count = m[1] ? parseInt(m[1], 10) : 1;
-  const sides = parseInt(m[2], 10);
-  const modifier = m[3] ? parseInt(m[3], 10) : 0;
+  const count = m[1] ? Number.parseInt(m[1], 10) : 1;
+  const sides = Number.parseInt(m[2], 10);
+  const modifier = m[3] ? Number.parseInt(m[3], 10) : 0;
   if (!Number.isFinite(count) || count < 1 || count > 100) return null;
   if (!Number.isFinite(sides) || sides < 2 || sides > 1000) return null;
   if (!Number.isFinite(modifier) || modifier < -1000 || modifier > 1000) return null;

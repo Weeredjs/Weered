@@ -21,7 +21,7 @@ function stripHtml(html: string): string {
     .replace(/&lt;/g, "<")
     .replace(/&gt;/g, ">")
     .replace(/&quot;/g, '"')
-    .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(parseInt(n, 10)))
+    .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number.parseInt(n, 10)))
     .replace(/\s+/g, " ")
     .trim();
 }
@@ -67,7 +67,7 @@ function parseAtomEntries(feed: string): any[] {
 
     let num_comments = 0;
     const commMatch = content.match(/(\d+)\s+comments?/i);
-    if (commMatch) num_comments = parseInt(commMatch[1], 10);
+    if (commMatch) num_comments = Number.parseInt(commMatch[1], 10);
 
     const selftext = stripHtml(content).slice(0, 600);
 

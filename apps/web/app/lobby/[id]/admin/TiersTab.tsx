@@ -46,7 +46,7 @@ export function TiersTab({
       setMsg("Name is required.");
       return;
     }
-    const priceCents = Math.round(parseFloat(form.priceDollars || "0") * 100);
+    const priceCents = Math.round(Number.parseFloat(form.priceDollars || "0") * 100);
     if (priceCents < 100) {
       setMsg("Minimum price is $1.00.");
       return;

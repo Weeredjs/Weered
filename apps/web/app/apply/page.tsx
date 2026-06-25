@@ -66,8 +66,8 @@ export default function ApplyPage() {
       setError("Username is required.");
       return;
     }
-    const ageNum = parseInt(age, 10);
-    if (!age || isNaN(ageNum) || ageNum < 18) {
+    const ageNum = Number.parseInt(age, 10);
+    if (!age || Number.isNaN(Number(ageNum)) || ageNum < 18) {
       setError("You must be at least 18 years old.");
       return;
     }

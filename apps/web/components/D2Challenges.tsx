@@ -567,7 +567,9 @@ export function ChallengeBuilder({
                   max={10}
                   value={s.count}
                   onChange={(e) =>
-                    setStep(i, { count: Math.max(1, Math.min(10, parseInt(e.target.value) || 1)) })
+                    setStep(i, {
+                      count: Math.max(1, Math.min(10, Number.parseInt(e.target.value) || 1)),
+                    })
                   }
                   style={S.input}
                 />

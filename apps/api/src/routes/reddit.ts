@@ -28,14 +28,14 @@ function decodeOnce(s: string): string {
     .replace(/&apos;/g, "'")
     .replace(/&#x([0-9a-f]+);/gi, (_, h) => {
       try {
-        return String.fromCodePoint(parseInt(h, 16));
+        return String.fromCodePoint(Number.parseInt(h, 16));
       } catch {
         return "";
       }
     })
     .replace(/&#(\d+);/g, (_, n) => {
       try {
-        return String.fromCodePoint(parseInt(n, 10));
+        return String.fromCodePoint(Number.parseInt(n, 10));
       } catch {
         return "";
       }

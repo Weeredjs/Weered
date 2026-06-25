@@ -49,7 +49,7 @@ export default async function badgesRoutes(app: FastifyInstance, opts: Opts) {
           name: String(body.name || "").trim(),
           description: String(body.description || "").trim(),
           iconUrl: String(body.iconUrl || "").trim(),
-          rarity: parseInt(body.rarity) || 1,
+          rarity: Number.parseInt(body.rarity) || 1,
         },
       });
       return reply.send({ ok: true, badge });

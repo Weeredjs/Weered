@@ -21,7 +21,14 @@ export default async function geoRoutes(app: FastifyInstance, opts: Opts) {
       const body: any = (req as any).body || {};
       const lat = Number(body.latitude);
       const lng = Number(body.longitude);
-      if (!isFinite(lat) || !isFinite(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+      if (
+        !Number.isFinite(Number(lat)) ||
+        !Number.isFinite(Number(lng)) ||
+        lat < -90 ||
+        lat > 90 ||
+        lng < -180 ||
+        lng > 180
+      ) {
         return reply.code(400).send({ error: "Invalid coordinates" });
       }
       const h3Index = latLngToCell(lat, lng, H3_RES);
@@ -149,7 +156,7 @@ export default async function geoRoutes(app: FastifyInstance, opts: Opts) {
     const q: any = (req as any).query || {};
     const lat = Number(q.lat);
     const lng = Number(q.lng);
-    if (!isFinite(lat) || !isFinite(lng))
+    if (!Number.isFinite(Number(lat)) || !Number.isFinite(Number(lng)))
       return reply.code(400).send({ error: "lat/lng required" });
     const center = latLngToCell(lat, lng, H3_RES);
     const ring = gridDisk(center, 1);

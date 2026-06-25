@@ -488,7 +488,7 @@ export default async function billingRoutes(app: FastifyInstance, opts: Opts) {
         return reply.code(400).send({ ok: false, error: "invalid_signature" });
       }
 
-      const age = Math.floor(Date.now() / 1000) - parseInt(timestamp, 10);
+      const age = Math.floor(Date.now() / 1000) - Number.parseInt(timestamp, 10);
       if (age > 300) {
         log.error("[stripe webhook] timestamp too old:", age, "seconds");
         return reply.code(400).send({ ok: false, error: "timestamp_expired" });

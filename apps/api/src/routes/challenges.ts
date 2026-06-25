@@ -183,7 +183,7 @@ export default async function challengesRoutes(app: FastifyInstance, opts: Opts)
           description: String(body.description || "").trim(),
           iconUrl: body.iconUrl || null,
           category: String(body.category || "").trim(),
-          difficulty: parseInt(body.difficulty) || 1,
+          difficulty: Number.parseInt(body.difficulty) || 1,
           scope: body.scope || "GLOBAL",
           lobbyId: body.lobbyId || null,
           crewId: body.crewId || null,
@@ -191,18 +191,18 @@ export default async function challengesRoutes(app: FastifyInstance, opts: Opts)
           objectives: body.objectives || [],
           requireAll: body.requireAll !== false,
           requireCount: body.requireCount || null,
-          notorietyReward: parseInt(body.notorietyReward) || 0,
-          paperReward: parseInt(body.paperReward) || 0,
-          crewRepReward: parseInt(body.crewRepReward) || 0,
+          notorietyReward: Number.parseInt(body.notorietyReward) || 0,
+          paperReward: Number.parseInt(body.paperReward) || 0,
+          crewRepReward: Number.parseInt(body.crewRepReward) || 0,
           badgeId: body.badgeId || null,
           isRecurring: body.isRecurring === true,
           recurSchedule: body.recurSchedule || null,
           requiredModifiers: Array.isArray(body.requiredModifiers) ? body.requiredModifiers : [],
           requireDifficultyTier: body.requireDifficultyTier
-            ? parseInt(body.requireDifficultyTier)
+            ? Number.parseInt(body.requireDifficultyTier)
             : null,
-          minPartySize: body.minPartySize ? parseInt(body.minPartySize) : null,
-          maxPartySize: body.maxPartySize ? parseInt(body.maxPartySize) : null,
+          minPartySize: body.minPartySize ? Number.parseInt(body.minPartySize) : null,
+          maxPartySize: body.maxPartySize ? Number.parseInt(body.maxPartySize) : null,
           status: "DRAFT",
         },
       });
@@ -309,7 +309,7 @@ export default async function challengesRoutes(app: FastifyInstance, opts: Opts)
       const descParts: string[] = [];
       steps.forEach((s: any, i: number) => {
         const act = ACTIVITY[String(s.activity || "ANY").toUpperCase()] || ACTIVITY.ANY;
-        const count = Math.max(1, Math.min(10, parseInt(s.count) || 1));
+        const count = Math.max(1, Math.min(10, Number.parseInt(s.count) || 1));
         const mods = (Array.isArray(s.modifiers) ? s.modifiers : [])
           .map((x: any) => resolveModifier(String(x)))
           .filter(Boolean) as { hash: string; name: string }[];
@@ -395,16 +395,16 @@ export default async function challengesRoutes(app: FastifyInstance, opts: Opts)
           .trim()
           .slice(0, 50);
       if (body.difficulty !== undefined)
-        data.difficulty = Math.max(1, Math.min(5, parseInt(body.difficulty) || 1));
+        data.difficulty = Math.max(1, Math.min(5, Number.parseInt(body.difficulty) || 1));
       if (body.requireAll !== undefined) data.requireAll = !!body.requireAll;
       if (body.requireCount !== undefined)
-        data.requireCount = body.requireCount ? parseInt(body.requireCount) : null;
+        data.requireCount = body.requireCount ? Number.parseInt(body.requireCount) : null;
       if (body.notorietyReward !== undefined)
-        data.notorietyReward = Math.max(0, parseInt(body.notorietyReward) || 0);
+        data.notorietyReward = Math.max(0, Number.parseInt(body.notorietyReward) || 0);
       if (body.paperReward !== undefined)
-        data.paperReward = Math.max(0, parseInt(body.paperReward) || 0);
+        data.paperReward = Math.max(0, Number.parseInt(body.paperReward) || 0);
       if (body.crewRepReward !== undefined)
-        data.crewRepReward = Math.max(0, parseInt(body.crewRepReward) || 0);
+        data.crewRepReward = Math.max(0, Number.parseInt(body.crewRepReward) || 0);
       if (body.badgeId !== undefined) data.badgeId = body.badgeId || null;
       if (body.isRecurring !== undefined) data.isRecurring = !!body.isRecurring;
       if (body.recurSchedule !== undefined) data.recurSchedule = body.recurSchedule || null;
@@ -414,12 +414,12 @@ export default async function challengesRoutes(app: FastifyInstance, opts: Opts)
           : [];
       if (body.requireDifficultyTier !== undefined)
         data.requireDifficultyTier = body.requireDifficultyTier
-          ? parseInt(body.requireDifficultyTier)
+          ? Number.parseInt(body.requireDifficultyTier)
           : null;
       if (body.minPartySize !== undefined)
-        data.minPartySize = body.minPartySize ? parseInt(body.minPartySize) : null;
+        data.minPartySize = body.minPartySize ? Number.parseInt(body.minPartySize) : null;
       if (body.maxPartySize !== undefined)
-        data.maxPartySize = body.maxPartySize ? parseInt(body.maxPartySize) : null;
+        data.maxPartySize = body.maxPartySize ? Number.parseInt(body.maxPartySize) : null;
       if (body.status !== undefined && ["DRAFT", "ACTIVE", "ARCHIVED"].includes(body.status))
         data.status = body.status;
       if (body.objectives !== undefined) {

@@ -101,7 +101,7 @@ function parseDice(expr: string): { count: number; sides: number; modifier: numb
   if (working.includes("dis")) { dis = true; working = working.replace(/dis(advantage)?/, ""); }
   const m = working.match(/^(\d*)d(\d+)([+-]\d+)?$/);
   if (!m) return null;
-  return { count: m[1] ? parseInt(m[1]) : 1, sides: parseInt(m[2]), modifier: m[3] ? parseInt(m[3]) : 0, advantage: adv, disadvantage: dis };
+  return { count: m[1] ? Number.parseInt(m[1]) : 1, sides: Number.parseInt(m[2]), modifier: m[3] ? Number.parseInt(m[3]) : 0, advantage: adv, disadvantage: dis };
 }
 
 function rollDice(parsed: { count: number; sides: number; modifier: number; advantage?: boolean; disadvantage?: boolean }): Omit<DiceResult, "id" | "expr" | "roller" | "ts"> {
@@ -367,7 +367,7 @@ function MonsterBrowser() {
 
   if (selected) {
     const m = selected;
-    const numCr = parseFloat(m.challenge_rating) || 0;
+    const numCr = Number.parseFloat(m.challenge_rating) || 0;
     const cc = crColor(numCr);
     return (
       <div>
@@ -478,7 +478,7 @@ function MonsterBrowser() {
         <>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
             {monsters.map(m => {
-              const numCr = parseFloat(m.challenge_rating) || 0;
+              const numCr = Number.parseFloat(m.challenge_rating) || 0;
               const cc = crColor(numCr);
               const typeKey = (m.type || "").toLowerCase();
               const typeIcon = MONSTER_ICONS[typeKey];

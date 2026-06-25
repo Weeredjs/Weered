@@ -687,12 +687,12 @@ function validateAutoModConfig(kind: string, raw: any): { value?: any; error?: s
   }
   if (kind === "KARMA_MIN") {
     const min = Number(cfg.min);
-    if (!isFinite(min)) return { error: "min_required" };
+    if (!Number.isFinite(Number(min))) return { error: "min_required" };
     return { value: { min } };
   }
   if (kind === "ACCOUNT_AGE_MIN") {
     const minDays = Number(cfg.minDays);
-    if (!isFinite(minDays) || minDays < 0) return { error: "minDays_required" };
+    if (!Number.isFinite(Number(minDays)) || minDays < 0) return { error: "minDays_required" };
     return { value: { minDays } };
   }
   return { error: "unknown_kind" };

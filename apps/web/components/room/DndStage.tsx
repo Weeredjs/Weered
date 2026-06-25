@@ -99,9 +99,9 @@ function parseDice(expr: string): {
   const m = working.match(/^(\d*)d(\d+)([+-]\d+)?$/);
   if (!m) return null;
   return {
-    count: m[1] ? parseInt(m[1]) : 1,
-    sides: parseInt(m[2]),
-    modifier: m[3] ? parseInt(m[3]) : 0,
+    count: m[1] ? Number.parseInt(m[1]) : 1,
+    sides: Number.parseInt(m[2]),
+    modifier: m[3] ? Number.parseInt(m[3]) : 0,
     advantage: adv,
     disadvantage: dis,
   };
@@ -263,10 +263,10 @@ function InitiativeTracker({ roomId }: { roomId: string }) {
     const c: Combatant = {
       id: Math.random().toString(36).slice(2),
       name: addName.trim(),
-      initiative: parseInt(addInit) || Math.floor(Math.random() * 20) + 1,
-      hpCurrent: parseInt(addHp) || 10,
-      hpMax: parseInt(addHp) || 10,
-      ac: parseInt(addAc) || 10,
+      initiative: Number.parseInt(addInit) || Math.floor(Math.random() * 20) + 1,
+      hpCurrent: Number.parseInt(addHp) || 10,
+      hpMax: Number.parseInt(addHp) || 10,
+      ac: Number.parseInt(addAc) || 10,
       conditions: [],
       isNPC: addIsNpc,
     };

@@ -51,8 +51,8 @@ function formatScore(score: string | number | null | undefined): { text: string;
   if (score === null || score === undefined || score === "" || score === "—") return { text: "—", color: "rgba(255,255,255,.5)" };
   const s = String(score).trim();
   if (s === "E" || s === "0" || s === "Even") return { text: "E", color: "rgba(255,255,255,.85)" };
-  const num = parseInt(s, 10);
-  if (isNaN(num)) return { text: s, color: "rgba(255,255,255,.7)" };
+  const num = Number.parseInt(s, 10);
+  if (Number.isNaN(Number(num))) return { text: s, color: "rgba(255,255,255,.7)" };
   if (num < 0) return { text: s, color: "#ef4444" };
   return { text: `+${num}`, color: "#22c55e" };
 }
@@ -85,10 +85,10 @@ function HoleByHole({ holes, accentColor: _accentColor }: { holes: any[]; accent
     <div style={{ display: "flex", gap: 2, flexWrap: "wrap", padding: "6px 0" }}>
       {holes.map((h: any) => {
         const tp = String(h.toPar || "E");
-        const isEagle = tp.includes("-2") || parseInt(tp) <= -2;
+        const isEagle = tp.includes("-2") || Number.parseInt(tp) <= -2;
         const isBirdie = tp === "-1";
         const isBogey = tp === "+1" || tp === "1";
-        const isDouble = parseInt(tp) >= 2;
+        const isDouble = Number.parseInt(tp) >= 2;
         const bg = isEagle ? "#eab308" : isBirdie ? "#ef4444" : isBogey ? "#3b82f6" : isDouble ? "#1d4ed8" : "rgba(255,255,255,.08)";
         const border = isEagle ? "#eab30880" : isBirdie ? "#ef444460" : isBogey ? "#3b82f660" : isDouble ? "#1d4ed860" : "rgba(255,255,255,.06)";
         const shape = isEagle || isBirdie ? "50%" : "3px";
@@ -264,9 +264,9 @@ function Leaderboard({ accentColor }: { accentColor: string }) {
             <tbody>
               {players.map((p: any, i: number) => {
                 const pos = p.position || p.pos || "";
-                const posNum = parseInt(String(pos), 10);
-                const isTop3 = !isNaN(posNum) && posNum <= 3;
-                const isCutLine = !isNaN(posNum) && posNum === 65;
+                const posNum = Number.parseInt(String(pos), 10);
+                const isTop3 = !Number.isNaN(Number(posNum)) && posNum <= 3;
+                const isCutLine = !Number.isNaN(Number(posNum)) && posNum === 65;
                 const isCut = (p.status || "").toLowerCase() === "cut" || (p.status || "").toLowerCase() === "mc";
                 const scoreInfo = formatScore(p.score);
                 const rounds = p.rounds || p.roundScores || [];
@@ -407,7 +407,7 @@ function FieldIntel({ accentColor }: { accentColor: string }) {
   if (error) return <div style={{ padding: 20, textAlign: "center", fontSize: 12, color: "rgba(252,165,165,.8)" }}>{error}</div>;
 
   const enriched = field.map(p => {
-    const todayScore = p.today ? parseInt(String(p.today), 10) : NaN;
+    const todayScore = p.today ? Number.parseInt(String(p.today), 10) : NaN;
     const rounds = p.roundScores || p.rounds || [];
     return { ...p, todayNum: todayScore, rounds };
   });
@@ -415,24 +415,24 @@ function FieldIntel({ accentColor }: { accentColor: string }) {
   const sorted = [...enriched].sort((a, b) => {
     if (sort === "name") return (a.name || "").localeCompare(b.name || "");
     if (sort === "today") {
-      const at = isNaN(a.todayNum) ? 999 : a.todayNum;
-      const bt = isNaN(b.todayNum) ? 999 : b.todayNum;
+      const at = Number.isNaN(Number(a.todayNum)) ? 999 : a.todayNum;
+      const bt = Number.isNaN(Number(b.todayNum)) ? 999 : b.todayNum;
       return at - bt;
     }
-    const ap = parseInt(String(a.position), 10) || 999;
-    const bp = parseInt(String(b.position), 10) || 999;
+    const ap = Number.parseInt(String(a.position), 10) || 999;
+    const bp = Number.parseInt(String(b.position), 10) || 999;
     return ap - bp;
   });
 
-  const todayScores = enriched.filter(p => !isNaN(p.todayNum)).map(p => p.todayNum);
+  const todayScores = enriched.filter(p => !Number.isNaN(Number(p.todayNum))).map(p => p.todayNum);
   const fieldAvg = todayScores.length > 0 ? (todayScores.reduce((s, v) => s + v, 0) / todayScores.length).toFixed(1) : "—";
   const lowestRound = todayScores.length > 0 ? Math.min(...todayScores) : null;
   const underPar = todayScores.filter(s => s < 72).length;
 
   function roundCircle(score: string | number | undefined, idx: number) {
     if (!score && score !== 0) return <span key={idx} style={{ width: 10, height: 10, borderRadius: "50%", background: "rgba(255,255,255,.08)", display: "inline-block" }} />;
-    const num = typeof score === "number" ? score : parseInt(String(score), 10);
-    if (isNaN(num)) return <span key={idx} style={{ width: 10, height: 10, borderRadius: "50%", background: "rgba(255,255,255,.08)", display: "inline-block" }} />;
+    const num = typeof score === "number" ? score : Number.parseInt(String(score), 10);
+    if (Number.isNaN(Number(num))) return <span key={idx} style={{ width: 10, height: 10, borderRadius: "50%", background: "rgba(255,255,255,.08)", display: "inline-block" }} />;
     let color = "rgba(255,255,255,.15)";
     if (num < 72) color = "rgba(34,197,94,.6)";
     else if (num > 72) color = "rgba(239,68,68,.5)";
@@ -493,8 +493,8 @@ function FieldIntel({ accentColor }: { accentColor: string }) {
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         {sorted.map((p, i) => {
           const scoreInfo = formatScore(p.score);
-          const isHot = !isNaN(p.todayNum) && p.todayNum < 68;
-          const isCold = !isNaN(p.todayNum) && p.todayNum > 74;
+          const isHot = !Number.isNaN(Number(p.todayNum)) && p.todayNum < 68;
+          const isCold = !Number.isNaN(Number(p.todayNum)) && p.todayNum > 74;
 
           return (
             <div key={p.id || p.name + "-" + i} style={{
@@ -556,7 +556,7 @@ function FieldIntel({ accentColor }: { accentColor: string }) {
                 fontSize: 11, fontWeight: 600,
                 color: isHot ? "#22c55e" : isCold ? "#ef4444" : "rgba(255,255,255,.5)",
               }}>
-                {!isNaN(p.todayNum) ? p.todayNum : p.today || "—"}
+                {!Number.isNaN(Number(p.todayNum)) ? p.todayNum : p.today || "—"}
               </div>
             </div>
           );

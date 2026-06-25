@@ -315,9 +315,9 @@ function OrderEntry({ symbol, lobbyId, livePrice, mode, onTrade }: {
   const [stopLoss, setStopLoss] = useState("");
   const [takeProfit, setTakeProfit] = useState("");
 
-  const quantity = livePrice && parseFloat(usdAmount) > 0 ? parseFloat(usdAmount) / livePrice : 0;
-  const slNum = stopLoss ? parseFloat(stopLoss) : null;
-  const tpNum = takeProfit ? parseFloat(takeProfit) : null;
+  const quantity = livePrice && Number.parseFloat(usdAmount) > 0 ? Number.parseFloat(usdAmount) / livePrice : 0;
+  const slNum = stopLoss ? Number.parseFloat(stopLoss) : null;
+  const tpNum = takeProfit ? Number.parseFloat(takeProfit) : null;
   const slRisk = (slNum != null && livePrice) ? (side === "BUY" ? (livePrice - slNum) : (slNum - livePrice)) * quantity : null;
   const tpReward = (tpNum != null && livePrice) ? (side === "BUY" ? (tpNum - livePrice) : (livePrice - tpNum)) * quantity : null;
 
@@ -327,10 +327,10 @@ function OrderEntry({ symbol, lobbyId, livePrice, mode, onTrade }: {
       try {
         const r = await fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${symbol}`);
         const j = await r.json();
-        price = parseFloat(j.price);
+        price = Number.parseFloat(j.price);
       } catch {}
     }
-    const qty = price && parseFloat(usdAmount) > 0 ? parseFloat(usdAmount) / price : 0;
+    const qty = price && Number.parseFloat(usdAmount) > 0 ? Number.parseFloat(usdAmount) / price : 0;
     if (!price || qty <= 0) return;
     setLoading(true);
     setResult(null);
@@ -495,7 +495,7 @@ function OrderEntry({ symbol, lobbyId, livePrice, mode, onTrade }: {
 
       <button
         onClick={placeOrder}
-        disabled={loading || parseFloat(usdAmount) <= 0}
+        disabled={loading || Number.parseFloat(usdAmount) <= 0}
         style={{
           width: "100%", padding: "10px 0", borderRadius: 2, border: "none", cursor: "pointer",
           fontWeight: 700, fontSize: 14, letterSpacing: ".3px",
@@ -635,8 +635,8 @@ function ExitsEditor({ position, onSaved, onCancel }: {
   async function save() {
     setSaving(true); setErr("");
     const body: any = {};
-    body.stopLoss = sl === "" ? null : parseFloat(sl);
-    body.takeProfit = tp === "" ? null : parseFloat(tp);
+    body.stopLoss = sl === "" ? null : Number.parseFloat(sl);
+    body.takeProfit = tp === "" ? null : Number.parseFloat(tp);
     const j = await apiFetch(`/trading/position/${position.id}/exits`, {
       method: "PATCH",
       body: JSON.stringify(body),

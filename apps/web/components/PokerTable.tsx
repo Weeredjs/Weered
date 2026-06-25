@@ -650,7 +650,7 @@ function BuyInDialog({
             value={amount}
             onChange={(e) => {
               const v = Number(e.target.value);
-              if (!isNaN(v)) setAmount(Math.min(max, Math.max(min, v)));
+              if (!Number.isNaN(Number(v))) setAmount(Math.min(max, Math.max(min, v)));
             }}
             style={{
               flex: 1,
@@ -885,7 +885,8 @@ function ActionBar({ state, mySeat }: { state: TableState; mySeat: Seat }) {
             value={raiseAmount}
             onChange={(e) => {
               const v = Number(e.target.value);
-              if (!isNaN(v)) setRaiseAmount(Math.min(maxRaise, Math.max(minRaise, v)));
+              if (!Number.isNaN(Number(v)))
+                setRaiseAmount(Math.min(maxRaise, Math.max(minRaise, v)));
             }}
             style={{
               width: 72,

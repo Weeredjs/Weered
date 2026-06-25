@@ -323,8 +323,8 @@ export default async function windroseBuildsRoutes(app: FastifyInstance, opts: O
     const search = String(q.q || "")
       .slice(0, 60)
       .trim();
-    const limit = Math.max(1, Math.min(60, parseInt(q.limit) || 24));
-    const offset = Math.max(0, parseInt(q.offset) || 0);
+    const limit = Math.max(1, Math.min(60, Number.parseInt(q.limit) || 24));
+    const offset = Math.max(0, Number.parseInt(q.offset) || 0);
     const authorId = q.authorId ? String(q.authorId) : null;
 
     const where: any = { moderationStatus: "APPROVED" };
@@ -514,7 +514,7 @@ export default async function windroseBuildsRoutes(app: FastifyInstance, opts: O
     if (b.authorId === u.id) return reply.code(400).send({ ok: false, error: "self_vote" });
 
     const body: any = (req as any).body || {};
-    const value = Math.max(-1, Math.min(1, parseInt(body.value)));
+    const value = Math.max(-1, Math.min(1, Number.parseInt(body.value)));
     if (value === 0) {
       await prisma.windroseBuildVote.deleteMany({ where: { buildId: b.id, userId: u.id } });
     } else {

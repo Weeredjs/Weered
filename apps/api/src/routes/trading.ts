@@ -54,7 +54,7 @@ export default async function tradingRoutes(app: FastifyInstance, opts: Opts) {
     const q: any = (req as any).query || {};
     const symbol = String(q.symbol || "BTCUSDT").toUpperCase();
     const interval = String(q.interval || "1m");
-    const limit = Math.min(parseInt(q.limit) || 200, 1000);
+    const limit = Math.min(Number.parseInt(q.limit) || 200, 1000);
 
     try {
       const url = `${BINANCE_REST}/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=${limit}`;
@@ -64,11 +64,11 @@ export default async function tradingRoutes(app: FastifyInstance, opts: Opts) {
 
       const candles = data.map((c: any) => ({
         time: c[0] / 1000,
-        open: parseFloat(c[1]),
-        high: parseFloat(c[2]),
-        low: parseFloat(c[3]),
-        close: parseFloat(c[4]),
-        volume: parseFloat(c[5]),
+        open: Number.parseFloat(c[1]),
+        high: Number.parseFloat(c[2]),
+        low: Number.parseFloat(c[3]),
+        close: Number.parseFloat(c[4]),
+        volume: Number.parseFloat(c[5]),
       }));
       return reply.send({ ok: true, candles });
     } catch (e) {
@@ -220,15 +220,15 @@ export default async function tradingRoutes(app: FastifyInstance, opts: Opts) {
       const symbol = String(body.symbol || "").toUpperCase();
       const side: string = String(body.side || "").toUpperCase();
       const orderType = String(body.orderType || "MARKET").toUpperCase();
-      const quantity = parseFloat(body.quantity);
-      const limitPrice = body.price ? parseFloat(body.price) : null;
+      const quantity = Number.parseFloat(body.quantity);
+      const limitPrice = body.price ? Number.parseFloat(body.price) : null;
       const rawStopLoss =
         body.stopLoss !== undefined && body.stopLoss !== null && body.stopLoss !== ""
-          ? parseFloat(body.stopLoss)
+          ? Number.parseFloat(body.stopLoss)
           : null;
       const rawTakeProfit =
         body.takeProfit !== undefined && body.takeProfit !== null && body.takeProfit !== ""
-          ? parseFloat(body.takeProfit)
+          ? Number.parseFloat(body.takeProfit)
           : null;
       const stopLoss =
         rawStopLoss !== null && Number.isFinite(rawStopLoss) && rawStopLoss > 0
@@ -701,7 +701,7 @@ export default async function tradingRoutes(app: FastifyInstance, opts: Opts) {
       if (body.stopLoss === null || body.stopLoss === "") {
         data.stopLoss = null;
       } else {
-        const sl = parseFloat(body.stopLoss);
+        const sl = Number.parseFloat(body.stopLoss);
         if (!Number.isFinite(sl) || sl <= 0)
           return reply.code(400).send({ ok: false, error: "invalid_stopLoss" });
         if (pos.side === "BUY" && sl >= pos.entryPrice)
@@ -723,7 +723,7 @@ export default async function tradingRoutes(app: FastifyInstance, opts: Opts) {
       if (body.takeProfit === null || body.takeProfit === "") {
         data.takeProfit = null;
       } else {
-        const tp = parseFloat(body.takeProfit);
+        const tp = Number.parseFloat(body.takeProfit);
         if (!Number.isFinite(tp) || tp <= 0)
           return reply.code(400).send({ ok: false, error: "invalid_takeProfit" });
         if (pos.side === "BUY" && tp <= pos.entryPrice)
@@ -971,7 +971,7 @@ export default async function tradingRoutes(app: FastifyInstance, opts: Opts) {
         lobbyId,
         name: String(body.name || "Trading Competition").slice(0, 100),
         description: String(body.description || "").slice(0, 500),
-        startBalance: parseFloat(body.startBalance) || 100000,
+        startBalance: Number.parseFloat(body.startBalance) || 100000,
         startTime: new Date(body.startTime || Date.now()),
         endTime: new Date(body.endTime),
         status: new Date(body.startTime || Date.now()) <= new Date() ? "ACTIVE" : "UPCOMING",

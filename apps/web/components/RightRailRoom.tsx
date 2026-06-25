@@ -485,7 +485,7 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
                 <div style={{ marginTop: 8 }}>
                   <div style={{ ...s.label, marginBottom: 4 }}>Slow mode</div>
                   <div style={{ display: "flex", gap: 6 }}>
-                    <select style={s.select} value={String(slowSec)} onChange={e => setSlowSec(parseInt(e.target.value || "0", 10))}>
+                    <select style={s.select} value={String(slowSec)} onChange={e => setSlowSec(Number.parseInt(e.target.value || "0", 10))}>
                       <option value="0">Off</option><option value="5">5s</option><option value="10">10s</option><option value="30">30s</option><option value="60">60s</option>
                     </select>
                     <button style={s.btn} onClick={() => setSlowSec(0)}>Off</button>

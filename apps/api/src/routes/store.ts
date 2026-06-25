@@ -340,7 +340,7 @@ export default async function storeRoutes(app: FastifyInstance, opts: Opts) {
       const body: any = (req as any).body || {};
 
       const userItemId = String(body.userItemId || "");
-      const price = parseInt(body.price);
+      const price = Number.parseInt(body.price);
       if (!userItemId || !price || price < 1)
         return reply.code(400).send({ ok: false, error: "invalid_params" });
 
