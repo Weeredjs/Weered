@@ -33,9 +33,19 @@ export default async function invitesRoutes(app: FastifyInstance, opts: Opts) {
       const note = body.note ? String(body.note).slice(0, 200) : null;
       const ttlHours = Number(body.ttlHours) || 0;
       const expiresAt = ttlHours > 0 ? new Date(Date.now() + ttlHours * 3600 * 1000) : null;
-      const validTypes = ["PLATFORM", "ROOM", "LOBBY", "CREW"];
+      const validTypes = ["PLATFORM", "ROOM", "LOBBY", "CREW", "GUEST"];
       if (!validTypes.includes(type))
         return reply.code(400).send({ ok: false, error: "invalid_type" });
+      if (type === "GUEST") {
+        if (!targetId) return reply.code(400).send({ ok: false, error: "missing_target" });
+        const lob = await prisma.lobby.findUnique({
+          where: { id: targetId },
+          select: { ownerId: true },
+        });
+        if (!lob || lob.ownerId !== u.id) {
+          return reply.code(403).send({ ok: false, error: "not_lobby_owner" });
+        }
+      }
       const invite = await prisma.invite.create({
         data: { type: type as any, targetId, createdBy: u.id, note, maxUses, expiresAt },
       });
@@ -187,6 +197,19 @@ export default async function invitesRoutes(app: FastifyInstance, opts: Opts) {
       const type = String(body.type || "PLATFORM").toUpperCase();
       const targetId = body.targetId ? String(body.targetId) : null;
       if (!username) return reply.code(400).send({ ok: false, error: "username_required" });
+      const validTypes = ["PLATFORM", "ROOM", "LOBBY", "CREW", "GUEST"];
+      if (!validTypes.includes(type))
+        return reply.code(400).send({ ok: false, error: "invalid_type" });
+      if (type === "GUEST") {
+        if (!targetId) return reply.code(400).send({ ok: false, error: "missing_target" });
+        const lob = await prisma.lobby.findUnique({
+          where: { id: targetId },
+          select: { ownerId: true },
+        });
+        if (!lob || lob.ownerId !== u.id) {
+          return reply.code(403).send({ ok: false, error: "not_lobby_owner" });
+        }
+      }
       const target = await prisma.user.findFirst({
         where: {
           OR: [{ usernameKey: username }, { name: { equals: username, mode: "insensitive" } }],

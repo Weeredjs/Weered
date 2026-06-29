@@ -31,6 +31,14 @@ export async function handlePresence(ws: any, msg: any, opts: Opts): Promise<voi
     leaveRoom,
   } = opts;
 
+  if (
+    (ws.user as any)?.guest &&
+    (msg.type === "rooms:list" || msg.type === "lobby:rooms" || msg.type === "room:list")
+  ) {
+    send(ws, { type: msg.type, rooms: [], lobbies: [] });
+    return;
+  }
+
   if (msg.type === "rooms:list" || msg.type === "lobby:rooms" || msg.type === "room:list") {
     const [lobbyList, roomList] = await Promise.all([
       prisma.lobby.findMany({
@@ -74,7 +82,7 @@ export async function handlePresence(ws: any, msg: any, opts: Opts): Promise<voi
       locked: false,
     }));
     const roomOut = roomList
-      .filter((r) => !r.id.includes("%") && !lobbyIds.has(r.id))
+      .filter((r) => !r.id.includes("%") && !lobbyIds.has(r.id) && !r.id.startsWith("mtg-"))
       .map((r: any) => ({
         id: r.id,
         roomId: r.id,
@@ -95,6 +103,20 @@ export async function handlePresence(ws: any, msg: any, opts: Opts): Promise<voi
   if (msg.type === "presence:join") {
     const roomId = normalizeRoomId(String(msg.roomId || ""));
     if (!roomId) return;
+    {
+      const _u = ws.user as any;
+      if (_u?.guest || _u?.host) {
+        const office = String(_u.scope?.office || "");
+        const inScope = office && (roomId === office || roomId.startsWith(office + "-"));
+        if (!inScope) {
+          send(ws, { type: "room:denied", roomId, reason: "out_of_scope" });
+          return;
+        }
+      } else if (roomId.startsWith("mtg-")) {
+        send(ws, { type: "room:denied", roomId, reason: "private_meeting" });
+        return;
+      }
+    }
     const room = await ensureRoomLoaded(roomId);
     if (room.banned.has(ws.user.id)) {
       send(ws, { type: "room:banned", roomId });

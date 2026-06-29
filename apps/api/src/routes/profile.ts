@@ -71,6 +71,7 @@ export default async function profileRoutes(app: FastifyInstance, opts: Opts) {
           : { OR: [{ usernameKey: userId.toLowerCase() }, { name: userId }] },
         select: {
           id: true,
+          isGuest: true,
           name: true,
           bio: true,
           statusText: true,
@@ -94,6 +95,7 @@ export default async function profileRoutes(app: FastifyInstance, opts: Opts) {
       });
 
       if (!u) return reply.code(404).send({ error: "User not found" });
+      if ((u as any).isGuest) return reply.code(404).send({ error: "User not found" });
 
       const roomsHosted = await prisma.room.count({ where: { ownerId: u.id } });
 

@@ -360,11 +360,19 @@ function removeKnock(room: RoomState, userId: string) {
 function verifyToken(token?: string): AuthedUser | null {
   if (!token) return null;
   try {
-    const decoded: any = jwt.verify(token, JWT_SECRET);
+    const decoded: any = jwt.verify(token, JWT_SECRET, { algorithms: ["HS256"] });
     const id = String(decoded?.sub || decoded?.id || "");
     const name = String(decoded?.name || decoded?.username || "");
     if (!id || !name) return null;
-    return { id, name };
+    const out: AuthedUser = { id, name };
+    if (decoded?.guest) {
+      (out as any).guest = true;
+      (out as any).scope = decoded?.scope ?? null;
+    } else if (decoded?.host) {
+      (out as any).host = true;
+      (out as any).scope = decoded?.scope ?? null;
+    }
+    return out;
   } catch {
     return null;
   }
@@ -427,7 +435,22 @@ async function doJoin(ws: Sock, roomId: string) {
   const room = await ensureRoomLoaded(roomId);
   if (roomId === "lobby" && !room.name) room.name = "Home Lobby";
 
-  if (!room.ownerId && ws.user) {
+  {
+    const _u = ws.user as any;
+    if (_u?.guest || _u?.host) {
+      const office = String(_u.scope?.office || "");
+      const inScope = office && (roomId === office || roomId.startsWith(office + "-"));
+      if (!inScope) {
+        send(ws, { type: "room:denied", roomId, reason: "out_of_scope" });
+        return false;
+      }
+    } else if (roomId.startsWith("mtg-")) {
+      send(ws, { type: "room:denied", roomId, reason: "private_meeting" });
+      return false;
+    }
+  }
+
+  if (!room.ownerId && ws.user && !(ws.user as any).guest) {
     room.ownerId = ws.user.id;
     if (room.roomId !== "lobby") {
       await prisma.room.update({ where: { id: room.roomId }, data: { ownerId: room.ownerId } });
@@ -455,6 +478,7 @@ async function doJoin(ws: Sock, roomId: string) {
     const userEntry = {
       id: ws.user.id,
       name: ws.user.name,
+      isGuest: Boolean((ws.user as any).guest),
       usernameKey: (ws.user as any).usernameKey ?? undefined,
       globalRole: ws.user.globalRole || "USER",
       tier: ws.user.tier || "INNOCENT",
@@ -476,7 +500,7 @@ async function doJoin(ws: Sock, roomId: string) {
     broadcast(room, { type: "presence:join", roomId, user: userEntry });
   }
 
-  if (ws.user) {
+  if (ws.user && !(ws.user as any).guest) {
     try {
       await persistMember(room, ws.user);
     } catch (e) {
@@ -484,11 +508,11 @@ async function doJoin(ws: Sock, roomId: string) {
     }
   }
 
-  if (ws.user) awardNotoriety(ws.user.id, "ROOM_JOINED").catch(swallow);
+  if (ws.user && !(ws.user as any).guest) awardNotoriety(ws.user.id, "ROOM_JOINED").catch(swallow);
 
   publishStateToSocket(ws, room);
 
-  if (room.msgs.length) {
+  if (room.msgs.length && !(ws.user as any)?.guest) {
     send(ws, { type: "chat:history", roomId, msgs: room.msgs.slice(-80) });
   }
 
@@ -513,6 +537,42 @@ async function main() {
     if (!req.headers.authorization) {
       const c = readCookieToken(req);
       if (c) req.headers.authorization = "Bearer " + c;
+    }
+  });
+
+  // Guest deny-by-default: a guest token is valid ONLY on this tiny allowlist; every
+  // other HTTP route returns 403. Also enforces revocation -- a deleted/expired/banned
+  // guest row kills all its live tokens immediately.
+  const GUEST_ALLOWED_PATHS = new Set(["/auth/ws-ticket", "/auth/logout", "/voice/token"]);
+  app.addHook("onRequest", async (req: any, reply: any) => {
+    const a = req.headers.authorization;
+    if (!a) return;
+    let decoded: any = null;
+    try {
+      decoded = jwt.verify(String(a).replace(/^Bearer\s+/i, ""), JWT_SECRET, {
+        algorithms: ["HS256"],
+      });
+    } catch {
+      return;
+    }
+    if (!decoded?.guest) return;
+    const path = String(req.url || "").split("?")[0];
+    if (!GUEST_ALLOWED_PATHS.has(path)) {
+      return reply.code(403).send({ ok: false, error: "guest_forbidden" });
+    }
+    const gu = await prisma.user
+      .findUnique({
+        where: { id: String(decoded.sub || "") },
+        select: { isGuest: true, banned: true, guestExpiresAt: true },
+      })
+      .catch(() => null);
+    if (
+      !gu ||
+      !gu.isGuest ||
+      gu.banned ||
+      (gu.guestExpiresAt && gu.guestExpiresAt.getTime() < Date.now())
+    ) {
+      return reply.code(401).send({ ok: false, error: "guest_revoked" });
     }
   });
 
@@ -1138,6 +1198,28 @@ async function main() {
   runNewsWorker();
   setInterval(runNewsWorker, 15 * 60 * 1000);
 
+  // Ephemeral guest cleanup: drop expired guest users (and their room memberships) hourly.
+  setInterval(
+    () => {
+      void (async () => {
+        try {
+          const expired = await prisma.user.findMany({
+            where: { isGuest: true, guestExpiresAt: { lt: new Date() } },
+            select: { id: true },
+          });
+          if (!expired.length) return;
+          const ids = expired.map((g) => g.id);
+          await prisma.roomMember.deleteMany({ where: { userId: { in: ids } } });
+          await prisma.notorietyEvent.deleteMany({ where: { userId: { in: ids } } });
+          await prisma.user.deleteMany({ where: { id: { in: ids } } });
+        } catch (e) {
+          swallow(e);
+        }
+      })();
+    },
+    60 * 60 * 1000,
+  );
+
   await seedLobbies();
 
   await app.register(modsRoutes, { verifyToken });
@@ -1150,6 +1232,39 @@ async function main() {
   setPresenceWss(wss);
   startPresencePolling();
   app.log.info(`WS listening on ws://127.0.0.1:${WS_PORT}`);
+
+  // Guest liveness sweep (60s): WS path mirrors the HTTP revocation hook, so a
+  // banned/expired/deleted guest's live socket is severed promptly, not just on HTTP.
+  setInterval(() => {
+    void (async () => {
+      try {
+        const guestSockets = [...wss.clients].filter((c: any) => c.user?.guest && c.user?.id);
+        if (!guestSockets.length) return;
+        const ids = [...new Set(guestSockets.map((c: any) => c.user.id as string))];
+        const live = await prisma.user.findMany({
+          where: {
+            id: { in: ids },
+            isGuest: true,
+            banned: false,
+            guestExpiresAt: { gt: new Date() },
+          },
+          select: { id: true },
+        });
+        const liveSet = new Set(live.map((u) => u.id));
+        for (const c of guestSockets) {
+          if (!liveSet.has((c as any).user.id)) {
+            try {
+              (c as any).close(4001, "guest_revoked");
+            } catch (e) {
+              swallow(e);
+            }
+          }
+        }
+      } catch (e) {
+        swallow(e);
+      }
+    })();
+  }, 60 * 1000);
 
   // 30s heartbeat: ping every client, terminate any that didn't pong since the
   // previous tick. Reaps stale half-open sockets that otherwise tax all the
@@ -1202,6 +1317,25 @@ async function main() {
         if (!ws.user) {
           send(ws, { type: "auth:fail", reason: "Not authenticated" });
           return;
+        }
+
+        if ((ws.user as any).guest) {
+          const gt = msg.type as string;
+          const guestAllowed =
+            gt === "presence:join" ||
+            gt === "presence:idle" ||
+            gt === "presence:leave" ||
+            gt === "rooms:list" ||
+            gt === "lobby:rooms" ||
+            gt === "room:list" ||
+            gt.startsWith("chat:") ||
+            gt.startsWith("voice:") ||
+            gt === "reaction:toggle";
+          if (!guestAllowed) return;
+          if (gt.startsWith("chat:") || gt.startsWith("voice:") || gt === "reaction:toggle") {
+            if (!ws.roomId) return;
+            if (msg.roomId && normalizeRoomId(String(msg.roomId)) !== ws.roomId) return;
+          }
         }
 
         if (

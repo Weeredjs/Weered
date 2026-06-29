@@ -41,6 +41,16 @@ export default async function voiceRoutes(app: FastifyInstance, opts: Opts) {
 
       const cleaned = roomIdRaw.startsWith("room:") ? roomIdRaw.slice(5) : roomIdRaw;
       const lookup = normalizeRoomId(cleaned);
+      {
+        const _u = u as any;
+        if (_u.guest || _u.host) {
+          const office = String(_u.scope?.office || "");
+          const inScope = office && (lookup === office || lookup.startsWith(office + "-"));
+          if (!inScope) return reply.code(403).send({ ok: false, error: "out_of_scope" });
+        } else if (lookup.startsWith("mtg-")) {
+          return reply.code(403).send({ ok: false, error: "private_meeting" });
+        }
+      }
       let canPublish = true;
       try {
         const room = lookup
@@ -68,13 +78,13 @@ export default async function voiceRoutes(app: FastifyInstance, opts: Opts) {
       });
       at.addGrant({
         roomJoin: true,
-        room: roomIdRaw,
+        room: lookup,
         canPublish,
         canSubscribe: true,
         canPublishData: true,
       });
       const token = await at.toJwt();
-      awardNotoriety(u.id, "VOICE_JOINED").catch(swallow);
+      if (!(u as any).guest) awardNotoriety(u.id, "VOICE_JOINED").catch(swallow);
       return reply.send({ ok: true, url: LIVEKIT_URL, token, canPublish });
     },
   );

@@ -437,6 +437,8 @@ model User {
   tier        UserTier   @default(INNOCENT)
   globalRole        GlobalRole @default(USER)
   onboardingComplete Boolean    @default(false)
+  isGuest        Boolean   @default(false)
+  guestExpiresAt DateTime?
 
   // Global ban — staff-imposed platform-wide ban
   banned      Boolean    @default(false)
@@ -1014,6 +1016,7 @@ enum InviteType {
   ROOM
   LOBBY
   CREW
+  GUEST
 }
 
 model Invite {

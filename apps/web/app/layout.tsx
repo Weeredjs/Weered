@@ -46,23 +46,7 @@ const sairaStencil = Saira_Stencil_One({
   display: "swap",
   preload: true,
 });
-import { WeeredProvider } from "../components/WeeredProvider";
-import OverlayProvider from "../components/overlays/OverlayProvider";
-import OverlayHost from "../components/overlays/OverlayHost";
-import LeftRail from "../components/LeftRail";
-import RightRailSwitch from "../components/RightRailSwitch";
-import DockDrawer from "../components/DockDrawer";
-import ShellGate from "../components/ShellGate";
-import ThemeRestore from "../components/ThemeRestore";
-import DesktopTitleBar from "../components/DesktopTitleBar";
-import LobbyBrowser from "../components/LobbyBrowser";
-import ServiceWorkerRegister from "../components/ServiceWorkerRegister";
-import PushPrompt from "../components/PushPrompt";
-import UnreadIndicator from "../components/UnreadIndicator";
-import InstallPrompt from "../components/InstallPrompt";
-import KeyboardShortcuts from "../components/KeyboardShortcuts";
-import CookieConsent from "../components/CookieConsent";
-import BugReportButton from "../components/BugReportButton";
+import RootFrame from "../components/RootFrame";
 
 export const metadata = {
   title: {
@@ -135,60 +119,6 @@ export const viewport = {
   initialScale: 1,
 };
 
-const jsonLd = {
-  "@context": "https://schema.org",
-  "@type": "WebApplication",
-  name: "Weered",
-  url: "https://weered.ca",
-  description:
-    "Real-time community platform with lobbies, rooms, presence, and gaming integrations.",
-  applicationCategory: "SocialNetworkingApplication",
-  operatingSystem: "Web",
-  offers: {
-    "@type": "AggregateOffer",
-    lowPrice: "0",
-    highPrice: "14",
-    priceCurrency: "USD",
-    offerCount: 3,
-  },
-  creator: {
-    "@type": "Organization",
-    name: "Weered",
-    url: "https://weered.ca",
-    logo: "https://weered.ca/brand/logo/weered-logo-512.png",
-  },
-};
-
-const orgJsonLd = {
-  "@context": "https://schema.org",
-  "@type": "Organization",
-  name: "Weered",
-  url: "https://weered.ca",
-  logo: "https://weered.ca/brand/logo/weered-logo-512.png",
-  description:
-    "Weered is a real-time community platform for gaming and beyond: lobbies, rooms, presence, and modules.",
-  foundingDate: "2024",
-  sameAs: ["https://twitter.com/weered", "https://www.reddit.com/r/weered"],
-  contactPoint: {
-    "@type": "ContactPoint",
-    contactType: "customer support",
-    email: "support@weered.ca",
-    url: "https://weered.ca/contact",
-  },
-};
-
-const websiteJsonLd = {
-  "@context": "https://schema.org",
-  "@type": "WebSite",
-  name: "Weered",
-  url: "https://weered.ca",
-  potentialAction: {
-    "@type": "SearchAction",
-    target: "https://weered.ca/lobby?q={search_term_string}",
-    "query-input": "required name=search_term_string",
-  },
-};
-
 const themeBootScript = `
 try {
   var d = document.documentElement;
@@ -252,41 +182,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body>
-        <DesktopTitleBar />
-        <ThemeRestore />
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-        />
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(orgJsonLd) }}
-        />
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }}
-        />
-        <OverlayProvider>
-          <WeeredProvider>
-            <ShellGate left={<LeftRail />} right={<RightRailSwitch />}>
-              {children}
-            </ShellGate>
-            <DockDrawer />
-            <LobbyBrowser />
-            <OverlayHost />
-            <ServiceWorkerRegister />
-            <PushPrompt />
-            <UnreadIndicator />
-            <InstallPrompt />
-            <KeyboardShortcuts />
-            <CookieConsent />
-            <BugReportButton />
-            <div className="weered-trademark-footer">
-              Game names, logos, and trademarks are the property of their respective owners. Weered
-              is not affiliated with or endorsed by any game publisher or platform.
-            </div>
-          </WeeredProvider>
-        </OverlayProvider>
+        <RootFrame>{children}</RootFrame>
       </body>
     </html>
   );

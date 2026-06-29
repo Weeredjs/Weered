@@ -30,6 +30,54 @@ export async function handleAuthHello(
       send(ws, { type: "auth:fail", reason: "Invalid token" });
       return;
     }
+    if ((u as any).guest) {
+      const gu = await prisma.user
+        .findUnique({
+          where: { id: u.id },
+          select: { isGuest: true, banned: true, guestExpiresAt: true },
+        })
+        .catch(() => null);
+      if (
+        !gu ||
+        !gu.isGuest ||
+        gu.banned ||
+        (gu.guestExpiresAt && gu.guestExpiresAt.getTime() < Date.now())
+      ) {
+        send(ws, { type: "auth:fail", reason: "Guest session ended." });
+        try {
+          ws.close(4001, "guest_revoked");
+        } catch (e) {
+          swallow(e);
+        }
+        return;
+      }
+      ws.user = { ...u, globalRole: "USER", tier: "INNOCENT" } as any;
+      send(ws, {
+        type: "auth:ok",
+        user: {
+          id: ws.user.id,
+          name: ws.user.name,
+          globalRole: "USER",
+          tier: "INNOCENT",
+          isGuest: true,
+        },
+      });
+      return;
+    }
+    if ((u as any).host) {
+      ws.user = { ...u, globalRole: "USER", tier: "INNOCENT" } as any;
+      send(ws, {
+        type: "auth:ok",
+        user: {
+          id: ws.user.id,
+          name: ws.user.name,
+          globalRole: "USER",
+          tier: "INNOCENT",
+          isHost: true,
+        },
+      });
+      return;
+    }
     ws.user = await hydrateGlobalRole(u);
     if (await isGloballyBanned(ws.user.id)) {
       send(ws, { type: "auth:fail", reason: "Your account has been suspended." });

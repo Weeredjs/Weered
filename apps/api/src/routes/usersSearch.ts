@@ -13,6 +13,7 @@ export default async function usersSearchRoutes(app: FastifyInstance) {
           { usernameKey: { contains: q.toLowerCase() } },
         ],
         banned: false,
+        isGuest: false,
       },
       select: {
         id: true,

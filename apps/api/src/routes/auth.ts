@@ -351,11 +351,80 @@ export default async function authRoutes(app: FastifyInstance, opts: Opts) {
   app.get("/auth/ws-ticket", async (req, reply) => {
     const u = authFromHeader((req.headers as any).authorization);
     if (!u) return reply.code(401).send({ ok: false });
+    const claims: any = { sub: u.id, name: u.name };
+    if ((u as any).guest) {
+      claims.guest = true;
+      claims.scope = (u as any).scope ?? null;
+    } else if ((u as any).host) {
+      claims.host = true;
+      claims.scope = (u as any).scope ?? null;
+    }
     return reply.send({
       ok: true,
-      ticket: jwt.sign({ sub: u.id, name: u.name }, JWT_SECRET, { expiresIn: "60s" }),
+      ticket: jwt.sign(claims, JWT_SECRET, { expiresIn: "60s" }),
     });
   });
+
+  // Frictionless guest join: validate a GUEST invite -> ephemeral scoped user -> short-lived
+  // token bound to ONE lobby. Never sets the account cookie; token returned in body only
+  // (white-label client stores it in sessionStorage + sends as Authorization header).
+  app.post(
+    "/auth/guest",
+    { config: { rateLimit: { max: 50, timeWindow: "1 hour" } } },
+    async (req, reply) => {
+      const body: any = (req as any).body || {};
+      const inviteToken = String(body.inviteToken || body.invite || "").trim();
+      const rawName = String(body.name || "")
+        .trim()
+        .slice(0, 40);
+      if (!inviteToken) return reply.code(400).send({ ok: false, error: "missing_invite" });
+
+      const invite = await prisma.invite.findUnique({ where: { token: inviteToken } });
+      if (!invite || invite.type !== "GUEST" || !invite.targetId) {
+        return reply.code(404).send({ ok: false, error: "invalid_invite" });
+      }
+      if (invite.expiresAt && invite.expiresAt.getTime() < Date.now()) {
+        return reply.code(410).send({ ok: false, error: "expired" });
+      }
+      const consumed = await prisma.invite.updateMany({
+        where:
+          invite.maxUses > 0
+            ? { token: inviteToken, uses: { lt: invite.maxUses } }
+            : { token: inviteToken },
+        data: { uses: { increment: 1 } },
+      });
+      if (consumed.count !== 1) {
+        return reply.code(409).send({ ok: false, error: "used_up" });
+      }
+
+      const name = rawName || `Guest-${Math.floor(1000 + Math.random() * 9000)}`;
+      const guestId = `guest_${randomBytes(12).toString("hex")}`;
+      // ephemeral user + token live no longer than the invite window, capped at 4h.
+      const cap = Date.now() + 90 * 60 * 1000;
+      const expMs = invite.expiresAt ? Math.min(invite.expiresAt.getTime(), cap) : cap;
+      const ttlSec = Math.max(60, Math.floor((expMs - Date.now()) / 1000));
+
+      const user = await prisma.user.create({
+        data: { usernameKey: guestId, name, isGuest: true, guestExpiresAt: new Date(expMs) },
+        select: { id: true, name: true },
+      });
+
+      const office = invite.targetId;
+      // office = a room-prefix namespace (e.g. "mtg-eceb"); foyer is the open waiting room.
+      // lobbyId kept = foyer for back-compat with the current single-room foyer page.
+      const scope = { office, foyer: `${office}-foyer`, lobbyId: `${office}-foyer` };
+      const token = jwt.sign({ sub: user.id, name: user.name, guest: true, scope }, JWT_SECRET, {
+        expiresIn: ttlSec,
+      });
+      return reply.send({
+        ok: true,
+        token,
+        scope,
+        expiresIn: ttlSec,
+        user: { id: user.id, name: user.name },
+      });
+    },
+  );
   app.post("/auth/logout", async (_req, reply) => {
     clearAuthCookie(reply);
     return reply.send({ ok: true });

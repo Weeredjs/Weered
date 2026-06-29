@@ -912,6 +912,7 @@ export async function handleReactionToggle(
     if (!rId || !msgId || !emoji) return;
     const room = await ensureRoomLoaded(rId);
     if (room.banned.has(ws.user.id)) return;
+    if (!room.users.has(ws.user.id)) return;
     const target = room.msgs.find((m: any) => m.id === msgId);
     if (!target || target.deletedAt) return;
 

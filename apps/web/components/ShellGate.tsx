@@ -42,6 +42,7 @@ function LeftRailScroll({ children }: { children: React.ReactNode }) {
 
 const NO_SHELL_ROUTES = [
   "/",
+  "/foyer",
   "/login",
   "/register",
   "/staff",

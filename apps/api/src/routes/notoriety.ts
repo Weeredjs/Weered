@@ -51,6 +51,7 @@ export default async function notorietyRoutes(app: FastifyInstance, opts: Opts) 
   app.get("/notoriety/leaderboard", async (req, reply) => {
     const limit = Math.min(Number((req as any).query?.limit || 25), 50);
     const leaders = await prisma.user.findMany({
+      where: { isGuest: false, banned: false },
       orderBy: { notoriety: "desc" },
       take: limit,
       select: {
