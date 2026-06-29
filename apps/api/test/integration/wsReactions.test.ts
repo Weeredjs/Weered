@@ -6,8 +6,13 @@ import { prisma } from "../../src/lib/prisma";
 // in the integration suite so prisma.reaction toggles hit the test DB.
 let broadcasts: any[];
 let sent: any[];
-function mkRoom(roomId: string, msgId: string) {
-  return { roomId, banned: new Set<string>(), msgs: [{ id: msgId }] as any[] };
+function mkRoom(roomId: string, msgId: string, uid: string) {
+  return {
+    roomId,
+    banned: new Set<string>(),
+    users: new Set<string>([uid]),
+    msgs: [{ id: msgId }] as any[],
+  };
 }
 function mkOpts(room: any) {
   broadcasts = [];
@@ -49,7 +54,7 @@ describe("ws handleReactionToggle - emoji reactions (DB-backed)", () => {
     const uid = await newUser();
     const msgId = "rxmsg_" + Math.floor(Math.random() * 1e9);
     msgIds.push(msgId);
-    const room = mkRoom("r1", msgId);
+    const room = mkRoom("r1", msgId, uid);
     const ws = { user: { id: uid, name: "rx" } };
 
     await handleReactionToggle(
@@ -78,7 +83,7 @@ describe("ws handleReactionToggle - emoji reactions (DB-backed)", () => {
     msgIds.push(msgId);
     const ws = { user: { id: uid, name: "rx" } };
 
-    const banned = mkRoom("r1", msgId);
+    const banned = mkRoom("r1", msgId, uid);
     banned.banned.add(uid);
     await handleReactionToggle(
       ws,
@@ -88,7 +93,12 @@ describe("ws handleReactionToggle - emoji reactions (DB-backed)", () => {
     expect(await prisma.reaction.count({ where: { targetId: msgId } })).toBe(0);
 
     // target message not in the room
-    const empty = { roomId: "r1", banned: new Set<string>(), msgs: [] as any[] };
+    const empty = {
+      roomId: "r1",
+      banned: new Set<string>(),
+      users: new Set<string>([uid]),
+      msgs: [] as any[],
+    };
     await handleReactionToggle(
       ws,
       { type: "reaction:toggle", roomId: "r1", msgId, emoji: "👍" },
