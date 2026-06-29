@@ -397,7 +397,7 @@ export default async function authRoutes(app: FastifyInstance, opts: Opts) {
         return reply.code(409).send({ ok: false, error: "used_up" });
       }
 
-      const name = rawName || `Guest-${Math.floor(1000 + Math.random() * 9000)}`;
+      const name = rawName || `Guest-${1000 + (randomBytes(2).readUInt16BE(0) % 9000)}`;
       const guestId = `guest_${randomBytes(12).toString("hex")}`;
       // ephemeral user + token live no longer than the invite window, capped at 4h.
       const cap = Date.now() + 90 * 60 * 1000;
