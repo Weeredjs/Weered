@@ -53,10 +53,13 @@ let _connSeq = 0;
 function makeRoomConn(opts: {
   getToken: () => string;
   tilesEl: () => HTMLDivElement | null;
+  screenEl: () => HTMLDivElement | null; // large featured container for a screen-share
   selfLabel: () => string;
   onRoster: () => void;
   // unexpected disconnect of the CURRENTLY-active room (not an intentional teardown)
   onDropped: () => void;
+  // local screen-share ended (incl. the browser's native "Stop sharing")
+  onLocalScreenEnd: () => void;
   leavingRef: { current: boolean };
 }) {
   const ref: { current: Room | null } = { current: null };
@@ -88,6 +91,31 @@ function makeRoomConn(opts: {
       ?.remove();
   }
 
+  // A screen-share renders LARGE (the focus of a consult), not as a grid tile.
+  // Only one screen at a time — a new share replaces the old.
+  function setScreenVideo(video: HTMLVideoElement, label: string) {
+    const host = opts.screenEl();
+    if (!host) return;
+    host.innerHTML = "";
+    video.autoplay = true;
+    video.playsInline = true;
+    video.style.cssText =
+      "width:100%;max-height:62vh;object-fit:contain;background:#000;border-radius:10px;display:block";
+    const wrap = document.createElement("div");
+    wrap.style.cssText = "position:relative";
+    const tag = document.createElement("div");
+    tag.textContent = label;
+    tag.style.cssText =
+      "position:absolute;left:8px;top:8px;font:600 12px sans-serif;color:#fff;background:rgba(0,0,0,.6);padding:2px 8px;border-radius:6px";
+    wrap.appendChild(video);
+    wrap.appendChild(tag);
+    host.appendChild(wrap);
+  }
+  function clearScreen() {
+    const host = opts.screenEl();
+    if (host) host.innerHTML = "";
+  }
+
   // Detach old listeners and disconnect the given room without touching ref/media.
   function teardownRoom(r: Room | null) {
     if (!r) return;
@@ -96,11 +124,8 @@ function makeRoomConn(opts: {
     } catch {
       /* noop */
     }
-    try {
-      r.disconnect();
-    } catch {
-      /* noop */
-    }
+    // disconnect() is async; fire-and-forget with its own rejection handler (teardown is best-effort)
+    void r.disconnect().catch(() => {});
   }
 
   // returns the real mic state after connect (false if mic was denied/absent)
@@ -117,7 +142,7 @@ function makeRoomConn(opts: {
 
     // Every handler captures its own `r` and ignores events once this room is no
     // longer the active one — livekit emits trailing events AFTER disconnect().
-    r.on(RoomEvent.TrackSubscribed, (track, _pub, participant) => {
+    r.on(RoomEvent.TrackSubscribed, (track, pub, participant) => {
       if (ref.current !== r) return;
       const el = track.attach();
       if (track.kind === Track.Kind.Audio) {
@@ -129,15 +154,18 @@ function makeRoomConn(opts: {
         a.setAttribute("data-lk-conn", connId);
         document.body.appendChild(a);
         a.play?.().catch(() => {});
+      } else if (pub?.source === Track.Source.ScreenShare) {
+        setScreenVideo(el as HTMLVideoElement, `${participant.name || "Guest"} — screen`);
       } else if (track.kind === Track.Kind.Video) {
         addTile(participant.identity, participant.name || "Guest", el as HTMLVideoElement);
       }
       opts.onRoster();
     });
-    r.on(RoomEvent.TrackUnsubscribed, (track, _pub, participant) => {
+    r.on(RoomEvent.TrackUnsubscribed, (track, pub, participant) => {
       track.detach().forEach((e) => e.remove());
       if (ref.current !== r) return;
-      if (track.kind === Track.Kind.Video) removeTile(participant.identity);
+      if (pub?.source === Track.Source.ScreenShare) clearScreen();
+      else if (track.kind === Track.Kind.Video) removeTile(participant.identity);
       opts.onRoster();
     });
     r.on(RoomEvent.ParticipantConnected, () => {
@@ -163,23 +191,31 @@ function makeRoomConn(opts: {
     });
     // Self-view: drive off the publish event (the synchronous getter races publish-lag).
     r.on(RoomEvent.LocalTrackPublished, (pub) => {
-      if (ref.current !== r) return;
-      if (pub.kind === Track.Kind.Video && pub.track)
+      if (ref.current !== r || !pub.track) return;
+      if (pub.source === Track.Source.ScreenShare) {
+        setScreenVideo(pub.track.attach() as HTMLVideoElement, "Your screen");
+      } else if (pub.kind === Track.Kind.Video) {
         addTile(
           r.localParticipant.identity,
           `${opts.selfLabel()} (you)`,
           pub.track.attach() as HTMLVideoElement,
         );
+      }
     });
     r.on(RoomEvent.LocalTrackUnpublished, (pub) => {
-      // Detach the local self-view track (not just its wrapper) to release the sink.
+      // Detach the local track (not just its wrapper) to release the sink.
       try {
         pub.track?.detach().forEach((e) => e.remove());
       } catch {
         /* noop */
       }
       if (ref.current !== r) return;
-      if (pub.kind === Track.Kind.Video) removeTile(r.localParticipant.identity);
+      if (pub.source === Track.Source.ScreenShare) {
+        clearScreen();
+        opts.onLocalScreenEnd(); // incl. the browser's native "Stop sharing" control
+      } else if (pub.kind === Track.Kind.Video) {
+        removeTile(r.localParticipant.identity);
+      }
     });
 
     await r.connect(url, lkToken);
@@ -201,6 +237,8 @@ function makeRoomConn(opts: {
   function purgeMedia() {
     const host = opts.tilesEl();
     if (host) host.innerHTML = "";
+    const sh = opts.screenEl();
+    if (sh) sh.innerHTML = "";
     document.querySelectorAll(`audio[data-lk-conn="${connId}"]`).forEach((e) => e.remove());
   }
 
@@ -249,8 +287,21 @@ function makeRoomConn(opts: {
       return false;
     }
   }
+  // Screen share. Browser shows its own picker on enable; cancel/deny -> stays off.
+  async function setScreen(on: boolean): Promise<boolean> {
+    const r = ref.current;
+    if (!r) return false;
+    try {
+      await r.localParticipant.setScreenShareEnabled(on);
+      if (!on) clearScreen();
+      return on;
+    } catch {
+      clearScreen();
+      return false;
+    }
+  }
 
-  return { ref, connect, disconnect, roster, setMic, setCam, addTile, removeTile };
+  return { ref, connect, disconnect, roster, setMic, setCam, setScreen, addTile, removeTile };
 }
 
 // dedupe-on-append helper shared by every chat:new handler
@@ -348,6 +399,7 @@ function ClientView({
   const [chatInput, setChatInput] = useState("");
   const [micOn, setMicOn] = useState(true);
   const [camOn, setCamOn] = useState(false);
+  const [screenOn, setScreenOn] = useState(false);
 
   const ws = useRef<WebSocket | null>(null);
   const token = useRef("");
@@ -360,6 +412,7 @@ function ClientView({
   // office roster immediately (its presence:state arrives BEFORE room:admitted).
   const lastUsers = useRef<Record<string, any[]>>({});
   const tilesEl = useRef<HTMLDivElement | null>(null);
+  const screenEl = useRef<HTMLDivElement | null>(null);
   const joining = useRef(false);
   const leaving = useRef(false);
   const switchEpoch = useRef(0); // guards against interleaved/concurrent switches
@@ -379,6 +432,7 @@ function ClientView({
     makeRoomConn({
       getToken: () => token.current,
       tilesEl: () => tilesEl.current,
+      screenEl: () => screenEl.current,
       selfLabel: () => nameRef.current || "You",
       onRoster: () => {}, // roster comes from WS presence:state, not LiveKit
       onDropped: () => {
@@ -387,6 +441,7 @@ function ClientView({
           setPhase("error");
         }
       },
+      onLocalScreenEnd: () => setScreenOn(false),
       leavingRef: leaving,
     }),
   ).current;
@@ -412,6 +467,7 @@ function ClientView({
     leaving.current = true; // suppress the dropped-error for the WHOLE switch
     conn.disconnect();
     setRoster([]);
+    setScreenOn(false); // a local share doesn't carry across a room switch
     currentRoom.current = roomId;
     try {
       const res = await conn.connect(roomId, micOnRef.current);
@@ -626,6 +682,12 @@ function ClientView({
     setCamOn(actual);
     if (next && !actual) setInfo("Your camera is blocked or unavailable.");
   };
+  const toggleScreen = async () => {
+    const next = !screenOn;
+    const actual = await conn.setScreen(next);
+    setScreenOn(actual);
+    if (next && !actual) setInfo("Screen share was cancelled or blocked.");
+  };
   const leave = () => {
     leaving.current = true;
     joining.current = false;
@@ -639,6 +701,8 @@ function ClientView({
     setRoster([]);
     setMessages([]);
     setInfo("");
+    setScreenOn(false);
+    setCamOn(false);
   };
   const sendChat = () => {
     const b = chatInput.trim();
@@ -714,6 +778,12 @@ function ClientView({
           <button style={S.ctl} onClick={toggleCam}>
             {camOn ? "Stop video" : "Start video"}
           </button>
+          <button
+            style={{ ...S.ctl, background: screenOn ? "#1f7a37" : "#21262d" }}
+            onClick={toggleScreen}
+          >
+            {screenOn ? "Stop sharing" : "Share screen"}
+          </button>
           <button style={{ ...S.ctl, background: "#b62324" }} onClick={leave}>
             Leave
           </button>
@@ -755,6 +825,7 @@ function ClientView({
               </button>
             </div>
           )}
+          <div ref={screenEl} style={S.screen} />
           <div ref={tilesEl} style={S.tiles} />
         </main>
         <aside style={S.side}>
@@ -819,10 +890,12 @@ function HostView({ jwt, title, accent }: { jwt: string; title: string; accent: 
   const [chatInput, setChatInput] = useState("");
   const [micOn, setMicOn] = useState(true);
   const [camOn, setCamOn] = useState(false);
+  const [screenOn, setScreenOn] = useState(false);
 
   const foyerWS = useRef<WebSocket | null>(null);
   const officeWS = useRef<WebSocket | null>(null);
   const tilesEl = useRef<HTMLDivElement | null>(null);
+  const screenEl = useRef<HTMLDivElement | null>(null);
   const leaving = useRef(false);
   const started = useRef(false);
 
@@ -830,6 +903,7 @@ function HostView({ jwt, title, accent }: { jwt: string; title: string; accent: 
     makeRoomConn({
       getToken: () => jwt,
       tilesEl: () => tilesEl.current,
+      screenEl: () => screenEl.current,
       selfLabel: () => hostName,
       onRoster: () => {}, // office roster comes from WS presence:state, not LiveKit
       onDropped: () => {
@@ -838,6 +912,7 @@ function HostView({ jwt, title, accent }: { jwt: string; title: string; accent: 
           setPhase("error");
         }
       },
+      onLocalScreenEnd: () => setScreenOn(false),
       leavingRef: leaving,
     }),
   ).current;
@@ -1088,6 +1163,11 @@ function HostView({ jwt, title, accent }: { jwt: string; title: string; accent: 
     const actual = await conn.setCam(next);
     setCamOn(actual);
   };
+  const toggleScreen = async () => {
+    const next = !screenOn;
+    const actual = await conn.setScreen(next);
+    setScreenOn(actual);
+  };
   const sendOfficeChat = () => {
     const b = chatInput.trim();
     if (!b) return;
@@ -1142,12 +1222,19 @@ function HostView({ jwt, title, accent }: { jwt: string; title: string; accent: 
           <button style={S.ctl} onClick={toggleCam}>
             {camOn ? "Stop video" : "Start video"}
           </button>
+          <button
+            style={{ ...S.ctl, background: screenOn ? "#1f7a37" : "#21262d" }}
+            onClick={toggleScreen}
+          >
+            {screenOn ? "Stop sharing" : "Share screen"}
+          </button>
         </div>
       </header>
 
       <div style={S.body}>
         <main style={S.stage}>
           <div style={S.sideHead}>My office ({officeRoster.length})</div>
+          <div ref={screenEl} style={{ ...S.screen, marginTop: 12 }} />
           <div ref={tilesEl} style={{ ...S.tiles, marginTop: 12 }} />
           <div style={{ ...S.sideHead, marginTop: 16 }}>Office chat</div>
           <div style={{ ...S.chat, maxHeight: 200 }}>
@@ -1321,6 +1408,7 @@ const S: Record<string, CSSProperties> = {
     cursor: "pointer",
     maxWidth: 420,
   },
+  screen: { width: "100%" }, // empty = 0 height; fills only when a share is attached
   tiles: { display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(240px,1fr))", gap: 12 },
   side: {
     width: 320,
