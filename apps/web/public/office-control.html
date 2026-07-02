@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="robots" content="noindex,nofollow" />
+    <title>Office Control</title>
+    <style>
+      body {
+        font-family:
+          system-ui,
+          -apple-system,
+          sans-serif;
+        background: #0b1220;
+        color: #e8eef7;
+        margin: 0;
+        display: flex;
+        min-height: 100vh;
+        align-items: center;
+        justify-content: center;
+      }
+      .card {
+        background: #131c2e;
+        border: 1px solid #2a3a55;
+        border-radius: 16px;
+        padding: 28px;
+        width: min(92vw, 420px);
+        box-shadow: 0 12px 44px rgba(0, 0, 0, 0.45);
+      }
+      h1 {
+        font-size: 18px;
+        margin: 0 0 2px;
+      }
+      .sub {
+        color: #8aa0c0;
+        font-size: 12px;
+        margin: 0 0 20px;
+      }
+      .status {
+        display: flex;
+        align-items: center;
+        gap: 11px;
+        font-size: 19px;
+        font-weight: 800;
+        margin: 0 0 6px;
+      }
+      .dot {
+        width: 13px;
+        height: 13px;
+        border-radius: 50%;
+        box-shadow: 0 0 10px currentColor;
+      }
+      .open {
+        color: #2ecc71;
+      }
+      .closed {
+        color: #e74c3c;
+      }
+      .open .dot,
+      .closed .dot {
+        background: currentColor;
+      }
+      .sched {
+        color: #8aa0c0;
+        font-size: 13px;
+        margin: 0 0 18px;
+        min-height: 16px;
+      }
+      button {
+        width: 100%;
+        border: 0;
+        border-radius: 10px;
+        padding: 14px;
+        font-size: 15px;
+        font-weight: 800;
+        cursor: pointer;
+        margin-top: 10px;
+      }
+      .b-open {
+        background: #2ecc71;
+        color: #06210f;
+      }
+      .b-close {
+        background: #e74c3c;
+        color: #2a0a06;
+      }
+      button:active {
+        transform: translateY(1px);
+      }
+      .msg {
+        font-size: 12.5px;
+        color: #9fb2cf;
+        margin-top: 14px;
+        min-height: 16px;
+      }
+      .tok {
+        margin-top: 18px;
+        padding-top: 14px;
+        border-top: 1px solid #24314a;
+      }
+      input {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 11px;
+        border-radius: 8px;
+        border: 1px solid #2a3a55;
+        background: #0b1220;
+        color: #e8eef7;
+        font-size: 12px;
+        margin-top: 6px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h1>Office Control</h1>
+      <p class="sub">East Coast Employee Benefits</p>
+      <div id="status" class="status closed">
+        <span class="dot"></span><span id="statusText">Loading…</span>
+      </div>
+      <div class="sched" id="sched"></div>
+      <button class="b-open" onclick="setOpen(true)">Open the office</button>
+      <button class="b-close" onclick="setOpen(false)">Close the office</button>
+      <div class="msg" id="msg"></div>
+      <div class="tok">
+        <div class="sub" style="margin: 0">
+          Host token (paste once — stored only on this device)
+        </div>
+        <input id="tok" placeholder="host JWT" autocomplete="off" spellcheck="false" />
+      </div>
+    </div>
+    <script>
+      var $ = function (i) {
+        return document.getElementById(i);
+      };
+      $("tok").value = localStorage.getItem("office_host_tok") || "";
+      $("tok").addEventListener("change", function () {
+        localStorage.setItem("office_host_tok", $("tok").value.trim());
+      });
+      function refresh() {
+        fetch("/api/office/status")
+          .then(function (r) {
+            return r.json();
+          })
+          .then(function (j) {
+            $("status").className = "status " + (j.open ? "open" : "closed");
+            $("statusText").textContent = j.open ? "OPEN — visitors can knock" : "CLOSED";
+            $("sched").textContent = j.schedule ? "Hours: " + j.schedule : "";
+          })
+          .catch(function () {
+            $("statusText").textContent = "status unavailable";
+          });
+      }
+      function setOpen(open) {
+        var tok = ($("tok").value || localStorage.getItem("office_host_tok") || "").trim();
+        if (!tok) {
+          $("msg").textContent = "Paste your host token in the box below first.";
+          return;
+        }
+        localStorage.setItem("office_host_tok", tok);
+        $("msg").textContent = "…";
+        fetch("/api/office/set", {
+          method: "POST",
+          headers: { Authorization: "Bearer " + tok, "Content-Type": "application/json" },
+          body: JSON.stringify({ open: open }),
+        })
+          .then(function (r) {
+            return r.json().then(function (j) {
+              return { s: r.status, j: j };
+            });
+          })
+          .then(function (o) {
+            if (o.j.ok) {
+              $("msg").textContent = open ? "Office is now open." : "Office is now closed.";
+              refresh();
+            } else {
+              $("msg").textContent =
+                "Error: " +
+                (o.j.error || "failed") +
+                (o.s === 403 ? "  (token expired — paste a fresh one)" : "");
+            }
+          })
+          .catch(function () {
+            $("msg").textContent = "Network error.";
+          });
+      }
+      refresh();
+      setInterval(refresh, 15000);
+    </script>
+  </body>
+</html>

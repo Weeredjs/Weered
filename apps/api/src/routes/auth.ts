@@ -5,6 +5,8 @@ import { z } from "zod";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import { randomBytes } from "crypto";
+import { readFileSync, writeFileSync } from "fs";
+import { sendPush } from "../lib/notifications";
 import { OAuth2Client } from "google-auth-library";
 import { prisma } from "../lib/prisma";
 import { setAuthCookie, clearAuthCookie, isWebClient } from "../lib/authCookie";
@@ -568,5 +570,131 @@ export default async function authRoutes(app: FastifyInstance, opts: Opts) {
       expiresIn: "7d",
     });
     return reply.send({ token, user: { id: updated.id, name: updated.name } });
+  });
+
+  // --- OFFICE HOURS (ECEB walk-in office) ---
+  // Persistent open/closed flag: the ECEB site shows a live status, and walk-in
+  // foyer invites are only mintable while the advisor is holding hours.
+  const OFFICE_STATE_FILE = "/opt/weered/office-hours.json";
+  const readOfficeState = () => {
+    try {
+      const st = JSON.parse(readFileSync(OFFICE_STATE_FILE, "utf8"));
+      return {
+        open: !!st.open,
+        schedule: (st.schedule ?? null) as string | null,
+        note: (st.note ?? null) as string | null,
+      };
+    } catch {
+      return { open: false, schedule: null as string | null, note: null as string | null };
+    }
+  };
+  const writeOfficeState = (st: {
+    open: boolean;
+    schedule: string | null;
+    note: string | null;
+  }) => {
+    writeFileSync(OFFICE_STATE_FILE, JSON.stringify(st));
+  };
+
+  // Recent walk-in arrivals (host reception desk). Capped + time-pruned.
+  const OFFICE_WAITING_FILE = "/opt/weered/office-waiting.json";
+  type Arrival = { name: string; at: number };
+  const readWaiting = (): Arrival[] => {
+    try {
+      const arr = JSON.parse(readFileSync(OFFICE_WAITING_FILE, "utf8"));
+      const cutoff = Date.now() - 30 * 60 * 1000;
+      return Array.isArray(arr)
+        ? arr.filter((a: any) => a && typeof a.at === "number" && a.at > cutoff).slice(-20)
+        : [];
+    } catch {
+      return [];
+    }
+  };
+  const pushWaiting = (name: string) => {
+    try {
+      const arr = readWaiting();
+      arr.push({ name: (name || "Visitor").slice(0, 40), at: Date.now() });
+      writeFileSync(OFFICE_WAITING_FILE, JSON.stringify(arr.slice(-20)));
+    } catch {
+      /* best effort */
+    }
+  };
+
+  // Public: current office status (drives the ECEB-site fixture + the foyer door).
+  app.get("/office/status", async (_req, reply) => {
+    const st = readOfficeState();
+    return reply.send({ ok: true, open: st.open, schedule: st.schedule, note: st.note });
+  });
+
+  // Host-only: flip the office open/closed (or set the schedule/note).
+  app.post("/office/set", async (req, reply) => {
+    const u = authFromHeader((req.headers as any).authorization);
+    if (!u || !(u as any).host) return reply.code(403).send({ ok: false, error: "host_only" });
+    const body: any = (req as any).body || {};
+    const cur = readOfficeState();
+    const next = {
+      open: typeof body.open === "boolean" ? body.open : cur.open,
+      schedule: typeof body.schedule === "string" ? body.schedule.slice(0, 200) : cur.schedule,
+      note: typeof body.note === "string" ? body.note.slice(0, 200) : cur.note,
+    };
+    writeOfficeState(next);
+    return reply.send({ ok: true, ...next });
+  });
+
+  // Public walk-in: while open, mint a single-use foyer invite so a visitor can
+  // enter with just a name. They still knock; the host still admits.
+  app.post(
+    "/office/walkin",
+    { config: { rateLimit: { max: 20, timeWindow: "10 minutes" } } },
+    async (req, reply) => {
+      const st = readOfficeState();
+      if (!st.open)
+        return reply.code(403).send({ ok: false, error: "closed", schedule: st.schedule });
+      const host = await prisma.user
+        .findUnique({ where: { usernameKey: "eceb-host" }, select: { id: true } })
+        .catch(() => null);
+      const token = `m_${randomBytes(12).toString("hex")}`;
+      await prisma.invite.create({
+        data: {
+          token,
+          type: "GUEST",
+          targetId: "mtg-eceb",
+          createdBy: host?.id ?? "cmmgisqb70000zzfhh3k9e069",
+          maxUses: 1,
+          uses: 0,
+          expiresAt: new Date(Date.now() + 2 * 60 * 60 * 1000),
+        },
+      });
+      const visitorName =
+        typeof (req as any).body?.name === "string" ? (req as any).body.name : "Visitor";
+      pushWaiting(visitorName);
+      if (host?.id) {
+        sendPush(host.id, {
+          title: "Someone's at your office door",
+          body: `${visitorName} just walked in. Tap to greet them.`,
+          url: "/foyer",
+          tag: "office-walkin",
+        }).catch(() => {});
+      }
+      return reply.send({ ok: true, url: `/foyer?invite=${token}&title=Office%20Hours` });
+    },
+  );
+
+  // Host-only: recent walk-in arrivals, for the reception-desk view on the control page.
+  app.get("/office/waiting", async (req, reply) => {
+    const u = authFromHeader((req.headers as any).authorization);
+    if (!u || !(u as any).host) return reply.code(403).send({ ok: false, error: "host_only" });
+    return reply.send({ ok: true, waiting: readWaiting() });
+  });
+
+  // Bookmarkable host control page, served same-origin so the toggle needs no CORS.
+  app.get("/office/control", async (_req, reply) => {
+    reply.header("Content-Type", "text/html; charset=utf-8");
+    reply.header("Cache-Control", "no-store");
+    try {
+      return reply.send(readFileSync("/opt/weered/office-control.html", "utf8"));
+    } catch {
+      return reply.code(404).send("control not found");
+    }
   });
 }
