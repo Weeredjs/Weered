@@ -721,6 +721,7 @@ async function main() {
     isNameReserved,
     getSiteConfig,
     seedWelcomeDM,
+    rooms,
   });
 
   const WEB_URL = process.env.APP_URL || "https://weered.ca";

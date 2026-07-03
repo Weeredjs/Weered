@@ -1,24 +1,77 @@
 "use client";
-// In-room Fathom plan module. HOST side: pull a client's plan of record via the
-// same-origin host-gated proxy (/api/office/plan/*), adjust the renewal levers,
-// apply to the plan of record, send the amendment to the carrier, and PRESENT the
-// plan to the room. CLIENT side: PresentedPlanViewer polls the presented snapshot
-// (guest-readable by design) and renders it read-only. The engine token is minted
-// server-side; it never reaches the browser.
+// In-room Fathom plan module. HOST: pull a client's plan of record via the same-
+// origin host-gated proxy (/api/office/plan/*), adjust the renewal levers, apply to
+// the plan of record, send the amendment to the carrier, and PRESENT the plan to the
+// room. CLIENT: PresentedPlanViewer polls the presented snapshot (guest-readable only
+// while admitted) and renders it read-only. The engine token is minted server-side.
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 
 const API = "/api";
 
+// ---- client-facing label + ordering (a prospect must never see raw keys/jargon) ----
+function prettyField(k: string): string {
+  return String(k || "")
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .replace(/_/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/^\w/, (c) => c.toUpperCase());
+}
+const BENEFIT_LABELS: Record<string, string> = {
+  health: "Health & drug",
+  drug: "Prescription drugs",
+  dental: "Dental",
+  vision: "Vision",
+  hsa: "Health spending account",
+  life: "Life insurance",
+  add: "Accidental death & dismemberment",
+  ad_d: "Accidental death & dismemberment",
+  std: "Short-term disability",
+  ltd: "Long-term disability",
+  ci: "Critical illness",
+  eap: "Employee assistance program",
+};
+const benefitLabel = (k: string) => BENEFIT_LABELS[String(k).toLowerCase()] || prettyField(k);
+const BENEFIT_ORDER = [
+  "health",
+  "drug",
+  "dental",
+  "vision",
+  "hsa",
+  "life",
+  "add",
+  "ad_d",
+  "std",
+  "ltd",
+  "ci",
+  "eap",
+];
+const benefitRank = (k: string) => {
+  const i = BENEFIT_ORDER.indexOf(String(k).toLowerCase());
+  return i === -1 ? 999 : i;
+};
 function fmtPlanValue(type: string | undefined, v: any): string {
   if (typeof v === "boolean") return v ? "Yes" : "No";
   if (type === "ratio" && typeof v === "number") return `${Math.round(v * 100)}%`;
   if (type === "money" && typeof v === "number") return `$${v.toLocaleString()}`;
   return String(v);
 }
+function scalarCoverage(v: any): string {
+  if (v === true) return "Included";
+  if (v === false) return "Not included";
+  const s = String(v).toLowerCase().trim();
+  if (s === "included" || s === "yes") return "Included";
+  if (s === "excluded" || s === "not included" || s === "no" || s === "none") return "Not included";
+  return String(v);
+}
 
 // Read-only rendering of an employer + plan snapshot (shared by host + client).
 function PlanBody({ detail, accent }: { detail: any; accent: string }) {
+  const benefits = Object.entries(detail.plan?.benefitDesign || {}).sort(
+    (a: any, b: any) =>
+      benefitRank(a[0]) - benefitRank(b[0]) || String(a[0]).localeCompare(String(b[0])),
+  );
   return (
     <>
       <div style={PM.clientName}>{detail.employer?.name}</div>
@@ -40,15 +93,15 @@ function PlanBody({ detail, accent }: { detail: any; accent: string }) {
         </div>
       ) : (
         <div style={{ marginTop: 10 }}>
-          {Object.entries(detail.plan.benefitDesign || {}).map(([benefit, obj]: [string, any]) => (
+          {benefits.map(([benefit, obj]: [string, any]) => (
             <div key={benefit} style={PM.benefit}>
-              <div style={{ ...PM.benefitHead, color: accent }}>{benefit}</div>
+              <div style={{ ...PM.benefitHead, color: accent }}>{benefitLabel(benefit)}</div>
               {obj && typeof obj === "object" ? (
                 Object.entries(obj).map(([field, val]: [string, any]) => {
                   const fs = detail.fields?.[benefit]?.[field];
                   return (
                     <div key={field} style={PM.row}>
-                      <span style={{ color: "#c9d4e0" }}>{fs?.label || field}</span>
+                      <span style={{ color: "#c9d4e0" }}>{fs?.label || prettyField(field)}</span>
                       <span style={{ fontWeight: 700 }}>{fmtPlanValue(fs?.type, val)}</span>
                     </div>
                   );
@@ -56,7 +109,7 @@ function PlanBody({ detail, accent }: { detail: any; accent: string }) {
               ) : (
                 <div style={PM.row}>
                   <span style={{ color: "#c9d4e0" }}>Coverage</span>
-                  <span style={{ fontWeight: 700 }}>{String(obj)}</span>
+                  <span style={{ fontWeight: 700 }}>{scalarCoverage(obj)}</span>
                 </div>
               )}
             </div>
@@ -77,6 +130,7 @@ export function PresentedPlanViewer({
   accent: string;
 }) {
   const [data, setData] = useState<any | null>(null);
+  const [justUpdated, setJustUpdated] = useState(false);
   const seqRef = useRef(0);
   useEffect(() => {
     let stop = false;
@@ -91,25 +145,47 @@ export function PresentedPlanViewer({
           seqRef.current = 0;
           setData(null);
         } else if (j.seq !== seqRef.current) {
+          const wasShowing = seqRef.current !== 0;
           seqRef.current = j.seq;
           setData(j.data);
+          if (wasShowing) {
+            setJustUpdated(true);
+            setTimeout(() => setJustUpdated(false), 2600);
+          }
         }
       } catch {}
     };
     tick();
-    const iv = setInterval(tick, 3000);
+    const iv = setInterval(tick, 2000);
     return () => {
       stop = true;
       clearInterval(iv);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  if (!data) return null;
+
+  // Idle placeholder: the container is always on screen once admitted, so the plan
+  // reveal feels intentional instead of popping in from nothing.
+  if (!data) {
+    return (
+      <div style={{ ...PM.panel, borderColor: "#283040" }}>
+        <div style={PM.head}>
+          <strong style={{ color: accent }}>◧ Your plan — live review</strong>
+          <span style={{ color: "#8b949e", fontSize: 12 }}>with your advisor</span>
+        </div>
+        <div style={{ padding: 16, color: "#8b949e", fontSize: 13.5 }}>
+          Your advisor will pull up your plan here when the review begins.
+        </div>
+      </div>
+    );
+  }
   return (
     <div style={{ ...PM.panel, borderColor: accent }}>
       <div style={PM.head}>
         <strong style={{ color: accent }}>◧ Your plan — live review</strong>
-        <span style={{ color: "#8b949e", fontSize: 12 }}>shared by your advisor</span>
+        <span style={{ color: justUpdated ? "#3fb950" : "#8b949e", fontSize: 12 }}>
+          {justUpdated ? "· updated just now" : "shared by your advisor"}
+        </span>
       </div>
       <div style={{ padding: 12 }}>
         <PlanBody detail={data} accent={accent} />
@@ -127,7 +203,6 @@ export function PlanModule({ jwt, accent }: { jwt: string; accent: string }) {
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
 
-  // edit state
   const [editing, setEditing] = useState(false);
   const [changes, setChanges] = useState<any[]>([]);
   const [selBenefit, setSelBenefit] = useState("");
@@ -140,20 +215,51 @@ export function PlanModule({ jwt, accent }: { jwt: string; accent: string }) {
   const [effDate, setEffDate] = useState("");
   const [presenting, setPresenting] = useState(false);
 
-  const authHdr = { Authorization: `Bearer ${jwt}` };
+  // mirror `presenting` into a ref so unmount/pagehide cleanup reads the latest value
+  const presentingRef = useRef(false);
+  useEffect(() => {
+    presentingRef.current = presenting;
+  }, [presenting]);
 
+  // returns true only on a confirmed server ack
   const postPresent = useCallback(
-    async (data: any) => {
+    async (data: any): Promise<boolean> => {
       try {
-        await fetch(`${API}/office/plan/present`, {
+        const r = await fetch(`${API}/office/plan/present`, {
           method: "POST",
           headers: { Authorization: `Bearer ${jwt}`, "Content-Type": "application/json" },
           body: JSON.stringify({ data }),
         });
-      } catch {}
+        const j = await r.json().catch(() => null);
+        return !!(r.ok && j && j.ok !== false);
+      } catch {
+        return false;
+      }
     },
     [jwt],
   );
+
+  // Safety net: if the host closes the tab / navigates / the component unmounts
+  // (e.g. the consult drops to the error card) while presenting, tell the server to
+  // stop so the client is never stranded viewing the plan for up to 4h.
+  useEffect(() => {
+    const stopShare = () => {
+      if (!presentingRef.current) return;
+      try {
+        fetch(`${API}/office/plan/present`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${jwt}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ data: null }),
+          keepalive: true,
+        }).catch(() => {});
+      } catch {}
+    };
+    window.addEventListener("pagehide", stopShare);
+    return () => {
+      window.removeEventListener("pagehide", stopShare);
+      stopShare();
+    };
+  }, [jwt]);
 
   const runSearch = useCallback(async () => {
     setErr("");
@@ -161,7 +267,9 @@ export function PlanModule({ jwt, accent }: { jwt: string; accent: string }) {
     try {
       const r = await fetch(
         `${API}/office/plan/employers?book=${book}&q=${encodeURIComponent(q)}`,
-        { headers: authHdr },
+        {
+          headers: { Authorization: `Bearer ${jwt}` },
+        },
       );
       const j = await r.json();
       if (!r.ok) throw new Error(j?.error || "lookup failed");
@@ -171,7 +279,6 @@ export function PlanModule({ jwt, accent }: { jwt: string; accent: string }) {
     } finally {
       setLoading(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [q, jwt, book]);
 
   const loadEmployer = useCallback(
@@ -185,7 +292,9 @@ export function PlanModule({ jwt, accent }: { jwt: string; accent: string }) {
       try {
         const r = await fetch(
           `${API}/office/plan/employer/${encodeURIComponent(id)}?book=${book}`,
-          { headers: authHdr },
+          {
+            headers: { Authorization: `Bearer ${jwt}` },
+          },
         );
         const j = await r.json();
         if (!r.ok) throw new Error(j?.error || "load failed");
@@ -201,30 +310,45 @@ export function PlanModule({ jwt, accent }: { jwt: string; accent: string }) {
     [jwt, book],
   );
 
-  const stopPresenting = () => {
-    if (presenting) {
+  // best-effort stop for navigation transitions (change book / client / hide)
+  const stopPresentingSoft = () => {
+    if (presentingRef.current) {
       void postPresent(null);
       setPresenting(false);
     }
   };
 
   const pickBook = (b: "eceb" | "demo") => {
-    stopPresenting();
+    stopPresentingSoft();
     setBook(b);
     setResults([]);
     setDetail(null);
     setErr("");
   };
 
+  // deliberate stop from the button: confirm the server ack before clearing
   const togglePresent = async () => {
     if (!detail) return;
     if (presenting) {
-      await postPresent(null);
-      setPresenting(false);
+      setBusy("present");
+      const ok = await postPresent(null);
+      setBusy("");
+      if (ok) setPresenting(false);
+      else setFlash("Couldn't stop the share — the client may still see the plan. Tap Stop again.");
     } else {
-      await postPresent(detail);
-      setPresenting(true);
+      setBusy("present");
+      const ok = await postPresent(detail);
+      setBusy("");
+      if (ok) {
+        setPresenting(true);
+        setFlash("");
+      } else setFlash("Couldn't present — try again.");
     }
+  };
+
+  const hidePanel = () => {
+    stopPresentingSoft();
+    setOpen(false);
   };
 
   const curOf = (benefit: string, field: string) => {
@@ -232,7 +356,6 @@ export function PlanModule({ jwt, accent }: { jwt: string; accent: string }) {
     const v = g && typeof g === "object" ? g[field] : undefined;
     return typeof v === "number" || typeof v === "boolean" ? v : null;
   };
-
   const spec = () => detail?.fields?.[selBenefit]?.[selField];
 
   const addChange = () => {
@@ -264,7 +387,7 @@ export function PlanModule({ jwt, accent }: { jwt: string; accent: string }) {
         `${API}/office/plan/employer/${encodeURIComponent(detail.employer.id)}?book=${book}`,
         {
           method: "PATCH",
-          headers: { ...authHdr, "Content-Type": "application/json" },
+          headers: { Authorization: `Bearer ${jwt}`, "Content-Type": "application/json" },
           body: JSON.stringify({ changes: payloadChanges(), note: "Adjusted in office review" }),
         },
       );
@@ -272,7 +395,7 @@ export function PlanModule({ jwt, accent }: { jwt: string; accent: string }) {
       if (!r.ok) throw new Error(j?.error || "apply failed");
       setChanges([]);
       const fresh = await loadEmployer(detail.employer.id);
-      if (presenting && fresh) await postPresent(fresh); // client sees the new version live
+      if (presentingRef.current && fresh) await postPresent(fresh);
       setFlash(`Applied to plan of record (now v${j.version}).`);
     } catch (e: any) {
       setFlash("Error: " + String(e?.message || e));
@@ -288,7 +411,7 @@ export function PlanModule({ jwt, accent }: { jwt: string; accent: string }) {
     try {
       const r = await fetch(`${API}/office/plan/amend?book=${book}`, {
         method: "POST",
-        headers: { ...authHdr, "Content-Type": "application/json" },
+        headers: { Authorization: `Bearer ${jwt}`, "Content-Type": "application/json" },
         body: JSON.stringify({
           employerId: detail.employer.id,
           planId: detail.plan.planId,
@@ -331,8 +454,8 @@ export function PlanModule({ jwt, accent }: { jwt: string; accent: string }) {
   return (
     <div style={{ ...PM.panel, borderColor: accent }}>
       <div style={PM.head}>
-        <strong style={{ color: accent }}>◧ Client plan</strong>
-        <button style={PM.x} onClick={() => setOpen(false)}>
+        <strong style={{ color: accent }}>◧ Client plan{presenting ? " · presenting" : ""}</strong>
+        <button style={PM.x} onClick={hidePanel}>
           Hide
         </button>
       </div>
@@ -361,7 +484,7 @@ export function PlanModule({ jwt, accent }: { jwt: string; accent: string }) {
           </div>
           <div style={{ display: "flex", gap: 8 }}>
             <input
-              style={{ ...PM.input, flex: 1, width: undefined }}
+              style={PM.input}
               value={q}
               onChange={(e) => setQ(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && runSearch()}
@@ -394,7 +517,7 @@ export function PlanModule({ jwt, accent }: { jwt: string; accent: string }) {
           <button
             style={PM.back}
             onClick={() => {
-              stopPresenting();
+              stopPresentingSoft();
               setDetail(null);
             }}
           >
@@ -407,7 +530,6 @@ export function PlanModule({ jwt, accent }: { jwt: string; accent: string }) {
               <button
                 style={{
                   ...PM.adjust,
-                  marginTop: 0,
                   borderColor: accent,
                   color: editing ? "#08120b" : accent,
                   background: editing ? accent : "transparent",
@@ -419,14 +541,14 @@ export function PlanModule({ jwt, accent }: { jwt: string; accent: string }) {
               <button
                 style={{
                   ...PM.adjust,
-                  marginTop: 0,
                   borderColor: presenting ? "#3fb950" : "#8b949e",
                   color: presenting ? "#08120b" : "#c9d4e0",
                   background: presenting ? "#3fb950" : "transparent",
                 }}
                 onClick={togglePresent}
+                disabled={busy === "present"}
               >
-                {presenting ? "■ Stop presenting" : "▶ Present to room"}
+                {busy === "present" ? "…" : presenting ? "■ Stop presenting" : "▶ Present to room"}
               </button>
             </div>
           )}
@@ -446,7 +568,7 @@ export function PlanModule({ jwt, accent }: { jwt: string; accent: string }) {
                   <option value="">benefit…</option>
                   {benefits.map((b) => (
                     <option key={b} value={b}>
-                      {b}
+                      {benefitLabel(b)}
                     </option>
                   ))}
                 </select>
@@ -555,6 +677,7 @@ export function PlanModule({ jwt, accent }: { jwt: string; accent: string }) {
                   </div>
                   <input
                     style={PM.input}
+                    type="email"
                     value={carrierEmail}
                     onChange={(e) => setCarrierEmail(e.target.value)}
                     placeholder="carrier email"
@@ -579,7 +702,13 @@ export function PlanModule({ jwt, accent }: { jwt: string; accent: string }) {
           )}
 
           {flash && (
-            <div style={{ ...PM.flash, color: flash.startsWith("Error") ? "#f85149" : "#3fb950" }}>
+            <div
+              style={{
+                ...PM.flash,
+                color:
+                  flash.startsWith("Error") || flash.startsWith("Couldn") ? "#f85149" : "#3fb950",
+              }}
+            >
               {flash}
             </div>
           )}
@@ -684,13 +813,7 @@ const PM: Record<string, CSSProperties> = {
   clientName: { fontSize: 18, fontWeight: 800 },
   meta: { color: "#8b949e", fontSize: 13, marginTop: 3 },
   benefit: { marginTop: 12 },
-  benefitHead: {
-    fontSize: 12,
-    textTransform: "uppercase",
-    letterSpacing: ".5px",
-    fontWeight: 800,
-    marginBottom: 4,
-  },
+  benefitHead: { fontSize: 12.5, letterSpacing: ".02em", fontWeight: 800, marginBottom: 4 },
   row: {
     display: "flex",
     justifyContent: "space-between",
@@ -701,7 +824,6 @@ const PM: Record<string, CSSProperties> = {
   ver: { color: "#6a7681", fontSize: 11, marginTop: 12, textAlign: "right" },
   adjust: {
     flex: 1,
-    marginTop: 14,
     padding: "10px",
     borderRadius: 9,
     border: "1px solid",

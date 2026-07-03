@@ -29,10 +29,13 @@ type Opts = {
   isNameReserved: (name: string, scope: "LOBBY" | "USERNAME" | "BOTH") => Promise<boolean>;
   getSiteConfig: (key: string) => Promise<string | null>;
   seedWelcomeDM: (toUserId: string) => Promise<void>;
+  // live room presence (roomId -> { users: Map<userId, ...> }); used to gate the
+  // presented-plan read on actual consult-room admission.
+  rooms: any;
 };
 
 export default async function authRoutes(app: FastifyInstance, opts: Opts) {
-  const { authFromHeader, JWT_SECRET, isNameReserved, getSiteConfig, seedWelcomeDM } = opts;
+  const { authFromHeader, JWT_SECRET, isNameReserved, getSiteConfig, seedWelcomeDM, rooms } = opts;
 
   // env-derived config, exclusive to auth (re-derived here from process.env).
   const DEV_LOGIN_ENABLED =
@@ -583,18 +586,66 @@ export default async function authRoutes(app: FastifyInstance, opts: Opts) {
         open: !!st.open,
         schedule: (st.schedule ?? null) as string | null,
         note: (st.note ?? null) as string | null,
+        auto: !!st.auto,
       };
     } catch {
-      return { open: false, schedule: null as string | null, note: null as string | null };
+      return {
+        open: false,
+        schedule: null as string | null,
+        note: null as string | null,
+        auto: false,
+      };
     }
   };
   const writeOfficeState = (st: {
     open: boolean;
     schedule: string | null;
     note: string | null;
+    auto: boolean;
   }) => {
     writeFileSync(OFFICE_STATE_FILE, JSON.stringify(st));
   };
+
+  // Auto schedule: edge-triggered Mon-Fri 9-17 America/Halifax. Fires only when a
+  // boundary is CROSSED, so manual flips between boundaries stick (close early and
+  // it stays closed; next morning it opens itself). Opt-in via state.auto.
+  const atlNow = (d: Date) => {
+    const parts = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "America/Halifax",
+      weekday: "short",
+      hour: "numeric",
+      minute: "numeric",
+      hour12: false,
+    }).formatToParts(d);
+    const get = (t: string) => parts.find((x) => x.type === t)?.value || "";
+    const dayMap: Record<string, number> = {
+      Sun: 0,
+      Mon: 1,
+      Tue: 2,
+      Wed: 3,
+      Thu: 4,
+      Fri: 5,
+      Sat: 6,
+    };
+    return { day: dayMap[get("weekday").replace(".", "")] ?? 0, hour: Number(get("hour")) % 24 };
+  };
+  const inOfficeWindow = (d: Date) => {
+    const t = atlNow(d);
+    return t.day >= 1 && t.day <= 5 && t.hour >= 9 && t.hour < 17;
+  };
+  let officeAutoLastAt = Date.now();
+  setInterval(() => {
+    try {
+      const st = readOfficeState();
+      const prev = inOfficeWindow(new Date(officeAutoLastAt));
+      const now = inOfficeWindow(new Date());
+      officeAutoLastAt = Date.now();
+      if (!st.auto) return;
+      if (prev !== now && st.open !== now) writeOfficeState({ ...st, open: now });
+    } catch {
+      /* best effort */
+    }
+  }, 60_000);
 
   // Recent walk-in arrivals (host reception desk). Capped + time-pruned.
   const OFFICE_WAITING_FILE = "/opt/weered/office-waiting.json";
@@ -623,7 +674,13 @@ export default async function authRoutes(app: FastifyInstance, opts: Opts) {
   // Public: current office status (drives the ECEB-site fixture + the foyer door).
   app.get("/office/status", async (_req, reply) => {
     const st = readOfficeState();
-    return reply.send({ ok: true, open: st.open, schedule: st.schedule, note: st.note });
+    return reply.send({
+      ok: true,
+      open: st.open,
+      schedule: st.schedule,
+      note: st.note,
+      auto: st.auto,
+    });
   });
 
   // Host-only: flip the office open/closed (or set the schedule/note).
@@ -636,6 +693,7 @@ export default async function authRoutes(app: FastifyInstance, opts: Opts) {
       open: typeof body.open === "boolean" ? body.open : cur.open,
       schedule: typeof body.schedule === "string" ? body.schedule.slice(0, 200) : cur.schedule,
       note: typeof body.note === "string" ? body.note.slice(0, 200) : cur.note,
+      auto: typeof body.auto === "boolean" ? body.auto : cur.auto,
     };
     writeOfficeState(next);
     return reply.send({ ok: true, ...next });
@@ -735,7 +793,15 @@ export default async function authRoutes(app: FastifyInstance, opts: Opts) {
       reply.code(403).send({ ok: false, error: "host_only" });
       return false;
     }
-    if (!process.env.OFFICE_TOKEN_SECRET || !process.env.ECEB_TENANT_ID) {
+    const book = String((req.query as any)?.book ?? "eceb");
+    if (book !== "eceb" && book !== "demo") {
+      reply.code(400).send({ ok: false, error: "unknown_book" });
+      return false;
+    }
+    // Gate on the tenant for the ACTUALLY-selected book, so a missing DEMO_* env
+    // can never mint an office token with an undefined tenant claim.
+    const { tenantId, brokerId } = bookConfig(book);
+    if (!process.env.OFFICE_TOKEN_SECRET || !tenantId || !brokerId) {
       reply.code(503).send({ ok: false, error: "engine_not_configured" });
       return false;
     }
@@ -761,26 +827,48 @@ export default async function authRoutes(app: FastifyInstance, opts: Opts) {
   });
 
   // Host-only: apply a change-set to the plan of record (creates a new version).
-  app.patch("/office/plan/employer/:id", async (req, reply) => {
-    if (!planGate(req, reply)) return;
-    const book = String((req.query as any)?.book ?? "eceb");
-    const id = String((req.params as any).id);
-    const r = await engineSend(
-      "PATCH",
-      `/api/employers/${encodeURIComponent(id)}/plan`,
-      (req as any).body,
-      book,
-    );
-    return reply.code(r.status).header("content-type", "application/json").send(r.text);
-  });
+  app.patch(
+    "/office/plan/employer/:id",
+    { config: { rateLimit: { max: 20, timeWindow: "1 minute" } } },
+    async (req, reply) => {
+      if (!planGate(req, reply)) return;
+      const book = String((req.query as any)?.book ?? "eceb");
+      const id = String((req.params as any).id);
+      const r = await engineSend(
+        "PATCH",
+        `/api/employers/${encodeURIComponent(id)}/plan`,
+        (req as any).body,
+        book,
+      );
+      return reply.code(r.status).header("content-type", "application/json").send(r.text);
+    },
+  );
 
   // Host-only: send a plan amendment notice to the carrier (Resend, engine-side).
-  app.post("/office/plan/amend", async (req, reply) => {
-    if (!planGate(req, reply)) return;
-    const book = String((req.query as any)?.book ?? "eceb");
-    const r = await engineSend("POST", `/api/plan-amendments/send`, (req as any).body, book);
-    return reply.code(r.status).header("content-type", "application/json").send(r.text);
-  });
+  app.post(
+    "/office/plan/amend",
+    { config: { rateLimit: { max: 6, timeWindow: "1 minute" } } },
+    async (req, reply) => {
+      if (!planGate(req, reply)) return;
+      const book = String((req.query as any)?.book ?? "eceb");
+      const body: any = (req as any).body || {};
+      const email = String(body.carrierEmail ?? "").trim();
+      const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && email.length <= 200;
+      if (
+        !body.employerId ||
+        !body.planId ||
+        !body.version ||
+        !Array.isArray(body.changes) ||
+        body.changes.length === 0 ||
+        !body.effectiveDate ||
+        !emailOk
+      ) {
+        return reply.code(400).send({ ok: false, error: "invalid_amendment" });
+      }
+      const r = await engineSend("POST", `/api/plan-amendments/send`, body, book);
+      return reply.code(r.status).header("content-type", "application/json").send(r.text);
+    },
+  );
 
   // --- LIVE PLAN PRESENTATION ---
   // The host "presents" a plan snapshot to the room; admitted guests poll it
@@ -794,7 +882,25 @@ export default async function authRoutes(app: FastifyInstance, opts: Opts) {
     if (!u || !(u as any).host) return reply.code(403).send({ ok: false, error: "host_only" });
     const office = String((u as any).scope?.office || "");
     if (!office) return reply.code(400).send({ ok: false, error: "no_office_scope" });
-    const data = (req as any).body?.data ?? null;
+    const raw = (req as any).body?.data ?? null;
+    // Project to a display-only whitelist: the guest snapshot can never carry ids
+    // or engine internals the read-only viewer doesn't render.
+    const data = raw
+      ? {
+          employer: {
+            name: raw.employer?.name ?? null,
+            carrier: raw.employer?.carrier ?? null,
+            carrierPolicy: raw.employer?.carrierPolicy ?? null,
+            renewalMonth: raw.employer?.renewalMonth ?? null,
+            lives: raw.employer?.lives ?? null,
+            premium: raw.employer?.premium ?? null,
+          },
+          plan: raw.plan
+            ? { benefitDesign: raw.plan.benefitDesign ?? {}, version: raw.plan.version ?? null }
+            : null,
+          fields: raw.fields ?? {},
+        }
+      : null;
     if (data) {
       if (JSON.stringify(data).length > 200_000)
         return reply.code(400).send({ ok: false, error: "too_large" });
@@ -811,6 +917,17 @@ export default async function authRoutes(app: FastifyInstance, opts: Opts) {
     if (!u || (!uu.host && !uu.guest))
       return reply.code(403).send({ ok: false, error: "auth_required" });
     const office = String(uu.scope?.office || "");
+    // ISOLATION: a guest reads the presented plan ONLY while LIVE in the consult
+    // room. A waiting-room guest (in the -foyer room) or a stale/ex token is not
+    // in the -office room's presence, so it sees nothing. The shared office scope
+    // is NOT the boundary; live admission is.
+    if (uu.guest) {
+      const gid = String(uu.id || "");
+      const room = rooms?.get(`${office}-office`);
+      if (!room || !room.users || !room.users.has(gid)) {
+        return reply.send({ ok: true, seq: 0, data: null });
+      }
+    }
     const p = office ? presentedPlans.get(office) : undefined;
     if (p && Date.now() - p.at > 4 * 60 * 60 * 1000) {
       presentedPlans.delete(office);

@@ -195,6 +195,13 @@
 
       <button class="b-open" onclick="setOpen(true)">Open the office</button>
       <button class="b-close" onclick="setOpen(false)">Close the office</button>
+      <button
+        id="autoBtn"
+        style="background: #1c2940; color: #9fc0e8; border: 1px solid #2a3a55"
+        onclick="toggleAuto()"
+      >
+        Auto schedule: …
+      </button>
       <div class="msg" id="msg"></div>
       <div class="tok">
         <div class="sub" style="margin: 0">
@@ -214,6 +221,9 @@
       var _ut = new URLSearchParams(location.search).get("t");
       if (_ut) {
         localStorage.setItem("office_host_tok", _ut);
+        try {
+          history.replaceState({}, "", location.pathname);
+        } catch (e) {}
       }
       $("tok").value = localStorage.getItem("office_host_tok") || "";
       $("tok").addEventListener("change", function () {
@@ -298,6 +308,7 @@
         });
       }
 
+      var curAuto = false;
       function refresh() {
         fetch("/api/office/status")
           .then(function (r) {
@@ -306,10 +317,44 @@
           .then(function (j) {
             $("status").className = "status " + (j.open ? "open" : "closed");
             $("statusText").textContent = j.open ? "OPEN — visitors can knock" : "CLOSED";
-            $("sched").textContent = j.schedule ? "Hours: " + j.schedule : "";
+            $("sched").textContent =
+              (j.schedule ? "Hours: " + j.schedule : "") + (j.auto ? "  ·  AUTO" : "");
+            curAuto = !!j.auto;
+            $("autoBtn").textContent =
+              "Auto schedule: " + (curAuto ? "ON (Mon-Fri 9-5 Atlantic)" : "off — tap to enable");
+            $("autoBtn").style.color = curAuto ? "#2ecc71" : "#9fc0e8";
+            $("autoBtn").style.borderColor = curAuto ? "#2ecc71" : "#2a3a55";
           })
           .catch(function () {
             $("statusText").textContent = "status unavailable";
+          });
+      }
+      function toggleAuto() {
+        var t = tok();
+        if (!t) {
+          $("msg").textContent = "Paste your host token in the box below first.";
+          return;
+        }
+        fetch("/api/office/set", {
+          method: "POST",
+          headers: { Authorization: "Bearer " + t, "Content-Type": "application/json" },
+          body: JSON.stringify({ auto: !curAuto }),
+        })
+          .then(function (r) {
+            return r.json();
+          })
+          .then(function (j) {
+            if (j.ok) {
+              $("msg").textContent = j.auto
+                ? "Auto schedule on — opens 9, closes 5, weekdays. Your manual flips still work."
+                : "Auto schedule off — fully manual.";
+              refresh();
+            } else {
+              $("msg").textContent = "Error: " + (j.error || "failed");
+            }
+          })
+          .catch(function () {
+            $("msg").textContent = "Network error.";
           });
       }
       function pollWaiting() {
