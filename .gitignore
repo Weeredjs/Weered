@@ -98,3 +98,5 @@ coverage/
 
 # GSC service-account key (never commit)
 seo-tools/gsc-sa.json
+office-hours.json
+office-waiting.json

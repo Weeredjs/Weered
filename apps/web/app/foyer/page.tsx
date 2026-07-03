@@ -12,7 +12,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import { Room, RoomEvent, Track } from "livekit-client";
-import { PlanModule } from "./PlanModule";
+import { PlanModule, PresentedPlanViewer } from "./PlanModule";
 
 const API = "/api";
 const wsBase = () => `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws`;
@@ -826,6 +826,7 @@ function ClientView({
               </button>
             </div>
           )}
+          {inOffice && <PresentedPlanViewer getToken={() => token.current} accent={accent} />}
           <div ref={screenEl} style={S.screen} />
           <div ref={tilesEl} style={S.tiles} />
         </main>

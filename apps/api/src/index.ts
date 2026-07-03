@@ -543,7 +543,14 @@ async function main() {
   // Guest deny-by-default: a guest token is valid ONLY on this tiny allowlist; every
   // other HTTP route returns 403. Also enforces revocation -- a deleted/expired/banned
   // guest row kills all its live tokens immediately.
-  const GUEST_ALLOWED_PATHS = new Set(["/auth/ws-ticket", "/auth/logout", "/voice/token"]);
+  const GUEST_ALLOWED_PATHS = new Set([
+    "/auth/ws-ticket",
+    "/auth/logout",
+    "/voice/token",
+    // Read-only: returns ONLY what the host explicitly presented to this guest's
+    // office scope (route re-checks guest + scope). See routes/auth.ts.
+    "/office/plan/presented",
+  ]);
   app.addHook("onRequest", async (req: any, reply: any) => {
     const a = req.headers.authorization;
     if (!a) return;

@@ -694,24 +694,38 @@ export default async function authRoutes(app: FastifyInstance, opts: Opts) {
   // Fathom engine server-side.
   const ENGINE_BASE =
     process.env.FATHOM_ENGINE_URL || "https://agent.eastcoastemployeebenefits.com";
-  const mintOfficeToken = (scope: string[]) =>
-    jwt.sign(
-      {
-        typ: "office",
-        tenantId: process.env.ECEB_TENANT_ID,
-        brokerId: process.env.ECEB_BROKER_ID,
-        meetingId: null,
-        scope,
-      },
+  // A "book" selects which tenant the office reads: the real ECEB book (default)
+  // or the Scotia demo book. Constrained to these two — never an arbitrary tenant.
+  const bookConfig = (book: string) =>
+    book === "demo"
+      ? { tenantId: process.env.DEMO_TENANT_ID, brokerId: process.env.DEMO_BROKER_ID }
+      : { tenantId: process.env.ECEB_TENANT_ID, brokerId: process.env.ECEB_BROKER_ID };
+  const mintOfficeToken = (scope: string[], book: string) => {
+    const { tenantId, brokerId } = bookConfig(book);
+    return jwt.sign(
+      { typ: "office", tenantId, brokerId, meetingId: null, scope },
       process.env.OFFICE_TOKEN_SECRET as string,
       { algorithm: "HS256", issuer: "abb-office", audience: "engine-api", expiresIn: 600 },
     );
-  const engineGet = async (path: string) => {
+  };
+  const engineGet = async (path: string, book: string) => {
     const res = await fetch(`${ENGINE_BASE}${path}`, {
       headers: {
-        Authorization: `Bearer ${mintOfficeToken(["office:read"])}`,
+        Authorization: `Bearer ${mintOfficeToken(["office:read"], book)}`,
         Origin: "https://office.eastcoastemployeebenefits.com",
       },
+    });
+    return { status: res.status, text: await res.text() };
+  };
+  const engineSend = async (method: string, path: string, body: any, book: string) => {
+    const res = await fetch(`${ENGINE_BASE}${path}`, {
+      method,
+      headers: {
+        Authorization: `Bearer ${mintOfficeToken(["office:read", "office:write"], book)}`,
+        "Content-Type": "application/json",
+        Origin: "https://office.eastcoastemployeebenefits.com",
+      },
+      body: JSON.stringify(body ?? {}),
     });
     return { status: res.status, text: await res.text() };
   };
@@ -731,17 +745,78 @@ export default async function authRoutes(app: FastifyInstance, opts: Opts) {
   // Host-only: client picker (proxied to the engine, tenant-scoped there).
   app.get("/office/plan/employers", async (req, reply) => {
     if (!planGate(req, reply)) return;
+    const book = String((req.query as any)?.book ?? "eceb");
     const q = encodeURIComponent(String((req.query as any)?.q ?? "").slice(0, 80));
-    const r = await engineGet(`/api/office/employers?q=${q}`);
+    const r = await engineGet(`/api/office/employers?q=${q}`, book);
     return reply.code(r.status).header("content-type", "application/json").send(r.text);
   });
 
   // Host-only: full client detail + current plan of record.
   app.get("/office/plan/employer/:id", async (req, reply) => {
     if (!planGate(req, reply)) return;
+    const book = String((req.query as any)?.book ?? "eceb");
     const id = encodeURIComponent(String((req.params as any).id));
-    const r = await engineGet(`/api/office/employers/${id}`);
+    const r = await engineGet(`/api/office/employers/${id}`, book);
     return reply.code(r.status).header("content-type", "application/json").send(r.text);
+  });
+
+  // Host-only: apply a change-set to the plan of record (creates a new version).
+  app.patch("/office/plan/employer/:id", async (req, reply) => {
+    if (!planGate(req, reply)) return;
+    const book = String((req.query as any)?.book ?? "eceb");
+    const id = String((req.params as any).id);
+    const r = await engineSend(
+      "PATCH",
+      `/api/employers/${encodeURIComponent(id)}/plan`,
+      (req as any).body,
+      book,
+    );
+    return reply.code(r.status).header("content-type", "application/json").send(r.text);
+  });
+
+  // Host-only: send a plan amendment notice to the carrier (Resend, engine-side).
+  app.post("/office/plan/amend", async (req, reply) => {
+    if (!planGate(req, reply)) return;
+    const book = String((req.query as any)?.book ?? "eceb");
+    const r = await engineSend("POST", `/api/plan-amendments/send`, (req as any).body, book);
+    return reply.code(r.status).header("content-type", "application/json").send(r.text);
+  });
+
+  // --- LIVE PLAN PRESENTATION ---
+  // The host "presents" a plan snapshot to the room; admitted guests poll it
+  // read-only. Guests only ever see exactly what the host chose to present.
+  // In-memory by design: ephemeral meeting state (host re-presents after a restart).
+  const presentedPlans = new Map<string, { data: any; seq: number; at: number }>();
+  let presentedSeq = 0;
+
+  app.post("/office/plan/present", async (req, reply) => {
+    const u = authFromHeader((req.headers as any).authorization);
+    if (!u || !(u as any).host) return reply.code(403).send({ ok: false, error: "host_only" });
+    const office = String((u as any).scope?.office || "");
+    if (!office) return reply.code(400).send({ ok: false, error: "no_office_scope" });
+    const data = (req as any).body?.data ?? null;
+    if (data) {
+      if (JSON.stringify(data).length > 200_000)
+        return reply.code(400).send({ ok: false, error: "too_large" });
+      presentedPlans.set(office, { data, seq: ++presentedSeq, at: Date.now() });
+    } else {
+      presentedPlans.delete(office);
+    }
+    return reply.send({ ok: true, presenting: presentedPlans.has(office) });
+  });
+
+  app.get("/office/plan/presented", async (req, reply) => {
+    const u = authFromHeader((req.headers as any).authorization);
+    const uu = u as any;
+    if (!u || (!uu.host && !uu.guest))
+      return reply.code(403).send({ ok: false, error: "auth_required" });
+    const office = String(uu.scope?.office || "");
+    const p = office ? presentedPlans.get(office) : undefined;
+    if (p && Date.now() - p.at > 4 * 60 * 60 * 1000) {
+      presentedPlans.delete(office);
+      return reply.send({ ok: true, seq: 0, data: null });
+    }
+    return reply.send({ ok: true, seq: p?.seq ?? 0, data: p?.data ?? null });
   });
 
   // Bookmarkable host control page, served same-origin so the toggle needs no CORS.
