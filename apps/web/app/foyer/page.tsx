@@ -12,6 +12,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import { Room, RoomEvent, Track } from "livekit-client";
+import { PlanModule } from "./PlanModule";
 
 const API = "/api";
 const wsBase = () => `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws`;
@@ -1233,6 +1234,7 @@ function HostView({ jwt, title, accent }: { jwt: string; title: string; accent: 
 
       <div style={S.body}>
         <main style={S.stage}>
+          <PlanModule jwt={jwt} accent={accent} />
           <div style={S.sideHead}>My office ({officeRoster.length})</div>
           <div ref={screenEl} style={{ ...S.screen, marginTop: 12 }} />
           <div ref={tilesEl} style={{ ...S.tiles, marginTop: 12 }} />

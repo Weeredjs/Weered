@@ -687,6 +687,63 @@ export default async function authRoutes(app: FastifyInstance, opts: Opts) {
     return reply.send({ ok: true, waiting: readWaiting() });
   });
 
+  // --- IN-ROOM FATHOM PLAN MODULE (read proxy) ---
+  // The office (client browser) never holds the engine token: it calls these
+  // host-gated routes same-origin, and the API mints a short-lived office:read
+  // token (shared OFFICE_TOKEN_SECRET) to fetch the tenant-scoped plan from the
+  // Fathom engine server-side.
+  const ENGINE_BASE =
+    process.env.FATHOM_ENGINE_URL || "https://agent.eastcoastemployeebenefits.com";
+  const mintOfficeToken = (scope: string[]) =>
+    jwt.sign(
+      {
+        typ: "office",
+        tenantId: process.env.ECEB_TENANT_ID,
+        brokerId: process.env.ECEB_BROKER_ID,
+        meetingId: null,
+        scope,
+      },
+      process.env.OFFICE_TOKEN_SECRET as string,
+      { algorithm: "HS256", issuer: "abb-office", audience: "engine-api", expiresIn: 600 },
+    );
+  const engineGet = async (path: string) => {
+    const res = await fetch(`${ENGINE_BASE}${path}`, {
+      headers: {
+        Authorization: `Bearer ${mintOfficeToken(["office:read"])}`,
+        Origin: "https://office.eastcoastemployeebenefits.com",
+      },
+    });
+    return { status: res.status, text: await res.text() };
+  };
+  const planGate = (req: any, reply: any): boolean => {
+    const u = authFromHeader((req.headers as any).authorization);
+    if (!u || !(u as any).host) {
+      reply.code(403).send({ ok: false, error: "host_only" });
+      return false;
+    }
+    if (!process.env.OFFICE_TOKEN_SECRET || !process.env.ECEB_TENANT_ID) {
+      reply.code(503).send({ ok: false, error: "engine_not_configured" });
+      return false;
+    }
+    return true;
+  };
+
+  // Host-only: client picker (proxied to the engine, tenant-scoped there).
+  app.get("/office/plan/employers", async (req, reply) => {
+    if (!planGate(req, reply)) return;
+    const q = encodeURIComponent(String((req.query as any)?.q ?? "").slice(0, 80));
+    const r = await engineGet(`/api/office/employers?q=${q}`);
+    return reply.code(r.status).header("content-type", "application/json").send(r.text);
+  });
+
+  // Host-only: full client detail + current plan of record.
+  app.get("/office/plan/employer/:id", async (req, reply) => {
+    if (!planGate(req, reply)) return;
+    const id = encodeURIComponent(String((req.params as any).id));
+    const r = await engineGet(`/api/office/employers/${id}`);
+    return reply.code(r.status).header("content-type", "application/json").send(r.text);
+  });
+
   // Bookmarkable host control page, served same-origin so the toggle needs no CORS.
   app.get("/office/control", async (_req, reply) => {
     reply.header("Content-Type", "text/html; charset=utf-8");
