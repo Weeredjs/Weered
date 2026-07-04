@@ -112,7 +112,7 @@ export default async function LobbyIdLayout(props: {
       />
       <script
         dangerouslySetInnerHTML={{
-          __html: `try{if(localStorage.getItem('weered_token'))document.documentElement.setAttribute('data-weered-authed','1');}catch(e){}`,
+          __html: `try{if(localStorage.getItem('weered_user'))document.documentElement.setAttribute('data-weered-authed','1');}catch(e){}`,
         }}
       />
       <SyncAuthedAttribute />
