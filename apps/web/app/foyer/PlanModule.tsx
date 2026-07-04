@@ -384,7 +384,7 @@ export function PresentedPlanViewer({
           {justUpdated ? "· updated just now" : "shared by your advisor"}
         </span>
       </div>
-      <div style={{ padding: 12 }}>
+      <div style={{ padding: 12, maxHeight: "70vh", overflowY: "auto" }}>
         <PlanBody detail={data} accent={accent} />
         {data.projection && (
           <ProjectionPaths
@@ -1001,7 +1001,7 @@ export function PlanModule({ jwt, accent }: { jwt: string; accent: string }) {
           </div>
         </div>
       ) : (
-        <div style={{ padding: 12 }}>
+        <div style={{ padding: 12, maxHeight: "66vh", overflowY: "auto" }}>
           <button
             style={PM.back}
             onClick={() => {
@@ -1540,6 +1540,10 @@ const PM: Record<string, CSSProperties> = {
     borderRadius: 12,
     background: "#11151c",
     overflow: "hidden",
+    // The foyer stage is a flex column; overflow:hidden makes this box
+    // shrinkable, which silently clipped the plan + buttons. Never shrink —
+    // the detail area scrolls internally instead.
+    flexShrink: 0,
   },
   head: {
     display: "flex",
