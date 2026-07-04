@@ -870,6 +870,87 @@ export default async function authRoutes(app: FastifyInstance, opts: Opts) {
     },
   );
 
+  // --- RENEWAL RATE CARD (present-side) ---
+  // A pure re-rate travels carrier -> broker: the carrier set the rates, so nothing
+  // is ever sent back. This card is what the broker SHOWS the room. Persisted
+  // droplet-side (keyed per book+employer) so keyed-in rates survive a refresh;
+  // the engine grows a versioned RateCard later and this becomes its display leg.
+  // Row shape deliberately mirrors the engine renewal parser's RateRow (benefit /
+  // tier-or-unit / current / renewal / % change) so doc-drop fill is a straight map.
+  const RATECARD_FILE = "/opt/weered/office-ratecards.json";
+  const rcKey = (book: string, id: string) => `${book}:${id}`;
+  const loadRateCards = (): Record<string, any> => {
+    try {
+      return JSON.parse(readFileSync(RATECARD_FILE, "utf8"));
+    } catch {
+      return {};
+    }
+  };
+  const rcNum = (v: any): number | null => {
+    if (v === null || v === undefined || v === "") return null;
+    const n = Number(v);
+    return Number.isFinite(n) && Math.abs(n) < 1e9 ? Math.round(n * 10000) / 10000 : null;
+  };
+  const rcStr = (v: any, max: number): string => String(v ?? "").slice(0, max);
+  // Whitelist projection: also reused when presenting, so a guest snapshot can only
+  // ever carry these fields. pctChange is stored in PERCENT units (8.2 = +8.2%).
+  const sanitizeRateCard = (raw: any): any | null => {
+    if (!raw || typeof raw !== "object" || !Array.isArray(raw.rows)) return null;
+    const rows = raw.rows
+      .slice(0, 40)
+      .map((r: any) => ({
+        benefit: rcStr(r?.benefit, 60).trim(),
+        tier: rcStr(r?.tier, 40).trim(),
+        volumeOrLives: rcNum(r?.volumeOrLives),
+        currentRate: rcNum(r?.currentRate),
+        currentPremium: rcNum(r?.currentPremium),
+        renewalRate: rcNum(r?.renewalRate),
+        renewalPremium: rcNum(r?.renewalPremium),
+        pctChange: rcNum(r?.pctChange),
+      }))
+      .filter((r: any) => r.benefit !== "");
+    if (!rows.length) return null;
+    return {
+      rows,
+      effectiveDate: /^\d{4}-\d{2}-\d{2}$/.test(String(raw.effectiveDate ?? ""))
+        ? String(raw.effectiveDate)
+        : null,
+      rateGuaranteeMonths: rcNum(raw.rateGuaranteeMonths),
+      note: rcStr(raw.note, 300).trim() || null,
+    };
+  };
+
+  app.get("/office/plan/ratecard/:id", async (req, reply) => {
+    if (!planGate(req, reply)) return;
+    const book = String((req.query as any)?.book ?? "eceb");
+    const id = String((req.params as any).id).slice(0, 60);
+    const cards = loadRateCards();
+    return reply.send({ ok: true, card: cards[rcKey(book, id)] ?? null });
+  });
+
+  app.put(
+    "/office/plan/ratecard/:id",
+    { config: { rateLimit: { max: 30, timeWindow: "1 minute" } } },
+    async (req, reply) => {
+      if (!planGate(req, reply)) return;
+      const book = String((req.query as any)?.book ?? "eceb");
+      const id = String((req.params as any).id).slice(0, 60);
+      const body: any = (req as any).body || {};
+      const cards = loadRateCards();
+      if (body.card === null) {
+        delete cards[rcKey(book, id)];
+        writeFileSync(RATECARD_FILE, JSON.stringify(cards));
+        return reply.send({ ok: true, card: null });
+      }
+      const card = sanitizeRateCard(body.card);
+      if (!card) return reply.code(400).send({ ok: false, error: "invalid_ratecard" });
+      card.updatedAt = Date.now();
+      cards[rcKey(book, id)] = card;
+      writeFileSync(RATECARD_FILE, JSON.stringify(cards));
+      return reply.send({ ok: true, card });
+    },
+  );
+
   // --- LIVE PLAN PRESENTATION ---
   // The host "presents" a plan snapshot to the room; admitted guests poll it
   // read-only. Guests only ever see exactly what the host chose to present.
@@ -899,6 +980,8 @@ export default async function authRoutes(app: FastifyInstance, opts: Opts) {
             ? { benefitDesign: raw.plan.benefitDesign ?? {}, version: raw.plan.version ?? null }
             : null,
           fields: raw.fields ?? {},
+          // same projection as storage: a guest can only ever see whitelisted fields
+          rateCard: sanitizeRateCard(raw.rateCard),
         }
       : null;
     if (data) {

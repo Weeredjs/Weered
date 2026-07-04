@@ -121,6 +121,107 @@ function PlanBody({ detail, accent }: { detail: any; accent: string }) {
   );
 }
 
+// ---- Renewal rate card (carrier re-rate, shown to the room; nothing goes back
+// to the carrier). Row shape mirrors the engine renewal parser's RateRow. ----
+const rcMoney = (n: number) =>
+  "$" + n.toLocaleString("en-CA", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+// stored pctChange (percent units) wins; else derive premium-pair, else rate-pair
+function rcRowPct(r: any): number | null {
+  if (typeof r?.pctChange === "number") return r.pctChange;
+  if (
+    typeof r?.currentPremium === "number" &&
+    typeof r?.renewalPremium === "number" &&
+    r.currentPremium !== 0
+  )
+    return ((r.renewalPremium - r.currentPremium) / Math.abs(r.currentPremium)) * 100;
+  if (
+    typeof r?.currentRate === "number" &&
+    typeof r?.renewalRate === "number" &&
+    r.currentRate !== 0
+  )
+    return ((r.renewalRate - r.currentRate) / Math.abs(r.currentRate)) * 100;
+  return null;
+}
+const rcPctColor = (p: number | null) =>
+  p == null ? "#6a7681" : p > 0 ? "#f0883e" : p < 0 ? "#3fb950" : "#8b949e";
+const rcPctText = (p: number | null) => (p == null ? "—" : `${p > 0 ? "+" : ""}${p.toFixed(1)}%`);
+
+function RateCardTable({ card, accent, title }: { card: any; accent: string; title: string }) {
+  const rows: any[] = Array.isArray(card?.rows) ? card.rows : [];
+  if (!rows.length) return null;
+  let curSum = 0,
+    newSum = 0,
+    haveCur = false,
+    haveNew = false;
+  rows.forEach((r) => {
+    if (typeof r.currentPremium === "number") {
+      curSum += r.currentPremium;
+      haveCur = true;
+    }
+    if (typeof r.renewalPremium === "number") {
+      newSum += r.renewalPremium;
+      haveNew = true;
+    }
+  });
+  const totalPct =
+    haveCur && haveNew && curSum !== 0 ? ((newSum - curSum) / Math.abs(curSum)) * 100 : null;
+  const meta = [
+    card.effectiveDate ? `Effective ${card.effectiveDate}` : null,
+    card.rateGuaranteeMonths != null ? `${card.rateGuaranteeMonths}-month rate guarantee` : null,
+  ]
+    .filter(Boolean)
+    .join("  ·  ");
+  const cell = (prem: any, rate: any) =>
+    typeof prem === "number" ? rcMoney(prem) : typeof rate === "number" ? String(rate) : "—";
+  return (
+    <div style={{ marginTop: 14 }}>
+      <div style={{ ...PM.benefitHead, color: accent }}>{title}</div>
+      {meta && <div style={{ color: "#8b949e", fontSize: 12, marginBottom: 4 }}>{meta}</div>}
+      <div style={PM.rcHeadRow}>
+        <span style={{ flex: 1.4 }}>Benefit</span>
+        <span style={PM.rcNumCol}>Current</span>
+        <span style={PM.rcNumCol}>Renewal</span>
+        <span style={PM.rcPctCol}>Change</span>
+      </div>
+      {rows.map((r, i) => {
+        const pct = rcRowPct(r);
+        return (
+          <div key={i} style={{ ...PM.rcRow, ...(i === 0 ? { borderTop: "none" } : {}) }}>
+            <span style={{ flex: 1.4 }}>
+              <span style={{ color: "#e6edf3" }}>{r.benefit}</span>
+              {r.tier ? (
+                <span style={{ color: "#8b949e", fontSize: 11.5 }}> · {r.tier}</span>
+              ) : null}
+            </span>
+            <span style={{ ...PM.rcNumCol, color: "#c9d4e0" }}>
+              {cell(r.currentPremium, r.currentRate)}
+            </span>
+            <span style={{ ...PM.rcNumCol, fontWeight: 700 }}>
+              {cell(r.renewalPremium, r.renewalRate)}
+            </span>
+            <span style={{ ...PM.rcPctCol, color: rcPctColor(pct), fontWeight: 700 }}>
+              {rcPctText(pct)}
+            </span>
+          </div>
+        );
+      })}
+      {(haveCur || haveNew) && (
+        <div style={{ ...PM.rcRow, borderTop: "1px solid #283040" }}>
+          <span style={{ flex: 1.4, fontWeight: 800 }}>Total monthly</span>
+          <span style={{ ...PM.rcNumCol, color: "#c9d4e0", fontWeight: 700 }}>
+            {haveCur ? rcMoney(curSum) : "—"}
+          </span>
+          <span style={{ ...PM.rcNumCol, fontWeight: 800 }}>{haveNew ? rcMoney(newSum) : "—"}</span>
+          <span style={{ ...PM.rcPctCol, color: rcPctColor(totalPct), fontWeight: 800 }}>
+            {rcPctText(totalPct)}
+          </span>
+        </div>
+      )}
+      {card.note && <div style={{ color: "#8b949e", fontSize: 12, marginTop: 6 }}>{card.note}</div>}
+    </div>
+  );
+}
+
 // CLIENT side: renders whatever the host is presenting, live. Polls while mounted.
 export function PresentedPlanViewer({
   getToken,
@@ -189,6 +290,9 @@ export function PresentedPlanViewer({
       </div>
       <div style={{ padding: 12 }}>
         <PlanBody detail={data} accent={accent} />
+        {data.rateCard && (
+          <RateCardTable card={data.rateCard} accent={accent} title="Your renewal — rates" />
+        )}
       </div>
     </div>
   );
@@ -214,6 +318,22 @@ export function PlanModule({ jwt, accent }: { jwt: string; accent: string }) {
   const [carrierEmail, setCarrierEmail] = useState("");
   const [effDate, setEffDate] = useState("");
   const [presenting, setPresenting] = useState(false);
+
+  // renewal rate card (saved card + editor working copy; numbers kept as strings while editing)
+  const emptyRcRow = () => ({
+    benefit: "",
+    tier: "",
+    currentRate: "",
+    currentPremium: "",
+    renewalRate: "",
+    renewalPremium: "",
+  });
+  const [rateCard, setRateCard] = useState<any | null>(null);
+  const [rcOpen, setRcOpen] = useState(false);
+  const [rcRows, setRcRows] = useState<any[]>([]);
+  const [rcEff, setRcEff] = useState("");
+  const [rcGuar, setRcGuar] = useState("");
+  const [rcNote, setRcNote] = useState("");
 
   // mirror `presenting` into a ref so unmount/pagehide cleanup reads the latest value
   const presentingRef = useRef(false);
@@ -281,6 +401,19 @@ export function PlanModule({ jwt, accent }: { jwt: string; accent: string }) {
     }
   }, [q, jwt, book]);
 
+  // saved card -> editable working copy (numbers become input strings)
+  const cardToRows = (card: any): any[] =>
+    Array.isArray(card?.rows)
+      ? card.rows.map((r: any) => ({
+          benefit: r.benefit ?? "",
+          tier: r.tier ?? "",
+          currentRate: r.currentRate == null ? "" : String(r.currentRate),
+          currentPremium: r.currentPremium == null ? "" : String(r.currentPremium),
+          renewalRate: r.renewalRate == null ? "" : String(r.renewalRate),
+          renewalPremium: r.renewalPremium == null ? "" : String(r.renewalPremium),
+        }))
+      : [];
+
   const loadEmployer = useCallback(
     async (id: string): Promise<any | null> => {
       setErr("");
@@ -289,6 +422,7 @@ export function PlanModule({ jwt, accent }: { jwt: string; accent: string }) {
       setChanges([]);
       setShowSend(false);
       setFlash("");
+      setRcOpen(false);
       try {
         const r = await fetch(
           `${API}/office/plan/employer/${encodeURIComponent(id)}?book=${book}`,
@@ -299,6 +433,26 @@ export function PlanModule({ jwt, accent }: { jwt: string; accent: string }) {
         const j = await r.json();
         if (!r.ok) throw new Error(j?.error || "load failed");
         setDetail(j);
+        // saved renewal rate card, if any (non-fatal on error)
+        try {
+          const rc = await fetch(
+            `${API}/office/plan/ratecard/${encodeURIComponent(id)}?book=${book}`,
+            { headers: { Authorization: `Bearer ${jwt}` } },
+          );
+          const rj = await rc.json();
+          const card = rc.ok && rj?.ok ? (rj.card ?? null) : null;
+          setRateCard(card);
+          setRcRows(cardToRows(card));
+          setRcEff(card?.effectiveDate ?? "");
+          setRcGuar(card?.rateGuaranteeMonths == null ? "" : String(card.rateGuaranteeMonths));
+          setRcNote(card?.note ?? "");
+        } catch {
+          setRateCard(null);
+          setRcRows([]);
+          setRcEff("");
+          setRcGuar("");
+          setRcNote("");
+        }
         return j;
       } catch (e: any) {
         setErr(String(e?.message || e));
@@ -337,7 +491,7 @@ export function PlanModule({ jwt, accent }: { jwt: string; accent: string }) {
       else setFlash("Couldn't stop the share — the client may still see the plan. Tap Stop again.");
     } else {
       setBusy("present");
-      const ok = await postPresent(detail);
+      const ok = await postPresent({ ...detail, rateCard });
       setBusy("");
       if (ok) {
         setPresenting(true);
@@ -345,6 +499,75 @@ export function PlanModule({ jwt, accent }: { jwt: string; accent: string }) {
       } else setFlash("Couldn't present — try again.");
     }
   };
+
+  // Save the renewal rate card (droplet-side store). Saving with zero lines clears
+  // it. If presenting, the room updates immediately with the saved card.
+  const saveRateCard = async () => {
+    if (!detail) return;
+    const rows = rcRows
+      .map((r) => ({
+        benefit: String(r.benefit || "").trim(),
+        tier: String(r.tier || "").trim(),
+        currentRate: r.currentRate === "" ? null : Number(r.currentRate),
+        currentPremium: r.currentPremium === "" ? null : Number(r.currentPremium),
+        renewalRate: r.renewalRate === "" ? null : Number(r.renewalRate),
+        renewalPremium: r.renewalPremium === "" ? null : Number(r.renewalPremium),
+      }))
+      .filter((r) => r.benefit !== "");
+    setBusy("ratecard");
+    setFlash("");
+    try {
+      const isClear = rows.length === 0;
+      const body = isClear
+        ? { card: null }
+        : {
+            card: {
+              rows,
+              effectiveDate: rcEff || null,
+              rateGuaranteeMonths: rcGuar === "" ? null : Number(rcGuar),
+              note: rcNote.trim() || null,
+            },
+          };
+      const r = await fetch(
+        `${API}/office/plan/ratecard/${encodeURIComponent(detail.employer.id)}?book=${book}`,
+        {
+          method: "PUT",
+          headers: { Authorization: `Bearer ${jwt}`, "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        },
+      );
+      const j = await r.json();
+      if (!r.ok || !j.ok) throw new Error(j?.error || "save failed");
+      setRateCard(j.card);
+      setRcRows(cardToRows(j.card));
+      if (presentingRef.current) await postPresent({ ...detail, rateCard: j.card });
+      setFlash(isClear ? "Rate card cleared." : "Rate card saved.");
+      if (isClear) setRcOpen(false);
+    } catch (e: any) {
+      setFlash("Error: " + String(e?.message || e));
+    } finally {
+      setBusy("");
+    }
+  };
+
+  const setRcRow = (i: number, patch: any) =>
+    setRcRows((x) => x.map((r, j) => (j === i ? { ...r, ...patch } : r)));
+
+  // standard small-group benefit lines: tiered health/dental, volume-rated
+  // life/AD&D/LTD (rate per $100), flat dependent life
+  const seedRateRows = () =>
+    setRcRows(
+      [
+        ["Extended health", "Single"],
+        ["Extended health", "Family"],
+        ["Dental", "Single"],
+        ["Dental", "Family"],
+        ["Life", "per $100"],
+        ["AD&D", "per $100"],
+        ["LTD", "per $100"],
+        ["Dependent life", "flat"],
+      ].map(([benefit, tier]) => ({ ...emptyRcRow(), benefit, tier })),
+    );
 
   const hidePanel = () => {
     stopPresentingSoft();
@@ -395,7 +618,7 @@ export function PlanModule({ jwt, accent }: { jwt: string; accent: string }) {
       if (!r.ok) throw new Error(j?.error || "apply failed");
       setChanges([]);
       const fresh = await loadEmployer(detail.employer.id);
-      if (presentingRef.current && fresh) await postPresent(fresh);
+      if (presentingRef.current && fresh) await postPresent({ ...fresh, rateCard });
       setFlash(`Applied to plan of record (now v${j.version}).`);
     } catch (e: any) {
       setFlash("Error: " + String(e?.message || e));
@@ -524,9 +747,10 @@ export function PlanModule({ jwt, accent }: { jwt: string; accent: string }) {
             ‹ Change client
           </button>
           <PlanBody detail={detail} accent={accent} />
+          {rateCard && <RateCardTable card={rateCard} accent={accent} title="Renewal rates" />}
 
           {detail.plan && (
-            <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
+            <div style={{ display: "flex", gap: 8, marginTop: 14, flexWrap: "wrap" }}>
               <button
                 style={{
                   ...PM.adjust,
@@ -541,6 +765,17 @@ export function PlanModule({ jwt, accent }: { jwt: string; accent: string }) {
               <button
                 style={{
                   ...PM.adjust,
+                  borderColor: accent,
+                  color: rcOpen ? "#08120b" : accent,
+                  background: rcOpen ? accent : "transparent",
+                }}
+                onClick={() => setRcOpen((v) => !v)}
+              >
+                {rcOpen ? "Done with rates" : "▤ Renewal rates"}
+              </button>
+              <button
+                style={{
+                  ...PM.adjust,
                   borderColor: presenting ? "#3fb950" : "#8b949e",
                   color: presenting ? "#08120b" : "#c9d4e0",
                   background: presenting ? "#3fb950" : "transparent",
@@ -550,6 +785,136 @@ export function PlanModule({ jwt, accent }: { jwt: string; accent: string }) {
               >
                 {busy === "present" ? "…" : presenting ? "■ Stop presenting" : "▶ Present to room"}
               </button>
+            </div>
+          )}
+
+          {rcOpen && detail.plan && (
+            <div style={PM.editor}>
+              <div style={{ color: "#8b949e", fontSize: 12, marginBottom: 8 }}>
+                Carrier re-rate for this renewal. Shown to the room when presenting — nothing is
+                sent to the carrier. Premiums are monthly; rates for volume-rated lines.
+              </div>
+              {rcRows.length === 0 && (
+                <button
+                  style={{ ...PM.sendBtn, borderColor: accent, color: accent, width: "100%" }}
+                  onClick={seedRateRows}
+                >
+                  Start from typical benefit lines
+                </button>
+              )}
+              {rcRows.map((r, i) => (
+                <div
+                  key={i}
+                  style={{
+                    marginTop: 8,
+                    paddingTop: 8,
+                    borderTop: i === 0 ? "none" : "1px solid #1b2029",
+                  }}
+                >
+                  <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                    <input
+                      style={{ ...PM.rcIn, flex: 1.6 }}
+                      value={r.benefit}
+                      onChange={(e) => setRcRow(i, { benefit: e.target.value })}
+                      placeholder="Benefit (e.g. Extended health)"
+                    />
+                    <input
+                      style={{ ...PM.rcIn, flex: 1 }}
+                      value={r.tier}
+                      onChange={(e) => setRcRow(i, { tier: e.target.value })}
+                      placeholder="Single / Family / per $100"
+                    />
+                    <button
+                      style={PM.rm}
+                      onClick={() => setRcRows((x) => x.filter((_, j) => j !== i))}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  <div style={PM.rcInRow}>
+                    <input
+                      style={PM.rcIn}
+                      type="number"
+                      value={r.currentRate}
+                      onChange={(e) => setRcRow(i, { currentRate: e.target.value })}
+                      placeholder="cur rate"
+                    />
+                    <input
+                      style={PM.rcIn}
+                      type="number"
+                      value={r.currentPremium}
+                      onChange={(e) => setRcRow(i, { currentPremium: e.target.value })}
+                      placeholder="cur $/mo"
+                    />
+                    <input
+                      style={PM.rcIn}
+                      type="number"
+                      value={r.renewalRate}
+                      onChange={(e) => setRcRow(i, { renewalRate: e.target.value })}
+                      placeholder="new rate"
+                    />
+                    <input
+                      style={PM.rcIn}
+                      type="number"
+                      value={r.renewalPremium}
+                      onChange={(e) => setRcRow(i, { renewalPremium: e.target.value })}
+                      placeholder="new $/mo"
+                    />
+                  </div>
+                </div>
+              ))}
+              {rcRows.length > 0 && (
+                <>
+                  <button
+                    style={{
+                      ...PM.sendBtn,
+                      borderColor: "#283040",
+                      color: "#c9d4e0",
+                      marginTop: 10,
+                    }}
+                    onClick={() => setRcRows((x) => [...x, emptyRcRow()])}
+                  >
+                    + Add line
+                  </button>
+                  <div style={PM.rcInRow}>
+                    <input
+                      style={PM.rcIn}
+                      type="date"
+                      value={rcEff}
+                      onChange={(e) => setRcEff(e.target.value)}
+                      title="Renewal effective date"
+                    />
+                    <input
+                      style={PM.rcIn}
+                      type="number"
+                      value={rcGuar}
+                      onChange={(e) => setRcGuar(e.target.value)}
+                      placeholder="rate guarantee (months)"
+                    />
+                  </div>
+                  <input
+                    style={{ ...PM.rcIn, width: "100%", boxSizing: "border-box", marginTop: 6 }}
+                    value={rcNote}
+                    onChange={(e) => setRcNote(e.target.value)}
+                    placeholder="note shown with the card (optional)"
+                  />
+                </>
+              )}
+              {(rcRows.length > 0 || rateCard) && (
+                <button
+                  style={{ ...PM.apply, background: accent, marginTop: 10, width: "100%" }}
+                  onClick={saveRateCard}
+                  disabled={busy !== ""}
+                >
+                  {busy === "ratecard"
+                    ? "Saving…"
+                    : rcRows.length === 0
+                      ? "Save (clears the card)"
+                      : presenting
+                        ? "Save rate card (updates room)"
+                        : "Save rate card"}
+                </button>
+              )}
             </div>
           )}
 
@@ -887,4 +1252,35 @@ const PM: Record<string, CSSProperties> = {
     border: "1px solid #4a3612",
   },
   flash: { fontSize: 13, marginTop: 10, fontWeight: 600 },
+  rcHeadRow: {
+    display: "flex",
+    gap: 8,
+    fontSize: 10.5,
+    color: "#6a7681",
+    padding: "4px 0 3px",
+    borderBottom: "1px solid #283040",
+    textTransform: "uppercase",
+    letterSpacing: ".05em",
+  },
+  rcRow: {
+    display: "flex",
+    gap: 8,
+    alignItems: "baseline",
+    fontSize: 13.5,
+    padding: "6px 0",
+    borderTop: "1px solid #1b2029",
+  },
+  rcNumCol: { flex: 1, textAlign: "right" },
+  rcPctCol: { width: 62, textAlign: "right" },
+  rcInRow: { display: "flex", gap: 6, marginTop: 6 },
+  rcIn: {
+    flex: 1,
+    minWidth: 0,
+    padding: "7px 8px",
+    borderRadius: 7,
+    border: "1px solid #283040",
+    background: "#11151c",
+    color: "#e6edf3",
+    fontSize: 12.5,
+  },
 };
