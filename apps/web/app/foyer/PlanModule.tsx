@@ -306,6 +306,10 @@ export function PlanModule({ jwt, accent }: { jwt: string; accent: string }) {
   const [detail, setDetail] = useState<any | null>(null);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
+  // "No matches" may only render after a search actually completed — showing it
+  // for mere typed text reads as a dead connection (bit us on 2026-07-04).
+  const [searched, setSearched] = useState(false);
+  const searchSeq = useRef(0);
 
   const [editing, setEditing] = useState(false);
   const [changes, setChanges] = useState<any[]>([]);
@@ -382,6 +386,7 @@ export function PlanModule({ jwt, accent }: { jwt: string; accent: string }) {
   }, [jwt]);
 
   const runSearch = useCallback(async () => {
+    const mySeq = ++searchSeq.current;
     setErr("");
     setLoading(true);
     try {
@@ -392,14 +397,31 @@ export function PlanModule({ jwt, accent }: { jwt: string; accent: string }) {
         },
       );
       const j = await r.json();
+      if (mySeq !== searchSeq.current) return; // a newer keystroke's search superseded this one
       if (!r.ok) throw new Error(j?.error || "lookup failed");
       setResults(j.employers || []);
+      setSearched(true);
     } catch (e: any) {
-      setErr(String(e?.message || e));
+      if (mySeq === searchSeq.current) setErr(String(e?.message || e));
     } finally {
-      setLoading(false);
+      if (mySeq === searchSeq.current) setLoading(false);
     }
   }, [q, jwt, book]);
+
+  // Search as you type: the in-room expectation is live lookup, not a Search
+  // button. Debounced; empty box just clears the list.
+  useEffect(() => {
+    if (!open || detail) return;
+    if (!q.trim()) {
+      setResults([]);
+      setSearched(false);
+      return;
+    }
+    const t = setTimeout(() => {
+      void runSearch();
+    }, 350);
+    return () => clearTimeout(t);
+  }, [q, book, open, detail, runSearch]);
 
   // saved card -> editable working copy (numbers become input strings)
   const cardToRows = (card: any): any[] =>
@@ -476,6 +498,7 @@ export function PlanModule({ jwt, accent }: { jwt: string; accent: string }) {
     stopPresentingSoft();
     setBook(b);
     setResults([]);
+    setSearched(false);
     setDetail(null);
     setErr("");
   };
@@ -730,8 +753,13 @@ export function PlanModule({ jwt, accent }: { jwt: string; accent: string }) {
                 </span>
               </button>
             ))}
-            {!loading && results.length === 0 && q && !err && (
-              <div style={{ color: "#8b949e", fontSize: 13, padding: "8px 2px" }}>No matches.</div>
+            {loading && results.length === 0 && (
+              <div style={{ color: "#8b949e", fontSize: 13, padding: "8px 2px" }}>Searching…</div>
+            )}
+            {!loading && searched && results.length === 0 && !err && (
+              <div style={{ color: "#8b949e", fontSize: 13, padding: "8px 2px" }}>
+                No clients matched &ldquo;{q}&rdquo;.
+              </div>
             )}
           </div>
         </div>
