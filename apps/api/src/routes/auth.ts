@@ -951,6 +951,67 @@ export default async function authRoutes(app: FastifyInstance, opts: Opts) {
     },
   );
 
+  // --- IN-ROOM RENEWAL PROJECTION (engine computes; stateless, no writes) ---
+  // Proxies the engine's credibility-weighted projection: three paths (status
+  // quo / capped / with levers) + the lever catalog priced for THIS group. The
+  // room renders levers from the response, never a hardcoded list. Engine
+  // rate-limits 300/10min; we gate tighter per host.
+  app.post(
+    "/office/plan/projection/:id",
+    { config: { rateLimit: { max: 60, timeWindow: "1 minute" } } },
+    async (req, reply) => {
+      if (!planGate(req, reply)) return;
+      const book = String((req.query as any)?.book ?? "eceb");
+      const id = String((req.params as any).id).slice(0, 60);
+      const r = await engineSend(
+        "POST",
+        `/api/office/employers/${encodeURIComponent(id)}/projection`,
+        (req as any).body ?? {},
+        book,
+      );
+      return reply.code(r.status).header("content-type", "application/json").send(r.text);
+    },
+  );
+
+  // Display-only whitelist for a PRESENTED projection: paths, per-lever savings,
+  // intensity, loss ratio. Never the catalog, assumptions, or benefit internals —
+  // the client screen shows outcomes, not the model's dials.
+  const sanitizeProjection = (raw: any): any | null => {
+    if (!raw || typeof raw !== "object" || !raw.paths || typeof raw.paths !== "object") return null;
+    const p: any = raw.paths;
+    const path2 = (x: any) =>
+      x && typeof x === "object"
+        ? { annual: rcNum(x.annual), changePct: rcNum(x.changePct) }
+        : null;
+    const statusQuo = path2(p.statusQuo);
+    const capped = path2(p.capped);
+    const withLevers = path2(p.withLevers);
+    const currentAnnual = rcNum(p.currentAnnual);
+    if (currentAnnual == null || !statusQuo || statusQuo.annual == null) return null;
+    return {
+      paths: {
+        currentAnnual,
+        statusQuo,
+        capped: capped ? { ...capped, capped: !!p.capped?.capped } : null,
+        withLevers: withLevers
+          ? { ...withLevers, totalClaimsSaved: rcNum(p.withLevers?.totalClaimsSaved) }
+          : null,
+      },
+      perLever: Array.isArray(raw.perLever)
+        ? raw.perLever
+            .slice(0, 20)
+            .map((l: any) => ({
+              name: rcStr(l?.name, 80).trim(),
+              claimsSaved: rcNum(l?.claimsSaved),
+              memberImpact: rcStr(l?.memberImpact, 10),
+            }))
+            .filter((l: any) => l.name !== "")
+        : [],
+      intensity: rcStr(raw.intensity, 14),
+      overallLossRatio: rcNum(raw.overallLossRatio),
+    };
+  };
+
   // --- LIVE PLAN PRESENTATION ---
   // The host "presents" a plan snapshot to the room; admitted guests poll it
   // read-only. Guests only ever see exactly what the host chose to present.
@@ -982,6 +1043,7 @@ export default async function authRoutes(app: FastifyInstance, opts: Opts) {
           fields: raw.fields ?? {},
           // same projection as storage: a guest can only ever see whitelisted fields
           rateCard: sanitizeRateCard(raw.rateCard),
+          projection: sanitizeProjection(raw.projection),
         }
       : null;
     if (data) {

@@ -222,6 +222,102 @@ function RateCardTable({ card, accent, title }: { card: any; accent: string; tit
   );
 }
 
+// ---- Renewal projection (engine-computed: credibility-weighted experience
+// rating + lever catalog priced for THIS group). The office is a remote control:
+// every number here came back from the engine; nothing is computed in the room. ----
+const pjMoney = (n: number) => "$" + Math.round(n).toLocaleString("en-CA");
+const pjPct = (p: number) => `${p > 0 ? "+" : ""}${p.toFixed(1)}%`;
+
+// Shared read-only render of the three paths + applied levers (host + client).
+function ProjectionPaths({
+  paths,
+  perLever,
+  accent,
+  title,
+  note,
+}: {
+  paths: any;
+  perLever: any[];
+  accent: string;
+  title: string;
+  note?: string;
+}) {
+  if (!paths || typeof paths.currentAnnual !== "number" || !paths.statusQuo) return null;
+  const rows: { label: string; annual: number; pct: number | null; color: string; sub?: string }[] =
+    [{ label: "Current premium", annual: paths.currentAnnual, pct: null, color: "#8b949e" }];
+  rows.push({
+    label: "Status quo renewal",
+    annual: paths.statusQuo.annual,
+    pct: paths.statusQuo.changePct,
+    color: "#f0883e",
+    sub: "no changes, full experience",
+  });
+  if (paths.capped)
+    rows.push({
+      label: "First-renewal cap",
+      annual: paths.capped.annual,
+      pct: paths.capped.changePct,
+      color: "#e0b341",
+      sub: paths.capped.capped ? "cap holds the increase" : "cap not reached",
+    });
+  if (paths.withLevers && perLever.length)
+    rows.push({
+      label: "With the changes on screen",
+      annual: paths.withLevers.annual,
+      pct: paths.withLevers.changePct,
+      color: "#3fb950",
+      sub:
+        typeof paths.withLevers.totalClaimsSaved === "number" &&
+        paths.withLevers.totalClaimsSaved > 0
+          ? `trims ~${pjMoney(paths.withLevers.totalClaimsSaved)} in claims`
+          : undefined,
+    });
+  const max = Math.max(...rows.map((r) => r.annual), 1);
+  return (
+    <div style={{ marginTop: 14 }}>
+      <div style={{ ...PM.benefitHead, color: accent }}>{title}</div>
+      {rows.map((r, i) => (
+        <div key={i} style={{ marginTop: i === 0 ? 4 : 9 }}>
+          <div style={PM.pjLabelRow}>
+            <span style={{ color: "#c9d4e0" }}>
+              {r.label}
+              {r.sub ? <span style={{ color: "#6a7681", fontSize: 11 }}> · {r.sub}</span> : null}
+            </span>
+            <span style={{ fontWeight: 800, whiteSpace: "nowrap" }}>
+              {pjMoney(r.annual)}
+              {r.pct != null && (
+                <span style={{ color: r.color, marginLeft: 6, fontSize: 12 }}>{pjPct(r.pct)}</span>
+              )}
+            </span>
+          </div>
+          <div style={PM.pjTrack}>
+            <div
+              style={{
+                ...PM.pjBar,
+                width: `${Math.max(3, (r.annual / max) * 100)}%`,
+                background: r.color,
+              }}
+            />
+          </div>
+        </div>
+      ))}
+      {perLever.length > 0 && (
+        <div style={{ marginTop: 10 }}>
+          {perLever.map((l: any, i: number) => (
+            <div key={i} style={PM.pjLeverLine}>
+              <span style={{ color: "#c9d4e0" }}>{l.name}</span>
+              <span style={{ color: "#3fb950", fontWeight: 700 }}>
+                {typeof l.claimsSaved === "number" ? `~${pjMoney(l.claimsSaved)}` : ""}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+      {note && <div style={{ color: "#6a7681", fontSize: 11.5, marginTop: 10 }}>{note}</div>}
+    </div>
+  );
+}
+
 // CLIENT side: renders whatever the host is presenting, live. Polls while mounted.
 export function PresentedPlanViewer({
   getToken,
@@ -290,6 +386,15 @@ export function PresentedPlanViewer({
       </div>
       <div style={{ padding: 12 }}>
         <PlanBody detail={data} accent={accent} />
+        {data.projection && (
+          <ProjectionPaths
+            paths={data.projection.paths}
+            perLever={data.projection.perLever || []}
+            accent={accent}
+            title="Your renewal outlook — modelled live"
+            note="Modelled from your plan's experience with stated assumptions. An estimate to steer by, not a quote; your carrier confirms final rates."
+          />
+        )}
         {data.rateCard && (
           <RateCardTable card={data.rateCard} accent={accent} title="Your renewal — rates" />
         )}
@@ -338,6 +443,136 @@ export function PlanModule({ jwt, accent }: { jwt: string; accent: string }) {
   const [rcEff, setRcEff] = useState("");
   const [rcGuar, setRcGuar] = useState("");
   const [rcNote, setRcNote] = useState("");
+
+  // renewal projection (engine-computed; the room only selects levers/intensity)
+  const [proj, setProj] = useState<any | null>(null);
+  const [projOpen, setProjOpen] = useState(false);
+  const [projSel, setProjSel] = useState<string[]>([]);
+  const [projIntensity, setProjIntensity] = useState<"conservative" | "expected" | "aggressive">(
+    "expected",
+  );
+  const [projCap, setProjCap] = useState("12");
+  const [projErr, setProjErr] = useState("");
+  const [projLoading, setProjLoading] = useState(false);
+  const projSeq = useRef(0);
+  const projRef = useRef<any | null>(null);
+  useEffect(() => {
+    projRef.current = proj;
+  }, [proj]);
+
+  // What the client screen gets if presented: outcomes only, never the catalog
+  // or assumption dials (the server whitelists again regardless).
+  const projSnap = (p: any | null) =>
+    p && p.paths
+      ? {
+          paths: p.paths,
+          perLever: p.perLever || [],
+          intensity: projIntensity,
+          overallLossRatio: p.overallLossRatio ?? null,
+        }
+      : null;
+
+  // The projection rides the present payload only while the model panel is OPEN:
+  // what is open in the host's workspace is what the room sees.
+  const presentedProjection = () => (projOpen ? projSnap(projRef.current) : null);
+
+  // Plain per-render function on purpose: reads current state, no stale closures.
+  const fetchProjection = async (
+    employerId: string,
+    sel: string[],
+    intensity: string,
+    capStr: string,
+    baseDetail: any | null,
+  ) => {
+    const mySeq = ++projSeq.current;
+    setProjLoading(true);
+    setProjErr("");
+    try {
+      const cap = capStr.trim() === "" ? null : Number(capStr);
+      const r = await fetch(
+        `${API}/office/plan/projection/${encodeURIComponent(employerId)}?book=${book}`,
+        {
+          method: "POST",
+          headers: { Authorization: `Bearer ${jwt}`, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            selectedLevers: sel,
+            intensity,
+            capPct: cap != null && Number.isFinite(cap) ? cap : null,
+          }),
+        },
+      );
+      const j = await r.json().catch(() => null);
+      if (mySeq !== projSeq.current) return; // superseded by a newer toggle
+      if (r.status === 422) {
+        setProj(null);
+        setProjErr("Nothing to model yet: this client has no premium or experience on file.");
+        return;
+      }
+      if (!r.ok || !j || !j.paths) throw new Error((j && j.error) || "projection failed");
+      setProj(j);
+      // live re-present so the client's bars move with the host's toggles
+      if (presentingRef.current) {
+        const base = baseDetail || detail;
+        if (base)
+          await postPresent({
+            ...base,
+            rateCard,
+            projection: {
+              paths: j.paths,
+              perLever: j.perLever || [],
+              intensity,
+              overallLossRatio: j.overallLossRatio ?? null,
+            },
+          });
+      }
+    } catch (e: any) {
+      if (mySeq === projSeq.current) setProjErr(String(e?.message || e));
+    } finally {
+      if (mySeq === projSeq.current) setProjLoading(false);
+    }
+  };
+
+  const toggleLever = (id: string, group?: string | null) => {
+    if (!detail) return;
+    let next: string[];
+    if (projSel.includes(id)) {
+      next = projSel.filter((x) => x !== id);
+    } else {
+      // levers in the same group are mutually exclusive (e.g. the coinsurance pair)
+      next = group
+        ? projSel.filter((x) => {
+            const d = proj?.catalog?.find((c: any) => c.id === x);
+            return !(d?.group && d.group === group);
+          })
+        : [...projSel];
+      next = [...next, id];
+    }
+    setProjSel(next);
+    void fetchProjection(detail.employer.id, next, projIntensity, projCap, null);
+  };
+
+  const openClient = (id: string) => {
+    setProjSel([]);
+    setProjIntensity("expected");
+    setProjCap("12");
+    setProjOpen(false);
+    setProj(null);
+    setProjErr("");
+    void loadEmployer(id);
+    void fetchProjection(id, [], "expected", "12", null);
+  };
+
+  const toggleProjPanel = () => {
+    const opening = !projOpen;
+    setProjOpen(opening);
+    // entering/leaving the model while presenting updates the room immediately
+    if (presentingRef.current && detail)
+      void postPresent({
+        ...detail,
+        rateCard,
+        projection: opening ? projSnap(projRef.current) : null,
+      });
+  };
 
   // mirror `presenting` into a ref so unmount/pagehide cleanup reads the latest value
   const presentingRef = useRef(false);
@@ -514,7 +749,7 @@ export function PlanModule({ jwt, accent }: { jwt: string; accent: string }) {
       else setFlash("Couldn't stop the share — the client may still see the plan. Tap Stop again.");
     } else {
       setBusy("present");
-      const ok = await postPresent({ ...detail, rateCard });
+      const ok = await postPresent({ ...detail, rateCard, projection: presentedProjection() });
       setBusy("");
       if (ok) {
         setPresenting(true);
@@ -563,7 +798,8 @@ export function PlanModule({ jwt, accent }: { jwt: string; accent: string }) {
       if (!r.ok || !j.ok) throw new Error(j?.error || "save failed");
       setRateCard(j.card);
       setRcRows(cardToRows(j.card));
-      if (presentingRef.current) await postPresent({ ...detail, rateCard: j.card });
+      if (presentingRef.current)
+        await postPresent({ ...detail, rateCard: j.card, projection: presentedProjection() });
       setFlash(isClear ? "Rate card cleared." : "Rate card saved.");
       if (isClear) setRcOpen(false);
     } catch (e: any) {
@@ -641,7 +877,8 @@ export function PlanModule({ jwt, accent }: { jwt: string; accent: string }) {
       if (!r.ok) throw new Error(j?.error || "apply failed");
       setChanges([]);
       const fresh = await loadEmployer(detail.employer.id);
-      if (presentingRef.current && fresh) await postPresent({ ...fresh, rateCard });
+      if (presentingRef.current && fresh)
+        await postPresent({ ...fresh, rateCard, projection: presentedProjection() });
       setFlash(`Applied to plan of record (now v${j.version}).`);
     } catch (e: any) {
       setFlash("Error: " + String(e?.message || e));
@@ -744,7 +981,7 @@ export function PlanModule({ jwt, accent }: { jwt: string; accent: string }) {
           {err && <div style={PM.err}>{err}</div>}
           <div style={{ marginTop: 10 }}>
             {results.map((e) => (
-              <button key={e.id} style={PM.result} onClick={() => loadEmployer(e.id)}>
+              <button key={e.id} style={PM.result} onClick={() => openClient(e.id)}>
                 <span style={{ fontWeight: 700 }}>{e.name}</span>
                 <span style={{ color: "#8b949e", fontSize: 12 }}>
                   {[e.carrier, e.renewalMonth, e.lives ? `${e.lives} lives` : null]
@@ -777,8 +1014,8 @@ export function PlanModule({ jwt, accent }: { jwt: string; accent: string }) {
           <PlanBody detail={detail} accent={accent} />
           {rateCard && <RateCardTable card={rateCard} accent={accent} title="Renewal rates" />}
 
-          {detail.plan && (
-            <div style={{ display: "flex", gap: 8, marginTop: 14, flexWrap: "wrap" }}>
+          <div style={{ display: "flex", gap: 8, marginTop: 14, flexWrap: "wrap" }}>
+            {detail.plan && (
               <button
                 style={{
                   ...PM.adjust,
@@ -790,33 +1027,204 @@ export function PlanModule({ jwt, accent }: { jwt: string; accent: string }) {
               >
                 {editing ? "Done adjusting" : "✎ Adjust plan"}
               </button>
-              <button
-                style={{
-                  ...PM.adjust,
-                  borderColor: accent,
-                  color: rcOpen ? "#08120b" : accent,
-                  background: rcOpen ? accent : "transparent",
-                }}
-                onClick={() => setRcOpen((v) => !v)}
-              >
-                {rcOpen ? "Done with rates" : "▤ Renewal rates"}
-              </button>
-              <button
-                style={{
-                  ...PM.adjust,
-                  borderColor: presenting ? "#3fb950" : "#8b949e",
-                  color: presenting ? "#08120b" : "#c9d4e0",
-                  background: presenting ? "#3fb950" : "transparent",
-                }}
-                onClick={togglePresent}
-                disabled={busy === "present"}
-              >
-                {busy === "present" ? "…" : presenting ? "■ Stop presenting" : "▶ Present to room"}
-              </button>
+            )}
+            <button
+              style={{
+                ...PM.adjust,
+                borderColor: accent,
+                color: projOpen ? "#08120b" : accent,
+                background: projOpen ? accent : "transparent",
+              }}
+              onClick={toggleProjPanel}
+            >
+              {projOpen ? "Close the model" : "◇ Model the renewal"}
+            </button>
+            <button
+              style={{
+                ...PM.adjust,
+                borderColor: accent,
+                color: rcOpen ? "#08120b" : accent,
+                background: rcOpen ? accent : "transparent",
+              }}
+              onClick={() => setRcOpen((v) => !v)}
+            >
+              {rcOpen ? "Done with rates" : "▤ Renewal rates"}
+            </button>
+            <button
+              style={{
+                ...PM.adjust,
+                borderColor: presenting ? "#3fb950" : "#8b949e",
+                color: presenting ? "#08120b" : "#c9d4e0",
+                background: presenting ? "#3fb950" : "transparent",
+              }}
+              onClick={togglePresent}
+              disabled={busy === "present"}
+            >
+              {busy === "present" ? "…" : presenting ? "■ Stop presenting" : "▶ Present to room"}
+            </button>
+          </div>
+
+          {projOpen && (
+            <div style={PM.editor}>
+              <div style={{ color: "#8b949e", fontSize: 12, marginBottom: 8 }}>
+                Live renewal model, computed by the engine from this group&apos;s own numbers.
+                Estimates with stated assumptions; nothing here is a quote.
+              </div>
+              {projErr && <div style={PM.err}>{projErr}</div>}
+              {projLoading && !proj && (
+                <div style={{ color: "#8b949e", fontSize: 13 }}>Computing…</div>
+              )}
+              {proj && (
+                <>
+                  <ProjectionPaths
+                    paths={proj.paths}
+                    perLever={proj.perLever || []}
+                    accent={accent}
+                    title="Where the renewal lands"
+                  />
+                  <div style={PM.pjMetaLine}>
+                    {proj.seededFrom === "strategy"
+                      ? "Seeded from a saved strategy"
+                      : proj.seededFrom === "review"
+                        ? "Seeded from parsed carrier experience"
+                        : "Seeded from annual premium (standard split)"}
+                    {typeof proj.overallLossRatio === "number"
+                      ? ` · loss ratio ${Math.round(proj.overallLossRatio * 100)}%`
+                      : ""}
+                  </div>
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: 6,
+                      marginTop: 10,
+                      alignItems: "center",
+                      flexWrap: "wrap",
+                    }}
+                  >
+                    {(["conservative", "expected", "aggressive"] as const).map((iv) => (
+                      <button
+                        key={iv}
+                        style={{
+                          ...PM.pjIntBtn,
+                          ...(projIntensity === iv
+                            ? { background: accent, color: "#08120b", borderColor: accent }
+                            : {}),
+                        }}
+                        onClick={() => {
+                          setProjIntensity(iv);
+                          void fetchProjection(detail.employer.id, projSel, iv, projCap, null);
+                        }}
+                      >
+                        {iv}
+                      </button>
+                    ))}
+                    <span style={{ color: "#6a7681", fontSize: 11.5, marginLeft: "auto" }}>
+                      cap %
+                    </span>
+                    <input
+                      style={{ ...PM.rcIn, flex: "0 0 64px" }}
+                      type="number"
+                      value={projCap}
+                      onChange={(e) => setProjCap(e.target.value)}
+                      onBlur={() =>
+                        void fetchProjection(
+                          detail.employer.id,
+                          projSel,
+                          projIntensity,
+                          projCap,
+                          null,
+                        )
+                      }
+                    />
+                  </div>
+                  {Array.isArray(proj.catalog) && proj.catalog.length > 0 && (
+                    <div style={{ marginTop: 6 }}>
+                      {Object.entries(
+                        proj.catalog.reduce((acc: any, c: any) => {
+                          (acc[c.category] = acc[c.category] || []).push(c);
+                          return acc;
+                        }, {}),
+                      ).map(([cat, items]: [string, any]) => (
+                        <div key={cat} style={{ marginTop: 10 }}>
+                          <div style={PM.pjCat}>{cat}</div>
+                          {items.map((c: any) => {
+                            const on = projSel.includes(c.id);
+                            return (
+                              <button
+                                key={c.id}
+                                style={{
+                                  ...PM.pjLever,
+                                  ...(on ? { borderColor: accent, background: "#101a13" } : {}),
+                                }}
+                                onClick={() => toggleLever(c.id, c.group)}
+                                title={c.rationale}
+                              >
+                                <span
+                                  style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: 8,
+                                    minWidth: 0,
+                                  }}
+                                >
+                                  <span
+                                    style={{
+                                      ...PM.pjCheck,
+                                      ...(on
+                                        ? {
+                                            background: accent,
+                                            borderColor: accent,
+                                            color: "#08120b",
+                                          }
+                                        : {}),
+                                    }}
+                                  >
+                                    {on ? "✓" : ""}
+                                  </span>
+                                  <span
+                                    style={{ color: "#e6edf3", fontSize: 12.5, textAlign: "left" }}
+                                  >
+                                    {c.name}
+                                  </span>
+                                </span>
+                                <span
+                                  style={{
+                                    whiteSpace: "nowrap",
+                                    color: on ? "#3fb950" : "#8b949e",
+                                    fontSize: 12,
+                                    fontWeight: 700,
+                                  }}
+                                >
+                                  ~{pjMoney(c.standalone?.[projIntensity] ?? 0)}
+                                  <span
+                                    style={{
+                                      color: "#6a7681",
+                                      fontWeight: 400,
+                                      marginLeft: 6,
+                                      fontSize: 10.5,
+                                    }}
+                                  >
+                                    {c.memberImpact} impact
+                                  </span>
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {presenting && (
+                    <div style={{ color: "#3fb950", fontSize: 11.5, marginTop: 10 }}>
+                      Presenting live: every toggle updates the client&apos;s screen.
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           )}
 
-          {rcOpen && detail.plan && (
+          {rcOpen && (
             <div style={PM.editor}>
               <div style={{ color: "#8b949e", fontSize: 12, marginBottom: 8 }}>
                 Carrier re-rate for this renewal. Shown to the room when presenting — nothing is
@@ -1310,5 +1718,73 @@ const PM: Record<string, CSSProperties> = {
     background: "#11151c",
     color: "#e6edf3",
     fontSize: 12.5,
+  },
+  pjLabelRow: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "baseline",
+    fontSize: 13,
+    gap: 8,
+  },
+  pjTrack: {
+    height: 8,
+    background: "#0d1117",
+    border: "1px solid #1b2029",
+    borderRadius: 5,
+    marginTop: 4,
+    overflow: "hidden",
+  },
+  pjBar: { height: "100%", borderRadius: 4, transition: "width .25s ease" },
+  pjLeverLine: {
+    display: "flex",
+    justifyContent: "space-between",
+    fontSize: 12.5,
+    padding: "4px 0",
+    borderTop: "1px solid #1b2029",
+  },
+  pjMetaLine: { color: "#6a7681", fontSize: 11.5, marginTop: 8 },
+  pjIntBtn: {
+    padding: "6px 10px",
+    borderRadius: 7,
+    border: "1px solid #283040",
+    background: "#0d1117",
+    color: "#c9d4e0",
+    fontSize: 12,
+    fontWeight: 700,
+    cursor: "pointer",
+    textTransform: "capitalize",
+  },
+  pjCat: {
+    color: "#6a7681",
+    fontSize: 10.5,
+    textTransform: "uppercase",
+    letterSpacing: ".05em",
+    marginBottom: 2,
+  },
+  pjLever: {
+    width: "100%",
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 8,
+    padding: "7px 9px",
+    marginTop: 5,
+    borderRadius: 8,
+    border: "1px solid #283040",
+    background: "#0d1117",
+    cursor: "pointer",
+  },
+  pjCheck: {
+    width: 16,
+    height: 16,
+    borderRadius: 4,
+    border: "1px solid #3a4454",
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: 11,
+    fontWeight: 900,
+    color: "transparent",
+    flex: "0 0 16px",
   },
 };
