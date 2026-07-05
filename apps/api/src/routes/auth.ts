@@ -32,10 +32,39 @@ type Opts = {
   // live room presence (roomId -> { users: Map<userId, ...> }); used to gate the
   // presented-plan read on actual consult-room admission.
   rooms: any;
+  // GOD-or-allowlist check: lets a normal Weered session act as office host.
+  isOfficeStaff: (userId?: string) => Promise<boolean>;
 };
 
 export default async function authRoutes(app: FastifyInstance, opts: Opts) {
-  const { authFromHeader, JWT_SECRET, isNameReserved, getSiteConfig, seedWelcomeDM, rooms } = opts;
+  const {
+    authFromHeader,
+    JWT_SECRET,
+    isNameReserved,
+    getSiteConfig,
+    seedWelcomeDM,
+    rooms,
+    isOfficeStaff,
+  } = opts;
+
+  // Resolve the acting office host: a magic-link token carrying the host claim,
+  // OR a logged-in office-staff account (GOD / env allowlist) on a normal Weered
+  // session — the same identity that walks into mtg-* rooms without a link.
+  const officeHostFromReq = async (
+    req: any,
+  ): Promise<{ id: string; name: string; office: string } | null> => {
+    const u: any = authFromHeader((req.headers as any).authorization);
+    if (!u) return null;
+    if (u.host)
+      return {
+        id: String(u.id),
+        name: String(u.name || ""),
+        office: String(u.scope?.office || ""),
+      };
+    if (await isOfficeStaff(u.id))
+      return { id: String(u.id), name: String(u.name || ""), office: "mtg-eceb" };
+    return null;
+  };
 
   // env-derived config, exclusive to auth (re-derived here from process.env).
   const DEV_LOGIN_ENABLED =
@@ -685,8 +714,8 @@ export default async function authRoutes(app: FastifyInstance, opts: Opts) {
 
   // Host-only: flip the office open/closed (or set the schedule/note).
   app.post("/office/set", async (req, reply) => {
-    const u = authFromHeader((req.headers as any).authorization);
-    if (!u || !(u as any).host) return reply.code(403).send({ ok: false, error: "host_only" });
+    const u = await officeHostFromReq(req);
+    if (!u) return reply.code(403).send({ ok: false, error: "host_only" });
     const body: any = (req as any).body || {};
     const cur = readOfficeState();
     const next = {
@@ -740,8 +769,8 @@ export default async function authRoutes(app: FastifyInstance, opts: Opts) {
 
   // Host-only: recent walk-in arrivals, for the reception-desk view on the control page.
   app.get("/office/waiting", async (req, reply) => {
-    const u = authFromHeader((req.headers as any).authorization);
-    if (!u || !(u as any).host) return reply.code(403).send({ ok: false, error: "host_only" });
+    const u = await officeHostFromReq(req);
+    if (!u) return reply.code(403).send({ ok: false, error: "host_only" });
     return reply.send({ ok: true, waiting: readWaiting() });
   });
 
@@ -787,9 +816,9 @@ export default async function authRoutes(app: FastifyInstance, opts: Opts) {
     });
     return { status: res.status, text: await res.text() };
   };
-  const planGate = (req: any, reply: any): boolean => {
-    const u = authFromHeader((req.headers as any).authorization);
-    if (!u || !(u as any).host) {
+  const planGate = async (req: any, reply: any): Promise<boolean> => {
+    const u = await officeHostFromReq(req);
+    if (!u) {
       reply.code(403).send({ ok: false, error: "host_only" });
       return false;
     }
@@ -810,7 +839,7 @@ export default async function authRoutes(app: FastifyInstance, opts: Opts) {
 
   // Host-only: client picker (proxied to the engine, tenant-scoped there).
   app.get("/office/plan/employers", async (req, reply) => {
-    if (!planGate(req, reply)) return;
+    if (!(await planGate(req, reply))) return;
     const book = String((req.query as any)?.book ?? "eceb");
     const q = encodeURIComponent(String((req.query as any)?.q ?? "").slice(0, 80));
     const r = await engineGet(`/api/office/employers?q=${q}`, book);
@@ -819,7 +848,7 @@ export default async function authRoutes(app: FastifyInstance, opts: Opts) {
 
   // Host-only: full client detail + current plan of record.
   app.get("/office/plan/employer/:id", async (req, reply) => {
-    if (!planGate(req, reply)) return;
+    if (!(await planGate(req, reply))) return;
     const book = String((req.query as any)?.book ?? "eceb");
     const id = encodeURIComponent(String((req.params as any).id));
     const r = await engineGet(`/api/office/employers/${id}`, book);
@@ -831,7 +860,7 @@ export default async function authRoutes(app: FastifyInstance, opts: Opts) {
     "/office/plan/employer/:id",
     { config: { rateLimit: { max: 20, timeWindow: "1 minute" } } },
     async (req, reply) => {
-      if (!planGate(req, reply)) return;
+      if (!(await planGate(req, reply))) return;
       const book = String((req.query as any)?.book ?? "eceb");
       const id = String((req.params as any).id);
       const r = await engineSend(
@@ -849,7 +878,7 @@ export default async function authRoutes(app: FastifyInstance, opts: Opts) {
     "/office/plan/amend",
     { config: { rateLimit: { max: 6, timeWindow: "1 minute" } } },
     async (req, reply) => {
-      if (!planGate(req, reply)) return;
+      if (!(await planGate(req, reply))) return;
       const book = String((req.query as any)?.book ?? "eceb");
       const body: any = (req as any).body || {};
       const email = String(body.carrierEmail ?? "").trim();
@@ -921,7 +950,7 @@ export default async function authRoutes(app: FastifyInstance, opts: Opts) {
   };
 
   app.get("/office/plan/ratecard/:id", async (req, reply) => {
-    if (!planGate(req, reply)) return;
+    if (!(await planGate(req, reply))) return;
     const book = String((req.query as any)?.book ?? "eceb");
     const id = String((req.params as any).id).slice(0, 60);
     const cards = loadRateCards();
@@ -932,7 +961,7 @@ export default async function authRoutes(app: FastifyInstance, opts: Opts) {
     "/office/plan/ratecard/:id",
     { config: { rateLimit: { max: 30, timeWindow: "1 minute" } } },
     async (req, reply) => {
-      if (!planGate(req, reply)) return;
+      if (!(await planGate(req, reply))) return;
       const book = String((req.query as any)?.book ?? "eceb");
       const id = String((req.params as any).id).slice(0, 60);
       const body: any = (req as any).body || {};
@@ -960,7 +989,7 @@ export default async function authRoutes(app: FastifyInstance, opts: Opts) {
     "/office/plan/projection/:id",
     { config: { rateLimit: { max: 60, timeWindow: "1 minute" } } },
     async (req, reply) => {
-      if (!planGate(req, reply)) return;
+      if (!(await planGate(req, reply))) return;
       const book = String((req.query as any)?.book ?? "eceb");
       const id = String((req.params as any).id).slice(0, 60);
       const r = await engineSend(
@@ -1020,9 +1049,9 @@ export default async function authRoutes(app: FastifyInstance, opts: Opts) {
   let presentedSeq = 0;
 
   app.post("/office/plan/present", async (req, reply) => {
-    const u = authFromHeader((req.headers as any).authorization);
-    if (!u || !(u as any).host) return reply.code(403).send({ ok: false, error: "host_only" });
-    const office = String((u as any).scope?.office || "");
+    const u = await officeHostFromReq(req);
+    if (!u) return reply.code(403).send({ ok: false, error: "host_only" });
+    const office = u.office;
     if (!office) return reply.code(400).send({ ok: false, error: "no_office_scope" });
     const raw = (req as any).body?.data ?? null;
     // Project to a display-only whitelist: the guest snapshot can never carry ids

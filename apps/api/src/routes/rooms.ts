@@ -72,7 +72,8 @@ export default async function roomsRoutes(app: FastifyInstance, opts: Opts) {
       take: 100,
     });
     const roomOut = roomList
-      .filter((r) => !r.id.includes("%") && !lobbyIds.has(r.id))
+      // mtg-* is the private meeting namespace (client consults): never listed.
+      .filter((r) => !r.id.includes("%") && !lobbyIds.has(r.id) && !r.id.startsWith("mtg-"))
       .map((r) => ({
         id: r.id,
         roomId: r.id,

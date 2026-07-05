@@ -430,6 +430,26 @@ async function persistRoomBasics(room: RoomState) {
   });
 }
 
+// Office staff: the professional identity allowed into the mtg-* meeting
+// namespace and onto the office host surface from a normal Weered session (no
+// magic link). Deliberately NARROW — GOD or an explicit env allowlist, never
+// the broad staff check (SUPPORT/STAFF must not reach the ECEB book).
+const OFFICE_HOST_USER_IDS = new Set(
+  String(process.env.OFFICE_HOST_USER_IDS || "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean),
+);
+async function isOfficeStaff(userId?: string): Promise<boolean> {
+  if (!userId) return false;
+  if (OFFICE_HOST_USER_IDS.has(userId)) return true;
+  try {
+    return (await getGlobalRole(userId)) === "GOD";
+  } catch {
+    return false;
+  }
+}
+
 async function doJoin(ws: Sock, roomId: string) {
   roomId = normalizeRoomId(roomId);
   const room = await ensureRoomLoaded(roomId);
@@ -445,8 +465,13 @@ async function doJoin(ws: Sock, roomId: string) {
         return false;
       }
     } else if (roomId.startsWith("mtg-")) {
-      send(ws, { type: "room:denied", roomId, reason: "private_meeting" });
-      return false;
+      // Meeting namespace: closed to the public. Office staff (GOD or the env
+      // allowlist) walk in from a normal Weered session — the wormhole between
+      // the platform and the professional office. Everyone else bounces.
+      if (!(await isOfficeStaff(_u?.id))) {
+        send(ws, { type: "room:denied", roomId, reason: "private_meeting" });
+        return false;
+      }
     }
   }
 
@@ -722,6 +747,7 @@ async function main() {
     getSiteConfig,
     seedWelcomeDM,
     rooms,
+    isOfficeStaff,
   });
 
   const WEB_URL = process.env.APP_URL || "https://weered.ca";

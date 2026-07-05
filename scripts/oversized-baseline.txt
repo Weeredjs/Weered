@@ -2,3 +2,4 @@ apps/api/src/index.ts
 apps/web/app/styles/60-lobby-themes.css
 apps/web/app/styles/80-chrome-min.css
 apps/web/components/DockShell.tsx
+apps/web/app/foyer/PlanModule.tsx
