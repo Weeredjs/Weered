@@ -759,6 +759,7 @@ async function main() {
     normalizeRoomId,
     isModOrOwner,
     awardNotoriety,
+    isOfficeStaff,
   });
   async function lobbyAdminAccess(
     req: any,
@@ -1390,6 +1391,7 @@ async function main() {
             doJoin,
             publishState,
             leaveRoom,
+            isOfficeStaff,
           });
           return;
         }

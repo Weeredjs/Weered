@@ -16,6 +16,8 @@ type Opts = {
   doJoin: (ws: any, roomId: string) => Promise<any>;
   publishState: (room: any) => void;
   leaveRoom: (ws: any) => void;
+  // GOD-or-allowlist: lets office staff enter the mtg-* meeting namespace
+  isOfficeStaff: (userId?: string) => Promise<boolean>;
 };
 
 export async function handlePresence(ws: any, msg: any, opts: Opts): Promise<void> {
@@ -29,6 +31,7 @@ export async function handlePresence(ws: any, msg: any, opts: Opts): Promise<voi
     doJoin,
     publishState,
     leaveRoom,
+    isOfficeStaff,
   } = opts;
 
   if (
@@ -113,8 +116,12 @@ export async function handlePresence(ws: any, msg: any, opts: Opts): Promise<voi
           return;
         }
       } else if (roomId.startsWith("mtg-")) {
-        send(ws, { type: "room:denied", roomId, reason: "private_meeting" });
-        return;
+        // Meeting namespace: office staff (GOD / allowlist) walk in from a
+        // normal Weered session; everyone else bounces. Mirrors doJoin's gate.
+        if (!(await isOfficeStaff(_u?.id))) {
+          send(ws, { type: "room:denied", roomId, reason: "private_meeting" });
+          return;
+        }
       }
     }
     const room = await ensureRoomLoaded(roomId);

@@ -17,11 +17,20 @@ type Opts = {
   normalizeRoomId: (input: string) => string;
   isModOrOwner: (room: any, userId?: string, globalRole?: string) => boolean;
   awardNotoriety: (userId: string, action: string) => Promise<number | null>;
+  // GOD-or-allowlist: office staff get voice in the mtg-* meeting namespace
+  isOfficeStaff: (userId?: string) => Promise<boolean>;
 };
 
 export default async function voiceRoutes(app: FastifyInstance, opts: Opts) {
-  const { authFromHeader, rooms, ensureRoomLoaded, normalizeRoomId, isModOrOwner, awardNotoriety } =
-    opts;
+  const {
+    authFromHeader,
+    rooms,
+    ensureRoomLoaded,
+    normalizeRoomId,
+    isModOrOwner,
+    awardNotoriety,
+    isOfficeStaff,
+  } = opts;
 
   app.post(
     "/voice/token",
@@ -48,7 +57,10 @@ export default async function voiceRoutes(app: FastifyInstance, opts: Opts) {
           const inScope = office && (lookup === office || lookup.startsWith(office + "-"));
           if (!inScope) return reply.code(403).send({ ok: false, error: "out_of_scope" });
         } else if (lookup.startsWith("mtg-")) {
-          return reply.code(403).send({ ok: false, error: "private_meeting" });
+          // office staff (GOD / allowlist) get voice in the meeting namespace
+          if (!(await isOfficeStaff(_u.id))) {
+            return reply.code(403).send({ ok: false, error: "private_meeting" });
+          }
         }
       }
       let canPublish = true;
