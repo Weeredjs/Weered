@@ -526,7 +526,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
               }}
             >
               <OfficeRail
-                knocks={Array.isArray(w?.meta?.knocks) ? w.meta.knocks : []}
+                knocks={Array.isArray(w?.admin?.knocks) ? w.admin.knocks : []}
                 onAdmit={(id: string) => {
                   try {
                     w?.admit?.(id);

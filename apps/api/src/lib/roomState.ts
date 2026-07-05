@@ -287,6 +287,20 @@ export async function ensureRoomLoaded(roomId: string): Promise<RoomState> {
     }));
   }
 
+  // OFFICE INVARIANT: consult rooms (mtg-*, except the -foyer waiting room) are
+  // born locked and cannot drift unlocked. Admission — a mod letting a knocker
+  // in — IS the privacy boundary for presented plans; an unlocked office lets a
+  // scoped guest walk straight into another client's meeting. The original foyer
+  // host flow re-locked per session; the wormhole path must not depend on that.
+  if (roomId.startsWith("mtg-") && !roomId.endsWith("-foyer") && !r.locked) {
+    r.locked = true;
+    try {
+      await prisma.room.update({ where: { id: roomId }, data: { locked: true } });
+    } catch (e) {
+      swallow(e);
+    }
+  }
+
   if (!r.name) {
     const meta = articleRoomMeta.get(roomId);
     if (meta) {
