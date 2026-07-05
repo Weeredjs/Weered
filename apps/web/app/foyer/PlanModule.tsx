@@ -6,6 +6,7 @@
 // while admitted) and renders it read-only. The engine token is minted server-side.
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
+import { ReviewDoc, ProposalDoc } from "./ReviewDocs";
 
 const API = "/api";
 
@@ -385,6 +386,18 @@ export function PresentedPlanViewer({
         </span>
       </div>
       <div style={{ padding: 12, maxHeight: "70vh", overflowY: "auto" }}>
+        {data.review && (
+          <div style={{ marginBottom: 14 }}>
+            <div style={{ ...PM.benefitHead, color: accent }}>Your renewal — the full review</div>
+            <ReviewDoc review={data.review} accent={accent} />
+          </div>
+        )}
+        {data.proposal && (
+          <div style={{ marginBottom: 14 }}>
+            <div style={{ ...PM.benefitHead, color: accent }}>The proposal</div>
+            <ProposalDoc proposal={data.proposal} accent={accent} />
+          </div>
+        )}
         <PlanBody detail={data} accent={accent} />
         {data.projection && (
           <ProjectionPaths
@@ -481,6 +494,123 @@ export function PlanModule({ jwt, accent }: { jwt: string; accent: string }) {
   // what is open in the host's workspace is what the room sees.
   const presentedProjection = () => (projOpen ? projSnap(projRef.current) : null);
 
+  // The three-tab consult: REVIEW (the full renewal audit) and PROPOSAL (the
+  // sign-off side-by-side). Same open-panel-is-presented rule as the model.
+  const [review, setReview] = useState<any | null>(null);
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const [reviewLoading, setReviewLoading] = useState(false);
+  const [reviewErr, setReviewErr] = useState("");
+  const reviewRef = useRef<any | null>(null);
+  useEffect(() => {
+    reviewRef.current = review;
+  }, [review]);
+  const [proposal, setProposal] = useState<any | null>(null);
+  const [proposalOpen, setProposalOpen] = useState(false);
+  const [proposalLoading, setProposalLoading] = useState(false);
+  const [proposalErr, setProposalErr] = useState("");
+  const proposalRef = useRef<any | null>(null);
+  useEffect(() => {
+    proposalRef.current = proposal;
+  }, [proposal]);
+  const presentedReview = () => (reviewOpen ? reviewRef.current : null);
+  const presentedProposal = () => (proposalOpen ? proposalRef.current : null);
+
+  const fetchReview = async (employerId: string) => {
+    setReviewLoading(true);
+    setReviewErr("");
+    try {
+      const r = await fetch(
+        `${API}/office/plan/review/${encodeURIComponent(employerId)}?book=${book}`,
+        {
+          headers: authHeaders(),
+        },
+      );
+      const j = await r.json().catch(() => null);
+      if (r.status === 404) {
+        setReview(null);
+        setReviewErr("No analyzed renewal review on file for this client yet.");
+        return;
+      }
+      if (!r.ok || !j || !j.headline) throw new Error((j && j.error) || "review unavailable");
+      setReview(j);
+    } catch (e: any) {
+      setReview(null);
+      setReviewErr(String(e?.message || e));
+    } finally {
+      setReviewLoading(false);
+    }
+  };
+
+  const fetchProposal = async (employerId: string) => {
+    setProposalLoading(true);
+    setProposalErr("");
+    try {
+      const cap = projCap.trim() === "" ? null : Number(projCap);
+      const r = await fetch(
+        `${API}/office/plan/proposal/${encodeURIComponent(employerId)}?book=${book}`,
+        {
+          method: "POST",
+          headers: authHeaders({ "Content-Type": "application/json" }),
+          body: JSON.stringify({
+            selectedLevers: projSel,
+            intensity: projIntensity,
+            capPct: cap != null && Number.isFinite(cap) ? cap : null,
+          }),
+        },
+      );
+      const j = await r.json().catch(() => null);
+      if (r.status === 404) {
+        setProposal(null);
+        setProposalErr("Nothing to propose yet: no rate sheet or review on file.");
+        return;
+      }
+      if (!r.ok || !j || !Array.isArray(j.lines))
+        throw new Error((j && j.error) || "proposal unavailable");
+      setProposal(j);
+      if (presentingRef.current && detail)
+        await postPresent({
+          ...detail,
+          rateCard,
+          projection: presentedProjection(),
+          review: presentedReview(),
+          proposal: proposalOpen ? j : null,
+        });
+    } catch (e: any) {
+      setProposal(null);
+      setProposalErr(String(e?.message || e));
+    } finally {
+      setProposalLoading(false);
+    }
+  };
+
+  const toggleReviewPanel = () => {
+    const opening = !reviewOpen;
+    setReviewOpen(opening);
+    if (opening && !review && detail) void fetchReview(detail.employer.id);
+    if (presentingRef.current && detail)
+      void postPresent({
+        ...detail,
+        rateCard,
+        projection: presentedProjection(),
+        review: opening ? reviewRef.current : null,
+        proposal: presentedProposal(),
+      });
+  };
+
+  const toggleProposalPanel = () => {
+    const opening = !proposalOpen;
+    setProposalOpen(opening);
+    if (opening && detail) void fetchProposal(detail.employer.id);
+    if (!opening && presentingRef.current && detail)
+      void postPresent({
+        ...detail,
+        rateCard,
+        projection: presentedProjection(),
+        review: presentedReview(),
+        proposal: null,
+      });
+  };
+
   // Plain per-render function on purpose: reads current state, no stale closures.
   const fetchProjection = async (
     employerId: string,
@@ -528,6 +658,8 @@ export function PlanModule({ jwt, accent }: { jwt: string; accent: string }) {
               intensity,
               overallLossRatio: j.overallLossRatio ?? null,
             },
+            review: presentedReview(),
+            proposal: presentedProposal(),
           });
       }
     } catch (e: any) {
@@ -563,6 +695,12 @@ export function PlanModule({ jwt, accent }: { jwt: string; accent: string }) {
     setProjOpen(false);
     setProj(null);
     setProjErr("");
+    setReview(null);
+    setReviewOpen(false);
+    setReviewErr("");
+    setProposal(null);
+    setProposalOpen(false);
+    setProposalErr("");
     void loadEmployer(id);
     void fetchProjection(id, [], "expected", "12", null);
   };
@@ -576,7 +714,22 @@ export function PlanModule({ jwt, accent }: { jwt: string; accent: string }) {
         ...detail,
         rateCard,
         projection: opening ? projSnap(projRef.current) : null,
+        review: presentedReview(),
+        proposal: presentedProposal(),
       });
+  };
+
+  // "Stage these in the model": pre-check the review's recommended levers in the
+  // projection panel — the click-through from the review to the adjustments.
+  const stageRecommended = () => {
+    if (!detail) return;
+    const ids = (reviewRef.current?.levers || [])
+      .map((l: any) => l.catalogId)
+      .filter((x: any) => typeof x === "string" && x);
+    if (!ids.length) return;
+    setProjSel(ids);
+    setProjOpen(true);
+    void fetchProjection(detail.employer.id, ids, projIntensity, projCap, null);
   };
 
   // mirror `presenting` into a ref so unmount/pagehide cleanup reads the latest value
@@ -754,7 +907,13 @@ export function PlanModule({ jwt, accent }: { jwt: string; accent: string }) {
       else setFlash("Couldn't stop the share — the client may still see the plan. Tap Stop again.");
     } else {
       setBusy("present");
-      const ok = await postPresent({ ...detail, rateCard, projection: presentedProjection() });
+      const ok = await postPresent({
+        ...detail,
+        rateCard,
+        projection: presentedProjection(),
+        review: presentedReview(),
+        proposal: presentedProposal(),
+      });
       setBusy("");
       if (ok) {
         setPresenting(true);
@@ -804,7 +963,13 @@ export function PlanModule({ jwt, accent }: { jwt: string; accent: string }) {
       setRateCard(j.card);
       setRcRows(cardToRows(j.card));
       if (presentingRef.current)
-        await postPresent({ ...detail, rateCard: j.card, projection: presentedProjection() });
+        await postPresent({
+          ...detail,
+          rateCard: j.card,
+          projection: presentedProjection(),
+          review: presentedReview(),
+          proposal: presentedProposal(),
+        });
       setFlash(isClear ? "Rate card cleared." : "Rate card saved.");
       if (isClear) setRcOpen(false);
     } catch (e: any) {
@@ -883,7 +1048,13 @@ export function PlanModule({ jwt, accent }: { jwt: string; accent: string }) {
       setChanges([]);
       const fresh = await loadEmployer(detail.employer.id);
       if (presentingRef.current && fresh)
-        await postPresent({ ...fresh, rateCard, projection: presentedProjection() });
+        await postPresent({
+          ...fresh,
+          rateCard,
+          projection: presentedProjection(),
+          review: presentedReview(),
+          proposal: presentedProposal(),
+        });
       setFlash(`Applied to plan of record (now v${j.version}).`);
     } catch (e: any) {
       setFlash("Error: " + String(e?.message || e));
@@ -1020,6 +1191,17 @@ export function PlanModule({ jwt, accent }: { jwt: string; accent: string }) {
           {rateCard && <RateCardTable card={rateCard} accent={accent} title="Renewal rates" />}
 
           <div style={{ display: "flex", gap: 8, marginTop: 14, flexWrap: "wrap" }}>
+            <button
+              style={{
+                ...PM.adjust,
+                borderColor: accent,
+                color: reviewOpen ? "#08120b" : accent,
+                background: reviewOpen ? accent : "transparent",
+              }}
+              onClick={toggleReviewPanel}
+            >
+              {reviewOpen ? "Close the review" : "▣ Renewal review"}
+            </button>
             {detail.plan && (
               <button
                 style={{
@@ -1058,6 +1240,17 @@ export function PlanModule({ jwt, accent }: { jwt: string; accent: string }) {
             <button
               style={{
                 ...PM.adjust,
+                borderColor: accent,
+                color: proposalOpen ? "#08120b" : accent,
+                background: proposalOpen ? accent : "transparent",
+              }}
+              onClick={toggleProposalPanel}
+            >
+              {proposalOpen ? "Close the proposal" : "≡ Proposal"}
+            </button>
+            <button
+              style={{
+                ...PM.adjust,
                 borderColor: presenting ? "#3fb950" : "#8b949e",
                 color: presenting ? "#08120b" : "#c9d4e0",
                 background: presenting ? "#3fb950" : "transparent",
@@ -1068,6 +1261,68 @@ export function PlanModule({ jwt, accent }: { jwt: string; accent: string }) {
               {busy === "present" ? "…" : presenting ? "■ Stop presenting" : "▶ Present to room"}
             </button>
           </div>
+
+          {reviewOpen && (
+            <div style={PM.editor}>
+              {reviewLoading && !review && (
+                <div style={{ color: "#8b949e", fontSize: 13 }}>Loading the review…</div>
+              )}
+              {reviewErr && !review && <div style={PM.err}>{reviewErr}</div>}
+              {review && (
+                <>
+                  <ReviewDoc review={review} accent={accent} />
+                  {(review.levers || []).some((l: any) => l.catalogId) && (
+                    <button
+                      style={{ ...PM.apply, background: accent, marginTop: 12, width: "100%" }}
+                      onClick={stageRecommended}
+                    >
+                      ⚡ Stage these levers in the model
+                    </button>
+                  )}
+                  {presenting && (
+                    <div style={{ color: "#3fb950", fontSize: 11.5, marginTop: 8 }}>
+                      Presenting live: the client sees this review.
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+
+          {proposalOpen && (
+            <div style={PM.editor}>
+              <div style={{ color: "#8b949e", fontSize: 12, marginBottom: 8 }}>
+                The sign-off: carrier&apos;s ask, our target, and the plan with your selected
+                changes. Uses the levers currently staged in the model.
+              </div>
+              {proposalLoading && !proposal && (
+                <div style={{ color: "#8b949e", fontSize: 13 }}>Building the proposal…</div>
+              )}
+              {proposalErr && !proposal && <div style={PM.err}>{proposalErr}</div>}
+              {proposal && (
+                <>
+                  <ProposalDoc proposal={proposal} accent={accent} />
+                  <button
+                    style={{
+                      ...PM.sendBtn,
+                      borderColor: "#283040",
+                      color: "#c9d4e0",
+                      marginTop: 10,
+                    }}
+                    onClick={() => detail && void fetchProposal(detail.employer.id)}
+                    disabled={proposalLoading}
+                  >
+                    {proposalLoading ? "…" : "↻ Rebuild with current levers"}
+                  </button>
+                  {presenting && (
+                    <div style={{ color: "#3fb950", fontSize: 11.5, marginTop: 8 }}>
+                      Presenting live: the client sees this proposal.
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          )}
 
           {projOpen && (
             <div style={PM.editor}>

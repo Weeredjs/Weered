@@ -1002,6 +1002,39 @@ export default async function authRoutes(app: FastifyInstance, opts: Opts) {
     },
   );
 
+  // --- IN-ROOM RENEWAL REVIEW + PROPOSAL (engine content; the three-tab consult) ---
+  // REVIEW: the full renewal audit for presentation. PROPOSAL: the sign-off
+  // side-by-side (current / renewal / appeal target / with changes) + forecasts.
+  // Both proxied like the projection; 404 passes through as "none on file yet".
+  app.get(
+    "/office/plan/review/:id",
+    { config: { rateLimit: { max: 30, timeWindow: "1 minute" } } },
+    async (req, reply) => {
+      if (!(await planGate(req, reply))) return;
+      const book = String((req.query as any)?.book ?? "eceb");
+      const id = String((req.params as any).id).slice(0, 60);
+      const r = await engineGet(`/api/office/employers/${encodeURIComponent(id)}/review`, book);
+      return reply.code(r.status).header("content-type", "application/json").send(r.text);
+    },
+  );
+
+  app.post(
+    "/office/plan/proposal/:id",
+    { config: { rateLimit: { max: 60, timeWindow: "1 minute" } } },
+    async (req, reply) => {
+      if (!(await planGate(req, reply))) return;
+      const book = String((req.query as any)?.book ?? "eceb");
+      const id = String((req.params as any).id).slice(0, 60);
+      const r = await engineSend(
+        "POST",
+        `/api/office/employers/${encodeURIComponent(id)}/proposal`,
+        (req as any).body ?? {},
+        book,
+      );
+      return reply.code(r.status).header("content-type", "application/json").send(r.text);
+    },
+  );
+
   // Display-only whitelist for a PRESENTED projection: paths, per-lever savings,
   // intensity, loss ratio. Never the catalog, assumptions, or benefit internals —
   // the client screen shows outcomes, not the model's dials.
@@ -1041,6 +1074,167 @@ export default async function authRoutes(app: FastifyInstance, opts: Opts) {
     };
   };
 
+  // Whitelists for the PRESENTED review + proposal (the three-tab consult).
+  // Shape-tolerant to the pinned engine contract; anything not listed is
+  // dropped, every string capped, every number normalized. A guest can only
+  // ever receive these fields.
+  const rcStrN = (v: any, max: number): string | null => {
+    const s = rcStr(v, max).trim();
+    return s === "" ? null : s;
+  };
+  // appeal targets may be a number or a {low, high} range
+  const rcNumOrRange = (v: any): any => {
+    if (v && typeof v === "object") return { low: rcNum(v.low), high: rcNum(v.high) };
+    return rcNum(v);
+  };
+  const sanitizeReview = (raw: any): any | null => {
+    if (!raw || typeof raw !== "object" || !raw.headline) return null;
+    const h: any = raw.headline;
+    return {
+      builtAt: rcStrN(raw.builtAt, 40),
+      disclaimers: Array.isArray(raw.disclaimers)
+        ? raw.disclaimers.slice(0, 6).map((s: any) => rcStr(s, 500))
+        : [],
+      headline: {
+        carrier: rcStrN(h.carrier, 60),
+        policy: rcStrN(h.policy, 40),
+        pct: rcNum(h.pct),
+        monthlyFrom: rcNum(h.monthlyFrom),
+        monthlyTo: rcNum(h.monthlyTo),
+        annualDelta: rcNum(h.annualDelta),
+        effective: rcStrN(h.effective, 40),
+        experienceWindow: rcStrN(h.experienceWindow, 80),
+        lives: rcNum(h.lives),
+        avgAgeFrom: rcNum(h.avgAgeFrom),
+        avgAgeTo: rcNum(h.avgAgeTo),
+      },
+      lossRatios: Array.isArray(raw.lossRatios)
+        ? raw.lossRatios.slice(0, 20).map((r: any) => ({
+            benefit: rcStr(r?.benefit, 60),
+            lossRatio: rcNum(r?.lossRatio),
+            credibility: rcNum(r?.credibility),
+            rateChangePct: rcNum(r?.rateChangePct),
+            target: rcNum(r?.target),
+          }))
+        : [],
+      drivers: Array.isArray(raw.drivers)
+        ? raw.drivers.slice(0, 20).map((d: any) => ({
+            kind: ["warn", "info", "lever"].includes(d?.kind) ? d.kind : "info",
+            title: rcStr(d?.title, 140),
+            body: rcStr(d?.body, 800),
+          }))
+        : [],
+      roadmap: raw.roadmap
+        ? {
+            renewsAt: rcStrN(raw.roadmap.renewsAt, 40),
+            windowClosesAt: rcStrN(raw.roadmap.windowClosesAt, 40),
+            pctElapsed: rcNum(raw.roadmap.pctElapsed),
+            items: Array.isArray(raw.roadmap.items)
+              ? raw.roadmap.items.slice(0, 12).map((i: any) => ({
+                  title: rcStr(i?.title, 140),
+                  body: rcStr(i?.body, 800),
+                  due: rcStrN(i?.due, 60),
+                  badge: rcStrN(i?.badge, 90),
+                  memberFacing: Boolean(i?.memberFacing),
+                }))
+              : [],
+          }
+        : null,
+      diagnosis: Array.isArray(raw.diagnosis)
+        ? raw.diagnosis.slice(0, 20).map((s: any) => rcStr(s, 400))
+        : [],
+      scenarios: Array.isArray(raw.scenarios)
+        ? raw.scenarios.slice(0, 6).map((s: any) => ({
+            title: rcStr(s?.title, 140),
+            body: rcStr(s?.body, 800),
+          }))
+        : [],
+      levers: Array.isArray(raw.levers)
+        ? raw.levers.slice(0, 12).map((l: any) => ({
+            title: rcStr(l?.title, 140),
+            body: rcStr(l?.body, 800),
+            saveLow: rcNum(l?.saveLow),
+            saveHigh: rcNum(l?.saveHigh),
+            badge: rcStrN(l?.badge, 90),
+            catalogId: rcStrN(l?.catalogId, 60),
+          }))
+        : [],
+      demographics: raw.demographics
+        ? {
+            lives: rcNum(raw.demographics.lives),
+            avgAge: rcNum(raw.demographics.avgAge),
+            dobOnFile: rcStrN(raw.demographics.dobOnFile, 20),
+            ageBands: Array.isArray(raw.demographics.ageBands)
+              ? raw.demographics.ageBands.slice(0, 8).map((b: any) => ({
+                  band: rcStr(b?.band, 20),
+                  count: rcNum(b?.count),
+                }))
+              : [],
+            coverageMix: Array.isArray(raw.demographics.coverageMix)
+              ? raw.demographics.coverageMix.slice(0, 8).map((c: any) => ({
+                  label: rcStr(c?.label, 30),
+                  count: rcNum(c?.count),
+                }))
+              : [],
+          }
+        : null,
+      benchmark: raw.benchmark
+        ? {
+            verdict: rcStrN(raw.benchmark.verdict, 40),
+            scope: rcStrN(raw.benchmark.scope, 80),
+            note: rcStrN(raw.benchmark.note, 400),
+          }
+        : null,
+    };
+  };
+  const sanitizeProposal = (raw: any): any | null => {
+    if (!raw || typeof raw !== "object" || !Array.isArray(raw.lines)) return null;
+    const lines = raw.lines.slice(0, 30).map((l: any) => ({
+      benefit: rcStr(l?.benefit, 60),
+      tier: rcStr(l?.tier, 40),
+      current: rcNum(l?.current),
+      renewal: rcNum(l?.renewal),
+      appealTarget: rcNumOrRange(l?.appealTarget),
+      withChanges: rcNum(l?.withChanges),
+    }));
+    if (!lines.length) return null;
+    const t: any = raw.totals || {};
+    return {
+      lines,
+      totals: {
+        current: rcNum(t.current),
+        renewal: rcNum(t.renewal),
+        appealTarget: rcNumOrRange(t.appealTarget),
+        withChanges: rcNum(t.withChanges),
+        renewalPct: rcNum(t.renewalPct),
+        appealPct: rcNum(t.appealPct),
+        withChangesPct: rcNum(t.withChangesPct),
+      },
+      appealBasis: Array.isArray(raw.appealBasis)
+        ? raw.appealBasis.slice(0, 12).map((s: any) => rcStr(s, 500))
+        : [],
+      benchmark: raw.benchmark
+        ? {
+            verdict: rcStrN(raw.benchmark.verdict, 40),
+            scope: rcStrN(raw.benchmark.scope, 80),
+            note: rcStrN(raw.benchmark.note, 400),
+          }
+        : null,
+      forecasts: Array.isArray(raw.forecasts)
+        ? raw.forecasts.slice(0, 6).map((f: any) => ({
+            scenario: rcStr(f?.scenario, 40),
+            label: rcStr(f?.label, 140),
+            nextRenewalAnnual: rcNum(f?.nextRenewalAnnual),
+            changePct: rcNum(f?.changePct),
+            notes: rcStrN(f?.notes, 400),
+          }))
+        : [],
+      disclaimers: Array.isArray(raw.disclaimers)
+        ? raw.disclaimers.slice(0, 6).map((s: any) => rcStr(s, 500))
+        : [],
+    };
+  };
+
   // --- LIVE PLAN PRESENTATION ---
   // The host "presents" a plan snapshot to the room; admitted guests poll it
   // read-only. Guests only ever see exactly what the host chose to present.
@@ -1073,6 +1267,8 @@ export default async function authRoutes(app: FastifyInstance, opts: Opts) {
           // same projection as storage: a guest can only ever see whitelisted fields
           rateCard: sanitizeRateCard(raw.rateCard),
           projection: sanitizeProjection(raw.projection),
+          review: sanitizeReview(raw.review),
+          proposal: sanitizeProposal(raw.proposal),
         }
       : null;
     if (data) {
@@ -1088,9 +1284,15 @@ export default async function authRoutes(app: FastifyInstance, opts: Opts) {
   app.get("/office/plan/presented", async (req, reply) => {
     const u = authFromHeader((req.headers as any).authorization);
     const uu = u as any;
-    if (!u || (!uu.host && !uu.guest))
-      return reply.code(403).send({ ok: false, error: "auth_required" });
-    const office = String(uu.scope?.office || "");
+    if (!u) return reply.code(403).send({ ok: false, error: "auth_required" });
+    let office = String(uu.scope?.office || "");
+    // office-staff sessions (GOD/allowlist, no host claim) may read too — same
+    // acceptance as every other host gate
+    if (!uu.host && !uu.guest) {
+      const h = await officeHostFromReq(req);
+      if (!h) return reply.code(403).send({ ok: false, error: "auth_required" });
+      office = h.office;
+    }
     // ISOLATION: a guest reads the presented plan ONLY while LIVE in the consult
     // room. A waiting-room guest (in the -foyer room) or a stale/ex token is not
     // in the -office room's presence, so it sees nothing. The shared office scope
