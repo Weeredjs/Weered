@@ -44,6 +44,7 @@ function lobbyHref(id: string): string {
   } catch {}
   if (!clean) return "/lobby";
   const ROOM_PREFIXES = [
+    "mtg-", // meeting/office rooms (the consult namespace)
     "stream-",
     "news-",
     "article-",
