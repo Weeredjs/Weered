@@ -404,6 +404,11 @@ export function PresentedPlanViewer({
 }
 
 export function PlanModule({ jwt, accent }: { jwt: string; accent: string }) {
+  // Foyer passes a magic-link host JWT; the in-room rail passes jwt="" and rides
+  // the session cookie (the API's onRequest hook maps the cookie only when no
+  // Authorization header is present, so we must omit the header entirely).
+  const authHeaders = (extra: Record<string, string> = {}): Record<string, string> =>
+    jwt ? { Authorization: `Bearer ${jwt}`, ...extra } : extra;
   const [open, setOpen] = useState(false);
   const [book, setBook] = useState<"eceb" | "demo">("eceb");
   const [q, setQ] = useState("");
@@ -493,7 +498,7 @@ export function PlanModule({ jwt, accent }: { jwt: string; accent: string }) {
         `${API}/office/plan/projection/${encodeURIComponent(employerId)}?book=${book}`,
         {
           method: "POST",
-          headers: { Authorization: `Bearer ${jwt}`, "Content-Type": "application/json" },
+          headers: authHeaders({ "Content-Type": "application/json" }),
           body: JSON.stringify({
             selectedLevers: sel,
             intensity,
@@ -586,7 +591,7 @@ export function PlanModule({ jwt, accent }: { jwt: string; accent: string }) {
       try {
         const r = await fetch(`${API}/office/plan/present`, {
           method: "POST",
-          headers: { Authorization: `Bearer ${jwt}`, "Content-Type": "application/json" },
+          headers: authHeaders({ "Content-Type": "application/json" }),
           body: JSON.stringify({ data }),
         });
         const j = await r.json().catch(() => null);
@@ -607,7 +612,7 @@ export function PlanModule({ jwt, accent }: { jwt: string; accent: string }) {
       try {
         fetch(`${API}/office/plan/present`, {
           method: "POST",
-          headers: { Authorization: `Bearer ${jwt}`, "Content-Type": "application/json" },
+          headers: authHeaders({ "Content-Type": "application/json" }),
           body: JSON.stringify({ data: null }),
           keepalive: true,
         }).catch(() => {});
@@ -628,7 +633,7 @@ export function PlanModule({ jwt, accent }: { jwt: string; accent: string }) {
       const r = await fetch(
         `${API}/office/plan/employers?book=${book}&q=${encodeURIComponent(q)}`,
         {
-          headers: { Authorization: `Bearer ${jwt}` },
+          headers: authHeaders(),
         },
       );
       const j = await r.json();
@@ -684,7 +689,7 @@ export function PlanModule({ jwt, accent }: { jwt: string; accent: string }) {
         const r = await fetch(
           `${API}/office/plan/employer/${encodeURIComponent(id)}?book=${book}`,
           {
-            headers: { Authorization: `Bearer ${jwt}` },
+            headers: authHeaders(),
           },
         );
         const j = await r.json();
@@ -694,7 +699,7 @@ export function PlanModule({ jwt, accent }: { jwt: string; accent: string }) {
         try {
           const rc = await fetch(
             `${API}/office/plan/ratecard/${encodeURIComponent(id)}?book=${book}`,
-            { headers: { Authorization: `Bearer ${jwt}` } },
+            { headers: authHeaders() },
           );
           const rj = await rc.json();
           const card = rc.ok && rj?.ok ? (rj.card ?? null) : null;
@@ -790,7 +795,7 @@ export function PlanModule({ jwt, accent }: { jwt: string; accent: string }) {
         `${API}/office/plan/ratecard/${encodeURIComponent(detail.employer.id)}?book=${book}`,
         {
           method: "PUT",
-          headers: { Authorization: `Bearer ${jwt}`, "Content-Type": "application/json" },
+          headers: authHeaders({ "Content-Type": "application/json" }),
           body: JSON.stringify(body),
         },
       );
@@ -869,7 +874,7 @@ export function PlanModule({ jwt, accent }: { jwt: string; accent: string }) {
         `${API}/office/plan/employer/${encodeURIComponent(detail.employer.id)}?book=${book}`,
         {
           method: "PATCH",
-          headers: { Authorization: `Bearer ${jwt}`, "Content-Type": "application/json" },
+          headers: authHeaders({ "Content-Type": "application/json" }),
           body: JSON.stringify({ changes: payloadChanges(), note: "Adjusted in office review" }),
         },
       );
@@ -894,7 +899,7 @@ export function PlanModule({ jwt, accent }: { jwt: string; accent: string }) {
     try {
       const r = await fetch(`${API}/office/plan/amend?book=${book}`, {
         method: "POST",
-        headers: { Authorization: `Bearer ${jwt}`, "Content-Type": "application/json" },
+        headers: authHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({
           employerId: detail.employer.id,
           planId: detail.plan.planId,

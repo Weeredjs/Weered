@@ -10,6 +10,7 @@ import LaunchPad from "./LaunchPad";
 import { useOverlay } from "../overlays/OverlayProvider";
 import { useVoice } from "../VoiceContext";
 import ArticleReader from "./ArticleReader";
+import OfficeRail from "./OfficeRail";
 import { weeredToast } from "../../lib/toast";
 import { onActivate } from "@/lib/a11y";
 import { safeUrl } from "@/lib/safeUrl";
@@ -111,6 +112,9 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
   const [stageMode, setStageMode] = useState<StageMode>("voice");
 
   const SOLO_KEY = `weered:room:${roomId}:solo`;
+  // Office rail: the ECEB control surface for meeting rooms (owner/staff only).
+  const isOfficeRoom = String(roomId || "").startsWith("mtg-");
+  const [officeRailOpen, setOfficeRailOpen] = useState(true);
   const [soloViewing, setSoloViewing] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
     try { return localStorage.getItem(SOLO_KEY) === "1"; } catch { return false; }
@@ -500,6 +504,60 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
           </div>
           <button onClick={() => { try { window.history.back(); } catch {} }} style={{ marginTop: 8, padding: "8px 20px", borderRadius: 9, background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", color: "rgba(252,165,165,0.9)", fontSize: 13, cursor: "pointer" }}>Go back</button>
         </div>
+      )}
+
+      {isOfficeRoom && (isRoomOwner || isRoomMod) && (
+        <>
+          {officeRailOpen && (
+            <div
+              style={{
+                position: "absolute",
+                top: 0,
+                right: 0,
+                bottom: 0,
+                width: 420,
+                maxWidth: "92vw",
+                zIndex: 120,
+                background: "#0b0e14",
+                borderLeft: "1px solid rgba(224,179,65,0.28)",
+                boxShadow: "-14px 0 44px rgba(0,0,0,0.55)",
+                overflowY: "auto",
+                padding: 14,
+              }}
+            >
+              <OfficeRail
+                knocks={Array.isArray(w?.meta?.knocks) ? w.meta.knocks : []}
+                onAdmit={(id: string) => {
+                  try {
+                    w?.admit?.(id);
+                  } catch {}
+                }}
+              />
+            </div>
+          )}
+          <button
+            onClick={() => setOfficeRailOpen((v) => !v)}
+            style={{
+              position: "absolute",
+              top: "42%",
+              right: officeRailOpen ? 420 : 0,
+              zIndex: 121,
+              writingMode: "vertical-rl",
+              padding: "14px 6px",
+              borderRadius: "8px 0 0 8px",
+              border: "1px solid rgba(224,179,65,0.4)",
+              borderRight: "none",
+              background: "#131722",
+              color: "#e0b341",
+              fontSize: 11,
+              fontWeight: 800,
+              letterSpacing: "0.18em",
+              cursor: "pointer",
+            }}
+          >
+            OFFICE
+          </button>
+        </>
       )}
 
       <RoomHeader
