@@ -416,6 +416,8 @@ function ClientView({
   const screenEl = useRef<HTMLDivElement | null>(null);
   const joining = useRef(false);
   const leaving = useRef(false);
+  // walk-in support: a self-minted invite (bare /foyer with the office open)
+  const mintedInvite = useRef("");
   const switchEpoch = useRef(0); // guards against interleaved/concurrent switches
   const phaseRef = useRef<ClientPhase>("enter");
   phaseRef.current = phase;
@@ -603,10 +605,43 @@ function ClientView({
 
   const join = useCallback(async () => {
     if (joining.current) return;
-    if (!invite) {
-      setErr("This meeting link is missing its code.");
-      setPhase("error");
-      return;
+    let inviteCode = invite || mintedInvite.current;
+    if (!inviteCode) {
+      // No coded link: treat bare /foyer as a WALK-IN. While the office is open,
+      // self-mint the same single-use invite the ECEB-site badge mints — the
+      // foyer IS the door. Closed office = a polite hours card, not a dead end.
+      setPhase("connecting");
+      setErr("");
+      try {
+        const st = await (await fetch(`${API}/office/status`)).json();
+        if (!st?.open) {
+          setErr(
+            st?.schedule
+              ? `The office is closed right now. Walk-in hours: ${st.schedule}.`
+              : "The office is closed right now.",
+          );
+          setPhase("error");
+          return;
+        }
+        const wr = await fetch(`${API}/office/walkin`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: name.trim() || "Visitor" }),
+        });
+        const wj = await wr.json().catch(() => null);
+        const m = String(wj?.url || "").match(/invite=([^&]+)/);
+        if (!wr.ok || !m) {
+          setErr("Couldn't open the door. Try again in a moment.");
+          setPhase("error");
+          return;
+        }
+        inviteCode = decodeURIComponent(m[1]);
+        mintedInvite.current = inviteCode;
+      } catch {
+        setErr("Couldn't reach the office. Try again in a moment.");
+        setPhase("error");
+        return;
+      }
     }
     joining.current = true;
     leaving.current = false;
@@ -617,7 +652,7 @@ function ClientView({
       const gr = await fetch(`${API}/auth/guest`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ inviteToken: invite, name: name.trim() }),
+        body: JSON.stringify({ inviteToken: inviteCode, name: name.trim() }),
       });
       if (!gr.ok) {
         throw new Error(
@@ -650,6 +685,8 @@ function ClientView({
       setMicOn(res.micOn); // reflect a denied mic in the toolbar
       // roster now arrives via WS presence:state for the foyer
     } catch (e: any) {
+      // a spent self-minted walk-in invite must not wedge retries: mint fresh next time
+      if (!invite) mintedInvite.current = "";
       setErr(e?.message || "Could not join the meeting.");
       setPhase("error");
     } finally {
