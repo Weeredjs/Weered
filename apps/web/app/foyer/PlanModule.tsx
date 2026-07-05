@@ -1409,6 +1409,9 @@ export function PlanModule({ jwt, accent }: { jwt: string; accent: string }) {
                           <div style={PM.pjCat}>{cat}</div>
                           {items.map((c: any) => {
                             const on = projSel.includes(c.id);
+                            const rec =
+                              Array.isArray(proj.recommendedLevers) &&
+                              proj.recommendedLevers.includes(c.id);
                             return (
                               <button
                                 key={c.id}
@@ -1445,6 +1448,14 @@ export function PlanModule({ jwt, accent }: { jwt: string; accent: string }) {
                                     style={{ color: "#e6edf3", fontSize: 12.5, textAlign: "left" }}
                                   >
                                     {c.name}
+                                    {rec && (
+                                      <span
+                                        style={{ color: "#e0b341", fontSize: 10.5, marginLeft: 6 }}
+                                        title="Recommended by the renewal review"
+                                      >
+                                        ★ recommended
+                                      </span>
+                                    )}
                                   </span>
                                 </span>
                                 <span
