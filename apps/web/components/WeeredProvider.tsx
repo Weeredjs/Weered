@@ -14,6 +14,18 @@ const API    = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 const WS_URL = process.env.NEXT_PUBLIC_WS_URL   || "ws://127.0.0.1:4001";
 const SETTINGS_KEY = "weered:settings:v0";
 
+// White-label office domains talk same-origin: the edge proxies /ws to the WS
+// server, so the socket URL follows the page's own host there. Weered-family
+// hosts (and dev) keep the configured absolute WS_URL.
+function effectiveWsUrl(): string {
+  if (typeof window === "undefined") return WS_URL;
+  const h = window.location.hostname;
+  const weeredFamily =
+    h === "weered.ca" || h.endsWith(".weered.ca") || h === "localhost" || h === "127.0.0.1";
+  if (weeredFamily) return WS_URL;
+  return `${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.host}/ws`;
+}
+
 type Role       = "owner" | "mod" | "member" | "none";
 type RoomUser   = { id: string; name: string; role?: Role; globalRole?: string; avatarColor?: string };
 type ChatMsg    = { id: string; user: RoomUser; body: string; ts: number; kind?: "trade" | "dice" | "system" | "poker" | "poker-winner"; meta?: any };
@@ -339,7 +351,7 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
     if (existing?.readyState === WebSocket.CONNECTING) return;
     if (existing) { try { existing.close(); } catch {} wsRef.current = null; }
 
-    const ws = new WebSocket(WS_URL);
+    const ws = new WebSocket(effectiveWsUrl());
     wsRef.current = ws;
 
     ws.onopen = () => {
@@ -1219,7 +1231,7 @@ const renameRoom = (name: string)   => sendAdmin("room:rename",  { name });
   const revokeSpeaker     = (userId: string)                          => sendAdmin("voice:revoke",  { userId });
 
   const value: Ctx = React.useMemo(() => ({
-    apiBase: API, wsUrl: WS_URL,
+    apiBase: API, wsUrl: effectiveWsUrl(),
     token, me, authed, globalRole,
     wsReady, wsState,
     activeRoomId, joinedRoomId, currentLobbyId, setActiveRoomId,

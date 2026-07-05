@@ -4,13 +4,26 @@
 // boundary — any mismatch silently breaks every web session.
 export const AUTH_COOKIE = "weered_token";
 
+// Weered-family hosts share one session across subdomains (Domain=.weered.ca).
+// Any other host — the white-label office domains — gets a host-only first-party
+// cookie, so a broker's domain is a self-contained session world that never
+// bleeds into gaming Weered or another broker's office.
+function cookieDomainAttr(reply: any): string {
+  const host = String(reply?.request?.headers?.host || "")
+    .toLowerCase()
+    .split(":")[0];
+  return host === "weered.ca" || host.endsWith(".weered.ca") ? " Domain=.weered.ca;" : "";
+}
+
 export function setAuthCookie(reply: any, token: string) {
   reply.header(
     "Set-Cookie",
     AUTH_COOKIE +
       "=" +
       token +
-      "; HttpOnly; Secure; SameSite=Lax; Domain=.weered.ca; Path=/; Max-Age=" +
+      "; HttpOnly; Secure; SameSite=Lax;" +
+      cookieDomainAttr(reply) +
+      " Path=/; Max-Age=" +
       7 * 24 * 3600,
   );
 }
@@ -18,7 +31,10 @@ export function setAuthCookie(reply: any, token: string) {
 export function clearAuthCookie(reply: any) {
   reply.header(
     "Set-Cookie",
-    AUTH_COOKIE + "=; HttpOnly; Secure; SameSite=Lax; Domain=.weered.ca; Path=/; Max-Age=0",
+    AUTH_COOKIE +
+      "=; HttpOnly; Secure; SameSite=Lax;" +
+      cookieDomainAttr(reply) +
+      " Path=/; Max-Age=0",
   );
 }
 
