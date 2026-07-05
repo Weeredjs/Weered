@@ -5,12 +5,21 @@
 // same (whitelisted) payload — what the broker sees is what the client sees.
 import type { CSSProperties } from "react";
 
+// UNIT CONTRACT (verified against the live engine payload): every percentage
+// arrives in PERCENT UNITS — lossRatio 326.71 means 326.71%, credibility 84.38,
+// target 74.25, pct 14.96, rateChangePct 42.0, pctElapsed 74. Render as-is;
+// NEVER multiply by 100. (The projection endpoint's overallLossRatio is the one
+// fraction-unit exception, handled where it renders.)
 const money = (n: any): string =>
   typeof n === "number" ? "$" + n.toLocaleString("en-CA", { maximumFractionDigits: 2 }) : "—";
 const money0 = (n: any): string =>
   typeof n === "number" ? "$" + Math.round(n).toLocaleString("en-CA") : "—";
 const pctTxt = (p: any): string =>
   typeof p === "number" ? `${p > 0 ? "+" : ""}${p.toFixed(1)}%` : "—";
+// headline precision: +14.96% must never round to +15.0% — the broker quotes it
+const pct2 = (p: any): string =>
+  typeof p === "number" ? `${p > 0 ? "+" : ""}${p.toFixed(2)}%` : "—";
+const plainPct = (p: any): string => (typeof p === "number" ? `${p.toFixed(2)}%` : "—");
 const pctColor = (p: any) =>
   typeof p !== "number" ? "#8b949e" : p > 0 ? "#f0883e" : p < 0 ? "#3fb950" : "#8b949e";
 const rangeTxt = (v: any): string => {
@@ -91,7 +100,7 @@ export function ReviewDoc({ review, accent }: { review: any; accent: string }) {
         </div>
         <div style={{ display: "flex", alignItems: "baseline", gap: 12, marginTop: 2 }}>
           <span style={{ fontSize: 30, fontWeight: 900, color: pctColor(h.pct) }}>
-            {pctTxt(h.pct)}
+            {pct2(h.pct)}
           </span>
           {typeof h.monthlyFrom === "number" && typeof h.monthlyTo === "number" && (
             <span style={{ fontSize: 14, color: "#c9d4e0" }}>
@@ -120,7 +129,7 @@ export function ReviewDoc({ review, accent }: { review: any; accent: string }) {
           <div style={{ ...S.h, color: accent }}>
             LOSS RATIO VS TARGET
             {typeof review.lossRatios[0]?.target === "number"
-              ? ` (${(review.lossRatios[0].target * 100).toFixed(2)}%)`
+              ? ` (${plainPct(review.lossRatios[0].target)})`
               : ""}
           </div>
           <div style={S.thRow}>
@@ -135,11 +144,9 @@ export function ReviewDoc({ review, accent }: { review: any; accent: string }) {
               <span
                 style={{ ...S.num, color: overTarget(r) ? "#f85149" : "#c9d4e0", fontWeight: 700 }}
               >
-                {typeof r.lossRatio === "number" ? (r.lossRatio * 100).toFixed(2) + "%" : "—"}
+                {plainPct(r.lossRatio)}
               </span>
-              <span style={{ ...S.num, color: "#8b949e" }}>
-                {typeof r.credibility === "number" ? (r.credibility * 100).toFixed(2) + "%" : "—"}
-              </span>
+              <span style={{ ...S.num, color: "#8b949e" }}>{plainPct(r.credibility)}</span>
               <span style={{ ...S.num, color: pctColor(r.rateChangePct), fontWeight: 700 }}>
                 {pctTxt(r.rateChangePct)}
               </span>
