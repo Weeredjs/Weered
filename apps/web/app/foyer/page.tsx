@@ -771,9 +771,9 @@ function ClientView({
         <div style={{ ...S.card, borderTop: `3px solid ${accent}` }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src="/brand/eceb-logo-white.png"
+            src="/brand/eceb-logo-white.png?v=2"
             alt="East Coast Employee Benefits"
-            style={{ height: 46, width: "auto", display: "inline-block", verticalAlign: "middle" }}
+            style={{ height: 62, width: "auto", display: "inline-block", verticalAlign: "middle" }}
           />
           <div style={{ ...S.wordmarkSub, color: accent, marginBottom: 16 }}>{title}</div>
           {phase === "error" ? (
@@ -819,7 +819,7 @@ function ClientView({
         <div style={{ lineHeight: 1.15 }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src="/brand/eceb-logo-white.png"
+            src="/brand/eceb-logo-white.png?v=2"
             alt="East Coast Employee Benefits"
             style={{ height: 46, width: "auto", display: "inline-block", verticalAlign: "middle" }}
           />
@@ -1236,9 +1236,9 @@ function HostView({ jwt, title, accent }: { jwt: string; title: string; accent: 
         <div style={{ ...S.card, borderTop: `3px solid ${accent}` }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src="/brand/eceb-logo-white.png"
+            src="/brand/eceb-logo-white.png?v=2"
             alt="East Coast Employee Benefits"
-            style={{ height: 46, width: "auto", display: "inline-block", verticalAlign: "middle" }}
+            style={{ height: 62, width: "auto", display: "inline-block", verticalAlign: "middle" }}
           />
           <div style={{ ...S.wordmarkSub, color: accent, marginBottom: 16 }}>{title}</div>
           {phase === "error" ? (
@@ -1269,7 +1269,7 @@ function HostView({ jwt, title, accent }: { jwt: string; title: string; accent: 
         <div style={{ lineHeight: 1.15 }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src="/brand/eceb-logo-white.png"
+            src="/brand/eceb-logo-white.png?v=2"
             alt="East Coast Employee Benefits"
             style={{ height: 46, width: "auto", display: "inline-block", verticalAlign: "middle" }}
           />
