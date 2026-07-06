@@ -371,6 +371,9 @@ export function ReviewDoc({ review, accent }: { review: any; accent: string }) {
           {review.disclaimers.join(" ")}
         </div>
       )}
+      <div style={{ ...S.tiny, marginTop: 10, letterSpacing: ".04em" }}>
+        Prepared with Fathom · East Coast Employee Benefits
+      </div>
     </div>
   );
 }
@@ -478,6 +481,9 @@ export function ProposalDoc({ proposal, accent }: { proposal: any; accent: strin
           {proposal.disclaimers.join(" ")}
         </div>
       )}
+      <div style={{ ...S.tiny, marginTop: 10, letterSpacing: ".04em" }}>
+        Prepared with Fathom · East Coast Employee Benefits
+      </div>
     </div>
   );
 }
