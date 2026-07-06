@@ -769,7 +769,12 @@ function ClientView({
     return (
       <div style={S.center}>
         <div style={{ ...S.card, borderTop: `3px solid ${accent}` }}>
-          <div style={S.wordmark}>East Coast Employee Benefits</div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/brand/eceb-logo-white.png"
+            alt="East Coast Employee Benefits"
+            style={{ height: 34, width: "auto", display: "inline-block", verticalAlign: "middle" }}
+          />
           <div style={{ ...S.wordmarkSub, color: accent, marginBottom: 16 }}>{title}</div>
           {phase === "error" ? (
             <>
@@ -812,7 +817,12 @@ function ClientView({
     <div style={S.live}>
       <header style={{ ...S.bar, borderBottom: `2px solid ${accent}` }}>
         <div style={{ lineHeight: 1.15 }}>
-          <div style={S.wordmark}>East Coast Employee Benefits</div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/brand/eceb-logo-white.png"
+            alt="East Coast Employee Benefits"
+            style={{ height: 34, width: "auto", display: "inline-block", verticalAlign: "middle" }}
+          />
           <div style={{ ...S.wordmarkSub, color: accent, marginBottom: 16 }}>{title}</div>
         </div>
         <div style={{ display: "flex", gap: 8 }}>
@@ -1224,7 +1234,12 @@ function HostView({ jwt, title, accent }: { jwt: string; title: string; accent: 
     return (
       <div style={S.center}>
         <div style={{ ...S.card, borderTop: `3px solid ${accent}` }}>
-          <div style={S.wordmark}>East Coast Employee Benefits</div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/brand/eceb-logo-white.png"
+            alt="East Coast Employee Benefits"
+            style={{ height: 34, width: "auto", display: "inline-block", verticalAlign: "middle" }}
+          />
           <div style={{ ...S.wordmarkSub, color: accent, marginBottom: 16 }}>{title}</div>
           {phase === "error" ? (
             <>
@@ -1252,7 +1267,12 @@ function HostView({ jwt, title, accent }: { jwt: string; title: string; accent: 
     <div style={S.live}>
       <header style={{ ...S.bar, borderBottom: `2px solid ${accent}` }}>
         <div style={{ lineHeight: 1.15 }}>
-          <div style={S.wordmark}>East Coast Employee Benefits</div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/brand/eceb-logo-white.png"
+            alt="East Coast Employee Benefits"
+            style={{ height: 34, width: "auto", display: "inline-block", verticalAlign: "middle" }}
+          />
           <div style={{ ...S.wordmarkSub, color: accent }}>
             {title} · {hostName}
           </div>
