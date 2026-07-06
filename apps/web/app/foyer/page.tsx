@@ -773,7 +773,7 @@ function ClientView({
           <img
             src="/brand/eceb-logo-white.png"
             alt="East Coast Employee Benefits"
-            style={{ height: 34, width: "auto", display: "inline-block", verticalAlign: "middle" }}
+            style={{ height: 46, width: "auto", display: "inline-block", verticalAlign: "middle" }}
           />
           <div style={{ ...S.wordmarkSub, color: accent, marginBottom: 16 }}>{title}</div>
           {phase === "error" ? (
@@ -821,7 +821,7 @@ function ClientView({
           <img
             src="/brand/eceb-logo-white.png"
             alt="East Coast Employee Benefits"
-            style={{ height: 34, width: "auto", display: "inline-block", verticalAlign: "middle" }}
+            style={{ height: 46, width: "auto", display: "inline-block", verticalAlign: "middle" }}
           />
           <div style={{ ...S.wordmarkSub, color: accent, marginBottom: 16 }}>{title}</div>
         </div>
@@ -1238,7 +1238,7 @@ function HostView({ jwt, title, accent }: { jwt: string; title: string; accent: 
           <img
             src="/brand/eceb-logo-white.png"
             alt="East Coast Employee Benefits"
-            style={{ height: 34, width: "auto", display: "inline-block", verticalAlign: "middle" }}
+            style={{ height: 46, width: "auto", display: "inline-block", verticalAlign: "middle" }}
           />
           <div style={{ ...S.wordmarkSub, color: accent, marginBottom: 16 }}>{title}</div>
           {phase === "error" ? (
@@ -1271,7 +1271,7 @@ function HostView({ jwt, title, accent }: { jwt: string; title: string; accent: 
           <img
             src="/brand/eceb-logo-white.png"
             alt="East Coast Employee Benefits"
-            style={{ height: 34, width: "auto", display: "inline-block", verticalAlign: "middle" }}
+            style={{ height: 46, width: "auto", display: "inline-block", verticalAlign: "middle" }}
           />
           <div style={{ ...S.wordmarkSub, color: accent }}>
             {title} · {hostName}
