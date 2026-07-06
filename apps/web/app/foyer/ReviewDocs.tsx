@@ -20,8 +20,6 @@ const pctTxt = (p: any): string =>
 const pct2 = (p: any): string =>
   typeof p === "number" ? `${p > 0 ? "+" : ""}${p.toFixed(2)}%` : "—";
 const plainPct = (p: any): string => (typeof p === "number" ? `${p.toFixed(2)}%` : "—");
-const pctColor = (p: any) =>
-  typeof p !== "number" ? "#8b949e" : p > 0 ? "#f0883e" : p < 0 ? "#3fb950" : "#8b949e";
 const rangeTxt = (v: any): string => {
   if (v && typeof v === "object") {
     const lo = typeof v.low === "number" ? money(v.low) : null;
@@ -32,13 +30,78 @@ const rangeTxt = (v: any): string => {
   return money(v);
 };
 
-const S: Record<string, CSSProperties> = {
+// The renderer is theme-aware: DARK for the broker's operator rail (Weered), a
+// LIGHT "benefits document" palette for the client-facing consult (matches the
+// ECEB website; dense number tables read far better on white). Headings use
+// navy on light / gold(accent) on dark; gold-on-white is too low-contrast.
+export type Pal = {
+  card: string;
+  cardBorder: string;
+  rowLine: string;
+  barBg: string;
+  barBorder: string;
+  text: string;
+  strong: string;
+  muted: string;
+  faint: string;
+  head: string;
+  up: string;
+  down: string;
+  neutral: string;
+  over: string;
+  badgeBg: string;
+  badgeBorder: string;
+  badgeText: string;
+  leverIcon: string;
+};
+const DARK: Pal = {
+  card: "#0e2038",
+  cardBorder: "#233a5e",
+  rowLine: "#1c3150",
+  barBg: "#081525",
+  barBorder: "#1c3150",
+  text: "#e6edf3",
+  strong: "#e6edf3",
+  muted: "#8b949e",
+  faint: "#6a7681",
+  head: "#e0b341",
+  up: "#f0883e",
+  down: "#3fb950",
+  neutral: "#8b949e",
+  over: "#f85149",
+  badgeBg: "rgba(63,185,80,0.08)",
+  badgeBorder: "#2e4a2e",
+  badgeText: "#7ee787",
+  leverIcon: "#e0b341",
+};
+const LIGHT: Pal = {
+  card: "#ffffff",
+  cardBorder: "#d6dfea",
+  rowLine: "#e6ecf3",
+  barBg: "#eef2f7",
+  barBorder: "#d6dfea",
+  text: "#1c2733",
+  strong: "#14233D",
+  muted: "#5a6b83",
+  faint: "#8593a6",
+  head: "#14233D",
+  up: "#c26a12",
+  down: "#1a7a3c",
+  neutral: "#5a6b83",
+  over: "#c0392b",
+  badgeBg: "#e8f5ec",
+  badgeBorder: "#bcdfc7",
+  badgeText: "#1a7a3c",
+  leverIcon: "#9a7b16",
+};
+
+const mkS = (P: Pal): Record<string, CSSProperties> => ({
   section: { marginTop: 16 },
   h: { fontSize: 12.5, letterSpacing: ".05em", fontWeight: 800, marginBottom: 6 },
   card: {
-    border: "1px solid #233a5e",
-    borderRadius: 10,
-    background: "#0e2038",
+    border: `1px solid ${P.cardBorder}`,
+    borderRadius: 5,
+    background: P.card,
     padding: "10px 12px",
     marginTop: 6,
   },
@@ -48,26 +111,26 @@ const S: Record<string, CSSProperties> = {
     gap: 8,
     fontSize: 13,
     padding: "5px 0",
-    borderTop: "1px solid #1c3150",
+    borderTop: `1px solid ${P.rowLine}`,
   },
-  small: { color: "#8b949e", fontSize: 12 },
-  tiny: { color: "#6a7681", fontSize: 11 },
+  small: { color: P.muted, fontSize: 12 },
+  tiny: { color: P.faint, fontSize: 11 },
   thRow: {
     display: "flex",
     gap: 8,
     fontSize: 10.5,
-    color: "#6a7681",
+    color: P.faint,
     textTransform: "uppercase",
     letterSpacing: ".05em",
     padding: "4px 0 3px",
-    borderBottom: "1px solid #233a5e",
+    borderBottom: `1px solid ${P.cardBorder}`,
   },
   num: { flex: 1, textAlign: "right" },
   bar: {
     height: 7,
-    background: "#081525",
-    border: "1px solid #1c3150",
-    borderRadius: 4,
+    background: P.barBg,
+    border: `1px solid ${P.barBorder}`,
+    borderRadius: 3,
     overflow: "hidden",
     marginTop: 3,
   },
@@ -75,18 +138,40 @@ const S: Record<string, CSSProperties> = {
     fontSize: 10.5,
     padding: "2px 8px",
     borderRadius: 999,
-    border: "1px solid #2e4a2e",
-    background: "rgba(63,185,80,0.08)",
-    color: "#7ee787",
+    border: `1px solid ${P.badgeBorder}`,
+    background: P.badgeBg,
+    color: P.badgeText,
     whiteSpace: "nowrap",
   },
-};
+});
 
 const KIND_ICON: Record<string, string> = { warn: "⚠", info: "ⓘ", lever: "⚡" };
-const KIND_COLOR: Record<string, string> = { warn: "#f0883e", info: "#8b949e", lever: "#e0b341" };
+const kindColor = (P: Pal): Record<string, string> => ({
+  warn: P.up,
+  info: P.muted,
+  lever: P.leverIcon,
+});
 
-export function ReviewDoc({ review, accent }: { review: any; accent: string }) {
+// Shared so the PlanModule presented components (plan body, rate card,
+// projection) theme from the exact same tokens as the review/proposal docs.
+export const fathomPal = (light?: boolean): Pal => (light ? LIGHT : DARK);
+
+export function ReviewDoc({
+  review,
+  accent,
+  light,
+}: {
+  review: any;
+  accent: string;
+  light?: boolean;
+}) {
   if (!review || !review.headline) return null;
+  const P = light ? LIGHT : DARK;
+  const S = mkS(P);
+  const head = P.head;
+  const KC = kindColor(P);
+  const pcolor = (p: any) =>
+    typeof p !== "number" ? P.neutral : p > 0 ? P.up : p < 0 ? P.down : P.neutral;
   const h = review.headline;
   const overTarget = (r: any) =>
     typeof r.lossRatio === "number" && typeof r.target === "number" && r.lossRatio > r.target;
@@ -99,11 +184,9 @@ export function ReviewDoc({ review, accent }: { review: any; accent: string }) {
             "Renewal"}
         </div>
         <div style={{ display: "flex", alignItems: "baseline", gap: 12, marginTop: 2 }}>
-          <span style={{ fontSize: 30, fontWeight: 900, color: pctColor(h.pct) }}>
-            {pct2(h.pct)}
-          </span>
+          <span style={{ fontSize: 30, fontWeight: 900, color: pcolor(h.pct) }}>{pct2(h.pct)}</span>
           {typeof h.monthlyFrom === "number" && typeof h.monthlyTo === "number" && (
-            <span style={{ fontSize: 14, color: "#c9d4e0" }}>
+            <span style={{ fontSize: 14, color: P.text }}>
               {money0(h.monthlyFrom)} → <b>{money0(h.monthlyTo)}</b>/mo
               {typeof h.annualDelta === "number" ? ` · ≈${money0(h.annualDelta)}/yr` : ""}
             </span>
@@ -126,7 +209,7 @@ export function ReviewDoc({ review, accent }: { review: any; accent: string }) {
       {/* loss ratios */}
       {review.lossRatios?.length > 0 && (
         <div style={S.section}>
-          <div style={{ ...S.h, color: accent }}>
+          <div style={{ ...S.h, color: head }}>
             LOSS RATIO VS TARGET
             {typeof review.lossRatios[0]?.target === "number"
               ? ` (${plainPct(review.lossRatios[0].target)})`
@@ -140,14 +223,12 @@ export function ReviewDoc({ review, accent }: { review: any; accent: string }) {
           </div>
           {review.lossRatios.map((r: any, i: number) => (
             <div key={i} style={{ ...S.row, ...(i === 0 ? { borderTop: "none" } : {}) }}>
-              <span style={{ flex: 1.3, color: "#e6edf3" }}>{r.benefit}</span>
-              <span
-                style={{ ...S.num, color: overTarget(r) ? "#f85149" : "#c9d4e0", fontWeight: 700 }}
-              >
+              <span style={{ flex: 1.3, color: P.strong }}>{r.benefit}</span>
+              <span style={{ ...S.num, color: overTarget(r) ? P.over : P.text, fontWeight: 700 }}>
                 {plainPct(r.lossRatio)}
               </span>
-              <span style={{ ...S.num, color: "#8b949e" }}>{plainPct(r.credibility)}</span>
-              <span style={{ ...S.num, color: pctColor(r.rateChangePct), fontWeight: 700 }}>
+              <span style={{ ...S.num, color: P.muted }}>{plainPct(r.credibility)}</span>
+              <span style={{ ...S.num, color: pcolor(r.rateChangePct), fontWeight: 700 }}>
                 {pctTxt(r.rateChangePct)}
               </span>
             </div>
@@ -158,11 +239,11 @@ export function ReviewDoc({ review, accent }: { review: any; accent: string }) {
       {/* drivers */}
       {review.drivers?.length > 0 && (
         <div style={S.section}>
-          <div style={{ ...S.h, color: accent }}>WHAT&apos;S DRIVING IT</div>
+          <div style={{ ...S.h, color: head }}>WHAT&apos;S DRIVING IT</div>
           {review.drivers.map((d: any, i: number) => (
             <div key={i} style={S.card}>
-              <div style={{ fontSize: 13, fontWeight: 800, color: "#e6edf3" }}>
-                <span style={{ color: KIND_COLOR[d.kind] || "#8b949e", marginRight: 6 }}>
+              <div style={{ fontSize: 13, fontWeight: 800, color: P.strong }}>
+                <span style={{ color: KC[d.kind] || P.muted, marginRight: 6 }}>
                   {KIND_ICON[d.kind] || "ⓘ"}
                 </span>
                 {d.title}
@@ -176,7 +257,7 @@ export function ReviewDoc({ review, accent }: { review: any; accent: string }) {
       {/* roadmap */}
       {review.roadmap && (
         <div style={S.section}>
-          <div style={{ ...S.h, color: accent }}>RENEWAL ROADMAP</div>
+          <div style={{ ...S.h, color: head }}>RENEWAL ROADMAP</div>
           <div style={S.small}>
             {[
               review.roadmap.renewsAt ? `Renews ${review.roadmap.renewsAt}` : null,
@@ -193,7 +274,7 @@ export function ReviewDoc({ review, accent }: { review: any; accent: string }) {
                 style={{
                   height: "100%",
                   width: `${Math.min(100, Math.max(0, review.roadmap.pctElapsed))}%`,
-                  background: accent,
+                  background: head,
                 }}
               />
             </div>
@@ -208,7 +289,7 @@ export function ReviewDoc({ review, accent }: { review: any; accent: string }) {
                   alignItems: "baseline",
                 }}
               >
-                <span style={{ fontSize: 13, fontWeight: 800, color: "#e6edf3" }}>{it.title}</span>
+                <span style={{ fontSize: 13, fontWeight: 800, color: P.strong }}>{it.title}</span>
                 {it.badge && <span style={S.badge}>{it.badge}</span>}
               </div>
               {it.body && (
@@ -223,11 +304,11 @@ export function ReviewDoc({ review, accent }: { review: any; accent: string }) {
       {/* diagnosis */}
       {review.diagnosis?.length > 0 && (
         <div style={S.section}>
-          <div style={{ ...S.h, color: accent }}>DIAGNOSIS &amp; PLAN</div>
+          <div style={{ ...S.h, color: head }}>DIAGNOSIS &amp; PLAN</div>
           {review.diagnosis.map((s: string, i: number) => (
             <div key={i} style={{ display: "flex", gap: 8, fontSize: 13, padding: "3px 0" }}>
-              <span style={{ color: accent }}>•</span>
-              <span style={{ color: "#c9d4e0", lineHeight: 1.5 }}>{s}</span>
+              <span style={{ color: head }}>•</span>
+              <span style={{ color: P.text, lineHeight: 1.5 }}>{s}</span>
             </div>
           ))}
         </div>
@@ -238,7 +319,7 @@ export function ReviewDoc({ review, accent }: { review: any; accent: string }) {
         <div style={{ ...S.section, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
           {review.scenarios.map((s: any, i: number) => (
             <div key={i} style={{ ...S.card, marginTop: 0 }}>
-              <div style={{ fontSize: 12.5, fontWeight: 800, color: accent }}>{s.title}</div>
+              <div style={{ fontSize: 12.5, fontWeight: 800, color: head }}>{s.title}</div>
               <div style={{ ...S.small, marginTop: 4, lineHeight: 1.5 }}>{s.body}</div>
             </div>
           ))}
@@ -248,7 +329,7 @@ export function ReviewDoc({ review, accent }: { review: any; accent: string }) {
       {/* levers */}
       {review.levers?.length > 0 && (
         <div style={S.section}>
-          <div style={{ ...S.h, color: accent }}>LEVERS TO FORCE A BETTER OUTCOME</div>
+          <div style={{ ...S.h, color: head }}>LEVERS TO FORCE A BETTER OUTCOME</div>
           {review.levers.map((l: any, i: number) => (
             <div key={i} style={S.card}>
               <div
@@ -259,7 +340,7 @@ export function ReviewDoc({ review, accent }: { review: any; accent: string }) {
                   alignItems: "baseline",
                 }}
               >
-                <span style={{ fontSize: 13, fontWeight: 800, color: "#e6edf3" }}>{l.title}</span>
+                <span style={{ fontSize: 13, fontWeight: 800, color: P.strong }}>{l.title}</span>
                 {typeof l.saveLow === "number" && typeof l.saveHigh === "number" ? (
                   <span style={S.badge}>
                     save ~{money0(l.saveLow)}–{money0(l.saveHigh)}/yr
@@ -277,7 +358,7 @@ export function ReviewDoc({ review, accent }: { review: any; accent: string }) {
       {/* demographics */}
       {review.demographics && (
         <div style={S.section}>
-          <div style={{ ...S.h, color: accent }}>GROUP</div>
+          <div style={{ ...S.h, color: head }}>GROUP</div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             {typeof review.demographics.lives === "number" && (
               <div style={{ ...S.card, marginTop: 0, flex: 1, minWidth: 90 }}>
@@ -288,7 +369,7 @@ export function ReviewDoc({ review, accent }: { review: any; accent: string }) {
             {typeof review.demographics.avgAge === "number" && (
               <div style={{ ...S.card, marginTop: 0, flex: 1, minWidth: 90 }}>
                 <div style={S.tiny}>AVG AGE</div>
-                <div style={{ fontSize: 20, fontWeight: 900, color: accent }}>
+                <div style={{ fontSize: 20, fontWeight: 900, color: head }}>
                   {review.demographics.avgAge}
                 </div>
               </div>
@@ -318,7 +399,7 @@ export function ReviewDoc({ review, accent }: { review: any; accent: string }) {
                         style={{
                           height: "100%",
                           width: `${((b.count || 0) / max) * 100}%`,
-                          background: accent,
+                          background: head,
                           opacity: 0.75,
                         }}
                       />
@@ -338,8 +419,8 @@ export function ReviewDoc({ review, accent }: { review: any; accent: string }) {
                     fontSize: 11.5,
                     padding: "3px 10px",
                     borderRadius: 999,
-                    border: "1px solid #233a5e",
-                    color: "#c9d4e0",
+                    border: `1px solid ${P.cardBorder}`,
+                    color: P.text,
                   }}
                 >
                   {c.label} · {c.count}
@@ -352,8 +433,8 @@ export function ReviewDoc({ review, accent }: { review: any; accent: string }) {
 
       {/* benchmark */}
       {review.benchmark && (
-        <div style={{ ...S.card, borderColor: "#2e4a2e" }}>
-          <div style={{ fontSize: 12.5, fontWeight: 800, color: "#7ee787" }}>
+        <div style={{ ...S.card, borderColor: P.badgeBorder }}>
+          <div style={{ fontSize: 12.5, fontWeight: 800, color: P.badgeText }}>
             BENCHMARK{review.benchmark.verdict ? ` · ${review.benchmark.verdict}` : ""}
             {review.benchmark.scope ? (
               <span style={{ ...S.tiny, fontWeight: 400 }}> ({review.benchmark.scope})</span>
@@ -378,8 +459,21 @@ export function ReviewDoc({ review, accent }: { review: any; accent: string }) {
   );
 }
 
-export function ProposalDoc({ proposal, accent }: { proposal: any; accent: string }) {
+export function ProposalDoc({
+  proposal,
+  accent,
+  light,
+}: {
+  proposal: any;
+  accent: string;
+  light?: boolean;
+}) {
   if (!proposal || !Array.isArray(proposal.lines) || !proposal.lines.length) return null;
+  const P = light ? LIGHT : DARK;
+  const S = mkS(P);
+  const head = P.head;
+  const pcolor = (p: any) =>
+    typeof p !== "number" ? P.neutral : p > 0 ? P.up : p < 0 ? P.down : P.neutral;
   const t = proposal.totals || {};
   return (
     <div>
@@ -393,31 +487,27 @@ export function ProposalDoc({ proposal, accent }: { proposal: any; accent: strin
       {proposal.lines.map((l: any, i: number) => (
         <div key={i} style={{ ...S.row, ...(i === 0 ? { borderTop: "none" } : {}) }}>
           <span style={{ flex: 1.3 }}>
-            <span style={{ color: "#e6edf3" }}>{l.benefit}</span>
+            <span style={{ color: P.strong }}>{l.benefit}</span>
             {l.tier ? <span style={S.tiny}> · {l.tier}</span> : null}
           </span>
-          <span style={{ ...S.num, color: "#8b949e" }}>{money(l.current)}</span>
-          <span style={{ ...S.num, color: "#f0883e" }}>{money(l.renewal)}</span>
-          <span style={{ ...S.num, color: accent, fontWeight: 700 }}>
-            {rangeTxt(l.appealTarget)}
-          </span>
-          <span style={{ ...S.num, color: "#3fb950", fontWeight: 700 }}>
-            {money(l.withChanges)}
-          </span>
+          <span style={{ ...S.num, color: P.muted }}>{money(l.current)}</span>
+          <span style={{ ...S.num, color: P.up }}>{money(l.renewal)}</span>
+          <span style={{ ...S.num, color: head, fontWeight: 700 }}>{rangeTxt(l.appealTarget)}</span>
+          <span style={{ ...S.num, color: P.down, fontWeight: 700 }}>{money(l.withChanges)}</span>
         </div>
       ))}
-      <div style={{ ...S.row, borderTop: "1px solid #233a5e", fontWeight: 800 }}>
+      <div style={{ ...S.row, borderTop: `1px solid ${P.cardBorder}`, fontWeight: 800 }}>
         <span style={{ flex: 1.3 }}>Total monthly</span>
-        <span style={{ ...S.num, color: "#c9d4e0" }}>{money(t.current)}</span>
-        <span style={{ ...S.num, color: "#f0883e" }}>
+        <span style={{ ...S.num, color: P.text }}>{money(t.current)}</span>
+        <span style={{ ...S.num, color: P.up }}>
           {money(t.renewal)}
           <span style={{ ...S.tiny, marginLeft: 4 }}>{pctTxt(t.renewalPct)}</span>
         </span>
-        <span style={{ ...S.num, color: accent }}>
+        <span style={{ ...S.num, color: head }}>
           {rangeTxt(t.appealTarget)}
           <span style={{ ...S.tiny, marginLeft: 4 }}>{pctTxt(t.appealPct)}</span>
         </span>
-        <span style={{ ...S.num, color: "#3fb950" }}>
+        <span style={{ ...S.num, color: P.down }}>
           {money(t.withChanges)}
           <span style={{ ...S.tiny, marginLeft: 4 }}>{pctTxt(t.withChangesPct)}</span>
         </span>
@@ -425,11 +515,11 @@ export function ProposalDoc({ proposal, accent }: { proposal: any; accent: strin
 
       {proposal.appealBasis?.length > 0 && (
         <div style={S.section}>
-          <div style={{ ...S.h, color: accent }}>WHY OUR TARGET IS DEFENSIBLE</div>
+          <div style={{ ...S.h, color: head }}>WHY OUR TARGET IS DEFENSIBLE</div>
           {proposal.appealBasis.map((s: string, i: number) => (
             <div key={i} style={{ display: "flex", gap: 8, fontSize: 13, padding: "3px 0" }}>
-              <span style={{ color: accent }}>•</span>
-              <span style={{ color: "#c9d4e0", lineHeight: 1.5 }}>{s}</span>
+              <span style={{ color: head }}>•</span>
+              <span style={{ color: P.text, lineHeight: 1.5 }}>{s}</span>
             </div>
           ))}
         </div>
@@ -437,7 +527,7 @@ export function ProposalDoc({ proposal, accent }: { proposal: any; accent: strin
 
       {proposal.forecasts?.length > 0 && (
         <div style={S.section}>
-          <div style={{ ...S.h, color: accent }}>WHERE THE NEXT RENEWAL LANDS</div>
+          <div style={{ ...S.h, color: head }}>WHERE THE NEXT RENEWAL LANDS</div>
           <div style={S.thRow}>
             <span style={{ flex: 1.6 }}>Scenario</span>
             <span style={S.num}>Next renewal</span>
@@ -446,13 +536,11 @@ export function ProposalDoc({ proposal, accent }: { proposal: any; accent: strin
           {proposal.forecasts.map((f: any, i: number) => (
             <div key={i} style={{ ...S.row, ...(i === 0 ? { borderTop: "none" } : {}) }}>
               <span style={{ flex: 1.6 }}>
-                <span style={{ color: "#e6edf3" }}>{f.label || f.scenario}</span>
+                <span style={{ color: P.strong }}>{f.label || f.scenario}</span>
                 {f.notes ? <div style={S.tiny}>{f.notes}</div> : null}
               </span>
               <span style={{ ...S.num, fontWeight: 700 }}>{money0(f.nextRenewalAnnual)}</span>
-              <span
-                style={{ ...S.num, maxWidth: 70, color: pctColor(f.changePct), fontWeight: 700 }}
-              >
+              <span style={{ ...S.num, maxWidth: 70, color: pcolor(f.changePct), fontWeight: 700 }}>
                 {pctTxt(f.changePct)}
               </span>
             </div>
@@ -461,8 +549,8 @@ export function ProposalDoc({ proposal, accent }: { proposal: any; accent: strin
       )}
 
       {proposal.benchmark && (
-        <div style={{ ...S.card, borderColor: "#2e4a2e" }}>
-          <div style={{ fontSize: 12.5, fontWeight: 800, color: "#7ee787" }}>
+        <div style={{ ...S.card, borderColor: P.badgeBorder }}>
+          <div style={{ fontSize: 12.5, fontWeight: 800, color: P.badgeText }}>
             BENCHMARK{proposal.benchmark.verdict ? ` · ${proposal.benchmark.verdict}` : ""}
             {proposal.benchmark.scope ? (
               <span style={{ ...S.tiny, fontWeight: 400 }}> ({proposal.benchmark.scope})</span>

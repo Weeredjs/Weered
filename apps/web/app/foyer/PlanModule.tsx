@@ -6,7 +6,7 @@
 // while admitted) and renders it read-only. The engine token is minted server-side.
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
-import { ReviewDoc, ProposalDoc } from "./ReviewDocs";
+import { ReviewDoc, ProposalDoc, fathomPal } from "./ReviewDocs";
 
 const API = "/api";
 
@@ -68,15 +68,17 @@ function scalarCoverage(v: any): string {
 }
 
 // Read-only rendering of an employer + plan snapshot (shared by host + client).
-function PlanBody({ detail, accent }: { detail: any; accent: string }) {
+function PlanBody({ detail, accent, light }: { detail: any; accent: string; light?: boolean }) {
+  const P = fathomPal(light);
+  const head = P.head;
   const benefits = Object.entries(detail.plan?.benefitDesign || {}).sort(
     (a: any, b: any) =>
       benefitRank(a[0]) - benefitRank(b[0]) || String(a[0]).localeCompare(String(b[0])),
   );
   return (
     <>
-      <div style={PM.clientName}>{detail.employer?.name}</div>
-      <div style={PM.meta}>
+      <div style={{ ...PM.clientName, color: P.strong }}>{detail.employer?.name}</div>
+      <div style={{ ...PM.meta, color: P.muted }}>
         {[
           detail.employer?.carrier
             ? `${detail.employer.carrier}${detail.employer.carrierPolicy ? ` #${detail.employer.carrierPolicy}` : ""}`
@@ -89,33 +91,35 @@ function PlanBody({ detail, accent }: { detail: any; accent: string }) {
           .join("  ·  ") || "No carrier on file yet"}
       </div>
       {!detail.plan ? (
-        <div style={{ color: "#8b949e", fontSize: 13, marginTop: 12 }}>
+        <div style={{ color: P.muted, fontSize: 13, marginTop: 12 }}>
           No plan of record on file yet.
         </div>
       ) : (
         <div style={{ marginTop: 10 }}>
           {benefits.map(([benefit, obj]: [string, any]) => (
             <div key={benefit} style={PM.benefit}>
-              <div style={{ ...PM.benefitHead, color: accent }}>{benefitLabel(benefit)}</div>
+              <div style={{ ...PM.benefitHead, color: head }}>{benefitLabel(benefit)}</div>
               {obj && typeof obj === "object" ? (
                 Object.entries(obj).map(([field, val]: [string, any]) => {
                   const fs = detail.fields?.[benefit]?.[field];
                   return (
-                    <div key={field} style={PM.row}>
-                      <span style={{ color: "#c9d4e0" }}>{fs?.label || prettyField(field)}</span>
-                      <span style={{ fontWeight: 700 }}>{fmtPlanValue(fs?.type, val)}</span>
+                    <div key={field} style={{ ...PM.row, borderTop: `1px solid ${P.rowLine}` }}>
+                      <span style={{ color: P.text }}>{fs?.label || prettyField(field)}</span>
+                      <span style={{ fontWeight: 700, color: P.strong }}>
+                        {fmtPlanValue(fs?.type, val)}
+                      </span>
                     </div>
                   );
                 })
               ) : (
-                <div style={PM.row}>
-                  <span style={{ color: "#c9d4e0" }}>Coverage</span>
-                  <span style={{ fontWeight: 700 }}>{scalarCoverage(obj)}</span>
+                <div style={{ ...PM.row, borderTop: `1px solid ${P.rowLine}` }}>
+                  <span style={{ color: P.text }}>Coverage</span>
+                  <span style={{ fontWeight: 700, color: P.strong }}>{scalarCoverage(obj)}</span>
                 </div>
               )}
             </div>
           ))}
-          <div style={PM.ver}>Plan of record · v{detail.plan.version}</div>
+          <div style={{ ...PM.ver, color: P.faint }}>Plan of record · v{detail.plan.version}</div>
         </div>
       )}
     </>
@@ -143,11 +147,23 @@ function rcRowPct(r: any): number | null {
     return ((r.renewalRate - r.currentRate) / Math.abs(r.currentRate)) * 100;
   return null;
 }
-const rcPctColor = (p: number | null) =>
-  p == null ? "#6a7681" : p > 0 ? "#f0883e" : p < 0 ? "#3fb950" : "#8b949e";
+const rcPctColor = (p: number | null, P: ReturnType<typeof fathomPal>) =>
+  p == null ? P.faint : p > 0 ? P.up : p < 0 ? P.down : P.neutral;
 const rcPctText = (p: number | null) => (p == null ? "—" : `${p > 0 ? "+" : ""}${p.toFixed(1)}%`);
 
-function RateCardTable({ card, accent, title }: { card: any; accent: string; title: string }) {
+function RateCardTable({
+  card,
+  accent,
+  title,
+  light,
+}: {
+  card: any;
+  accent: string;
+  title: string;
+  light?: boolean;
+}) {
+  const P = fathomPal(light);
+  const head = P.head;
   const rows: any[] = Array.isArray(card?.rows) ? card.rows : [];
   if (!rows.length) return null;
   let curSum = 0,
@@ -176,9 +192,9 @@ function RateCardTable({ card, accent, title }: { card: any; accent: string; tit
     typeof prem === "number" ? rcMoney(prem) : typeof rate === "number" ? String(rate) : "—";
   return (
     <div style={{ marginTop: 14 }}>
-      <div style={{ ...PM.benefitHead, color: accent }}>{title}</div>
-      {meta && <div style={{ color: "#8b949e", fontSize: 12, marginBottom: 4 }}>{meta}</div>}
-      <div style={PM.rcHeadRow}>
+      <div style={{ ...PM.benefitHead, color: head }}>{title}</div>
+      {meta && <div style={{ color: P.muted, fontSize: 12, marginBottom: 4 }}>{meta}</div>}
+      <div style={{ ...PM.rcHeadRow, color: P.faint, borderBottom: `1px solid ${P.cardBorder}` }}>
         <span style={{ flex: 1.4 }}>Benefit</span>
         <span style={PM.rcNumCol}>Current</span>
         <span style={PM.rcNumCol}>Renewal</span>
@@ -187,38 +203,39 @@ function RateCardTable({ card, accent, title }: { card: any; accent: string; tit
       {rows.map((r, i) => {
         const pct = rcRowPct(r);
         return (
-          <div key={i} style={{ ...PM.rcRow, ...(i === 0 ? { borderTop: "none" } : {}) }}>
+          <div
+            key={i}
+            style={{ ...PM.rcRow, borderTop: i === 0 ? "none" : `1px solid ${P.rowLine}` }}
+          >
             <span style={{ flex: 1.4 }}>
-              <span style={{ color: "#e6edf3" }}>{r.benefit}</span>
-              {r.tier ? (
-                <span style={{ color: "#8b949e", fontSize: 11.5 }}> · {r.tier}</span>
-              ) : null}
+              <span style={{ color: P.strong }}>{r.benefit}</span>
+              {r.tier ? <span style={{ color: P.muted, fontSize: 11.5 }}> · {r.tier}</span> : null}
             </span>
-            <span style={{ ...PM.rcNumCol, color: "#c9d4e0" }}>
+            <span style={{ ...PM.rcNumCol, color: P.text }}>
               {cell(r.currentPremium, r.currentRate)}
             </span>
-            <span style={{ ...PM.rcNumCol, fontWeight: 700 }}>
+            <span style={{ ...PM.rcNumCol, fontWeight: 700, color: P.strong }}>
               {cell(r.renewalPremium, r.renewalRate)}
             </span>
-            <span style={{ ...PM.rcPctCol, color: rcPctColor(pct), fontWeight: 700 }}>
+            <span style={{ ...PM.rcPctCol, color: rcPctColor(pct, P), fontWeight: 700 }}>
               {rcPctText(pct)}
             </span>
           </div>
         );
       })}
       {(haveCur || haveNew) && (
-        <div style={{ ...PM.rcRow, borderTop: "1px solid #283040" }}>
+        <div style={{ ...PM.rcRow, borderTop: `1px solid ${P.cardBorder}`, color: P.strong }}>
           <span style={{ flex: 1.4, fontWeight: 800 }}>Total monthly</span>
-          <span style={{ ...PM.rcNumCol, color: "#c9d4e0", fontWeight: 700 }}>
+          <span style={{ ...PM.rcNumCol, color: P.text, fontWeight: 700 }}>
             {haveCur ? rcMoney(curSum) : "—"}
           </span>
           <span style={{ ...PM.rcNumCol, fontWeight: 800 }}>{haveNew ? rcMoney(newSum) : "—"}</span>
-          <span style={{ ...PM.rcPctCol, color: rcPctColor(totalPct), fontWeight: 800 }}>
+          <span style={{ ...PM.rcPctCol, color: rcPctColor(totalPct, P), fontWeight: 800 }}>
             {rcPctText(totalPct)}
           </span>
         </div>
       )}
-      {card.note && <div style={{ color: "#8b949e", fontSize: 12, marginTop: 6 }}>{card.note}</div>}
+      {card.note && <div style={{ color: P.muted, fontSize: 12, marginTop: 6 }}>{card.note}</div>}
     </div>
   );
 }
@@ -236,21 +253,25 @@ function ProjectionPaths({
   accent,
   title,
   note,
+  light,
 }: {
   paths: any;
   perLever: any[];
   accent: string;
   title: string;
   note?: string;
+  light?: boolean;
 }) {
+  const P = fathomPal(light);
+  const head = P.head;
   if (!paths || typeof paths.currentAnnual !== "number" || !paths.statusQuo) return null;
   const rows: { label: string; annual: number; pct: number | null; color: string; sub?: string }[] =
-    [{ label: "Current premium", annual: paths.currentAnnual, pct: null, color: "#8b949e" }];
+    [{ label: "Current premium", annual: paths.currentAnnual, pct: null, color: P.muted }];
   rows.push({
     label: "Status quo renewal",
     annual: paths.statusQuo.annual,
     pct: paths.statusQuo.changePct,
-    color: "#f0883e",
+    color: P.up,
     sub: "no changes, full experience",
   });
   if (paths.capped)
@@ -258,7 +279,7 @@ function ProjectionPaths({
       label: "First-renewal cap",
       annual: paths.capped.annual,
       pct: paths.capped.changePct,
-      color: "#e0b341",
+      color: P.leverIcon,
       sub: paths.capped.capped ? "cap holds the increase" : "cap not reached",
     });
   if (paths.withLevers && perLever.length)
@@ -266,7 +287,7 @@ function ProjectionPaths({
       label: "With the changes on screen",
       annual: paths.withLevers.annual,
       pct: paths.withLevers.changePct,
-      color: "#3fb950",
+      color: P.down,
       sub:
         typeof paths.withLevers.totalClaimsSaved === "number" &&
         paths.withLevers.totalClaimsSaved > 0
@@ -276,22 +297,22 @@ function ProjectionPaths({
   const max = Math.max(...rows.map((r) => r.annual), 1);
   return (
     <div style={{ marginTop: 14 }}>
-      <div style={{ ...PM.benefitHead, color: accent }}>{title}</div>
+      <div style={{ ...PM.benefitHead, color: head }}>{title}</div>
       {rows.map((r, i) => (
         <div key={i} style={{ marginTop: i === 0 ? 4 : 9 }}>
-          <div style={PM.pjLabelRow}>
-            <span style={{ color: "#c9d4e0" }}>
+          <div style={{ ...PM.pjLabelRow, color: P.text }}>
+            <span style={{ color: P.text }}>
               {r.label}
-              {r.sub ? <span style={{ color: "#6a7681", fontSize: 11 }}> · {r.sub}</span> : null}
+              {r.sub ? <span style={{ color: P.faint, fontSize: 11 }}> · {r.sub}</span> : null}
             </span>
-            <span style={{ fontWeight: 800, whiteSpace: "nowrap" }}>
+            <span style={{ fontWeight: 800, whiteSpace: "nowrap", color: P.strong }}>
               {pjMoney(r.annual)}
               {r.pct != null && (
                 <span style={{ color: r.color, marginLeft: 6, fontSize: 12 }}>{pjPct(r.pct)}</span>
               )}
             </span>
           </div>
-          <div style={PM.pjTrack}>
+          <div style={{ ...PM.pjTrack, background: P.barBg, border: `1px solid ${P.barBorder}` }}>
             <div
               style={{
                 ...PM.pjBar,
@@ -305,16 +326,16 @@ function ProjectionPaths({
       {perLever.length > 0 && (
         <div style={{ marginTop: 10 }}>
           {perLever.map((l: any, i: number) => (
-            <div key={i} style={PM.pjLeverLine}>
-              <span style={{ color: "#c9d4e0" }}>{l.name}</span>
-              <span style={{ color: "#3fb950", fontWeight: 700 }}>
+            <div key={i} style={{ ...PM.pjLeverLine, borderTop: `1px solid ${P.rowLine}` }}>
+              <span style={{ color: P.text }}>{l.name}</span>
+              <span style={{ color: P.down, fontWeight: 700 }}>
                 {typeof l.claimsSaved === "number" ? `~${pjMoney(l.claimsSaved)}` : ""}
               </span>
             </div>
           ))}
         </div>
       )}
-      {note && <div style={{ color: "#6a7681", fontSize: 11.5, marginTop: 10 }}>{note}</div>}
+      {note && <div style={{ color: P.faint, fontSize: 11.5, marginTop: 10 }}>{note}</div>}
     </div>
   );
 }
@@ -362,54 +383,67 @@ export function PresentedPlanViewer({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Client-facing consult: always the LIGHT "benefits document" theme (matches
+  // the ECEB site). White card, navy headings, gold border accent.
+  const P = fathomPal(true);
+  const head = P.head;
+  const lightPanel: CSSProperties = {
+    ...PM.panel,
+    background: P.card,
+    color: P.text,
+    borderRadius: 6,
+  };
+  const lightHead: CSSProperties = { ...PM.head, borderBottom: `1px solid ${P.cardBorder}` };
+
   // Idle placeholder: the container is always on screen once admitted, so the plan
   // reveal feels intentional instead of popping in from nothing.
   if (!data) {
     return (
-      <div style={{ ...PM.panel, borderColor: "#283040" }}>
-        <div style={PM.head}>
-          <strong style={{ color: accent }}>◧ Your plan — live review</strong>
-          <span style={{ color: "#8b949e", fontSize: 12 }}>with your advisor</span>
+      <div style={{ ...lightPanel, borderColor: P.cardBorder }}>
+        <div style={lightHead}>
+          <strong style={{ color: head }}>◧ Your plan — live review</strong>
+          <span style={{ color: P.muted, fontSize: 12 }}>with your advisor</span>
         </div>
-        <div style={{ padding: 16, color: "#8b949e", fontSize: 13.5 }}>
+        <div style={{ padding: 16, color: P.muted, fontSize: 13.5 }}>
           Your advisor will pull up your plan here when the review begins.
         </div>
       </div>
     );
   }
   return (
-    <div style={{ ...PM.panel, borderColor: accent }}>
-      <div style={PM.head}>
-        <strong style={{ color: accent }}>◧ Your plan — live review</strong>
-        <span style={{ color: justUpdated ? "#3fb950" : "#8b949e", fontSize: 12 }}>
+    <div style={{ ...lightPanel, borderColor: accent }}>
+      <div style={lightHead}>
+        <strong style={{ color: head }}>◧ Your plan — live review</strong>
+        <span style={{ color: justUpdated ? P.down : P.muted, fontSize: 12 }}>
           {justUpdated ? "· updated just now" : "shared by your advisor"}
         </span>
       </div>
       <div style={{ padding: 12, maxHeight: "70vh", overflowY: "auto" }}>
         {data.review && (
           <div style={{ marginBottom: 14 }}>
-            <div style={{ ...PM.benefitHead, color: accent }}>Your renewal — the full review</div>
-            <ReviewDoc review={data.review} accent={accent} />
+            <div style={{ ...PM.benefitHead, color: head }}>Your renewal — the full review</div>
+            <ReviewDoc review={data.review} accent={accent} light />
           </div>
         )}
         {data.proposal && (
           <div style={{ marginBottom: 14 }}>
-            <div style={{ ...PM.benefitHead, color: accent }}>The proposal</div>
-            <ProposalDoc proposal={data.proposal} accent={accent} />
+            <div style={{ ...PM.benefitHead, color: head }}>The proposal</div>
+            <ProposalDoc proposal={data.proposal} accent={accent} light />
           </div>
         )}
-        <PlanBody detail={data} accent={accent} />
+        <PlanBody detail={data} accent={accent} light />
         {data.projection && (
           <ProjectionPaths
             paths={data.projection.paths}
             perLever={data.projection.perLever || []}
             accent={accent}
+            light
             title="Your renewal outlook — modelled live"
             note="Modelled from your plan's experience with stated assumptions. An estimate to steer by, not a quote; your carrier confirms final rates."
           />
         )}
         {data.rateCard && (
-          <RateCardTable card={data.rateCard} accent={accent} title="Your renewal — rates" />
+          <RateCardTable card={data.rateCard} accent={accent} title="Your renewal — rates" light />
         )}
       </div>
     </div>
