@@ -36,9 +36,9 @@ const S: Record<string, CSSProperties> = {
   section: { marginTop: 16 },
   h: { fontSize: 12.5, letterSpacing: ".05em", fontWeight: 800, marginBottom: 6 },
   card: {
-    border: "1px solid #283040",
+    border: "1px solid #233a5e",
     borderRadius: 10,
-    background: "#0d1117",
+    background: "#0e2038",
     padding: "10px 12px",
     marginTop: 6,
   },
@@ -48,7 +48,7 @@ const S: Record<string, CSSProperties> = {
     gap: 8,
     fontSize: 13,
     padding: "5px 0",
-    borderTop: "1px solid #1b2029",
+    borderTop: "1px solid #1c3150",
   },
   small: { color: "#8b949e", fontSize: 12 },
   tiny: { color: "#6a7681", fontSize: 11 },
@@ -60,13 +60,13 @@ const S: Record<string, CSSProperties> = {
     textTransform: "uppercase",
     letterSpacing: ".05em",
     padding: "4px 0 3px",
-    borderBottom: "1px solid #283040",
+    borderBottom: "1px solid #233a5e",
   },
   num: { flex: 1, textAlign: "right" },
   bar: {
     height: 7,
-    background: "#0d1117",
-    border: "1px solid #1b2029",
+    background: "#081525",
+    border: "1px solid #1c3150",
     borderRadius: 4,
     overflow: "hidden",
     marginTop: 3,
@@ -338,7 +338,7 @@ export function ReviewDoc({ review, accent }: { review: any; accent: string }) {
                     fontSize: 11.5,
                     padding: "3px 10px",
                     borderRadius: 999,
-                    border: "1px solid #283040",
+                    border: "1px solid #233a5e",
                     color: "#c9d4e0",
                   }}
                 >
@@ -406,7 +406,7 @@ export function ProposalDoc({ proposal, accent }: { proposal: any; accent: strin
           </span>
         </div>
       ))}
-      <div style={{ ...S.row, borderTop: "1px solid #283040", fontWeight: 800 }}>
+      <div style={{ ...S.row, borderTop: "1px solid #233a5e", fontWeight: 800 }}>
         <span style={{ flex: 1.3 }}>Total monthly</span>
         <span style={{ ...S.num, color: "#c9d4e0" }}>{money(t.current)}</span>
         <span style={{ ...S.num, color: "#f0883e" }}>

@@ -73,7 +73,7 @@ function makeRoomConn(opts: {
     const wrap = document.createElement("div");
     wrap.setAttribute("data-pid", pid);
     wrap.style.cssText =
-      "position:relative;aspect-ratio:4/3;background:#0d1117;border:1px solid #283040;border-radius:12px;overflow:hidden";
+      "position:relative;aspect-ratio:4/3;background:#0a1729;border:1px solid #233a5e;border-radius:12px;overflow:hidden";
     video.autoplay = true;
     video.playsInline = true;
     video.style.cssText = "width:100%;height:100%;object-fit:cover";
@@ -347,7 +347,9 @@ export default function Foyer() {
   const [invite, setInvite] = useState<string | null>(null);
   const [hostJwt, setHostJwt] = useState<string | null>(null);
   const [title, setTitle] = useState("Office Hours");
-  const [accent, setAccent] = useState("#1f6feb");
+  // ECEB gold by default (the office is ECEB's until per-domain branding lands);
+  // still overridable via ?accent= for future white-label tenants.
+  const [accent, setAccent] = useState("#E0B341");
 
   useEffect(() => {
     const p = new URLSearchParams(location.search);
@@ -356,9 +358,9 @@ export default function Foyer() {
     const t = p.get("title");
     if (t) {
       setTitle(t);
-      document.title = t;
+      document.title = t + " · East Coast Employee Benefits";
     } else {
-      document.title = "Office Hours";
+      document.title = "Office Hours · East Coast Employee Benefits";
     }
     // Validate accent is an actual hex color before use; otherwise keep default.
     const a = p.get("accent");
@@ -767,7 +769,8 @@ function ClientView({
     return (
       <div style={S.center}>
         <div style={{ ...S.card, borderTop: `3px solid ${accent}` }}>
-          <h1 style={S.h1}>{title}</h1>
+          <div style={S.wordmark}>East Coast Employee Benefits</div>
+          <div style={{ ...S.wordmarkSub, color: accent, marginBottom: 16 }}>{title}</div>
           {phase === "error" ? (
             <>
               <p style={S.err}>{err}</p>
@@ -808,7 +811,10 @@ function ClientView({
   return (
     <div style={S.live}>
       <header style={{ ...S.bar, borderBottom: `2px solid ${accent}` }}>
-        <strong>{title}</strong>
+        <div style={{ lineHeight: 1.15 }}>
+          <div style={S.wordmark}>East Coast Employee Benefits</div>
+          <div style={{ ...S.wordmarkSub, color: accent, marginBottom: 16 }}>{title}</div>
+        </div>
         <div style={{ display: "flex", gap: 8 }}>
           <button style={S.ctl} onClick={toggleMic}>
             {micOn ? "Mute" : "Unmute"}
@@ -817,7 +823,7 @@ function ClientView({
             {camOn ? "Stop video" : "Start video"}
           </button>
           <button
-            style={{ ...S.ctl, background: screenOn ? "#1f7a37" : "#21262d" }}
+            style={{ ...S.ctl, background: screenOn ? "#1f7a37" : "#1a2c4d" }}
             onClick={toggleScreen}
           >
             {screenOn ? "Stop sharing" : "Share screen"}
@@ -832,7 +838,7 @@ function ClientView({
       <div
         style={{
           ...S.banner,
-          background: inOffice ? "#13361f" : "#1c2230",
+          background: inOffice ? "#123528" : "#122340",
           borderBottom: `1px solid ${accent}`,
         }}
       >
@@ -1218,7 +1224,8 @@ function HostView({ jwt, title, accent }: { jwt: string; title: string; accent: 
     return (
       <div style={S.center}>
         <div style={{ ...S.card, borderTop: `3px solid ${accent}` }}>
-          <h1 style={S.h1}>{title}</h1>
+          <div style={S.wordmark}>East Coast Employee Benefits</div>
+          <div style={{ ...S.wordmarkSub, color: accent, marginBottom: 16 }}>{title}</div>
           {phase === "error" ? (
             <>
               <p style={S.err}>{err}</p>
@@ -1244,9 +1251,12 @@ function HostView({ jwt, title, accent }: { jwt: string; title: string; accent: 
   return (
     <div style={S.live}>
       <header style={{ ...S.bar, borderBottom: `2px solid ${accent}` }}>
-        <strong>
-          {title} · {hostName}
-        </strong>
+        <div style={{ lineHeight: 1.15 }}>
+          <div style={S.wordmark}>East Coast Employee Benefits</div>
+          <div style={{ ...S.wordmarkSub, color: accent }}>
+            {title} · {hostName}
+          </div>
+        </div>
         <div style={{ display: "flex", gap: 8 }}>
           <button
             style={{ ...S.ctl, background: locked ? "#b62324" : "#1f7a37" }}
@@ -1262,7 +1272,7 @@ function HostView({ jwt, title, accent }: { jwt: string; title: string; accent: 
             {camOn ? "Stop video" : "Start video"}
           </button>
           <button
-            style={{ ...S.ctl, background: screenOn ? "#1f7a37" : "#21262d" }}
+            style={{ ...S.ctl, background: screenOn ? "#1f7a37" : "#1a2c4d" }}
             onClick={toggleScreen}
           >
             {screenOn ? "Stop sharing" : "Share screen"}
@@ -1362,20 +1372,36 @@ function HostView({ jwt, title, accent }: { jwt: string; title: string; accent: 
 
 // ============================================================================
 const S: Record<string, CSSProperties> = {
+  // ECEB brand shell: deep navy ground, gold accent, serif wordmark — the same
+  // family look as the ECEB site and the Fathom review pages.
+  wordmark: {
+    fontFamily: "Georgia, 'Playfair Display', 'Times New Roman', serif",
+    fontSize: 17,
+    fontWeight: 700,
+    color: "#f2f5fa",
+    letterSpacing: ".01em",
+  },
+  wordmarkSub: {
+    fontSize: 10.5,
+    fontWeight: 800,
+    letterSpacing: ".18em",
+    textTransform: "uppercase",
+    marginTop: 2,
+  },
   center: {
     minHeight: "100vh",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    background: "#0d1117",
+    background: "#0a1729",
     color: "#e6edf3",
     fontFamily: "system-ui,sans-serif",
   },
   card: {
     width: 360,
     maxWidth: "90vw",
-    background: "#161b22",
-    border: "1px solid #283040",
+    background: "#12233f",
+    border: "1px solid #233a5e",
     borderRadius: 14,
     padding: 28,
     textAlign: "center",
@@ -1388,8 +1414,8 @@ const S: Record<string, CSSProperties> = {
     boxSizing: "border-box",
     padding: "10px 12px",
     borderRadius: 8,
-    border: "1px solid #283040",
-    background: "#0d1117",
+    border: "1px solid #233a5e",
+    background: "#0a1729",
     color: "#e6edf3",
     fontSize: 15,
     marginBottom: 12,
@@ -1408,7 +1434,7 @@ const S: Record<string, CSSProperties> = {
     height: "100vh",
     display: "flex",
     flexDirection: "column",
-    background: "#0d1117",
+    background: "#0a1729",
     color: "#e6edf3",
     fontFamily: "system-ui,sans-serif",
   },
@@ -1417,13 +1443,13 @@ const S: Record<string, CSSProperties> = {
     justifyContent: "space-between",
     alignItems: "center",
     padding: "10px 16px",
-    background: "#161b22",
+    background: "#12233f",
   },
   ctl: {
     padding: "6px 12px",
     borderRadius: 8,
-    border: "1px solid #283040",
-    background: "#21262d",
+    border: "1px solid #233a5e",
+    background: "#1a2c4d",
     color: "#fff",
     cursor: "pointer",
     fontSize: 13,
@@ -1452,10 +1478,10 @@ const S: Record<string, CSSProperties> = {
   tiles: { display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(240px,1fr))", gap: 12 },
   side: {
     width: 320,
-    borderLeft: "1px solid #283040",
+    borderLeft: "1px solid #233a5e",
     display: "flex",
     flexDirection: "column",
-    background: "#11151c",
+    background: "#0e1d34",
     overflow: "auto",
   },
   sideHead: {
@@ -1464,7 +1490,7 @@ const S: Record<string, CSSProperties> = {
     textTransform: "uppercase",
     letterSpacing: ".5px",
     color: "#8b949e",
-    borderBottom: "1px solid #283040",
+    borderBottom: "1px solid #233a5e",
   },
   roster: { listStyle: "none", margin: 0, padding: "6px 0", maxHeight: 220, overflow: "auto" },
   rosterItem: { padding: "6px 14px", fontSize: 14 },
@@ -1479,13 +1505,13 @@ const S: Record<string, CSSProperties> = {
   },
   chat: { flex: 1, overflow: "auto", padding: "8px 14px", fontSize: 14, minHeight: 80 },
   msg: { marginBottom: 6, lineHeight: 1.35 },
-  chatBar: { display: "flex", gap: 6, padding: 10, borderTop: "1px solid #283040" },
+  chatBar: { display: "flex", gap: 6, padding: 10, borderTop: "1px solid #233a5e" },
   chatInput: {
     flex: 1,
     padding: "8px 10px",
     borderRadius: 8,
-    border: "1px solid #283040",
-    background: "#0d1117",
+    border: "1px solid #233a5e",
+    background: "#0a1729",
     color: "#e6edf3",
   },
   send: {
