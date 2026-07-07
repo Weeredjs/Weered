@@ -7,7 +7,7 @@
 // never serialized into the /foyer RSC payload. Non-foyer routes render the exact same
 // tree as before (zero behavior change).
 import React, { useEffect, useState } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { WeeredProvider } from "./WeeredProvider";
 import OverlayProvider from "./overlays/OverlayProvider";
 import OverlayHost from "./overlays/OverlayHost";
@@ -81,13 +81,10 @@ const websiteJsonLd = {
 };
 
 // PROFESSIONAL SKIN — on the ECEB meeting host (office./meet.eastcoastemployeebenefits.com)
-// the whole Weered gaming shell (left rail, right rail, dock, purple, "Home lobby",
-// trademark footer, JSON-LD) is replaced by a clean navy ECEB frame — but ONLY on
-// that host, so weered.ca is byte-identical. The room + all its providers (WS, voice,
-// video via WeeredProvider→VoiceProvider) are preserved underneath. The pre-hydration
-// script in app/layout.tsx sets data-pro-host; we read it after mount (weered.ca never
-// has it → no change, no flash there; the pro host may briefly flash on a HARD reload
-// only, not on client nav, which is the usual path in).
+// we add a navy ECEB brand bar and drop the Weered trademark footer + JSON-LD, but KEEP
+// the full shell (left + right rails, dock) — James uses the rails to navigate; they're
+// still important. Only the branding wrapper changes. weered.ca is byte-identical (the
+// pre-hydration script in app/layout.tsx only sets data-pro-host on the ECEB host).
 function ProfessionalFrame({ children }: { children: React.ReactNode }) {
   return (
     <OverlayProvider>
@@ -130,23 +127,47 @@ function ProfessionalFrame({ children }: { children: React.ReactNode }) {
               Private meeting room
             </span>
           </header>
-          <div style={{ flex: 1, minHeight: 0, position: "relative" }}>{children}</div>
+          <div style={{ flex: 1, minHeight: 0, position: "relative" }}>
+            <ShellGate left={<LeftRail />} right={<RightRailSwitch />}>
+              {children}
+            </ShellGate>
+          </div>
         </div>
+        <DockDrawer />
+        <LobbyBrowser />
         <OverlayHost />
+        <ServiceWorkerRegister />
+        <PushPrompt />
+        <UnreadIndicator />
+        <InstallPrompt />
         <KeyboardShortcuts />
+        <CookieConsent />
+        <BugReportButton />
       </WeeredProvider>
     </OverlayProvider>
   );
 }
 
+// The ECEB office room. Hitting the meeting host root (or /home) should drop the
+// operator straight into the room, not the Weered home page.
+const OFFICE_ROOM_PATH = "/room/mtg-eceb-office";
+
 export default function RootFrame({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [proHost, setProHost] = useState(false);
   useEffect(() => {
     try {
       if (document.documentElement.hasAttribute("data-pro-host")) setProHost(true);
     } catch {}
   }, []);
+
+  // On the ECEB meeting host, the bare domain (or /home) routes into the office room.
+  useEffect(() => {
+    if (proHost && (pathname === "/" || pathname === "/home")) {
+      router.replace(OFFICE_ROOM_PATH);
+    }
+  }, [proHost, pathname, router]);
 
   if (pathname === "/foyer" || (pathname && pathname.startsWith("/foyer/"))) {
     // White-label: no Weered providers, chrome, footer, JSON-LD, titlebar, or service worker.
