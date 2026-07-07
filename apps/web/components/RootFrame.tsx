@@ -6,7 +6,7 @@
 // is the escape hatch. The JSON-LD lives here as module consts (NOT props) so it is
 // never serialized into the /foyer RSC payload. Non-foyer routes render the exact same
 // tree as before (zero behavior change).
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useLayoutEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { WeeredProvider } from "./WeeredProvider";
 import OverlayProvider from "./overlays/OverlayProvider";
@@ -89,14 +89,6 @@ function ProfessionalFrame({ children }: { children: React.ReactNode }) {
   return (
     <OverlayProvider>
       <WeeredProvider>
-        {/* Office host only: swap the Weered mark for the chrome ECEB anchor. Scoped
-            to [data-pro-host] so weered.ca is untouched. */}
-        <style>{`
-          [data-pro-host] .weered-rail-logo img {
-            content: url("/brand/eceb-anchor-chrome.svg");
-            object-fit: contain;
-          }
-        `}</style>
         <div
           style={{
             display: "flex",
@@ -160,6 +152,13 @@ function ProfessionalFrame({ children }: { children: React.ReactNode }) {
 // operator straight into the room, not the Weered home page.
 const OFFICE_ROOM_PATH = "/room/mtg-eceb-office";
 
+// Swaps the Weered mark for the chrome ECEB anchor wherever the office skin is on
+// (both the ECEB host and any mtg-* meeting room). Gated by [data-office-skin] so
+// normal Weered is never touched.
+const OFFICE_LOGO_STYLE = (
+  <style>{`[data-office-skin] .weered-rail-logo img { content: url("/brand/eceb-anchor-chrome.svg"); object-fit: contain; }`}</style>
+);
+
 export default function RootFrame({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -177,16 +176,41 @@ export default function RootFrame({ children }: { children: React.ReactNode }) {
     }
   }, [proHost, pathname, router]);
 
+  // The office skin (professional "press" theme + chrome anchor) applies whenever the
+  // operator is viewing the office — the ECEB host OR any mtg-* meeting room on any
+  // host (so entering from a weered.ca favourite/desktop still de-purples). This only
+  // toggles <html> attributes (no provider remount); the full navy ProfessionalFrame
+  // stays host-scoped below. On leave, the operator's own theme is restored.
+  const inOfficeRoom = !!pathname && pathname.startsWith("/room/mtg-");
+  const officeSkin = proHost || inOfficeRoom;
+  useLayoutEffect(() => {
+    if (typeof document === "undefined" || !officeSkin) return;
+    const de = document.documentElement;
+    const prevTheme = de.getAttribute("data-weered-theme");
+    de.setAttribute("data-weered-theme", "press");
+    de.setAttribute("data-office-skin", "1");
+    return () => {
+      de.removeAttribute("data-office-skin");
+      if (prevTheme) de.setAttribute("data-weered-theme", prevTheme);
+    };
+  }, [officeSkin, pathname]);
+
   if (pathname === "/foyer" || (pathname && pathname.startsWith("/foyer/"))) {
     // White-label: no Weered providers, chrome, footer, JSON-LD, titlebar, or service worker.
     return <>{children}</>;
   }
   // ECEB meeting host: the professional frame (room + preserved providers, no gaming chrome).
   if (proHost) {
-    return <ProfessionalFrame>{children}</ProfessionalFrame>;
+    return (
+      <>
+        {OFFICE_LOGO_STYLE}
+        <ProfessionalFrame>{children}</ProfessionalFrame>
+      </>
+    );
   }
   return (
     <>
+      {OFFICE_LOGO_STYLE}
       <DesktopTitleBar />
       <ThemeRestore />
       <script
