@@ -112,9 +112,12 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
   const [stageMode, setStageMode] = useState<StageMode>("voice");
 
   const SOLO_KEY = `weered:room:${roomId}:solo`;
-  // Office rail: the ECEB control surface for meeting rooms (owner/staff only).
+  // Office: the ECEB control surface for meeting rooms, a first-class stage module
+  // (owner/staff only). LOCAL-only toggle — never synced to the room like the
+  // game/AV modules, so it can't leak to guests and the server can't clobber it.
+  // Staff land on it by default when entering a meeting room.
   const isOfficeRoom = String(roomId || "").startsWith("mtg-");
-  const [officeRailOpen, setOfficeRailOpen] = useState(true);
+  const [officeStage, setOfficeStage] = useState(() => String(roomId || "").startsWith("mtg-"));
   const [soloViewing, setSoloViewing] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
     try { return localStorage.getItem(SOLO_KEY) === "1"; } catch { return false; }
@@ -178,14 +181,29 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
   }, [currentLobbyId]);
 
   const MODULES = useMemo(() => {
+    let base: typeof ALL_MODULES;
     if (currentLobbyId === "gta6") {
       const allowed = ["voice", "gta", "youtube", "twitch", "video", "screen"];
-      return ALL_MODULES.filter(m => allowed.includes(m.id));
+      base = ALL_MODULES.filter(m => allowed.includes(m.id));
+    } else if (!lobbyContext?.moduleType) {
+      base = ALL_MODULES.filter(m => DEFAULT_ROOM_MODULES.includes(m.id));
+    } else {
+      const allowed = LOBBY_MODULE_MAP[lobbyContext.moduleType] || DEFAULT_ROOM_MODULES;
+      base = ALL_MODULES.filter(m => allowed.includes(m.id));
     }
-    if (!lobbyContext?.moduleType) return ALL_MODULES.filter(m => DEFAULT_ROOM_MODULES.includes(m.id));
-    const allowed = LOBBY_MODULE_MAP[lobbyContext.moduleType] || DEFAULT_ROOM_MODULES;
-    return ALL_MODULES.filter(m => allowed.includes(m.id));
-  }, [lobbyContext?.moduleType, currentLobbyId]);
+    // The Office is a first-class module in meeting rooms, for office staff only.
+    const meId = String(w?.me?.id || "");
+    const role = String(w?.globalRole || w?.me?.globalRole || "USER").toUpperCase();
+    const officeAccess =
+      ["GOD", "STAFF", "SUPPORT", "ADMIN"].includes(role) ||
+      (!!meId && w?.meta?.ownerId === meId) ||
+      (Array.isArray(w?.meta?.mods) && w.meta.mods.includes(meId));
+    if (isOfficeRoom && officeAccess) {
+      base = [...base, { id: "office", icon: "◧", label: "Office", live: true }];
+    }
+    return base;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lobbyContext?.moduleType, currentLobbyId, isOfficeRoom, w?.me?.id, w?.globalRole, w?.meta?.ownerId, w?.meta?.mods]);
 
   useEffect(() => {
     const THEMEABLE = new Set<string>(["windrose", "destiny2", "dnd", "helldivers2"]);
@@ -441,6 +459,19 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
   const removeLink = (v: string) => setLinks(links.filter((x) => x !== v));
 
   const handleModuleClick = (id: NonNullable<StageMode>) => {
+    // Office is a LOCAL-only surface: toggle it, close any synced module behind
+    // it, and never broadcast it (guests must never receive an office module).
+    if (id === "office") {
+      const open = !officeStage;
+      setOfficeStage(open);
+      if (open && stageMode !== null) {
+        setStageMode(null);
+        selfSetRef.current = true;
+        w?.setModuleState?.(null);
+      }
+      return;
+    }
+    if (officeStage) setOfficeStage(false);
     const newMode = stageMode === id ? null : id;
     if (newMode) {
       const disabled: string[] = (w?.meta?.disabledModules as string[] | undefined) || [];
@@ -506,59 +537,6 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
         </div>
       )}
 
-      {isOfficeRoom && (isRoomOwner || isRoomMod) && (
-        <>
-          {officeRailOpen && (
-            <div
-              style={{
-                position: "absolute",
-                top: 0,
-                right: 0,
-                bottom: 0,
-                width: 420,
-                maxWidth: "92vw",
-                zIndex: 120,
-                background: "#0b0e14",
-                borderLeft: "1px solid rgba(224,179,65,0.28)",
-                boxShadow: "-14px 0 44px rgba(0,0,0,0.55)",
-                overflowY: "auto",
-                padding: 14,
-              }}
-            >
-              <OfficeRail
-                knocks={Array.isArray(w?.admin?.knocks) ? w.admin.knocks : []}
-                onAdmit={(id: string) => {
-                  try {
-                    w?.admit?.(id);
-                  } catch {}
-                }}
-              />
-            </div>
-          )}
-          <button
-            onClick={() => setOfficeRailOpen((v) => !v)}
-            style={{
-              position: "absolute",
-              top: "42%",
-              right: officeRailOpen ? 420 : 0,
-              zIndex: 121,
-              writingMode: "vertical-rl",
-              padding: "14px 6px",
-              borderRadius: "8px 0 0 8px",
-              border: "1px solid rgba(224,179,65,0.4)",
-              borderRight: "none",
-              background: "#131722",
-              color: "#e0b341",
-              fontSize: 11,
-              fontWeight: 800,
-              letterSpacing: "0.18em",
-              cursor: "pointer",
-            }}
-          >
-            OFFICE
-          </button>
-        </>
-      )}
 
       <RoomHeader
         title={roomLabel}
@@ -568,7 +546,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
         iconUrl={w?.meta?.iconUrl || null}
         bannerUrl={w?.meta?.bannerUrl || null}
         accentColor={w?.meta?.accentColor || null}
-        pills={MODULES.map(m => ({ ...m, active: stageMode === m.id }))}
+        pills={MODULES.map(m => ({ ...m, active: m.id === "office" ? officeStage : stageMode === m.id }))}
         users={liveUsers}
         lobbyName={lobbyContext?.name || w?.meta?.lobbyName || null}
         lobbyLogo={lobbyContext?.logoUrl || w?.meta?.lobbyLogo || null}
@@ -643,11 +621,11 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
           stageActive ? "bg-black/30" : "bg-transparent",
         ].join(" ")}
         style={(() => {
-          if (!stageActive) return { height: "40px", flexShrink: 0 };
+          if (!stageActive && !officeStage) return { height: "40px", flexShrink: 0 };
           return { flex: 1, minHeight: 0, overflow: "auto" };
         })()}
       >
-        {!stageActive && (
+        {!stageActive && !officeStage && (
           <div className="flex items-center px-4 h-10">
             <span className="text-[9px] font-bold tracking-[0.14em] uppercase text-white/20">
               Stage -- activate a module below
@@ -655,7 +633,22 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
           </div>
         )}
 
-        {stageActive && stageMode !== "browser" && stageMode !== "twitch" && stageMode !== "article" && (
+        {officeStage && (isRoomOwner || isRoomMod) && (
+          <div style={{ height: "100%", overflowY: "auto", background: "#0b0e14" }}>
+            <div style={{ maxWidth: 960, margin: "0 auto", padding: "18px 18px 44px" }}>
+              <OfficeRail
+                knocks={Array.isArray(w?.admin?.knocks) ? w.admin.knocks : []}
+                onAdmit={(id: string) => {
+                  try {
+                    w?.admit?.(id);
+                  } catch {}
+                }}
+              />
+            </div>
+          </div>
+        )}
+
+        {!officeStage && stageActive && stageMode !== "browser" && stageMode !== "twitch" && stageMode !== "article" && (
           <div style={{ height: "100%" }}>
             <RoomStage roomId={roomId} mode={stageMode} moduleType={lobbyContext?.moduleType} roomUsers={(() => {
               const wsUsers = liveUsers;
@@ -882,7 +875,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
           <div style={{ display: "none" }}>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center" }}>
               {MODULES.map((m) => {
-                const isActive = stageMode === m.id;
+                const isActive = m.id === "office" ? officeStage : stageMode === m.id;
                 const isLive   = m.live;
                 const isTwitch = m.icon === "__twitch__";
                 const isYT     = m.icon === "__youtube__";
@@ -1163,7 +1156,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
       <div style={{ flexShrink: 0, borderTop: "1px solid rgba(255,255,255,0.07)", padding: "10px 16px 8px", background: "rgba(10,10,18,0.95)", zIndex: 20 }}>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center" }}>
           {MODULES.map((m) => {
-            const isActive = stageMode === m.id;
+            const isActive = m.id === "office" ? officeStage : stageMode === m.id;
             const isLive = m.live;
             const isTwitch = m.icon === "__twitch__";
             const isYT = m.icon === "__youtube__";

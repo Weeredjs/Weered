@@ -10,7 +10,7 @@ import MicSettings from "../MicSettings";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
-export type StageMode = "voice" | "video" | "screen" | "youtube" | "browser" | "twitch" | "article" | "poker" | "fakeout" | "destiny" | "league" | "fortnite" | "pubg" | "hq" | "cs2" | "dota2" | "study" | "dnd" | "windrose" | "helldivers" | "chess" | "gta" | "eve" | null;
+export type StageMode = "voice" | "video" | "screen" | "youtube" | "browser" | "twitch" | "article" | "poker" | "fakeout" | "destiny" | "league" | "fortnite" | "pubg" | "hq" | "cs2" | "dota2" | "study" | "dnd" | "windrose" | "helldivers" | "chess" | "gta" | "eve" | "office" | null;
 
 interface Props {
   roomId: string;
