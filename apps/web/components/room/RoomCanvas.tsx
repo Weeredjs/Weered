@@ -635,7 +635,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
 
         {officeStage && (isRoomOwner || isRoomMod) && (
           <div style={{ height: "100%", overflowY: "auto", background: "#0b0e14" }}>
-            <div style={{ maxWidth: 960, margin: "0 auto", padding: "18px 18px 44px" }}>
+            <div style={{ maxWidth: "none", margin: 0, padding: "16px 22px 44px" }}>
               <OfficeRail
                 knocks={Array.isArray(w?.admin?.knocks) ? w.admin.knocks : []}
                 onAdmit={(id: string) => {
@@ -864,7 +864,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
         )}
       </div>
 
-      <div className={isFullStageMode ? "flex" : stageActive ? "flex" : "flex flex-1 min-h-0"} style={{ position: "relative", overflow: "visible", ...(isFullStageMode ? { flexShrink: 0, maxHeight: 50 } : stageActive ? { flexShrink: 0, height: 0 } : {}) }}>
+      <div className={isFullStageMode ? "flex" : (stageActive || officeStage) ? "flex" : "flex flex-1 min-h-0"} style={{ position: "relative", overflow: "visible", ...(isFullStageMode ? { flexShrink: 0, maxHeight: 50 } : (stageActive || officeStage) ? { flexShrink: 0, height: 0 } : {}) }}>
 
         <div className={isFullStageMode ? "" : "flex flex-col flex-1 min-w-0 min-h-0"} style={{ position: "relative" }}>
 
