@@ -15,6 +15,40 @@ import { weeredToast } from "../../lib/toast";
 import { onActivate } from "@/lib/a11y";
 import { safeUrl } from "@/lib/safeUrl";
 
+// A short "knock-knock" chime for office walk-ins — synthesized (no asset to
+// ship/cache). Best-effort: silently no-ops if WebAudio is unavailable or the
+// context can't resume (e.g. no user gesture yet).
+function playKnockChime() {
+  try {
+    const AC = (window as any).AudioContext || (window as any).webkitAudioContext;
+    if (!AC) return;
+    const ctx = new AC();
+    const fire = () => {
+      const now = ctx.currentTime;
+      [0, 0.19].forEach((t, i) => {
+        const o = ctx.createOscillator();
+        const g = ctx.createGain();
+        o.type = "sine";
+        o.frequency.value = i === 0 ? 680 : 560;
+        g.gain.setValueAtTime(0.0001, now + t);
+        g.gain.exponentialRampToValueAtTime(0.28, now + t + 0.012);
+        g.gain.exponentialRampToValueAtTime(0.0001, now + t + 0.15);
+        o.connect(g);
+        g.connect(ctx.destination);
+        o.start(now + t);
+        o.stop(now + t + 0.17);
+      });
+      setTimeout(() => {
+        try {
+          ctx.close();
+        } catch {}
+      }, 700);
+    };
+    if (ctx.state === "suspended" && ctx.resume) ctx.resume().then(fire).catch(fire);
+    else fire();
+  } catch {}
+}
+
 // Only allow https lichess.org URLs to reach the chess <iframe>/<a> sinks,
 // no matter the source (user input, server module state, or WS update). Blocks
 // javascript:/arbitrary-URL injection (CodeQL js/xss, js/client-side-url-redirect).
@@ -510,6 +544,69 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
   const isStaffGlobal = ["GOD", "STAFF", "SUPPORT"].includes(myGlobalRole);
   const isRoomOwner = (!!meId && meId === roomOwnerId) || isStaffGlobal;
   const isRoomMod = !!(w?.meta?.mods && Array.isArray(w.meta.mods) && w.meta.mods.includes(meId)) || isStaffGlobal;
+
+  // --- OFFICE KNOCK ALERTS ---
+  // The operator can't stare at the room all day: when a guest knocks, chime +
+  // fire an OS/browser notification + flash the tab title. Lives here (not in
+  // OfficeRail) so it works even when the Office tab isn't the open module and
+  // whether or not Weered is the focused browser tab. Staff-gated, office-only.
+  const officeStaff = isOfficeRoom && (isRoomOwner || isRoomMod);
+  const knockList: any[] = Array.isArray(w?.admin?.knocks) ? w.admin.knocks : [];
+  const knockCount = knockList.length;
+  const knockSig = knockList
+    .map((k: any) => String(k?.userId || k?.id || ""))
+    .filter(Boolean)
+    .join(",");
+  const seenKnockIdsRef = useRef<Set<string>>(new Set());
+  const notifyAskedRef = useRef(false);
+
+  // Ask for notification permission once, after the operator is in an office room.
+  useEffect(() => {
+    if (!officeStaff || notifyAskedRef.current) return;
+    notifyAskedRef.current = true;
+    try {
+      if (typeof Notification !== "undefined" && Notification.permission === "default") {
+        void Notification.requestPermission().catch(() => {});
+      }
+    } catch {}
+  }, [officeStaff]);
+
+  // Alert on a genuinely NEW knock id (not on admits/refreshes that shrink the list).
+  useEffect(() => {
+    if (!officeStaff) return;
+    const ids = knockList.map((k: any) => String(k?.userId || k?.id || "")).filter(Boolean);
+    const seen = seenKnockIdsRef.current;
+    const fresh = ids.filter((id) => !seen.has(id));
+    seenKnockIdsRef.current = new Set(ids);
+    if (fresh.length === 0) return;
+    const who =
+      knockList.find((k: any) => String(k?.userId || k?.id || "") === fresh[0])?.name || "Someone";
+    playKnockChime();
+    try {
+      if (typeof Notification !== "undefined" && Notification.permission === "granted") {
+        const n = new Notification("Someone's at the office door", {
+          body: `${who} is knocking. Waiting to be let in.`,
+          tag: "office-knock",
+          renotify: true,
+        } as NotificationOptions);
+        n.onclick = () => {
+          try {
+            window.focus();
+          } catch {}
+          n.close();
+        };
+      } else {
+        weeredToast?.(`${who} is knocking at the office door`);
+      }
+    } catch {}
+  }, [knockSig, officeStaff]);
+
+  // Flash the browser tab title while knocks are pending (permission-free fallback).
+  useEffect(() => {
+    if (!isOfficeRoom) return;
+    const base = "East Coast Employee Benefits · Office";
+    document.title = knockCount > 0 ? `🔔 (${knockCount}) knocking — ${base}` : base;
+  }, [knockCount, isOfficeRoom]);
 
   return (
     <div className="flex flex-col min-w-0" style={{ position: "relative", overflow: "hidden", height: "calc(100vh - 32px)" }}>
