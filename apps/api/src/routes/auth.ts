@@ -1071,6 +1071,16 @@ export default async function authRoutes(app: FastifyInstance, opts: Opts) {
         : [],
       intensity: rcStr(raw.intensity, 14),
       overallLossRatio: rcNum(raw.overallLossRatio),
+      // Optional loss-ratio trio (percent units) for the presentation gauge; when
+      // the engine emits it the client doc upgrades to the exact loss-ratio story.
+      lossRatio:
+        raw.lossRatio && typeof raw.lossRatio === "object"
+          ? {
+              current: rcNum(raw.lossRatio.current),
+              withLevers: rcNum(raw.lossRatio.withLevers),
+              target: rcNum(raw.lossRatio.target),
+            }
+          : null,
     };
   };
 

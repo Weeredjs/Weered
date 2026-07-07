@@ -7,6 +7,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import { ReviewDoc, ProposalDoc, fathomPal } from "./ReviewDocs";
+import { PresentationDoc } from "./PresentationDoc";
 
 const API = "/api";
 
@@ -410,6 +411,62 @@ export function PresentedPlanViewer({
       </div>
     );
   }
+  // When the advisor is presenting the review and/or the live model, the client
+  // sees the full PRESENTATION document (the "beautiful PDF that changes live").
+  // Proposal + rate card, presented on their own, ride below in light cards.
+  const isPresentation = !!(data.review || data.projection);
+  if (isPresentation) {
+    return (
+      <div style={{ position: "relative" }}>
+        {justUpdated && (
+          <div
+            style={{
+              position: "absolute",
+              top: 10,
+              right: 12,
+              zIndex: 3,
+              fontSize: 11,
+              fontWeight: 800,
+              letterSpacing: "0.03em",
+              color: "#1a7a3c",
+              background: "#e7f3ec",
+              border: "1px solid #bcdfc7",
+              borderRadius: 999,
+              padding: "4px 11px",
+            }}
+          >
+            updated just now
+          </div>
+        )}
+        <PresentationDoc data={data} clientName={data.employer?.name} />
+        {data.proposal && (
+          <div style={{ ...lightPanel, borderColor: accent, marginTop: 14 }}>
+            <div style={lightHead}>
+              <strong style={{ color: head }}>The proposal</strong>
+            </div>
+            <div style={{ padding: 12 }}>
+              <ProposalDoc proposal={data.proposal} accent={accent} light />
+            </div>
+          </div>
+        )}
+        {data.rateCard && (
+          <div style={{ ...lightPanel, borderColor: P.cardBorder, marginTop: 14 }}>
+            <div style={{ padding: 12 }}>
+              <RateCardTable
+                card={data.rateCard}
+                accent={accent}
+                title="Your renewal — rates"
+                light
+              />
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Fallback: only a plan of record / rate card is being presented (no review or
+  // model) — keep the original light card stack.
   return (
     <div style={{ ...lightPanel, borderColor: accent }}>
       <div style={lightHead}>
@@ -419,29 +476,7 @@ export function PresentedPlanViewer({
         </span>
       </div>
       <div style={{ padding: 12, maxHeight: "70vh", overflowY: "auto" }}>
-        {data.review && (
-          <div style={{ marginBottom: 14 }}>
-            <div style={{ ...PM.benefitHead, color: head }}>Your renewal — the full review</div>
-            <ReviewDoc review={data.review} accent={accent} light />
-          </div>
-        )}
-        {data.proposal && (
-          <div style={{ marginBottom: 14 }}>
-            <div style={{ ...PM.benefitHead, color: head }}>The proposal</div>
-            <ProposalDoc proposal={data.proposal} accent={accent} light />
-          </div>
-        )}
         <PlanBody detail={data} accent={accent} light />
-        {data.projection && (
-          <ProjectionPaths
-            paths={data.projection.paths}
-            perLever={data.projection.perLever || []}
-            accent={accent}
-            light
-            title="Your renewal outlook — modelled live"
-            note="Modelled from your plan's experience with stated assumptions. An estimate to steer by, not a quote; your carrier confirms final rates."
-          />
-        )}
         {data.rateCard && (
           <RateCardTable card={data.rateCard} accent={accent} title="Your renewal — rates" light />
         )}
