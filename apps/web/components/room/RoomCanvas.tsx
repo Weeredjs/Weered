@@ -11,6 +11,7 @@ import { useOverlay } from "../overlays/OverlayProvider";
 import { useVoice } from "../VoiceContext";
 import ArticleReader from "./ArticleReader";
 import OfficeRail from "./OfficeRail";
+import MeetingFaceStrip from "./MeetingFaceStrip";
 import { weeredToast } from "../../lib/toast";
 import { onActivate } from "@/lib/a11y";
 import { safeUrl } from "@/lib/safeUrl";
@@ -710,6 +711,11 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
           </div>
         </div>
       )}
+
+      {/* Meeting face strip: participant cameras ride above the stage so the client
+          stays visible while the office presentation is up (self-hides until voice
+          is connected). */}
+      {isOfficeRoom && <MeetingFaceStrip />}
 
       <div
         className={[
