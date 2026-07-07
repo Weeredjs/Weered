@@ -89,6 +89,14 @@ function ProfessionalFrame({ children }: { children: React.ReactNode }) {
   return (
     <OverlayProvider>
       <WeeredProvider>
+        {/* Office host only: swap the Weered mark for the chrome ECEB anchor. Scoped
+            to [data-pro-host] so weered.ca is untouched. */}
+        <style>{`
+          [data-pro-host] .weered-rail-logo img {
+            content: url("/brand/eceb-anchor-chrome.svg");
+            object-fit: contain;
+          }
+        `}</style>
         <div
           style={{
             display: "flex",
