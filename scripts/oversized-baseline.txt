@@ -3,3 +3,6 @@ apps/web/app/styles/60-lobby-themes.css
 apps/web/app/styles/80-chrome-min.css
 apps/web/components/DockShell.tsx
 apps/web/app/foyer/PlanModule.tsx
+# foyer/page.tsx: client-facing office foyer (masthead + gate + light benefits-document consult).
+#   Slated for retirement when the office fully folds into Weered (Phase 3); splitting a doomed page = churn.
+apps/web/app/foyer/page.tsx
