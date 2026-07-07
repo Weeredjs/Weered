@@ -1087,6 +1087,31 @@ export default async function authRoutes(app: FastifyInstance, opts: Opts) {
     if (v && typeof v === "object") return { low: rcNum(v.low), high: rcNum(v.high) };
     return rcNum(v);
   };
+  // "Deployable" figures behind a plain statement (paediatrician disclosure):
+  // a short table of { label, value } strings the client can reveal on click.
+  const rcFigures = (v: any): { label: string; value: string }[] | undefined => {
+    if (!Array.isArray(v)) return undefined;
+    const out = v
+      .slice(0, 8)
+      .map((f: any) => ({ label: rcStr(f?.label, 80), value: rcStr(f?.value, 80) }))
+      .filter((f) => f.label !== "" || f.value !== "");
+    return out.length ? out : undefined;
+  };
+  // A plain statement line that may deploy to its figure: a bare string stays a
+  // string; { plain, detail?, figures? } is whitelisted to exactly those fields.
+  const rcDeployable = (v: any, max: number): any => {
+    if (v && typeof v === "object") {
+      const figures = rcFigures(v.figures);
+      const detail = rcStrN(v.detail, 600);
+      const plain = rcStr(v.plain, max);
+      if (!detail && !figures) return plain; // no payload behind it → collapse to text
+      const o: any = { plain };
+      if (detail) o.detail = detail;
+      if (figures) o.figures = figures;
+      return o;
+    }
+    return rcStr(v, max);
+  };
   const sanitizeReview = (raw: any): any | null => {
     if (!raw || typeof raw !== "object" || !raw.headline) return null;
     const h: any = raw.headline;
@@ -1122,6 +1147,8 @@ export default async function authRoutes(app: FastifyInstance, opts: Opts) {
             kind: ["warn", "info", "lever"].includes(d?.kind) ? d.kind : "info",
             title: rcStr(d?.title, 140),
             body: rcStr(d?.body, 800),
+            detail: rcStrN(d?.detail, 600),
+            figures: rcFigures(d?.figures),
           }))
         : [],
       roadmap: raw.roadmap
@@ -1141,7 +1168,7 @@ export default async function authRoutes(app: FastifyInstance, opts: Opts) {
           }
         : null,
       diagnosis: Array.isArray(raw.diagnosis)
-        ? raw.diagnosis.slice(0, 20).map((s: any) => rcStr(s, 400))
+        ? raw.diagnosis.slice(0, 20).map((s: any) => rcDeployable(s, 400))
         : [],
       scenarios: Array.isArray(raw.scenarios)
         ? raw.scenarios.slice(0, 6).map((s: any) => ({
@@ -1157,6 +1184,8 @@ export default async function authRoutes(app: FastifyInstance, opts: Opts) {
             saveHigh: rcNum(l?.saveHigh),
             badge: rcStrN(l?.badge, 90),
             catalogId: rcStrN(l?.catalogId, 60),
+            detail: rcStrN(l?.detail, 600),
+            figures: rcFigures(l?.figures),
           }))
         : [],
       demographics: raw.demographics
@@ -1211,7 +1240,7 @@ export default async function authRoutes(app: FastifyInstance, opts: Opts) {
         withChangesPct: rcNum(t.withChangesPct),
       },
       appealBasis: Array.isArray(raw.appealBasis)
-        ? raw.appealBasis.slice(0, 12).map((s: any) => rcStr(s, 500))
+        ? raw.appealBasis.slice(0, 12).map((s: any) => rcDeployable(s, 500))
         : [],
       benchmark: raw.benchmark
         ? {

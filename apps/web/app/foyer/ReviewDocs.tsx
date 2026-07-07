@@ -3,6 +3,7 @@
 // and the sign-off PROPOSAL (current / renewal / our target / with changes +
 // forecasts). Host panel and guest viewer draw the SAME components from the
 // same (whitelisted) payload — what the broker sees is what the client sees.
+import { useState } from "react";
 import type { CSSProperties } from "react";
 
 // UNIT CONTRACT (verified against the live engine payload): every percentage
@@ -156,6 +157,125 @@ const kindColor = (P: Pal): Record<string, string> => ({
 // projection) theme from the exact same tokens as the review/proposal docs.
 export const fathomPal = (light?: boolean): Pal => (light ? LIGHT : DARK);
 
+// "DEPLOYABLE" DETAIL — the paediatrician contract. The client reads a plain
+// statement; if the engine attaches the figure(s) behind it, the statement
+// becomes click-to-reveal ("Where did you get that?" → *click* → the numbers
+// that produced it). Backward compatible: a bare string, or a { plain } with no
+// detail/figures, renders as flat text with no affordance. Any diagnosis line,
+// driver, lever, or appeal-basis line can carry:
+//   detail?: string                       — the underlying reasoning in one line
+//   figures?: { label: string; value: string }[]  — the raw numbers, as a table
+export type Figure = { label: string; value: string };
+export type Deployable = string | { plain: string; detail?: string; figures?: Figure[] };
+const hasDetail = (d: any): boolean =>
+  !!d &&
+  typeof d === "object" &&
+  (!!d.detail || (Array.isArray(d.figures) && d.figures.length > 0));
+
+// The revealed panel (figure table + one-line reasoning). Shared by both the
+// bullet-line and card-embedded disclosures so the deployed state looks identical.
+function FigurePanel({ detail, figures, P }: { detail?: string; figures?: Figure[]; P: Pal }) {
+  const S = mkS(P);
+  return (
+    <div style={{ ...S.card, marginTop: 5, background: P.barBg }}>
+      {(figures || []).map((f, i) => (
+        <div
+          key={i}
+          style={{ ...S.row, ...(i === 0 ? { borderTop: "none" } : {}), fontSize: 12.5 }}
+        >
+          <span style={{ color: P.muted }}>{f.label}</span>
+          <span style={{ color: P.strong, fontWeight: 700, textAlign: "right" }}>{f.value}</span>
+        </div>
+      ))}
+      {detail && (
+        <div style={{ ...S.small, marginTop: figures && figures.length ? 6 : 0, lineHeight: 1.5 }}>
+          {detail}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// A bulleted plain statement that deploys to its figure. Used for diagnosis and
+// the proposal's appeal basis (both currently flat string lists).
+function DeployableLine({ item, P, head }: { item: Deployable; P: Pal; head: string }) {
+  const [open, setOpen] = useState(false);
+  const plain = typeof item === "string" ? item : item.plain;
+  if (!hasDetail(item)) {
+    return (
+      <div style={{ display: "flex", gap: 8, fontSize: 13, padding: "3px 0" }}>
+        <span style={{ color: head }}>•</span>
+        <span style={{ color: P.text, lineHeight: 1.5 }}>{plain}</span>
+      </div>
+    );
+  }
+  const d = item as { plain: string; detail?: string; figures?: Figure[] };
+  return (
+    <div style={{ padding: "3px 0" }}>
+      <div style={{ display: "flex", gap: 8, fontSize: 13 }}>
+        <span style={{ color: head }}>•</span>
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          title="Show the figure behind this"
+          style={{
+            all: "unset",
+            cursor: "pointer",
+            color: P.text,
+            lineHeight: 1.5,
+            borderBottom: `1px dotted ${P.faint}`,
+          }}
+        >
+          {plain}
+          <span style={{ color: head, marginLeft: 6, fontSize: 11 }}>{open ? "▾" : "▸"}</span>
+        </button>
+      </div>
+      {open && (
+        <div style={{ marginLeft: 16 }}>
+          <FigurePanel detail={d.detail} figures={d.figures} P={P} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+// A subtle "where this comes from" toggle for card-embedded statements (drivers,
+// levers) that already have a title + body. Renders nothing if no figure is
+// attached, so existing payloads are untouched.
+function FigureReveal({
+  detail,
+  figures,
+  P,
+  head,
+}: {
+  detail?: string;
+  figures?: Figure[];
+  P: Pal;
+  head: string;
+}) {
+  const [open, setOpen] = useState(false);
+  if (!detail && !(figures && figures.length)) return null;
+  return (
+    <div style={{ marginTop: 6 }}>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        style={{
+          all: "unset",
+          cursor: "pointer",
+          fontSize: 11,
+          fontWeight: 700,
+          letterSpacing: ".03em",
+          color: head,
+        }}
+      >
+        {open ? "▾ hide the figure" : "▸ where this comes from"}
+      </button>
+      {open && <FigurePanel detail={detail} figures={figures} P={P} />}
+    </div>
+  );
+}
+
 export function ReviewDoc({
   review,
   accent,
@@ -249,6 +369,7 @@ export function ReviewDoc({
                 {d.title}
               </div>
               {d.body && <div style={{ ...S.small, marginTop: 4, lineHeight: 1.5 }}>{d.body}</div>}
+              <FigureReveal detail={d.detail} figures={d.figures} P={P} head={head} />
             </div>
           ))}
         </div>
@@ -305,11 +426,8 @@ export function ReviewDoc({
       {review.diagnosis?.length > 0 && (
         <div style={S.section}>
           <div style={{ ...S.h, color: head }}>DIAGNOSIS &amp; PLAN</div>
-          {review.diagnosis.map((s: string, i: number) => (
-            <div key={i} style={{ display: "flex", gap: 8, fontSize: 13, padding: "3px 0" }}>
-              <span style={{ color: head }}>•</span>
-              <span style={{ color: P.text, lineHeight: 1.5 }}>{s}</span>
-            </div>
+          {review.diagnosis.map((s: Deployable, i: number) => (
+            <DeployableLine key={i} item={s} P={P} head={head} />
           ))}
         </div>
       )}
@@ -350,6 +468,7 @@ export function ReviewDoc({
                 ) : null}
               </div>
               {l.body && <div style={{ ...S.small, marginTop: 4, lineHeight: 1.5 }}>{l.body}</div>}
+              <FigureReveal detail={l.detail} figures={l.figures} P={P} head={head} />
             </div>
           ))}
         </div>
@@ -516,11 +635,8 @@ export function ProposalDoc({
       {proposal.appealBasis?.length > 0 && (
         <div style={S.section}>
           <div style={{ ...S.h, color: head }}>WHY OUR TARGET IS DEFENSIBLE</div>
-          {proposal.appealBasis.map((s: string, i: number) => (
-            <div key={i} style={{ display: "flex", gap: 8, fontSize: 13, padding: "3px 0" }}>
-              <span style={{ color: head }}>•</span>
-              <span style={{ color: P.text, lineHeight: 1.5 }}>{s}</span>
-            </div>
+          {proposal.appealBasis.map((s: Deployable, i: number) => (
+            <DeployableLine key={i} item={s} P={P} head={head} />
           ))}
         </div>
       )}
