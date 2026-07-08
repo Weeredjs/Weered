@@ -118,9 +118,13 @@ html[data-office-skin] [class*="-section"]::before,html[data-office-skin] [class
 html[data-office-skin] [class*="-title"]::before,html[data-office-skin] [class*="-title"]::after,
 html[data-office-skin] [class*="-header"]::before,html[data-office-skin] [class*="-header"]::after,
 html[data-office-skin] [class*="weered-me"]::before,html[data-office-skin] [class*="weered-me"]::after,
-html[data-office-skin] .weered-uc-banner,
 html[data-office-skin] [class*="weered-uc"]::before,html[data-office-skin] [class*="weered-uc"]::after{
   filter:grayscale(1) sepia(1) saturate(3.2) brightness(1.32)!important;
+}
+/* UserCorner top banner: its background is an inline url(tier.svg)+linear-gradient with
+   a purple accent. Override the whole background with a gold gradient (beats inline). */
+html[data-office-skin] .weered-uc-banner{
+  background:linear-gradient(135deg,rgba(217,169,66,.36) 0%,rgba(217,169,66,.12) 55%,rgba(0,0,0,.5) 100%)!important;
 }
 /* Browser normalizes ALL colors in the style attr to rgb(R, G, B) comma-space,
    so #7c3aed -> rgb(124, 58, 237) and rgba(124,58,237,.x) -> rgba(124, 58, 237, .x).
