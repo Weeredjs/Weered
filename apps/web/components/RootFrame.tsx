@@ -199,22 +199,47 @@ export default function RootFrame({ children }: { children: React.ReactNode }) {
     const de = document.documentElement;
     const prevTheme = de.getAttribute("data-weered-theme");
     const prevLobby = de.getAttribute("data-weered-lobby");
-    de.setAttribute("data-weered-theme", "press");
-    de.setAttribute("data-office-skin", "1");
-    de.removeAttribute("data-weered-lobby"); // kill the lobby theme (a source of forced purple)
-    // Inject the de-purple override as the LAST node in <body> so it wins the cascade
-    // over component <style> blocks (which render deeper/later than a React-rendered
-    // <style> at the root). Removed on leave.
-    let styleEl = document.getElementById("office-skin-css") as HTMLStyleElement | null;
-    if (!styleEl) {
-      styleEl = document.createElement("style");
-      styleEl.id = "office-skin-css";
-      document.body.appendChild(styleEl);
-    } else {
-      document.body.appendChild(styleEl); // move to last
-    }
-    styleEl.textContent = OFFICE_SKIN_CSS;
+
+    // Keep the de-purple stylesheet the LAST node in <body> so it wins the cascade
+    // over component <style> blocks (which mount deeper/later than a root <style>).
+    const ensureStyle = () => {
+      let s = document.getElementById("office-skin-css") as HTMLStyleElement | null;
+      if (!s) {
+        s = document.createElement("style");
+        s.id = "office-skin-css";
+        s.textContent = OFFICE_SKIN_CSS;
+        document.body.appendChild(s);
+      } else if (document.body.lastElementChild !== s) {
+        document.body.appendChild(s);
+      }
+    };
+    // ENFORCE the office skin. The room re-applies the purple lobby theme when its
+    // WebSocket/lobby data loads (after this effect's one-shot run) — that was the
+    // flash. A MutationObserver snaps it back the instant anything re-purples: theme
+    // flipped off "press", the lobby theme re-added, or data-office-skin cleared.
+    // Each fix only writes when the value is wrong, so it converges (no loop).
+    const enforce = () => {
+      if (de.getAttribute("data-weered-theme") !== "press")
+        de.setAttribute("data-weered-theme", "press");
+      if (de.hasAttribute("data-weered-lobby")) de.removeAttribute("data-weered-lobby");
+      if (!de.hasAttribute("data-office-skin")) de.setAttribute("data-office-skin", "1");
+      ensureStyle();
+    };
+    enforce();
+    const attrObs = new MutationObserver(enforce);
+    attrObs.observe(de, {
+      attributes: true,
+      attributeFilter: ["data-weered-theme", "data-weered-lobby", "data-office-skin"],
+    });
+    const bodyObs = new MutationObserver(() => {
+      const s = document.getElementById("office-skin-css");
+      if (s && document.body.lastElementChild !== s) document.body.appendChild(s);
+    });
+    bodyObs.observe(document.body, { childList: true });
+
     return () => {
+      attrObs.disconnect();
+      bodyObs.disconnect();
       de.removeAttribute("data-office-skin");
       if (prevTheme) de.setAttribute("data-weered-theme", prevTheme);
       if (prevLobby) de.setAttribute("data-weered-lobby", prevLobby);
