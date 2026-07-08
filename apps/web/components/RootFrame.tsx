@@ -101,7 +101,14 @@ html[data-office-skin]{
   --weered-accent-bg:rgba(217,169,66,.14)!important;--weered-accent-ring:rgba(217,169,66,.32)!important;
   --weered-accent-grad:linear-gradient(180deg,#e6bd6e,#d9a942 55%,#a87a1c)!important;
   --weered-accent-text:rgba(230,190,110,.95)!important;
+  /* lift the backdrop + panels a touch (was #1a1a1c charcoal) */
+  --weered-bg:#22232a!important;--weered-panel:rgba(40,41,48,.96)!important;--weered-panel2:rgba(31,32,38,.97)!important;
 }
+html[data-office-skin] body{background:#22232a!important;}
+/* collapsed right-rail icon strip — de-purple the buttons */
+html[data-office-skin] .weered-icon-strip-btn{color:rgba(217,169,66,.55)!important;}
+html[data-office-skin] .weered-icon-strip-btn:hover{background:rgba(217,169,66,.12)!important;color:rgba(230,190,110,.9)!important;}
+html[data-office-skin] .weered-icon-strip-btn-active{background:rgba(217,169,66,.2)!important;color:rgba(235,205,140,.95)!important;}
 html[data-office-skin] .weered-left-title,
 html[data-office-skin] .weered-presence-title,
 html[data-office-skin] .weered-rr-section-title,
@@ -115,7 +122,6 @@ html[data-office-skin] .weered-dock-title{
    touch it. Recolor the whole pseudo purple->gold with a filter (these pseudos only
    hold the banner decoration, so it's safe and keeps the Weered chamfer shape). */
 html[data-office-skin] [class*="-section"]::before,html[data-office-skin] [class*="-section"]::after,
-html[data-office-skin] [class*="-title"]::before,html[data-office-skin] [class*="-title"]::after,
 html[data-office-skin] [class*="-head"]::before,html[data-office-skin] [class*="-head"]::after,
 html[data-office-skin] [class*="weered-me"]::before,html[data-office-skin] [class*="weered-me"]::after,
 html[data-office-skin] [class*="weered-uc"]::before,html[data-office-skin] [class*="weered-uc"]::after,
