@@ -6,7 +6,7 @@
 // is the escape hatch. The JSON-LD lives here as module consts (NOT props) so it is
 // never serialized into the /foyer RSC payload. Non-foyer routes render the exact same
 // tree as before (zero behavior change).
-import React, { useEffect, useLayoutEffect, useState } from "react";
+import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { WeeredProvider } from "./WeeredProvider";
 import OverlayProvider from "./overlays/OverlayProvider";
@@ -110,33 +110,35 @@ html[data-office-skin] .weered-dock-title{
   background:transparent!important;color:#e0be6a!important;
   border-color:rgba(217,169,66,.30)!important;box-shadow:none!important;
 }
-html[data-office-skin] .weered-left-title::before,html[data-office-skin] .weered-left-title::after,
-html[data-office-skin] .weered-presence-title::before,html[data-office-skin] .weered-presence-title::after,
-html[data-office-skin] .weered-rr-section-title::before,html[data-office-skin] .weered-rr-section-title::after{
-  background:#d9a942!important;border-color:#d9a942!important;box-shadow:none!important;
+/* The chamfered section/header banners are SVG data-URI backgrounds on the ::before
+   of section wrappers — the purple is baked inside the SVG, so no color selector can
+   touch it. Recolor the whole pseudo purple->gold with a filter (these pseudos only
+   hold the banner decoration, so it's safe and keeps the Weered chamfer shape). */
+html[data-office-skin] [class*="-section"]::before,html[data-office-skin] [class*="-section"]::after,
+html[data-office-skin] [class*="-title"]::before,html[data-office-skin] [class*="-title"]::after,
+html[data-office-skin] [class*="-header"]::before,html[data-office-skin] [class*="-header"]::after,
+html[data-office-skin] [class*="weered-me"]::before,html[data-office-skin] [class*="weered-me"]::after{
+  filter:grayscale(1) sepia(1) saturate(3.2) brightness(1.32)!important;
 }
-html[data-office-skin] [style*="124,58,237"],
-html[data-office-skin] [style*="124 58 237"],
-html[data-office-skin] [style*="167,139,250"],
-html[data-office-skin] [style*="167 139 250"],
-html[data-office-skin] [style*="88,0,229"],
-html[data-office-skin] [style*="139,92,246"],
-html[data-office-skin] [style*="216,180,254"],
-html[data-office-skin] [style*="7c3aed"],html[data-office-skin] [style*="7C3AED"],
-html[data-office-skin] [style*="5800e5"],html[data-office-skin] [style*="5800E5"],
-html[data-office-skin] [style*="8b5cf6"],html[data-office-skin] [style*="8B5CF6"],
-html[data-office-skin] [style*="a78bfa"],html[data-office-skin] [style*="A78BFA"],
-html[data-office-skin] [style*="6d28d9"],html[data-office-skin] [style*="5b21b6"],
-html[data-office-skin] [style*="4c1d95"],html[data-office-skin] [style*="c4b5fd"]{
+/* Browser normalizes ALL colors in the style attr to rgb(R, G, B) comma-space,
+   so #7c3aed -> rgb(124, 58, 237) and rgba(124,58,237,.x) -> rgba(124, 58, 237, .x).
+   Match that exact form (the earlier no-space forms never matched anything). */
+html[data-office-skin] [style*="124, 58, 237"],
+html[data-office-skin] [style*="88, 0, 229"],
+html[data-office-skin] [style*="167, 139, 250"],
+html[data-office-skin] [style*="139, 92, 246"],
+html[data-office-skin] [style*="216, 180, 254"],
+html[data-office-skin] [style*="196, 181, 253"],
+html[data-office-skin] [style*="109, 40, 217"],
+html[data-office-skin] [style*="91, 33, 182"],
+html[data-office-skin] [style*="76, 29, 149"]{
   background-image:none!important;background-color:rgba(217,169,66,.12)!important;
   border-color:rgba(217,169,66,.34)!important;box-shadow:none!important;
 }
-/* solid purple buttons (e.g. Join voice = #7c3aed): give them a proper brass fill */
-html[data-office-skin] button[style*="#7c3aed"],
-html[data-office-skin] button[style*="#5800e5"],
-html[data-office-skin] button[style*="background:#7c3aed"],
-html[data-office-skin] button[style*="background: #7c3aed"]{
-  background:linear-gradient(180deg,#e0be6a,#c39a2e)!important;color:#1a1a1c!important;box-shadow:none!important;
+/* solid purple buttons (Join voice #7c3aed -> rgb(124, 58, 237)): proper brass fill */
+html[data-office-skin] button[style*="124, 58, 237"]{
+  background:linear-gradient(180deg,#e0be6a,#c39a2e)!important;color:#1a1a1c!important;
+  box-shadow:none!important;border-color:transparent!important;
 }
 html[data-office-skin] [class*="bg-violet"],html[data-office-skin] [class*="bg-purple"],html[data-office-skin] [class*="bg-indigo"],html[data-office-skin] [class*="bg-fuchsia"]{background-color:rgba(217,169,66,.75)!important;background-image:none!important;}
 html[data-office-skin] [class*="text-violet"],html[data-office-skin] [class*="text-purple"],html[data-office-skin] [class*="text-indigo"]{color:rgba(235,205,140,.96)!important;}
@@ -162,10 +164,20 @@ export default function RootFrame({ children }: { children: React.ReactNode }) {
     } catch {}
   }, []);
 
-  // On the ECEB meeting host, the bare domain (or /home) routes into the office room.
+  // On the ECEB meeting host, the bare domain (or /home) routes the operator into the
+  // office room — but ONCE only (a ref, not a loop): an unauthed visitor gets bounced by
+  // the room, and without this guard the redirect would re-fire forever (the true/false
+  // flashing James caught). Unauthed → the guest foyer instead of the room.
+  const redirectedRef = useRef(false);
   useEffect(() => {
-    if (proHost && (pathname === "/" || pathname === "/home")) {
-      router.replace(OFFICE_ROOM_PATH);
+    if (!proHost || redirectedRef.current) return;
+    if (pathname === "/" || pathname === "/home") {
+      redirectedRef.current = true;
+      let authed = false;
+      try {
+        authed = !!localStorage.getItem("weered_user");
+      } catch {}
+      router.replace(authed ? OFFICE_ROOM_PATH : "/foyer");
     }
   }, [proHost, pathname, router]);
 
@@ -204,42 +216,6 @@ export default function RootFrame({ children }: { children: React.ReactNode }) {
     };
   }, [officeSkin, pathname]);
 
-  // TEMP DEBUG — live attribute readout in office rooms; remove after diagnosis.
-  const [dbg, setDbg] = useState("");
-  useEffect(() => {
-    const read = () => {
-      try {
-        const de = document.documentElement;
-        setDbg(
-          `theme=${de.getAttribute("data-weered-theme")} pro=${de.hasAttribute("data-pro-host")} skin=${de.hasAttribute("data-office-skin")} v2=${localStorage.getItem("weered_theme_v2")} inRoom=${inOfficeRoom} host=${location.hostname}`,
-        );
-      } catch {}
-    };
-    read();
-    const iv = setInterval(read, 800);
-    return () => clearInterval(iv);
-  }, [inOfficeRoom, pathname]);
-  const DEBUG_BADGE =
-    inOfficeRoom || proHost ? (
-      <div
-        style={{
-          position: "fixed",
-          bottom: 4,
-          left: 4,
-          zIndex: 999999,
-          background: "rgba(0,0,0,0.92)",
-          color: "#7CFC00",
-          font: "10px/1.3 monospace",
-          padding: "4px 7px",
-          borderRadius: 4,
-          pointerEvents: "none",
-          maxWidth: "92vw",
-        }}
-      >
-        DBG {dbg}
-      </div>
-    ) : null;
-
   if (pathname === "/foyer" || (pathname && pathname.startsWith("/foyer/"))) {
     // White-label: no Weered providers, chrome, footer, JSON-LD, titlebar, or service worker.
     return <>{children}</>;
@@ -249,7 +225,6 @@ export default function RootFrame({ children }: { children: React.ReactNode }) {
   return (
     <>
       {OFFICE_LOGO_STYLE}
-      {DEBUG_BADGE}
       <DesktopTitleBar />
       <ThemeRestore />
       <script
