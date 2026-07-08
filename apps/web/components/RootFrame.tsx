@@ -116,9 +116,10 @@ html[data-office-skin] .weered-dock-title{
    hold the banner decoration, so it's safe and keeps the Weered chamfer shape). */
 html[data-office-skin] [class*="-section"]::before,html[data-office-skin] [class*="-section"]::after,
 html[data-office-skin] [class*="-title"]::before,html[data-office-skin] [class*="-title"]::after,
-html[data-office-skin] [class*="-header"]::before,html[data-office-skin] [class*="-header"]::after,
+html[data-office-skin] [class*="-head"]::before,html[data-office-skin] [class*="-head"]::after,
 html[data-office-skin] [class*="weered-me"]::before,html[data-office-skin] [class*="weered-me"]::after,
-html[data-office-skin] [class*="weered-uc"]::before,html[data-office-skin] [class*="weered-uc"]::after{
+html[data-office-skin] [class*="weered-uc"]::before,html[data-office-skin] [class*="weered-uc"]::after,
+html[data-office-skin] .weered-presence::before,html[data-office-skin] .weered-presence::after{
   filter:grayscale(1) sepia(1) saturate(3.2) brightness(1.32)!important;
 }
 /* UserCorner top banner (ID/host strip) + PRESENCE header still carry purple on a
