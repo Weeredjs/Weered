@@ -125,7 +125,7 @@ html[data-office-skin] [class*="weered-uc"]::before,html[data-office-skin] [clas
    child/pseudo/tier-SVG that per-element rules miss. Filter the whole wrapper gold —
    recolors everything inside regardless of where the purple lives. */
 html[data-office-skin] .weered-usercorner,
-html[data-office-skin] .weered-presence-title{
+html[data-office-skin] .weered-presence-head{
   filter:grayscale(1) sepia(1) saturate(3.1) brightness(1.28)!important;
 }
 /* Browser normalizes ALL colors in the style attr to rgb(R, G, B) comma-space,
