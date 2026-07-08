@@ -117,7 +117,9 @@ html[data-office-skin] .weered-dock-title{
 html[data-office-skin] [class*="-section"]::before,html[data-office-skin] [class*="-section"]::after,
 html[data-office-skin] [class*="-title"]::before,html[data-office-skin] [class*="-title"]::after,
 html[data-office-skin] [class*="-header"]::before,html[data-office-skin] [class*="-header"]::after,
-html[data-office-skin] [class*="weered-me"]::before,html[data-office-skin] [class*="weered-me"]::after{
+html[data-office-skin] [class*="weered-me"]::before,html[data-office-skin] [class*="weered-me"]::after,
+html[data-office-skin] .weered-uc-banner,
+html[data-office-skin] [class*="weered-uc"]::before,html[data-office-skin] [class*="weered-uc"]::after{
   filter:grayscale(1) sepia(1) saturate(3.2) brightness(1.32)!important;
 }
 /* Browser normalizes ALL colors in the style attr to rgb(R, G, B) comma-space,
