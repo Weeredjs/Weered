@@ -97,18 +97,40 @@ const OFFICE_LOGO_STYLE = (
 // rgba purple, and Tailwind violet utilities/gradients.
 const OFFICE_SKIN_CSS = `
 html[data-office-skin]{
-  --weered-accent-1:#d9a942!important;--weered-accent-2:#b78a28!important;
-  --weered-accent-bg:rgba(217,169,66,.14)!important;--weered-accent-ring:rgba(217,169,66,.32)!important;
-  --weered-accent-grad:linear-gradient(180deg,#e6bd6e,#d9a942 55%,#a87a1c)!important;
-  --weered-accent-text:rgba(230,190,110,.95)!important;
-  /* lift the backdrop + panels a touch (was #1a1a1c charcoal) */
-  --weered-bg:#22232a!important;--weered-panel:rgba(40,41,48,.96)!important;--weered-panel2:rgba(31,32,38,.97)!important;
+  --weered-accent-1:#e0c169!important;--weered-accent-2:#c99a2e!important;
+  --weered-accent-bg:rgba(224,193,105,.14)!important;--weered-accent-ring:rgba(224,193,105,.34)!important;
+  --weered-accent-grad:linear-gradient(180deg,#f0da95,#e0c169 55%,#b9902a)!important;
+  --weered-accent-text:rgba(240,214,140,.95)!important;
+  /* CHROME: cooler + lighter gunmetal, silver borders (was #1a1a1c charcoal) */
+  --weered-bg:#343842!important;--weered-panel:rgba(64,70,80,.95)!important;--weered-panel2:rgba(48,53,62,.96)!important;
+  --weered-border:rgba(198,208,220,.18)!important;--weered-border2:rgba(198,208,220,.32)!important;
+  --weered-text:rgba(240,243,248,.96)!important;--weered-muted:rgba(200,208,220,.62)!important;
 }
-html[data-office-skin] body{background:#22232a!important;}
-/* collapsed right-rail icon strip — de-purple the buttons */
-html[data-office-skin] .weered-icon-strip-btn{color:rgba(217,169,66,.55)!important;}
-html[data-office-skin] .weered-icon-strip-btn:hover{background:rgba(217,169,66,.12)!important;color:rgba(230,190,110,.9)!important;}
-html[data-office-skin] .weered-icon-strip-btn-active{background:rgba(217,169,66,.2)!important;color:rgba(235,205,140,.95)!important;}
+html[data-office-skin] body{background:#343842!important;}
+/* Chrome lighten — the press theme paints panels with an explicit DARK gradient (not
+   the var), so override those surfaces directly to a lighter cool metal. */
+html[data-office-skin] .weered-panel,html[data-office-skin] .weered-panel2,
+html[data-office-skin] .weered-left,html[data-office-skin] .weered-right,
+html[data-office-skin] .weered-presence,html[data-office-skin] .weered-icon-strip,
+html[data-office-skin] .weered-overlay-panel{
+  background:linear-gradient(180deg,rgba(76,82,93,.97) 0%,rgba(56,61,71,.98) 100%)!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.10),0 0 0 1px rgba(198,208,220,.16),0 6px 18px rgba(0,0,0,.4)!important;
+}
+html[data-office-skin] .weered-left-link{background:linear-gradient(180deg,#4a5060 0%,#3c4250 100%)!important;color:rgba(240,243,248,.9)!important;}
+html[data-office-skin] .weered-left-link:hover{background:linear-gradient(180deg,#565e70 0%,#454c5b 100%)!important;color:rgba(248,250,254,.98)!important;}
+/* collapsed right-rail icon strip — de-purple */
+html[data-office-skin] .weered-icon-strip-btn{color:rgba(224,193,105,.6)!important;}
+html[data-office-skin] .weered-icon-strip-btn:hover{background:rgba(224,193,105,.12)!important;color:rgba(240,214,140,.9)!important;}
+html[data-office-skin] .weered-icon-strip-btn-active{background:rgba(224,193,105,.2)!important;color:rgba(245,225,150,.95)!important;}
+/* remaining hardcoded purple in the core layout (rail close/tab, logo glow, focus, CTA) */
+html[data-office-skin] .weered-rail-logo img,html[data-office-skin] .weered-rail-logo:hover img{filter:none!important;}
+html[data-office-skin] input:focus,html[data-office-skin] textarea:focus,html[data-office-skin] select:focus{box-shadow:0 0 0 3px rgba(224,193,105,.22)!important;}
+html[data-office-skin] .weered-rail-close,html[data-office-skin] .weered-rail-close:hover{border-color:rgba(198,208,220,.5)!important;background:linear-gradient(180deg,rgba(92,98,109,.55),rgba(70,76,86,.55))!important;box-shadow:0 0 8px rgba(0,0,0,.25),inset 0 1px 0 rgba(255,255,255,.1)!important;}
+html[data-office-skin] .weered-rail-tab:hover .weered-rail-tab-label,html[data-office-skin] .weered-overlay-close:hover{color:rgba(240,214,140,.95)!important;}
+html[data-office-skin] .weered-overlay-close:hover{background:rgba(224,193,105,.15)!important;border-color:rgba(224,193,105,.3)!important;}
+html[data-office-skin] .weered-mobile-nav-btn-active{background:rgba(224,193,105,.12)!important;color:rgba(245,225,150,.95)!important;}
+html[data-office-skin] .weered-chat-fullscreen-cta:hover{background:linear-gradient(135deg,rgba(224,193,105,.3),rgba(224,193,105,.14))!important;border-color:rgba(224,193,105,.6)!important;}
+html[data-office-skin] .weered-chat-fullscreen .weered-chat-members{border-left-color:rgba(198,208,220,.18)!important;}
 html[data-office-skin] .weered-left-title,
 html[data-office-skin] .weered-presence-title,
 html[data-office-skin] .weered-rr-section-title,
