@@ -1,8 +1,8 @@
-"use client";
+﻿"use client";
 
 // Splits the app frame so the white-label /foyer route bypasses ALL Weered chrome,
 // JSON-LD, providers, the titlebar, theme, and the service worker. App Router layouts
-// NEST, so a nested foyer/layout cannot escape the root chrome — this pathname switch
+// NEST, so a nested foyer/layout cannot escape the root chrome â€” this pathname switch
 // is the escape hatch. The JSON-LD lives here as module consts (NOT props) so it is
 // never serialized into the /foyer RSC payload. Non-foyer routes render the exact same
 // tree as before (zero behavior change).
@@ -25,6 +25,7 @@ import InstallPrompt from "./InstallPrompt";
 import KeyboardShortcuts from "./KeyboardShortcuts";
 import CookieConsent from "./CookieConsent";
 import BugReportButton from "./BugReportButton";
+import { OFFICE_SKIN_CSS } from "./officeSkinCss";
 
 const jsonLd = {
   "@context": "https://schema.org",
@@ -91,105 +92,9 @@ const OFFICE_LOGO_STYLE = (
   <style>{`[data-office-skin] .weered-rail-logo img { content: url("/brand/eceb-anchor-chrome.svg"); object-fit: contain; }`}</style>
 );
 
-// The de-purple override, injected as the LAST node in <body> (see the effect) so it
-// beats component <style> blocks + the lobby theme. Brass over every purple source:
-// the accent vars, the rail section-title banners + their ::before/::after, inline
-// rgba purple, and Tailwind violet utilities/gradients.
-const OFFICE_SKIN_CSS = `
-html[data-office-skin]{
-  --weered-accent-1:#e0c169!important;--weered-accent-2:#c99a2e!important;
-  --weered-accent-bg:rgba(224,193,105,.14)!important;--weered-accent-ring:rgba(224,193,105,.34)!important;
-  --weered-accent-grad:linear-gradient(180deg,#f0da95,#e0c169 55%,#b9902a)!important;
-  --weered-accent-text:rgba(240,214,140,.95)!important;
-  /* CHROME: cooler + lighter gunmetal, silver borders (was #1a1a1c charcoal) */
-  --weered-bg:#343842!important;--weered-panel:rgba(64,70,80,.95)!important;--weered-panel2:rgba(48,53,62,.96)!important;
-  --weered-border:rgba(198,208,220,.18)!important;--weered-border2:rgba(198,208,220,.32)!important;
-  --weered-text:rgba(240,243,248,.96)!important;--weered-muted:rgba(200,208,220,.62)!important;
-}
-html[data-office-skin] body{background:#343842!important;}
-/* Chrome lighten — the press theme paints panels with an explicit DARK gradient (not
-   the var), so override those surfaces directly to a lighter cool metal. */
-html[data-office-skin] .weered-panel,html[data-office-skin] .weered-panel2,
-html[data-office-skin] .weered-left,html[data-office-skin] .weered-right,
-html[data-office-skin] .weered-presence,html[data-office-skin] .weered-icon-strip,
-html[data-office-skin] .weered-overlay-panel{
-  background:linear-gradient(180deg,rgba(76,82,93,.97) 0%,rgba(56,61,71,.98) 100%)!important;
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.10),0 0 0 1px rgba(198,208,220,.16),0 6px 18px rgba(0,0,0,.4)!important;
-}
-html[data-office-skin] .weered-left-link{background:linear-gradient(180deg,#4a5060 0%,#3c4250 100%)!important;color:rgba(240,243,248,.9)!important;}
-html[data-office-skin] .weered-left-link:hover{background:linear-gradient(180deg,#565e70 0%,#454c5b 100%)!important;color:rgba(248,250,254,.98)!important;}
-/* collapsed right-rail icon strip — de-purple */
-html[data-office-skin] .weered-icon-strip-btn{color:rgba(224,193,105,.6)!important;}
-html[data-office-skin] .weered-icon-strip-btn:hover{background:rgba(224,193,105,.12)!important;color:rgba(240,214,140,.9)!important;}
-html[data-office-skin] .weered-icon-strip-btn-active{background:rgba(224,193,105,.2)!important;color:rgba(245,225,150,.95)!important;}
-/* remaining hardcoded purple in the core layout (rail close/tab, logo glow, focus, CTA) */
-html[data-office-skin] .weered-rail-logo img,html[data-office-skin] .weered-rail-logo:hover img{filter:none!important;}
-html[data-office-skin] input:focus,html[data-office-skin] textarea:focus,html[data-office-skin] select:focus{box-shadow:0 0 0 3px rgba(224,193,105,.22)!important;}
-html[data-office-skin] .weered-rail-close,html[data-office-skin] .weered-rail-close:hover{border-color:rgba(198,208,220,.5)!important;background:linear-gradient(180deg,rgba(92,98,109,.55),rgba(70,76,86,.55))!important;box-shadow:0 0 8px rgba(0,0,0,.25),inset 0 1px 0 rgba(255,255,255,.1)!important;}
-html[data-office-skin] .weered-rail-tab:hover .weered-rail-tab-label,html[data-office-skin] .weered-overlay-close:hover{color:rgba(240,214,140,.95)!important;}
-html[data-office-skin] .weered-overlay-close:hover{background:rgba(224,193,105,.15)!important;border-color:rgba(224,193,105,.3)!important;}
-html[data-office-skin] .weered-mobile-nav-btn-active{background:rgba(224,193,105,.12)!important;color:rgba(245,225,150,.95)!important;}
-html[data-office-skin] .weered-chat-fullscreen-cta:hover{background:linear-gradient(135deg,rgba(224,193,105,.3),rgba(224,193,105,.14))!important;border-color:rgba(224,193,105,.6)!important;}
-html[data-office-skin] .weered-chat-fullscreen .weered-chat-members{border-left-color:rgba(198,208,220,.18)!important;}
-html[data-office-skin] .weered-left-title,
-html[data-office-skin] .weered-presence-title,
-html[data-office-skin] .weered-rr-section-title,
-html[data-office-skin] .weered-rr-create-title,
-html[data-office-skin] .weered-dock-title{
-  background:transparent!important;color:#e0be6a!important;
-  border-color:rgba(217,169,66,.30)!important;box-shadow:none!important;
-}
-/* The chamfered section/header banners are SVG data-URI backgrounds on the ::before
-   of section wrappers — the purple is baked inside the SVG, so no color selector can
-   touch it. Recolor the whole pseudo purple->gold with a filter (these pseudos only
-   hold the banner decoration, so it's safe and keeps the Weered chamfer shape). */
-html[data-office-skin] [class*="-section"]::before,html[data-office-skin] [class*="-section"]::after,
-html[data-office-skin] [class*="-head"]::before,html[data-office-skin] [class*="-head"]::after,
-html[data-office-skin] [class*="weered-me"]::before,html[data-office-skin] [class*="weered-me"]::after,
-html[data-office-skin] [class*="weered-uc"]::before,html[data-office-skin] [class*="weered-uc"]::after,
-html[data-office-skin] .weered-presence::before,html[data-office-skin] .weered-presence::after{
-  filter:grayscale(1) sepia(1) saturate(3.2) brightness(1.32)!important;
-}
-/* UserCorner top banner (ID/host strip) + PRESENCE header still carry purple on a
-   child/pseudo/tier-SVG that per-element rules miss. Filter the whole wrapper gold —
-   recolors everything inside regardless of where the purple lives. */
-html[data-office-skin] .weered-usercorner,
-html[data-office-skin] .weered-presence-head{
-  filter:grayscale(1) sepia(1) saturate(3.1) brightness(1.28)!important;
-}
-/* Browser normalizes ALL colors in the style attr to rgb(R, G, B) comma-space,
-   so #7c3aed -> rgb(124, 58, 237) and rgba(124,58,237,.x) -> rgba(124, 58, 237, .x).
-   Match that exact form (the earlier no-space forms never matched anything). */
-html[data-office-skin] [style*="124, 58, 237"],
-html[data-office-skin] [style*="88, 0, 229"],
-html[data-office-skin] [style*="167, 139, 250"],
-html[data-office-skin] [style*="139, 92, 246"],
-html[data-office-skin] [style*="216, 180, 254"],
-html[data-office-skin] [style*="196, 181, 253"],
-html[data-office-skin] [style*="109, 40, 217"],
-html[data-office-skin] [style*="91, 33, 182"],
-html[data-office-skin] [style*="76, 29, 149"]{
-  background-image:none!important;background-color:rgba(217,169,66,.12)!important;
-  border-color:rgba(217,169,66,.34)!important;box-shadow:none!important;
-}
-/* solid purple buttons (Join voice #7c3aed -> rgb(124, 58, 237)): proper brass fill */
-html[data-office-skin] button[style*="124, 58, 237"]{
-  background:linear-gradient(180deg,#e0be6a,#c39a2e)!important;color:#1a1a1c!important;
-  box-shadow:none!important;border-color:transparent!important;
-}
-html[data-office-skin] [class*="bg-violet"],html[data-office-skin] [class*="bg-purple"],html[data-office-skin] [class*="bg-indigo"],html[data-office-skin] [class*="bg-fuchsia"]{background-color:rgba(217,169,66,.75)!important;background-image:none!important;}
-html[data-office-skin] [class*="text-violet"],html[data-office-skin] [class*="text-purple"],html[data-office-skin] [class*="text-indigo"]{color:rgba(235,205,140,.96)!important;}
-html[data-office-skin] [class*="border-violet"],html[data-office-skin] [class*="border-purple"],html[data-office-skin] [class*="border-indigo"]{border-color:rgba(217,169,66,.34)!important;}
-html[data-office-skin] [class*="from-violet"],html[data-office-skin] [class*="via-violet"],html[data-office-skin] [class*="to-violet"],
-html[data-office-skin] [class*="from-purple"],html[data-office-skin] [class*="via-purple"],html[data-office-skin] [class*="to-purple"],
-html[data-office-skin] [class*="from-indigo"],html[data-office-skin] [class*="via-indigo"],html[data-office-skin] [class*="to-indigo"]{
-  --tw-gradient-from:rgba(217,169,66,.28)!important;--tw-gradient-to:rgba(217,169,66,.04)!important;
-  --tw-gradient-stops:var(--tw-gradient-from),var(--tw-gradient-to)!important;
-}
-/* shadow-[...purple...] glow utilities */
-html[data-office-skin] [class*="shadow-"][class*="violet"],
-html[data-office-skin] [class*="shadow-"][class*="124,58,237"]{box-shadow:none!important;}
-`;
+// The office skin stylesheet (the Fathom Review Room design tokens + de-purple
+// mechanics) lives in ./officeSkinCss and is injected as the LAST node in <body>
+// (see the effect below) so it wins the cascade over component <style> blocks.
 
 export default function RootFrame({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -202,9 +107,9 @@ export default function RootFrame({ children }: { children: React.ReactNode }) {
   }, []);
 
   // On the ECEB meeting host, the bare domain (or /home) routes the operator into the
-  // office room — but ONCE only (a ref, not a loop): an unauthed visitor gets bounced by
+  // office room â€” but ONCE only (a ref, not a loop): an unauthed visitor gets bounced by
   // the room, and without this guard the redirect would re-fire forever (the true/false
-  // flashing James caught). Unauthed → the guest foyer instead of the room.
+  // flashing James caught). Unauthed â†’ the guest foyer instead of the room.
   const redirectedRef = useRef(false);
   useEffect(() => {
     if (!proHost || redirectedRef.current) return;
@@ -219,7 +124,7 @@ export default function RootFrame({ children }: { children: React.ReactNode }) {
   }, [proHost, pathname, router]);
 
   // The office skin (professional "press" theme + chrome anchor) applies whenever the
-  // operator is viewing the office — the ECEB host OR any mtg-* meeting room on any
+  // operator is viewing the office â€” the ECEB host OR any mtg-* meeting room on any
   // host (so entering from a weered.ca favourite/desktop still de-purples). This only
   // toggles <html> attributes (no provider remount); the full navy ProfessionalFrame
   // stays host-scoped below. On leave, the operator's own theme is restored.
@@ -245,7 +150,7 @@ export default function RootFrame({ children }: { children: React.ReactNode }) {
       }
     };
     // ENFORCE the office skin. The room re-applies the purple lobby theme when its
-    // WebSocket/lobby data loads (after this effect's one-shot run) — that was the
+    // WebSocket/lobby data loads (after this effect's one-shot run) â€” that was the
     // flash. A MutationObserver snaps it back the instant anything re-purples: theme
     // flipped off "press", the lobby theme re-added, or data-office-skin cleared.
     // Each fix only writes when the value is wrong, so it converges (no loop).
@@ -282,7 +187,7 @@ export default function RootFrame({ children }: { children: React.ReactNode }) {
     // White-label: no Weered providers, chrome, footer, JSON-LD, titlebar, or service worker.
     return <>{children}</>;
   }
-  // Full Weered chrome everywhere (no branch swap → no remount → the office recolor
+  // Full Weered chrome everywhere (no branch swap â†’ no remount â†’ the office recolor
   // stays put). The office room is recolored in place via the injected stylesheet.
   return (
     <>

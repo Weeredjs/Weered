@@ -17,6 +17,16 @@ import { PlanModule, PresentedPlanViewer } from "./PlanModule";
 const API = "/api";
 const wsBase = () => `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws`;
 
+// --- Review Room design tokens (visual only; no behavior lives here) ---
+const EASE = "cubic-bezier(0.22,0.61,0.36,1)";
+const GOLD_GRAD = "linear-gradient(180deg,#D9B878,#C6A15B 55%,#A8853F)";
+const SERIF = "Georgia, 'Iowan Old Style', Cambria, 'Times New Roman', serif";
+const UIFONT = "'Segoe UI', Inter, system-ui, -apple-system, sans-serif";
+const INK_TEXT = "rgba(236,242,250,.95)";
+const MUTED_TEXT = "rgba(163,180,202,.72)";
+const PAPER = "#F7F4EC";
+const PAPER_INK = "#10233F";
+
 // --- shared types ---
 type Scope = { office?: string; foyer?: string; lobbyId?: string | null };
 type Msg = { id: string; name: string; body: string };
@@ -73,14 +83,14 @@ function makeRoomConn(opts: {
     const wrap = document.createElement("div");
     wrap.setAttribute("data-pid", pid);
     wrap.style.cssText =
-      "position:relative;aspect-ratio:4/3;background:#0a1729;border:1px solid #233a5e;border-radius:12px;overflow:hidden";
+      "position:relative;aspect-ratio:4/3;background:#0A1D35;border:1px solid #1E3A5F;border-radius:6px;overflow:hidden";
     video.autoplay = true;
     video.playsInline = true;
     video.style.cssText = "width:100%;height:100%;object-fit:cover";
     const tag = document.createElement("div");
     tag.textContent = label;
     tag.style.cssText =
-      "position:absolute;left:8px;bottom:8px;font:600 12px sans-serif;color:#fff;background:rgba(0,0,0,.55);padding:2px 8px;border-radius:6px";
+      "position:absolute;left:8px;bottom:8px;font:600 11px 'Segoe UI',sans-serif;color:rgba(236,242,250,.95);background:rgba(10,29,53,.72);padding:2px 8px;border-radius:4px";
     wrap.appendChild(video);
     wrap.appendChild(tag);
     host.appendChild(wrap);
@@ -101,13 +111,13 @@ function makeRoomConn(opts: {
     video.autoplay = true;
     video.playsInline = true;
     video.style.cssText =
-      "width:100%;max-height:62vh;object-fit:contain;background:#000;border-radius:10px;display:block";
+      "width:100%;max-height:62vh;object-fit:contain;background:#000;border-radius:6px;display:block";
     const wrap = document.createElement("div");
     wrap.style.cssText = "position:relative";
     const tag = document.createElement("div");
     tag.textContent = label;
     tag.style.cssText =
-      "position:absolute;left:8px;top:8px;font:600 12px sans-serif;color:#fff;background:rgba(0,0,0,.6);padding:2px 8px;border-radius:6px";
+      "position:absolute;left:8px;top:8px;font:600 11px 'Segoe UI',sans-serif;color:rgba(236,242,250,.95);background:rgba(10,29,53,.72);padding:2px 8px;border-radius:4px";
     wrap.appendChild(video);
     wrap.appendChild(tag);
     host.appendChild(wrap);
@@ -156,7 +166,7 @@ function makeRoomConn(opts: {
         document.body.appendChild(a);
         a.play?.().catch(() => {});
       } else if (pub?.source === Track.Source.ScreenShare) {
-        setScreenVideo(el as HTMLVideoElement, `${participant.name || "Guest"} — screen`);
+        setScreenVideo(el as HTMLVideoElement, `${participant.name || "Guest"} · screen`);
       } else if (track.kind === Track.Kind.Video) {
         addTile(participant.identity, participant.name || "Guest", el as HTMLVideoElement);
       }
@@ -346,10 +356,10 @@ export default function Foyer() {
   const [mode, setMode] = useState<Mode>("loading");
   const [invite, setInvite] = useState<string | null>(null);
   const [hostJwt, setHostJwt] = useState<string | null>(null);
-  const [title, setTitle] = useState("Office Hours");
-  // ECEB gold by default (the office is ECEB's until per-domain branding lands);
+  const [title, setTitle] = useState("The Review Room");
+  // ECEB satin brass by default (the office is ECEB's until per-domain branding lands);
   // still overridable via ?accent= for future white-label tenants.
-  const [accent, setAccent] = useState("#E0B341");
+  const [accent, setAccent] = useState("#C6A15B");
 
   useEffect(() => {
     const p = new URLSearchParams(location.search);
@@ -360,7 +370,7 @@ export default function Foyer() {
       setTitle(t);
       document.title = t + " · East Coast Employee Benefits";
     } else {
-      document.title = "Office Hours · East Coast Employee Benefits";
+      document.title = "The Review Room · East Coast Employee Benefits";
     }
     // Validate accent is an actual hex color before use; otherwise keep default.
     const a = p.get("accent");
@@ -432,6 +442,25 @@ function ClientView({
   camOnRef.current = camOn;
   const micOnRef = useRef(true);
   micOnRef.current = micOn;
+
+  // Receiving choreography (parlour -> receiving -> in). PURELY visual: the
+  // LiveKit switch in room:admitted starts immediately; only the cross-fade is
+  // held (~700ms door, then a 420ms settle on the easing token).
+  const [entry, setEntry] = useState<"hold" | "fading" | "in">("in");
+  const entryTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const clearEntryTimers = () => {
+    entryTimers.current.forEach(clearTimeout);
+    entryTimers.current = [];
+  };
+  const beginEntry = () => {
+    clearEntryTimers();
+    setEntry("hold");
+    entryTimers.current.push(setTimeout(() => setEntry("fading"), 700));
+    entryTimers.current.push(setTimeout(() => setEntry("in"), 1140));
+  };
+  // The gate button reads "Let James know you're here": the knock is part of
+  // arrival, sent once the WS authenticates (auth:ok), so it can never race auth.
+  const autoKnock = useRef(false);
 
   const conn = useRef(
     makeRoomConn({
@@ -513,6 +542,12 @@ function ClientView({
       switch (m.type) {
         case "auth:ok":
           sock.send(JSON.stringify({ type: "presence:join", roomId: foyerRoom.current }));
+          // Arrival knock: the client already asked for James at the gate.
+          if (autoKnock.current && officeRoom.current) {
+            autoKnock.current = false;
+            sock.send(JSON.stringify({ type: "presence:join", roomId: officeRoom.current }));
+            setPhase("knocking"); // optimistic; confirmed by room:knock:queued
+          }
           break;
         case "auth:fail":
           try {
@@ -557,9 +592,10 @@ function ClientView({
           if (m.roomId === officeRoom.current) {
             // Server already doJoin'd us to the office. Switch LiveKit foyer -> office.
             setInfo("");
+            if (phaseRef.current !== "office") beginEntry(); // visual held-door only
             setPhase("office");
             switchTo(officeRoom.current).catch(() => {
-              setErr("Couldn't connect to the consult.");
+              setErr("Couldn't connect to the review.");
               setPhase("error");
             });
           }
@@ -570,14 +606,16 @@ function ClientView({
           // An already-admitted (phase 'office') guest must NOT be silently bounced
           // to the foyer label while still A/V-connected to the office.
           if (phaseRef.current === "knocking") {
-            setInfo("The advisor isn't free right now — please keep waiting.");
+            setInfo("James is with someone just now. He'll come to the door when he's free.");
             setPhase("foyer");
           } else if (phaseRef.current === "office") {
             // a real ejection from an active consult: tear the office down, return to foyer.
-            setInfo("The consult was ended by the advisor.");
+            clearEntryTimers();
+            setEntry("in");
+            setInfo("The review has ended.");
             setPhase("foyer");
             switchTo(foyerRoom.current).catch(() => {
-              setErr("You were removed from the consult.");
+              setErr("The review has ended.");
               setPhase("error");
             });
           } else {
@@ -619,8 +657,8 @@ function ClientView({
         if (!st?.open) {
           setErr(
             st?.schedule
-              ? `The office is closed right now. Walk-in hours: ${st.schedule}.`
-              : "The office is closed right now.",
+              ? `The office is receiving by appointment. Walk-in hours: ${st.schedule}.`
+              : "The office is receiving by appointment just now.",
           );
           setPhase("error");
           return;
@@ -650,6 +688,7 @@ function ClientView({
     setPhase("connecting");
     setErr("");
     setInfo("");
+    let joinEpoch = switchEpoch.current; // re-captured just before conn.connect
     try {
       const gr = await fetch(`${API}/auth/guest`, {
         method: "POST",
@@ -680,13 +719,25 @@ function ClientView({
       try {
         sessionStorage.setItem("foyer_guest", gd.token);
       } catch {}
+      autoKnock.current = true; // knock as soon as the socket authenticates
       await connectWS();
       currentRoom.current = foyerRoom.current;
       setPhase("foyer"); // mount the stage so tiles have a container before tracks arrive
+      // The arrival knock can be answered while this foyer connect is still in
+      // flight (a fast admit calls switchTo -> conn.disconnect on the in-flight
+      // Room, rejecting this await). That rejection must not kick an
+      // already-admitted guest to the error gate: capture the switch epoch and
+      // swallow the abort when a newer switch superseded us.
+      joinEpoch = switchEpoch.current;
       const res = await conn.connect(foyerRoom.current, micOnRef.current);
       setMicOn(res.micOn); // reflect a denied mic in the toolbar
       // roster now arrives via WS presence:state for the foyer
     } catch (e: any) {
+      if (joinEpoch !== switchEpoch.current || phaseRef.current === "office") {
+        // superseded by an admit-driven room switch: the office connection owns
+        // the session now; this foyer abort is expected and non-fatal.
+        return;
+      }
       // a spent self-minted walk-in invite must not wedge retries: mint fresh next time
       if (!invite) mintedInvite.current = "";
       setErr(e?.message || "Could not join the meeting.");
@@ -704,6 +755,9 @@ function ClientView({
     sendWS({ type: "presence:join", roomId: officeRoom.current });
   };
   const cancelKnock = () => {
+    // If the arrival knock hasn't been sent yet (auth still in flight), disarm it
+    // so auth:ok doesn't knock on behalf of a guest who just cancelled.
+    autoKnock.current = false;
     // Leaving the office clears our pending knock (else leaves current room) per WS contract.
     sendWS({ type: "presence:leave", roomId: officeRoom.current });
     setInfo("");
@@ -731,6 +785,9 @@ function ClientView({
   const leave = () => {
     leaving.current = true;
     joining.current = false;
+    autoKnock.current = false;
+    clearEntryTimers();
+    setEntry("in");
     switchEpoch.current++; // invalidate any in-flight switch
     conn.disconnect();
     try {
@@ -755,6 +812,7 @@ function ClientView({
     () => () => {
       leaving.current = true;
       switchEpoch.current++;
+      clearEntryTimers();
       conn.disconnect();
       try {
         ws.current?.close();
@@ -768,26 +826,37 @@ function ClientView({
   if (phase === "enter" || phase === "connecting" || phase === "error") {
     return (
       <div style={S.center}>
-        <div style={{ ...S.card, borderTop: `3px solid ${accent}` }}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/brand/eceb-logo-white.png?v=2"
-            alt="East Coast Employee Benefits"
-            style={{ height: 62, width: "auto", display: "inline-block", verticalAlign: "middle" }}
-          />
-          <div style={{ ...S.wordmarkSub, color: accent, marginBottom: 16 }}>{title}</div>
+        <div style={S.card}>
+          <svg
+            width="26"
+            height="26"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="rgba(163,180,202,.8)"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+            style={{ display: "block", margin: "0 auto 14px" }}
+          >
+            <circle cx="12" cy="5" r="2.4" />
+            <line x1="12" y1="7.4" x2="12" y2="21" />
+            <line x1="7.5" y1="10.5" x2="16.5" y2="10.5" />
+            <path d="M5 16a7 5 0 0 0 14 0" />
+          </svg>
+          <div style={S.kicker}>East Coast Employee Benefits</div>
+          <h1 style={S.serifH}>{title}</h1>
           {phase === "error" ? (
             <>
-              <p style={S.err}>{err}</p>
-              <button style={{ ...S.btn, background: accent }} onClick={() => setPhase("enter")}>
+              <p style={{ ...S.err, marginTop: 14 }}>{err}</p>
+              <button style={S.btn} onClick={() => setPhase("enter")}>
                 Try again
               </button>
             </>
           ) : phase === "connecting" ? (
-            <p style={S.muted}>Connecting you to the room…</p>
+            <p style={{ ...S.muted, marginTop: 16 }}>Showing you in…</p>
           ) : (
             <>
-              <p style={S.muted}>Enter your name to join.</p>
               <input
                 style={S.input}
                 value={name}
@@ -798,14 +867,15 @@ function ClientView({
                 autoFocus
               />
               <button
-                style={{ ...S.btn, background: accent }}
+                style={{ ...S.btn, opacity: name.trim() ? 1 : 0.55 }}
                 onClick={join}
                 disabled={!name.trim()}
               >
-                Join
+                {"Let James know you're here"}
               </button>
             </>
           )}
+          <p style={S.foot}>Private advisory office · Halifax, Nova Scotia</p>
         </div>
       </div>
     );
@@ -815,106 +885,126 @@ function ClientView({
   const inOffice = phase === "office";
   return (
     <div style={S.live}>
-      <header style={{ ...S.bar, borderBottom: `2px solid ${accent}` }}>
-        <div style={{ lineHeight: 1.15 }}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/brand/eceb-logo-white.png?v=2"
-            alt="East Coast Employee Benefits"
-            style={{ height: 58, width: "auto", display: "inline-block", verticalAlign: "middle" }}
-          />
-          <div style={{ ...S.wordmarkSub, color: accent, marginBottom: 16 }}>{title}</div>
+      {/* Receiving: a ~700ms held door, then a single settled cross-fade. Visual only. */}
+      {inOffice && entry !== "in" && (
+        <div style={{ ...S.overlay, opacity: entry === "hold" ? 1 : 0 }}>
+          <div style={{ textAlign: "center" }}>
+            <div style={S.kicker}>East Coast Employee Benefits</div>
+            <div style={S.serifH}>Welcome{name.trim() ? `, ${name.trim()}` : ""}.</div>
+            <p style={S.parlourLine}>James will see you now.</p>
+          </div>
         </div>
-        <div style={{ display: "flex", gap: 8 }}>
-          <button style={S.ctl} onClick={toggleMic}>
-            {micOn ? "Mute" : "Unmute"}
-          </button>
-          <button style={S.ctl} onClick={toggleCam}>
-            {camOn ? "Stop video" : "Start video"}
-          </button>
-          <button
-            style={{ ...S.ctl, background: screenOn ? "#1f7a37" : "#1a2c4d" }}
-            onClick={toggleScreen}
-          >
-            {screenOn ? "Stop sharing" : "Share screen"}
-          </button>
-          <button style={{ ...S.ctl, background: "#b62324" }} onClick={leave}>
-            Leave
-          </button>
-        </div>
-      </header>
-
-      {/* status banner */}
+      )}
       <div
         style={{
-          ...S.banner,
-          background: inOffice ? "#e4f3ea" : "#e8eef6",
-          borderBottom: `1px solid ${accent}`,
+          ...S.fadeWrap,
+          opacity: inOffice && entry === "hold" ? 0 : 1,
+          // While the held-door overlay is up, the invisible room UI beneath must
+          // not be clickable or tab-focusable.
+          pointerEvents: inOffice && entry === "hold" ? "none" : "auto",
         }}
       >
-        {inOffice ? (
-          <span>In your private consult.</span>
-        ) : phase === "knocking" ? (
-          <span>Knocking… waiting to be admitted.</span>
-        ) : (
-          <span>You're in the waiting room — the advisor will be with you shortly.</span>
-        )}
-      </div>
-
-      <div style={S.body}>
-        <main style={S.stage}>
-          {!inOffice && phase !== "knocking" && (
-            <div style={S.knockBox}>
-              <button style={{ ...S.bigBtn, background: accent }} onClick={knock}>
-                Knock — request a private consult
-              </button>
-              {info && <p style={{ ...S.muted, marginTop: 12 }}>{info}</p>}
+        <header style={inOffice ? S.paperBar : S.bar}>
+          {inOffice ? (
+            <div style={S.paperTitle}>East Coast Employee Benefits · The Review Room</div>
+          ) : (
+            <div>
+              <div style={S.kicker}>East Coast Employee Benefits</div>
+              <div style={{ ...S.serifH, fontSize: 17, margin: "2px 0 0" }}>{title}</div>
             </div>
           )}
-          {phase === "knocking" && (
-            <div style={S.knockBox}>
-              <p style={{ ...S.muted, marginBottom: 12 }}>Knocking… waiting to be admitted.</p>
-              <button style={{ ...S.bigBtn, background: "#30363d" }} onClick={cancelKnock}>
-                Cancel
-              </button>
-            </div>
-          )}
-          {inOffice && <PresentedPlanViewer getToken={() => token.current} accent={accent} />}
-          <div ref={screenEl} style={S.screen} />
-          <div ref={tilesEl} style={S.tiles} />
-        </main>
-        <aside style={S.side}>
-          <div style={S.sideHead}>
-            {inOffice ? "In the consult" : "Waiting room"} ({roster.length})
-          </div>
-          <ul style={S.roster}>
-            {roster.map((p) => (
-              <li key={p.id} style={S.rosterItem}>
-                {p.name}
-              </li>
-            ))}
-          </ul>
-          <div style={S.sideHead}>Chat</div>
-          <div style={S.chat}>
-            {messages.map((m) => (
-              <div key={m.id} style={S.msg}>
-                <b style={{ color: accent }}>{m.name}:</b> {m.body}
-              </div>
-            ))}
-          </div>
-          <div style={S.chatBar}>
-            <input
-              style={S.chatInput}
-              value={chatInput}
-              onChange={(e) => setChatInput(e.target.value)}
-              placeholder="Message"
-              onKeyDown={(e) => e.key === "Enter" && sendChat()}
-            />
-            <button style={{ ...S.send, background: accent }} onClick={sendChat}>
-              Send
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <button style={inOffice ? S.ctlPaper : S.ctl} onClick={toggleMic}>
+              {micOn ? "Mute" : "Unmute"}
+            </button>
+            <button style={inOffice ? S.ctlPaper : S.ctl} onClick={toggleCam}>
+              {camOn ? "Stop video" : "Start video"}
+            </button>
+            <button
+              style={
+                inOffice
+                  ? { ...S.ctlPaper, background: screenOn ? "rgba(16,35,63,.08)" : "transparent" }
+                  : { ...S.ctl, background: screenOn ? "#1E3A5F" : "#122A4A" }
+              }
+              onClick={toggleScreen}
+            >
+              {screenOn ? "Stop sharing" : "Share screen"}
+            </button>
+            <button style={inOffice ? S.ctlPaper : S.ctl} onClick={leave}>
+              Leave
             </button>
           </div>
-        </aside>
+        </header>
+
+        <div style={S.body}>
+          <main style={S.stage}>
+            {!inOffice && (
+              <div style={S.parlourWrap}>
+                <div style={S.card}>
+                  <div style={S.kicker}>East Coast Employee Benefits</div>
+                  <div style={S.serifH}>Welcome{name.trim() ? `, ${name.trim()}` : ""}.</div>
+                  {phase === "knocking" || autoKnock.current ? (
+                    /* autoKnock armed counts as knocking: the knock IS the arrival, so
+                       the manual-button parlour must never flash during the WS
+                       handshake window before auth:ok confirms it. */
+                    <>
+                      <p style={S.parlourLine}>{"We've let James know you're here."}</p>
+                      <p style={S.parlourLine}>{"When he's ready, the door opens on its own."}</p>
+                      <p style={S.parlourLine}>Your review is prepared and waiting.</p>
+                      {info && <p style={{ ...S.parlourLine, color: INK_TEXT }}>{info}</p>}
+                      <button style={{ ...S.textBtn, marginTop: 12 }} onClick={cancelKnock}>
+                        Cancel
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <p style={S.parlourLine}>{"Take a seat. Whenever you're ready:"}</p>
+                      {info && <p style={{ ...S.parlourLine, color: INK_TEXT }}>{info}</p>}
+                      <button style={{ ...S.btn, marginTop: 10 }} onClick={knock}>
+                        {"Let James know you're here"}
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
+            {inOffice && <PresentedPlanViewer getToken={() => token.current} accent={accent} />}
+            <div ref={screenEl} style={S.screen} />
+            <div ref={tilesEl} style={S.tiles} />
+          </main>
+          <aside style={S.side}>
+            <div style={S.sideHead}>
+              {inOffice ? "In the room" : "Reception"} ({roster.length})
+            </div>
+            <ul style={S.roster}>
+              {roster.map((p) => (
+                <li key={p.id} style={S.rosterItem}>
+                  {p.name}
+                </li>
+              ))}
+            </ul>
+            <div style={S.sideHead}>Chat</div>
+            <div style={S.chat}>
+              {messages.map((m) => (
+                <div key={m.id} style={S.msg}>
+                  <b style={S.msgName}>{m.name}:</b> {m.body}
+                </div>
+              ))}
+            </div>
+            <div style={S.chatBar}>
+              <input
+                style={S.chatInput}
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                placeholder="Message"
+                onKeyDown={(e) => e.key === "Enter" && sendChat()}
+              />
+              <button style={S.send} onClick={sendChat}>
+                Send
+              </button>
+            </div>
+          </aside>
+        </div>
       </div>
     </div>
   );
@@ -1146,7 +1236,7 @@ function HostView({ jwt, title, accent }: { jwt: string; title: string; accent: 
           case "room:denied":
             if (m.roomId === officeRoom) {
               leaving.current = true;
-              setErr("Couldn't take ownership of the office — check the host link.");
+              setErr("Couldn't take ownership of the office. Check the host link.");
               setPhase("error");
             }
             break;
@@ -1233,7 +1323,7 @@ function HostView({ jwt, title, accent }: { jwt: string; title: string; accent: 
   if (phase === "connecting" || phase === "error") {
     return (
       <div style={S.center}>
-        <div style={{ ...S.card, borderTop: `3px solid ${accent}` }}>
+        <div style={S.card}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/brand/eceb-logo-white.png?v=2"
@@ -1245,7 +1335,7 @@ function HostView({ jwt, title, accent }: { jwt: string; title: string; accent: 
             <>
               <p style={S.err}>{err}</p>
               <button
-                style={{ ...S.btn, background: accent }}
+                style={S.btn}
                 onClick={() => {
                   started.current = false;
                   leaving.current = false;
@@ -1265,7 +1355,7 @@ function HostView({ jwt, title, accent }: { jwt: string; title: string; accent: 
 
   return (
     <div style={S.live}>
-      <header style={{ ...S.bar, borderBottom: `2px solid ${accent}` }}>
+      <header style={S.bar}>
         <div style={{ lineHeight: 1.15 }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
@@ -1279,9 +1369,9 @@ function HostView({ jwt, title, accent }: { jwt: string; title: string; accent: 
         </div>
         <div style={{ display: "flex", gap: 8 }}>
           <button
-            style={{ ...S.ctl, background: locked ? "#b62324" : "#1f7a37" }}
+            style={{ ...S.ctl, color: locked ? INK_TEXT : "#D9B878" }}
             onClick={toggleLock}
-            title={locked ? "Door is closed — click to open" : "Door is open — click to close"}
+            title={locked ? "Door is closed. Click to open." : "Door is open. Click to close."}
           >
             {locked ? "Door closed" : "Door open"}
           </button>
@@ -1292,7 +1382,7 @@ function HostView({ jwt, title, accent }: { jwt: string; title: string; accent: 
             {camOn ? "Stop video" : "Start video"}
           </button>
           <button
-            style={{ ...S.ctl, background: screenOn ? "#1f7a37" : "#1a2c4d" }}
+            style={{ ...S.ctl, background: screenOn ? "#1E3A5F" : "#122A4A" }}
             onClick={toggleScreen}
           >
             {screenOn ? "Stop sharing" : "Share screen"}
@@ -1310,7 +1400,7 @@ function HostView({ jwt, title, accent }: { jwt: string; title: string; accent: 
           <div style={{ ...S.chat, maxHeight: 200 }}>
             {officeMessages.map((m) => (
               <div key={m.id} style={S.msg}>
-                <b style={{ color: accent }}>{m.name}:</b> {m.body}
+                <b style={S.msgName}>{m.name}:</b> {m.body}
               </div>
             ))}
           </div>
@@ -1322,7 +1412,7 @@ function HostView({ jwt, title, accent }: { jwt: string; title: string; accent: 
               placeholder="Message the consult"
               onKeyDown={(e) => e.key === "Enter" && sendOfficeChat()}
             />
-            <button style={{ ...S.send, background: accent }} onClick={sendOfficeChat}>
+            <button style={S.send} onClick={sendOfficeChat}>
               Send
             </button>
           </div>
@@ -1332,7 +1422,7 @@ function HostView({ jwt, title, accent }: { jwt: string; title: string; accent: 
           <div style={S.sideHead}>Knocks ({knocks.length})</div>
           <ul style={S.roster}>
             {knocks.length === 0 && (
-              <li style={{ ...S.rosterItem, color: "#8b949e" }}>No one knocking.</li>
+              <li style={{ ...S.rosterItem, color: MUTED_TEXT }}>No one knocking.</li>
             )}
             {knocks.map((k) => (
               <li
@@ -1347,16 +1437,10 @@ function HostView({ jwt, title, accent }: { jwt: string; title: string; accent: 
               >
                 <span>{k.name}</span>
                 <span style={{ display: "flex", gap: 6 }}>
-                  <button
-                    style={{ ...S.miniBtn, background: "#1f7a37" }}
-                    onClick={() => admit(k.id)}
-                  >
+                  <button style={S.miniBtn} onClick={() => admit(k.id)}>
                     Admit
                   </button>
-                  <button
-                    style={{ ...S.miniBtn, background: "#b62324" }}
-                    onClick={() => deny(k.id)}
-                  >
+                  <button style={S.miniBtnQuiet} onClick={() => deny(k.id)}>
                     Deny
                   </button>
                 </span>
@@ -1367,7 +1451,7 @@ function HostView({ jwt, title, accent }: { jwt: string; title: string; accent: 
           <div style={S.sideHead}>Waiting room ({waiting.length})</div>
           <ul style={S.roster}>
             {waiting.length === 0 && (
-              <li style={{ ...S.rosterItem, color: "#8b949e" }}>No one waiting.</li>
+              <li style={{ ...S.rosterItem, color: MUTED_TEXT }}>No one waiting.</li>
             )}
             {waiting.map((p) => (
               <li key={p.id} style={S.rosterItem}>
@@ -1380,7 +1464,7 @@ function HostView({ jwt, title, accent }: { jwt: string; title: string; accent: 
           <div style={S.chat}>
             {foyerMessages.map((m) => (
               <div key={m.id} style={S.msg}>
-                <b style={{ color: accent }}>{m.name}:</b> {m.body}
+                <b style={S.msgName}>{m.name}:</b> {m.body}
               </div>
             ))}
           </div>
@@ -1392,91 +1476,177 @@ function HostView({ jwt, title, accent }: { jwt: string; title: string; accent: 
 
 // ============================================================================
 const S: Record<string, CSSProperties> = {
-  // ECEB brand shell: deep navy ground, gold accent, serif wordmark — the same
-  // family look as the ECEB site and the Fathom review pages.
+  // The Review Room shell: ink-navy ground, milled panels, hairline rules,
+  // satin brass used once per surface, serif figures with tabular numerals.
   wordmark: {
-    fontFamily: "Georgia, 'Playfair Display', 'Times New Roman', serif",
+    fontFamily: SERIF,
     fontSize: 17,
-    fontWeight: 700,
-    color: "#f2f5fa",
+    fontWeight: 400,
+    color: INK_TEXT,
     letterSpacing: ".01em",
   },
   wordmarkSub: {
     fontSize: 10.5,
-    fontWeight: 800,
+    fontWeight: 600,
     letterSpacing: ".18em",
     textTransform: "uppercase",
     marginTop: 2,
+    fontFamily: UIFONT,
   },
+  kicker: {
+    fontFamily: UIFONT,
+    fontSize: 10.5,
+    fontWeight: 600,
+    letterSpacing: ".22em",
+    textTransform: "uppercase",
+    color: MUTED_TEXT,
+  },
+  serifH: {
+    fontFamily: SERIF,
+    fontSize: 26,
+    fontWeight: 400,
+    color: INK_TEXT,
+    letterSpacing: ".01em",
+    margin: "10px 0 6px",
+    fontVariantNumeric: "tabular-nums lining-nums",
+  },
+  parlourLine: {
+    fontFamily: UIFONT,
+    fontSize: 14,
+    color: MUTED_TEXT,
+    margin: "0 0 8px",
+    lineHeight: 1.55,
+  },
+  foot: { marginTop: 18, marginBottom: 0, fontSize: 12, color: MUTED_TEXT, fontFamily: UIFONT },
   center: {
     minHeight: "100vh",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    background: "#eef2f7",
-    color: "#1c2733",
-    fontFamily: "system-ui,sans-serif",
+    background: "#0A1D35",
+    color: INK_TEXT,
+    fontFamily: UIFONT,
   },
   card: {
-    width: 360,
-    maxWidth: "90vw",
-    background: "#12233f",
-    border: "1px solid #233a5e",
-    borderRadius: 6,
-    padding: 28,
+    width: 400,
+    maxWidth: "92vw",
+    background: "#122A4A",
+    border: "1px solid #1E3A5F",
+    borderRadius: 8,
+    boxShadow: "inset 0 1px 0 rgba(255,255,255,.06), 0 8px 24px rgba(0,0,0,.35)",
+    padding: "36px 36px 28px",
     textAlign: "center",
   },
   h1: { fontSize: 20, margin: "0 0 14px" },
-  muted: { color: "#8b949e", fontSize: 14, margin: "0 0 16px" },
-  err: { color: "#f85149", fontSize: 14, margin: "0 0 16px" },
+  muted: { color: MUTED_TEXT, fontSize: 14, margin: "0 0 16px" },
+  err: { color: INK_TEXT, fontSize: 14, margin: "0 0 16px", lineHeight: 1.55 },
   input: {
     width: "100%",
     boxSizing: "border-box",
     padding: "10px 12px",
-    borderRadius: 6,
-    border: "1px solid #233a5e",
-    background: "#0a1729",
-    color: "#e6edf3",
+    borderRadius: 4,
+    border: "1px solid #1E3A5F",
+    background: "#0A1D35",
+    color: INK_TEXT,
     fontSize: 15,
+    fontFamily: UIFONT,
+    marginTop: 16,
     marginBottom: 12,
   },
   btn: {
     width: "100%",
-    padding: "10px 12px",
-    borderRadius: 6,
-    border: 0,
-    color: "#fff",
-    fontWeight: 700,
+    padding: "11px 12px",
+    borderRadius: 4,
+    border: "1px solid #A8853F",
+    background: GOLD_GRAD,
+    color: PAPER_INK,
+    fontWeight: 600,
     fontSize: 15,
+    fontFamily: UIFONT,
     cursor: "pointer",
+    transition: `opacity 260ms ${EASE}`,
+  },
+  textBtn: {
+    background: "transparent",
+    border: 0,
+    color: MUTED_TEXT,
+    fontSize: 13,
+    fontFamily: UIFONT,
+    cursor: "pointer",
+    padding: "6px 10px",
+    transition: `color 260ms ${EASE}`,
   },
   live: {
     height: "100vh",
     display: "flex",
     flexDirection: "column",
-    background: "#eef2f7",
-    color: "#1c2733",
-    fontFamily: "system-ui,sans-serif",
+    background: "#0A1D35",
+    color: INK_TEXT,
+    fontFamily: UIFONT,
+  },
+  fadeWrap: {
+    display: "flex",
+    flexDirection: "column",
+    flex: 1,
+    minHeight: 0,
+    transition: `opacity 420ms ${EASE}`,
+  },
+  overlay: {
+    position: "fixed",
+    inset: 0,
+    zIndex: 60,
+    background: "#0A1D35",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    transition: `opacity 420ms ${EASE}`,
+    pointerEvents: "none",
   },
   bar: {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
     padding: "10px 16px",
-    background: "#12233f",
+    background: "#0A1D35",
+    borderBottom: "1px solid #1E3A5F",
   },
+  paperBar: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: "7px 16px",
+    background: PAPER,
+    color: PAPER_INK,
+    borderBottom: "1px solid rgba(16,35,63,.18)",
+    boxShadow: "0 1px 6px rgba(0,0,0,.25)",
+  },
+  paperTitle: { fontFamily: SERIF, fontSize: 14, color: PAPER_INK, letterSpacing: ".01em" },
   ctl: {
     padding: "6px 12px",
-    borderRadius: 6,
-    border: "1px solid #233a5e",
-    background: "#1a2c4d",
-    color: "#fff",
+    borderRadius: 4,
+    border: "1px solid #1E3A5F",
+    background: "#122A4A",
+    color: INK_TEXT,
     cursor: "pointer",
     fontSize: 13,
+    fontFamily: UIFONT,
+    transition: `background-color 260ms ${EASE}`,
   },
-  banner: { padding: "10px 16px", fontSize: 14, fontWeight: 600, color: "#1c2733" },
+  ctlPaper: {
+    padding: "4px 10px",
+    borderRadius: 4,
+    border: "1px solid rgba(16,35,63,.3)",
+    background: "transparent",
+    color: PAPER_INK,
+    cursor: "pointer",
+    fontSize: 12.5,
+    fontFamily: UIFONT,
+    transition: `background-color 260ms ${EASE}`,
+  },
+  banner: { padding: "10px 16px", fontSize: 14, fontWeight: 600, color: INK_TEXT },
   body: { flex: 1, display: "flex", minHeight: 0 },
   stage: { flex: 1, padding: 16, overflow: "auto", display: "flex", flexDirection: "column" },
+  parlourWrap: { display: "flex", justifyContent: "center", padding: "9vh 0 24px" },
   knockBox: {
     display: "flex",
     flexDirection: "column",
@@ -1486,60 +1656,91 @@ const S: Record<string, CSSProperties> = {
   },
   bigBtn: {
     padding: "14px 24px",
-    borderRadius: 6,
-    border: 0,
-    color: "#fff",
-    fontWeight: 700,
+    borderRadius: 4,
+    border: "1px solid #A8853F",
+    background: GOLD_GRAD,
+    color: PAPER_INK,
+    fontWeight: 600,
     fontSize: 16,
+    fontFamily: UIFONT,
     cursor: "pointer",
     maxWidth: 420,
   },
   screen: { width: "100%" }, // empty = 0 height; fills only when a share is attached
-  tiles: { display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(240px,1fr))", gap: 12 },
+  tiles: { display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(180px,1fr))", gap: 10 },
   side: {
     width: 320,
-    borderLeft: "1px solid #d6dfea",
+    borderLeft: "1px solid #1E3A5F",
     display: "flex",
     flexDirection: "column",
-    background: "#ffffff",
+    background: "#122A4A",
     overflow: "auto",
   },
   sideHead: {
-    padding: "10px 14px",
-    fontSize: 12,
+    padding: "12px 14px 8px",
+    fontSize: 10.5,
+    fontWeight: 600,
     textTransform: "uppercase",
-    letterSpacing: ".5px",
-    color: "#5a6b83",
-    borderBottom: "1px solid #e6ecf3",
+    letterSpacing: ".18em",
+    color: MUTED_TEXT,
+    borderBottom: "1px solid #1E3A5F",
+    fontVariantNumeric: "tabular-nums lining-nums",
   },
   roster: { listStyle: "none", margin: 0, padding: "6px 0", maxHeight: 220, overflow: "auto" },
-  rosterItem: { padding: "6px 14px", fontSize: 14 },
+  rosterItem: { padding: "6px 14px", fontSize: 14, color: INK_TEXT },
   miniBtn: {
     padding: "3px 10px",
-    borderRadius: 6,
-    border: 0,
-    color: "#fff",
+    borderRadius: 4,
+    border: "1px solid #1E3A5F",
+    background: "#1E3A5F",
+    color: INK_TEXT,
     fontSize: 12,
-    fontWeight: 700,
+    fontWeight: 600,
+    fontFamily: UIFONT,
     cursor: "pointer",
+    transition: `background-color 260ms ${EASE}`,
   },
-  chat: { flex: 1, overflow: "auto", padding: "8px 14px", fontSize: 14, minHeight: 80 },
+  miniBtnQuiet: {
+    padding: "3px 10px",
+    borderRadius: 4,
+    border: "1px solid #1E3A5F",
+    background: "transparent",
+    color: MUTED_TEXT,
+    fontSize: 12,
+    fontWeight: 600,
+    fontFamily: UIFONT,
+    cursor: "pointer",
+    transition: `background-color 260ms ${EASE}`,
+  },
+  chat: {
+    flex: 1,
+    overflow: "auto",
+    padding: "8px 14px",
+    fontSize: 14,
+    minHeight: 80,
+    color: INK_TEXT,
+  },
   msg: { marginBottom: 6, lineHeight: 1.35 },
-  chatBar: { display: "flex", gap: 6, padding: 10, borderTop: "1px solid #e6ecf3" },
+  msgName: { color: INK_TEXT },
+  chatBar: { display: "flex", gap: 6, padding: 10, borderTop: "1px solid #1E3A5F" },
   chatInput: {
     flex: 1,
     padding: "8px 10px",
-    borderRadius: 6,
-    border: "1px solid #d6dfea",
-    background: "#ffffff",
-    color: "#1c2733",
+    borderRadius: 4,
+    border: "1px solid #1E3A5F",
+    background: "#0A1D35",
+    color: INK_TEXT,
+    fontFamily: UIFONT,
   },
   send: {
     padding: "8px 12px",
-    borderRadius: 6,
-    border: 0,
-    color: "#fff",
-    fontWeight: 700,
+    borderRadius: 4,
+    border: "1px solid #1E3A5F",
+    background: "#122A4A",
+    color: INK_TEXT,
+    fontWeight: 600,
+    fontFamily: UIFONT,
     cursor: "pointer",
+    transition: `background-color 260ms ${EASE}`,
   },
 };

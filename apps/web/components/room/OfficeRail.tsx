@@ -1,12 +1,23 @@
 "use client";
-// The office rail: the ECEB control surface docked inside a meeting room.
+// The Desk: the ECEB advisor cockpit docked inside a meeting room.
 // Rendered only for the room owner / office staff. Every call is same-origin
 // /api/office/* riding the session cookie — no tokens anywhere in the page.
 // The foyer keeps working in parallel; this is the same API surface.
 import { useCallback, useEffect, useState } from "react";
 import { PlanModule } from "@/app/foyer/PlanModule";
 
-const GOLD = "#e0b341";
+// Fathom office tokens
+const GOLD = "#C6A15B";
+const GOLD_SATIN = "linear-gradient(180deg,#D9B878,#C6A15B 55%,#A8853F)";
+const PANEL = "#122A4A";
+const HAIRLINE = "#1E3A5F";
+const PAPER_INK = "#10233F";
+const TEXT = "rgba(236,242,250,.95)";
+const MUTED = "rgba(163,180,202,.72)";
+const GOOD = "#3E7D5C";
+const EASE = "cubic-bezier(0.22,0.61,0.36,1)";
+const SERIF = "Georgia, 'Iowan Old Style', Cambria, 'Times New Roman', serif";
+const UI_FONT = "'Segoe UI', Inter, system-ui, -apple-system, sans-serif";
 
 type Knock = { userId: string; name: string; ts?: number };
 
@@ -40,6 +51,27 @@ export default function OfficeRail({
     return () => clearInterval(iv);
   }, [refresh]);
 
+  // Present mode: PlanModule will announce presenting on/off via a window event
+  // so the room chrome can quiet itself without prop-drilling. Only the listener
+  // and attribute toggle are installed here; nothing dispatches the event yet,
+  // which is harmless.
+  useEffect(() => {
+    const onPresenting = (ev: Event) => {
+      const on = Boolean((ev as CustomEvent<{ on?: boolean }>)?.detail?.on);
+      try {
+        if (on) document.documentElement.setAttribute("data-office-presenting", "1");
+        else document.documentElement.removeAttribute("data-office-presenting");
+      } catch {}
+    };
+    window.addEventListener("fathom:presenting", onPresenting as EventListener);
+    return () => {
+      window.removeEventListener("fathom:presenting", onPresenting as EventListener);
+      try {
+        document.documentElement.removeAttribute("data-office-presenting");
+      } catch {}
+    };
+  }, []);
+
   const toggleDoor = async () => {
     if (!status || busy) return;
     setBusy(true);
@@ -56,16 +88,49 @@ export default function OfficeRail({
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      {/* Room status + door control on one line — the door lives next to the status. */}
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: 16,
+        fontFamily: UI_FONT,
+        color: TEXT,
+      }}
+    >
+      {/* The Desk header + The Sign on one line, over a hairline rule. */}
       <div
-        style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}
+        style={{
+          display: "flex",
+          alignItems: "flex-end",
+          justifyContent: "space-between",
+          gap: 12,
+          flexWrap: "wrap",
+          paddingBottom: 14,
+          borderBottom: `1px solid ${HAIRLINE}`,
+        }}
       >
         <div>
-          <div style={{ color: GOLD, fontWeight: 800, fontSize: 12, letterSpacing: "0.14em" }}>
-            THE OFFICE
+          <div
+            style={{
+              color: GOLD,
+              fontWeight: 600,
+              fontSize: 10,
+              letterSpacing: "0.22em",
+              textTransform: "uppercase",
+              marginBottom: 3,
+            }}
+          >
+            The Desk
           </div>
-          <div style={{ color: "rgba(226,232,240,0.85)", fontWeight: 700, fontSize: 14 }}>
+          <div
+            style={{
+              fontFamily: SERIF,
+              fontSize: 20,
+              lineHeight: 1.25,
+              color: TEXT,
+              letterSpacing: "0.01em",
+            }}
+          >
             East Coast Employee Benefits
           </div>
         </div>
@@ -73,93 +138,160 @@ export default function OfficeRail({
           {status && (
             <span
               style={{
-                fontSize: 11,
-                fontWeight: 800,
-                letterSpacing: "0.08em",
-                padding: "4px 10px",
-                borderRadius: 999,
-                background: status.open ? "rgba(34,197,94,0.15)" : "rgba(148,163,184,0.12)",
-                color: status.open ? "#4ade80" : "rgba(148,163,184,0.8)",
-                border: `1px solid ${status.open ? "rgba(34,197,94,0.4)" : "rgba(148,163,184,0.25)"}`,
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                fontSize: 10,
+                fontWeight: 600,
+                letterSpacing: "0.16em",
+                textTransform: "uppercase",
+                padding: "6px 12px",
+                borderRadius: 3,
+                border: `1px solid ${HAIRLINE}`,
+                background: "rgba(255,255,255,0.02)",
+                color: status.open ? TEXT : MUTED,
+                transition: `color 320ms ${EASE}`,
+                whiteSpace: "nowrap",
               }}
             >
-              {status.open ? "DOOR OPEN" : "DOOR CLOSED"}
+              <span
+                style={{
+                  width: 6,
+                  height: 6,
+                  borderRadius: 1,
+                  background: status.open ? GOOD : "rgba(163,180,202,0.35)",
+                  flexShrink: 0,
+                  transition: `background 320ms ${EASE}`,
+                }}
+              />
+              {status.open ? "Open for consultations" : "By appointment"}
             </span>
           )}
           <button
             onClick={toggleDoor}
             disabled={busy || !status}
             style={{
-              padding: "7px 14px",
-              borderRadius: 9,
-              border: "1px solid rgba(255,255,255,0.12)",
-              background: status?.open ? "rgba(239,68,68,0.12)" : "rgba(34,197,94,0.15)",
-              color: status?.open ? "#fca5a5" : "#4ade80",
+              padding: "7px 16px",
+              borderRadius: 3,
+              border: `1px solid ${HAIRLINE}`,
+              background: PANEL,
+              boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06)",
+              color: busy || !status ? MUTED : TEXT,
+              fontFamily: UI_FONT,
               fontSize: 12,
-              fontWeight: 800,
-              cursor: "pointer",
+              fontWeight: 600,
+              letterSpacing: "0.02em",
+              cursor: busy || !status ? "default" : "pointer",
               whiteSpace: "nowrap",
+              transition: `color 260ms ${EASE}`,
             }}
           >
-            {busy ? "…" : status?.open ? "Close the door" : "Open the door"}
+            {busy ? "…" : "Flip the sign"}
           </button>
         </div>
       </div>
 
-      {/* Knocks only surface when someone is actually waiting — no idle log. */}
+      {/* At the door: visitor cards surface only when someone is actually waiting — no idle log. */}
       {knocks.length > 0 && (
         <div
           style={{
-            border: "1px solid rgba(224,179,65,0.35)",
-            borderRadius: 12,
-            background: "rgba(224,179,65,0.06)",
-            padding: 12,
+            border: `1px solid ${HAIRLINE}`,
+            borderRadius: 6,
+            background: PANEL,
+            boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06), 0 8px 24px rgba(0,0,0,0.35)",
+            padding: "12px 16px 6px",
           }}
         >
           <div
             style={{
-              fontSize: 11,
-              color: GOLD,
-              fontWeight: 800,
-              letterSpacing: "0.1em",
-              marginBottom: 6,
+              fontSize: 10,
+              color: MUTED,
+              fontWeight: 600,
+              letterSpacing: "0.2em",
+              textTransform: "uppercase",
+              marginBottom: 8,
+              display: "flex",
+              alignItems: "baseline",
+              gap: 8,
             }}
           >
-            KNOCKING ({knocks.length})
-          </div>
-          {knocks.map((k) => (
-            <div
-              key={k.userId}
+            At the door
+            <span
               style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                gap: 8,
-                padding: "6px 0",
-                borderTop: "1px solid rgba(255,255,255,0.06)",
+                fontFamily: SERIF,
+                fontVariantNumeric: "tabular-nums lining-nums",
+                fontSize: 11,
+                letterSpacing: 0,
+                color: MUTED,
               }}
             >
-              <span style={{ fontSize: 13, color: "rgba(226,232,240,0.9)" }}>
-                {k.name}
-                <span style={{ color: "rgba(148,163,184,0.5)", fontSize: 11 }}> · {ago(k.ts)}</span>
-              </span>
-              <button
-                onClick={() => onAdmit?.(k.userId)}
+              {knocks.length}
+            </span>
+          </div>
+          {knocks.map((k) => {
+            const when = ago(k.ts);
+            return (
+              <div
+                key={k.userId}
                 style={{
-                  padding: "5px 12px",
-                  borderRadius: 8,
-                  border: "none",
-                  background: GOLD,
-                  color: "#131313",
-                  fontSize: 12,
-                  fontWeight: 800,
-                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 10,
+                  padding: "10px 0",
+                  borderTop: `1px solid ${HAIRLINE}`,
                 }}
               >
-                Let in
-              </button>
-            </div>
-          ))}
+                <span style={{ minWidth: 0 }}>
+                  <span
+                    style={{
+                      display: "block",
+                      fontFamily: SERIF,
+                      fontSize: 15,
+                      lineHeight: 1.3,
+                      color: TEXT,
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {k.name}
+                  </span>
+                  <span
+                    style={{
+                      display: "block",
+                      fontSize: 11,
+                      color: MUTED,
+                      fontVariantNumeric: "tabular-nums lining-nums",
+                      marginTop: 1,
+                    }}
+                  >
+                    {when ? `${when} · at the door` : "at the door"}
+                  </span>
+                </span>
+                <button
+                  onClick={() => onAdmit?.(k.userId)}
+                  style={{
+                    padding: "6px 14px",
+                    borderRadius: 3,
+                    border: "1px solid #A8853F",
+                    background: GOLD_SATIN,
+                    color: PAPER_INK,
+                    fontFamily: UI_FONT,
+                    fontSize: 12,
+                    fontWeight: 600,
+                    letterSpacing: "0.02em",
+                    cursor: "pointer",
+                    whiteSpace: "nowrap",
+                    flexShrink: 0,
+                    transition: `opacity 260ms ${EASE}`,
+                  }}
+                >
+                  Show them in
+                </button>
+              </div>
+            );
+          })}
         </div>
       )}
 

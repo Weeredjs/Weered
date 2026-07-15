@@ -805,6 +805,11 @@ export function PlanModule({ jwt, accent }: { jwt: string; accent: string }) {
   const presentingRef = useRef(false);
   useEffect(() => {
     presentingRef.current = presenting;
+    // Broadcast the presenting state so the room chrome can do the present-mode
+    // focus pull ("boardroom lights dimming" — rails recede while presenting).
+    try {
+      window.dispatchEvent(new CustomEvent("fathom:presenting", { detail: { on: presenting } }));
+    } catch {}
   }, [presenting]);
 
   // returns true only on a confirmed server ack

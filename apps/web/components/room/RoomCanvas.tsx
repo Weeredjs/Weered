@@ -130,6 +130,20 @@ const LOBBY_MODULE_MAP: Record<string, string[]> = {
 
 const DEFAULT_ROOM_MODULES = ["voice", "youtube", "twitch", "browser", "video", "screen"];
 
+// Office rooms (mtg-*) present the same modules under advisory-office language.
+// Display-only remap applied at the single point MODULES is built, so the header
+// pills, bottom bar, and any other consumer all pick it up. Module ids, wiring,
+// and behavior are untouched; non-office rooms never enter this path.
+const OFFICE_MODULE_SKIN: Record<string, { label: string; icon?: string }> = {
+  voice:   { label: "Conversation" },
+  youtube: { label: "Walkthrough", icon: "▶" },
+  twitch:  { label: "Broadcast",   icon: "◉" },
+  browser: { label: "Co-browse" },
+  screen:  { label: "Screen" },
+  video:   { label: "Faces" },
+  office:  { label: "The Review" },
+};
+
 const ROOM_NAME_CACHE_KEY = "weered:roomnames:v1";
 
 const CHAT_WIDTH_DESKTOP = 580;
@@ -235,6 +249,13 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
       (Array.isArray(w?.meta?.mods) && w.meta.mods.includes(meId));
     if (isOfficeRoom && officeAccess) {
       base = [...base, { id: "office", icon: "◧", label: "Office", live: true }];
+    }
+    // Advisory-office labels for meeting rooms only (display-only; ids unchanged).
+    if (isOfficeRoom) {
+      base = base.map((m) => {
+        const skin = OFFICE_MODULE_SKIN[m.id];
+        return skin ? { ...m, label: skin.label, icon: skin.icon ?? m.icon } : m;
+      });
     }
     return base;
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -418,9 +439,12 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
 
   const roomLabel = useMemo(() => {
     const name = String(w?.meta?.name || w?.meta?.title || w?.meta?.label || w?.admin?.name || "").trim();
+    // Office rooms never show a raw room id ("mtg-eceb-office") as the title.
+    // Display-only: the id keeps doing all the functional work everywhere else.
+    if (isOfficeRoom && (!name || name === roomId)) return "The Review Room";
     if (name) return name;
     try { return decodeURIComponent(roomId || ""); } catch { return roomId || ""; }
-  }, [w?.meta?.name, w?.meta?.title, w?.meta?.label, w?.admin?.name, roomId]);
+  }, [w?.meta?.name, w?.meta?.title, w?.meta?.label, w?.admin?.name, roomId, isOfficeRoom]);
 
   const roomThumbnail = useMemo(() => {
     if (w?.meta?.thumbnail) return w.meta.thumbnail;
@@ -585,8 +609,8 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
     playKnockChime();
     try {
       if (typeof Notification !== "undefined" && Notification.permission === "granted") {
-        const n = new Notification("Someone's at the office door", {
-          body: `${who} is knocking. Waiting to be let in.`,
+        const n = new Notification("Someone is at the door", {
+          body: `${who} is at the door of the Review Room.`,
           tag: "office-knock",
           renotify: true,
         } as NotificationOptions);
@@ -597,7 +621,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
           n.close();
         };
       } else {
-        weeredToast?.(`${who} is knocking at the office door`);
+        weeredToast?.(`${who} is at the door of the Review Room.`);
       }
     } catch {}
   }, [knockSig, officeStaff]);
@@ -605,8 +629,8 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
   // Flash the browser tab title while knocks are pending (permission-free fallback).
   useEffect(() => {
     if (!isOfficeRoom) return;
-    const base = "East Coast Employee Benefits · Office";
-    document.title = knockCount > 0 ? `🔔 (${knockCount}) knocking — ${base}` : base;
+    const base = "The Review Room · East Coast Employee Benefits";
+    document.title = knockCount > 0 ? `🔔 (${knockCount}) at the door · ${base}` : base;
   }, [knockCount, isOfficeRoom]);
 
   return (
@@ -737,7 +761,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
         )}
 
         {officeStage && (isRoomOwner || isRoomMod) && (
-          <div style={{ height: "100%", overflowY: "auto", background: "#0b0e14" }}>
+          <div style={{ height: "100%", overflowY: "auto", background: "#0A1D35" }}>
             <div style={{ maxWidth: "none", margin: 0, padding: "16px 22px 44px" }}>
               <OfficeRail
                 knocks={Array.isArray(w?.admin?.knocks) ? w.admin.knocks : []}

@@ -9,6 +9,8 @@ import UserCorner from "./UserCorner";
 import { useUserHover } from "./UserHoverCard";
 import RoleIcon, { TierIcon } from "./RoleIcon";
 import PresenceRow from "./PresenceRow";
+import { useOfficeSkin } from "./useOfficeSkin";
+import AdvisorCredentialCard from "./AdvisorCredentialCard";
 
 function pickFirstString(...vals: any[]): string {
   for (const v of vals) if (typeof v === "string" && v.trim()) return v.trim();
@@ -177,6 +179,9 @@ export default function LeftRail() {
   const { joinedRoomId, activeRoomId, me, globalRole, currentLobbyId, joinStatus, leave } =
     useWeered() as any;
   const users = useRoomUsers(activeRoomId);
+  // The Review Room gate: true only inside /room/mtg-* or on the office host.
+  // Every office-context divergence below checks this flag and nothing else.
+  const office = useOfficeSkin();
 
   const [lobbyTheme, setLobbyTheme] = useState<string | null>(null);
   useEffect(() => {
@@ -310,6 +315,18 @@ export default function LeftRail() {
       return nm.includes(qq);
     });
   }, [users, q, me]);
+
+  // Office Reception sub-line: the UNFILTERED room count (the search box must never
+  // make "Door open · no one waiting" appear while people are actually in the room).
+  const roomCount = useMemo(() => {
+    const arr0 = Array.isArray(effectiveUsers) ? effectiveUsers : [];
+    try {
+      const meId = String(me?.id || "");
+      if (meId && !arr0.some((u: any) => String(u?.id || "") === meId)) return arr0.length + 1;
+    } catch {}
+    return arr0.length;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [users, me]);
 
   const listed = useMemo(() => {
     const arr = [...filtered];
@@ -602,71 +619,105 @@ export default function LeftRail() {
 
   return (
     <div className="weered-left-inner">
-      <UserCorner />
+      {office ? <AdvisorCredentialCard /> : <UserCorner />}
 
       <div className="weered-left-section">
-        <div className="weered-left-title">{navLabels.communities}</div>
+        <div className="weered-left-title">{office ? "Practice" : navLabels.communities}</div>
 
-        {[
-          {
-            href: lobbyHrefMain,
-            label: navLabels.lobby,
-            icon: navIcons.lobby,
-            active: isLobbyActive,
-            onClick: undefined as any,
-            key: "lobby",
-          },
-          {
-            href: "/home",
-            label: navLabels.home,
-            icon: navIcons.home,
-            active: isHomeActive,
-            onClick: (e: any) => {
-              e.preventDefault();
-              try {
-                leave();
-              } catch {}
-              router.push("/home");
-            },
-            key: "home",
-          },
-          {
-            href: "/forum",
-            label: navLabels.forum,
-            icon: navIcons.forum,
-            active: pathname.startsWith("/forum"),
-            onClick: undefined as any,
-            key: "forum",
-          },
-          {
-            href: "/store",
-            label: navLabels.paper,
-            icon: navIcons.paper,
-            active: pathname.startsWith("/store"),
-            onClick: undefined as any,
-            key: "paper",
-          },
-          {
-            href: "/map",
-            label: navLabels.locator,
-            icon: navIcons.locator,
-            active: pathname.startsWith("/map"),
-            onClick: undefined as any,
-            key: "locator",
-          },
-          ...(globalRole === "GOD" || globalRole === "STAFF" || globalRole === "SUPPORT"
-            ? [
-                {
-                  href: "/staff",
-                  label: navLabels.ops,
-                  icon: navIcons.ops,
-                  active: pathname.startsWith("/staff"),
-                  onClick: undefined as any,
-                  key: "ops",
+        {(office
+          ? [
+              {
+                href: "/room/mtg-eceb-office",
+                label: "The Desk",
+                icon: "▤",
+                active: pathname.startsWith("/room/mtg-"),
+                onClick: undefined as any,
+                key: "lobby",
+              },
+              {
+                href: "https://agent.eastcoastemployeebenefits.com",
+                label: "Book of Business",
+                icon: "☰",
+                active: false,
+                onClick: undefined as any,
+                key: "book",
+                target: "_blank",
+                rel: "noopener noreferrer",
+              },
+              ...(globalRole === "GOD" || globalRole === "STAFF" || globalRole === "SUPPORT"
+                ? [
+                    {
+                      href: "/staff",
+                      label: "Admin",
+                      icon: "⚙",
+                      active: pathname.startsWith("/staff"),
+                      onClick: undefined as any,
+                      key: "ops",
+                    },
+                  ]
+                : []),
+            ]
+          : [
+              {
+                href: lobbyHrefMain,
+                label: navLabels.lobby,
+                icon: navIcons.lobby,
+                active: isLobbyActive,
+                onClick: undefined as any,
+                key: "lobby",
+              },
+              {
+                href: "/home",
+                label: navLabels.home,
+                icon: navIcons.home,
+                active: isHomeActive,
+                onClick: (e: any) => {
+                  e.preventDefault();
+                  try {
+                    leave();
+                  } catch {}
+                  router.push("/home");
                 },
-              ]
-            : []),
-        ].map((item) => (
+                key: "home",
+              },
+              {
+                href: "/forum",
+                label: navLabels.forum,
+                icon: navIcons.forum,
+                active: pathname.startsWith("/forum"),
+                onClick: undefined as any,
+                key: "forum",
+              },
+              {
+                href: "/store",
+                label: navLabels.paper,
+                icon: navIcons.paper,
+                active: pathname.startsWith("/store"),
+                onClick: undefined as any,
+                key: "paper",
+              },
+              {
+                href: "/map",
+                label: navLabels.locator,
+                icon: navIcons.locator,
+                active: pathname.startsWith("/map"),
+                onClick: undefined as any,
+                key: "locator",
+              },
+              ...(globalRole === "GOD" || globalRole === "STAFF" || globalRole === "SUPPORT"
+                ? [
+                    {
+                      href: "/staff",
+                      label: navLabels.ops,
+                      icon: navIcons.ops,
+                      active: pathname.startsWith("/staff"),
+                      onClick: undefined as any,
+                      key: "ops",
+                    },
+                  ]
+                : []),
+            ]
+        ).map((item: any) => (
           <Link
             key={item.key}
             className={
@@ -677,6 +728,8 @@ export default function LeftRail() {
             }
             href={item.href}
             onClick={item.onClick}
+            target={item.target}
+            rel={item.rel}
           >
             <span className="text-[15px] opacity-70">{item.icon}</span>
             <span className="flex-1 font-semibold text-[13px]">{item.label}</span>
@@ -704,12 +757,22 @@ export default function LeftRail() {
 
       <div className="weered-presence">
         <div className="weered-presence-head">
-          <div className="weered-presence-title">Presence</div>
+          <div className="weered-presence-title">{office ? "Reception" : "Presence"}</div>
           <div className="weered-presence-sub">
-            {isLobbyActive && lobbyPresence.length > 0
-              ? `${lobbyPresenceId} · all rooms`
-              : `context: ${getRoomName(rawRoomKey) || (isLobbyActive ? "lobby" : "—")}`}{" "}
-            • {listed.length}
+            {office ? (
+              roomCount > 0 ? (
+                `in the room · ${roomCount}`
+              ) : (
+                "Door open · no one waiting"
+              )
+            ) : (
+              <>
+                {isLobbyActive && lobbyPresence.length > 0
+                  ? `${lobbyPresenceId} · all rooms`
+                  : `context: ${getRoomName(rawRoomKey) || (isLobbyActive ? "lobby" : "—")}`}{" "}
+                • {listed.length}
+              </>
+            )}
           </div>
         </div>
 
@@ -738,7 +801,16 @@ export default function LeftRail() {
             };
 
             const isOperator = uid === "operator";
-            const secondary: React.ReactNode | undefined = isOperator ? (
+            // Office context only: The Operator presents as the house analyst.
+            // Display-level rename; the underlying user object is untouched.
+            // Matched STRICTLY on uid/username "operator" (never by display name,
+            // so a real user named "The Operator" is never silently renamed).
+            const isFathom =
+              office && (isOperator || String(u?.username || "").toLowerCase() === "operator");
+            const displayName = isFathom ? "Fathom" : nm;
+            const secondary: React.ReactNode | undefined = isFathom ? (
+              <span style={{ color: "rgba(163,180,202,.72)" }}>Analyst</span>
+            ) : isOperator ? (
               <span style={{ color: "rgba(212,160,23,.7)", fontStyle: "italic" }}>
                 AI · @operator
               </span>
@@ -748,14 +820,22 @@ export default function LeftRail() {
               <div
                 key={rid}
                 onMouseEnter={(e) => {
-                  if (uid) openHover(uid, nm, e.currentTarget, { isAway: !!u?.isAway });
+                  // Fathom's hover card would fetch the real Operator profile
+                  // (name, AI badge, tier chrome), breaking the office rename
+                  // mid-meeting; suppress it there.
+                  if (uid && !isFathom)
+                    openHover(uid, displayName, e.currentTarget, { isAway: !!u?.isAway });
                 }}
                 onMouseLeave={() => scheduleClose(160)}
-                style={you ? { background: "rgba(124,58,237,0.04)", borderRadius: 10 } : undefined}
+                style={
+                  you && !office
+                    ? { background: "rgba(124,58,237,0.04)", borderRadius: 10 }
+                    : undefined
+                }
                 className="weered-presence-row"
               >
                 <PresenceRow
-                  name={nm}
+                  name={displayName}
                   userId={u?.id}
                   avatar={u?.avatar}
                   avatarColor={u?.avatarColor}
@@ -781,9 +861,11 @@ export default function LeftRail() {
             );
           })}
           {!listed.length ? (
-            <div className="weered-muted" style={{ padding: 10 }}>
-              No users.
-            </div>
+            office ? null : (
+              <div className="weered-muted" style={{ padding: 10 }}>
+                No users.
+              </div>
+            )
           ) : null}
         </div>
       </div>
@@ -797,7 +879,7 @@ export default function LeftRail() {
               className="weered-left-title"
               style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}
             >
-              <span>Favorites</span>
+              <span>{office ? "Clients" : "Favorites"}</span>
               <span style={{ fontSize: 10, opacity: 0.4 }}>{favs.length}</span>
             </div>
             {favs.map((room) => {
@@ -971,7 +1053,7 @@ export default function LeftRail() {
                 marginTop: favs.length ? 10 : 0,
               }}
             >
-              <span>Recent</span>
+              <span>{office ? "Recent reviews" : "Recent"}</span>
               <span style={{ fontSize: 10, opacity: 0.4 }}>{recentRooms.length}</span>
             </div>
             {recentRooms.map((room) => {
@@ -1153,7 +1235,7 @@ export default function LeftRail() {
 
         {favs.length === 0 && recentRooms.length === 0 && (
           <div style={{ fontSize: 11, opacity: 0.3, padding: "2px 0 4px", fontStyle: "italic" }}>
-            Join a room to build your history
+            {office ? "Reviews you open will appear here" : "Join a room to build your history"}
           </div>
         )}
       </div>
