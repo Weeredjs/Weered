@@ -38,6 +38,13 @@ html[data-office-skin]{
   --weered-scrollbar-track:rgba(255,255,255,.04)!important;
   --weered-scrollbar-thumb:rgba(163,180,202,.24)!important;
   --weered-scrollbar-thumb-hover:rgba(163,180,202,.40)!important;
+  /* chrome-min re-declares these with !important at equal specificity; this sheet
+     is injected last so these win. --weered-user-panel-accent/-bg color the
+     chamfered section banners (the "chevron hats") + backplates directly — the
+     geometry (clip-path taper, insets) is chrome-min's and stays untouched. */
+  --weered-accent:#C6A15B!important;
+  --weered-user-panel-accent:#16345C!important;
+  --weered-user-panel-bg:#0F2440!important;
 }
 
 /* ============ GROUND + TYPE ============ */
@@ -67,7 +74,7 @@ html[data-office-skin] label{color:rgba(236,242,250,.95);}
    surfaces directly: lifted navy, top inner-highlight hairline, weighted shadow. */
 html[data-office-skin] .weered-panel,html[data-office-skin] .weered-panel2,
 html[data-office-skin] .weered-left,html[data-office-skin] .weered-right,
-html[data-office-skin] .weered-presence,html[data-office-skin] .weered-icon-strip,
+html[data-office-skin] .weered-icon-strip,
 html[data-office-skin] .weered-overlay-panel{
   background:linear-gradient(180deg,#152F52 0%,#122A4A 100%)!important;
   border:0!important;border-radius:8px!important;
@@ -78,7 +85,15 @@ html[data-office-skin] .weered-usercorner{
   box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 0 0 1px #1E3A5F,0 8px 24px rgba(0,0,0,.35)!important;
 }
 html[data-office-skin] .weered-usercorner:hover{background:linear-gradient(180deg,#173357 0%,#142C4E 100%)!important;border-color:transparent!important;}
-html[data-office-skin] .weered-left-section{border:0!important;border-radius:8px!important;box-shadow:0 0 0 1px #1E3A5F!important;}
+/* Chevron sections (.weered-left-section / .weered-presence): chrome-min draws them
+   as a tapered banner "hat" (::before, inset right:8px) over a backplate (::after,
+   inset right:24px) — DELIBERATELY narrower than the section box. Never ring or
+   radius the section itself: any outline traces the invisible full-width box and
+   floats past the visible plates (the "borders all around" bug). Color comes from
+   the --weered-user-panel-* vars in the token block; geometry stays chrome-min's. */
+html[data-office-skin] .weered-left-section,html[data-office-skin] .weered-presence{
+  background:transparent!important;border:0!important;border-radius:0!important;box-shadow:none!important;
+}
 html[data-office-skin] .weered-rr-create-panel,html[data-office-skin] .weered-rr-mod-panel,
 html[data-office-skin] .weered-lobby-tabs,html[data-office-skin] .weered-dock-tabs{
   background:#0C2140!important;border:0!important;border-radius:6px!important;
@@ -141,6 +156,15 @@ html[data-office-skin] .weered-lobby-tab-active{
 html[data-office-skin] .weered-left-link-active::before,html[data-office-skin] .weered-dock-tab-active::before,
 html[data-office-skin] .weered-rr-module-btn-active::before,html[data-office-skin] .weered-rr-room-card-active::before,
 html[data-office-skin] .weered-lobby-tab-active::before{display:none!important;content:none!important;}
+/* chrome-min's ".weered-left .weered-left-link-active" purple outranks the generic
+   actives rule above — match its specificity (this sheet is later, so it wins).
+   Nav actives read from a gold LEFT edge (an underline looks odd on full-width rows). */
+html[data-office-skin] .weered-left .weered-left-link-active{
+  background:rgba(255,255,255,.05)!important;border-color:transparent!important;
+  color:rgba(236,242,250,.95)!important;
+  box-shadow:inset 2px 0 0 #C6A15B!important;
+}
+html[data-office-skin] .weered-rr-room-card-active{box-shadow:inset 2px 0 0 #C6A15B,0 0 0 1px #1E3A5F!important;}
 
 /* ============ BUTTONS + INPUTS ============ */
 html[data-office-skin] .weered-btn,html[data-office-skin] .weered-btnX,
@@ -264,6 +288,21 @@ html[data-office-skin] .weered-rail-tab:hover{border-color:#2C4E7C!important;box
 html[data-office-skin] .weered-rail-tab:hover .weered-rail-tab-label,
 html[data-office-skin] .weered-overlay-close:hover{color:#D9B878!important;}
 html[data-office-skin] .weered-rail-tab-glow{animation:none!important;box-shadow:none!important;border-color:#1E3A5F!important;}
+/* chrome-min paints purple left-edge bars (inset box-shadows + a ::before strip) on
+   the collapsed rail stack + quick tab — hairline navy at rest, gold on hover/active */
+html[data-office-skin] .weered-rail-quick::before{background:#C6A15B!important;}
+html[data-office-skin] .weered-rail-quick,html[data-office-skin] .weered-rail-quick:hover{
+  animation:none!important;
+  box-shadow:inset 2px 0 0 #C6A15B,inset 0 1px 0 rgba(255,255,255,.05)!important;
+}
+html[data-office-skin] .weered-rail-stack .weered-rail-tab{box-shadow:inset 3px 0 0 #1E3A5F!important;}
+html[data-office-skin] .weered-rail-stack .weered-rail-tab:hover{box-shadow:inset 3px 0 0 #C6A15B!important;}
+/* chrome-min re-purples the dock's accent vars at .weered-dock/.weered-dock-tabs level */
+html[data-office-skin] .weered-dock,html[data-office-skin] .weered-dock-tabs{
+  --weered-accent:#C6A15B!important;
+  --weered-accent-bg:rgba(198,161,91,.14)!important;--weered-accent-ring:rgba(198,161,91,.40)!important;
+}
+html[data-office-skin] .weered-modules-chip{background:rgba(255,255,255,.05)!important;color:rgba(163,180,202,.8)!important;}
 html[data-office-skin] .weered-overlay-close:hover{background:rgba(198,161,91,.12)!important;border-color:rgba(198,161,91,.3)!important;}
 html[data-office-skin] .weered-mobile-nav-btn{color:rgba(163,180,202,.6)!important;}
 html[data-office-skin] .weered-mobile-nav-btn-active{background:rgba(255,255,255,.06)!important;color:rgba(236,242,250,.95)!important;}
@@ -281,23 +320,14 @@ html[data-office-skin] .weered-rail-logo:hover img{
 }
 html[data-office-skin] .weered-rail-logo:hover{transform:none!important;}
 
-/* ============ SVG BANNER + WRAPPER RECOLOR (battle-tested filters) ============ */
-/* The chamfered section/header banners are SVG data-URI backgrounds on pseudos —
-   purple is baked inside the SVG, unreachable by color selectors. Filter the whole
-   pseudo. Re-tuned purple -> desaturated steel (sits inside the navy system; gold
-   stays reserved for the one accent per surface). */
-html[data-office-skin] [class*="-section"]::before,html[data-office-skin] [class*="-section"]::after,
-html[data-office-skin] [class*="-head"]::before,html[data-office-skin] [class*="-head"]::after,
-html[data-office-skin] [class*="weered-me"]::before,html[data-office-skin] [class*="weered-me"]::after,
-html[data-office-skin] [class*="weered-uc"]::before,html[data-office-skin] [class*="weered-uc"]::after,
-html[data-office-skin] .weered-presence::before,html[data-office-skin] .weered-presence::after{
-  filter:grayscale(1) sepia(1) hue-rotate(178deg) saturate(1.5) brightness(.92)!important;
-}
-/* UserCorner banner strip + PRESENCE header carry purple on children/pseudos/tier
-   SVGs that per-element rules miss — filter the wrapper (recolors everything inside). */
-html[data-office-skin] .weered-usercorner,
-html[data-office-skin] .weered-presence-head{
-  filter:grayscale(1) sepia(1) hue-rotate(178deg) saturate(1.5) brightness(.92)!important;
+/* ============ BANNER RECOLOR — vars, not filters ============ */
+/* In rooms (chrome-min) the chamfered banners are FLAT fills of
+   --weered-user-panel-accent / -bg, remapped to navy in the token block; the old
+   grayscale/sepia/hue-rotate filters double-processed those flats into blue-shifted
+   mud and are gone. Kept only for the UserCorner tier art (an actual SVG/image the
+   vars cannot reach) — and UserCorner only renders outside office rooms anyway. */
+html[data-office-skin] [class*="weered-uc"]::before,html[data-office-skin] [class*="weered-uc"]::after{
+  filter:grayscale(1) sepia(1) hue-rotate(178deg) saturate(1.2) brightness(.92)!important;
 }
 /* The uc banner ground itself (tier art / custom banner) -> plain lifted navy */
 html[data-office-skin] .weered-uc-banner{background:linear-gradient(180deg,#16335B 0%,#122A4A 100%)!important;}
@@ -312,8 +342,11 @@ html[data-office-skin] [style*="196, 181, 253"],
 html[data-office-skin] [style*="109, 40, 217"],
 html[data-office-skin] [style*="91, 33, 182"],
 html[data-office-skin] [style*="76, 29, 149"]{
-  background-image:none!important;background-color:rgba(198,161,91,.10)!important;
-  border-color:rgba(198,161,91,.32)!important;box-shadow:none!important;
+  /* NAVY wash, not gold: gold-tinted washes on large surfaces (the voice banner,
+     the bottom module bar) read as olive/brown against the ink ground. Gold stays
+     reserved for the few deliberate accents declared explicitly. */
+  background-image:none!important;background-color:rgba(30,58,95,.42)!important;
+  border-color:#2C4E7C!important;box-shadow:none!important;
 }
 /* Solid purple buttons (Join voice #7c3aed -> rgb(124, 58, 237)): lifted navy key
    with a single gold hairline — gold is never a fill in this room */
@@ -324,17 +357,17 @@ html[data-office-skin] button[style*="124, 58, 237"]{
 }
 
 /* ============ TAILWIND VIOLET/PURPLE/INDIGO NEUTRALIZERS ============ */
-html[data-office-skin] [class*="bg-violet"],html[data-office-skin] [class*="bg-purple"],html[data-office-skin] [class*="bg-indigo"],html[data-office-skin] [class*="bg-fuchsia"]{background-color:rgba(198,161,91,.14)!important;background-image:none!important;}
+html[data-office-skin] [class*="bg-violet"],html[data-office-skin] [class*="bg-purple"],html[data-office-skin] [class*="bg-indigo"],html[data-office-skin] [class*="bg-fuchsia"]{background-color:rgba(198,208,220,.08)!important;background-image:none!important;}
 /* the live-presence dot stays a visible solid indicator (neutral steel, not a gold slab) */
 html[data-office-skin] [class*="bg-violet-400"]{background-color:rgba(163,180,202,.7)!important;}
 /* brand accents on active Broadcast/Walkthrough pills (Twitch purple, YouTube red serialize inline) */
-html[data-office-skin] [style*="145, 70, 255"]{background-color:rgba(198,161,91,.14)!important;border-color:#1E3A5F!important;box-shadow:none!important;color:rgba(236,242,250,.95)!important;}
+html[data-office-skin] [style*="145, 70, 255"]{background-color:rgba(30,58,95,.42)!important;border-color:#1E3A5F!important;box-shadow:none!important;color:rgba(236,242,250,.95)!important;}
 html[data-office-skin] [class*="text-violet"],html[data-office-skin] [class*="text-purple"],html[data-office-skin] [class*="text-indigo"]{color:rgba(217,184,120,.95)!important;}
-html[data-office-skin] [class*="border-violet"],html[data-office-skin] [class*="border-purple"],html[data-office-skin] [class*="border-indigo"]{border-color:rgba(198,161,91,.32)!important;}
+html[data-office-skin] [class*="border-violet"],html[data-office-skin] [class*="border-purple"],html[data-office-skin] [class*="border-indigo"]{border-color:#2C4E7C!important;}
 html[data-office-skin] [class*="from-violet"],html[data-office-skin] [class*="via-violet"],html[data-office-skin] [class*="to-violet"],
 html[data-office-skin] [class*="from-purple"],html[data-office-skin] [class*="via-purple"],html[data-office-skin] [class*="to-purple"],
 html[data-office-skin] [class*="from-indigo"],html[data-office-skin] [class*="via-indigo"],html[data-office-skin] [class*="to-indigo"]{
-  --tw-gradient-from:rgba(198,161,91,.22)!important;--tw-gradient-to:rgba(198,161,91,.03)!important;
+  --tw-gradient-from:rgba(44,78,124,.35)!important;--tw-gradient-to:rgba(44,78,124,.05)!important;
   --tw-gradient-stops:var(--tw-gradient-from),var(--tw-gradient-to)!important;
 }
 /* shadow-[...purple...] glow utilities */
