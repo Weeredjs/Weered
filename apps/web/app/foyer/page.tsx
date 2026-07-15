@@ -75,6 +75,13 @@ function makeRoomConn(opts: {
 }) {
   const ref: { current: Room | null } = { current: null };
   const connId = `c${++_connSeq}`;
+  // Connection generation. Every connect() and disconnect() bumps it; an in-flight
+  // connect() re-checks it after each await and ABORTS if superseded. Without this,
+  // disconnect() during connect()'s token fetch is a no-op (ref not yet assigned) and
+  // the stale connect survives to stomp ref.current / linger as a zombie Room — the
+  // exact race behind "guest drops right after a fast admit" (the arrival knock can
+  // now be answered while the foyer connect is still in flight).
+  let gen = 0;
 
   function addTile(pid: string, label: string, video: HTMLVideoElement) {
     const host = opts.tilesEl();
@@ -141,6 +148,7 @@ function makeRoomConn(opts: {
 
   // returns the real mic state after connect (false if mic was denied/absent)
   async function connect(roomId: string, micWanted: boolean): Promise<{ micOn: boolean }> {
+    const myGen = ++gen; // supersedes any older in-flight connect
     const vr = await fetch(`${API}/voice/token`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${opts.getToken()}` },
@@ -148,6 +156,9 @@ function makeRoomConn(opts: {
     });
     if (!vr.ok) throw new Error("Couldn't start audio/video.");
     const { url, token: lkToken } = await vr.json();
+    // A disconnect()/newer connect() won while we fetched the token: abort BEFORE
+    // creating a Room or touching ref (the ref-stomp half of the fast-admit race).
+    if (myGen !== gen) throw new Error("superseded");
     const r = new Room({ adaptiveStream: true, dynacast: true });
     ref.current = r;
 
@@ -230,6 +241,13 @@ function makeRoomConn(opts: {
     });
 
     await r.connect(url, lkToken);
+    // Superseded while LiveKit connected: hand the zombie straight back. Null ref
+    // only if it is still ours (a newer connect may already own it).
+    if (myGen !== gen) {
+      if (ref.current === r) ref.current = null;
+      teardownRoom(r);
+      throw new Error("superseded");
+    }
     // Mic-deny is non-fatal: a participant with no/denied mic still joins listen/watch-only.
     let micOn = false;
     if (micWanted) {
@@ -240,6 +258,7 @@ function makeRoomConn(opts: {
         /* listen-only */
       }
     }
+    if (myGen !== gen) throw new Error("superseded"); // torn down by whoever superseded us
     opts.onRoster();
     return { micOn };
   }
@@ -254,6 +273,7 @@ function makeRoomConn(opts: {
   }
 
   function disconnect() {
+    gen++; // abort any in-flight connect at its next checkpoint
     const r = ref.current;
     ref.current = null; // do this first so trailing events early-return
     teardownRoom(r);
@@ -518,6 +538,11 @@ function ClientView({
         if (epoch === switchEpoch.current) setCamOn(cam);
       }
       if (epoch === switchEpoch.current) refreshClientRoster();
+    } catch (e: any) {
+      // A superseded connect (a newer switch/disconnect won) is expected and silent;
+      // anything else keeps its previous behavior (propagates).
+      if (epoch !== switchEpoch.current || String(e?.message || "").includes("superseded")) return;
+      throw e;
     } finally {
       if (epoch === switchEpoch.current) leaving.current = false;
     }
