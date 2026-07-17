@@ -264,9 +264,20 @@ let broadcastToLobbyRef: ((lobbyId: string, event: any) => void) | undefined;
 async function seedLobbies() {
   for (const l of SEED_LOBBIES) {
     try {
+      // Seed copy is BOOTSTRAP-ONLY for anything an admin can edit live:
+      // moduleConfig (linked subreddits, twitch category, …) is only filled
+      // when the row has none, so admin changes survive every restart.
+      const existing = await prisma.lobby.findUnique({
+        where: { id: l.id },
+        select: { moduleConfig: true },
+      });
       await prisma.lobby.upsert({
         where: { id: l.id },
-        update: { pinned: true, moduleType: l.moduleType, moduleConfig: l.moduleConfig as any },
+        update: {
+          pinned: true,
+          moduleType: l.moduleType,
+          ...(existing?.moduleConfig != null ? {} : { moduleConfig: l.moduleConfig as any }),
+        },
         create: {
           id: l.id,
           name: l.name,
@@ -293,11 +304,10 @@ async function seedLobbies() {
       await prisma.room.upsert({
         where: { id: r.id },
         update: {
-          name: r.name,
-          description: r.description,
+          // Only re-assert placement + pinned. Name/description/defaultModule
+          // are seeded on CREATE; live edits + room flair survive restarts.
           lobbyId: r.lobbyId,
           pinned: true,
-          ...(r.defaultModule !== undefined ? { defaultModule: r.defaultModule } : {}),
         },
         create: {
           id: r.id,
