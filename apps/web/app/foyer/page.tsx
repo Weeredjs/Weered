@@ -910,6 +910,16 @@ function ClientView({
   const inOffice = phase === "office";
   return (
     <div style={S.live}>
+      <style>{`
+        .fx-ctl:hover{background:rgba(16,35,63,.07)!important;border-color:rgba(16,35,63,.42)!important}
+        .fx-leave:hover{background:rgba(181,74,68,.1)!important;border-color:rgba(181,74,68,.45)!important;color:#9B3B36!important}
+        .fx-row{transition:background-color 200ms}
+        .fx-row:hover{background:rgba(255,255,255,.035)}
+        .fx-send:hover{filter:brightness(1.06)}
+        .fx-send:active{filter:brightness(.97)}
+        .fx-input:focus{outline:none;border-color:rgba(198,161,91,.5)!important}
+        @keyframes fxpulse{0%,100%{opacity:1}50%{opacity:.4}}
+      `}</style>
       {/* Receiving: a ~700ms held door, then a single settled cross-fade. Visual only. */}
       {inOffice && entry !== "in" && (
         <div style={{ ...S.overlay, opacity: entry === "hold" ? 1 : 0 }}>
@@ -931,7 +941,37 @@ function ClientView({
       >
         <header style={inOffice ? S.paperBar : S.bar}>
           {inOffice ? (
-            <div style={S.paperTitle}>East Coast Employee Benefits · The Review Room</div>
+            <div style={S.letterhead}>
+              <span style={S.seal}>
+                <svg
+                  width="17"
+                  height="17"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#A8853F"
+                  strokeWidth={1.6}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                  style={{ display: "block" }}
+                >
+                  <circle cx="12" cy="5" r="2.4" />
+                  <line x1="12" y1="7.4" x2="12" y2="21" />
+                  <line x1="7.5" y1="10.5" x2="16.5" y2="10.5" />
+                  <path d="M5 16a7 5 0 0 0 14 0" />
+                </svg>
+              </span>
+              <div>
+                <div style={S.lhKicker}>East Coast Employee Benefits</div>
+                <div style={S.lhTitle}>
+                  The Review Room
+                  <span style={S.livePill}>
+                    <span style={S.liveDot} />
+                    Live
+                  </span>
+                </div>
+              </div>
+            </div>
           ) : (
             <div>
               <div style={S.kicker}>East Coast Employee Benefits</div>
@@ -939,23 +979,46 @@ function ClientView({
             </div>
           )}
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <button style={inOffice ? S.ctlPaper : S.ctl} onClick={toggleMic}>
+            <button
+              className="fx-ctl"
+              style={inOffice ? S.ctlPaper : S.ctl}
+              onClick={toggleMic}
+              title={micOn ? "Mute microphone" : "Unmute microphone"}
+            >
+              <IcMic on={micOn} />
               {micOn ? "Mute" : "Unmute"}
             </button>
-            <button style={inOffice ? S.ctlPaper : S.ctl} onClick={toggleCam}>
+            <button
+              className="fx-ctl"
+              style={inOffice ? S.ctlPaper : S.ctl}
+              onClick={toggleCam}
+              title={camOn ? "Stop your camera" : "Start your camera"}
+            >
+              <IcVideo on={camOn} />
               {camOn ? "Stop video" : "Start video"}
             </button>
             <button
+              className="fx-ctl"
               style={
                 inOffice
-                  ? { ...S.ctlPaper, background: screenOn ? "rgba(16,35,63,.08)" : "transparent" }
+                  ? screenOn
+                    ? { ...S.ctlPaper, ...S.ctlActive }
+                    : S.ctlPaper
                   : { ...S.ctl, background: screenOn ? "#1E3A5F" : "#122A4A" }
               }
               onClick={toggleScreen}
+              title={screenOn ? "Stop sharing your screen" : "Share your screen"}
             >
+              <IcScreen />
               {screenOn ? "Stop sharing" : "Share screen"}
             </button>
-            <button style={inOffice ? S.ctlPaper : S.ctl} onClick={leave}>
+            <button
+              className="fx-ctl fx-leave"
+              style={inOffice ? S.ctlPaper : S.ctl}
+              onClick={leave}
+              title="Leave the review"
+            >
+              <IcExit />
               Leave
             </button>
           </div>
@@ -1002,29 +1065,40 @@ function ClientView({
               {inOffice ? "In the room" : "Reception"} ({roster.length})
             </div>
             <ul style={S.roster}>
-              {roster.map((p) => (
-                <li key={p.id} style={S.rosterItem}>
-                  {p.name}
-                </li>
-              ))}
+              {roster.map((p) => {
+                const nm = (p.name || "Guest").replace(/\s*\(you\)\s*/i, "");
+                const isYou = p.id === selfId.current;
+                const initial = nm.trim().charAt(0).toUpperCase() || "·";
+                return (
+                  <li key={p.id} className="fx-row" style={S.rosterItem}>
+                    <span style={S.medallion}>{initial}</span>
+                    <span style={S.rosterName}>{nm}</span>
+                    {isYou && <span style={S.youTag}>You</span>}
+                    <span style={S.presDot} />
+                  </li>
+                );
+              })}
             </ul>
             <div style={S.sideHead}>Chat</div>
             <div style={S.chat}>
+              {messages.length === 0 && <div style={S.chatEmpty}>No messages yet.</div>}
               {messages.map((m) => (
                 <div key={m.id} style={S.msg}>
-                  <b style={S.msgName}>{m.name}:</b> {m.body}
+                  <span style={S.msgName}>{m.name}</span>
+                  <span style={S.msgBody}>{m.body}</span>
                 </div>
               ))}
             </div>
             <div style={S.chatBar}>
               <input
+                className="fx-input"
                 style={S.chatInput}
                 value={chatInput}
                 onChange={(e) => setChatInput(e.target.value)}
                 placeholder="Message"
                 onKeyDown={(e) => e.key === "Enter" && sendChat()}
               />
-              <button style={S.send} onClick={sendChat}>
+              <button className="fx-send" style={S.send} onClick={sendChat}>
                 Send
               </button>
             </div>
@@ -1500,6 +1574,89 @@ function HostView({ jwt, title, accent }: { jwt: string; title: string; accent: 
 }
 
 // ============================================================================
+// Client-room control glyphs — stroke icons matched to the anchor's line weight.
+function IcMic({ on }: { on: boolean }) {
+  return (
+    <svg
+      width="13"
+      height="13"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.7}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      style={{ flexShrink: 0 }}
+    >
+      <rect x="9" y="2.5" width="6" height="11" rx="3" />
+      <path d="M5 11a7 7 0 0 0 14 0" />
+      <line x1="12" y1="18" x2="12" y2="21.5" />
+      {!on && <line x1="3.5" y1="3" x2="20.5" y2="21" />}
+    </svg>
+  );
+}
+function IcVideo({ on }: { on: boolean }) {
+  return (
+    <svg
+      width="13"
+      height="13"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.7}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      style={{ flexShrink: 0 }}
+    >
+      <rect x="3" y="6" width="13" height="12" rx="2" />
+      <path d="M16 10l5-2.5v9L16 14" />
+      {!on && <line x1="3.5" y1="3.5" x2="20.5" y2="20.5" />}
+    </svg>
+  );
+}
+function IcScreen() {
+  return (
+    <svg
+      width="13"
+      height="13"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.7}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      style={{ flexShrink: 0 }}
+    >
+      <rect x="3" y="4" width="18" height="13" rx="2" />
+      <line x1="9" y1="21" x2="15" y2="21" />
+      <line x1="12" y1="17" x2="12" y2="21" />
+    </svg>
+  );
+}
+function IcExit() {
+  return (
+    <svg
+      width="13"
+      height="13"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.7}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      style={{ flexShrink: 0 }}
+    >
+      <path d="M14 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3" />
+      <path d="M10 8l-4 4 4 4" />
+      <line x1="6" y1="12" x2="15" y2="12" />
+    </svg>
+  );
+}
+
 const S: Record<string, CSSProperties> = {
   // The Review Room shell: ink-navy ground, milled panels, hairline rules,
   // satin brass used once per surface, serif figures with tabular numerals.
@@ -1647,6 +1804,9 @@ const S: Record<string, CSSProperties> = {
   },
   paperTitle: { fontFamily: SERIF, fontSize: 14, color: PAPER_INK, letterSpacing: ".01em" },
   ctl: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 6,
     padding: "6px 12px",
     borderRadius: 4,
     border: "1px solid #1E3A5F",
@@ -1658,15 +1818,24 @@ const S: Record<string, CSSProperties> = {
     transition: `background-color 260ms ${EASE}`,
   },
   ctlPaper: {
-    padding: "4px 10px",
-    borderRadius: 4,
-    border: "1px solid rgba(16,35,63,.3)",
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 6,
+    padding: "5px 11px",
+    borderRadius: 5,
+    border: "1px solid rgba(16,35,63,.22)",
     background: "transparent",
     color: PAPER_INK,
     cursor: "pointer",
     fontSize: 12.5,
+    fontWeight: 600,
     fontFamily: UIFONT,
-    transition: `background-color 260ms ${EASE}`,
+    transition: `background-color 200ms ${EASE}, border-color 200ms ${EASE}`,
+  },
+  ctlActive: {
+    background: "rgba(198,161,91,.16)",
+    borderColor: "rgba(168,133,63,.5)",
+    color: "#7A5E22",
   },
   banner: { padding: "10px 16px", fontSize: 14, fontWeight: 600, color: INK_TEXT },
   body: { flex: 1, display: "flex", minHeight: 0 },
@@ -1698,7 +1867,8 @@ const S: Record<string, CSSProperties> = {
     borderLeft: "1px solid #1E3A5F",
     display: "flex",
     flexDirection: "column",
-    background: "#122A4A",
+    background: "linear-gradient(180deg, #143257, #112846 60%)",
+    boxShadow: "inset 0 1px 0 rgba(255,255,255,.05)",
     overflow: "auto",
   },
   sideHead: {
@@ -1711,8 +1881,49 @@ const S: Record<string, CSSProperties> = {
     borderBottom: "1px solid #1E3A5F",
     fontVariantNumeric: "tabular-nums lining-nums",
   },
-  roster: { listStyle: "none", margin: 0, padding: "6px 0", maxHeight: 220, overflow: "auto" },
-  rosterItem: { padding: "6px 14px", fontSize: 14, color: INK_TEXT },
+  roster: { listStyle: "none", margin: 0, padding: "6px 0", maxHeight: 240, overflow: "auto" },
+  rosterItem: {
+    display: "flex",
+    alignItems: "center",
+    gap: 10,
+    padding: "7px 14px",
+    fontSize: 14,
+    color: INK_TEXT,
+  },
+  medallion: {
+    width: 26,
+    height: 26,
+    borderRadius: "50%",
+    flexShrink: 0,
+    display: "grid",
+    placeItems: "center",
+    fontFamily: SERIF,
+    fontSize: 13,
+    color: "rgba(224,233,245,.9)",
+    background: "linear-gradient(180deg, #1B3B62, #102542)",
+    border: "1px solid #2A4E73",
+    boxShadow: "inset 0 1px 0 rgba(255,255,255,.08)",
+  },
+  rosterName: { flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
+  youTag: {
+    fontFamily: UIFONT,
+    fontSize: 9,
+    fontWeight: 700,
+    letterSpacing: ".12em",
+    textTransform: "uppercase",
+    color: "#C6A15B",
+    border: "1px solid rgba(198,161,91,.4)",
+    borderRadius: 999,
+    padding: "1px 6px",
+  },
+  presDot: {
+    width: 7,
+    height: 7,
+    borderRadius: "50%",
+    flexShrink: 0,
+    background: "#6E8CA8",
+    boxShadow: "0 0 0 2px rgba(110,140,168,.15)",
+  },
   miniBtn: {
     padding: "3px 10px",
     borderRadius: 4,
@@ -1745,8 +1956,16 @@ const S: Record<string, CSSProperties> = {
     minHeight: 80,
     color: INK_TEXT,
   },
-  msg: { marginBottom: 6, lineHeight: 1.35 },
-  msgName: { color: INK_TEXT },
+  msg: { marginBottom: 9, lineHeight: 1.4, display: "flex", flexDirection: "column" },
+  msgName: {
+    color: "#8FA6C2",
+    fontSize: 11,
+    fontWeight: 700,
+    letterSpacing: ".03em",
+    marginBottom: 1,
+  },
+  msgBody: { color: INK_TEXT, fontSize: 14 },
+  chatEmpty: { color: MUTED_TEXT, fontSize: 13, fontStyle: "italic", padding: "2px 0" },
   chatBar: { display: "flex", gap: 6, padding: 10, borderTop: "1px solid #1E3A5F" },
   chatInput: {
     flex: 1,
@@ -1758,14 +1977,70 @@ const S: Record<string, CSSProperties> = {
     fontFamily: UIFONT,
   },
   send: {
-    padding: "8px 12px",
-    borderRadius: 4,
-    border: "1px solid #1E3A5F",
-    background: "#122A4A",
-    color: INK_TEXT,
-    fontWeight: 600,
+    padding: "8px 14px",
+    borderRadius: 5,
+    border: "1px solid #A8853F",
+    background: GOLD_GRAD,
+    color: PAPER_INK,
+    fontWeight: 700,
     fontFamily: UIFONT,
     cursor: "pointer",
-    transition: `background-color 260ms ${EASE}`,
+    transition: `filter 200ms ${EASE}`,
+  },
+  letterhead: { display: "flex", alignItems: "center", gap: 12 },
+  seal: {
+    width: 34,
+    height: 34,
+    borderRadius: "50%",
+    flexShrink: 0,
+    display: "grid",
+    placeItems: "center",
+    background: "radial-gradient(120% 120% at 50% 22%, #FCFAF3, #EDE6D6)",
+    border: "1px solid rgba(168,133,63,.5)",
+    boxShadow:
+      "inset 0 1px 0 rgba(255,255,255,.85), inset 0 -1px 2px rgba(16,35,63,.1), 0 1px 2px rgba(16,35,63,.18)",
+  },
+  lhKicker: {
+    fontFamily: UIFONT,
+    fontSize: 9,
+    fontWeight: 700,
+    letterSpacing: ".2em",
+    textTransform: "uppercase",
+    color: "rgba(16,35,63,.5)",
+    lineHeight: 1,
+  },
+  lhTitle: {
+    fontFamily: SERIF,
+    fontSize: 16,
+    color: PAPER_INK,
+    letterSpacing: ".01em",
+    lineHeight: 1.15,
+    marginTop: 3,
+    display: "flex",
+    alignItems: "center",
+  },
+  livePill: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 5,
+    marginLeft: 9,
+    padding: "2px 8px",
+    borderRadius: 999,
+    border: "1px solid rgba(16,35,63,.2)",
+    background: "rgba(16,35,63,.04)",
+    fontFamily: UIFONT,
+    fontSize: 8.5,
+    fontWeight: 700,
+    letterSpacing: ".16em",
+    textTransform: "uppercase",
+    color: "rgba(16,35,63,.6)",
+  },
+  liveDot: {
+    width: 6,
+    height: 6,
+    borderRadius: "50%",
+    background: "#C6A15B",
+    boxShadow: "0 0 0 2px rgba(198,161,91,.25)",
+    animation: "fxpulse 2.4s ease-in-out infinite",
   },
 };
