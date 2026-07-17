@@ -149,7 +149,7 @@ const CSS = `
   --gold:#C6A15B; --gold-hi:#D9B878;
   --hot:#B54A44; --warn:#C99B3F; --good:#3E7D5C;
   --ease:${EASE};
-  --serif:Georgia,'Iowan Old Style',Cambria,'Times New Roman',serif;
+  --serif:'Iowan Old Style','Palatino Linotype','Book Antiqua',Cambria,Georgia,'Times New Roman',serif;
   --sans:'Segoe UI',Inter,system-ui,-apple-system,sans-serif;
   background:var(--paper);
   background-image:${GRAIN};
@@ -165,7 +165,13 @@ const CSS = `
 @media(max-width:640px){.fdoc .page{padding:34px 22px 32px;}}
 .fdoc .num{font-family:var(--serif);font-variant-numeric:tabular-nums lining-nums;}
 .fdoc .kick{font-family:var(--sans);font-size:10.5px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-mute);}
-.fdoc h1{font-family:var(--serif);font-weight:400;font-size:clamp(28px,4.4vw,40px);line-height:1.12;letter-spacing:-.005em;margin:10px 0 0;color:var(--ink);}
+/* ECEB wordmark rendered in the doc's ink via a CSS mask (the only shipped asset
+   is a white logo; masking a navy fill by its alpha gives an exact-color mark on
+   paper with no separate dark asset). */
+.fdoc .eceb-mark{width:154px;height:57px;background:var(--ink);-webkit-mask:url(/brand/eceb-logo-white.png) left center / contain no-repeat;mask:url(/brand/eceb-logo-white.png) left center / contain no-repeat;}
+.fdoc footer .eceb-mark-sm{width:112px;height:42px;background:var(--ink-mute);-webkit-mask:url(/brand/eceb-logo-white.png) center / contain no-repeat;mask:url(/brand/eceb-logo-white.png) center / contain no-repeat;margin:2px auto 8px;}
+.fdoc h1{font-family:var(--serif);font-weight:400;font-size:clamp(29px,4.6vw,43px);line-height:1.1;letter-spacing:-.012em;margin:12px 0 0;color:var(--ink)!important;}
+.fdoc h2,.fdoc h3,.fdoc h4{color:var(--ink)!important;}
 .fdoc .subline{font-size:13px;color:var(--ink-mute);margin-top:10px;font-variant-numeric:tabular-nums lining-nums;}
 .fdoc .rule{border:0;border-top:1px solid var(--hair);margin:0;}
 .fdoc .rule.soft{border-top-color:var(--hair-soft);}
@@ -177,7 +183,7 @@ const CSS = `
 .fdoc .seckick::after{content:"";flex:1;border-top:1px solid var(--hair-soft);align-self:center;}
 .fdoc p{margin:0 0 12px;color:var(--ink-soft);max-width:66ch;}
 .fdoc p:last-child{margin-bottom:0;}
-.fdoc strong{color:var(--ink);font-weight:600;}
+.fdoc strong{color:var(--ink)!important;font-weight:600;}
 
 /* THE RECONCILIATION ------------------------------------------------------ */
 .fdoc .recon{display:grid;grid-template-columns:1fr 1fr 1fr;}
@@ -517,7 +523,7 @@ export function PresentationDoc({ data, clientName }: { data: any; clientName?: 
       <main className="page">
         {/* HEADER ----------------------------------------------------------- */}
         <header>
-          <div className="kick">East Coast Employee Benefits</div>
+          <div className="eceb-mark" role="img" aria-label="East Coast Employee Benefits" />
           <h1>The Renewal Review</h1>
           <div className="subline">
             {client}
@@ -846,6 +852,7 @@ export function PresentationDoc({ data, clientName }: { data: any; clientName?: 
           </p>
           <p className="sig">Prepared by East Coast Employee Benefits &middot; Fathom analysis</p>
           <hr className="rule soft" />
+          <div className="eceb-mark-sm" role="img" aria-label="East Coast Employee Benefits" />
           <div className="anchor" aria-hidden="true">
             <Anchor />
           </div>

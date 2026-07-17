@@ -21,6 +21,17 @@ const pctTxt = (p: any): string =>
 const pct2 = (p: any): string =>
   typeof p === "number" ? `${p > 0 ? "+" : ""}${p.toFixed(2)}%` : "—";
 const plainPct = (p: any): string => (typeof p === "number" ? `${p.toFixed(2)}%` : "—");
+// Engine prose sometimes carries full-precision floats ("+60.7369%" / "5.0043%");
+// round any percentage with 3+ decimals to one place. Clean 2-place values
+// (e.g. +14.96%) are left untouched.
+const tidyPct = (s: any): string =>
+  typeof s === "string"
+    ? s.replace(
+        /(\d+)\.(\d{3,})%/g,
+        (_m: string, w: string, d: string) =>
+          (Math.round(parseFloat(w + "." + d) * 10) / 10).toFixed(1) + "%",
+      )
+    : s;
 const rangeTxt = (v: any): string => {
   if (v && typeof v === "object") {
     const lo = typeof v.low === "number" ? money(v.low) : null;
@@ -200,7 +211,7 @@ function FigurePanel({ detail, figures, P }: { detail?: string; figures?: Figure
 // the proposal's appeal basis (both currently flat string lists).
 function DeployableLine({ item, P, head }: { item: Deployable; P: Pal; head: string }) {
   const [open, setOpen] = useState(false);
-  const plain = typeof item === "string" ? item : item.plain;
+  const plain = tidyPct(typeof item === "string" ? item : item.plain);
   if (!hasDetail(item)) {
     return (
       <div style={{ display: "flex", gap: 8, fontSize: 13, padding: "3px 0" }}>
