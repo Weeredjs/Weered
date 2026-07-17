@@ -63,6 +63,7 @@ enum ModuleType {
   EVE
   MINECRAFT
   MTG
+  HLL
 }
 
 model NewsArticle {

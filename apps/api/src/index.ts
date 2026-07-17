@@ -1770,6 +1770,7 @@ async function main() {
     broadcastToLobby,
   });
   await app.register((await import("./routes/helldivers")).default, { authFromHeader });
+  await app.register((await import("./routes/hll")).default, { authFromHeader });
   await app.register(helldiversStratagemsRoutes);
   await app.register(helldiversLoadoutsRoutes, { authFromHeader });
   await app.register(steamRoutes, { authFromHeader, createNotification });

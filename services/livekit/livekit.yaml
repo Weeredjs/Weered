@@ -8,7 +8,7 @@ rtc:
   port_range_end: 50100
   tcp_port: 7881
   use_external_ip: false
-  node_ip: 192.168.0.106
+  node_ip: 142.93.148.29
 keys:
   weered_dev: weered_dev_secret_1234567890
   devkey: devsecret

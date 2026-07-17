@@ -143,6 +143,10 @@ const HelldiversModulesPanel = dynamic(() => import("../../../components/Helldiv
   loading: panelLoading,
   ssr: false,
 });
+const HllModulesPanel = dynamic(() => import("../../../components/HllModulesPanel"), {
+  loading: panelLoading,
+  ssr: false,
+});
 const ForumPage = dynamic(() => import("../../../components/forum/ForumPage"), {
   loading: panelLoading,
   ssr: false,
@@ -203,6 +207,7 @@ const MODULE_GAME_NAMES: Record<string, string> = {
   POE: "Path of Exile",
   WINDROSE: "Windrose",
   EVE: "EVE Online",
+  HLL: "Hell Let Loose",
 };
 
 type LobbyInfo = {
@@ -690,7 +695,8 @@ export default function LobbyIdPage() {
             j.lobby.moduleType === "HELLDIVERS2" ||
             j.lobby.moduleType === "CHESS" ||
             j.lobby.moduleType === "EVE" ||
-            j.lobby.moduleType === "MTG"
+            j.lobby.moduleType === "MTG" ||
+            j.lobby.moduleType === "HLL"
           ) {
             setView("modules");
           } else {
@@ -777,6 +783,7 @@ export default function LobbyIdPage() {
       "CHESS",
       "EVE",
       "MTG",
+      "HLL",
     ]);
     const mt = lobbyInfo?.moduleType || "";
     void DENSE_CHROME;
@@ -813,7 +820,8 @@ export default function LobbyIdPage() {
     lobbyInfo?.moduleType === "HELLDIVERS2" ||
     lobbyInfo?.moduleType === "CHESS" ||
     lobbyInfo?.moduleType === "EVE" ||
-    lobbyInfo?.moduleType === "MTG";
+    lobbyInfo?.moduleType === "MTG" ||
+    lobbyInfo?.moduleType === "HLL";
   const hasLfgBoard = LFG_BOARD_LOBBIES.has(lobbyId);
   const redditSub = REDDIT_TAB_LOBBIES[lobbyId];
   const KNOWN_ACCENTS: Record<string, string> = { gta6: "#e84393" };
@@ -1254,6 +1262,13 @@ export default function LobbyIdPage() {
                     />
                   ) : lobbyInfo?.moduleType === "HELLDIVERS2" ? (
                     <HelldiversModulesPanel
+                      lobbyId={lobbyId}
+                      accentColor={accent}
+                      currentUserId={me?.id}
+                      style={{ flex: 1, minHeight: 0 }}
+                    />
+                  ) : lobbyInfo?.moduleType === "HLL" ? (
+                    <HllModulesPanel
                       lobbyId={lobbyId}
                       accentColor={accent}
                       currentUserId={me?.id}

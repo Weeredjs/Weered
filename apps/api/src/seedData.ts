@@ -267,6 +267,28 @@ export const SEED_LOBBIES = [
     websiteUrl: "https://www.helldivers.com",
   },
   {
+    id: "hll",
+    name: "Hell Let Loose",
+    description:
+      "The 50v50 WWII platoon shooter where the map is won by squads that talk. Weered's Hell Let Loose lobby is built around the thing that actually decides whether you play tonight: the servers. A live server browser with population, current map and region for every community server on the front; a seeding rally board that pings the lobby when a server needs bodies to get from empty to the 40 players where the game comes alive, with live fill tracking so you can watch the push work; an artillery calculator with the real ballistics for the US 155, German 150, Soviet 122 and British 25-pounder; and dispatches straight from the front. Community servers are the backbone of HLL, and seeding them is the hardest job in the game. This lobby exists to make that a coordinated operation instead of a prayer. Enlist, answer a rally, hold the line.",
+    keywords: [
+      "hll",
+      "hell let loose",
+      "ww2",
+      "wwii",
+      "fps",
+      "milsim",
+      "seeding",
+      "artillery",
+      "squad",
+      "team17",
+    ],
+    moduleType: ModuleType.HLL,
+    moduleConfig: { steamAppId: 686810 },
+    accentColor: "#BFA46F",
+    websiteUrl: "https://www.hellletloose.com",
+  },
+  {
     id: "eve",
     name: "EVE Online",
     description:
@@ -900,5 +922,34 @@ export const SEED_ROOMS: {
     name: "Off Topic",
     description: "Whatever isn't about Weered itself. Lowkey vibes, weekend chat.",
     lobbyId: "hq",
+  },
+
+  {
+    id: "hll-command-post",
+    name: "The Command Post",
+    description:
+      "Main voice & chat for the front. War stories, match talk, and finding a squad for tonight.",
+    lobbyId: "hll",
+  },
+  {
+    id: "hll-seeding-ops",
+    name: "Seeding Ops",
+    description:
+      "The rally line. Coordinate seeds, call your server, watch the fill bar climb. Every body counts below 40.",
+    lobbyId: "hll",
+  },
+  {
+    id: "hll-enlistment",
+    name: "Enlistment Office",
+    description:
+      "Unit recruitment. Post your outfit, your server, your schedule, and what kind of soldiers you need.",
+    lobbyId: "hll",
+  },
+  {
+    id: "hll-range",
+    name: "The Range",
+    description:
+      "Tactics school. Artillery math, garrison placement, armor lanes, officer comms. Teach and be taught.",
+    lobbyId: "hll",
   },
 ];
