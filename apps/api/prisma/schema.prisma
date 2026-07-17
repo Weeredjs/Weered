@@ -163,6 +163,8 @@ model CommunityServer {
   host          String
   dashboardUrl  String?
   queryUrl      String?
+  apiKey        String?  // CRCON API key (server-side only; never serialized to clients)
+  bmServerId    String?  // BattleMetrics id — joins this server to rallies for verified seeding
   region        String?
   description   String?
   tags          String[] @default([])

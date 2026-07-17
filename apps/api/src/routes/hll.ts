@@ -3,6 +3,8 @@ import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
 import { createNotification } from "../lib/notifications";
 import { isStaffUser } from "../lib/isStaffUser";
+import { assertSafeUrl } from "../lib/ssrfGuard";
+import { awardNotoriety } from "../lib/notoriety";
 
 // Hell Let Loose. There is no official Team17 API (servers are GSP-rented) —
 // the data plane is BattleMetrics (public server list: name/players/map/region)
@@ -43,6 +45,14 @@ type Rally = {
   createdAt: number;
   expiresAt: number;
   joiners: Map<string, { name: string; at: number }>;
+  // Verified seeding — armed only when the rally's server has a linked CRCON.
+  // seen counts poll hits per user; two sightings ≥1 poll apart = present, not
+  // a drive-by. awarded is the in-memory mirror of the refId-deduped ledger.
+  verify?: {
+    seen: Map<string, number>;
+    awarded: Set<string>;
+    timer: ReturnType<typeof setInterval>;
+  };
 };
 
 export default async function hllRoutes(app: FastifyInstance, opts: Opts = {}) {
@@ -125,14 +135,182 @@ export default async function hllRoutes(app: FastifyInstance, opts: Opts = {}) {
     return s;
   }
 
+  // ---- linked community server (CRCON) ---------------------------------------
+  // A community links its CRCON instance (the de-facto HLL admin tool). Keyless
+  // link = status board only (get_public_info is CRCON's one public endpoint);
+  // an API key unlocks player lists + match history → verified seeding. The
+  // base URL and key NEVER leave the server.
+
+  type Linked = {
+    id: string;
+    name: string;
+    baseUrl: string;
+    apiKey: string | null;
+    bmServerId: string | null;
+    status: string;
+    lastSeenAt: Date | null;
+  };
+  let linkedCache: { row: Linked | null; expiresAt: number } | null = null;
+
+  async function loadLinkedServer(): Promise<Linked | null> {
+    if (linkedCache && linkedCache.expiresAt > Date.now()) return linkedCache.row;
+    try {
+      const row = await prisma.communityServer.findFirst({
+        where: { lobbyId: HLL_LOBBY_ID, framework: "crcon" },
+        orderBy: { createdAt: "asc" },
+      });
+      const mapped: Linked | null = row
+        ? {
+            id: row.id,
+            name: row.name,
+            baseUrl: row.host,
+            apiKey: (row as any).apiKey ?? null,
+            bmServerId: (row as any).bmServerId ?? null,
+            status: row.status,
+            lastSeenAt: row.lastSeenAt,
+          }
+        : null;
+      linkedCache = { row: mapped, expiresAt: Date.now() + 5 * 60_000 };
+      return mapped;
+    } catch (e) {
+      swallow(e);
+      return null;
+    }
+  }
+  function invalidateLinked() {
+    linkedCache = null;
+    cache.delete("crcon:live");
+    cache.delete("crcon:warrecord");
+  }
+
+  // CRCON wraps every response as { result, command, failed, error }.
+  async function crconGet(linked: Linked, cmd: string): Promise<any | null> {
+    try {
+      const base = linked.baseUrl.replace(/\/+$/, "");
+      const headers: Record<string, string> = { Accept: "application/json" };
+      if (linked.apiKey) headers.Authorization = `Bearer ${linked.apiKey}`;
+      const res = await fetch(`${base}/api/${cmd}`, {
+        headers,
+        signal: AbortSignal.timeout(8000),
+      });
+      if (!res.ok) return null;
+      const j = await res.json();
+      if (j && typeof j === "object" && "result" in j) {
+        if (j.failed) return null;
+        return j.result;
+      }
+      return j;
+    } catch (e) {
+      swallow(e);
+      return null;
+    }
+  }
+
+  // get_public_info (CRCON's public read): current_map.map, player_count,
+  // max_player_count, player_count_by_team{allied,axis}, score{allied,axis},
+  // time_remaining, name.name — with fallbacks for older/newer variants.
+  function normalizePublicInfo(r: any): any | null {
+    if (!r || typeof r !== "object") return null;
+    const mapRaw =
+      (typeof r.current_map === "object"
+        ? r.current_map?.map?.pretty_name || r.current_map?.map?.id || r.current_map?.map
+        : r.current_map) ||
+      r.map ||
+      null;
+    const name = (typeof r.name === "object" ? r.name?.name : r.name) || r.server_name || null;
+    return {
+      serverName: name ? String(name).slice(0, 120) : null,
+      map: mapRaw ? String(mapRaw) : null,
+      players: Number(r.player_count ?? r.nb_players ?? 0) || 0,
+      maxPlayers: Number(r.max_player_count ?? r.max_players ?? 100) || 100,
+      allied: Number(r.player_count_by_team?.allied ?? 0) || 0,
+      axis: Number(r.player_count_by_team?.axis ?? 0) || 0,
+      scoreAllied: Number(r.score?.allied ?? 0) || 0,
+      scoreAxis: Number(r.score?.axis ?? 0) || 0,
+      timeRemaining: Number(r.time_remaining ?? r.raw_time_remaining ?? 0) || 0,
+    };
+  }
+
+  // Player-id extraction across CRCON versions: get_playerids returns
+  // [name, id] pairs; get_players returns rich objects. Accept both.
+  function extractPlayerIds(r: any): Set<string> {
+    const out = new Set<string>();
+    const rows = Array.isArray(r) ? r : Array.isArray(r?.players) ? r.players : [];
+    for (const row of rows) {
+      if (Array.isArray(row) && row[1]) out.add(String(row[1]));
+      else if (row && typeof row === "object") {
+        const id = row.player_id || row.steam_id_64 || row.steamId || row.id;
+        if (id) out.add(String(id));
+      }
+    }
+    return out;
+  }
+
+  async function fetchLivePlayerIds(linked: Linked): Promise<Set<string> | null> {
+    const a = await crconGet(linked, "get_playerids");
+    if (a) {
+      const ids = extractPlayerIds(a);
+      if (ids.size) return ids;
+    }
+    const b = await crconGet(linked, "get_players");
+    if (b) return extractPlayerIds(b);
+    return a ? new Set<string>() : null; // null = endpoint unreachable (don't count a miss)
+  }
+
   // ---- rallies (in-memory; ephemeral by design) ------------------------------
   const rallies = new Map<string, Rally>();
   let lastArmAt = 0; // lobby-wide arm cooldown (staff exempt)
   let _raSeq = 0;
 
+  function stopVerify(r: Rally) {
+    if (r.verify) {
+      clearInterval(r.verify.timer);
+      r.verify.timer = undefined as any;
+    }
+  }
+
   function sweepRallies() {
     const now = Date.now();
-    for (const [id, r] of rallies) if (r.expiresAt < now) rallies.delete(id);
+    for (const [id, r] of rallies)
+      if (r.expiresAt < now) {
+        stopVerify(r);
+        rallies.delete(id);
+      }
+  }
+
+  // The verification loop: every 3 minutes during a rally, read who is actually
+  // on the server and credit joiners whose linked SteamID64 shows up twice.
+  function armVerification(rally: Rally, linked: Linked) {
+    const seen = new Map<string, number>();
+    const awarded = new Set<string>();
+    const timer = setInterval(async () => {
+      try {
+        if (rally.expiresAt < Date.now()) {
+          stopVerify(rally);
+          return;
+        }
+        const ids = await fetchLivePlayerIds(linked);
+        if (!ids) return; // upstream unreachable this cycle — no penalty, no credit
+        const joinerIds = Array.from(rally.joiners.keys());
+        if (!joinerIds.length) return;
+        const users = await prisma.user.findMany({
+          where: { id: { in: joinerIds } },
+          select: { id: true, steamId: true } as any,
+        });
+        for (const u of users as any[]) {
+          if (!u.steamId || !ids.has(String(u.steamId))) continue;
+          const n = (seen.get(u.id) || 0) + 1;
+          seen.set(u.id, n);
+          if (n >= 2 && !awarded.has(u.id)) {
+            awarded.add(u.id);
+            awardNotoriety(u.id, "HLL_SEEDED", rally.id).catch(swallow);
+          }
+        }
+      } catch (e) {
+        swallow(e);
+      }
+    }, 3 * 60_000);
+    rally.verify = { seen, awarded, timer };
   }
 
   async function canArmRally(userId: string): Promise<boolean> {
@@ -168,7 +346,12 @@ export default async function hllRoutes(app: FastifyInstance, opts: Opts = {}) {
       players: server?.players ?? null,
       maxPlayers: server?.maxPlayers ?? null,
       map: server?.map ?? null,
-      joiners: Array.from(r.joiners.entries()).map(([id, v]) => ({ id, name: v.name })),
+      verifiedMode: !!r.verify,
+      joiners: Array.from(r.joiners.entries()).map(([id, v]) => ({
+        id,
+        name: v.name,
+        verified: r.verify ? r.verify.awarded.has(id) : false,
+      })),
     };
   }
 
@@ -221,11 +404,16 @@ export default async function hllRoutes(app: FastifyInstance, opts: Opts = {}) {
     views.sort((a, b) => b.createdAt - a.createdAt);
     let canArm = false;
     let joinedIds: string[] = [];
+    let meSteamLinked = false;
     if (u) {
       canArm = await canArmRally(u.id);
       joinedIds = views.filter((v) => rallies.get(v.id)?.joiners.has(u.id)).map((v) => v.id);
+      const row = await prisma.user
+        .findUnique({ where: { id: u.id }, select: { steamId: true } as any })
+        .catch(() => null);
+      meSteamLinked = !!(row as any)?.steamId;
     }
-    return reply.send({ ok: true, rallies: views, canArm, joinedIds });
+    return reply.send({ ok: true, rallies: views, canArm, joinedIds, meSteamLinked });
   });
 
   app.post("/hll/rallies", { schema: { tags: ["hll"] } }, async (req, reply) => {
@@ -275,6 +463,14 @@ export default async function hllRoutes(app: FastifyInstance, opts: Opts = {}) {
     };
     rallies.set(rally.id, rally);
     lastArmAt = Date.now();
+
+    // Verified seeding: if this rally's server is the linked community server,
+    // start the presence loop — joiners with a linked SteamID64 who actually
+    // show up get credited (refId-deduped, once per rally).
+    const linked = await loadLinkedServer();
+    if (linked && linked.bmServerId && linked.bmServerId === bmServerId) {
+      armVerification(rally, linked);
+    }
 
     // Ping the lobby: the whole point is a call people actually receive.
     // In-app notification + (via createNotification) web/Expo push if offline.
@@ -337,7 +533,196 @@ export default async function hllRoutes(app: FastifyInstance, opts: Opts = {}) {
     if (!rally) return reply.code(404).send({ ok: false, error: "not_found" });
     if (rally.armedById !== u.id && !(await canArmRally(u.id)))
       return reply.code(403).send({ ok: false, error: "forbidden" });
+    stopVerify(rally);
     rallies.delete(rally.id);
     return reply.send({ ok: true });
+  });
+
+  // ---- the Garrison: linked-server routes ------------------------------------
+
+  app.get("/hll/server", { schema: { tags: ["hll"] } }, async (req, reply) => {
+    const u = authFromHeader?.((req as any).headers?.authorization);
+    const canManage = u ? await canArmRally(u.id) : false;
+    const linked = await loadLinkedServer();
+    if (!linked) return reply.send({ ok: true, linked: false, canManage });
+
+    let live = cacheGet("crcon:live");
+    if (!live) {
+      const [info, rotation] = await Promise.all([
+        crconGet(linked, "get_public_info"),
+        linked.apiKey ? crconGet(linked, "get_map_rotation") : Promise.resolve(null),
+      ]);
+      const norm = normalizePublicInfo(info);
+      live = {
+        info: norm,
+        rotation: Array.isArray(rotation)
+          ? rotation
+              .slice(0, 12)
+              .map((m: any) =>
+                String(typeof m === "object" ? m?.pretty_name || m?.id || m?.map || "" : m),
+              )
+              .filter(Boolean)
+          : [],
+        reachable: !!norm,
+        at: Date.now(),
+      };
+      cacheSet("crcon:live", live, 60_000);
+      if (norm) {
+        prisma.communityServer
+          .update({
+            where: { id: linked.id },
+            data: { lastSeenAt: new Date(), status: "connected", lastState: live.info },
+          })
+          .catch(swallow);
+      }
+    }
+
+    return reply.send({
+      ok: true,
+      linked: true,
+      canManage,
+      server: {
+        name: linked.name,
+        bmServerId: linked.bmServerId,
+        status: live.reachable ? "connected" : linked.status,
+        lastSeenAt: linked.lastSeenAt,
+        hasKey: !!linked.apiKey,
+        live: live.info,
+        rotation: live.rotation,
+      },
+    });
+  });
+
+  app.post("/hll/server/link", { schema: { tags: ["hll"] } }, async (req, reply) => {
+    const u = authFromHeader?.((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    if (!(await canArmRally(u.id))) return reply.code(403).send({ ok: false, error: "mods_only" });
+
+    const body: any = (req as any).body || {};
+    const name = String(body.name || "")
+      .trim()
+      .slice(0, 80);
+    const baseUrlRaw = String(body.baseUrl || "")
+      .trim()
+      .slice(0, 200);
+    const apiKey =
+      String(body.apiKey || "")
+        .trim()
+        .slice(0, 200) || null;
+    const bmServerId = /^\d+$/.test(String(body.bmServerId || "").trim())
+      ? String(body.bmServerId).trim()
+      : null;
+    if (!name || !baseUrlRaw) return reply.code(400).send({ ok: false, error: "missing_fields" });
+
+    // User-supplied URL → SSRF guard (resolves DNS, blocks private ranges).
+    let baseUrl: string;
+    try {
+      const parsed = await assertSafeUrl(baseUrlRaw);
+      baseUrl = `${parsed.protocol}//${parsed.host}`;
+    } catch {
+      return reply.code(400).send({ ok: false, error: "bad_url" });
+    }
+
+    // Probe: public info (keyless), then authed reads if a key was given.
+    const probeLinked: Linked = {
+      id: "probe",
+      name,
+      baseUrl,
+      apiKey,
+      bmServerId,
+      status: "pending",
+      lastSeenAt: null,
+    };
+    const [info, version, playersProbe] = await Promise.all([
+      crconGet(probeLinked, "get_public_info"),
+      crconGet(probeLinked, "get_version"),
+      apiKey ? fetchLivePlayerIds(probeLinked) : Promise.resolve(null),
+    ]);
+    const norm = normalizePublicInfo(info);
+    if (!norm)
+      return reply
+        .code(422)
+        .send({ ok: false, error: "not_crcon", detail: "get_public_info did not respond" });
+
+    const capabilities = {
+      publicInfo: true,
+      version: version ? String(version).slice(0, 40) : null,
+      authedReads: !!(apiKey && playersProbe),
+    };
+
+    const existing = await prisma.communityServer.findFirst({
+      where: { lobbyId: HLL_LOBBY_ID, framework: "crcon" },
+    });
+    const data: any = {
+      lobbyId: HLL_LOBBY_ID,
+      ownerId: u.id,
+      name,
+      host: baseUrl,
+      queryUrl: baseUrl,
+      framework: "crcon",
+      status: "connected",
+      lastSeenAt: new Date(),
+      lastState: { info: norm, capabilities },
+      apiKey,
+      bmServerId,
+    };
+    if (existing) await prisma.communityServer.update({ where: { id: existing.id }, data });
+    else await prisma.communityServer.create({ data });
+    invalidateLinked();
+
+    return reply.send({ ok: true, capabilities, live: norm });
+  });
+
+  app.post("/hll/server/unlink", { schema: { tags: ["hll"] } }, async (req, reply) => {
+    const u = authFromHeader?.((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    if (!(await canArmRally(u.id))) return reply.code(403).send({ ok: false, error: "mods_only" });
+    await prisma.communityServer
+      .deleteMany({ where: { lobbyId: HLL_LOBBY_ID, framework: "crcon" } })
+      .catch(swallow);
+    invalidateLinked();
+    return reply.send({ ok: true });
+  });
+
+  // War Record — recent completed matches off the linked CRCON's history.
+  // Endpoint names vary by CRCON version; try the known ones, normalize hard.
+  app.get("/hll/server/warrecord", { schema: { tags: ["hll"] } }, async (_req, reply) => {
+    const linked = await loadLinkedServer();
+    if (!linked) return reply.send({ ok: true, linked: false, matches: [] });
+    if (!linked.apiKey) return reply.send({ ok: true, linked: true, needsKey: true, matches: [] });
+
+    const hit = cacheGet("crcon:warrecord");
+    if (hit) return reply.send(hit);
+
+    const raw =
+      (await crconGet(linked, "get_scoreboard_maps")) ??
+      (await crconGet(linked, "get_map_history"));
+    const rows = Array.isArray(raw) ? raw : Array.isArray(raw?.maps) ? raw.maps : [];
+    const matches = rows
+      .slice(0, 15)
+      .map((m: any) => {
+        const mapRaw =
+          (typeof m?.map === "object" ? m.map?.pretty_name || m.map?.id : m?.map) ||
+          m?.map_name ||
+          m?.name ||
+          null;
+        const allied = Number(m?.result?.allied ?? m?.allied_score ?? m?.score?.allied ?? NaN);
+        const axis = Number(m?.result?.axis ?? m?.axis_score ?? m?.score?.axis ?? NaN);
+        const start = m?.start ? new Date(m.start).getTime() : null;
+        const end = m?.end ? new Date(m.end).getTime() : null;
+        if (!mapRaw) return null;
+        return {
+          map: String(mapRaw),
+          allied: Number.isFinite(allied) ? allied : null,
+          axis: Number.isFinite(axis) ? axis : null,
+          start,
+          end,
+        };
+      })
+      .filter(Boolean);
+
+    const out = { ok: true, linked: true, matches };
+    if (matches.length) cacheSet("crcon:warrecord", out, 5 * 60_000);
+    return reply.send(out);
   });
 }

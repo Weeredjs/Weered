@@ -18,6 +18,7 @@ function authHeaders(): Record<string, string> {
 const TABS = [
   { id: "frontlines" as const, label: "Front Lines" },
   { id: "seeding" as const, label: "Seeding Ops" },
+  { id: "garrison" as const, label: "Garrison" },
   { id: "artillery" as const, label: "Artillery School" },
   { id: "intel" as const, label: "Intel" },
 ];
@@ -344,13 +345,15 @@ type RallyView = {
   players: number | null;
   maxPlayers: number | null;
   map: string | null;
-  joiners: { id: string; name: string }[];
+  verifiedMode?: boolean;
+  joiners: { id: string; name: string; verified?: boolean }[];
 };
 
 function SeedingOps({ accent, currentUserId }: { accent: string; currentUserId?: string }) {
   const [rallies, setRallies] = useState<RallyView[]>([]);
   const [canArm, setCanArm] = useState(false);
   const [joinedIds, setJoinedIds] = useState<string[]>([]);
+  const [meSteamLinked, setMeSteamLinked] = useState(true);
   const [loaded, setLoaded] = useState(false);
   const [servers, setServers] = useState<BmServer[]>([]);
   const [armServer, setArmServer] = useState("");
@@ -365,6 +368,7 @@ function SeedingOps({ accent, currentUserId }: { accent: string; currentUserId?:
         setRallies(j.rallies || []);
         setCanArm(!!j.canArm);
         setJoinedIds(j.joinedIds || []);
+        setMeSteamLinked(j.meSteamLinked !== false);
       }
     } catch {}
     setLoaded(true);
@@ -459,6 +463,15 @@ function SeedingOps({ accent, currentUserId }: { accent: string; currentUserId?:
       )}
       {err && <div style={{ ...S.muted, color: "#E08A83" }}>{err}</div>}
 
+      {currentUserId && !meSteamLinked && rallies.some((r) => r.verifiedMode) && (
+        <div style={{ ...S.card, borderColor: "rgba(224,182,83,.4)" }}>
+          <div style={{ ...S.muted, color: "#E0B653" }}>
+            A rally here has verified seeding: link your SteamID64 in Settings and you earn
+            notoriety automatically when you actually show up on the server.
+          </div>
+        </div>
+      )}
+
       <div style={S.kick}>Active rallies</div>
       {!loaded && <div style={S.muted}>Checking the board…</div>}
       {loaded && rallies.length === 0 && (
@@ -481,8 +494,22 @@ function SeedingOps({ accent, currentUserId }: { accent: string; currentUserId?:
           >
             <div style={{ ...S.row, justifyContent: "space-between" }}>
               <div style={{ minWidth: 0, flex: 1 }}>
-                <div style={{ fontSize: 13.5, fontWeight: 700, color: "rgba(236,242,250,.95)" }}>
-                  {r.serverName}
+                <div style={{ ...S.row, gap: 8 }}>
+                  <div style={{ fontSize: 13.5, fontWeight: 700, color: "rgba(236,242,250,.95)" }}>
+                    {r.serverName}
+                  </div>
+                  {r.verifiedMode && (
+                    <span
+                      style={{
+                        ...S.badge,
+                        color: "#8FBF7F",
+                        border: "1px solid rgba(143,191,127,.4)",
+                      }}
+                      title="This server is linked — showing up earns notoriety automatically"
+                    >
+                      ✓ VERIFIED
+                    </span>
+                  )}
                 </div>
                 <div style={{ ...S.muted, marginTop: 2 }}>
                   {prettyMap(r.map)} · armed by {r.armedByName}
@@ -518,7 +545,7 @@ function SeedingOps({ accent, currentUserId }: { accent: string; currentUserId?:
                     ? "Be the first to answer."
                     : `${r.joiners.length} answering: ${r.joiners
                         .slice(0, 6)
-                        .map((x) => x.name)
+                        .map((x) => (x.verified ? `${x.name} ✓` : x.name))
                         .join(", ")}${r.joiners.length > 6 ? "…" : ""}`}
               </div>
               <div style={{ ...S.row, gap: 8 }}>
@@ -545,6 +572,312 @@ function SeedingOps({ accent, currentUserId }: { accent: string; currentUserId?:
           </div>
         );
       })}
+    </div>
+  );
+}
+
+// ---- Garrison (linked community server via CRCON) --------------------------
+
+type GarrisonServer = {
+  name: string;
+  bmServerId: string | null;
+  status: string;
+  lastSeenAt: string | null;
+  hasKey: boolean;
+  live: {
+    serverName: string | null;
+    map: string | null;
+    players: number;
+    maxPlayers: number;
+    allied: number;
+    axis: number;
+    scoreAllied: number;
+    scoreAxis: number;
+    timeRemaining: number;
+  } | null;
+  rotation: string[];
+};
+
+function fmtClock(secs: number): string {
+  if (!secs || secs <= 0) return "—";
+  const h = Math.floor(secs / 3600);
+  const m = Math.floor((secs % 3600) / 60);
+  const s = Math.floor(secs % 60);
+  return h > 0
+    ? `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`
+    : `${m}:${String(s).padStart(2, "0")}`;
+}
+
+function Garrison({ accent }: { accent: string }) {
+  const [linked, setLinked] = useState<boolean | null>(null);
+  const [canManage, setCanManage] = useState(false);
+  const [server, setServer] = useState<GarrisonServer | null>(null);
+  const [matches, setMatches] = useState<any[]>([]);
+  const [needsKey, setNeedsKey] = useState(false);
+  const [servers, setServers] = useState<BmServer[]>([]);
+  const [fName, setFName] = useState("");
+  const [fUrl, setFUrl] = useState("");
+  const [fKey, setFKey] = useState("");
+  const [fBm, setFBm] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+
+  const load = async () => {
+    try {
+      const r = await fetch(`${API}/hll/server`, { headers: authHeaders() });
+      const j = await r.json();
+      if (j?.ok) {
+        setLinked(!!j.linked);
+        setCanManage(!!j.canManage);
+        setServer(j.server || null);
+      }
+    } catch {}
+    try {
+      const r2 = await fetch(`${API}/hll/server/warrecord`);
+      const j2 = await r2.json();
+      if (j2?.ok) {
+        setMatches(j2.matches || []);
+        setNeedsKey(!!j2.needsKey);
+      }
+    } catch {}
+  };
+
+  useEffect(() => {
+    void load();
+    const iv = setInterval(load, 60_000);
+    fetch(`${API}/hll/servers`)
+      .then((r) => r.json())
+      .then((j) => j?.ok && setServers(j.servers || []))
+      .catch(() => {});
+    return () => clearInterval(iv);
+  }, []);
+
+  const link = async () => {
+    setBusy(true);
+    setErr("");
+    try {
+      const r = await fetch(`${API}/hll/server/link`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify({ name: fName, baseUrl: fUrl, apiKey: fKey, bmServerId: fBm }),
+      });
+      const j = await r.json();
+      if (!j?.ok) {
+        setErr(
+          j?.error === "not_crcon"
+            ? "That URL didn't answer like a CRCON — check the address (no /api, just the base)."
+            : j?.error === "bad_url"
+              ? "That URL can't be reached safely."
+              : j?.error === "mods_only"
+                ? "Moderators only."
+                : "Link failed.",
+        );
+      } else {
+        setFName("");
+        setFUrl("");
+        setFKey("");
+        setFBm("");
+        await load();
+      }
+    } catch {
+      setErr("Link failed.");
+    }
+    setBusy(false);
+  };
+
+  const unlink = async () => {
+    setBusy(true);
+    try {
+      await fetch(`${API}/hll/server/unlink`, { method: "POST", headers: authHeaders() });
+      await load();
+    } catch {}
+    setBusy(false);
+  };
+
+  const live = server?.live;
+  return (
+    <div>
+      {linked === null && <div style={{ ...S.muted, marginTop: 14 }}>Raising the garrison…</div>}
+
+      {linked === false && (
+        <>
+          <div style={{ ...S.card, marginTop: 12 }}>
+            <div style={{ fontSize: 13.5, fontWeight: 700, color: "rgba(236,242,250,.95)" }}>
+              No community server linked yet
+            </div>
+            <div style={{ ...S.muted, marginTop: 4 }}>
+              Run a Hell Let Loose server? Link your CRCON and this tab becomes your garrison board:
+              live map, score and population for everyone in the lobby, match history, and — with an
+              API key — <b>verified seeding</b>: members who answer a rally and actually show up on
+              your server earn notoriety automatically.
+            </div>
+          </div>
+          {canManage && (
+            <div style={S.card}>
+              <div style={S.kick}>Link your CRCON</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                <input
+                  style={S.input}
+                  placeholder="Server name — e.g. 82nd Airborne | NA West"
+                  value={fName}
+                  maxLength={80}
+                  onChange={(e) => setFName(e.target.value)}
+                />
+                <input
+                  style={S.input}
+                  placeholder="CRCON base URL — e.g. https://rcon.yourclan.com"
+                  value={fUrl}
+                  maxLength={200}
+                  onChange={(e) => setFUrl(e.target.value)}
+                />
+                <input
+                  style={S.input}
+                  type="password"
+                  placeholder="CRCON API key (optional — unlocks match history + verified seeding)"
+                  value={fKey}
+                  maxLength={200}
+                  onChange={(e) => setFKey(e.target.value)}
+                />
+                <select style={S.input} value={fBm} onChange={(e) => setFBm(e.target.value)}>
+                  <option value="">
+                    BattleMetrics identity (optional — enables verified rallies)
+                  </option>
+                  {servers.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name.slice(0, 70)}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  style={{ ...S.btn, opacity: busy ? 0.6 : 1 }}
+                  disabled={busy}
+                  onClick={link}
+                >
+                  {busy ? "Probing…" : "Link server"}
+                </button>
+                {err && <div style={{ ...S.muted, color: "#E08A83" }}>{err}</div>}
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {linked && server && (
+        <>
+          <div style={{ ...S.card, marginTop: 12 }}>
+            <div style={{ ...S.row, justifyContent: "space-between" }}>
+              <div style={{ fontSize: 14, fontWeight: 800, color: "rgba(236,242,250,.95)" }}>
+                {server.name}
+              </div>
+              <span
+                style={{
+                  ...S.badge,
+                  color: server.status === "connected" ? "#8FBF7F" : "#E08A83",
+                  border: `1px solid ${server.status === "connected" ? "rgba(143,191,127,.4)" : "rgba(224,138,131,.4)"}`,
+                }}
+              >
+                {server.status === "connected" ? "CONNECTED" : server.status.toUpperCase()}
+              </span>
+            </div>
+            {live ? (
+              <>
+                <div style={{ ...S.row, marginTop: 10, justifyContent: "space-between" }}>
+                  <div style={{ ...S.muted }}>{prettyMap(live.map)}</div>
+                  <div style={{ ...S.muted }}>⏱ {fmtClock(live.timeRemaining)}</div>
+                  <div
+                    style={{
+                      fontVariantNumeric: "tabular-nums",
+                      fontWeight: 800,
+                      color: "rgba(236,242,250,.95)",
+                    }}
+                  >
+                    {live.players}/{live.maxPlayers}
+                  </div>
+                </div>
+                <div style={{ margin: "8px 0" }}>
+                  <FillBar players={live.players} max={live.maxPlayers} accent={accent} />
+                </div>
+                <div style={{ ...S.row, justifyContent: "center", gap: 18 }}>
+                  <span style={{ ...S.muted }}>
+                    Allies <b style={{ color: "#9DB8D6" }}>{live.scoreAllied}</b>
+                    {" · "}
+                    <span style={{ fontVariantNumeric: "tabular-nums" }}>{live.allied} on</span>
+                  </span>
+                  <span style={{ ...S.muted }}>
+                    Axis <b style={{ color: "#D6A99D" }}>{live.scoreAxis}</b>
+                    {" · "}
+                    <span style={{ fontVariantNumeric: "tabular-nums" }}>{live.axis} on</span>
+                  </span>
+                </div>
+              </>
+            ) : (
+              <div style={{ ...S.muted, marginTop: 8 }}>
+                Server unreachable right now — last seen{" "}
+                {server.lastSeenAt ? new Date(server.lastSeenAt).toLocaleString() : "never"}.
+              </div>
+            )}
+            {server.rotation.length > 0 && (
+              <>
+                <div style={S.kick}>Map rotation</div>
+                <div style={{ ...S.row, flexWrap: "wrap", gap: 6 }}>
+                  {server.rotation.map((m, i) => (
+                    <span
+                      key={i}
+                      style={{
+                        ...S.badge,
+                        color: "rgba(226,232,240,.8)",
+                        border: "1px solid rgba(255,255,255,.14)",
+                      }}
+                    >
+                      {prettyMap(m)}
+                    </span>
+                  ))}
+                </div>
+              </>
+            )}
+            {canManage && (
+              <div style={{ ...S.row, justifyContent: "flex-end", marginTop: 10 }}>
+                <button style={S.btnQuiet} disabled={busy} onClick={unlink}>
+                  Unlink
+                </button>
+              </div>
+            )}
+          </div>
+
+          <div style={S.kick}>War record</div>
+          {needsKey && (
+            <div style={S.muted}>
+              Add a CRCON API key to the link to pull match history and arm verified seeding.
+            </div>
+          )}
+          {!needsKey && matches.length === 0 && (
+            <div style={S.muted}>No recent matches reported.</div>
+          )}
+          {matches.map((m, i) => (
+            <div key={i} style={S.card}>
+              <div style={{ ...S.row, justifyContent: "space-between" }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: "rgba(236,242,250,.95)" }}>
+                  {prettyMap(m.map)}
+                </div>
+                <div style={{ fontVariantNumeric: "tabular-nums", fontWeight: 800 }}>
+                  {m.allied != null && m.axis != null ? (
+                    <>
+                      <span style={{ color: "#9DB8D6" }}>{m.allied}</span>
+                      <span style={{ color: "rgba(148,163,184,.6)" }}> – </span>
+                      <span style={{ color: "#D6A99D" }}>{m.axis}</span>
+                    </>
+                  ) : (
+                    <span style={S.muted}>—</span>
+                  )}
+                </div>
+              </div>
+              {m.start && (
+                <div style={{ ...S.muted, marginTop: 3 }}>{new Date(m.start).toLocaleString()}</div>
+              )}
+            </div>
+          ))}
+        </>
+      )}
     </div>
   );
 }
@@ -735,6 +1068,7 @@ export default function HllModulesPanel({
       <div style={S.body}>
         {tab === "frontlines" && <FrontLines accent={accent} />}
         {tab === "seeding" && <SeedingOps accent={accent} currentUserId={currentUserId} />}
+        {tab === "garrison" && <Garrison accent={accent} />}
         {tab === "artillery" && <ArtillerySchool accent={accent} />}
         {tab === "intel" && <Intel />}
       </div>

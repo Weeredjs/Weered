@@ -39,6 +39,7 @@ export const NOTORIETY_ACTIONS: Record<
   FAKEOUT_PROFIT: { points: 25, once: false, cooldown: 0 },
   LFG_COMPLETED: { points: 20, once: false, cooldown: 600000 },
   HD2_MAJOR_ORDER: { points: 50, once: false },
+  HLL_SEEDED: { points: 25, once: false }, // verified on-server presence during a seeding rally (refId = rallyId)
 };
 
 export const NOTORIETY_RANKS = [
@@ -69,7 +70,11 @@ export function getNotorietyRank(n: number): {
 
 export const notorietyCooldowns = new Map<string, number>();
 
-export async function awardNotoriety(userId: string, action: string): Promise<number | null> {
+export async function awardNotoriety(
+  userId: string,
+  action: string,
+  refId?: string,
+): Promise<number | null> {
   const cfg = NOTORIETY_ACTIONS[action];
   if (!cfg) return null;
 
@@ -89,6 +94,15 @@ export async function awardNotoriety(userId: string, action: string): Promise<nu
       if (existing) return null;
     }
 
+    // refId dedupe: at most one award per (user, action, source) — survives
+    // restarts, unlike the in-memory cooldown map. Callers pass e.g. a rallyId.
+    if (refId) {
+      const existing = await prisma.notorietyEvent.findFirst({
+        where: { userId, action, refId },
+      });
+      if (existing) return null;
+    }
+
     const userBefore = await prisma.user.findUnique({
       where: { id: userId },
       select: { notoriety: true, name: true },
@@ -97,7 +111,9 @@ export async function awardNotoriety(userId: string, action: string): Promise<nu
     const rankBefore = getNotorietyRank(scoreBefore);
 
     await prisma.$transaction([
-      prisma.notorietyEvent.create({ data: { userId, action, points: cfg.points } }),
+      prisma.notorietyEvent.create({
+        data: { userId, action, points: cfg.points, refId: refId ?? null },
+      }),
       prisma.user.update({
         where: { id: userId },
         data: { notoriety: { increment: cfg.points } },
