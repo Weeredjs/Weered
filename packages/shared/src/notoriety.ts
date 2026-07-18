@@ -25,6 +25,7 @@ export const NOTORIETY_ACTIONS = [
   "FAKEOUT_PROFIT",
   "LFG_COMPLETED",
   "HD2_MAJOR_ORDER",
+  "HLL_SEEDED",
 ] as const;
 
 export type NotorietyAction = (typeof NOTORIETY_ACTIONS)[number];
