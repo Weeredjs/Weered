@@ -317,6 +317,7 @@ async function seedLobbies() {
           locked: false,
           pinned: true,
           ...(r.defaultModule !== undefined ? { defaultModule: r.defaultModule } : {}),
+          ...((r as any).voiceMode ? { voiceMode: (r as any).voiceMode } : {}),
         },
       });
     } catch (e) {
@@ -1782,6 +1783,7 @@ async function main() {
   });
   await app.register((await import("./routes/helldivers")).default, { authFromHeader });
   await app.register((await import("./routes/hll")).default, { authFromHeader });
+  await app.register((await import("./routes/cowork")).default, { authFromHeader });
   await app.register(helldiversStratagemsRoutes);
   await app.register(helldiversLoadoutsRoutes, { authFromHeader });
   await app.register(steamRoutes, { authFromHeader, createNotification });

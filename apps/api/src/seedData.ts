@@ -267,6 +267,27 @@ export const SEED_LOBBIES = [
     websiteUrl: "https://www.helldivers.com",
   },
   {
+    id: "cowork",
+    name: "Co-Work",
+    description:
+      "The lobby for people who work for themselves, by themselves. Solo founders, freelancers, consultants, one-person companies. Working alone is the deal you made — nobody said you had to sit in an empty room. Co-Work runs on presence: clock in on The Floor and see who else is at it right now, join the synchronized focus sprint that runs at the top of every hour (50 minutes of deep work, 10 of break, everyone on the same clock), put your intentions on the Day Board and check them off where people can see. Deep Work is a listen-only room built for body doubling: cameras optional, mics stay off, the quiet company of other people getting things done. The Watercooler is where the break happens. No performative hustle, no growth-hack spam — just other people who also chose to work for themselves, at work.",
+    keywords: [
+      "cowork",
+      "coworking",
+      "body doubling",
+      "solo founder",
+      "freelancer",
+      "indie hacker",
+      "entrepreneur",
+      "deep work",
+      "focus",
+      "accountability",
+    ],
+    moduleType: ModuleType.COWORK,
+    moduleConfig: {},
+    accentColor: "#7FA89B",
+  },
+  {
     id: "hll",
     name: "Hell Let Loose",
     description:
@@ -443,6 +464,7 @@ export const SEED_ROOMS: {
   description: string;
   lobbyId: string;
   defaultModule?: string;
+  voiceMode?: "OPEN" | "QUEUED" | "LISTEN_ONLY"; // bootstrap-only (create, never update)
 }[] = [
   {
     id: "dnd-tavern",
@@ -922,6 +944,36 @@ export const SEED_ROOMS: {
     name: "Off Topic",
     description: "Whatever isn't about Weered itself. Lowkey vibes, weekend chat.",
     lobbyId: "hq",
+  },
+
+  {
+    id: "cowork-floor",
+    name: "The Floor",
+    description:
+      "The open office. Say what you're working on, ask the room, think out loud. Main chat for everyone clocked in.",
+    lobbyId: "cowork",
+  },
+  {
+    id: "cowork-deepwork",
+    name: "Deep Work",
+    description:
+      "Body doubling, enforced. Listen-only voice: cameras optional, mics stay off. Sit down, be seen working, get it done.",
+    lobbyId: "cowork",
+    voiceMode: "LISTEN_ONLY",
+  },
+  {
+    id: "cowork-watercooler",
+    name: "The Watercooler",
+    description:
+      "Where the break goes. Open voice between sprints — talk shop, complain about invoices, be a person for ten minutes.",
+    lobbyId: "cowork",
+  },
+  {
+    id: "cowork-standup",
+    name: "Standup",
+    description:
+      "Post your day: what you're shipping, what's blocking you, what you finished yesterday. Async, no meetings.",
+    lobbyId: "cowork",
   },
 
   {

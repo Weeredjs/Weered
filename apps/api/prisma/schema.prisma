@@ -64,6 +64,7 @@ enum ModuleType {
   MINECRAFT
   MTG
   HLL
+  COWORK
 }
 
 model NewsArticle {

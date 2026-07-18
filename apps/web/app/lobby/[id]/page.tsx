@@ -147,6 +147,10 @@ const HllModulesPanel = dynamic(() => import("../../../components/HllModulesPane
   loading: panelLoading,
   ssr: false,
 });
+const CoworkModulesPanel = dynamic(() => import("../../../components/CoworkModulesPanel"), {
+  loading: panelLoading,
+  ssr: false,
+});
 const ForumPage = dynamic(() => import("../../../components/forum/ForumPage"), {
   loading: panelLoading,
   ssr: false,
@@ -208,6 +212,7 @@ const MODULE_GAME_NAMES: Record<string, string> = {
   WINDROSE: "Windrose",
   EVE: "EVE Online",
   HLL: "Hell Let Loose",
+  COWORK: "Co-Work",
 };
 
 type LobbyInfo = {
@@ -696,7 +701,8 @@ export default function LobbyIdPage() {
             j.lobby.moduleType === "CHESS" ||
             j.lobby.moduleType === "EVE" ||
             j.lobby.moduleType === "MTG" ||
-            j.lobby.moduleType === "HLL"
+            j.lobby.moduleType === "HLL" ||
+            j.lobby.moduleType === "COWORK"
           ) {
             setView("modules");
           } else {
@@ -784,6 +790,7 @@ export default function LobbyIdPage() {
       "EVE",
       "MTG",
       "HLL",
+      "COWORK",
     ]);
     const mt = lobbyInfo?.moduleType || "";
     void DENSE_CHROME;
@@ -821,7 +828,8 @@ export default function LobbyIdPage() {
     lobbyInfo?.moduleType === "CHESS" ||
     lobbyInfo?.moduleType === "EVE" ||
     lobbyInfo?.moduleType === "MTG" ||
-    lobbyInfo?.moduleType === "HLL";
+    lobbyInfo?.moduleType === "HLL" ||
+    lobbyInfo?.moduleType === "COWORK";
   const hasLfgBoard = LFG_BOARD_LOBBIES.has(lobbyId);
   const redditSub = REDDIT_TAB_LOBBIES[lobbyId];
   const KNOWN_ACCENTS: Record<string, string> = { gta6: "#e84393" };
@@ -1269,6 +1277,13 @@ export default function LobbyIdPage() {
                     />
                   ) : lobbyInfo?.moduleType === "HLL" ? (
                     <HllModulesPanel
+                      lobbyId={lobbyId}
+                      accentColor={accent}
+                      currentUserId={me?.id}
+                      style={{ flex: 1, minHeight: 0 }}
+                    />
+                  ) : lobbyInfo?.moduleType === "COWORK" ? (
+                    <CoworkModulesPanel
                       lobbyId={lobbyId}
                       accentColor={accent}
                       currentUserId={me?.id}
