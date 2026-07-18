@@ -733,10 +733,11 @@ async function main() {
   function applyWindroseReel<T extends { id?: string; bannerUrl?: string | null } | null>(
     lobby: T,
   ): T {
-    if (!lobby || lobby.id !== "windrose") return lobby;
-    const idx = Math.floor(Math.random() * WINDROSE_BANNER_COUNT) + 1;
-    const num = idx.toString().padStart(2, "0");
-    (lobby as any).bannerUrl = `/brand/windrose/banners/banner-${num}.webp`;
+    if (lobby && lobby.id === "windrose") {
+      const idx = Math.floor(Math.random() * WINDROSE_BANNER_COUNT) + 1;
+      const num = idx.toString().padStart(2, "0");
+      (lobby as any).bannerUrl = `/brand/windrose/banners/banner-${num}.webp`;
+    }
     return lobby;
   }
 

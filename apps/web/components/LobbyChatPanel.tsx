@@ -183,21 +183,22 @@ export default function LobbyChatPanel(
   const acceptMention = useCallback(
     (username: string) => {
       setMentionState((s) => {
-        if (!s) return null;
-        const before = text.slice(0, s.start);
-        const after = text.slice(s.start + 1 + s.query.length);
-        const next = `${before}@${username} ${after}`;
-        setText(next);
-        setTimeout(() => {
-          const el = inputRef.current;
-          if (el) {
-            const pos = before.length + username.length + 2;
-            el.focus();
-            try {
-              el.setSelectionRange(pos, pos);
-            } catch {}
-          }
-        }, 0);
+        if (s) {
+          const before = text.slice(0, s.start);
+          const after = text.slice(s.start + 1 + s.query.length);
+          const next = `${before}@${username} ${after}`;
+          setText(next);
+          setTimeout(() => {
+            const el = inputRef.current;
+            if (el) {
+              const pos = before.length + username.length + 2;
+              el.focus();
+              try {
+                el.setSelectionRange(pos, pos);
+              } catch {}
+            }
+          }, 0);
+        }
         return null;
       });
     },

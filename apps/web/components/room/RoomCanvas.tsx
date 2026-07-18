@@ -589,11 +589,9 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
   useEffect(() => {
     if (!officeStaff || notifyAskedRef.current) return;
     notifyAskedRef.current = true;
-    try {
-      if (typeof Notification !== "undefined" && Notification.permission === "default") {
-        void Notification.requestPermission().catch(() => {});
-      }
-    } catch {}
+    if (typeof Notification !== "undefined" && Notification.permission === "default") {
+      void Notification.requestPermission().catch(() => {});
+    }
   }, [officeStaff]);
 
   // Alert on a genuinely NEW knock id (not on admits/refreshes that shrink the list).
