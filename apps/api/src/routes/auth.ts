@@ -193,6 +193,13 @@ export default async function authRoutes(app: FastifyInstance, opts: Opts) {
       const reserved = await isNameReserved(username, "USERNAME");
       if (reserved)
         return reply.code(403).send({ error: "This username is reserved and cannot be used." });
+      // A User row can exist without LocalAuth (Google signups, system accounts
+      // like the Operator) — colliding with its usernameKey must be a clean 409,
+      // not a unique-constraint 500.
+      const nameTaken = await prisma.user
+        .findUnique({ where: { usernameKey: username } })
+        .catch(() => null);
+      if (nameTaken) return reply.code(409).send({ error: "Username already exists" });
       const user = await prisma.user.create({
         data: { name: username, usernameKey: username, email },
       });
