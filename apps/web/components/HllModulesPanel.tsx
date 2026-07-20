@@ -319,13 +319,13 @@ function FrontLines({ accent }: { accent: string }) {
               BattleMetrics
             </a>
             <button style={S.btnQuiet} onClick={() => copyName(s)}>
-              {copied === s.id ? "Copied — search it in-game" : "Copy name"}
+              {copied === s.id ? "Copied. Search it in-game" : "Copy name"}
             </button>
           </div>
         </div>
       ))}
       <div style={{ ...S.muted, marginTop: 6 }}>
-        HLL has no direct-join link — copy the server name and find it in the in-game browser.
+        HLL has no direct-join link. Copy the server name and find it in the in-game browser.
       </div>
     </div>
   );
@@ -396,7 +396,7 @@ function SeedingOps({ accent, currentUserId }: { accent: string; currentUserId?:
       if (!j?.ok) {
         setErr(
           j?.error === "cooldown"
-            ? "A rally was armed recently — give it an hour."
+            ? "A rally was armed recently. Give it an hour."
             : j?.error === "rally_exists"
               ? "That server already has an active rally."
               : j?.error === "mods_only"
@@ -418,9 +418,9 @@ function SeedingOps({ accent, currentUserId }: { accent: string; currentUserId?:
           The seeding problem, solved by showing up
         </div>
         <div style={{ ...S.muted, marginTop: 4 }}>
-          An HLL server below 40 players isn&rsquo;t a game yet — it&rsquo;s a queue with scenery. A
-          rally is a call to fill one specific server, together, now. Arm one, join one, and the
-          lobby gets pinged. When it hits the threshold, everyone plays.
+          Below 40 players, an HLL server is a queue with scenery. A rally is a call to fill one
+          specific server, together, now. When someone arms one, the lobby gets pinged. When it hits
+          the threshold, everyone plays.
         </div>
       </div>
 
@@ -445,7 +445,7 @@ function SeedingOps({ accent, currentUserId }: { accent: string; currentUserId?:
             </select>
             <input
               style={{ ...S.input, flex: 3, minWidth: 180 }}
-              placeholder="Note (optional) — e.g. Friday fight night, seed by 7pm AT"
+              placeholder="Note (optional): Friday fight night, seed by 7pm AT"
               value={armNote}
               maxLength={180}
               onChange={(e) => setArmNote(e.target.value)}
@@ -476,8 +476,8 @@ function SeedingOps({ accent, currentUserId }: { accent: string; currentUserId?:
       {!loaded && <div style={S.muted}>Checking the board…</div>}
       {loaded && rallies.length === 0 && (
         <div style={S.muted}>
-          No active rallies. Quiet board, quiet servers — a moderator can arm one from the form
-          above{canArm ? "" : " (moderators only)"}.
+          No active rallies yet. A moderator can arm one from the form above
+          {canArm ? "" : " (moderators only)"}.
         </div>
       )}
       {rallies.map((r) => {
@@ -505,7 +505,7 @@ function SeedingOps({ accent, currentUserId }: { accent: string; currentUserId?:
                         color: "#8FBF7F",
                         border: "1px solid rgba(143,191,127,.4)",
                       }}
-                      title="This server is linked — showing up earns notoriety automatically"
+                      title="This server is linked. Showing up earns notoriety automatically"
                     >
                       ✓ VERIFIED
                     </span>
@@ -540,7 +540,7 @@ function SeedingOps({ accent, currentUserId }: { accent: string; currentUserId?:
                 }}
               >
                 {hit
-                  ? "Threshold hit — the server is alive. Good work."
+                  ? "Threshold hit. The server is alive. Good work."
                   : r.joiners.length <= 1
                     ? "Be the first to answer."
                     : `${r.joiners.length} answering: ${r.joiners
@@ -665,7 +665,7 @@ function Garrison({ accent }: { accent: string }) {
       if (!j?.ok) {
         setErr(
           j?.error === "not_crcon"
-            ? "That URL didn't answer like a CRCON — check the address (no /api, just the base)."
+            ? "That URL didn't answer like a CRCON. Check the address (no /api, just the base)."
             : j?.error === "bad_url"
               ? "That URL can't be reached safely."
               : j?.error === "mods_only"
@@ -707,8 +707,8 @@ function Garrison({ accent }: { accent: string }) {
             </div>
             <div style={{ ...S.muted, marginTop: 4 }}>
               Run a Hell Let Loose server? Link your CRCON and this tab becomes your garrison board:
-              live map, score and population for everyone in the lobby, match history, and — with an
-              API key — <b>verified seeding</b>: members who answer a rally and actually show up on
+              live map, score and population for everyone in the lobby, match history, and, with an
+              API key, <b>verified seeding</b>: members who answer a rally and actually show up on
               your server earn notoriety automatically.
             </div>
           </div>
@@ -718,14 +718,14 @@ function Garrison({ accent }: { accent: string }) {
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 <input
                   style={S.input}
-                  placeholder="Server name — e.g. 82nd Airborne | NA West"
+                  placeholder="Server name: 82nd Airborne | NA West"
                   value={fName}
                   maxLength={80}
                   onChange={(e) => setFName(e.target.value)}
                 />
                 <input
                   style={S.input}
-                  placeholder="CRCON base URL — e.g. https://rcon.yourclan.com"
+                  placeholder="CRCON base URL: https://rcon.yourclan.com"
                   value={fUrl}
                   maxLength={200}
                   onChange={(e) => setFUrl(e.target.value)}
@@ -733,14 +733,14 @@ function Garrison({ accent }: { accent: string }) {
                 <input
                   style={S.input}
                   type="password"
-                  placeholder="CRCON API key (optional — unlocks match history + verified seeding)"
+                  placeholder="CRCON API key (optional; enables match history + verified seeding)"
                   value={fKey}
                   maxLength={200}
                   onChange={(e) => setFKey(e.target.value)}
                 />
                 <select style={S.input} value={fBm} onChange={(e) => setFBm(e.target.value)}>
                   <option value="">
-                    BattleMetrics identity (optional — enables verified rallies)
+                    BattleMetrics identity (optional; enables verified rallies)
                   </option>
                   {servers.map((s) => (
                     <option key={s.id} value={s.id}>
@@ -812,7 +812,7 @@ function Garrison({ accent }: { accent: string }) {
               </>
             ) : (
               <div style={{ ...S.muted, marginTop: 8 }}>
-                Server unreachable right now — last seen{" "}
+                Server unreachable right now. Last seen{" "}
                 {server.lastSeenAt ? new Date(server.lastSeenAt).toLocaleString() : "never"}.
               </div>
             )}

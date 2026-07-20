@@ -158,7 +158,7 @@ function SquadFinder({ lobbyId }: { lobbyId: string }) {
   useEffect(() => { load(); const i = setInterval(load, 12000); return () => clearInterval(i); }, [load]);
 
   async function create() {
-    const fullActivity = `${activity} — ${zone}${shell !== "Any Shell" ? ` (${shell})` : ""}`;
+    const fullActivity = `${activity} · ${zone}${shell !== "Any Shell" ? ` (${shell})` : ""}`;
     const j = await apiFetch(`/lfg/${encodeURIComponent(lobbyId)}`, {
       method: "POST",
       body: JSON.stringify({ activity: fullActivity, description: desc, maxPlayers: 3, platform: "crossplay" }),
@@ -270,7 +270,7 @@ function SquadFinder({ lobbyId }: { lobbyId: string }) {
         })}
         {posts.length === 0 && (
           <div style={{ textAlign: "center", padding: 30, opacity: 0.25, fontSize: 12, fontFamily: "monospace" }}>
-            NO ACTIVE SQUADS — DEPLOY THE FIRST BEACON
+            NO ACTIVE SQUADS. DEPLOY THE FIRST BEACON
           </div>
         )}
       </div>
@@ -285,7 +285,7 @@ const ZONES = [
     desc: "Entry-level zone. Scattered outposts and abandoned research facilities on the colony edge. Lower UESC presence, ideal for new Runners gearing up.",
     loot: "Common to Rare",
     enemies: "Light UESC patrols, Scavengers",
-    tips: "Good for learning extraction routes. Watch the ridgelines — snipers love the high ground.",
+    tips: "Good for learning extraction routes. Watch the ridgelines. Snipers love the high ground.",
   },
   {
     name: "Dire Marsh",
@@ -309,7 +309,7 @@ const ZONES = [
     desc: "The UESC Marathon in low orbit. End-game zone with sequential vaults, raid-like puzzles, and the deadliest enemies in the game. Where legends are made.",
     loot: "Legendary to Exotic",
     enemies: "Elite UESC, unknown entities, fully-geared rival crews",
-    tips: "Bring your best gear — you will lose it if you die. The 7th vault holds secrets about what happened to the colony.",
+    tips: "Bring your best gear, and know you will lose it if you die. The 7th vault holds secrets about what happened to the colony.",
   },
 ];
 
@@ -383,7 +383,7 @@ const RUNNERS = [
   { name: "Recon", role: "Intel", desc: "Eyes of the team. Long-range intel gathering and precision strikes from distance.", color: "#44DDFF", icon: "🔭" },
   { name: "Thief", role: "Stealth", desc: "In and out. Covert loot specialist who rewards clean, efficient extraction runs.", color: "#AA66FF", icon: "👻" },
   { name: "Triage", role: "Support", desc: "The lifeline. Keeps the crew alive through healing and tactical support.", color: "#44FF88", icon: "💉" },
-  { name: "Rook", role: "Wildcard", desc: "The opportunist. Scavenger mode with adaptive playstyle — thrives in chaos.", color: "#FFB020", icon: "🎲" },
+  { name: "Rook", role: "Wildcard", desc: "The opportunist. Scavenger mode with adaptive playstyle. Thrives in chaos.", color: "#FFB020", icon: "🎲" },
 ];
 
 function RunnerDatabase() {
@@ -391,7 +391,7 @@ function RunnerDatabase() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-      <div style={{ ...S.label, marginBottom: 2 }}>7 RUNNER SHELLS — TAU CETI IV DEPLOYMENT ROSTER</div>
+      <div style={{ ...S.label, marginBottom: 2 }}>7 RUNNER SHELLS · TAU CETI IV DEPLOYMENT ROSTER</div>
 
       {RUNNERS.map((r, i) => (
         <div key={r.name} onClick={() => setSelected(selected === i ? null : i)} onKeyDown={onActivate(() => setSelected(selected === i ? null : i))} tabIndex={0} role="button" style={{
@@ -449,7 +449,7 @@ function MyRunner({ accentColor }: { accentColor?: string }) {
       <div style={{
         maxWidth: 380, textAlign: "center", fontSize: 12, lineHeight: 1.7, opacity: 0.5,
       }}>
-        Bungie has not yet released a public Marathon API. When they do, this tab will show your Runner stats, match history, loadout, ranked progression, and extraction data — all pulled live from your linked Bungie account.
+        Bungie has not yet released a public Marathon API. When they do, this tab will show your Runner stats, match history, loadout, ranked progression, and extraction data, all pulled live from your linked Bungie account.
       </div>
 
       <div style={{ width: "100%", maxWidth: 420, display: "flex", flexDirection: "column", gap: 6, marginTop: 8 }}>
@@ -457,7 +457,7 @@ function MyRunner({ accentColor }: { accentColor?: string }) {
         {[
           { icon: "📊", label: "K/D, extraction rate, loot value stats" },
           { icon: "🏆", label: "Ranked tier and season progression" },
-          { icon: "🔫", label: "Current loadout — weapons, mods, cores" },
+          { icon: "🔫", label: "Current loadout: weapons, mods, cores" },
           { icon: "📜", label: "Match history with zone breakdowns" },
           { icon: "🏃", label: "Runner shell usage and performance" },
           { icon: "👥", label: "Crew stats and synergy analysis" },
@@ -538,8 +538,8 @@ function Leaderboards() {
       </div>
 
       <div style={{ ...S.card, textAlign: "center" }}>
-        <div style={{ fontWeight: 900, fontSize: 12, fontFamily: "monospace", letterSpacing: "1px", color: M.accent, marginBottom: 4 }}>SEASON 1 — DEATH IS THE FIRST STEP</div>
-        <div style={{ fontSize: 11, opacity: 0.5 }}>March 2026 — June 2026</div>
+        <div style={{ fontWeight: 900, fontSize: 12, fontFamily: "monospace", letterSpacing: "1px", color: M.accent, marginBottom: 4 }}>SEASON 1 · DEATH IS THE FIRST STEP</div>
+        <div style={{ fontSize: 11, opacity: 0.5 }}>March 2026 to June 2026</div>
         <div style={{ fontSize: 10, opacity: 0.3, marginTop: 4 }}>Progress resets each season. Cosmetics and Codex carry over.</div>
       </div>
     </div>
@@ -596,7 +596,7 @@ function ZoneMap() {
   const thumbnail = (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
       <div style={{ ...S.label, display: "flex", alignItems: "center", gap: 8 }}>
-        UESC MARATHON — ZONE MAP
+        UESC MARATHON · ZONE MAP
         <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 10, fontWeight: 800, color: "#E8C547", letterSpacing: "0.5px", opacity: 1 }}>
           <span style={{ fontSize: 12, filter: "drop-shadow(0 0 4px rgba(232,197,71,.5))" }}>&#9733;</span>
           LordTT
@@ -635,7 +635,7 @@ function ZoneMap() {
         </div>
       </div>
       <div style={{ fontSize: 10, opacity: 0.3, fontFamily: "monospace", textAlign: "center" }}>
-        Map by <span style={{ color: M.accent, opacity: 1 }}>LordTT</span> — click to open full-screen interactive view
+        Map by <span style={{ color: M.accent, opacity: 1 }}>LordTT</span>. Click to open the full-screen interactive view
       </div>
     </div>
   );
@@ -718,7 +718,7 @@ function ZoneMap() {
         fontSize: 10, fontFamily: "monospace", opacity: 0.35, textAlign: "center",
         flexShrink: 0,
       }}>
-        Map created by LordTT — scroll to zoom, drag to pan
+        Map created by LordTT. Scroll to zoom, drag to pan
       </div>
     </div>
   ) : null;

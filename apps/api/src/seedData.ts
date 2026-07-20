@@ -270,7 +270,7 @@ export const SEED_LOBBIES = [
     id: "cowork",
     name: "Co-Work",
     description:
-      "The lobby for people who work for themselves, by themselves. Solo founders, freelancers, consultants, one-person companies. Working alone is the deal you made — nobody said you had to sit in an empty room. Co-Work runs on presence: clock in on The Floor and see who else is at it right now, join the synchronized focus sprint that runs at the top of every hour (50 minutes of deep work, 10 of break, everyone on the same clock), put your intentions on the Day Board and check them off where people can see. Deep Work is a listen-only room built for body doubling: cameras optional, mics stay off, the quiet company of other people getting things done. The Watercooler is where the break happens. No performative hustle, no growth-hack spam — just other people who also chose to work for themselves, at work.",
+      "The lobby for people who work for themselves, by themselves. Solo founders, freelancers, consultants, one-person companies. Working alone is the deal you made. Nobody said you had to sit in an empty room. Co-Work runs on presence: clock in on The Floor and see who else is at it right now, join the synchronized focus sprint that runs at the top of every hour (50 minutes of deep work, 10 of break, everyone on the same clock), put your intentions on the Day Board and check them off where people can see. Deep Work is a listen-only room built for body doubling: cameras optional, mics stay off, the quiet company of other people getting things done. The Watercooler is where the break happens. There is no performative hustle here and nobody is growth-hacking you. It is other people who also chose to work for themselves, at work.",
     keywords: [
       "cowork",
       "coworking",
@@ -291,7 +291,7 @@ export const SEED_LOBBIES = [
     id: "hll",
     name: "Hell Let Loose",
     description:
-      "The 50v50 WWII platoon shooter where the map is won by squads that talk. Weered's Hell Let Loose lobby is built around the thing that actually decides whether you play tonight: the servers. A live server browser with population, current map and region for every community server on the front; a seeding rally board that pings the lobby when a server needs bodies to get from empty to the 40 players where the game comes alive, with live fill tracking so you can watch the push work; an artillery calculator with the real ballistics for the US 155, German 150, Soviet 122 and British 25-pounder; and dispatches straight from the front. Community servers are the backbone of HLL, and seeding them is the hardest job in the game. This lobby exists to make that a coordinated operation instead of a prayer. Enlist, answer a rally, hold the line.",
+      "The 50v50 WWII platoon shooter where the map is won by squads that talk. Weered's Hell Let Loose lobby is built around the thing that actually decides whether you play tonight: the servers. A live server browser with population, current map and region for every community server on the front; a seeding rally board that pings the lobby when a server needs bodies to get from empty to the 40 players where the game comes alive, with live fill tracking so you can watch the push work; an artillery calculator with the real ballistics for the US 155, German 150, Soviet 122 and British 25-pounder; and dispatches straight from the front. Community servers are the backbone of HLL, and seeding them is the hardest job in the game. This lobby exists to make that a coordinated operation instead of a prayer.",
     keywords: [
       "hll",
       "hell let loose",
@@ -345,7 +345,7 @@ export const SEED_LOBBIES = [
     id: "gta6",
     name: "GTA 6",
     description:
-      "The unofficial community hub for Grand Theft Auto VI. Find a crew, build a heist team, post LFG, run voice, and follow the news. Crew finder and player matchmaking for GTA 6 Online — where players actually link up.",
+      "The unofficial community hub for Grand Theft Auto VI. Find a crew, build a heist team, post LFG, run voice, and follow the news. Crew finder and player matchmaking for GTA 6 Online, where players actually link up.",
     keywords: [
       "gta6",
       "gta 6",
@@ -477,7 +477,7 @@ export const SEED_ROOMS: {
     id: "dnd-table",
     name: "Campaign Table",
     description:
-      "Open play table — roll initiative, share maps, run encounters. Bring your character sheet.",
+      "Open play table: roll initiative, share maps, run encounters. Bring your character sheet.",
     lobbyId: "dnd",
   },
   {
@@ -616,7 +616,7 @@ export const SEED_ROOMS: {
     id: "mtg-commander",
     name: "Commander Tables",
     description:
-      "Find a Commander pod tonight. Paper, Spelltable, MTGO — post your power level, format, and table type.",
+      "Find a Commander pod tonight. Paper, Spelltable, or MTGO. Post your power level, format, and table type.",
     lobbyId: "mtg",
   },
   {
@@ -658,7 +658,7 @@ export const SEED_ROOMS: {
     id: "poe-builds",
     name: "Build Lab",
     description:
-      "Theorycraft and PoB pastebins. League-starter debates, min-max math — bring receipts.",
+      "Theorycraft and PoB pastebins. League-starter debates and min-max math. Bring receipts.",
     lobbyId: "poe",
   },
   {
@@ -957,7 +957,7 @@ export const SEED_ROOMS: {
     id: "cowork-deepwork",
     name: "Deep Work",
     description:
-      "Body doubling, enforced. Listen-only voice: cameras optional, mics stay off. Sit down, be seen working, get it done.",
+      "Body doubling, enforced. Listen-only voice: cameras optional, mics stay off. Sit down where people can see you working and get it done.",
     lobbyId: "cowork",
     voiceMode: "LISTEN_ONLY",
   },
@@ -965,7 +965,7 @@ export const SEED_ROOMS: {
     id: "cowork-watercooler",
     name: "The Watercooler",
     description:
-      "Where the break goes. Open voice between sprints — talk shop, complain about invoices, be a person for ten minutes.",
+      "Where the break goes. Open voice between sprints, for talking shop and complaining about invoices. Be a person for ten minutes.",
     lobbyId: "cowork",
   },
   {
@@ -987,7 +987,7 @@ export const SEED_ROOMS: {
     id: "hll-seeding-ops",
     name: "Seeding Ops",
     description:
-      "The rally line. Coordinate seeds, call your server, watch the fill bar climb. Every body counts below 40.",
+      "The rally line. Call your server and watch the fill bar climb. Every body counts below 40.",
     lobbyId: "hll",
   },
   {

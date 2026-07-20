@@ -883,7 +883,7 @@ function DiceTower({ lobbyId }: { lobbyId: string }) {
             color: !isPublic ? ACCENT : "rgba(148,163,184,.65)",
             fontFamily: "inherit",
           }}
-          title="Rolls stay local — useful for DM stat blocks behind the screen"
+          title="Rolls stay local. Useful for DM stat blocks behind the screen"
         >
           Private (just you)
         </button>
@@ -1185,7 +1185,7 @@ function TavernBoard({ lobbyId }: { lobbyId: string }) {
             </div>
           </div>
 
-          <input style={S.input} value={activity} onChange={e => setActivity(e.target.value)} placeholder="Quest title (e.g. 'Lost Mine of Phandelver — Session 0')" maxLength={200} />
+          <input style={S.input} value={activity} onChange={e => setActivity(e.target.value)} placeholder="Quest title, like 'Lost Mine of Phandelver, Session 0'" maxLength={200} />
           <textarea
             style={{ ...S.input, minHeight: 60, resize: "vertical" }}
             value={description}
@@ -1356,7 +1356,7 @@ export default function DndModulesPanel({
         <button
           type="button"
           onClick={sessionZero.show}
-          title="Reopen Session Zero — the D&D lobby walkthrough"
+          title="Reopen Session Zero, the D&D lobby walkthrough"
           className="dnd-lectern-quill"
         >
           <span style={{ fontStyle: "normal" }}>🪶</span>

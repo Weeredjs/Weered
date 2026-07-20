@@ -98,7 +98,7 @@ const FLOOR_ROOMS = [
   },
   {
     name: "The Watercooler",
-    note: "Open voice for the break. Talk shop, complain about invoices, be a person.",
+    note: "Open voice for the break. Talk shop or complain about invoices. Be a person for ten minutes.",
   },
   {
     name: "Standup",
@@ -135,8 +135,8 @@ function Floor() {
       {loaded && users.length === 0 && (
         <div style={S.card}>
           <div style={{ ...S.muted }}>
-            Nobody on the floor right now. First one in turns on the lights — join a room, set your
-            status to what you&rsquo;re shipping, and get to it.
+            Nobody on the floor right now. First one in turns on the lights. Join a room and set
+            your status to what you&rsquo;re shipping.
           </div>
         </div>
       )}
@@ -402,8 +402,8 @@ function DayBoard({ currentUserId }: { currentUserId?: string }) {
           Say it where people can see it
         </div>
         <div style={{ ...S.muted, marginTop: 4 }}>
-          Up to five intentions for today. The board wipes clean every day — no backlog, no guilt
-          archive. Just today, in public.
+          Up to five intentions for today. The board wipes clean every day, so yesterday can&rsquo;t
+          guilt you. Today only, in public.
         </div>
         {currentUserId ? (
           <div style={{ ...S.row, marginTop: 10 }}>

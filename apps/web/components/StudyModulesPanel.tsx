@@ -356,7 +356,7 @@ function FocusTimer({ accent }: { accent: string }) {
           }}
         >
           <span style={{ fontSize: 14 }}>🔇</span>
-          Quiet Mode — mics muted during focus
+          Quiet Mode: mics muted during focus
         </div>
       )}
 
@@ -496,7 +496,7 @@ function FocusTimer({ accent }: { accent: string }) {
           !running &&
           phase === "break" && (
             <div style={{ fontSize: 11, color: ACCENT_GREEN, opacity: 0.7, marginTop: 2 }}>
-              Long break earned — you've completed {SESSIONS_BEFORE_LONG_BREAK} sessions!
+              Long break: {SESSIONS_BEFORE_LONG_BREAK} sessions done.
             </div>
           )}
       </div>
@@ -669,7 +669,7 @@ function StudyRooms({ lobbyId, accent }: { lobbyId: string; accent: string }) {
                     }}
                   />
                   <span style={{ fontSize: 11, color: "rgba(243,244,246,.5)" }}>
-                    {count} {count === 1 ? "person" : "people"} — {status}
+                    {count} {count === 1 ? "person" : "people"} · {status}
                   </span>
                 </div>
 
@@ -736,7 +736,7 @@ function FindPartners({ lobbyId, accent }: { lobbyId: string; accent: string }) 
       setMsg("Add a subject or topic");
       return;
     }
-    const activity = `${subject.trim()} — ${level} — ${sessionLen} — ${STUDY_STYLES.find((s) => s.value === studyStyle)?.label || studyStyle}`;
+    const activity = `${subject.trim()} · ${level} · ${sessionLen} · ${STUDY_STYLES.find((s) => s.value === studyStyle)?.label || studyStyle}`;
     const j = await apiFetch(`/lfg/${encodeURIComponent(lobbyId)}`, {
       method: "POST",
       body: JSON.stringify({ activity, description: note, maxPlayers: 8, platform: "any" }),
@@ -890,7 +890,7 @@ function FindPartners({ lobbyId, accent }: { lobbyId: string; accent: string }) 
                 )}
                 <div style={{ fontSize: 11, color: "rgba(243,244,246,.35)" }}>
                   {slots} joined
-                  {p.owner?.username && <span> — by {p.owner.username}</span>}
+                  {p.owner?.username && <span> · by {p.owner.username}</span>}
                 </div>
               </div>
               <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
@@ -909,7 +909,7 @@ function FindPartners({ lobbyId, accent }: { lobbyId: string; accent: string }) 
       {posts.length === 0 && !showForm && (
         <EmptyState
           title="No study partners yet."
-          hint="Post what you're studying — find a buddy."
+          hint="Post what you're studying and find a buddy."
         />
       )}
     </div>
