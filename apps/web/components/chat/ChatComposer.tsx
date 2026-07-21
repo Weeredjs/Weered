@@ -330,7 +330,9 @@ export function ChatComposer({
           </button>
         </div>
       )}
-      <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+      {/* Column layout: the input gets the full width (it was starved to a
+          postage stamp by four fixed icons on one row); tools live below. */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         <input
           ref={inputRef}
           value={text}
@@ -380,8 +382,7 @@ export function ChatComposer({
           }}
           disabled={!canType}
           style={{
-            flex: 1,
-            minWidth: 0,
+            width: "100%",
             padding: "8px 12px",
             borderRadius: 10,
             border: "1px solid rgba(255,255,255,.10)",
@@ -433,129 +434,132 @@ export function ChatComposer({
             e.currentTarget.value = "";
           }}
         />
-        <button
-          onClick={() => {
-            void onAttachClick();
-          }}
-          disabled={!canType || attBusy}
-          title="Attach image"
-          style={{
-            borderRadius: 8,
-            border: "1px solid rgba(255,255,255,.1)",
-            background: attBusy ? "rgba(124,58,237,.18)" : "rgba(255,255,255,.04)",
-            width: 34,
-            height: 34,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            cursor: canType && !attBusy ? "pointer" : "not-allowed",
-            color: canType ? "rgba(200,205,215,.75)" : "rgba(255,255,255,.3)",
-            transition: "background .15s, color .15s",
-            flexShrink: 0,
-            fontSize: 15,
-          }}
-          aria-label="Attach image"
-        >
-          {attBusy ? "⏳" : "📎"}
-        </button>
-        <button
-          onClick={() => {
-            setGifOpen((v) => !v);
-            setEmojiOpen(false);
-          }}
-          disabled={!canType}
-          title="GIF"
-          style={{
-            borderRadius: 8,
-            border: "1px solid rgba(255,255,255,.1)",
-            background: gifOpen ? "rgba(124,58,237,.18)" : "rgba(255,255,255,.04)",
-            width: 34,
-            height: 34,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            cursor: canType ? "pointer" : "not-allowed",
-            color: canType
-              ? gifOpen
-                ? "rgba(216,180,254,.95)"
-                : "rgba(200,205,215,.75)"
-              : "rgba(255,255,255,.3)",
-            transition: "background .15s, color .15s",
-            flexShrink: 0,
-          }}
-          onMouseEnter={(e) => {
-            if (canType && !gifOpen)
-              (e.currentTarget as HTMLElement).style.color = "rgba(243,244,246,.95)";
-          }}
-          onMouseLeave={(e) => {
-            if (canType && !gifOpen)
-              (e.currentTarget as HTMLElement).style.color = "rgba(200,205,215,.75)";
-          }}
-          aria-label="GIF"
-        >
-          <Icons.Gif />
-        </button>
-        <button
-          onClick={() => {
-            setEmojiOpen((v) => !v);
-            setGifOpen(false);
-          }}
-          disabled={!canType}
-          title="Emoji"
-          style={{
-            borderRadius: 8,
-            border: "1px solid rgba(255,255,255,.1)",
-            background: emojiOpen ? "rgba(124,58,237,.18)" : "rgba(255,255,255,.04)",
-            width: 34,
-            height: 34,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            cursor: canType ? "pointer" : "not-allowed",
-            color: canType
-              ? emojiOpen
-                ? "rgba(216,180,254,.95)"
-                : "rgba(200,205,215,.75)"
-              : "rgba(255,255,255,.3)",
-            transition: "background .15s, color .15s",
-            flexShrink: 0,
-          }}
-          onMouseEnter={(e) => {
-            if (canType && !emojiOpen)
-              (e.currentTarget as HTMLElement).style.color = "rgba(243,244,246,.95)";
-          }}
-          onMouseLeave={(e) => {
-            if (canType && !emojiOpen)
-              (e.currentTarget as HTMLElement).style.color = "rgba(200,205,215,.75)";
-          }}
-          aria-label="Emoji"
-        >
-          <Icons.Emoji />
-        </button>
-        <button
-          onClick={onSend}
-          disabled={!canSendNow}
-          title="Send"
-          aria-label="Send"
-          style={{
-            borderRadius: 10,
-            border: canSendNow
-              ? "1px solid rgba(124,58,237,.35)"
-              : "1px solid rgba(255,255,255,.10)",
-            background: canSendNow ? "rgba(124,58,237,.18)" : "rgba(255,255,255,.04)",
-            color: canSendNow ? "rgba(216,180,254,.95)" : "rgba(255,255,255,.4)",
-            width: 40,
-            height: 34,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            cursor: canSend ? "pointer" : "not-allowed",
-            transition: "all .15s",
-            flexShrink: 0,
-          }}
-        >
-          <Icons.Send />
-        </button>
+        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+          <button
+            onClick={() => {
+              void onAttachClick();
+            }}
+            disabled={!canType || attBusy}
+            title="Attach image"
+            style={{
+              borderRadius: 8,
+              border: "1px solid rgba(255,255,255,.1)",
+              background: attBusy ? "rgba(124,58,237,.18)" : "rgba(255,255,255,.04)",
+              width: 34,
+              height: 34,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: canType && !attBusy ? "pointer" : "not-allowed",
+              color: canType ? "rgba(200,205,215,.75)" : "rgba(255,255,255,.3)",
+              transition: "background .15s, color .15s",
+              flexShrink: 0,
+              fontSize: 15,
+            }}
+            aria-label="Attach image"
+          >
+            {attBusy ? "⏳" : "📎"}
+          </button>
+          <button
+            onClick={() => {
+              setGifOpen((v) => !v);
+              setEmojiOpen(false);
+            }}
+            disabled={!canType}
+            title="GIF"
+            style={{
+              borderRadius: 8,
+              border: "1px solid rgba(255,255,255,.1)",
+              background: gifOpen ? "rgba(124,58,237,.18)" : "rgba(255,255,255,.04)",
+              width: 34,
+              height: 34,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: canType ? "pointer" : "not-allowed",
+              color: canType
+                ? gifOpen
+                  ? "rgba(216,180,254,.95)"
+                  : "rgba(200,205,215,.75)"
+                : "rgba(255,255,255,.3)",
+              transition: "background .15s, color .15s",
+              flexShrink: 0,
+            }}
+            onMouseEnter={(e) => {
+              if (canType && !gifOpen)
+                (e.currentTarget as HTMLElement).style.color = "rgba(243,244,246,.95)";
+            }}
+            onMouseLeave={(e) => {
+              if (canType && !gifOpen)
+                (e.currentTarget as HTMLElement).style.color = "rgba(200,205,215,.75)";
+            }}
+            aria-label="GIF"
+          >
+            <Icons.Gif />
+          </button>
+          <button
+            onClick={() => {
+              setEmojiOpen((v) => !v);
+              setGifOpen(false);
+            }}
+            disabled={!canType}
+            title="Emoji"
+            style={{
+              borderRadius: 8,
+              border: "1px solid rgba(255,255,255,.1)",
+              background: emojiOpen ? "rgba(124,58,237,.18)" : "rgba(255,255,255,.04)",
+              width: 34,
+              height: 34,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: canType ? "pointer" : "not-allowed",
+              color: canType
+                ? emojiOpen
+                  ? "rgba(216,180,254,.95)"
+                  : "rgba(200,205,215,.75)"
+                : "rgba(255,255,255,.3)",
+              transition: "background .15s, color .15s",
+              flexShrink: 0,
+            }}
+            onMouseEnter={(e) => {
+              if (canType && !emojiOpen)
+                (e.currentTarget as HTMLElement).style.color = "rgba(243,244,246,.95)";
+            }}
+            onMouseLeave={(e) => {
+              if (canType && !emojiOpen)
+                (e.currentTarget as HTMLElement).style.color = "rgba(200,205,215,.75)";
+            }}
+            aria-label="Emoji"
+          >
+            <Icons.Emoji />
+          </button>
+          <div style={{ flex: 1 }} />
+          <button
+            onClick={onSend}
+            disabled={!canSendNow}
+            title="Send"
+            aria-label="Send"
+            style={{
+              borderRadius: 10,
+              border: canSendNow
+                ? "1px solid rgba(124,58,237,.35)"
+                : "1px solid rgba(255,255,255,.10)",
+              background: canSendNow ? "rgba(124,58,237,.18)" : "rgba(255,255,255,.04)",
+              color: canSendNow ? "rgba(216,180,254,.95)" : "rgba(255,255,255,.4)",
+              width: 40,
+              height: 34,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: canSend ? "pointer" : "not-allowed",
+              transition: "all .15s",
+              flexShrink: 0,
+            }}
+          >
+            <Icons.Send />
+          </button>
+        </div>
       </div>
 
       {emojiOpen && (
