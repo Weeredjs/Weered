@@ -15,7 +15,7 @@ export default async function helldiversRoutes(app: FastifyInstance, _opts: Opts
   };
 
   const cache = new Map<string, { data: any; expiresAt: number }>();
-  const TTL_MS = 60_000;
+  const TTL_MS = 160_000; // outlives the 120s refresh so a failed cycle serves stale, not empty
 
   function cacheGet(key: string) {
     const c = cache.get(key);
@@ -54,18 +54,24 @@ export default async function helldiversRoutes(app: FastifyInstance, _opts: Opts
 
   async function warmCache() {
     try {
-      const [war, assignments, dispatches, campaigns, planets] = await Promise.all([
-        hd2Get("/war"),
-        hd2Get("/assignments"),
-        hd2Get("/dispatches"),
-        hd2Get("/campaigns"),
-        hd2Get("/planets"),
-      ]);
-      if (war) cacheSet("war", war);
-      if (assignments) cacheSet("assignments", assignments);
-      if (dispatches) cacheSet("dispatches", dispatches);
-      if (campaigns) cacheSet("campaigns", campaigns);
-      if (planets) cacheSet("planets", planets);
+      // The community API allows roughly 5 requests per 10s. The old parallel
+      // burst fired all five at once (plus the worker's own two), so the tail
+      // requests — planets and dispatches — got 429'd every single cycle.
+      // Sequential with spacing keeps a full refresh comfortably under the cap.
+      const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
+      const PATHS: [string, string][] = [
+        ["war", "/war"],
+        ["assignments", "/assignments"],
+        ["dispatches", "/dispatches"],
+        ["campaigns", "/campaigns"],
+        ["planets", "/planets"],
+      ];
+      for (let i = 0; i < PATHS.length; i++) {
+        const [key, path] = PATHS[i];
+        const data = await hd2Get(path);
+        if (data) cacheSet(key, data);
+        if (i < PATHS.length - 1) await delay(2500);
+      }
     } catch (e) {
       log.warn(`[helldivers2] warmCache failed: ${(e as any)?.message || e}`);
     }
@@ -74,7 +80,7 @@ export default async function helldiversRoutes(app: FastifyInstance, _opts: Opts
   warmCache().catch(swallow);
   setInterval(() => {
     warmCache().catch(swallow);
-  }, 60_000);
+  }, 120_000);
 
   async function getOrFetch(key: string, path: string) {
     const hit = cacheGet(key);
