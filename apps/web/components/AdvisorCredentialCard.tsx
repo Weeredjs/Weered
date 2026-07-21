@@ -16,6 +16,20 @@ function pickFirstString(...vals: any[]): string {
   return "";
 }
 
+/**
+ * Only let http(s) or inline image data URLs reach an <img src>. A stored
+ * avatar is user-settable, so this blocks javascript:/vbscript:/other schemes
+ * from being reflected into the DOM (XSS + navigation). Returns null otherwise.
+ */
+function safeImageUrl(raw: unknown): string | null {
+  if (typeof raw !== "string") return null;
+  const s = raw.trim();
+  if (!s) return null;
+  if (/^https?:\/\//i.test(s)) return s;
+  if (/^data:image\/(png|jpe?g|gif|webp|avif);/i.test(s)) return s;
+  return null;
+}
+
 /** Halifax wall-clock, minute precision. Updates on the minute boundary. */
 function useHalifaxTime(): string {
   const fmt = useMemo(
@@ -94,7 +108,7 @@ export default function AdvisorCredentialCard() {
   const { me } = useWeered() as any;
 
   const name = useMemo(() => pickFirstString(me?.name, me?.username, "Advisor"), [me]);
-  const avatarUrl: string | null = typeof me?.avatar === "string" && me.avatar ? me.avatar : null;
+  const avatarUrl: string | null = safeImageUrl(me?.avatar);
   const initial = (name || "A").trim().slice(0, 1).toUpperCase();
   const time = useHalifaxTime();
   const signOpen = useSignState();

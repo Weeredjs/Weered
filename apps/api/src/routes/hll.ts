@@ -246,10 +246,15 @@ export default async function hllRoutes(app: FastifyInstance, opts: Opts = {}) {
   // CRCON wraps every response as { result, command, failed, error }.
   async function crconGet(linked: Linked, cmd: string): Promise<any | null> {
     try {
-      const base = linked.baseUrl.replace(/\/+$/, "");
+      // Re-validate the stored base URL against the SSRF guard on every call.
+      // It was checked when the server was linked, but re-resolving here closes
+      // the DNS-rebind window (host later pointing at an internal IP) and keeps
+      // the guard directly on the request path. cmd is a fixed internal literal.
+      const parsed = await assertSafeUrl(linked.baseUrl);
+      const base = `${parsed.protocol}//${parsed.host}`;
       const headers: Record<string, string> = { Accept: "application/json" };
       if (linked.apiKey) headers.Authorization = `Bearer ${linked.apiKey}`;
-      const res = await fetch(`${base}/api/${cmd}`, {
+      const res = await fetch(`${base}/api/${encodeURIComponent(cmd)}`, {
         headers,
         signal: AbortSignal.timeout(8000),
       });
@@ -476,126 +481,144 @@ export default async function hllRoutes(app: FastifyInstance, opts: Opts = {}) {
     return reply.send({ ok: true, rallies: views, canArm, joinedIds, meSteamLinked });
   });
 
-  app.post("/hll/rallies", { schema: { tags: ["hll"] } }, async (req, reply) => {
-    const u = authFromHeader?.((req as any).headers?.authorization);
-    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
-    if (!(await canArmRally(u.id))) return reply.code(403).send({ ok: false, error: "mods_only" });
+  app.post(
+    "/hll/rallies",
+    { schema: { tags: ["hll"] }, config: { rateLimit: { max: 20, timeWindow: "1 minute" } } },
+    async (req, reply) => {
+      const u = authFromHeader?.((req as any).headers?.authorization);
+      if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+      if (!(await canArmRally(u.id)))
+        return reply.code(403).send({ ok: false, error: "mods_only" });
 
-    const body: any = (req as any).body || {};
-    const bmServerId = String(body.bmServerId || "")
-      .trim()
-      .slice(0, 32);
-    if (!/^\d+$/.test(bmServerId)) return reply.code(400).send({ ok: false, error: "bad_server" });
-    const note = String(body.note || "")
-      .trim()
-      .slice(0, 180);
-    const target = Math.min(100, Math.max(10, Number(body.target) || 45));
+      const body: any = (req as any).body || {};
+      const bmServerId = String(body.bmServerId || "")
+        .trim()
+        .slice(0, 32);
+      if (!/^\d+$/.test(bmServerId))
+        return reply.code(400).send({ ok: false, error: "bad_server" });
+      const note = String(body.note || "")
+        .trim()
+        .slice(0, 180);
+      const target = Math.min(100, Math.max(10, Number(body.target) || 45));
 
-    sweepRallies();
-    for (const r of rallies.values())
-      if (r.bmServerId === bmServerId)
-        return reply.code(409).send({ ok: false, error: "rally_exists" });
+      sweepRallies();
+      for (const r of rallies.values())
+        if (r.bmServerId === bmServerId)
+          return reply.code(409).send({ ok: false, error: "rally_exists" });
 
-    const staff = await isStaffUser(u.id).catch(() => false);
-    if (!staff && Date.now() - lastArmAt < 60 * 60_000)
-      return reply.code(429).send({ ok: false, error: "cooldown" });
+      const staff = await isStaffUser(u.id).catch(() => false);
+      if (!staff && Date.now() - lastArmAt < 60 * 60_000)
+        return reply.code(429).send({ ok: false, error: "cooldown" });
 
-    const server = await getServerById(bmServerId);
-    if (!server) return reply.code(404).send({ ok: false, error: "server_not_found" });
+      const server = await getServerById(bmServerId);
+      if (!server) return reply.code(404).send({ ok: false, error: "server_not_found" });
 
-    const armer = await prisma.user.findUnique({
-      where: { id: u.id },
-      select: { name: true },
-    });
-    const armedByName = armer?.name || "A moderator";
+      const armer = await prisma.user.findUnique({
+        where: { id: u.id },
+        select: { name: true },
+      });
+      const armedByName = armer?.name || "A moderator";
 
-    const rally: Rally = {
-      id: `ra_${Date.now().toString(36)}_${++_raSeq}`,
-      bmServerId,
-      serverName: server.name,
-      note,
-      target,
-      armedById: u.id,
-      armedByName,
-      createdAt: Date.now(),
-      expiresAt: Date.now() + 3 * 60 * 60_000,
-      joiners: new Map([[u.id, { name: armedByName, at: Date.now() }]]),
-    };
-    rallies.set(rally.id, rally);
-    lastArmAt = Date.now();
+      const rally: Rally = {
+        id: `ra_${Date.now().toString(36)}_${++_raSeq}`,
+        bmServerId,
+        serverName: server.name,
+        note,
+        target,
+        armedById: u.id,
+        armedByName,
+        createdAt: Date.now(),
+        expiresAt: Date.now() + 3 * 60 * 60_000,
+        joiners: new Map([[u.id, { name: armedByName, at: Date.now() }]]),
+      };
+      rallies.set(rally.id, rally);
+      lastArmAt = Date.now();
 
-    // Verified seeding: if this rally's server is one of the linked garrisons,
-    // start the presence loop — joiners with a linked SteamID64 who actually
-    // show up get credited (refId-deduped, once per rally).
-    const garrisons = await loadLinkedServers();
-    const match = garrisons.find((g) => g.bmServerId && g.bmServerId === bmServerId);
-    if (match) armVerification(rally, match);
+      // Verified seeding: if this rally's server is one of the linked garrisons,
+      // start the presence loop — joiners with a linked SteamID64 who actually
+      // show up get credited (refId-deduped, once per rally).
+      const garrisons = await loadLinkedServers();
+      const match = garrisons.find((g) => g.bmServerId && g.bmServerId === bmServerId);
+      if (match) armVerification(rally, match);
 
-    // Ping the lobby: the whole point is a call people actually receive.
-    // In-app notification + (via createNotification) web/Expo push if offline.
-    // Capped fan-out; fire-and-forget so the armer isn't held on N writes.
-    void (async () => {
-      try {
-        const members = await prisma.lobbyMember.findMany({
-          where: { lobbyId: HLL_LOBBY_ID, userId: { not: u.id } },
-          select: { userId: true },
-          take: 300,
-        });
-        await Promise.allSettled(
-          members.map((m) =>
-            createNotification({
-              userId: m.userId,
-              type: "SYSTEM",
-              title: `Seeding rally: ${server.name.slice(0, 60)}`,
-              body: note || `Help seed to ${target} players — the fight starts when you show up.`,
-              actionUrl: "/lobby/hll",
-              actorId: u.id,
-              actorName: armedByName,
-              meta: { kind: "hll_seed_rally", rallyId: rally.id, bmServerId },
-            }),
-          ),
-        );
-      } catch (e) {
-        swallow(e);
+      // Ping the lobby: the whole point is a call people actually receive.
+      // In-app notification + (via createNotification) web/Expo push if offline.
+      // Capped fan-out; fire-and-forget so the armer isn't held on N writes.
+      void (async () => {
+        try {
+          const members = await prisma.lobbyMember.findMany({
+            where: { lobbyId: HLL_LOBBY_ID, userId: { not: u.id } },
+            select: { userId: true },
+            take: 300,
+          });
+          await Promise.allSettled(
+            members.map((m) =>
+              createNotification({
+                userId: m.userId,
+                type: "SYSTEM",
+                title: `Seeding rally: ${server.name.slice(0, 60)}`,
+                body: note || `Help seed to ${target} players — the fight starts when you show up.`,
+                actionUrl: "/lobby/hll",
+                actorId: u.id,
+                actorName: armedByName,
+                meta: { kind: "hll_seed_rally", rallyId: rally.id, bmServerId },
+              }),
+            ),
+          );
+        } catch (e) {
+          swallow(e);
+        }
+      })();
+
+      return reply.send({ ok: true, rally: await rallyView(rally) });
+    },
+  );
+
+  app.post(
+    "/hll/rallies/:id/join",
+    { schema: { tags: ["hll"] }, config: { rateLimit: { max: 40, timeWindow: "1 minute" } } },
+    async (req, reply) => {
+      const u = authFromHeader?.((req as any).headers?.authorization);
+      if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+      sweepRallies();
+      const rally = rallies.get(String((req as any).params?.id || ""));
+      if (!rally) return reply.code(404).send({ ok: false, error: "not_found" });
+      if (!rally.joiners.has(u.id)) {
+        const row = await prisma.user.findUnique({ where: { id: u.id }, select: { name: true } });
+        rally.joiners.set(u.id, { name: row?.name || "Someone", at: Date.now() });
       }
-    })();
+      return reply.send({ ok: true, rally: await rallyView(rally) });
+    },
+  );
 
-    return reply.send({ ok: true, rally: await rallyView(rally) });
-  });
+  app.post(
+    "/hll/rallies/:id/leave",
+    { schema: { tags: ["hll"] }, config: { rateLimit: { max: 40, timeWindow: "1 minute" } } },
+    async (req, reply) => {
+      const u = authFromHeader?.((req as any).headers?.authorization);
+      if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+      const rally = rallies.get(String((req as any).params?.id || ""));
+      if (!rally) return reply.code(404).send({ ok: false, error: "not_found" });
+      rally.joiners.delete(u.id);
+      return reply.send({ ok: true, rally: await rallyView(rally) });
+    },
+  );
 
-  app.post("/hll/rallies/:id/join", { schema: { tags: ["hll"] } }, async (req, reply) => {
-    const u = authFromHeader?.((req as any).headers?.authorization);
-    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
-    sweepRallies();
-    const rally = rallies.get(String((req as any).params?.id || ""));
-    if (!rally) return reply.code(404).send({ ok: false, error: "not_found" });
-    if (!rally.joiners.has(u.id)) {
-      const row = await prisma.user.findUnique({ where: { id: u.id }, select: { name: true } });
-      rally.joiners.set(u.id, { name: row?.name || "Someone", at: Date.now() });
-    }
-    return reply.send({ ok: true, rally: await rallyView(rally) });
-  });
-
-  app.post("/hll/rallies/:id/leave", { schema: { tags: ["hll"] } }, async (req, reply) => {
-    const u = authFromHeader?.((req as any).headers?.authorization);
-    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
-    const rally = rallies.get(String((req as any).params?.id || ""));
-    if (!rally) return reply.code(404).send({ ok: false, error: "not_found" });
-    rally.joiners.delete(u.id);
-    return reply.send({ ok: true, rally: await rallyView(rally) });
-  });
-
-  app.post("/hll/rallies/:id/cancel", { schema: { tags: ["hll"] } }, async (req, reply) => {
-    const u = authFromHeader?.((req as any).headers?.authorization);
-    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
-    const rally = rallies.get(String((req as any).params?.id || ""));
-    if (!rally) return reply.code(404).send({ ok: false, error: "not_found" });
-    if (rally.armedById !== u.id && !(await canArmRally(u.id)))
-      return reply.code(403).send({ ok: false, error: "forbidden" });
-    stopVerify(rally);
-    rallies.delete(rally.id);
-    return reply.send({ ok: true });
-  });
+  app.post(
+    "/hll/rallies/:id/cancel",
+    { schema: { tags: ["hll"] }, config: { rateLimit: { max: 40, timeWindow: "1 minute" } } },
+    async (req, reply) => {
+      const u = authFromHeader?.((req as any).headers?.authorization);
+      if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+      const rally = rallies.get(String((req as any).params?.id || ""));
+      if (!rally) return reply.code(404).send({ ok: false, error: "not_found" });
+      if (rally.armedById !== u.id && !(await canArmRally(u.id)))
+        return reply.code(403).send({ ok: false, error: "forbidden" });
+      stopVerify(rally);
+      rallies.delete(rally.id);
+      return reply.send({ ok: true });
+    },
+  );
 
   // ---- the Garrisons: linked community servers -------------------------------
 
@@ -632,175 +655,194 @@ export default async function hllRoutes(app: FastifyInstance, opts: Opts = {}) {
     return live;
   }
 
-  app.get("/hll/garrisons", { schema: { tags: ["hll"] } }, async (req, reply) => {
-    const u = authFromHeader?.((req as any).headers?.authorization);
-    const canManage = u ? await canArmRally(u.id) : false;
-    const linked = await loadLinkedServers();
-    const servers = await Promise.all(
-      linked.map(async (l) => {
-        const live = await garrisonLive(l);
-        return {
-          id: l.id,
-          name: l.name,
-          note: l.note,
-          bmServerId: l.bmServerId,
-          status: live.reachable ? "connected" : l.status,
-          lastSeenAt: l.lastSeenAt,
-          hasKey: !!l.apiKey,
-          live: live.info,
-          rotation: live.rotation,
-        };
-      }),
-    );
-    return reply.send({ ok: true, canManage, servers });
-  });
+  app.get(
+    "/hll/garrisons",
+    { schema: { tags: ["hll"] }, config: { rateLimit: { max: 60, timeWindow: "1 minute" } } },
+    async (req, reply) => {
+      const u = authFromHeader?.((req as any).headers?.authorization);
+      const canManage = u ? await canArmRally(u.id) : false;
+      const linked = await loadLinkedServers();
+      const servers = await Promise.all(
+        linked.map(async (l) => {
+          const live = await garrisonLive(l);
+          return {
+            id: l.id,
+            name: l.name,
+            note: l.note,
+            bmServerId: l.bmServerId,
+            status: live.reachable ? "connected" : l.status,
+            lastSeenAt: l.lastSeenAt,
+            hasKey: !!l.apiKey,
+            live: live.info,
+            rotation: live.rotation,
+          };
+        }),
+      );
+      return reply.send({ ok: true, canManage, servers });
+    },
+  );
 
-  app.post("/hll/server/link", { schema: { tags: ["hll"] } }, async (req, reply) => {
-    const u = authFromHeader?.((req as any).headers?.authorization);
-    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
-    if (!(await canArmRally(u.id))) return reply.code(403).send({ ok: false, error: "mods_only" });
+  app.post(
+    "/hll/server/link",
+    { schema: { tags: ["hll"] }, config: { rateLimit: { max: 10, timeWindow: "1 minute" } } },
+    async (req, reply) => {
+      const u = authFromHeader?.((req as any).headers?.authorization);
+      if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+      if (!(await canArmRally(u.id)))
+        return reply.code(403).send({ ok: false, error: "mods_only" });
 
-    const body: any = (req as any).body || {};
-    const name = String(body.name || "")
-      .trim()
-      .slice(0, 80);
-    const baseUrlRaw = String(body.baseUrl || "")
-      .trim()
-      .slice(0, 200);
-    const apiKey =
-      String(body.apiKey || "")
+      const body: any = (req as any).body || {};
+      const name = String(body.name || "")
         .trim()
-        .slice(0, 200) || null;
-    const bmServerId = /^\d+$/.test(String(body.bmServerId || "").trim())
-      ? String(body.bmServerId).trim()
-      : null;
-    if (!name || !baseUrlRaw) return reply.code(400).send({ ok: false, error: "missing_fields" });
+        .slice(0, 80);
+      const baseUrlRaw = String(body.baseUrl || "")
+        .trim()
+        .slice(0, 200);
+      const apiKey =
+        String(body.apiKey || "")
+          .trim()
+          .slice(0, 200) || null;
+      const bmServerId = /^\d+$/.test(String(body.bmServerId || "").trim())
+        ? String(body.bmServerId).trim()
+        : null;
+      if (!name || !baseUrlRaw) return reply.code(400).send({ ok: false, error: "missing_fields" });
 
-    // User-supplied URL → SSRF guard (resolves DNS, blocks private ranges).
-    let baseUrl: string;
-    try {
-      const parsed = await assertSafeUrl(baseUrlRaw);
-      baseUrl = `${parsed.protocol}//${parsed.host}`;
-    } catch {
-      return reply.code(400).send({ ok: false, error: "bad_url" });
-    }
+      // User-supplied URL → SSRF guard (resolves DNS, blocks private ranges).
+      let baseUrl: string;
+      try {
+        const parsed = await assertSafeUrl(baseUrlRaw);
+        baseUrl = `${parsed.protocol}//${parsed.host}`;
+      } catch {
+        return reply.code(400).send({ ok: false, error: "bad_url" });
+      }
 
-    // Probe: public info (keyless), then authed reads if a key was given.
-    const probeLinked: Linked = {
-      id: "probe",
-      name,
-      baseUrl,
-      apiKey,
-      bmServerId,
-      status: "pending",
-      lastSeenAt: null,
-      note: "",
-    };
-    const [info, version, playersProbe] = await Promise.all([
-      crconGet(probeLinked, "get_public_info"),
-      crconGet(probeLinked, "get_version"),
-      apiKey ? fetchLivePlayerIds(probeLinked) : Promise.resolve(null),
-    ]);
-    const norm = normalizePublicInfo(info);
-    if (!norm)
-      return reply
-        .code(422)
-        .send({ ok: false, error: "not_crcon", detail: "get_public_info did not respond" });
+      // Probe: public info (keyless), then authed reads if a key was given.
+      const probeLinked: Linked = {
+        id: "probe",
+        name,
+        baseUrl,
+        apiKey,
+        bmServerId,
+        status: "pending",
+        lastSeenAt: null,
+        note: "",
+      };
+      const [info, version, playersProbe] = await Promise.all([
+        crconGet(probeLinked, "get_public_info"),
+        crconGet(probeLinked, "get_version"),
+        apiKey ? fetchLivePlayerIds(probeLinked) : Promise.resolve(null),
+      ]);
+      const norm = normalizePublicInfo(info);
+      if (!norm)
+        return reply
+          .code(422)
+          .send({ ok: false, error: "not_crcon", detail: "get_public_info did not respond" });
 
-    const capabilities = {
-      publicInfo: true,
-      version: version ? String(version).slice(0, 40) : null,
-      authedReads: !!(apiKey && playersProbe),
-    };
+      const capabilities = {
+        publicInfo: true,
+        version: version ? String(version).slice(0, 40) : null,
+        authedReads: !!(apiKey && playersProbe),
+      };
 
-    const all = await loadLinkedServers();
-    const existing = all.find((l) => l.baseUrl === baseUrl);
-    if (!existing && all.length >= MAX_GARRISONS)
-      return reply.code(409).send({ ok: false, error: "garrisons_full" });
-    const note = String(body.note || "")
-      .trim()
-      .slice(0, 140);
-    const data: any = {
-      lobbyId: HLL_LOBBY_ID,
-      ownerId: u.id,
-      name,
-      host: baseUrl,
-      queryUrl: baseUrl,
-      description: note,
-      framework: "crcon",
-      status: "connected",
-      lastSeenAt: new Date(),
-      lastState: { info: norm, capabilities },
-      apiKey,
-      bmServerId,
-    };
-    if (existing) await prisma.communityServer.update({ where: { id: existing.id }, data });
-    else await prisma.communityServer.create({ data });
-    invalidateLinked();
+      const all = await loadLinkedServers();
+      const existing = all.find((l) => l.baseUrl === baseUrl);
+      if (!existing && all.length >= MAX_GARRISONS)
+        return reply.code(409).send({ ok: false, error: "garrisons_full" });
+      const note = String(body.note || "")
+        .trim()
+        .slice(0, 140);
+      const data: any = {
+        lobbyId: HLL_LOBBY_ID,
+        ownerId: u.id,
+        name,
+        host: baseUrl,
+        queryUrl: baseUrl,
+        description: note,
+        framework: "crcon",
+        status: "connected",
+        lastSeenAt: new Date(),
+        lastState: { info: norm, capabilities },
+        apiKey,
+        bmServerId,
+      };
+      if (existing) await prisma.communityServer.update({ where: { id: existing.id }, data });
+      else await prisma.communityServer.create({ data });
+      invalidateLinked();
 
-    return reply.send({ ok: true, capabilities, live: norm });
-  });
+      return reply.send({ ok: true, capabilities, live: norm });
+    },
+  );
 
-  app.post("/hll/garrisons/:id/unlink", { schema: { tags: ["hll"] } }, async (req, reply) => {
-    const u = authFromHeader?.((req as any).headers?.authorization);
-    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
-    if (!(await canArmRally(u.id))) return reply.code(403).send({ ok: false, error: "mods_only" });
-    await prisma.communityServer
-      .deleteMany({
-        where: {
-          id: String((req as any).params?.id || ""),
-          lobbyId: HLL_LOBBY_ID,
-          framework: "crcon",
-        },
-      })
-      .catch(swallow);
-    invalidateLinked();
-    return reply.send({ ok: true });
-  });
+  app.post(
+    "/hll/garrisons/:id/unlink",
+    { schema: { tags: ["hll"] }, config: { rateLimit: { max: 20, timeWindow: "1 minute" } } },
+    async (req, reply) => {
+      const u = authFromHeader?.((req as any).headers?.authorization);
+      if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+      if (!(await canArmRally(u.id)))
+        return reply.code(403).send({ ok: false, error: "mods_only" });
+      await prisma.communityServer
+        .deleteMany({
+          where: {
+            id: String((req as any).params?.id || ""),
+            lobbyId: HLL_LOBBY_ID,
+            framework: "crcon",
+          },
+        })
+        .catch(swallow);
+      invalidateLinked();
+      return reply.send({ ok: true });
+    },
+  );
 
   // War Record — recent completed matches off a garrison's CRCON history.
   // Endpoint names vary by CRCON version; try the known ones, normalize hard.
-  app.get("/hll/garrisons/:id/warrecord", { schema: { tags: ["hll"] } }, async (req, reply) => {
-    const all = await loadLinkedServers();
-    const linked = all.find((l) => l.id === String((req as any).params?.id || ""));
-    if (!linked) return reply.send({ ok: true, linked: false, matches: [] });
-    if (!linked.apiKey) return reply.send({ ok: true, linked: true, needsKey: true, matches: [] });
+  app.get(
+    "/hll/garrisons/:id/warrecord",
+    { schema: { tags: ["hll"] }, config: { rateLimit: { max: 40, timeWindow: "1 minute" } } },
+    async (req, reply) => {
+      const all = await loadLinkedServers();
+      const linked = all.find((l) => l.id === String((req as any).params?.id || ""));
+      if (!linked) return reply.send({ ok: true, linked: false, matches: [] });
+      if (!linked.apiKey)
+        return reply.send({ ok: true, linked: true, needsKey: true, matches: [] });
 
-    const wrKey = `crcon:warrecord:${linked.id}`;
-    const hit = cacheGet(wrKey);
-    if (hit) return reply.send(hit);
+      const wrKey = `crcon:warrecord:${linked.id}`;
+      const hit = cacheGet(wrKey);
+      if (hit) return reply.send(hit);
 
-    const raw =
-      (await crconGet(linked, "get_scoreboard_maps")) ??
-      (await crconGet(linked, "get_map_history"));
-    const rows = Array.isArray(raw) ? raw : Array.isArray(raw?.maps) ? raw.maps : [];
-    const matches = rows
-      .slice(0, 15)
-      .map((m: any) => {
-        const mapRaw =
-          (typeof m?.map === "object" ? m.map?.pretty_name || m.map?.id : m?.map) ||
-          m?.map_name ||
-          m?.name ||
-          null;
-        const allied = Number(m?.result?.allied ?? m?.allied_score ?? m?.score?.allied ?? NaN);
-        const axis = Number(m?.result?.axis ?? m?.axis_score ?? m?.score?.axis ?? NaN);
-        const start = m?.start ? new Date(m.start).getTime() : null;
-        const end = m?.end ? new Date(m.end).getTime() : null;
-        if (!mapRaw) return null;
-        return {
-          map: String(mapRaw),
-          allied: Number.isFinite(allied) ? allied : null,
-          axis: Number.isFinite(axis) ? axis : null,
-          start,
-          end,
-        };
-      })
-      .filter(Boolean);
+      const raw =
+        (await crconGet(linked, "get_scoreboard_maps")) ??
+        (await crconGet(linked, "get_map_history"));
+      const rows = Array.isArray(raw) ? raw : Array.isArray(raw?.maps) ? raw.maps : [];
+      const matches = rows
+        .slice(0, 15)
+        .map((m: any) => {
+          const mapRaw =
+            (typeof m?.map === "object" ? m.map?.pretty_name || m.map?.id : m?.map) ||
+            m?.map_name ||
+            m?.name ||
+            null;
+          const allied = Number(m?.result?.allied ?? m?.allied_score ?? m?.score?.allied ?? NaN);
+          const axis = Number(m?.result?.axis ?? m?.axis_score ?? m?.score?.axis ?? NaN);
+          const start = m?.start ? new Date(m.start).getTime() : null;
+          const end = m?.end ? new Date(m.end).getTime() : null;
+          if (!mapRaw) return null;
+          return {
+            map: String(mapRaw),
+            allied: Number.isFinite(allied) ? allied : null,
+            axis: Number.isFinite(axis) ? axis : null,
+            start,
+            end,
+          };
+        })
+        .filter(Boolean);
 
-    const out = { ok: true, linked: true, matches };
-    if (matches.length) cacheSet(wrKey, out, 5 * 60_000);
-    return reply.send(out);
-  });
+      const out = { ok: true, linked: true, matches };
+      if (matches.length) cacheSet(wrKey, out, 5 * 60_000);
+      return reply.send(out);
+    },
+  );
 
   // ---- Fire Mission drill leaderboard ----------------------------------------
 
@@ -822,35 +864,39 @@ export default async function hllRoutes(app: FastifyInstance, opts: Opts = {}) {
     return reply.send({ ok: true, top, me });
   });
 
-  app.post("/hll/fire-mission/score", { schema: { tags: ["hll"] } }, async (req, reply) => {
-    const u = authFromHeader?.((req as any).headers?.authorization);
-    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
-    const body: any = (req as any).body || {};
-    const score = Math.floor(Number(body.score));
-    const shots = Math.floor(Number(body.shots));
-    // 60s drill, ~15 shots ceiling at 120 max per shot. Trust-based; the fence
-    // keeps the board sane, not tamper-proof.
-    if (!Number.isFinite(score) || score < 0 || score > 6000)
-      return reply.code(400).send({ ok: false, error: "bad_score" });
-    if (!Number.isFinite(shots) || shots < 0 || shots > 60)
-      return reply.code(400).send({ ok: false, error: "bad_shots" });
-    const user = await prisma.user.findUnique({ where: { id: u.id }, select: { name: true } });
-    const name = (user?.name || "Gunner").slice(0, 40);
-    const existing = await prisma.hllArtyScore.findUnique({ where: { userId: u.id } });
-    if (!existing || score > existing.score) {
-      await prisma.hllArtyScore.upsert({
-        where: { userId: u.id },
-        update: { score, shots, name },
-        create: { userId: u.id, score, shots, name },
+  app.post(
+    "/hll/fire-mission/score",
+    { schema: { tags: ["hll"] }, config: { rateLimit: { max: 30, timeWindow: "1 minute" } } },
+    async (req, reply) => {
+      const u = authFromHeader?.((req as any).headers?.authorization);
+      if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+      const body: any = (req as any).body || {};
+      const score = Math.floor(Number(body.score));
+      const shots = Math.floor(Number(body.shots));
+      // 60s drill, ~15 shots ceiling at 120 max per shot. Trust-based; the fence
+      // keeps the board sane, not tamper-proof.
+      if (!Number.isFinite(score) || score < 0 || score > 6000)
+        return reply.code(400).send({ ok: false, error: "bad_score" });
+      if (!Number.isFinite(shots) || shots < 0 || shots > 60)
+        return reply.code(400).send({ ok: false, error: "bad_shots" });
+      const user = await prisma.user.findUnique({ where: { id: u.id }, select: { name: true } });
+      const name = (user?.name || "Gunner").slice(0, 40);
+      const existing = await prisma.hllArtyScore.findUnique({ where: { userId: u.id } });
+      if (!existing || score > existing.score) {
+        await prisma.hllArtyScore.upsert({
+          where: { userId: u.id },
+          update: { score, shots, name },
+          create: { userId: u.id, score, shots, name },
+        });
+      }
+      const best = Math.max(score, existing?.score || 0);
+      const above = await prisma.hllArtyScore.count({ where: { score: { gt: best } } });
+      return reply.send({
+        ok: true,
+        best,
+        rank: above + 1,
+        improved: !existing || score > existing.score,
       });
-    }
-    const best = Math.max(score, existing?.score || 0);
-    const above = await prisma.hllArtyScore.count({ where: { score: { gt: best } } });
-    return reply.send({
-      ok: true,
-      best,
-      rank: above + 1,
-      improved: !existing || score > existing.score,
-    });
-  });
+    },
+  );
 }

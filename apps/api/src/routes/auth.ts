@@ -4,7 +4,7 @@ import { fetchWithTimeout } from "../lib/fetchWithTimeout";
 import { z } from "zod";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
-import { randomBytes } from "crypto";
+import { randomBytes, randomInt } from "crypto";
 import { readFileSync, writeFileSync } from "fs";
 import { sendPush } from "../lib/notifications";
 import { OAuth2Client } from "google-auth-library";
@@ -438,7 +438,8 @@ export default async function authRoutes(app: FastifyInstance, opts: Opts) {
         return reply.code(409).send({ ok: false, error: "used_up" });
       }
 
-      const name = rawName || `Guest-${1000 + (randomBytes(2).readUInt16BE(0) % 9000)}`;
+      // randomInt is rejection-sampled → no modulo bias in the guest suffix.
+      const name = rawName || `Guest-${randomInt(1000, 10000)}`;
       const guestId = `guest_${randomBytes(12).toString("hex")}`;
       // ephemeral user + token live no longer than the invite window, capped at 4h.
       const cap = Date.now() + 90 * 60 * 1000;
@@ -889,7 +890,18 @@ export default async function authRoutes(app: FastifyInstance, opts: Opts) {
       const book = String((req.query as any)?.book ?? "eceb");
       const body: any = (req as any).body || {};
       const email = String(body.carrierEmail ?? "").trim();
-      const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && email.length <= 200;
+      // Linear, length-capped email shape check. The old regex
+      // (/^[^\s@]+@[^\s@]+\.[^\s@]+$/) backtracks polynomially on a long
+      // no-@ string, and the length cap ran only after the regex. indexOf-based
+      // structural checks are O(n) and can't be forced to backtrack.
+      const emailOk = (() => {
+        if (email.length === 0 || email.length > 200) return false;
+        if (/\s/.test(email)) return false; // single char class → linear
+        const at = email.indexOf("@");
+        if (at <= 0 || at !== email.lastIndexOf("@")) return false; // exactly one @, not leading
+        const dot = email.lastIndexOf(".");
+        return dot > at + 1 && dot < email.length - 1; // dot inside the domain, not at an edge
+      })();
       if (
         !body.employerId ||
         !body.planId ||
