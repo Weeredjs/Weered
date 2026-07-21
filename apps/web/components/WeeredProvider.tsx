@@ -32,6 +32,20 @@ type ChatMsg    = { id: string; user: RoomUser; body: string; ts: number; kind?:
 type Knock      = { userId: string; name: string; ts: number };
 type JoinStatus = "idle" | "joining" | "joined" | "knocking" | "banned" | "denied";
 
+// Canonical room key: strip the "room:" prefix and URI-decode so a client's
+// URL-derived id and the server's echoed roomId compare equal regardless of
+// encoding. The chat-dead-until-refresh bug lived in this seam.
+function roomKey(s: string): string {
+  let x = s || "";
+  if (x.startsWith("room:")) x = x.slice(5);
+  try {
+    x = decodeURIComponent(x);
+  } catch {
+    /* leave as-is */
+  }
+  return x.trim();
+}
+
 type AuditItem = {
   id: string; ts: number; type: string;
   actorId: string; actorName: string;
@@ -518,10 +532,11 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
         // joined-ness. A stray broadcast from the previous room (someone
         // joined/left it during the transition window) used to hijack
         // joinedRoomId and fire presence:leave at the room we just entered —
-        // silently killing chat until a refresh.
-        if (rid === (activeRoomIdRef.current || "")) {
+        // silently killing chat until a refresh. Compare on canonical keys so
+        // encoding differences don't make the match spuriously miss either.
+        if (roomKey(rid) === roomKey(activeRoomIdRef.current || "")) {
           setJoinedRoomId(prev => {
-            if (prev && prev !== rid) {
+            if (prev && roomKey(prev) !== roomKey(rid)) {
               try { ws.send(JSON.stringify({ type: "presence:leave", roomId: prev })); } catch {}
             }
             return rid;
@@ -1010,7 +1025,19 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
   }
 
   function canChat() {
-    return Boolean(activeRoomId && joinedRoomId && activeRoomId === joinedRoomId && statusByRoom[activeRoomId] === "joined");
+    if (!activeRoomId) return false;
+    // Gate purely on the ACTIVE room's own join status. statusByRoom is keyed
+    // per room and set to "joined" only when the server confirms you're in it
+    // (presence:state), so this reflects real server membership without the old
+    // fragile joinedRoomId===activeRoomId coupling that a stray broadcast could
+    // knock out of sync. Check key variants since status may be stored under
+    // the server's canonical id or the URL-encoded one.
+    const k = roomKey(activeRoomId);
+    return (
+      statusByRoom[activeRoomId] === "joined" ||
+      statusByRoom[k] === "joined" ||
+      statusByRoom["room:" + k] === "joined"
+    );
   }
 
   useEffect(() => {
