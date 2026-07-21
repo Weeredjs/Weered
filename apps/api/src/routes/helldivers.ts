@@ -128,34 +128,42 @@ export default async function helldiversRoutes(app: FastifyInstance, _opts: Opts
 
     const list = Array.isArray(data) ? data : [];
     const orders = list.map((a: any) => {
-      const tasks = a.setting?.tasks || [];
+      // The community API flattened the raw ArrowHead shape: tasks/reward/
+      // briefing/expiration live at the top level now (setting.* is the old
+      // form — keep it as fallback). `progress` is a PER-TASK array; each
+      // task's goal is the value aligned to valueType 3 (binary hold/liberate
+      // tasks have goal 1 — a raw positional guess grabs the planet index).
+      const tasks = a.tasks || a.setting?.tasks || [];
       const progress = a.progress || [];
       let pct = 0;
       let denom = 0;
       tasks.forEach((t: any, i: number) => {
-        const target = Number(t?.values?.[2] || t?.values?.[0] || 0);
+        const vts: any[] = t?.valueTypes || [];
+        const gi = vts.indexOf(3);
+        const raw = gi >= 0 ? Number(t?.values?.[gi]) : NaN;
+        const goal = Number.isFinite(raw) && raw > 0 ? raw : 1;
         const cur = Number(progress[i] || 0);
-        if (target > 0) {
-          pct += Math.min(100, (cur / target) * 100);
-          denom++;
-        }
+        pct += Math.min(100, (cur / goal) * 100);
+        denom++;
       });
       const overallPct = denom > 0 ? Math.round(pct / denom) : 0;
 
+      const expiration = a.expiration ? new Date(a.expiration).getTime() : null;
       return {
         id: a.id,
         title: a.setting?.overrideTitle || a.title || "Major Order",
         brief: a.setting?.overrideBrief || a.briefing || "",
         description: a.setting?.taskDescription || a.description || "",
         type: a.setting?.type,
-        flags: a.setting?.flags,
-        reward: a.setting?.reward || a.setting?.rewards?.[0] || null,
-        rewards: a.setting?.rewards || [],
+        flags: a.flags ?? a.setting?.flags,
+        reward: a.reward || a.setting?.reward || a.rewards?.[0] || null,
+        rewards: a.rewards || a.setting?.rewards || [],
         tasks,
         progress,
         progressPct: overallPct,
         expiresIn: a.expiresIn,
-        expiresAt: typeof a.expiresIn === "number" ? Date.now() + a.expiresIn * 1000 : null,
+        expiresAt:
+          expiration ?? (typeof a.expiresIn === "number" ? Date.now() + a.expiresIn * 1000 : null),
       };
     });
 

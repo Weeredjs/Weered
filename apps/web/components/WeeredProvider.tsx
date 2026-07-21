@@ -514,12 +514,19 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
           setPinnedByRoom(prev => ({ ...prev, [rid]: msg.pinned.map(String) }));
         }
         if (msg.lobbyId) setCurrentLobbyId(String(msg.lobbyId));
-        setJoinedRoomId(prev => {
-          if (prev && prev !== rid) {
-            try { ws.send(JSON.stringify({ type: "presence:leave", roomId: prev })); } catch {}
-          }
-          return rid;
-        });
+        // Only a presence:state for the room we are CURRENTLY on may claim
+        // joined-ness. A stray broadcast from the previous room (someone
+        // joined/left it during the transition window) used to hijack
+        // joinedRoomId and fire presence:leave at the room we just entered —
+        // silently killing chat until a refresh.
+        if (rid === (activeRoomIdRef.current || "")) {
+          setJoinedRoomId(prev => {
+            if (prev && prev !== rid) {
+              try { ws.send(JSON.stringify({ type: "presence:leave", roomId: prev })); } catch {}
+            }
+            return rid;
+          });
+        }
         return;
       }
 
