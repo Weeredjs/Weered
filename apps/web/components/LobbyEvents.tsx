@@ -47,7 +47,8 @@ export default function LobbyEvents({
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
   const [fTitle, setFTitle] = useState("");
-  const [fWhen, setFWhen] = useState("");
+  const [fDay, setFDay] = useState(0); // days from today
+  const [fTime, setFTime] = useState(19 * 60); // minutes into the day
   const [fDesc, setFDesc] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
@@ -63,23 +64,25 @@ export default function LobbyEvents({
   }, [load]);
 
   const create = async () => {
-    if (!fTitle.trim() || !fWhen) return;
+    if (!fTitle.trim()) return;
     setBusy(true);
     setErr("");
     try {
+      const when = new Date();
+      when.setDate(when.getDate() + fDay);
+      when.setHours(Math.floor(fTime / 60), fTime % 60, 0, 0);
       const j = await apiFetch(`/lobbies/${encodeURIComponent(lobbyId)}/events`, {
         method: "POST",
         body: JSON.stringify({
           title: fTitle.trim(),
           description: fDesc.trim(),
-          startsAt: new Date(fWhen).toISOString(),
+          startsAt: when.toISOString(),
           status: "PUBLISHED",
         }),
       });
       if (j?.ok) {
         setFormOpen(false);
         setFTitle("");
-        setFWhen("");
         setFDesc("");
         await load();
       } else {
@@ -121,12 +124,53 @@ export default function LobbyEvents({
             maxLength={120}
             onChange={(e) => setFTitle(e.target.value)}
           />
-          <input
-            style={inputStyle}
-            type="datetime-local"
-            value={fWhen}
-            onChange={(e) => setFWhen(e.target.value)}
-          />
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+            {Array.from({ length: 7 }, (_, i) => {
+              const d = new Date();
+              d.setDate(d.getDate() + i);
+              const label =
+                i === 0
+                  ? "Tonight"
+                  : i === 1
+                    ? "Tomorrow"
+                    : d.toLocaleDateString([], { weekday: "short", day: "numeric" });
+              const sel = fDay === i;
+              return (
+                <button
+                  key={i}
+                  onClick={() => setFDay(i)}
+                  style={{
+                    padding: "6px 12px",
+                    borderRadius: 999,
+                    border: `1px solid ${sel ? color : "rgba(255,255,255,.16)"}`,
+                    background: sel ? `${color}22` : "transparent",
+                    color: sel ? color : "rgba(226,232,240,.8)",
+                    fontSize: 12.5,
+                    fontWeight: 600,
+                    cursor: "pointer",
+                  }}
+                >
+                  {label}
+                </button>
+              );
+            })}
+            <select
+              value={fTime}
+              onChange={(e) => setFTime(Number(e.target.value))}
+              style={{ ...inputStyle, padding: "6px 10px" }}
+            >
+              {Array.from({ length: 48 }, (_, i) => {
+                const mins = i * 30;
+                const d = new Date();
+                d.setHours(Math.floor(mins / 60), mins % 60, 0, 0);
+                return (
+                  <option key={mins} value={mins}>
+                    {d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
+                  </option>
+                );
+              })}
+            </select>
+          </div>
           <input
             style={inputStyle}
             placeholder="Details (optional)"
@@ -137,7 +181,7 @@ export default function LobbyEvents({
           <div style={{ display: "flex", gap: 8 }}>
             <button
               onClick={create}
-              disabled={busy || !fTitle.trim() || !fWhen}
+              disabled={busy || !fTitle.trim()}
               style={{
                 padding: "7px 16px",
                 borderRadius: 6,
@@ -147,7 +191,7 @@ export default function LobbyEvents({
                 fontWeight: 700,
                 fontSize: 12.5,
                 cursor: "pointer",
-                opacity: busy || !fTitle.trim() || !fWhen ? 0.55 : 1,
+                opacity: busy || !fTitle.trim() ? 0.55 : 1,
               }}
             >
               {busy ? "Posting…" : "Post event"}
