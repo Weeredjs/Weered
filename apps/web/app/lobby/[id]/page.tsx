@@ -1349,7 +1349,11 @@ export default function LobbyIdPage() {
                 ) : view === "reddit" && redditSub ? (
                   <RedditFeedTab sub={redditSub} accent={accent} />
                 ) : view === "events" ? (
-                  <LobbyEvents lobbyId={lobbyId} accent={accent} />
+                  <LobbyEvents
+                    lobbyId={lobbyId}
+                    accent={accent}
+                    canPost={isStaff || isOwner || (membership ? membership.roleLevel >= 4 : false)}
+                  />
                 ) : view === "feed" && lobbyInfo?.moduleType === "TRADING" ? (
                   <TradingFeed lobbyId={lobbyId} accent={accent} />
                 ) : (

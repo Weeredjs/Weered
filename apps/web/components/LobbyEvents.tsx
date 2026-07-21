@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type CSSProperties } from "react";
 import EmptyState from "./EmptyState";
 import LoadingState from "./LoadingState";
 
@@ -34,9 +34,23 @@ type EventItem = {
   promotionStatus: string;
 };
 
-export default function LobbyEvents({ lobbyId, accent }: { lobbyId: string; accent?: string }) {
+export default function LobbyEvents({
+  lobbyId,
+  accent,
+  canPost = false,
+}: {
+  lobbyId: string;
+  accent?: string;
+  canPost?: boolean;
+}) {
   const [events, setEvents] = useState<EventItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [formOpen, setFormOpen] = useState(false);
+  const [fTitle, setFTitle] = useState("");
+  const [fWhen, setFWhen] = useState("");
+  const [fDesc, setFDesc] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
 
   const load = useCallback(async () => {
     const j = await apiFetch(`/lobbies/${encodeURIComponent(lobbyId)}/events`);
@@ -48,13 +62,148 @@ export default function LobbyEvents({ lobbyId, accent }: { lobbyId: string; acce
     load();
   }, [load]);
 
+  const create = async () => {
+    if (!fTitle.trim() || !fWhen) return;
+    setBusy(true);
+    setErr("");
+    try {
+      const j = await apiFetch(`/lobbies/${encodeURIComponent(lobbyId)}/events`, {
+        method: "POST",
+        body: JSON.stringify({
+          title: fTitle.trim(),
+          description: fDesc.trim(),
+          startsAt: new Date(fWhen).toISOString(),
+          status: "PUBLISHED",
+        }),
+      });
+      if (j?.ok) {
+        setFormOpen(false);
+        setFTitle("");
+        setFWhen("");
+        setFDesc("");
+        await load();
+      } else {
+        setErr(j?.error === "forbidden" ? "Lobby admins only." : "Couldn't post the event.");
+      }
+    } catch {
+      setErr("Couldn't post the event.");
+    }
+    setBusy(false);
+  };
+
   if (loading) return <LoadingState label="Loading events" />;
-  if (events.length === 0)
-    return (
-      <EmptyState title="Nothing on the calendar." hint="When events drop they'll show up here." />
-    );
 
   const color = accent || "#7C3AED";
+  const inputStyle: CSSProperties = {
+    padding: "8px 10px",
+    borderRadius: 6,
+    border: "1px solid rgba(255,255,255,.14)",
+    background: "rgba(0,0,0,.25)",
+    color: "rgba(236,242,250,.95)",
+    fontSize: 13,
+  };
+
+  const postBar = canPost && (
+    <div
+      style={{
+        border: "1px solid rgba(255,255,255,.08)",
+        borderRadius: 10,
+        padding: formOpen ? "12px 14px" : "8px 14px",
+        background: "rgba(255,255,255,.02)",
+      }}
+    >
+      {formOpen ? (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <input
+            style={inputStyle}
+            placeholder="Event title: Seed night on The Outpost"
+            value={fTitle}
+            maxLength={120}
+            onChange={(e) => setFTitle(e.target.value)}
+          />
+          <input
+            style={inputStyle}
+            type="datetime-local"
+            value={fWhen}
+            onChange={(e) => setFWhen(e.target.value)}
+          />
+          <input
+            style={inputStyle}
+            placeholder="Details (optional)"
+            value={fDesc}
+            maxLength={300}
+            onChange={(e) => setFDesc(e.target.value)}
+          />
+          <div style={{ display: "flex", gap: 8 }}>
+            <button
+              onClick={create}
+              disabled={busy || !fTitle.trim() || !fWhen}
+              style={{
+                padding: "7px 16px",
+                borderRadius: 6,
+                border: `1px solid ${color}66`,
+                background: `${color}22`,
+                color: color,
+                fontWeight: 700,
+                fontSize: 12.5,
+                cursor: "pointer",
+                opacity: busy || !fTitle.trim() || !fWhen ? 0.55 : 1,
+              }}
+            >
+              {busy ? "Posting…" : "Post event"}
+            </button>
+            <button
+              onClick={() => setFormOpen(false)}
+              style={{
+                padding: "7px 12px",
+                borderRadius: 6,
+                border: "1px solid rgba(255,255,255,.14)",
+                background: "transparent",
+                color: "rgba(226,232,240,.8)",
+                fontSize: 12.5,
+                cursor: "pointer",
+              }}
+            >
+              Cancel
+            </button>
+          </div>
+          {err && <div style={{ fontSize: 12, color: "#E08A83" }}>{err}</div>}
+        </div>
+      ) : (
+        <button
+          onClick={() => setFormOpen(true)}
+          style={{
+            background: "transparent",
+            border: "none",
+            color: color,
+            fontWeight: 700,
+            fontSize: 12.5,
+            cursor: "pointer",
+            padding: 0,
+          }}
+        >
+          + Post an event
+        </button>
+      )}
+    </div>
+  );
+
+  if (events.length === 0)
+    return (
+      <div
+        style={{ padding: "12px 16px", display: "flex", flexDirection: "column", gap: 10, flex: 1 }}
+      >
+        {postBar}
+        <EmptyState
+          title="Nothing on the calendar."
+          hint={
+            canPost
+              ? "Post the first one: a seed night, a fight night, an org op."
+              : "When events drop they'll show up here."
+          }
+        />
+      </div>
+    );
 
   return (
     <div
@@ -67,6 +216,7 @@ export default function LobbyEvents({ lobbyId, accent }: { lobbyId: string; acce
         flex: 1,
       }}
     >
+      {postBar}
       {events.map((ev) => {
         const start = new Date(ev.startsAt);
         const month = start.toLocaleString("en-US", { month: "short" }).toUpperCase();
