@@ -541,6 +541,7 @@ function StatChip({ value, label }: { value: number | string; label: string }) {
 
 function LiveStreamCard({ stream, accent }: { stream: FeaturedStream; accent: string }) {
   const [tick, setTick] = React.useState(0);
+  const [imgError, setImgError] = React.useState(false);
 
   React.useEffect(() => {
     const t = setInterval(() => setTick((n) => n + 1), 30000);
@@ -549,6 +550,12 @@ function LiveStreamCard({ stream, accent }: { stream: FeaturedStream; accent: st
 
   const thumb = (stream.thumbnail || "").replace("{width}", "440").replace("{height}", "248");
   const src = thumb ? `${thumb}${thumb.includes("?") ? "&" : "?"}t=${tick}` : "";
+  // Twitch only generates preview images a few minutes into a stream, so a
+  // freshly-live stream's thumbnail 404s. Reset the error flag whenever the
+  // base url changes (new stream / retry) so it can recover on its own.
+  React.useEffect(() => {
+    setImgError(false);
+  }, [thumb]);
 
   return (
     <div
@@ -573,10 +580,11 @@ function LiveStreamCard({ stream, accent }: { stream: FeaturedStream; accent: st
       }}
     >
       <div style={{ position: "relative", aspectRatio: "16/9", background: "#000" }}>
-        {src ? (
+        {src && !imgError ? (
           <img
             src={src}
             alt={stream.title}
+            onError={() => setImgError(true)}
             style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
           />
         ) : (
@@ -587,9 +595,26 @@ function LiveStreamCard({ stream, accent }: { stream: FeaturedStream; accent: st
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
+              background: `radial-gradient(120% 120% at 50% 0%, ${accent}30 0%, rgba(0,0,0,0.55) 70%)`,
             }}
           >
-            <span style={{ fontSize: 28, opacity: 0.25 }}>▶</span>
+            <span
+              style={{
+                fontSize: 30,
+                color: accent,
+                opacity: 0.85,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                width: 46,
+                height: 46,
+                borderRadius: "50%",
+                border: `2px solid ${accent}`,
+                paddingLeft: 4,
+              }}
+            >
+              ▶
+            </span>
           </div>
         )}
         <div
