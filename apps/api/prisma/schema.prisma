@@ -2548,6 +2548,19 @@ model MapFogReveal {
 // throwable + armor + helmet (opt) + 4 stratagems, named, faction-tagged,
 // shareable via slug, voted on by the community.
 
+// Fire Mission drill (HLL artillery arcade): one row per user, best run only.
+model HllArtyScore {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  name      String
+  score     Int
+  shots     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([score])
+}
+
 // Stratagem Hero arcade: one row per user, their best run. Upserted only on
 // improvement, so the leaderboard is personal-bests, not spam.
 model HelldiversStratScore {

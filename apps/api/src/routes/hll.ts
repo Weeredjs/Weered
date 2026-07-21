@@ -208,38 +208,39 @@ export default async function hllRoutes(app: FastifyInstance, opts: Opts = {}) {
     bmServerId: string | null;
     status: string;
     lastSeenAt: Date | null;
+    note: string;
   };
-  let linkedCache: { row: Linked | null; expiresAt: number } | null = null;
+  const MAX_GARRISONS = 12;
+  let linkedCache: { rows: Linked[]; expiresAt: number } | null = null;
 
-  async function loadLinkedServer(): Promise<Linked | null> {
-    if (linkedCache && linkedCache.expiresAt > Date.now()) return linkedCache.row;
+  async function loadLinkedServers(): Promise<Linked[]> {
+    if (linkedCache && linkedCache.expiresAt > Date.now()) return linkedCache.rows;
     try {
-      const row = await prisma.communityServer.findFirst({
+      const rows = await prisma.communityServer.findMany({
         where: { lobbyId: HLL_LOBBY_ID, framework: "crcon" },
         orderBy: { createdAt: "asc" },
+        take: MAX_GARRISONS,
       });
-      const mapped: Linked | null = row
-        ? {
-            id: row.id,
-            name: row.name,
-            baseUrl: row.host,
-            apiKey: (row as any).apiKey ?? null,
-            bmServerId: (row as any).bmServerId ?? null,
-            status: row.status,
-            lastSeenAt: row.lastSeenAt,
-          }
-        : null;
-      linkedCache = { row: mapped, expiresAt: Date.now() + 5 * 60_000 };
+      const mapped: Linked[] = rows.map((row) => ({
+        id: row.id,
+        name: row.name,
+        baseUrl: row.host,
+        apiKey: (row as any).apiKey ?? null,
+        bmServerId: (row as any).bmServerId ?? null,
+        status: row.status,
+        lastSeenAt: row.lastSeenAt,
+        note: row.description || "",
+      }));
+      linkedCache = { rows: mapped, expiresAt: Date.now() + 5 * 60_000 };
       return mapped;
     } catch (e) {
       swallow(e);
-      return null;
+      return [];
     }
   }
   function invalidateLinked() {
     linkedCache = null;
-    cache.delete("crcon:live");
-    cache.delete("crcon:warrecord");
+    for (const k of Array.from(cache.keys())) if (k.startsWith("crcon:")) cache.delete(k);
   }
 
   // CRCON wraps every response as { result, command, failed, error }.
@@ -523,13 +524,12 @@ export default async function hllRoutes(app: FastifyInstance, opts: Opts = {}) {
     rallies.set(rally.id, rally);
     lastArmAt = Date.now();
 
-    // Verified seeding: if this rally's server is the linked community server,
+    // Verified seeding: if this rally's server is one of the linked garrisons,
     // start the presence loop — joiners with a linked SteamID64 who actually
     // show up get credited (refId-deduped, once per rally).
-    const linked = await loadLinkedServer();
-    if (linked && linked.bmServerId && linked.bmServerId === bmServerId) {
-      armVerification(rally, linked);
-    }
+    const garrisons = await loadLinkedServers();
+    const match = garrisons.find((g) => g.bmServerId && g.bmServerId === bmServerId);
+    if (match) armVerification(rally, match);
 
     // Ping the lobby: the whole point is a call people actually receive.
     // In-app notification + (via createNotification) web/Expo push if offline.
@@ -597,59 +597,62 @@ export default async function hllRoutes(app: FastifyInstance, opts: Opts = {}) {
     return reply.send({ ok: true });
   });
 
-  // ---- the Garrison: linked-server routes ------------------------------------
+  // ---- the Garrisons: linked community servers -------------------------------
 
-  app.get("/hll/server", { schema: { tags: ["hll"] } }, async (req, reply) => {
+  async function garrisonLive(linked: Linked): Promise<any> {
+    const key = `crcon:live:${linked.id}`;
+    const hit = cacheGet(key);
+    if (hit) return hit;
+    const [info, rotation] = await Promise.all([
+      crconGet(linked, "get_public_info"),
+      linked.apiKey ? crconGet(linked, "get_map_rotation") : Promise.resolve(null),
+    ]);
+    const norm = normalizePublicInfo(info);
+    const live = {
+      info: norm,
+      rotation: Array.isArray(rotation)
+        ? rotation
+            .slice(0, 12)
+            .map((m: any) =>
+              String(typeof m === "object" ? m?.pretty_name || m?.id || m?.map || "" : m),
+            )
+            .filter(Boolean)
+        : [],
+      reachable: !!norm,
+    };
+    cacheSet(key, live, 60_000);
+    if (norm) {
+      prisma.communityServer
+        .update({
+          where: { id: linked.id },
+          data: { lastSeenAt: new Date(), status: "connected", lastState: norm },
+        })
+        .catch(swallow);
+    }
+    return live;
+  }
+
+  app.get("/hll/garrisons", { schema: { tags: ["hll"] } }, async (req, reply) => {
     const u = authFromHeader?.((req as any).headers?.authorization);
     const canManage = u ? await canArmRally(u.id) : false;
-    const linked = await loadLinkedServer();
-    if (!linked) return reply.send({ ok: true, linked: false, canManage });
-
-    let live = cacheGet("crcon:live");
-    if (!live) {
-      const [info, rotation] = await Promise.all([
-        crconGet(linked, "get_public_info"),
-        linked.apiKey ? crconGet(linked, "get_map_rotation") : Promise.resolve(null),
-      ]);
-      const norm = normalizePublicInfo(info);
-      live = {
-        info: norm,
-        rotation: Array.isArray(rotation)
-          ? rotation
-              .slice(0, 12)
-              .map((m: any) =>
-                String(typeof m === "object" ? m?.pretty_name || m?.id || m?.map || "" : m),
-              )
-              .filter(Boolean)
-          : [],
-        reachable: !!norm,
-        at: Date.now(),
-      };
-      cacheSet("crcon:live", live, 60_000);
-      if (norm) {
-        prisma.communityServer
-          .update({
-            where: { id: linked.id },
-            data: { lastSeenAt: new Date(), status: "connected", lastState: live.info },
-          })
-          .catch(swallow);
-      }
-    }
-
-    return reply.send({
-      ok: true,
-      linked: true,
-      canManage,
-      server: {
-        name: linked.name,
-        bmServerId: linked.bmServerId,
-        status: live.reachable ? "connected" : linked.status,
-        lastSeenAt: linked.lastSeenAt,
-        hasKey: !!linked.apiKey,
-        live: live.info,
-        rotation: live.rotation,
-      },
-    });
+    const linked = await loadLinkedServers();
+    const servers = await Promise.all(
+      linked.map(async (l) => {
+        const live = await garrisonLive(l);
+        return {
+          id: l.id,
+          name: l.name,
+          note: l.note,
+          bmServerId: l.bmServerId,
+          status: live.reachable ? "connected" : l.status,
+          lastSeenAt: l.lastSeenAt,
+          hasKey: !!l.apiKey,
+          live: live.info,
+          rotation: live.rotation,
+        };
+      }),
+    );
+    return reply.send({ ok: true, canManage, servers });
   });
 
   app.post("/hll/server/link", { schema: { tags: ["hll"] } }, async (req, reply) => {
@@ -691,6 +694,7 @@ export default async function hllRoutes(app: FastifyInstance, opts: Opts = {}) {
       bmServerId,
       status: "pending",
       lastSeenAt: null,
+      note: "",
     };
     const [info, version, playersProbe] = await Promise.all([
       crconGet(probeLinked, "get_public_info"),
@@ -709,15 +713,20 @@ export default async function hllRoutes(app: FastifyInstance, opts: Opts = {}) {
       authedReads: !!(apiKey && playersProbe),
     };
 
-    const existing = await prisma.communityServer.findFirst({
-      where: { lobbyId: HLL_LOBBY_ID, framework: "crcon" },
-    });
+    const all = await loadLinkedServers();
+    const existing = all.find((l) => l.baseUrl === baseUrl);
+    if (!existing && all.length >= MAX_GARRISONS)
+      return reply.code(409).send({ ok: false, error: "garrisons_full" });
+    const note = String(body.note || "")
+      .trim()
+      .slice(0, 140);
     const data: any = {
       lobbyId: HLL_LOBBY_ID,
       ownerId: u.id,
       name,
       host: baseUrl,
       queryUrl: baseUrl,
+      description: note,
       framework: "crcon",
       status: "connected",
       lastSeenAt: new Date(),
@@ -732,25 +741,33 @@ export default async function hllRoutes(app: FastifyInstance, opts: Opts = {}) {
     return reply.send({ ok: true, capabilities, live: norm });
   });
 
-  app.post("/hll/server/unlink", { schema: { tags: ["hll"] } }, async (req, reply) => {
+  app.post("/hll/garrisons/:id/unlink", { schema: { tags: ["hll"] } }, async (req, reply) => {
     const u = authFromHeader?.((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     if (!(await canArmRally(u.id))) return reply.code(403).send({ ok: false, error: "mods_only" });
     await prisma.communityServer
-      .deleteMany({ where: { lobbyId: HLL_LOBBY_ID, framework: "crcon" } })
+      .deleteMany({
+        where: {
+          id: String((req as any).params?.id || ""),
+          lobbyId: HLL_LOBBY_ID,
+          framework: "crcon",
+        },
+      })
       .catch(swallow);
     invalidateLinked();
     return reply.send({ ok: true });
   });
 
-  // War Record — recent completed matches off the linked CRCON's history.
+  // War Record — recent completed matches off a garrison's CRCON history.
   // Endpoint names vary by CRCON version; try the known ones, normalize hard.
-  app.get("/hll/server/warrecord", { schema: { tags: ["hll"] } }, async (_req, reply) => {
-    const linked = await loadLinkedServer();
+  app.get("/hll/garrisons/:id/warrecord", { schema: { tags: ["hll"] } }, async (req, reply) => {
+    const all = await loadLinkedServers();
+    const linked = all.find((l) => l.id === String((req as any).params?.id || ""));
     if (!linked) return reply.send({ ok: true, linked: false, matches: [] });
     if (!linked.apiKey) return reply.send({ ok: true, linked: true, needsKey: true, matches: [] });
 
-    const hit = cacheGet("crcon:warrecord");
+    const wrKey = `crcon:warrecord:${linked.id}`;
+    const hit = cacheGet(wrKey);
     if (hit) return reply.send(hit);
 
     const raw =
@@ -781,7 +798,59 @@ export default async function hllRoutes(app: FastifyInstance, opts: Opts = {}) {
       .filter(Boolean);
 
     const out = { ok: true, linked: true, matches };
-    if (matches.length) cacheSet("crcon:warrecord", out, 5 * 60_000);
+    if (matches.length) cacheSet(wrKey, out, 5 * 60_000);
     return reply.send(out);
+  });
+
+  // ---- Fire Mission drill leaderboard ----------------------------------------
+
+  app.get("/hll/fire-mission/leaderboard", { schema: { tags: ["hll"] } }, async (req, reply) => {
+    const u = authFromHeader?.((req as any).headers?.authorization);
+    const top = await prisma.hllArtyScore.findMany({
+      orderBy: { score: "desc" },
+      take: 20,
+      select: { userId: true, name: true, score: true, shots: true },
+    });
+    let me: any = null;
+    if (u) {
+      const mine = await prisma.hllArtyScore.findUnique({ where: { userId: u.id } });
+      if (mine) {
+        const above = await prisma.hllArtyScore.count({ where: { score: { gt: mine.score } } });
+        me = { score: mine.score, shots: mine.shots, rank: above + 1 };
+      }
+    }
+    return reply.send({ ok: true, top, me });
+  });
+
+  app.post("/hll/fire-mission/score", { schema: { tags: ["hll"] } }, async (req, reply) => {
+    const u = authFromHeader?.((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const body: any = (req as any).body || {};
+    const score = Math.floor(Number(body.score));
+    const shots = Math.floor(Number(body.shots));
+    // 60s drill, ~15 shots ceiling at 120 max per shot. Trust-based; the fence
+    // keeps the board sane, not tamper-proof.
+    if (!Number.isFinite(score) || score < 0 || score > 6000)
+      return reply.code(400).send({ ok: false, error: "bad_score" });
+    if (!Number.isFinite(shots) || shots < 0 || shots > 60)
+      return reply.code(400).send({ ok: false, error: "bad_shots" });
+    const user = await prisma.user.findUnique({ where: { id: u.id }, select: { name: true } });
+    const name = (user?.name || "Gunner").slice(0, 40);
+    const existing = await prisma.hllArtyScore.findUnique({ where: { userId: u.id } });
+    if (!existing || score > existing.score) {
+      await prisma.hllArtyScore.upsert({
+        where: { userId: u.id },
+        update: { score, shots, name },
+        create: { userId: u.id, score, shots, name },
+      });
+    }
+    const best = Math.max(score, existing?.score || 0);
+    const above = await prisma.hllArtyScore.count({ where: { score: { gt: best } } });
+    return reply.send({
+      ok: true,
+      best,
+      rank: above + 1,
+      improved: !existing || score > existing.score,
+    });
   });
 }
