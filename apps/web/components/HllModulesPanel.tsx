@@ -225,6 +225,156 @@ function SeedBadge({ players }: { players: number }) {
   );
 }
 
+// A dark, searchable server picker — the native <select> renders its option
+// list in browser chrome we can't style, which was unreadable on the theme.
+function ServerPicker({
+  servers,
+  value,
+  onChange,
+  placeholder,
+}: {
+  servers: BmServer[];
+  value: string;
+  onChange: (id: string) => void;
+  placeholder: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const [q, setQ] = useState("");
+  const chosen = servers.find((s) => s.id === value);
+  const list = useMemo(() => {
+    const needle = q.trim().toLowerCase();
+    const base = needle ? servers.filter((s) => s.name.toLowerCase().includes(needle)) : servers;
+    return base.slice(0, 12);
+  }, [servers, q]);
+
+  return (
+    <div style={{ position: "relative", flex: 2, minWidth: 220 }}>
+      {chosen ? (
+        <div style={{ ...S.input, display: "flex", alignItems: "center", gap: 8 }}>
+          <span
+            style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+          >
+            {chosen.name}
+          </span>
+          <span
+            style={{
+              ...S.muted,
+              fontSize: 11.5,
+              flexShrink: 0,
+              fontVariantNumeric: "tabular-nums",
+            }}
+          >
+            {chosen.players}/{chosen.maxPlayers}
+          </span>
+          <button
+            onClick={() => {
+              onChange("");
+              setQ("");
+              setOpen(false);
+            }}
+            style={{
+              background: "transparent",
+              border: "none",
+              color: "rgba(148,163,184,.7)",
+              cursor: "pointer",
+              fontSize: 13,
+              padding: 0,
+            }}
+            aria-label="Clear server"
+          >
+            ×
+          </button>
+        </div>
+      ) : (
+        <input
+          style={{ ...S.input, width: "100%", boxSizing: "border-box" }}
+          placeholder={placeholder}
+          value={q}
+          autoComplete="off"
+          onChange={(e) => {
+            setQ(e.target.value);
+            setOpen(true);
+          }}
+          onFocus={() => setOpen(true)}
+          onBlur={() => setTimeout(() => setOpen(false), 150)}
+        />
+      )}
+      {open && !chosen && (
+        <div
+          style={{
+            position: "absolute",
+            top: "calc(100% + 4px)",
+            left: 0,
+            right: 0,
+            zIndex: 40,
+            background: "#131b2b",
+            border: "1px solid rgba(255,255,255,.14)",
+            borderRadius: 8,
+            boxShadow: "0 10px 30px rgba(0,0,0,.5)",
+            overflow: "hidden",
+          }}
+        >
+          {list.length === 0 && (
+            <div style={{ ...S.muted, padding: "10px 12px" }}>No servers match.</div>
+          )}
+          {list.map((s) => (
+            <button
+              key={s.id}
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => {
+                onChange(s.id);
+                setOpen(false);
+              }}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                width: "100%",
+                textAlign: "left",
+                padding: "8px 12px",
+                background: "transparent",
+                border: "none",
+                borderBottom: "1px solid rgba(255,255,255,.05)",
+                color: "rgba(236,242,250,.92)",
+                fontSize: 12.5,
+                cursor: "pointer",
+              }}
+              onMouseEnter={(e) =>
+                ((e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.06)")
+              }
+              onMouseLeave={(e) =>
+                ((e.currentTarget as HTMLElement).style.background = "transparent")
+              }
+            >
+              <span
+                style={{
+                  flex: 1,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {s.name}
+              </span>
+              <SeedBadge players={s.players} />
+              <span
+                style={{
+                  ...S.muted,
+                  fontSize: 11.5,
+                  fontVariantNumeric: "tabular-nums",
+                  flexShrink: 0,
+                }}
+              >
+                {s.players}/{s.maxPlayers}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ---- Front Lines (server browser) ------------------------------------------
 
 function FrontLines({ accent, onGo }: { accent: string; onGo?: (tab: string) => void }) {
@@ -562,21 +712,12 @@ function SeedingOps({ accent, currentUserId }: { accent: string; currentUserId?:
         <div style={S.card}>
           <div style={S.kick}>Arm a rally</div>
           <div style={{ ...S.row, flexWrap: "wrap" }}>
-            <select
-              style={{ ...S.input, flex: 2, minWidth: 200 }}
+            <ServerPicker
+              servers={servers.filter((s) => seedState(s.players) !== "live")}
               value={armServer}
-              onChange={(e) => setArmServer(e.target.value)}
-            >
-              <option value="">Pick a server…</option>
-              {servers
-                .filter((s) => seedState(s.players) !== "live")
-                .slice(0, 50)
-                .map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name.slice(0, 60)} ({s.players}/{s.maxPlayers})
-                  </option>
-                ))}
-            </select>
+              onChange={setArmServer}
+              placeholder="Pick a server to fill…"
+            />
             <input
               style={{ ...S.input, flex: 3, minWidth: 180 }}
               placeholder="Note (optional): Friday fight night, seed by 7pm AT"
@@ -852,6 +993,8 @@ function Garrison({ accent }: { accent: string }) {
           placeholder="Server name: 82nd Airborne | NA West"
           value={fName}
           maxLength={80}
+          autoComplete="off"
+          name="hll-garrison-name"
           onChange={(e) => setFName(e.target.value)}
         />
         <input
@@ -859,6 +1002,8 @@ function Garrison({ accent }: { accent: string }) {
           placeholder="CRCON base URL: https://rcon.yourclan.com"
           value={fUrl}
           maxLength={200}
+          autoComplete="off"
+          name="hll-garrison-url"
           onChange={(e) => setFUrl(e.target.value)}
         />
         <input
@@ -867,6 +1012,8 @@ function Garrison({ accent }: { accent: string }) {
           placeholder="CRCON API key (optional; enables match history + verified seeding)"
           value={fKey}
           maxLength={200}
+          autoComplete="new-password"
+          name="hll-garrison-key"
           onChange={(e) => setFKey(e.target.value)}
         />
         <input
@@ -874,16 +1021,16 @@ function Garrison({ accent }: { accent: string }) {
           placeholder="Recruiting line (optional): New player friendly, comp team tryouts open"
           value={fNote}
           maxLength={140}
+          autoComplete="off"
+          name="hll-garrison-note"
           onChange={(e) => setFNote(e.target.value)}
         />
-        <select style={S.input} value={fBm} onChange={(e) => setFBm(e.target.value)}>
-          <option value="">Server identity (optional; enables verified rallies)</option>
-          {servers.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.name.slice(0, 70)}
-            </option>
-          ))}
-        </select>
+        <ServerPicker
+          servers={servers}
+          value={fBm}
+          onChange={setFBm}
+          placeholder="Server identity (optional; enables verified rallies)…"
+        />
         <button style={{ ...S.btn, opacity: busy ? 0.6 : 1 }} disabled={busy} onClick={link}>
           {busy ? "Probing…" : "Link server"}
         </button>
