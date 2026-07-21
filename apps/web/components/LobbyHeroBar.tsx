@@ -93,7 +93,7 @@ export default function LobbyHeroBar({
     });
     return () => obs.disconnect();
   }, []);
-  const heroAccent = chromeMin ? FLAGSHIP : accent;
+  const heroAccent = chromeMin && !bannerUrl ? FLAGSHIP : accent;
 
   const ROTATING_BANNERS: Record<string, string[]> = {
     STUDY: [
@@ -235,7 +235,9 @@ export default function LobbyHeroBar({
         </>
       ) : null}
 
-      {chromeMin && (
+      {/* Flagship glow is for the UNDRESSED hero. A lobby with real banner art
+          gets the art, not a purple wash over it. */}
+      {chromeMin && !effectiveBanner && (
         <>
           <style>{`@keyframes weeredHeroBloom{0%,100%{opacity:.6;transform:scale(1)}50%{opacity:1;transform:scale(1.09)}}@keyframes weeredHeroBloom2{0%,100%{opacity:.35}50%{opacity:.72}}`}</style>
           <div
