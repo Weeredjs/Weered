@@ -39,6 +39,7 @@ interface Props {
   memberCount?: number;
   moduleType?: string;
   gameName?: string;
+  steamAppId?: number;
 }
 
 export default function LobbyHeroBar({
@@ -53,9 +54,31 @@ export default function LobbyHeroBar({
   memberCount,
   moduleType,
   gameName,
+  steamAppId,
 }: Props) {
   const accent = accentColor || "#7C3AED";
   const initial = (lobbyName || lobbyId || "L").charAt(0).toUpperCase();
+
+  // Steam live player count: the honest "this game is alive" signal for young
+  // lobbies where the member count would otherwise read as a morgue.
+  const [inGame, setInGame] = useState<number | null>(null);
+  useEffect(() => {
+    if (!steamAppId) return;
+    let stop = false;
+    const load = () =>
+      fetch(`${API}/steam/players/${steamAppId}`)
+        .then((r) => r.json())
+        .then((j) => {
+          if (!stop) setInGame(typeof j?.count === "number" ? j.count : null);
+        })
+        .catch(() => {});
+    load();
+    const iv = setInterval(load, 60_000);
+    return () => {
+      stop = true;
+      clearInterval(iv);
+    };
+  }, [steamAppId]);
 
   const FLAGSHIP = "#7C3AED";
   const [chromeMin, setChromeMin] = useState(false);
@@ -404,10 +427,20 @@ export default function LobbyHeroBar({
             </div>
           </div>
 
-          {(typeof roomCount === "number" || typeof memberCount === "number") && (
+          {(typeof roomCount === "number" ||
+            typeof memberCount === "number" ||
+            (inGame ?? 0) > 0) && (
             <div style={{ display: "flex", gap: 6 }}>
               {typeof roomCount === "number" && <StatChip value={roomCount} label="rooms" />}
-              {typeof memberCount === "number" && <StatChip value={memberCount} label="members" />}
+              {typeof memberCount === "number" && memberCount > 0 && (
+                <StatChip value={memberCount} label="members" />
+              )}
+              {(inGame ?? 0) > 0 && (
+                <StatChip
+                  value={inGame! >= 1000 ? `${(inGame! / 1000).toFixed(1)}k` : inGame!}
+                  label="in game now"
+                />
+              )}
             </div>
           )}
         </div>
@@ -479,7 +512,7 @@ export default function LobbyHeroBar({
   );
 }
 
-function StatChip({ value, label }: { value: number; label: string }) {
+function StatChip({ value, label }: { value: number | string; label: string }) {
   return (
     <div
       style={{
@@ -493,7 +526,7 @@ function StatChip({ value, label }: { value: number; label: string }) {
       }}
     >
       <span style={{ fontSize: 13, fontWeight: 800, color: "rgba(243,244,246,0.90)" }}>
-        {value.toLocaleString()}
+        {typeof value === "number" ? value.toLocaleString() : value}
       </span>
       <span
         style={{ fontSize: 10, opacity: 0.42, textTransform: "uppercase", letterSpacing: "0.07em" }}

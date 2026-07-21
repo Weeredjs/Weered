@@ -217,7 +217,7 @@ const MODULE_GAME_NAMES: Record<string, string> = {
 
 type LobbyInfo = {
   moduleType: string;
-  moduleConfig?: { twitchCategory?: string; subreddit?: string } | null;
+  moduleConfig?: { twitchCategory?: string; subreddit?: string; steamAppId?: number } | null;
   accentColor?: string;
   logoUrl?: string;
   bannerUrl?: string;
@@ -958,6 +958,7 @@ export default function LobbyIdPage() {
             memberCount={lobbyInfo?._count?.members}
             moduleType={lobbyInfo?.moduleType}
             gameName={hasModules ? gameName : undefined}
+            steamAppId={lobbyInfo?.moduleConfig?.steamAppId}
           />
 
           {memberChecked &&

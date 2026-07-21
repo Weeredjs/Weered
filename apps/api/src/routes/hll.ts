@@ -30,9 +30,28 @@ type BmServer = {
   maxPlayers: number;
   map: string | null;
   country: string | null;
+  region: string | null;
   rank: number | null;
   status: string;
 };
+
+// HLL servers do not set Steam's region field, so region comes from the way
+// communities actually signal it: the server name. EU tokens first (they are
+// the most distinctive); NA last because "east/west" are generic.
+function guessRegion(name: string): string | null {
+  const n = ` ${name.toLowerCase()} `;
+  if (
+    /[\s\W](eu|ger|german|uk|fr|french|pol|polski|polish|nl|dutch|esp|spain|ita|scand|nord)[\s\W]/.test(
+      n,
+    )
+  )
+    return "EU";
+  if (/[\s\W](aus?|anz|oce|oceania|sydney|nz)[\s\W]/.test(n)) return "OCE";
+  if (/[\s\W](asia|sea|jpn?|kr|kor|cn|chn|sgp?|hk|tha?i)[\s\W]/.test(n)) return "ASIA";
+  if (/[\s\W](usa?|na|east|west|central|dallas|chicago|texas|nyc?|cali|canada|can)[\s\W]/.test(n))
+    return "NA";
+  return null;
+}
 
 type Rally = {
   id: string;
@@ -98,41 +117,81 @@ export default async function hllRoutes(app: FastifyInstance, opts: Opts = {}) {
   function mapBmServer(row: any): BmServer | null {
     const a = row?.attributes;
     if (!row?.id || !a?.name) return null;
+    const name = String(a.name).slice(0, 120);
     return {
       id: String(row.id),
-      name: String(a.name).slice(0, 120),
+      name,
       players: Number(a.players) || 0,
       maxPlayers: Number(a.maxPlayers) || 100,
       map: a.details?.map ? String(a.details.map) : null,
       country: a.country ? String(a.country) : null,
+      region: guessRegion(name),
       rank: typeof a.rank === "number" ? a.rank : null,
       status: String(a.status || "online"),
     };
   }
 
-  // Top ~100 HLL servers by population. One upstream call per 60s serves everyone.
+  // Primary source: Steam's own server browser (first-party, same API key that
+  // already serves the player-count chip). BattleMetrics 403s datacenter IPs
+  // anonymously, so it is the fallback now, not the front door.
+  async function fetchSteamServers(): Promise<BmServer[]> {
+    const key = process.env.STEAM_API_KEY || "";
+    if (!key) return [];
+    const j = await jget(
+      `https://api.steampowered.com/IGameServersService/GetServerList/v1/?key=${key}&filter=%5Cappid%5C${STEAM_APP_ID}&limit=1000`,
+    );
+    const rows: any[] = Array.isArray(j?.response?.servers) ? j.response.servers : [];
+    return rows
+      .map((s: any): BmServer | null => {
+        if (!s?.name) return null;
+        const name = String(s.name).slice(0, 120);
+        return {
+          id: String(s.steamid || s.addr || ""),
+          name,
+          players: Number(s.players) || 0,
+          maxPlayers: Number(s.max_players) || 100,
+          map: s.map ? String(s.map) : null,
+          country: null,
+          region: guessRegion(name),
+          rank: null,
+          status: "online",
+        };
+      })
+      .filter((s): s is BmServer => !!s && !!s.id)
+      .sort((a, b) => b.players - a.players)
+      .slice(0, 120);
+  }
+
+  // Top HLL servers by population. One upstream call per 60s serves everyone.
   async function getServers(): Promise<BmServer[]> {
     const hit = cacheGet("servers");
     if (hit) return hit;
-    const j = await jget(
-      `${BM_BASE}/servers?filter[game]=hll&filter[status]=online&sort=-players&page[size]=100`,
-    );
-    const rows: BmServer[] = Array.isArray(j?.data) ? j.data.map(mapBmServer).filter(Boolean) : [];
+    let rows = await fetchSteamServers();
+    if (!rows.length) {
+      const j = await jget(
+        `${BM_BASE}/servers?filter[game]=hll&filter[status]=online&sort=-players&page[size]=100`,
+      );
+      rows = Array.isArray(j?.data) ? j.data.map(mapBmServer).filter(Boolean) : [];
+    }
     if (rows.length) cacheSet("servers", rows, 60_000);
     return rows.length ? rows : cacheGet("servers-stale") || [];
   }
 
-  // A rally can point at a server outside the top-100 window — fetch it solo.
+  // A rally can point at a server outside the cached window: check the live
+  // list first (refreshing it if stale), then fall back to a BM point lookup.
   async function getServerById(bmId: string): Promise<BmServer | null> {
     const key = `server:${bmId}`;
     const hit = cacheGet(key);
     if (hit) return hit;
-    const listed = (cacheGet("servers") as BmServer[] | null)?.find((s) => s.id === bmId);
+    const listed = (await getServers()).find((s) => s.id === bmId);
     if (listed) return listed;
-    const j = await jget(`${BM_BASE}/servers/${encodeURIComponent(bmId)}`);
-    const s = j?.data ? mapBmServer(j.data) : null;
-    if (s) cacheSet(key, s, 60_000);
-    return s;
+    if (/^\d+$/.test(bmId) && bmId.length < 12) {
+      const j = await jget(`${BM_BASE}/servers/${encodeURIComponent(bmId)}`);
+      const s = j?.data ? mapBmServer(j.data) : null;
+      if (s) cacheSet(key, s, 60_000);
+      return s;
+    }
+    return null;
   }
 
   // ---- linked community server (CRCON) ---------------------------------------

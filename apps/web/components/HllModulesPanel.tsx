@@ -33,6 +33,7 @@ type BmServer = {
   maxPlayers: number;
   map: string | null;
   country: string | null;
+  region?: string | null;
   rank: number | null;
 };
 
@@ -48,37 +49,64 @@ function regionOf(country: string | null): "EU" | "NA" | "OCE" | "ASIA" | "OTHER
   return "OTHER";
 }
 
+// Covers both long BattleMetrics names (omahabeach_warfare) and the short
+// codes Steam's server browser reports (SME, CT_N, PHL).
 const MAP_NAMES: Record<string, string> = {
   carentan: "Carentan",
+  ct: "Carentan",
   foy: "Foy",
   hill400: "Hill 400",
   hurtgenforest: "Hürtgen Forest",
+  hurtgen: "Hürtgen Forest",
   kharkov: "Kharkov",
   kursk: "Kursk",
   stalingrad: "Stalingrad",
+  stalin: "Stalingrad",
   remagen: "Remagen",
+  rem: "Remagen",
   mortain: "Mortain",
   driel: "Driel",
+  drl: "Driel",
   elalamein: "El Alamein",
+  elal: "El Alamein",
   elsenbornridge: "Elsenborn Ridge",
+  elsenborn: "Elsenborn Ridge",
   purpleheartlane: "Purple Heart Lane",
+  phl: "Purple Heart Lane",
   stmariedumont: "St. Marie du Mont",
+  smdm: "St. Marie du Mont",
+  stmarie: "St. Marie du Mont",
   stmereeglise: "Ste. Mère Église",
+  sme: "Ste. Mère Église",
   utahbeach: "Utah Beach",
+  utah: "Utah Beach",
   omahabeach: "Omaha Beach",
+  omaha: "Omaha Beach",
   tobruk: "Tobruk",
+};
+const MAP_VARIANTS: Record<string, string> = {
+  n: "Night",
+  night: "Night",
+  morning: "Morning",
+  day: "Day",
+  dusk: "Dusk",
+  rain: "Rain",
+  o: "Offensive",
+  off: "Offensive",
+  offensive: "Offensive",
+  warfare: "Warfare",
+  skirmish: "Skirmish",
 };
 function prettyMap(raw: string | null): string {
   if (!raw) return "—";
-  const lower = raw.toLowerCase();
-  const base = lower.split("_")[0];
+  const parts = raw
+    .toLowerCase()
+    .split(/[_\s]+/)
+    .filter(Boolean);
+  const base = parts.find((p) => MAP_NAMES[p]) || parts[0] || "";
   const name = MAP_NAMES[base] || base.charAt(0).toUpperCase() + base.slice(1);
-  const mode = lower.includes("off")
-    ? " · Offensive"
-    : lower.includes("skirmish")
-      ? " · Skirmish"
-      : "";
-  return name + mode;
+  const variant = parts.map((p) => MAP_VARIANTS[p]).filter(Boolean);
+  return variant.length ? `${name} · ${[...new Set(variant)].join(" ")}` : name;
 }
 
 // Seeding window: below ~5 the server is idle; 5–39 is the grind where every
@@ -228,7 +256,7 @@ function FrontLines({ accent }: { accent: string }) {
 
   const shown = useMemo(() => {
     let list = servers;
-    if (region !== "ALL") list = list.filter((s) => regionOf(s.country) === region);
+    if (region !== "ALL") list = list.filter((s) => (s.region || regionOf(s.country)) === region);
     if (seedOnly) list = list.filter((s) => seedState(s.players) === "seeding");
     if (q.trim()) {
       const needle = q.trim().toLowerCase();
@@ -288,7 +316,8 @@ function FrontLines({ accent }: { accent: string }) {
                 {s.name}
               </div>
               <div style={{ ...S.muted, marginTop: 2 }}>
-                {prettyMap(s.map)} · {s.country || "?"}
+                {prettyMap(s.map)}
+                {s.region || s.country ? ` · ${s.region || s.country}` : ""}
                 {s.rank ? ` · #${s.rank}` : ""}
               </div>
             </div>
@@ -311,7 +340,7 @@ function FrontLines({ accent }: { accent: string }) {
           </div>
           <div style={{ ...S.row, justifyContent: "flex-end", gap: 8 }}>
             <a
-              href={`https://www.battlemetrics.com/servers/hll/${s.id}`}
+              href={`https://www.battlemetrics.com/servers/hll?q=${encodeURIComponent(s.name.slice(0, 60))}`}
               target="_blank"
               rel="noopener noreferrer"
               style={{ ...S.btnQuiet, textDecoration: "none" }}
