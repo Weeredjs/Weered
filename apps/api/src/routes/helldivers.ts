@@ -1,8 +1,9 @@
 import { log, swallow } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
+import { prisma } from "../lib/prisma";
 
 type Opts = {
-  authFromHeader?: (h?: string) => { id: string } | null;
+  authFromHeader?: (h?: string) => { id: string; name?: string } | null;
 };
 
 export default async function helldiversRoutes(app: FastifyInstance, _opts: Opts = {}) {
@@ -296,6 +297,62 @@ export default async function helldiversRoutes(app: FastifyInstance, _opts: Opts
         event: planet.event || null,
         history: planet.history || [],
       },
+    });
+  });
+
+  // ---- Stratagem Hero arcade leaderboard --------------------------------
+
+  app.get("/helldivers/strat-hero/leaderboard", async (req, reply) => {
+    const u = _opts.authFromHeader?.((req as any).headers?.authorization);
+    const top = await prisma.helldiversStratScore.findMany({
+      orderBy: { score: "desc" },
+      take: 20,
+      select: { userId: true, name: true, score: true, rounds: true },
+    });
+    let me: any = null;
+    if (u) {
+      const mine = await prisma.helldiversStratScore.findUnique({ where: { userId: u.id } });
+      if (mine) {
+        const above = await prisma.helldiversStratScore.count({
+          where: { score: { gt: mine.score } },
+        });
+        me = { score: mine.score, rounds: mine.rounds, rank: above + 1 };
+      }
+    }
+    return reply.send({ ok: true, top, me });
+  });
+
+  app.post("/helldivers/strat-hero/score", async (req, reply) => {
+    const u = _opts.authFromHeader?.((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const body: any = (req as any).body || {};
+    const score = Math.floor(Number(body.score));
+    const rounds = Math.floor(Number(body.rounds));
+    // Sanity fence: per-arrow scoring with round bonuses tops out well under
+    // this even for absurdly long runs. Client scores are trust-based; the cap
+    // keeps the board embarrassment-free, not tamper-proof.
+    if (!Number.isFinite(score) || score < 0 || score > 250_000)
+      return reply.code(400).send({ ok: false, error: "bad_score" });
+    if (!Number.isFinite(rounds) || rounds < 0 || rounds > 60)
+      return reply.code(400).send({ ok: false, error: "bad_rounds" });
+
+    const user = await prisma.user.findUnique({ where: { id: u.id }, select: { name: true } });
+    const name = (user?.name || "Helldiver").slice(0, 40);
+    const existing = await prisma.helldiversStratScore.findUnique({ where: { userId: u.id } });
+    if (!existing || score > existing.score) {
+      await prisma.helldiversStratScore.upsert({
+        where: { userId: u.id },
+        update: { score, rounds, name },
+        create: { userId: u.id, score, rounds, name },
+      });
+    }
+    const best = Math.max(score, existing?.score || 0);
+    const above = await prisma.helldiversStratScore.count({ where: { score: { gt: best } } });
+    return reply.send({
+      ok: true,
+      best,
+      rank: above + 1,
+      improved: !existing || score > existing.score,
     });
   });
 }

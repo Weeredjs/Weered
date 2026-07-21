@@ -8,6 +8,8 @@ import HelldiversDispatchesPanel from "./HelldiversDispatchesPanel";
 import HelldiversSquadFinder from "./HelldiversSquadFinder";
 import HelldiversStratagemsPanel from "./HelldiversStratagemsPanel";
 import HelldiversLoadoutBrowser from "./HelldiversLoadoutBrowser";
+import HelldiversStratagemHero from "./HelldiversStratagemHero";
+import HelldiversServiceRecord from "./HelldiversServiceRecord";
 
 const ACCENT = "#FFD700";
 
@@ -15,6 +17,8 @@ const TABS = [
   { id: "war" as const, label: "War Map" },
   { id: "squad" as const, label: "Squad Finder" },
   { id: "stratagems" as const, label: "Stratagems" },
+  { id: "hero" as const, label: "Stratagem Hero" },
+  { id: "record" as const, label: "Service Record" },
   { id: "loadouts" as const, label: "Loadouts" },
 ];
 type TabId = (typeof TABS)[number]["id"];
@@ -123,6 +127,12 @@ export default function HelldiversModulesPanel({
             />
           )}
           {tab === "stratagems" && <HelldiversStratagemsPanel />}
+          {tab === "hero" && (
+            <HelldiversStratagemHero accent={accent} currentUserId={currentUserId} />
+          )}
+          {tab === "record" && (
+            <HelldiversServiceRecord accent={accent} currentUserId={currentUserId} />
+          )}
           {tab === "loadouts" && <HelldiversLoadoutBrowser lobbyAccent={accent} />}
         </div>
       </div>

@@ -2548,6 +2548,20 @@ model MapFogReveal {
 // throwable + armor + helmet (opt) + 4 stratagems, named, faction-tagged,
 // shareable via slug, voted on by the community.
 
+// Stratagem Hero arcade: one row per user, their best run. Upserted only on
+// improvement, so the leaderboard is personal-bests, not spam.
+model HelldiversStratScore {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  name      String
+  score     Int
+  rounds    Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([score])
+}
+
 model HelldiversLoadout {
   id          String   @id @default(cuid())
   slug        String   @unique
