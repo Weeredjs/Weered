@@ -6,3 +6,5 @@ apps/web/app/foyer/PlanModule.tsx
 # foyer/page.tsx: client-facing office foyer (masthead + gate + light benefits-document consult).
 #   Slated for retirement when the office fully folds into Weered (Phase 3); splitting a doomed page = churn.
 apps/web/app/foyer/page.tsx
+# HllModulesPanel.tsx: cohesive 4-tab HLL lobby panel (Front Lines / Seeding Ops / Garrisons / Artillery School) + ServerPicker, grown during the HLL build. Splitting mid-launch = regression risk on a live lobby; slated to split into per-tab files post-launch.
+apps/web/components/HllModulesPanel.tsx
