@@ -16,13 +16,13 @@
 > is opinionated, the business logic is server-side only, and it ships most days.
 > Constructive teardowns are welcome. See [Code quality](#code-quality) below.
 
-Real-time community platform for gaming — lobbies, rooms, crews, presence, and game-aware modules. A modern take on the MPlayer-era game lobby (1996), rebuilt for 2026.
+Real-time community platform for gaming: lobbies, rooms, crews, presence, and game-aware modules. A modern take on the MPlayer-era game lobby (1996), rebuilt for 2026.
 
 [weered.ca](https://weered.ca) · [About](https://weered.ca/about) · [Desktop](https://weered.ca/desktop)
 
 ## What it is
 
-Weered organizes communities around what people are actually doing. Open it and you land in a lobby or a room with other people present — you can see who's on Steam, Xbox, PlayStation, or Twitch, co-watch a stream, run a Destiny 2 raid LFG, hold a poker night, paper-trade against your crew on FakeOut, or track the Helldivers 2 galactic war together. Each game gets a lobby wired to that game's own live data.
+Weered organizes communities around what people are actually doing. Open it and you land in a lobby or a room with other people present. You can see who's on Steam, Xbox, PlayStation, or Twitch, co-watch a stream, run a Destiny 2 raid LFG, hold a poker night, paper-trade against your crew on FakeOut, or track the Helldivers 2 galactic war together. Each game gets a lobby wired to that game's own live data.
 
 The look is deliberately dark and cinematic. The model is the MPlayer lobby: show up, see who's around, play together.
 
@@ -30,15 +30,15 @@ The look is deliberately dark and cinematic. The model is the MPlayer lobby: sho
 
 ```
 apps/
-  web/       Next.js 15 — primary client at weered.ca
-  api/       Fastify 5 + Prisma + WebSocket — single source of truth
-  mobile/    React Native 0.83 + Expo SDK 55 — iOS + Android
-  desktop/   Tauri 2 + Rust — native shell around the web client
-  mod/       Weered Connect — Fabric mod (Minecraft 1.21.x), shipped via Modrinth
+  web/       Next.js 15 - primary client at weered.ca
+  api/       Fastify 5 + Prisma + WebSocket - single source of truth
+  mobile/    React Native 0.83 + Expo SDK 55 - iOS + Android
+  desktop/   Tauri 2 + Rust - native shell around the web client
+  mod/       Weered Connect - Fabric mod (Minecraft 1.21.x), shipped via Modrinth
 packages/
   shared/    TypeScript types + constants shared across clients
 .github/
-  workflows/ CI — cross-platform desktop release builds
+  workflows/ CI - cross-platform desktop release builds
 ```
 
 ```
@@ -65,9 +65,9 @@ packages/
    Edge: Caddy (TLS + CORS allowlist) · Process mgmt: PM2 · Errors: Sentry
 ```
 
-**The architectural rule:** business logic lives in the API. Permissions, scoring, the paper economy, friend logic, lobby joining, notoriety — every rule is server-side, decomposed across `apps/api/src/routes/*`. Clients render and submit; they never decide.
+**The architectural rule:** business logic lives in the API. Permissions, scoring, the paper economy, friend logic, lobby joining, notoriety. Every rule is server-side, decomposed across `apps/api/src/routes/*`. Clients render and submit; they never decide.
 
-See [`DEVELOPMENT.md`](./DEVELOPMENT.md) for the full repo guide — per-client release cadence, deploy procedures, and gotchas.
+See [`DEVELOPMENT.md`](./DEVELOPMENT.md) for the full repo guide: per-client release cadence, deploy procedures, and gotchas.
 
 For the deliberate single-node scaling posture (and why horizontal WS scaling is intentionally deferred), see [`SCALING.md`](./SCALING.md). Ops and disaster recovery: [`RUNBOOK.md`](./RUNBOOK.md).
 
@@ -79,7 +79,7 @@ For the deliberate single-node scaling posture (and why horizontal WS scaling is
 - **Desktop:** Tauri 2, Rust, native OS webview (~5 MB installer).
 - **Auth:** httpOnly-cookie sessions; Google OAuth, Bungie.net OAuth, and local username/password.
 - **Presence:** Steam Web API, Twitch Helix, Xbox / PlayStation.
-- **Payments:** Stripe (paid tiers — Indicted, Felon, Kingpin).
+- **Payments:** Stripe (paid tiers: Indicted, Felon, Kingpin).
 - **Observability:** Sentry (web + api), PM2 (process management).
 - **Hosting:** DigitalOcean droplet behind Caddy (edge TLS + CORS).
 
@@ -107,8 +107,8 @@ Plus lighter topic/content modules: `CS2`, `DOTA2`, `PUBG`, `MLB`, `PGA`, `MTG`,
 
 Closed-loop virtual economy:
 
-- **Notoriety** — reputation/XP, accrued via activity (chat, room joins, hosting, daily login). Drives a rank ladder and gates what you can do (posting media, hosting lobbies, moderation).
-- **Paper** — spendable currency for store items, bounties, tournament buy-ins, and tips. Earned via activity, never purchasable for cash.
+- **Notoriety**: reputation/XP, accrued via activity (chat, room joins, hosting, daily login). Drives a rank ladder and gates what you can do (posting media, hosting lobbies, moderation).
+- **Paper**: spendable currency for store items, bounties, tournament buy-ins, and tips. Earned via activity, never purchasable for cash.
 
 Sits alongside a Stripe-backed tier system (Innocent / Indicted / Felon / Kingpin) for paid features.
 
@@ -116,12 +116,12 @@ Sits alongside a Stripe-backed tier system (Innocent / Indicted / Felon / Kingpi
 
 Continuous analysis runs in CI on every push; the badges above are live.
 
-**Security A · Reliability A · Maintainability A · Security Review A** — 0 bugs,
+**Security A · Reliability A · Maintainability A · Security Review A**: 0 bugs,
 0 vulnerabilities, 0 open security hotspots, technical-debt ratio under 0.5%.
 
 A note for anyone running their own scanner, because you should: where a finding
 was suppressed instead of code-changed, the reason is committed in
-[`sonar-project.properties`](./sonar-project.properties) for you to read — for
+[`sonar-project.properties`](./sonar-project.properties) for you to read. For
 example, the "hardcoded credentials" are test-fixture and CI test-database
 passwords (not real secrets), and a few `S4325` "redundant" casts are
 load-bearing type-narrowing the TypeScript compiler actually requires. Test
@@ -156,7 +156,7 @@ Security reports: see [`SECURITY.md`](./SECURITY.md). Licensing questions:
 
 ## Status
 
-Public beta, live at [weered.ca](https://weered.ca). In active development — ships most days. Source-available as of June 2026.
+Public beta, live at [weered.ca](https://weered.ca). In active development, ships most days. Source-available as of June 2026.
 
 ## Contact
 
