@@ -2,7 +2,7 @@ import { log, swallow } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { prisma } from "../lib/prisma";
-import sharp from "sharp";
+import sharp, { type Metadata } from "sharp";
 import * as fs from "fs";
 import * as path from "path";
 import crypto from "crypto";
@@ -155,7 +155,7 @@ export default async function chatMediaRoutes(app: FastifyInstance, opts: Opts) 
       if (buf.length > MAX_BYTES)
         return reply.code(413).send({ ok: false, error: "too_large", maxBytes: MAX_BYTES });
 
-      let full: Buffer, thumb: Buffer, meta: sharp.Metadata;
+      let full: Buffer, thumb: Buffer, meta: Metadata;
       try {
         const img = sharp(buf, { animated: false }).rotate(); // bakes EXIF orientation, then EXIF is dropped by re-encode
         meta = await img.metadata();
