@@ -26,6 +26,51 @@ Weered organizes communities around what people are actually doing. Open it and 
 
 The look is deliberately dark and cinematic. The model is the MPlayer lobby: show up, see who's around, play together.
 
+## Features
+
+The game modules further down sit on top of a full community platform. The core surface:
+
+**Presence and social**
+
+- Cross-platform presence: see who is live on Steam, Xbox, PlayStation, and Twitch
+- Friends, profiles, and an activity feed
+- Crews: persistent groups with their own chat, roster, roles, and moderation tools
+
+**Real-time rooms**
+
+- Voice rooms on LiveKit, with a join queue and a listen-only mode
+- Camera video and screen sharing in any room
+- A shared real-time canvas, used for the built-in tabletop: map tokens, fog of war, and NPC encounters
+
+**Messaging**
+
+- Lobby, room, crew, and direct messages, plus group DMs
+- Reactions, mentions, and a flair cosmetic system
+- Image and file attachments (perceptual-hash blocked and blur-tiered for safety), plus GIFs via Tenor
+
+**Moderation and safety**
+
+- Per-lobby roles and moderator tiers; every permission is checked server-side
+- Automod rules, member reports, a ban-appeal court, and full audit logs
+- Notoriety-gated abilities: new accounts earn trust before they can post media or host lobbies
+
+**Notifications**
+
+- In-app notifications and web push (VAPID)
+
+**Communities and events**
+
+- Lobbies (each wired to a game module), rooms, crews, and forums with their own moderation
+- Scheduled events and API-verified tournaments (for example, Destiny 2 PGCR scoring)
+
+**Economy**
+
+- Two earned currencies, Notoriety (reputation) and Paper (spendable), drive a closed loop: store items, bounties, tournament buy-ins, and tips. See [Paper economy](#paper-economy).
+
+**Clients**
+
+- Web at weered.ca, a Tauri desktop app (~5 MB, Windows and Linux), and a mobile app in progress on Expo.
+
 ## Architecture
 
 ```
