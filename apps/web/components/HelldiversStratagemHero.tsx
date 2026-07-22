@@ -418,7 +418,7 @@ export default function HelldiversStratagemHero({
                 marginBottom: 12,
               }}
             >
-              {strat.code.split("").map(chip)}
+              {strat.code.split("").map((c, i) => chip(c, i))}
             </div>
             {upNext.length > 0 && (
               <div style={{ fontSize: 11, color: "rgba(148,163,184,.6)" }}>

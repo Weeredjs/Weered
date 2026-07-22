@@ -1074,8 +1074,17 @@ function Garrison({ accent }: { accent: string }) {
                 }}
               >
                 <div
+                  role="button"
+                  tabIndex={0}
                   style={{ ...S.row, cursor: "pointer" }}
                   onClick={() => {
+                    const next = isOpen ? "" : g.id;
+                    setOpen(next);
+                    if (next && g.hasKey) void loadRecord(g.id);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key !== "Enter" && e.key !== " ") return;
+                    e.preventDefault();
                     const next = isOpen ? "" : g.id;
                     setOpen(next);
                     if (next && g.hasKey) void loadRecord(g.id);
