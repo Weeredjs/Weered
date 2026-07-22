@@ -80,6 +80,102 @@ export default function FeaturesPage() {
 
         <section className="mkt-section">
           <div className="mkt-wrap">
+            <h2 className="mkt-h2">Everything else it does</h2>
+            <p className="mkt-p">
+              The lobbies are the point, but the table stakes are all here too. The short version:
+            </p>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+                gap: "22px 32px",
+                marginTop: 24,
+              }}
+            >
+              {[
+                {
+                  h: "Talk and hang",
+                  items: [
+                    "Voice rooms: open, queued, or listen-only",
+                    "Camera video and screen sharing",
+                    "Synced stream co-watch and a shared browser",
+                  ],
+                },
+                {
+                  h: "Message",
+                  items: [
+                    "Lobby, room, crew, and direct messages",
+                    "Group DMs, reactions, mentions, and flair",
+                    "Image and file attachments, plus GIFs",
+                  ],
+                },
+                {
+                  h: "Moderate",
+                  items: [
+                    "Per-lobby roles and moderator tiers",
+                    "Automod, member reports, a ban-appeal court",
+                    "Full audit logs; trust earned before you post",
+                  ],
+                },
+                {
+                  h: "Play together",
+                  items: [
+                    "Thirty-plus game lobbies wired to live data",
+                    "A built-in tabletop: tokens, fog of war, NPCs",
+                    "Live poker and a paper-trading floor",
+                  ],
+                },
+                {
+                  h: "Stay in the loop",
+                  items: [
+                    "Steam, Xbox, PlayStation, and Twitch presence",
+                    "In-app notifications and web push",
+                    "Forums, events, and self-scoring tournaments",
+                  ],
+                },
+                {
+                  h: "Yours, everywhere",
+                  items: [
+                    "Web, a Tauri desktop app, mobile in progress",
+                    "Notoriety reputation and Paper currency, earned",
+                    "Store, bounties, tips, tournament buy-ins",
+                  ],
+                },
+              ].map((col) => (
+                <div key={col.h}>
+                  <h3
+                    className="accent"
+                    style={{
+                      fontSize: "0.82rem",
+                      fontWeight: 700,
+                      letterSpacing: "0.08em",
+                      textTransform: "uppercase",
+                      marginBottom: 10,
+                    }}
+                  >
+                    {col.h}
+                  </h3>
+                  <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+                    {col.items.map((it) => (
+                      <li
+                        key={it}
+                        style={{ display: "flex", gap: 8, marginBottom: 7, lineHeight: 1.5 }}
+                      >
+                        <span className="accent" aria-hidden="true">
+                          ✓
+                        </span>
+                        <span>{it}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="mkt-section">
+          <div className="mkt-wrap">
             <h2 className="mkt-h2">Tournaments that score themselves</h2>
             <p className="mkt-p">
               Run a speed race, a bracket, or a challenge ladder, and the results come straight from
