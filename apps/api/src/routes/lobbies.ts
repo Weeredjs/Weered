@@ -4,6 +4,14 @@ import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
 import { z } from "zod";
 import { LobbyRole } from "@prisma/client";
+import { isAIAvailable, OPERATOR_PRESENCE } from "../lib/roomState";
+
+// Public read-only "N viewing" registry — ephemeral in-memory presence for anon
+// visitors on launch lobbies (they're not in the WS presence system). Allowlisted
+// so the map can't grow unbounded, TTL-pruned on every ping. No DB, no auth.
+const PUBLIC_VIEW_LOBBIES = new Set(["helldivers2"]);
+const VIEWER_TTL_MS = 45_000;
+const viewerReg = new Map<string, Map<string, number>>();
 
 // Public read-only "N viewing" registry — ephemeral in-memory presence for anon
 // visitors on launch lobbies (they're not in the WS presence system). Allowlisted
@@ -779,7 +787,13 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
       }
     }
 
-    return reply.send({ ok: true, users: Array.from(seen.values()) });
+    const users = Array.from(seen.values());
+    // The Operator (AI) is an always-on presence — matches the WS presence:state,
+    // so anon viewers see it too and the lobby never reads as fully empty.
+    if (isAIAvailable() && !seen.has("operator")) {
+      users.push({ ...OPERATOR_PRESENCE, isAway: false });
+    }
+    return reply.send({ ok: true, users });
   });
 
   app.get("/lobbies/:lobbyId/presence/:userId/game-card", async (req, reply) => {

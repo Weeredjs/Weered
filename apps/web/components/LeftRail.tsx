@@ -314,7 +314,7 @@ export default function LeftRail() {
       const nm = pickFirstString(u?.name, u?.username, u?.id).toLowerCase();
       return nm.includes(qq);
     });
-  }, [users, q, me]);
+  }, [effectiveUsers, q, me]);
 
   // Office Reception sub-line: the UNFILTERED room count (the search box must never
   // make "Door open · no one waiting" appear while people are actually in the room).
@@ -325,8 +325,7 @@ export default function LeftRail() {
       if (meId && !arr0.some((u: any) => String(u?.id || "") === meId)) return arr0.length + 1;
     } catch {}
     return arr0.length;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [users, me]);
+  }, [effectiveUsers, me]);
 
   const listed = useMemo(() => {
     const arr = [...filtered];
