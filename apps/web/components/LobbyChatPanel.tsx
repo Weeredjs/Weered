@@ -14,39 +14,7 @@ import { ChatMembers } from "./chat/ChatMembers";
 import { ChatMessage } from "./chat/ChatMessage";
 import { API, ChatAtt, authHeadersChat } from "./chat/chatShared";
 import { onActivate } from "@/lib/a11y";
-
-// Client-side screen — nsfwjs (lazy; the model ships in the package).
-let _nsfwModel: any = null;
-async function screenFile(file: File): Promise<{ ok: boolean }> {
-  try {
-    if (!_nsfwModel) {
-      // Loaded from CDN at runtime — the embedded model shards break the
-      // webpack minifier if bundled. Function() keeps both TS and webpack
-      // from statically analyzing the import.
-      const dynImport = new Function("u", "return import(u)") as (u: string) => Promise<any>;
-      const nsfwjs = await dynImport("https://esm.sh/nsfwjs@4.3.0");
-      _nsfwModel = await (nsfwjs.load ? nsfwjs.load() : nsfwjs.default.load());
-    }
-    const url = URL.createObjectURL(file);
-    try {
-      const img = new Image();
-      await new Promise<void>((res, rej) => {
-        img.onload = () => res();
-        img.onerror = () => rej(new Error("decode"));
-        img.src = url;
-      });
-      const preds: { className: string; probability: number }[] = await _nsfwModel.classify(img);
-      const bad = preds.find(
-        (p) => (p.className === "Porn" || p.className === "Hentai") && p.probability > 0.7,
-      );
-      return { ok: !bad };
-    } finally {
-      URL.revokeObjectURL(url);
-    }
-  } catch {
-    return { ok: true }; // screen unavailable — the server re-screens
-  }
-}
+import { screenImageFile } from "@/lib/nsfwScreen";
 
 export default function LobbyChatPanel(
   props: {
@@ -468,7 +436,7 @@ export default function LobbyChatPanel(
       }
       setAttBusy(true);
       try {
-        const sc = await screenFile(file);
+        const sc = await screenImageFile(file);
         if (!sc.ok) {
           weeredToast.error("That one didn\u2019t pass the door check.");
           return;
