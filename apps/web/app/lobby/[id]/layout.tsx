@@ -5,6 +5,10 @@ import SyncAuthedAttribute from "./SyncAuthedAttribute";
 const API = process.env.NEXT_PUBLIC_API_BASE || "https://api.weered.ca";
 const SITE = "https://weered.ca";
 
+// Public read-only launch lobbies: anon see the interactive app, not the SEO
+// slab. Keep in sync with PUBLIC_LAUNCH_LOBBIES in GuestLaunchBar / SyncAuthedAttribute.
+const PUBLIC_LAUNCH_LOBBIES = new Set(["helldivers2"]);
+
 const LOBBY_OG_OVERRIDES: Record<
   string,
   { ogImage: string; twitterImage?: string; description?: string; title?: string }
@@ -94,6 +98,7 @@ export default async function LobbyIdLayout(props: {
   const { children } = props;
 
   const id = decodeURIComponent(params.id);
+  const isPublicLaunch = PUBLIC_LAUNCH_LOBBIES.has(id);
   const name = await fetchLobbyName(id);
   const breadcrumbLd = {
     "@context": "https://schema.org",
@@ -112,7 +117,11 @@ export default async function LobbyIdLayout(props: {
       />
       <script
         dangerouslySetInnerHTML={{
-          __html: `try{if(localStorage.getItem('weered_user'))document.documentElement.setAttribute('data-weered-authed','1');}catch(e){}`,
+          __html: `try{if(localStorage.getItem('weered_user'))document.documentElement.setAttribute('data-weered-authed','1');${
+            isPublicLaunch
+              ? `document.documentElement.setAttribute('data-weered-public-lobby','1');`
+              : ""
+          }}catch(e){}`,
         }}
       />
       <SyncAuthedAttribute />
