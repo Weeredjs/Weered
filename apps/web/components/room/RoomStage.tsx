@@ -10,7 +10,7 @@ import MicSettings from "../MicSettings";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
-export type StageMode = "voice" | "video" | "screen" | "youtube" | "browser" | "twitch" | "article" | "poker" | "fakeout" | "destiny" | "league" | "fortnite" | "pubg" | "hq" | "cs2" | "dota2" | "study" | "dnd" | "windrose" | "helldivers" | "chess" | "gta" | "eve" | "office" | null;
+export type StageMode = "voice" | "video" | "screen" | "youtube" | "browser" | "twitch" | "article" | "poker" | "fakeout" | "destiny" | "league" | "fortnite" | "pubg" | "hq" | "cs2" | "dota2" | "study" | "dnd" | "windrose" | "helldivers" | "hll" | "chess" | "gta" | "eve" | "office" | null;
 
 interface Props {
   roomId: string;
@@ -52,6 +52,7 @@ const Dota2ModulesPanel = dynamic(() => import("../Dota2ModulesPanel"), { loadin
 const StudyModulesPanel = dynamic(() => import("../StudyModulesPanel"), { loading: stageLoading, ssr: false });
 const WindroseModulesPanel = dynamic(() => import("../WindroseModulesPanel"), { loading: stageLoading, ssr: false });
 const HelldiversModulesPanel = dynamic(() => import("../HelldiversModulesPanel"), { loading: stageLoading, ssr: false });
+const HllModulesPanel = dynamic(() => import("../HllModulesPanel"), { loading: stageLoading, ssr: false });
 const EveModulesPanel = dynamic(() => import("../EveModulesPanel"), { loading: stageLoading, ssr: false });
 
 function extractVideoId(input: string): string | null {
@@ -966,6 +967,7 @@ export default function RoomStage({ roomId, mode, moduleType, roomUsers, onClose
   if (mode === "windrose") return <WindroseModulesPanel slim lobbyId={ctx?.currentLobbyId || "windrose"} gameName="Windrose" accentColor="#c9a066" style={{ flex: 1, minHeight: 0 }} />;
   if (mode === "gta") return <GtaModulePanel lobbyId={ctx?.currentLobbyId || "gta6"} redditSub="gta6" accent="#e84393" currentUserId={ctx?.me?.id} style={{ flex: 1, minHeight: 0 }} />;
   if (mode === "helldivers") return <HelldiversModulesPanel lobbyId={ctx?.currentLobbyId || "helldivers2"} accentColor="#FFD700" currentUserId={ctx?.me?.id} hideSquad style={{ flex: 1, minHeight: 0 }} />;
+  if (mode === "hll") return <HllModulesPanel lobbyId={ctx?.currentLobbyId || "hll"} accentColor="#C9A227" currentUserId={ctx?.me?.id} style={{ flex: 1, minHeight: 0 }} />;
   if (mode === "eve") return <EveModulesPanel lobbyId={ctx?.currentLobbyId || "eve"} gameName="EVE Online" accentColor="#d4af37" style={{ flex: 1, minHeight: 0 }} />;
   if (mode === "dnd") return <DndStage roomId={roomId} onClose={onClose} />;
   if (mode === "youtube") return <YoutubeStage roomId={roomId} onClose={onClose} style={style} />;
