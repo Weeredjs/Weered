@@ -18,6 +18,7 @@ import LobbySplash, {
 import LobbyRoomDirectory from "../../../components/LobbyRoomDirectory";
 import LobbyTierCards from "../../../components/LobbyTierCards";
 import LobbyEvents from "../../../components/LobbyEvents";
+import GuestLaunchBar from "../../../components/GuestLaunchBar";
 
 const LFG_BOARD_LOBBIES = new Set(["gta6"]);
 const REDDIT_TAB_LOBBIES: Record<string, string> = { gta6: "gta6" };
@@ -842,6 +843,11 @@ export default function LobbyIdPage() {
 
   return (
     <>
+      <GuestLaunchBar
+        lobbyId={lobbyId}
+        lobbyName={lobbyInfo?.name || "this lobby"}
+        loggedIn={!!me?.id}
+      />
       {memberChecked && !isMember && lobbyInfo && (
         <JoinLobbyOverlay
           lobbyId={lobbyId}

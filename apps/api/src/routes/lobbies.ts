@@ -5,6 +5,13 @@ import { prisma } from "../lib/prisma";
 import { z } from "zod";
 import { LobbyRole } from "@prisma/client";
 
+// Public read-only "N viewing" registry — ephemeral in-memory presence for anon
+// visitors on launch lobbies (they're not in the WS presence system). Allowlisted
+// so the map can't grow unbounded, TTL-pruned on every ping. No DB, no auth.
+const PUBLIC_VIEW_LOBBIES = new Set(["helldivers2"]);
+const VIEWER_TTL_MS = 45_000;
+const viewerReg = new Map<string, Map<string, number>>();
+
 type Opts = {
   authFromHeader: (h?: string) => { id: string; name: string } | null;
   verifyToken: (token: string) => { id: string; name: string } | null;
@@ -42,6 +49,23 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
     awardNotoriety,
     send,
   } = opts;
+
+  // Public "N viewing" ping — records an anonymous viewer and returns the live
+  // count. Only active for allowlisted launch lobbies; no auth, no DB, no PII.
+  app.post("/lobbies/:id/viewing", async (req, reply) => {
+    const id = String((req as any).params?.id || "");
+    if (!PUBLIC_VIEW_LOBBIES.has(id)) return reply.send({ ok: true, count: 0 });
+    const sid = String((req as any).body?.sid || "").slice(0, 64) || "anon";
+    const now = Date.now();
+    let m = viewerReg.get(id);
+    if (!m) {
+      m = new Map();
+      viewerReg.set(id, m);
+    }
+    m.set(sid, now);
+    for (const [k, ts] of m) if (now - ts > VIEWER_TTL_MS) m.delete(k);
+    return reply.send({ ok: true, count: m.size });
+  });
 
   app.get("/lobbies/:lobbyId/rooms", async (req, reply) => {
     const lobbyId = String((req as any).params?.lobbyId || "");
