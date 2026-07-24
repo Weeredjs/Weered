@@ -105,6 +105,30 @@ describe("uploads - POST /profile/avatar/upload (free tier + moderation)", () =>
     expect(r.statusCode).toBe(401);
     await app.close();
   });
+
+  it("replacing a custom avatar swaps the file (deletes the previous one)", async () => {
+    const app = await makeApp();
+    const uid = await newUser("replace");
+    const tok = "Bearer " + testToken(uid);
+    const first = await app.inject({
+      method: "POST",
+      url: "/profile/avatar/upload",
+      headers: { authorization: tok },
+      payload: { image: await pngDataUrl() },
+    });
+    expect(first.statusCode).toBe(200);
+    const firstUrl = first.json().avatar;
+    await new Promise((r) => setTimeout(r, 5)); // distinct Date.now() → distinct filename
+    const second = await app.inject({
+      method: "POST",
+      url: "/profile/avatar/upload",
+      headers: { authorization: tok },
+      payload: { image: await pngDataUrl() },
+    });
+    expect(second.statusCode).toBe(200);
+    expect(second.json().avatar).not.toBe(firstUrl); // new file, prior one swapped out
+    await app.close();
+  });
 });
 
 describe("uploads - POST /profile/banner/upload (tier-gated + moderation)", () => {
@@ -129,6 +153,40 @@ describe("uploads - POST /profile/banner/upload (tier-gated + moderation)", () =
     });
     expect(ok.statusCode).toBe(200);
     expect(ok.json().bannerUrl).toMatch(/\/banners\/.*\.webp$/);
+    await app.close();
+  });
+
+  it("rejects a media-banned INDICTED user, and bad payloads", async () => {
+    const app = await makeApp();
+    const banned = await newUser("bban", {
+      tier: "INDICTED",
+      mediaBannedUntil: new Date(Date.now() + 86400_000),
+    });
+    const bannedRes = await app.inject({
+      method: "POST",
+      url: "/profile/banner/upload",
+      headers: { authorization: "Bearer " + testToken(banned) },
+      payload: { image: await pngDataUrl() },
+    });
+    expect(bannedRes.statusCode).toBe(403);
+    expect(bannedRes.json().error).toBe("media_banned");
+
+    const tok = "Bearer " + testToken(await newUser("bbad", { tier: "INDICTED" }));
+    const miss = await app.inject({
+      method: "POST",
+      url: "/profile/banner/upload",
+      headers: { authorization: tok },
+      payload: {},
+    });
+    expect(miss.statusCode).toBe(400);
+    const bad = await app.inject({
+      method: "POST",
+      url: "/profile/banner/upload",
+      headers: { authorization: tok },
+      payload: { image: "data:text/plain;base64,aGk=" },
+    });
+    expect(bad.statusCode).toBe(400);
+    expect(bad.json().error).toBe("invalid_format");
     await app.close();
   });
 });

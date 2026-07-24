@@ -143,4 +143,11 @@ describe("screenImage", () => {
     expect(r.ok).toBe(false);
     expect(r.label).toBe("Porn");
   });
+
+  it("fails open if the screen throws", async () => {
+    process.env.NSFW_SCREEN = "1";
+    // A non-image buffer makes the internal sharp resize throw; screenImage must
+    // catch and pass through rather than block a legitimate upload.
+    expect(await screenImage(Buffer.from("not an image"))).toEqual({ ok: true });
+  });
 });
