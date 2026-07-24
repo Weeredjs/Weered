@@ -1,7 +1,8 @@
 /* ── SEO slab for /lobby/[id] ────────────────────────────────────────────── */
 /* Server-rendered fallback content visible to crawlers and unauthenticated
    landings. Hidden before paint for authenticated users via theme-boot. */
-html[data-weered-authed] .seo-slab {
+html[data-weered-authed] .seo-slab,
+html[data-weered-public-lobby] .seo-slab {
   display: none !important;
 }
 .seo-slab {
