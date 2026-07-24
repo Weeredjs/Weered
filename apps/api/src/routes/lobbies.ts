@@ -13,13 +13,6 @@ const PUBLIC_VIEW_LOBBIES = new Set(["helldivers2"]);
 const VIEWER_TTL_MS = 45_000;
 const viewerReg = new Map<string, Map<string, number>>();
 
-// Public read-only "N viewing" registry — ephemeral in-memory presence for anon
-// visitors on launch lobbies (they're not in the WS presence system). Allowlisted
-// so the map can't grow unbounded, TTL-pruned on every ping. No DB, no auth.
-const PUBLIC_VIEW_LOBBIES = new Set(["helldivers2"]);
-const VIEWER_TTL_MS = 45_000;
-const viewerReg = new Map<string, Map<string, number>>();
-
 type Opts = {
   authFromHeader: (h?: string) => { id: string; name: string } | null;
   verifyToken: (token: string) => { id: string; name: string } | null;
