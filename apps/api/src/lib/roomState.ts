@@ -13,6 +13,23 @@ export function setRoomStateDeps(deps: { wss?: WebSocketServer; isAIAvailable?: 
   if (deps.isAIAvailable) _isAIAvailable = deps.isAIAvailable;
 }
 
+// Whether The Operator (AI) is live. Read at call time so DI order doesn't matter.
+export function isAIAvailable(): boolean {
+  return _isAIAvailable();
+}
+
+// The Operator's presence shape — shared by the WS presence:state and the HTTP
+// lobby-presence snapshot so anon and authed viewers see the same entry.
+export const OPERATOR_PRESENCE = {
+  id: "operator",
+  name: "The Operator",
+  usernameKey: "operator",
+  role: "SYSTEM",
+  globalRole: "GOD",
+  avatarColor: "#D4A017",
+  avatar: "/brand/roles/operator.svg",
+} as const;
+
 export type AuthedUser = {
   id: string;
   name: string;
