@@ -2,7 +2,8 @@ import { log, swallow } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
 import { join } from "path";
-import { existsSync, mkdirSync, writeFileSync } from "fs";
+import { existsSync, mkdirSync, writeFileSync, unlinkSync } from "fs";
+import { moderateProfileImage } from "../lib/imageModeration";
 
 type Opts = {
   authFromHeader: (h?: string) => { id: string; name?: string } | null;
@@ -18,17 +19,46 @@ export default async function uploadsRoutes(app: FastifyInstance, opts: Opts) {
   const AVATAR_MAX_BYTES = 2 * 1024 * 1024;
   const SITE_BASE = process.env.NEXT_PUBLIC_API_BASE || "https://api.weered.ca";
 
+  // Write a moderated WebP, best-effort delete the user's previous file of the
+  // same kind (one per user), and return its public URL. Shared by the avatar
+  // and banner routes.
+  const persistImage = (
+    dir: string,
+    subpath: string,
+    prevUrl: string,
+    webp: Buffer,
+    uid: string,
+  ): string => {
+    const filename = `${uid}-${Date.now()}.webp`;
+    writeFileSync(join(dir, filename), webp);
+    if (prevUrl.startsWith(`${SITE_BASE}/${subpath}/`)) {
+      const prevName = prevUrl.split("/").pop() || "";
+      if (prevName && prevName !== filename && /^[a-zA-Z0-9._-]+\.(webp|png|jpe?g|gif)$/.test(prevName)) {
+        try {
+          unlinkSync(join(dir, prevName));
+        } catch (e) {
+          swallow(e);
+        }
+      }
+    }
+    return `${SITE_BASE}/${subpath}/${filename}`;
+  };
+
   app.post("/profile/avatar/upload", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ error: "unauthorized" });
 
-    const dbUser = await prisma.user.findUnique({ where: { id: u.id }, select: { tier: true } });
-    const tier = String(dbUser?.tier ?? "INNOCENT").toUpperCase();
-    if (tier === "INNOCENT") {
-      return reply.code(403).send({
-        error: "tier_required",
-        message: "Custom avatar uploads require Indicted tier or higher.",
-      });
+    // Custom avatars are free for every user, from signup. The only gate is a
+    // standing media-ban (earned by a prior violation). Safety is handled by
+    // moderation below, not by tier.
+    const dbUser: any = await prisma.user.findUnique({
+      where: { id: u.id },
+      select: { avatar: true, mediaBannedUntil: true } as any,
+    });
+    if (dbUser?.mediaBannedUntil && new Date(dbUser.mediaBannedUntil).getTime() > Date.now()) {
+      return reply
+        .code(403)
+        .send({ error: "media_banned", message: "Your upload privileges are suspended." });
     }
 
     const body: any = (req as any).body || {};
@@ -44,29 +74,27 @@ export default async function uploadsRoutes(app: FastifyInstance, opts: Opts) {
         .send({ error: "invalid_format", message: "Image must be PNG, JPEG, WebP, or GIF." });
     }
 
-    const ext = match[1] === "jpeg" || match[1] === "jpg" ? "jpg" : match[1];
     const buffer = Buffer.from(match[2], "base64");
-
     if (buffer.length > AVATAR_MAX_BYTES) {
       return reply.code(400).send({ error: "too_large", message: "Image must be under 2MB." });
     }
 
+    // Sanitizing re-encode + hash-ban + NSFW screen. We store mod.webp, never
+    // the raw upload.
+    const mod = await moderateProfileImage(buffer, { userId: u.id, square: true, maxDim: 512 });
+    if (!mod.ok) {
+      return reply.code(mod.code).send({ error: mod.error, message: mod.message });
+    }
+
     try {
-      const filename = `${u.id}-${Date.now()}.${ext}`;
-      const filepath = join(AVATAR_DIR, filename);
-      writeFileSync(filepath, buffer);
+      const prevWasCustom = String(dbUser?.avatar || "").startsWith(`${SITE_BASE}/avatars/`);
+      const avatarUrl = persistImage(AVATAR_DIR, "avatars", String(dbUser?.avatar || ""), mod.webp, u.id);
+      await prisma.user.update({ where: { id: u.id }, data: { avatar: avatarUrl } });
 
-      const avatarUrl = `${SITE_BASE}/avatars/${filename}`;
-
-      await prisma.user.update({
-        where: { id: u.id },
-        data: { avatar: avatarUrl },
-      });
-
-      awardNotoriety(u.id, "AVATAR_SET").catch(swallow);
+      // Award only on the first switch to a custom avatar — no farming by re-upload.
+      if (!prevWasCustom) awardNotoriety(u.id, "AVATAR_SET").catch(swallow);
 
       onAvatarChanged?.(u.id, avatarUrl);
-
       return reply.send({ ok: true, avatar: avatarUrl });
     } catch (e) {
       log.error("[avatar upload]", e);
@@ -105,13 +133,23 @@ export default async function uploadsRoutes(app: FastifyInstance, opts: Opts) {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ error: "unauthorized" });
 
-    const dbUser = await prisma.user.findUnique({ where: { id: u.id }, select: { tier: true } });
+    // Banner stays a tier perk (Indicted+), but now gets the same moderation
+    // as avatars — it was previously an unmoderated hole.
+    const dbUser: any = await prisma.user.findUnique({
+      where: { id: u.id },
+      select: { tier: true, bannerUrl: true, mediaBannedUntil: true } as any,
+    });
     const tier = String(dbUser?.tier ?? "INNOCENT").toUpperCase();
     if (tier === "INNOCENT") {
       return reply.code(403).send({
         error: "tier_required",
         message: "Custom banner uploads require Indicted tier or higher.",
       });
+    }
+    if (dbUser?.mediaBannedUntil && new Date(dbUser.mediaBannedUntil).getTime() > Date.now()) {
+      return reply
+        .code(403)
+        .send({ error: "media_banned", message: "Your upload privileges are suspended." });
     }
 
     const body: any = (req as any).body || {};
@@ -125,16 +163,15 @@ export default async function uploadsRoutes(app: FastifyInstance, opts: Opts) {
         .code(400)
         .send({ error: "invalid_format", message: "Image must be PNG, JPEG, WebP, or GIF." });
 
-    const ext = match[1] === "jpeg" || match[1] === "jpg" ? "jpg" : match[1];
     const buffer = Buffer.from(match[2], "base64");
     if (buffer.length > BANNER_MAX_BYTES)
       return reply.code(400).send({ error: "too_large", message: "Image must be under 4MB." });
 
+    const mod = await moderateProfileImage(buffer, { userId: u.id, square: false, maxDim: 1600 });
+    if (!mod.ok) return reply.code(mod.code).send({ error: mod.error, message: mod.message });
+
     try {
-      const filename = `${u.id}-${Date.now()}.${ext}`;
-      const filepath = join(BANNER_DIR, filename);
-      writeFileSync(filepath, buffer);
-      const bannerUrl = `${SITE_BASE}/banners/${filename}`;
+      const bannerUrl = persistImage(BANNER_DIR, "banners", String(dbUser?.bannerUrl || ""), mod.webp, u.id);
       await prisma.user.update({ where: { id: u.id }, data: { bannerUrl } as any });
       return reply.send({ ok: true, bannerUrl });
     } catch (e) {

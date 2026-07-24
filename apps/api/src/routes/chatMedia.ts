@@ -6,6 +6,7 @@ import sharp, { type Metadata } from "sharp";
 import * as fs from "fs";
 import * as path from "path";
 import crypto from "crypto";
+import { dHash, hamming, screenImage } from "../lib/imageModeration";
 
 // Chat image attachments. Gated by notoriety/tier, re-encoded to WebP
 // (strips EXIF + kills polyglots), perceptual-hashed against a permanent
@@ -30,58 +31,8 @@ function ensureDir() {
   }
 }
 
-// 64-bit dHash from a 9x8 grayscale render — survives re-encodes/resizes.
-async function dHash(buf: Buffer): Promise<string> {
-  const raw = await sharp(buf).grayscale().resize(9, 8, { fit: "fill" }).raw().toBuffer();
-  let bits = "";
-  for (let y = 0; y < 8; y++) {
-    for (let x = 0; x < 8; x++) {
-      bits += raw[y * 9 + x] < raw[y * 9 + x + 1] ? "1" : "0";
-    }
-  }
-  return BigInt("0b" + bits)
-    .toString(16)
-    .padStart(16, "0");
-}
-
-function hamming(a: string, b: string): number {
-  if (a.length !== 16 || b.length !== 16) return 64;
-  let x = BigInt("0x" + a) ^ BigInt("0x" + b);
-  let n = 0;
-  while (x) {
-    n += Number(x & 1n);
-    x >>= 1n;
-  }
-  return n;
-}
-
-// Optional server-side ML screen (NSFW_SCREEN=1 + model on disk). The
-// client screens first; this catches direct-API uploads. Fails open with
-// a log line — the hash ledger and gates still hold.
-let _nsfw: any = null;
-async function screenImage(webp: Buffer): Promise<{ ok: boolean; label?: string }> {
-  if (process.env.NSFW_SCREEN !== "1") return { ok: true };
-  try {
-    if (!_nsfw) {
-      const tf = await import("@tensorflow/tfjs");
-      const nsfwjs = await import("nsfwjs");
-      _nsfw = { tf, model: await (nsfwjs as any).load() }; // nsfwjs 4.x bundles the model
-    }
-    const { tf, model } = _nsfw;
-    const raw = await sharp(webp).resize(224, 224, { fit: "fill" }).removeAlpha().raw().toBuffer();
-    const input = tf.tensor3d(new Uint8Array(raw), [224, 224, 3], "int32");
-    const preds: { className: string; probability: number }[] = await model.classify(input);
-    input.dispose();
-    const bad = preds.find(
-      (p) => (p.className === "Porn" || p.className === "Hentai") && p.probability > 0.7,
-    );
-    if (bad) return { ok: false, label: bad.className };
-    return { ok: true };
-  } catch (e: any) {
-    log.warn("[media] screen unavailable:", e?.message || e);
-    return { ok: true };
-  }
-}
+// dHash / hamming / screenImage now live in ../lib/imageModeration (shared
+// with avatar + banner uploads).
 
 type Opts = {
   authFromHeader: (h?: string) => { id: string } | null;

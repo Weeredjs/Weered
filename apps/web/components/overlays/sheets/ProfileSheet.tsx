@@ -6,6 +6,7 @@ import { useWeered } from "../../WeeredProvider";
 import { useOverlay } from "../OverlayProvider";
 import { weeredToast } from "../../../lib/toast";
 import { onActivate } from "@/lib/a11y";
+import { screenImageFile } from "@/lib/nsfwScreen";
 
 const WEERED_THEME_KEY = "weered_theme_v2";
 type WeeredThemeName = "slate" | "zinc" | "stone" | "gray" | "ishimura" | "broadcast" | "press";
@@ -737,7 +738,7 @@ export default function ProfileSheet({ userId }: { userId: string }) {
           </div>
 
           <div style={{ display: "flex", gap: 2, marginBottom: 12, background: "rgba(255,255,255,.04)", borderRadius: 8, padding: 2 }}>
-            {(["gta", "gallery", "color", ...(profile.tier !== "INNOCENT" ? ["upload"] : [])] as const).map(tab => (
+            {(["gta", "gallery", "color", "upload"] as const).map(tab => (
               <button
                 key={tab}
                 type="button"
@@ -804,6 +805,12 @@ export default function ProfileSheet({ userId }: { userId: string }) {
                     }
                     setUploading(true);
                     setUploadError("");
+                    const screen = await screenImageFile(file);
+                    if (!screen.ok) {
+                      setUploadError("That image can't be used. Keep it PG.");
+                      setUploading(false);
+                      return;
+                    }
                     try {
                       const img = new Image();
                       const url = URL.createObjectURL(file);
@@ -862,11 +869,9 @@ export default function ProfileSheet({ userId }: { userId: string }) {
                   {uploadError}
                 </div>
               )}
-              {profile.tier !== "INNOCENT" && (
-                <div style={{ fontSize: 10, color: "rgba(212,160,23,.4)", textAlign: "center" as const }}>
-                  ★ Premium feature — available to Indicted and above
-                </div>
-              )}
+              <div style={{ fontSize: 10, color: "rgba(148,163,184,.4)", textAlign: "center" as const }}>
+                Keep it PG. Uploads are screened and can be removed for breaking house rules.
+              </div>
             </div>
           ) : null}
         </div>
