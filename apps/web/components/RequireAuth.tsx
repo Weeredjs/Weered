@@ -5,11 +5,17 @@ import { usePathname, useRouter } from "next/navigation";
 
 const TOKEN_KEY = "weered_user";
 
+// Public read-only surfaces: paths viewable without auth (launch lobbies).
+// Matches the lobby root only — sub-routes like /admin stay gated.
+const PUBLIC_PATHS: RegExp[] = [/^\/lobby\/helldivers2\/?$/];
+const isPublicPath = (p: string | null): boolean => !!p && PUBLIC_PATHS.some((re) => re.test(p));
+
 export default function RequireAuth({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const [ok, setOk] = useState<boolean | null>(() => {
     if (typeof window === "undefined") return null;
+    if (isPublicPath(pathname)) return true;
     try {
       return !!(localStorage.getItem(TOKEN_KEY) || "");
     } catch {
@@ -18,6 +24,10 @@ export default function RequireAuth({ children }: { children: React.ReactNode })
   });
 
   useEffect(() => {
+    if (isPublicPath(pathname)) {
+      setOk(true);
+      return;
+    }
     try {
       const tok = localStorage.getItem(TOKEN_KEY) || "";
       if (!tok) {
