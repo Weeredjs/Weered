@@ -18,6 +18,7 @@ import LobbySplash, {
 import LobbyRoomDirectory from "../../../components/LobbyRoomDirectory";
 import LobbyTierCards from "../../../components/LobbyTierCards";
 import LobbyEvents from "../../../components/LobbyEvents";
+import GuestLaunchBar from "../../../components/GuestLaunchBar";
 
 const LFG_BOARD_LOBBIES = new Set(["gta6"]);
 const REDDIT_TAB_LOBBIES: Record<string, string> = { gta6: "gta6" };
@@ -169,107 +170,6 @@ const RedditFeedTab = dynamic(() => import("../../../components/RedditFeedTab"),
 });
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
-
-// Lobbies opened for public, logged-out, read-only viewing (launch surfaces).
-const PUBLIC_LAUNCH_LOBBIES = new Set(["helldivers2"]);
-
-// Ephemeral anon viewer count for a launch lobby: ping every 20s with a
-// per-session id and reflect the live "N viewing" total. No-op when disabled.
-function usePublicViewers(lobbyId: string, enabled: boolean): number {
-  const [count, setCount] = useState(0);
-  useEffect(() => {
-    if (!enabled) return;
-    let sid = "";
-    try {
-      sid = sessionStorage.getItem("weered_vsid") || "";
-      if (!sid) {
-        sid = globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.round(performance.now())}`;
-        sessionStorage.setItem("weered_vsid", sid);
-      }
-    } catch {
-      sid = String(Date.now());
-    }
-    let alive = true;
-    const ping = async () => {
-      try {
-        const r = await fetch(`${API}/lobbies/${encodeURIComponent(lobbyId)}/viewing`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ sid }),
-        });
-        const j = await r.json();
-        if (alive && typeof j?.count === "number") setCount(j.count);
-      } catch {}
-    };
-    ping();
-    const iv = setInterval(ping, 20_000);
-    return () => {
-      alive = false;
-      clearInterval(iv);
-    };
-  }, [lobbyId, enabled]);
-  return count;
-}
-
-// Slim top bar shown to logged-out visitors on a public launch lobby: live
-// viewer count + what they're seeing + a single sign-up CTA. Read-only is
-// enforced server-side (no token → every action 401s); this just makes it
-// intentional and converts.
-function GuestLaunchBanner({
-  lobbyName,
-  viewing,
-  lobbyId,
-}: {
-  lobbyName: string;
-  viewing: number;
-  lobbyId: string;
-}) {
-  return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 12,
-        flexWrap: "wrap",
-        padding: "10px 16px",
-        background: "linear-gradient(90deg, rgba(201,162,39,.14), rgba(201,162,39,.03))",
-        borderBottom: "1px solid rgba(201,162,39,.25)",
-        fontSize: 13,
-      }}
-    >
-      <span
-        style={{
-          display: "inline-flex",
-          alignItems: "center",
-          gap: 6,
-          color: "rgba(240,232,214,.92)",
-          fontWeight: 700,
-        }}
-      >
-        <span aria-hidden>👁</span>
-        {viewing > 0 ? `${viewing} viewing` : "Viewing"}
-      </span>
-      <span style={{ color: "rgba(200,190,170,.75)", flex: 1, minWidth: 180 }}>
-        You&rsquo;re exploring {lobbyName} as a guest. Sign up to chat, seed rallies, and drop into
-        voice.
-      </span>
-      <a
-        href={`/login?next=${encodeURIComponent("/lobby/" + lobbyId)}`}
-        style={{
-          padding: "7px 16px",
-          borderRadius: 6,
-          background: "#C9A227",
-          color: "#1a1a1a",
-          fontWeight: 800,
-          textDecoration: "none",
-          whiteSpace: "nowrap",
-        }}
-      >
-        Sign up free
-      </a>
-    </div>
-  );
-}
 
 function authHeaders(): Record<string, string> {
   try {
@@ -685,8 +585,6 @@ export default function LobbyIdPage() {
   const isVerified = VERIFIED_DOMAINS.has(lobbyId);
 
   const { join, globalRole, me } = useWeered();
-  const isPublicLaunch = PUBLIC_LAUNCH_LOBBIES.has(lobbyId);
-  const viewingCount = usePublicViewers(lobbyId, isPublicLaunch && !me?.id);
   const [lobbyInfo, setLobbyInfo] = useState<LobbyInfo | null>(null);
   const [membership, setMembership] = useState<Membership>(null);
   const [joinRequest, setJoinRequest] = useState<JoinRequestStatus>(null);
@@ -945,13 +843,11 @@ export default function LobbyIdPage() {
 
   return (
     <>
-      {isPublicLaunch && !me?.id && (
-        <GuestLaunchBanner
-          lobbyName={lobbyInfo?.name || "this lobby"}
-          viewing={viewingCount}
-          lobbyId={lobbyId}
-        />
-      )}
+      <GuestLaunchBar
+        lobbyId={lobbyId}
+        lobbyName={lobbyInfo?.name || "this lobby"}
+        loggedIn={!!me?.id}
+      />
       {memberChecked && !isMember && lobbyInfo && (
         <JoinLobbyOverlay
           lobbyId={lobbyId}
