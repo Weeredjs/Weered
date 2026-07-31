@@ -948,7 +948,11 @@ button:hover, [role="button"]:hover {
   padding: 16px 16px 0 16px;
   align-items: stretch;
   position: fixed;
-  top: 0;
+  /* Offset by the desktop title bar. --wtb-h is 0px in a browser and 38px only
+     when the Tauri shell sets data-weered-desktop, so this is inert on the web.
+     Without it the shell starts at y=0 and its top strip renders UNDER the
+     fixed title bar (body padding-top can't move a viewport-fixed element). */
+  top: var(--wtb-h, 0px);
   left: 0;
   right: 0;
   bottom: 0;

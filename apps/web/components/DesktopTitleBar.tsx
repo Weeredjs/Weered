@@ -90,7 +90,7 @@ export default function DesktopTitleBar() {
   return (
     <div className="weered-titlebar" data-tauri-drag-region>
       <div className="wtb-brand" data-tauri-drag-region>
-        <img src="/brand/weered-mark.png" alt="" className="wtb-mark" draggable={false} />
+        <img src="/brand/logo/weered-logo-64.png" alt="" className="wtb-mark" draggable={false} />
         <span className="wtb-word">Weered</span>
       </div>
       <div className="wtb-drag" data-tauri-drag-region />
