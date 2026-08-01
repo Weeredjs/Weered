@@ -41,6 +41,26 @@ describe("lobbies - POST /:id/viewing (public N-viewing)", () => {
     await app.close();
   });
 
+  it("counts viewers on cowork (public launch lobby) with an independent registry", async () => {
+    const app = await makeApp();
+    const r = await app.inject({
+      method: "POST",
+      url: "/lobbies/cowork/viewing",
+      payload: { sid: "sid-cowork" },
+    });
+    expect(r.statusCode).toBe(200);
+    expect(r.json().count).toBe(1);
+
+    // registries are per-lobby: the cowork viewer doesn't leak into helldivers2
+    const hd = await app.inject({
+      method: "POST",
+      url: "/lobbies/helldivers2/viewing",
+      payload: { sid: "sid-hd" },
+    });
+    expect(hd.json().count).toBe(1);
+    await app.close();
+  });
+
   it("is a no-op (count 0) for lobbies not on the allowlist", async () => {
     const app = await makeApp();
     const r = await app.inject({
