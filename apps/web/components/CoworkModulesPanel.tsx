@@ -87,33 +87,66 @@ const S: Record<string, React.CSSProperties> = {
 
 // ---- The Floor -------------------------------------------------------------
 
-const FLOOR_ROOMS = [
+type FloorRoom = {
+  id: string;
+  name: string;
+  note: string;
+  online: number;
+  users: { id?: string; name: string; avatar?: string }[];
+  accent?: string;
+};
+
+const FLOOR_ROOMS: FloorRoom[] = [
   {
+    id: "cowork-floor",
     name: "The Floor",
     note: "Open chat. Say what you're on, ask the room, think out loud.",
+    online: 0,
+    users: [],
   },
   {
+    id: "cowork-deepwork",
     name: "Deep Work",
     note: "Listen-only voice. Cameras optional, mics off. Sit down and be seen working.",
+    online: 0,
+    users: [],
   },
   {
+    id: "cowork-watercooler",
     name: "The Watercooler",
     note: "Open voice for the break. Talk shop or complain about invoices. Be a person for ten minutes.",
+    online: 0,
+    users: [],
   },
   {
+    id: "cowork-standup",
     name: "Standup",
     note: "Async check-ins: shipping, blocked-on, finished-yesterday. No meetings.",
+    online: 0,
+    users: [],
   },
 ];
+
+// Per-room color + type chip. Unknown rooms (created later) fall back to the
+// API accent or the lobby sage.
+const ROOM_META: Record<string, { accent: string; chip: string }> = {
+  "cowork-floor": { accent: "#7FA89B", chip: "open chat" },
+  "cowork-deepwork": { accent: "#8B7FD4", chip: "listen-only voice" },
+  "cowork-watercooler": { accent: "#E0B653", chip: "break voice" },
+  "cowork-standup": { accent: "#C98B9B", chip: "async check-ins" },
+};
+const ROOM_ORDER = ["cowork-floor", "cowork-deepwork", "cowork-watercooler", "cowork-standup"];
+const roomRank = (id: string) => {
+  const i = ROOM_ORDER.indexOf(id);
+  return i === -1 ? 99 : i;
+};
 
 function Floor() {
   const [users, setUsers] = useState<any[]>([]);
   const [loaded, setLoaded] = useState(false);
   // Live room cards so flair edits show up here; FLOOR_ROOMS is the fallback
   // when the fetch hasn't landed (or fails).
-  const [rooms, setRooms] = useState<{ name: string; note: string; online?: number }[] | null>(
-    null,
-  );
+  const [rooms, setRooms] = useState<FloorRoom[] | null>(null);
 
   useEffect(() => {
     let stop = false;
@@ -131,11 +164,16 @@ function Floor() {
         const j = await r.json();
         if (!stop && Array.isArray(j?.rooms) && j.rooms.length) {
           setRooms(
-            j.rooms.map((x: any) => ({
-              name: x.name,
-              note: x.description || "",
-              online: x.onlineCount || 0,
-            })),
+            j.rooms
+              .map((x: any) => ({
+                id: String(x.id || ""),
+                name: x.name,
+                note: x.description || "",
+                online: x.onlineCount || 0,
+                users: Array.isArray(x.onlineUsers) ? x.onlineUsers : [],
+                accent: x.accentColor || undefined,
+              }))
+              .sort((a: FloorRoom, b: FloorRoom) => roomRank(a.id) - roomRank(b.id)),
           );
         }
       } catch {}
@@ -165,11 +203,34 @@ function Floor() {
       )}
       {users.map((u: any) => (
         <div key={u.id || u.name} style={{ ...S.card, ...S.row }}>
-          <span style={S.medallion}>
-            {String(u?.name || "?")
-              .charAt(0)
-              .toUpperCase()}
-          </span>
+          {u?.avatar ? (
+            <img
+              src={u.avatar}
+              alt=""
+              style={{
+                width: 26,
+                height: 26,
+                borderRadius: "50%",
+                objectFit: "cover",
+                flexShrink: 0,
+                border: "1px solid rgba(255,255,255,.16)",
+                background: "rgba(0,0,0,.3)",
+              }}
+            />
+          ) : (
+            <span
+              style={{
+                ...S.medallion,
+                ...(u?.avatarColor
+                  ? { background: `${u.avatarColor}33`, borderColor: u.avatarColor }
+                  : {}),
+              }}
+            >
+              {String(u?.name || "?")
+                .charAt(0)
+                .toUpperCase()}
+            </span>
+          )}
           <div style={{ minWidth: 0, flex: 1 }}>
             <div style={{ fontSize: 13.5, fontWeight: 700, color: "rgba(236,242,250,.95)" }}>
               {u?.name || "Someone"}
@@ -185,21 +246,107 @@ function Floor() {
         </div>
       ))}
       <div style={S.kick}>The rooms</div>
-      {(rooms ?? FLOOR_ROOMS).map((r) => (
-        <div key={r.name} style={S.card}>
-          <div style={{ ...S.row, justifyContent: "space-between" }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: "rgba(236,242,250,.95)" }}>
-              {r.name}
-            </div>
-            {!!(r as any).online && (
-              <span style={{ ...S.muted, fontSize: 11.5, color: "rgba(127,168,155,.95)" }}>
-                {(r as any).online} in
+      <style>{`
+        .cw-roomcard{transition:transform .12s ease,border-color .12s ease,background .12s ease}
+        .cw-roomcard:hover{transform:translateY(-1px);border-color:var(--cw-a);background:rgba(255,255,255,.05)}
+      `}</style>
+      {(rooms ?? FLOOR_ROOMS).map((r) => {
+        const meta = ROOM_META[r.id] || { accent: r.accent || ACCENT, chip: "room" };
+        const acc = meta.accent;
+        return (
+          <a
+            key={r.id}
+            href={`/room/${encodeURIComponent(r.id)}`}
+            className="cw-roomcard"
+            style={
+              {
+                display: "block",
+                textDecoration: "none",
+                background: "rgba(255,255,255,.03)",
+                border: "1px solid rgba(255,255,255,.07)",
+                borderLeft: `3px solid ${acc}`,
+                borderRadius: 10,
+                padding: "12px 14px",
+                marginBottom: 10,
+                "--cw-a": acc,
+              } as React.CSSProperties
+            }
+          >
+            <div style={{ ...S.row, flexWrap: "wrap" }}>
+              <span style={{ fontSize: 13.5, fontWeight: 700, color: "rgba(236,242,250,.95)" }}>
+                {r.name}
               </span>
-            )}
-          </div>
-          <div style={{ ...S.muted, marginTop: 3 }}>{r.note}</div>
-        </div>
-      ))}
+              <span
+                style={{
+                  fontSize: 10,
+                  fontWeight: 700,
+                  letterSpacing: ".08em",
+                  textTransform: "uppercase",
+                  color: acc,
+                  border: `1px solid ${acc}55`,
+                  background: `${acc}1f`,
+                  padding: "2px 8px",
+                  borderRadius: 999,
+                }}
+              >
+                {meta.chip}
+              </span>
+              <span style={{ flex: 1 }} />
+              {r.users.length > 0 ? (
+                <span style={{ display: "inline-flex", alignItems: "center" }}>
+                  {r.users.slice(0, 4).map((u, i) =>
+                    u.avatar ? (
+                      <img
+                        key={u.id || u.name}
+                        src={u.avatar}
+                        alt=""
+                        title={u.name}
+                        style={{
+                          width: 22,
+                          height: 22,
+                          borderRadius: "50%",
+                          objectFit: "cover",
+                          marginLeft: i ? -7 : 0,
+                          border: "2px solid #17171c",
+                          background: "#17171c",
+                        }}
+                      />
+                    ) : (
+                      <span
+                        key={u.id || u.name}
+                        title={u.name}
+                        style={{
+                          width: 22,
+                          height: 22,
+                          borderRadius: "50%",
+                          marginLeft: i ? -7 : 0,
+                          border: "2px solid #17171c",
+                          background: `${acc}44`,
+                          color: "rgba(236,242,250,.9)",
+                          display: "grid",
+                          placeItems: "center",
+                          fontSize: 10,
+                          fontWeight: 700,
+                        }}
+                      >
+                        {String(u.name || "?")
+                          .charAt(0)
+                          .toUpperCase()}
+                      </span>
+                    ),
+                  )}
+                  <span style={{ color: acc, fontSize: 11.5, fontWeight: 700, marginLeft: 7 }}>
+                    {r.online} in
+                  </span>
+                </span>
+              ) : (
+                <span style={{ ...S.muted, fontSize: 11 }}>door&rsquo;s open</span>
+              )}
+            </div>
+            <div style={{ ...S.muted, marginTop: 4 }}>{r.note}</div>
+          </a>
+        );
+      })}
     </div>
   );
 }
