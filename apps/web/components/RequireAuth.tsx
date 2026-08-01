@@ -7,7 +7,7 @@ const TOKEN_KEY = "weered_user";
 
 // Public read-only surfaces: paths viewable without auth (launch lobbies).
 // Matches the lobby root only — sub-routes like /admin stay gated.
-const PUBLIC_PATHS: RegExp[] = [/^\/lobby\/helldivers2\/?$/];
+const PUBLIC_PATHS: RegExp[] = [/^\/lobby\/helldivers2\/?$/, /^\/lobby\/cowork\/?$/];
 const isPublicPath = (p: string | null): boolean => !!p && PUBLIC_PATHS.some((re) => re.test(p));
 
 export default function RequireAuth({ children }: { children: React.ReactNode }) {

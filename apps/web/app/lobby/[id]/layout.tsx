@@ -7,7 +7,7 @@ const SITE = "https://weered.ca";
 
 // Public read-only launch lobbies: anon see the interactive app, not the SEO
 // slab. Keep in sync with PUBLIC_LAUNCH_LOBBIES in GuestLaunchBar / SyncAuthedAttribute.
-const PUBLIC_LAUNCH_LOBBIES = new Set(["helldivers2"]);
+const PUBLIC_LAUNCH_LOBBIES = new Set(["helldivers2", "cowork"]);
 
 const LOBBY_OG_OVERRIDES: Record<
   string,

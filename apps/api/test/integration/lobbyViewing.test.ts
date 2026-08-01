@@ -41,6 +41,33 @@ describe("lobbies - POST /:id/viewing (public N-viewing)", () => {
     await app.close();
   });
 
+  it("counts viewers on cowork (public launch lobby) without leaking across lobbies", async () => {
+    const app = await makeApp();
+    const post = (lobby: string, sid: string) =>
+      app.inject({ method: "POST", url: `/lobbies/${lobby}/viewing`, payload: { sid } });
+
+    // The viewer registry is module-level and the integration suite runs in a
+    // single fork, so state persists across files. Assert RELATIVE behavior,
+    // never absolute counts.
+    const hdBefore = (await post("helldivers2", "sid-leak-probe")).json().count;
+
+    const first = await post("cowork", "sid-cw-1");
+    expect(first.statusCode).toBe(200);
+    const c1 = first.json().count;
+    expect(c1).toBeGreaterThanOrEqual(1); // cowork is allowlisted, not a no-op
+
+    const c2 = (await post("cowork", "sid-cw-2")).json().count;
+    expect(c2).toBe(c1 + 1); // distinct sid increments
+
+    const c2again = (await post("cowork", "sid-cw-2")).json().count;
+    expect(c2again).toBe(c2); // same sid is not double-counted
+
+    // cowork pings must not have leaked into helldivers2's registry
+    const hdAfter = (await post("helldivers2", "sid-leak-probe")).json().count;
+    expect(hdAfter).toBe(hdBefore);
+    await app.close();
+  });
+
   it("is a no-op (count 0) for lobbies not on the allowlist", async () => {
     const app = await makeApp();
     const r = await app.inject({
