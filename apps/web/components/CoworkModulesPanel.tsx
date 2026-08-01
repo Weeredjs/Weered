@@ -109,6 +109,11 @@ const FLOOR_ROOMS = [
 function Floor() {
   const [users, setUsers] = useState<any[]>([]);
   const [loaded, setLoaded] = useState(false);
+  // Live room cards so flair edits show up here; FLOOR_ROOMS is the fallback
+  // when the fetch hasn't landed (or fails).
+  const [rooms, setRooms] = useState<{ name: string; note: string; online?: number }[] | null>(
+    null,
+  );
 
   useEffect(() => {
     let stop = false;
@@ -120,11 +125,29 @@ function Floor() {
       } catch {}
       if (!stop) setLoaded(true);
     };
+    const loadRooms = async () => {
+      try {
+        const r = await fetch(`${API}/lobbies/cowork/rooms`);
+        const j = await r.json();
+        if (!stop && Array.isArray(j?.rooms) && j.rooms.length) {
+          setRooms(
+            j.rooms.map((x: any) => ({
+              name: x.name,
+              note: x.description || "",
+              online: x.onlineCount || 0,
+            })),
+          );
+        }
+      } catch {}
+    };
     void load();
+    void loadRooms();
     const iv = setInterval(load, 30_000);
+    const ivRooms = setInterval(loadRooms, 60_000);
     return () => {
       stop = true;
       clearInterval(iv);
+      clearInterval(ivRooms);
     };
   }, []);
 
@@ -162,10 +185,17 @@ function Floor() {
         </div>
       ))}
       <div style={S.kick}>The rooms</div>
-      {FLOOR_ROOMS.map((r) => (
+      {(rooms ?? FLOOR_ROOMS).map((r) => (
         <div key={r.name} style={S.card}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: "rgba(236,242,250,.95)" }}>
-            {r.name}
+          <div style={{ ...S.row, justifyContent: "space-between" }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: "rgba(236,242,250,.95)" }}>
+              {r.name}
+            </div>
+            {!!(r as any).online && (
+              <span style={{ ...S.muted, fontSize: 11.5, color: "rgba(127,168,155,.95)" }}>
+                {(r as any).online} in
+              </span>
+            )}
           </div>
           <div style={{ ...S.muted, marginTop: 3 }}>{r.note}</div>
         </div>
@@ -265,6 +295,27 @@ function Sprint({ accent, currentUserId }: { accent: string; currentUserId?: str
           }}
         >
           {fmtMMSS(left)}
+        </div>
+        <div
+          aria-hidden
+          style={{
+            height: 4,
+            borderRadius: 2,
+            background: "rgba(255,255,255,.08)",
+            maxWidth: 280,
+            margin: "10px auto 10px",
+            overflow: "hidden",
+          }}
+        >
+          <div
+            style={{
+              height: "100%",
+              borderRadius: 2,
+              width: `${Math.max(0, Math.min(1, 1 - left / (focus ? 3000 : 600))) * 100}%`,
+              background: focus ? accent : "#E0B653",
+              transition: "width 1s linear",
+            }}
+          />
         </div>
         <div style={S.muted}>
           {focus
