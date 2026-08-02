@@ -4,7 +4,7 @@ import { useEffect } from "react";
 // Public read-only launch lobbies: anon are allowed in (see RequireAuth) and
 // should see the interactive app, not the SEO slab. Keep in sync with
 // PUBLIC_LAUNCH_LOBBIES in GuestLaunchBar / the lobby layout.
-const PUBLIC_LAUNCH_LOBBIES = new Set(["helldivers2", "cowork"]);
+const PUBLIC_LAUNCH_LOBBIES = new Set(["helldivers2", "cowork", "windrose"]);
 
 export default function SyncAuthedAttribute() {
   useEffect(() => {
