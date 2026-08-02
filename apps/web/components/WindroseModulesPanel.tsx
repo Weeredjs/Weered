@@ -105,9 +105,13 @@ export default function WindroseModulesPanel({
         style={{
           ...S.shell,
           ...(style || {}),
-          flex: "initial",
-          minHeight: "auto",
-          overflow: "visible",
+          // Bounded scrolling flex child: the app shell is position:fixed +
+          // overflow:hidden, so this panel must scroll its own overflow or the
+          // content below the hero is unreachable. The tab bar below is sticky
+          // so it stays put while this scrolls.
+          flex: 1,
+          minHeight: 0,
+          overflowY: "auto",
         }}
       >
         {!slim && (
@@ -166,7 +170,7 @@ export default function WindroseModulesPanel({
           </div>
         )}
 
-        <div style={S.tabBar}>
+        <div style={{ ...S.tabBar, position: "sticky", top: 0, zIndex: 5 }}>
           {visibleTabs.map((t) => (
             <button
               key={t.id}
