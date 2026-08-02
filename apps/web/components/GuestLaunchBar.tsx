@@ -5,13 +5,14 @@ import { useEffect, useState } from "react";
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
 // Lobbies opened for public, logged-out, read-only viewing (launch surfaces).
-const PUBLIC_LAUNCH_LOBBIES = new Set(["helldivers2", "cowork"]);
+const PUBLIC_LAUNCH_LOBBIES = new Set(["helldivers2", "cowork", "windrose"]);
 
 // Per-lobby "what signing up gets you" line. Keep it in the lobby's own
 // vocabulary; the default covers game lobbies.
 const GUEST_ACTION_COPY: Record<string, string> = {
   helldivers2: "Sign up to chat, seed rallies, and drop into voice.",
   cowork: "Sign up to join the sprint, post on the day board, and sit in Deep Work.",
+  windrose: "Sign up to chat, share builds, and drop into voice.",
 };
 
 // Ephemeral anon viewer count for a launch lobby: ping every 20s with a
