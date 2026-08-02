@@ -5,9 +5,8 @@ import SyncAuthedAttribute from "./SyncAuthedAttribute";
 const API = process.env.NEXT_PUBLIC_API_BASE || "https://api.weered.ca";
 const SITE = "https://weered.ca";
 
-// Public read-only launch lobbies: anon see the interactive app, not the SEO
-// slab. Keep in sync with PUBLIC_LAUNCH_LOBBIES in GuestLaunchBar / SyncAuthedAttribute.
-const PUBLIC_LAUNCH_LOBBIES = new Set(["helldivers2", "cowork", "windrose"]);
+// Every lobby page is public read-only: anon see the interactive app, not the
+// SEO slab. PAID/approval/password lobbies self-gate their body via LobbyJoinGate.
 
 const LOBBY_OG_OVERRIDES: Record<
   string,
@@ -98,7 +97,7 @@ export default async function LobbyIdLayout(props: {
   const { children } = props;
 
   const id = decodeURIComponent(params.id);
-  const isPublicLaunch = PUBLIC_LAUNCH_LOBBIES.has(id);
+  const isPublicLaunch = true; // every lobby page is public read-only
   const name = await fetchLobbyName(id);
   const breadcrumbLd = {
     "@context": "https://schema.org",

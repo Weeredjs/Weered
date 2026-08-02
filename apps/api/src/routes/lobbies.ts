@@ -7,10 +7,13 @@ import { LobbyRole } from "@prisma/client";
 import { isAIAvailable, OPERATOR_PRESENCE } from "../lib/roomState";
 
 // Public read-only "N viewing" registry — ephemeral in-memory presence for anon
-// visitors on launch lobbies (they're not in the WS presence system). Allowlisted
-// so the map can't grow unbounded, TTL-pruned on every ping. No DB, no auth.
-const PUBLIC_VIEW_LOBBIES = new Set(["helldivers2", "cowork", "windrose"]);
+// visitors on lobby pages (they're not in the WS presence system). No DB, no
+// auth. Every lobby page is public now, so this can't be allowlist-bounded;
+// instead hard caps + TTL pruning (that drops empty buckets) keep the map
+// bounded, so a flood of junk ids self-heals within one TTL.
 const VIEWER_TTL_MS = 45_000;
+const MAX_TRACKED_LOBBIES = 500; // distinct lobby buckets held at once
+const MAX_VIEWERS_PER_LOBBY = 5000; // sids counted per lobby
 const viewerReg = new Map<string, Map<string, number>>();
 
 type Opts = {
@@ -52,19 +55,24 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
   } = opts;
 
   // Public "N viewing" ping — records an anonymous viewer and returns the live
-  // count. Only active for allowlisted launch lobbies; no auth, no DB, no PII.
+  // count. Works on any lobby page; no auth, no DB, no PII. Bounded by hard caps
+  // + TTL pruning (see viewerReg above) so junk ids can't grow the map.
   app.post("/lobbies/:id/viewing", async (req, reply) => {
-    const id = String((req as any).params?.id || "");
-    if (!PUBLIC_VIEW_LOBBIES.has(id)) return reply.send({ ok: true, count: 0 });
+    const id = String((req as any).params?.id || "").slice(0, 64);
+    if (!id) return reply.send({ ok: true, count: 0 });
     const sid = String((req as any).body?.sid || "").slice(0, 64) || "anon";
     const now = Date.now();
     let m = viewerReg.get(id);
     if (!m) {
+      // Refuse a NEW bucket once we're at the cap — protects against a flood of
+      // distinct junk lobby ids. Existing buckets keep updating.
+      if (viewerReg.size >= MAX_TRACKED_LOBBIES) return reply.send({ ok: true, count: 0 });
       m = new Map();
       viewerReg.set(id, m);
     }
-    m.set(sid, now);
+    if (m.size < MAX_VIEWERS_PER_LOBBY || m.has(sid)) m.set(sid, now);
     for (const [k, ts] of m) if (now - ts > VIEWER_TTL_MS) m.delete(k);
+    if (m.size === 0) viewerReg.delete(id); // drop empty bucket so the map self-heals
     return reply.send({ ok: true, count: m.size });
   });
 

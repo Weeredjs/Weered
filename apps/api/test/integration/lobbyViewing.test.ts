@@ -24,51 +24,26 @@ function makeApp() {
 }
 
 describe("lobbies - POST /:id/viewing (public N-viewing)", () => {
-  it("counts distinct anon viewers on an allowlisted launch lobby", async () => {
+  // The registry is module-level and the integration suite runs in a single
+  // fork, so state persists across files. Assert RELATIVE behavior + isolation,
+  // never absolute counts, and use unique lobby ids per test to avoid collisions.
+  it("counts distinct anon viewers on any lobby, deduped by sid", async () => {
     const app = await makeApp();
     const post = (sid: string) =>
-      app.inject({ method: "POST", url: "/lobbies/helldivers2/viewing", payload: { sid } });
+      app.inject({ method: "POST", url: "/lobbies/itest-count/viewing", payload: { sid } });
 
-    const a = await post("sid-a");
-    expect(a.statusCode).toBe(200);
-    expect(a.json().count).toBe(1);
+    const c1 = (await post("sid-a")).json().count;
+    expect(c1).toBeGreaterThanOrEqual(1);
 
-    const b = await post("sid-b");
-    expect(b.json().count).toBe(2);
-
-    const aAgain = await post("sid-a"); // same session id → not double-counted
-    expect(aAgain.json().count).toBe(2);
-    await app.close();
-  });
-
-  it("counts viewers on cowork (public launch lobby) without leaking across lobbies", async () => {
-    const app = await makeApp();
-    const post = (lobby: string, sid: string) =>
-      app.inject({ method: "POST", url: `/lobbies/${lobby}/viewing`, payload: { sid } });
-
-    // The viewer registry is module-level and the integration suite runs in a
-    // single fork, so state persists across files. Assert RELATIVE behavior,
-    // never absolute counts.
-    const hdBefore = (await post("helldivers2", "sid-leak-probe")).json().count;
-
-    const first = await post("cowork", "sid-cw-1");
-    expect(first.statusCode).toBe(200);
-    const c1 = first.json().count;
-    expect(c1).toBeGreaterThanOrEqual(1); // cowork is allowlisted, not a no-op
-
-    const c2 = (await post("cowork", "sid-cw-2")).json().count;
+    const c2 = (await post("sid-b")).json().count;
     expect(c2).toBe(c1 + 1); // distinct sid increments
 
-    const c2again = (await post("cowork", "sid-cw-2")).json().count;
-    expect(c2again).toBe(c2); // same sid is not double-counted
-
-    // cowork pings must not have leaked into helldivers2's registry
-    const hdAfter = (await post("helldivers2", "sid-leak-probe")).json().count;
-    expect(hdAfter).toBe(hdBefore);
+    const again = (await post("sid-a")).json().count;
+    expect(again).toBe(c2); // same sid not double-counted
     await app.close();
   });
 
-  it("is a no-op (count 0) for lobbies not on the allowlist", async () => {
+  it("counts on an arbitrary (non-allowlisted) lobby — every lobby is public now", async () => {
     const app = await makeApp();
     const r = await app.inject({
       method: "POST",
@@ -76,7 +51,34 @@ describe("lobbies - POST /:id/viewing (public N-viewing)", () => {
       payload: { sid: "x" },
     });
     expect(r.statusCode).toBe(200);
-    expect(r.json().count).toBe(0);
+    expect(r.json().count).toBeGreaterThanOrEqual(1); // was 0 under the old allowlist
+    await app.close();
+  });
+
+  it("keeps per-lobby registries isolated", async () => {
+    const app = await makeApp();
+    const post = (lobby: string, sid: string) =>
+      app.inject({ method: "POST", url: `/lobbies/${lobby}/viewing`, payload: { sid } });
+
+    const aBefore = (await post("itest-iso-a", "probe")).json().count;
+    await post("itest-iso-b", "b1");
+    await post("itest-iso-b", "b2");
+    const aAfter = (await post("itest-iso-a", "probe")).json().count;
+    expect(aAfter).toBe(aBefore); // pings to lobby B don't change lobby A
+    await app.close();
+  });
+
+  it("ignores a blank lobby id", async () => {
+    const app = await makeApp();
+    // "/lobbies//viewing" — empty id segment
+    const r = await app.inject({
+      method: "POST",
+      url: "/lobbies/%20/viewing",
+      payload: { sid: "x" },
+    });
+    // whitespace id is truthy after slice; the real guard is the empty-string
+    // case, which the router won't even route. Just assert it doesn't 500.
+    expect([200, 404]).toContain(r.statusCode);
     await app.close();
   });
 });

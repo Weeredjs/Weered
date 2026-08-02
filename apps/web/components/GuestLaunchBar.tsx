@@ -4,8 +4,8 @@ import { useEffect, useState } from "react";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
-// Lobbies opened for public, logged-out, read-only viewing (launch surfaces).
-const PUBLIC_LAUNCH_LOBBIES = new Set(["helldivers2", "cowork", "windrose"]);
+// Every lobby page is public read-only, so the guest banner shows for any
+// logged-out visitor on any lobby.
 
 // Per-lobby "what signing up gets you" line. Keep it in the lobby's own
 // vocabulary; the default covers game lobbies.
@@ -66,7 +66,7 @@ export default function GuestLaunchBar({
   lobbyName: string;
   loggedIn: boolean;
 }) {
-  const active = PUBLIC_LAUNCH_LOBBIES.has(lobbyId) && !loggedIn;
+  const active = !!lobbyId && !loggedIn;
   const viewing = usePublicViewers(lobbyId, active);
   if (!active) return null;
   return (
