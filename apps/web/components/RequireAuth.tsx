@@ -5,13 +5,11 @@ import { usePathname, useRouter } from "next/navigation";
 
 const TOKEN_KEY = "weered_user";
 
-// Public read-only surfaces: paths viewable without auth (launch lobbies).
-// Matches the lobby root only — sub-routes like /admin stay gated.
-const PUBLIC_PATHS: RegExp[] = [
-  /^\/lobby\/helldivers2\/?$/,
-  /^\/lobby\/cowork\/?$/,
-  /^\/lobby\/windrose\/?$/,
-];
+// Public read-only surfaces: every lobby ROOT page is viewable without auth
+// (the storefront). PAID / approval / password lobbies self-gate their body via
+// LobbyJoinGate (keyed on joinMode, independent of auth), and every action still
+// requires a token. Sub-routes like /lobby/x/admin stay gated by not matching.
+const PUBLIC_PATHS: RegExp[] = [/^\/lobby\/[^/]+\/?$/];
 const isPublicPath = (p: string | null): boolean => !!p && PUBLIC_PATHS.some((re) => re.test(p));
 
 export default function RequireAuth({ children }: { children: React.ReactNode }) {
