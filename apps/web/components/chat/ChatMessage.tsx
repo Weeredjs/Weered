@@ -571,75 +571,221 @@ export function ChatMessage(props: ChatMessageProps) {
           )}
         </div>
         <div style={{ minWidth: 0, flex: 1, opacity: deletedAt ? 0.55 : 1 }}>
-          {(() => {
-            const roomUsers: any[] = liveRoomUsers;
-            const umeta = msgUserId ? roomUsers.find((u: any) => u?.id === msgUserId) : undefined;
-            const uRole = umeta?.globalRole || m?.user?.globalRole;
-            const uTier = umeta?.tier || m?.user?.tier;
-            const nameStyle = nameStyleFor(uRole, uTier);
-            return (
-              <div
-                data-chat-username
-                style={{
-                  fontWeight: 800,
-                  fontSize: 13,
-                  cursor: "pointer",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 5,
-                }}
-                onMouseEnter={(e) => {
-                  if (msgUserId) openHover(msgUserId, uname, e.currentTarget as HTMLElement);
-                }}
-                onMouseLeave={() => hoverClose(160)}
-              >
-                <span
-                  className={
-                    (umeta as any)?.nameEffect
-                      ? "weered-name-" + (umeta as any).nameEffect
-                      : undefined
-                  }
-                  style={nameStyle}
+          <div
+            className="weered-chat-nameline"
+            style={{
+              position: "relative",
+              display: "inline-flex",
+              alignItems: "center",
+              maxWidth: "100%",
+            }}
+          >
+            {(() => {
+              const roomUsers: any[] = liveRoomUsers;
+              const umeta = msgUserId ? roomUsers.find((u: any) => u?.id === msgUserId) : undefined;
+              const uRole = umeta?.globalRole || m?.user?.globalRole;
+              const uTier = umeta?.tier || m?.user?.tier;
+              const nameStyle = nameStyleFor(uRole, uTier);
+              return (
+                <div
+                  data-chat-username
+                  style={{
+                    fontWeight: 800,
+                    fontSize: 13,
+                    cursor: "pointer",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 5,
+                  }}
+                  onMouseEnter={(e) => {
+                    if (msgUserId) openHover(msgUserId, uname, e.currentTarget as HTMLElement);
+                  }}
+                  onMouseLeave={() => hoverClose(160)}
                 >
-                  {uname}
-                </span>
-                {uRole && String(uRole).toUpperCase() !== "USER" && (
-                  <RoleIcon
-                    role={String(uRole).toUpperCase()}
-                    size={13}
-                    style={{ filter: "drop-shadow(0 1px 1px rgba(0,0,0,.5))" }}
-                  />
-                )}
-                {msgUserId && <CrewFlair userId={msgUserId} size={13} />}
-                <span
-                  className="chat-author-flair"
-                  style={{ display: "inline-flex", alignItems: "center", gap: 5 }}
-                >
-                  {uTier && String(uTier).toUpperCase() !== "INNOCENT" && (
-                    <TierIcon
-                      tier={String(uTier).toUpperCase()}
+                  <span
+                    className={
+                      (umeta as any)?.nameEffect
+                        ? "weered-name-" + (umeta as any).nameEffect
+                        : undefined
+                    }
+                    style={nameStyle}
+                  >
+                    {uname}
+                  </span>
+                  {uRole && String(uRole).toUpperCase() !== "USER" && (
+                    <RoleIcon
+                      role={String(uRole).toUpperCase()}
                       size={13}
                       style={{ filter: "drop-shadow(0 1px 1px rgba(0,0,0,.5))" }}
                     />
                   )}
-                  {msgUserId && <ChatFlair userId={msgUserId} size="sm" />}
-                </span>
-                {editedAt > 0 && !deletedAt && (
+                  {msgUserId && <CrewFlair userId={msgUserId} size={13} />}
                   <span
-                    title={new Date(editedAt).toLocaleString()}
-                    style={{
-                      fontSize: 10,
-                      fontWeight: 500,
-                      color: "var(--weered-muted, rgba(148,163,184,.55))",
-                      marginLeft: 2,
-                    }}
+                    className="chat-author-flair"
+                    style={{ display: "inline-flex", alignItems: "center", gap: 5 }}
                   >
-                    (edited)
+                    {uTier && String(uTier).toUpperCase() !== "INNOCENT" && (
+                      <TierIcon
+                        tier={String(uTier).toUpperCase()}
+                        size={13}
+                        style={{ filter: "drop-shadow(0 1px 1px rgba(0,0,0,.5))" }}
+                      />
+                    )}
+                    {msgUserId && <ChatFlair userId={msgUserId} size="sm" />}
                   </span>
-                )}
+                  {editedAt > 0 && !deletedAt && (
+                    <span
+                      title={new Date(editedAt).toLocaleString()}
+                      style={{
+                        fontSize: 10,
+                        fontWeight: 500,
+                        color: "var(--weered-muted, rgba(148,163,184,.55))",
+                        marginLeft: 2,
+                      }}
+                    >
+                      (edited)
+                    </span>
+                  )}
+                </div>
+              );
+            })()}
+            {mId && (isHovered || moreMenuMsgId === mId) && !isEditing && !deletedAt && (
+              <div
+                data-reaction-ui
+                data-more-menu
+                style={{
+                  position: "absolute",
+                  left: "100%",
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  marginLeft: 8,
+                  display: "flex",
+                  gap: 1,
+                  padding: 2,
+                  borderRadius: 8,
+                  background: "var(--weered-panel2, rgba(16,16,20,.98))",
+                  border: "1px solid var(--weered-border, rgba(255,255,255,.1))",
+                  boxShadow: "0 4px 14px rgba(0,0,0,.4)",
+                  zIndex: 2,
+                  whiteSpace: "nowrap",
+                }}
+              >
+                <button
+                  type="button"
+                  title="Add Reaction"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setPickerMsgId((cur) => (cur === mId ? "" : mId));
+                    setMoreMenuMsgId("");
+                  }}
+                  style={{
+                    width: 26,
+                    height: 26,
+                    borderRadius: 6,
+                    border: "none",
+                    background: "transparent",
+                    color: "var(--weered-muted, rgba(148,163,184,.8))",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    transition: "background .1s, color .1s",
+                  }}
+                  onMouseEnter={(e) => {
+                    (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.08)";
+                    (e.currentTarget as HTMLElement).style.color =
+                      "var(--weered-text, rgba(243,244,246,.95))";
+                  }}
+                  onMouseLeave={(e) => {
+                    (e.currentTarget as HTMLElement).style.background = "transparent";
+                    (e.currentTarget as HTMLElement).style.color =
+                      "var(--weered-muted, rgba(148,163,184,.8))";
+                  }}
+                >
+                  <Icons.Smile />
+                </button>
+                <button
+                  type="button"
+                  title="Reply"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setReplyingTo({
+                      id: mId,
+                      userName: uname || "user",
+                      body: String(m?.body || ""),
+                    });
+                    try {
+                      inputRef.current?.focus();
+                    } catch {}
+                  }}
+                  style={{
+                    width: 26,
+                    height: 26,
+                    borderRadius: 6,
+                    border: "none",
+                    background: "transparent",
+                    color: "var(--weered-muted, rgba(148,163,184,.8))",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    transition: "background .1s, color .1s",
+                  }}
+                  onMouseEnter={(e) => {
+                    (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.08)";
+                    (e.currentTarget as HTMLElement).style.color =
+                      "var(--weered-text, rgba(243,244,246,.95))";
+                  }}
+                  onMouseLeave={(e) => {
+                    (e.currentTarget as HTMLElement).style.background = "transparent";
+                    (e.currentTarget as HTMLElement).style.color =
+                      "var(--weered-muted, rgba(148,163,184,.8))";
+                  }}
+                >
+                  <Icons.Reply />
+                </button>
+                <button
+                  type="button"
+                  title="More"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setMoreMenuMsgId((cur) => (cur === mId ? "" : mId));
+                    setPickerMsgId("");
+                  }}
+                  style={{
+                    width: 26,
+                    height: 26,
+                    borderRadius: 6,
+                    border: "none",
+                    background: moreMenuMsgId === mId ? "rgba(255,255,255,.08)" : "transparent",
+                    color:
+                      moreMenuMsgId === mId
+                        ? "var(--weered-text, rgba(243,244,246,.95))"
+                        : "var(--weered-muted, rgba(148,163,184,.8))",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    transition: "background .1s, color .1s",
+                  }}
+                  onMouseEnter={(e) => {
+                    (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.08)";
+                    (e.currentTarget as HTMLElement).style.color =
+                      "var(--weered-text, rgba(243,244,246,.95))";
+                  }}
+                  onMouseLeave={(e) => {
+                    if (moreMenuMsgId !== mId) {
+                      (e.currentTarget as HTMLElement).style.background = "transparent";
+                      (e.currentTarget as HTMLElement).style.color =
+                        "var(--weered-muted, rgba(148,163,184,.8))";
+                    }
+                  }}
+                >
+                  <Icons.More />
+                </button>
               </div>
-            );
-          })()}
+            )}
+          </div>
           {m.replyTo?.id && !deletedAt && (
             <button
               type="button"
@@ -858,139 +1004,6 @@ export function ChatMessage(props: ChatMessageProps) {
             </div>
           )}
         </div>
-        {mId && (isHovered || moreMenuMsgId === mId) && !isEditing && !deletedAt && (
-          <div
-            data-reaction-ui
-            data-more-menu
-            style={{
-              position: "absolute",
-              top: 2,
-              right: 6,
-              display: "flex",
-              gap: 1,
-              padding: 2,
-              borderRadius: 8,
-              background: "var(--weered-panel2, rgba(16,16,20,.98))",
-              border: "1px solid var(--weered-border, rgba(255,255,255,.1))",
-              boxShadow: "0 4px 14px rgba(0,0,0,.4)",
-              zIndex: 2,
-            }}
-          >
-            <button
-              type="button"
-              title="Add Reaction"
-              onClick={(e) => {
-                e.stopPropagation();
-                setPickerMsgId((cur) => (cur === mId ? "" : mId));
-                setMoreMenuMsgId("");
-              }}
-              style={{
-                width: 28,
-                height: 28,
-                borderRadius: 6,
-                border: "none",
-                background: "transparent",
-                color: "var(--weered-muted, rgba(148,163,184,.8))",
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                transition: "background .1s, color .1s",
-              }}
-              onMouseEnter={(e) => {
-                (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.08)";
-                (e.currentTarget as HTMLElement).style.color =
-                  "var(--weered-text, rgba(243,244,246,.95))";
-              }}
-              onMouseLeave={(e) => {
-                (e.currentTarget as HTMLElement).style.background = "transparent";
-                (e.currentTarget as HTMLElement).style.color =
-                  "var(--weered-muted, rgba(148,163,184,.8))";
-              }}
-            >
-              <Icons.Smile />
-            </button>
-            <button
-              type="button"
-              title="Reply"
-              onClick={(e) => {
-                e.stopPropagation();
-                setReplyingTo({
-                  id: mId,
-                  userName: uname || "user",
-                  body: String(m?.body || ""),
-                });
-                try {
-                  inputRef.current?.focus();
-                } catch {}
-              }}
-              style={{
-                width: 28,
-                height: 28,
-                borderRadius: 6,
-                border: "none",
-                background: "transparent",
-                color: "var(--weered-muted, rgba(148,163,184,.8))",
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                transition: "background .1s, color .1s",
-              }}
-              onMouseEnter={(e) => {
-                (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.08)";
-                (e.currentTarget as HTMLElement).style.color =
-                  "var(--weered-text, rgba(243,244,246,.95))";
-              }}
-              onMouseLeave={(e) => {
-                (e.currentTarget as HTMLElement).style.background = "transparent";
-                (e.currentTarget as HTMLElement).style.color =
-                  "var(--weered-muted, rgba(148,163,184,.8))";
-              }}
-            >
-              <Icons.Reply />
-            </button>
-            <button
-              type="button"
-              title="More"
-              onClick={(e) => {
-                e.stopPropagation();
-                setMoreMenuMsgId((cur) => (cur === mId ? "" : mId));
-                setPickerMsgId("");
-              }}
-              style={{
-                width: 28,
-                height: 28,
-                borderRadius: 6,
-                border: "none",
-                background: moreMenuMsgId === mId ? "rgba(255,255,255,.08)" : "transparent",
-                color:
-                  moreMenuMsgId === mId
-                    ? "var(--weered-text, rgba(243,244,246,.95))"
-                    : "var(--weered-muted, rgba(148,163,184,.8))",
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                transition: "background .1s, color .1s",
-              }}
-              onMouseEnter={(e) => {
-                (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.08)";
-                (e.currentTarget as HTMLElement).style.color =
-                  "var(--weered-text, rgba(243,244,246,.95))";
-              }}
-              onMouseLeave={(e) => {
-                if (moreMenuMsgId !== mId) {
-                  (e.currentTarget as HTMLElement).style.background = "transparent";
-                  (e.currentTarget as HTMLElement).style.color =
-                    "var(--weered-muted, rgba(148,163,184,.8))";
-                }
-              }}
-            >
-              <Icons.More />
-            </button>
-          </div>
-        )}
         {moreMenuMsgId === mId &&
           !deletedAt &&
           !isEditing &&
