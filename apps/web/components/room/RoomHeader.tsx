@@ -174,7 +174,7 @@ export default function RoomHeader({
         position: "relative",
         overflow: "hidden",
         borderBottom: "1px solid rgba(255,255,255,0.05)",
-        background: "rgba(22,22,22,0.6)",
+        background: "rgba(26,26,28,0.6)",
       }}
     >
       {washUrl && (
@@ -200,7 +200,7 @@ export default function RoomHeader({
           inset: 0,
           zIndex: 0,
           pointerEvents: "none",
-          background: "linear-gradient(180deg, rgba(22,22,22,0.2) 0%, rgba(22,22,22,0.65) 100%)",
+          background: "linear-gradient(180deg, rgba(26,26,28,0.2) 0%, rgba(26,26,28,0.65) 100%)",
         }}
       />
 
