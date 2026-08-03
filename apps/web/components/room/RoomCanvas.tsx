@@ -314,6 +314,14 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
     prevVoiceConnRef.current = voice.connState;
   }, [voice.connState]);
 
+  // Re-arm the prompt on room change. RoomCanvas doesn't remount between rooms
+  // (same /room/[id] route), so without this a single "Not now" dismissal would
+  // suppress the voice prompt for every room you join afterward. The render
+  // condition still hides it if you're already connected/connecting.
+  React.useEffect(() => {
+    setVoicePrompt(true);
+  }, [roomId]);
+
   const selfSetRef = useRef(false);
 
   const serverModule = w?.moduleState;

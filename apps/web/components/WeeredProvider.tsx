@@ -590,6 +590,13 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
           next[idx] = { ...cur[idx], ...user };
           return { ...prev, [rid]: next };
         });
+        // Away alert when someone else enters. The roster snapshot on your own
+        // entry is presence:state, so presence:join is a genuine arrival, not a
+        // burst. Focus-gated by useUnreadIndicator (only flags while you're away),
+        // and skips your own join.
+        if (user.id !== me?.id) {
+          try { window.dispatchEvent(new CustomEvent("weered:unread-tick")); } catch {}
+        }
         return;
       }
 
@@ -661,6 +668,13 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
           return { ...prev, [rid]: cur.filter(e => e.userId !== authorId) };
         });
         try { window.dispatchEvent(new CustomEvent("weered:chat:new", { detail: { roomId: rid, msg: m } })); } catch {}
+        // Away alert (chime + tab badge) for real messages from OTHER people.
+        // useUnreadIndicator self-gates on tab focus, so it only flags while
+        // you're off building and clears the moment you return. Skips your own
+        // messages; operator/system messages below never reach this branch.
+        if (authorId && authorId !== me?.id) {
+          try { window.dispatchEvent(new CustomEvent("weered:unread-tick")); } catch {}
+        }
         return;
       }
 
