@@ -524,7 +524,18 @@ export default function RoomHeader({
                       }
                     />
                   ) : (
-                    <span style={{ fontSize: 11, lineHeight: 1 }}>{m.icon}</span>
+                    <span
+                      style={{
+                        fontSize: 11,
+                        lineHeight: 1,
+                        // The 🌐 browser emoji renders blue and ignores the
+                        // theme; desaturate it to neutral grey. Other module
+                        // emojis keep their color.
+                        filter: m.id === "browser" ? "grayscale(1)" : undefined,
+                      }}
+                    >
+                      {m.icon}
+                    </span>
                   )}
                   {m.label}
                   {m.active && (

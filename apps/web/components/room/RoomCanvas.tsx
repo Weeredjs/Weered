@@ -1074,7 +1074,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
                         color={isActive ? "#FF0000" : isLive ? "rgba(255,0,0,0.6)" : "rgba(255,255,255,0.18)"}
                       />
                     ) : (
-                      <span style={{ fontSize: 12, lineHeight: 1 }}>{m.icon}</span>
+                      <span style={{ fontSize: 12, lineHeight: 1, filter: m.id === "browser" ? "grayscale(1)" : undefined }}>{m.icon}</span>
                     )}
                     {m.label}
                     {isActive && (
@@ -1310,7 +1310,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
               >
                 {isTwitch ? <TwitchIcon size={13} color={isActive ? "#9146FF" : isLive ? "rgba(145,70,255,0.75)" : "rgba(255,255,255,0.18)"} />
                   : isYT ? <YouTubeIcon size={15} color={isActive ? "#FF0000" : isLive ? "rgba(255,0,0,0.6)" : "rgba(255,255,255,0.18)"} />
-                  : <span style={{ fontSize: 12, lineHeight: 1 }}>{m.icon}</span>}
+                  : <span style={{ fontSize: 12, lineHeight: 1, filter: m.id === "browser" ? "grayscale(1)" : undefined }}>{m.icon}</span>}
                 {m.label}
                 {isActive && <span style={{ fontSize: 8, fontWeight: 800, letterSpacing: "0.1em", padding: "1px 5px", borderRadius: 4, background: `${accent}44`, color: accent, textTransform: "uppercase" }}>ON</span>}
               </button>
