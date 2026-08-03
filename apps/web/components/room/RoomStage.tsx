@@ -7,7 +7,7 @@ import dynamic from "next/dynamic";
 import { useWeered } from "../WeeredProvider";
 import { useVoice } from "../VoiceContext";
 import MicSettings from "../MicSettings";
-import { safeUrl } from "../../lib/safeUrl";
+import { safeImgSrc } from "../../lib/safeUrl";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
@@ -589,7 +589,7 @@ function VoiceCard({ tile, moduleType, roomUsers, getVideoElement }: { tile: any
             fontSize: 16, fontWeight: 900, color: "#fff",
             overflow: "hidden",
           }}>
-            {userAvatar ? <img src={safeUrl(userAvatar)} alt={tile.name + " avatar"} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : (tile.name[0]?.toUpperCase() ?? "?")}
+            {userAvatar ? <img src={safeImgSrc(userAvatar)} alt={tile.name + " avatar"} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : (tile.name[0]?.toUpperCase() ?? "?")}
           </div>
         </>
       )}
