@@ -536,7 +536,7 @@ function VoiceCard({ tile, moduleType, roomUsers }: { tile: any; moduleType?: st
       {mainChar?.emblemBackgroundPath ? (
         <div style={{ height: 48, background: `url(${mainChar.emblemBackgroundPath}) center/cover`, opacity: 0.6 }} />
       ) : (
-        <div style={{ height: 48, background: "linear-gradient(135deg, rgba(124,58,237,.15), rgba(79,136,198,.1))" }} />
+        <div style={{ height: 48, background: "linear-gradient(135deg, rgba(255,255,255,.06), rgba(255,255,255,.025))" }} />
       )}
 
       <div style={{
