@@ -518,23 +518,27 @@ function VoiceCard({ tile, moduleType, roomUsers, getVideoElement }: { tile: any
   const userInfo = roomUsers?.find((u: any) => u.id === tile.identity || u.userId === tile.identity);
   const userAvatar = userInfo?.avatar || null;
 
-  // Live camera in the plate: reuse the same single-element attach pattern as
-  // VideoTile (getVideoElement returns ONE element per track, so it can only
-  // live in one place at a time -- fine now that the standalone Video tab is
-  // retired and the plate is the only cam renderer). Screen-share in the plate
-  // is deliberately deferred (it would tug tracks against the big Screen stage).
+  // Live stream in the plate, reusing VideoTile's single-element attach pattern.
+  // Screen share takes the plate when active (it's the deliberate "look at this"),
+  // otherwise the camera, otherwise the avatar plate. Cam and screen are separate
+  // tracks, and the Humans stage is never mounted at the same time as the big
+  // Screen stage (they are different stageModes), so getVideoElement's one element
+  // per track is never tugged between the two.
   const camSid = tile.hasVideo && tile.videoTrackSid ? tile.videoTrackSid : null;
-  const hasCam = !!(camSid && getVideoElement);
+  const screenSid = tile.hasScreenShare && tile.screenTrackSid ? tile.screenTrackSid : null;
+  const streamSid = screenSid || camSid;
+  const isScreen = !!screenSid;
+  const hasStream = !!(streamSid && getVideoElement);
   const camRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const host = camRef.current;
-    if (!host || !camSid || !getVideoElement) return;
+    if (!host || !streamSid || !getVideoElement) return;
     while (host.firstChild) host.removeChild(host.firstChild);
-    let el = getVideoElement(camSid);
+    let el = getVideoElement(streamSid);
     let retry: any;
     const attach = () => {
       if (!camRef.current) return;
-      el = getVideoElement(camSid);
+      el = getVideoElement(streamSid);
       if (!el) {
         retry = setTimeout(attach, 200);
         return;
@@ -542,7 +546,8 @@ function VoiceCard({ tile, moduleType, roomUsers, getVideoElement }: { tile: any
       el.style.display = "block";
       el.style.width = "100%";
       el.style.height = "100%";
-      el.style.objectFit = "cover";
+      // contain for a screen (show the whole desktop), cover for a face cam.
+      el.style.objectFit = isScreen ? "contain" : "cover";
       camRef.current.appendChild(el);
     };
     attach();
@@ -553,7 +558,7 @@ function VoiceCard({ tile, moduleType, roomUsers, getVideoElement }: { tile: any
         document.body.appendChild(el);
       }
     };
-  }, [camSid, getVideoElement]);
+  }, [streamSid, isScreen, getVideoElement]);
 
   const borderColor = tile.isSpeaking
     ? "rgba(34,197,94,.5)"
@@ -569,9 +574,10 @@ function VoiceCard({ tile, moduleType, roomUsers, getVideoElement }: { tile: any
       background: bgColor,
       transition: "border-color .2s, background .2s, opacity .2s",
       position: "relative",
+      alignSelf: "flex-start",
       opacity: notInVoice ? 0.5 : 1,
     }}>
-      {hasCam ? (
+      {hasStream ? (
         <div ref={camRef} style={{ width: "100%", height: 112, background: "#000" }} />
       ) : (
         <>
@@ -608,7 +614,7 @@ function VoiceCard({ tile, moduleType, roomUsers, getVideoElement }: { tile: any
         </div>
       )}
 
-      <div style={{ padding: hasCam ? "10px 12px 10px" : "20px 12px 10px" }}>
+      <div style={{ padding: hasStream ? "10px 12px 10px" : "20px 12px 10px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
           <span style={{
             fontSize: 13, fontWeight: 700, maxWidth: 120,
@@ -704,7 +710,7 @@ function VoiceStage({ roomId, moduleType, roomUsers, onClose, style }: { roomId:
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [prompted, roomId]);
 
-  const { connState, errorMsg, muted, tiles, cameraOn, toggleCamera, getVideoElement } = voice;
+  const { connState, errorMsg, muted, tiles, cameraOn, toggleCamera, screenShareOn, toggleScreenShare, getVideoElement } = voice;
   const live = connState === "connected";
 
   return (
@@ -725,6 +731,9 @@ function VoiceStage({ roomId, moduleType, roomUsers, onClose, style }: { roomId:
               </button>
               <button onClick={toggleCamera} style={{ padding: "5px 12px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 700, background: cameraOn ? "rgba(239,68,68,.15)" : "rgba(255,255,255,.07)", color: cameraOn ? "#fca5a5" : "rgba(255,255,255,.8)" }}>
                 {cameraOn ? "📷 Stop Cam" : "📷 Start Cam"}
+              </button>
+              <button onClick={toggleScreenShare} style={{ padding: "5px 12px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 700, background: screenShareOn ? "rgba(239,68,68,.15)" : "rgba(255,255,255,.07)", color: screenShareOn ? "#fca5a5" : "rgba(255,255,255,.8)" }}>
+                {screenShareOn ? "🖥 Stop Share" : "🖥 Share Screen"}
               </button>
               <MicSettings />
               <button onClick={disconnect} style={{ padding: "5px 12px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 700, background: "rgba(239,68,68,.15)", color: "#fca5a5" }}>Leave</button>
