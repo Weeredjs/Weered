@@ -221,10 +221,12 @@ export default function RootFrame({ children }: { children: React.ReactNode }) {
           <KeyboardShortcuts />
           <CookieConsent />
           <BugReportButton />
-          <div className="weered-trademark-footer">
-            Game names, logos, and trademarks are the property of their respective owners. Weered is
-            not affiliated with or endorsed by any game publisher or platform.
-          </div>
+          {!(pathname && pathname.startsWith("/room/")) && (
+            <div className="weered-trademark-footer">
+              Game names, logos, and trademarks are the property of their respective owners. Weered
+              is not affiliated with or endorsed by any game publisher or platform.
+            </div>
+          )}
         </WeeredProvider>
       </OverlayProvider>
     </>
