@@ -669,7 +669,7 @@ function VoiceStage({ roomId, moduleType, roomUsers, onClose, style }: { roomId:
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
         <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase" as const, opacity: 0.5, display: "flex", alignItems: "center", gap: 6 }}>
           <span style={{ width: 7, height: 7, borderRadius: "50%", background: live ? "#22c55e" : "rgba(255,255,255,.2)", boxShadow: live ? "0 0 6px #22c55e" : "none", display: "inline-block" }} />
-          Voice
+          Humans
           {connState === "connecting" && <span style={{ opacity: 0.5 }}> connecting…</span>}
           {connState === "error"      && <span style={{ color: "#fca5a5" }}> {errorMsg}</span>}
         </div>
