@@ -1288,7 +1288,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
 
       </div>
 
-      <div style={{ flexShrink: 0, borderTop: "1px solid rgba(255,255,255,0.07)", padding: "10px 16px 8px", background: "rgba(22,22,22,0.95)", zIndex: 20 }}>
+      <div style={{ flexShrink: 0, borderTop: "1px solid rgba(255,255,255,0.07)", padding: "10px 16px 8px", background: "var(--weered-bg, #1a1a1c)", zIndex: 20 }}>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center" }}>
           {MODULES.map((m) => {
             const isActive = m.id === "office" ? officeStage : stageMode === m.id;
