@@ -90,7 +90,6 @@ const ALL_MODULES: { id: NonNullable<StageMode>; label: string; icon: string; li
   { id: "browser", icon: "🌐", label: "Browser", live: true  },
   { id: "article", icon: "📰", label: "Article", live: true  },
   { id: "screen",  icon: "🖥", label: "Screen",  live: true  },
-  { id: "video",   icon: "📹", label: "Video",   live: true  },
   { id: "poker",   icon: "♦",  label: "Poker",   live: true  },
   { id: "fakeout", icon: "📈", label: "FakeOut", live: true  },
   { id: "destiny", icon: "⚔",  label: "Destiny",  live: true  },

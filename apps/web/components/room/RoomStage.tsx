@@ -510,12 +510,49 @@ function useGuardianData(userId: string, moduleType?: string) {
 
 const CLASS_ICONS: Record<string, string> = { Warlock: "☀", Hunter: "🗡", Titan: "🛡" };
 
-function VoiceCard({ tile, moduleType, roomUsers }: { tile: any; moduleType?: string; roomUsers?: any[] }) {
+function VoiceCard({ tile, moduleType, roomUsers, getVideoElement }: { tile: any; moduleType?: string; roomUsers?: any[]; getVideoElement?: (sid: string) => HTMLVideoElement | null }) {
   const guardian = useGuardianData(tile.identity, moduleType);
   const mainChar = guardian?.characters?.[0];
   const notInVoice = tile._notInVoice === true;
   const userInfo = roomUsers?.find((u: any) => u.id === tile.identity || u.userId === tile.identity);
   const userAvatar = userInfo?.avatar || null;
+
+  // Live camera in the plate: reuse the same single-element attach pattern as
+  // VideoTile (getVideoElement returns ONE element per track, so it can only
+  // live in one place at a time -- fine now that the standalone Video tab is
+  // retired and the plate is the only cam renderer). Screen-share in the plate
+  // is deliberately deferred (it would tug tracks against the big Screen stage).
+  const camSid = tile.hasVideo && tile.videoTrackSid ? tile.videoTrackSid : null;
+  const hasCam = !!(camSid && getVideoElement);
+  const camRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const host = camRef.current;
+    if (!host || !camSid || !getVideoElement) return;
+    while (host.firstChild) host.removeChild(host.firstChild);
+    let el = getVideoElement(camSid);
+    let retry: any;
+    const attach = () => {
+      if (!camRef.current) return;
+      el = getVideoElement(camSid);
+      if (!el) {
+        retry = setTimeout(attach, 200);
+        return;
+      }
+      el.style.display = "block";
+      el.style.width = "100%";
+      el.style.height = "100%";
+      el.style.objectFit = "cover";
+      camRef.current.appendChild(el);
+    };
+    attach();
+    return () => {
+      if (retry) clearTimeout(retry);
+      if (el && el.parentElement === camRef.current) {
+        el.style.display = "none";
+        document.body.appendChild(el);
+      }
+    };
+  }, [camSid, getVideoElement]);
 
   const borderColor = tile.isSpeaking
     ? "rgba(34,197,94,.5)"
@@ -533,22 +570,28 @@ function VoiceCard({ tile, moduleType, roomUsers }: { tile: any; moduleType?: st
       position: "relative",
       opacity: notInVoice ? 0.5 : 1,
     }}>
-      {mainChar?.emblemBackgroundPath ? (
-        <div style={{ height: 48, background: `url(${mainChar.emblemBackgroundPath}) center/cover`, opacity: 0.6 }} />
+      {hasCam ? (
+        <div ref={camRef} style={{ width: "100%", height: 112, background: "#000" }} />
       ) : (
-        <div style={{ height: 48, background: "linear-gradient(135deg, rgba(255,255,255,.06), rgba(255,255,255,.025))" }} />
-      )}
+        <>
+          {mainChar?.emblemBackgroundPath ? (
+            <div style={{ height: 48, background: `url(${mainChar.emblemBackgroundPath}) center/cover`, opacity: 0.6 }} />
+          ) : (
+            <div style={{ height: 48, background: "linear-gradient(135deg, rgba(255,255,255,.06), rgba(255,255,255,.025))" }} />
+          )}
 
-      <div style={{
-        width: 40, height: 40, borderRadius: "50%", position: "absolute", top: 28, left: 12,
-        background: userAvatar ? "rgba(255,255,255,.08)" : avatarColor(tile.name, tile.isLocal),
-        border: "2.5px solid rgba(10,10,20,.9)",
-        display: "flex", alignItems: "center", justifyContent: "center",
-        fontSize: 16, fontWeight: 900, color: "#fff",
-        overflow: "hidden",
-      }}>
-        {userAvatar ? <img src={userAvatar} alt={tile.name + " avatar"} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : (tile.name[0]?.toUpperCase() ?? "?")}
-      </div>
+          <div style={{
+            width: 40, height: 40, borderRadius: "50%", position: "absolute", top: 28, left: 12,
+            background: userAvatar ? "rgba(255,255,255,.08)" : avatarColor(tile.name, tile.isLocal),
+            border: "2.5px solid rgba(10,10,20,.9)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: 16, fontWeight: 900, color: "#fff",
+            overflow: "hidden",
+          }}>
+            {userAvatar ? <img src={userAvatar} alt={tile.name + " avatar"} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : (tile.name[0]?.toUpperCase() ?? "?")}
+          </div>
+        </>
+      )}
 
       {tile.isSpeaking && (
         <div style={{
@@ -564,7 +607,7 @@ function VoiceCard({ tile, moduleType, roomUsers }: { tile: any; moduleType?: st
         </div>
       )}
 
-      <div style={{ padding: "20px 12px 10px" }}>
+      <div style={{ padding: hasCam ? "10px 12px 10px" : "20px 12px 10px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
           <span style={{
             fontSize: 13, fontWeight: 700, maxWidth: 120,
@@ -660,7 +703,7 @@ function VoiceStage({ roomId, moduleType, roomUsers, onClose, style }: { roomId:
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [prompted, roomId]);
 
-  const { connState, errorMsg, muted, tiles } = voice;
+  const { connState, errorMsg, muted, tiles, cameraOn, toggleCamera, getVideoElement } = voice;
   const live = connState === "connected";
 
   return (
@@ -678,6 +721,9 @@ function VoiceStage({ roomId, moduleType, roomUsers, onClose, style }: { roomId:
             <>
               <button onClick={toggleMute} style={{ padding: "5px 12px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 700, background: "rgba(255,255,255,.07)", color: "rgba(255,255,255,.8)" }}>
                 {muted ? "🔇 Unmute" : "🎙 Mute"}
+              </button>
+              <button onClick={toggleCamera} style={{ padding: "5px 12px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 700, background: cameraOn ? "rgba(239,68,68,.15)" : "rgba(255,255,255,.07)", color: cameraOn ? "#fca5a5" : "rgba(255,255,255,.8)" }}>
+                {cameraOn ? "📷 Stop Cam" : "📷 Start Cam"}
               </button>
               <MicSettings />
               <button onClick={disconnect} style={{ padding: "5px 12px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 700, background: "rgba(239,68,68,.15)", color: "#fca5a5" }}>Leave</button>
@@ -707,7 +753,7 @@ function VoiceStage({ roomId, moduleType, roomUsers, onClose, style }: { roomId:
             alignContent: "start", flex: 1, overflow: "auto", padding: "4px 0",
           }}>
             {allTiles.map(t => (
-              <VoiceCard key={t.sid} tile={t} moduleType={moduleType} roomUsers={roomUsers} />
+              <VoiceCard key={t.sid} tile={t} moduleType={moduleType} roomUsers={roomUsers} getVideoElement={getVideoElement} />
             ))}
           </div>
         ) : (
