@@ -7,7 +7,10 @@ const FAVICON_DOT = "/brand/logo/weered-logo-32-dot.png";
 const STORAGE_MUTE = "weered_sound_muted";
 
 let lastChimeAt = 0;
-const CHIME_DEBOUNCE_MS = 1500;
+// ~1 minute between chimes: in a busy room you get one noise, then it stays
+// quiet until you come back. The tab (N) badge still counts every message;
+// only the sound is spaced out.
+const CHIME_DEBOUNCE_MS = 60_000;
 
 function findFaviconLink(): HTMLLinkElement | null {
   if (typeof document === "undefined") return null;
