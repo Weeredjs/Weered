@@ -54,7 +54,9 @@ function getAccent(id: string): string {
     case "voice":
       return "#22c55e";
     case "browser":
-      return "#38bdf8";
+      // Neutral slate (not blue): the browser tab shouldn't read as a branded
+      // color the way twitch/youtube do. Muted grey, of the rails' family.
+      return "#94a3b8";
     default:
       return "#5800E5";
   }

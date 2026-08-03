@@ -1015,7 +1015,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
                 const isTwitch = m.icon === "__twitch__";
                 const isYT     = m.icon === "__youtube__";
 
-                const accent = isTwitch ? "#9146FF" : isYT ? "#FF0000" : m.id === "voice" ? "#22c55e" : m.id === "browser" ? "#38bdf8" : "#7C3AED";
+                const accent = isTwitch ? "#9146FF" : isYT ? "#FF0000" : m.id === "voice" ? "#22c55e" : m.id === "browser" ? "#94a3b8" : "#7C3AED";
 
                 return (
                   <button
@@ -1295,7 +1295,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
             const isLive = m.live;
             const isTwitch = m.icon === "__twitch__";
             const isYT = m.icon === "__youtube__";
-            const accent = isTwitch ? "#9146FF" : isYT ? "#FF0000" : m.id === "voice" ? "#22c55e" : m.id === "browser" ? "#38bdf8" : "#7C3AED";
+            const accent = isTwitch ? "#9146FF" : isYT ? "#FF0000" : m.id === "voice" ? "#22c55e" : m.id === "browser" ? "#94a3b8" : "#7C3AED";
             return (
               <button key={m.id} type="button" disabled={!isLive} onClick={() => isLive && handleModuleClick(m.id)}
                 style={{
