@@ -252,6 +252,11 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
   const [wsState, setWsState] = useState<number>(WebSocket.CLOSED);
   const [wsReady, setWsReady] = useState(false);
   const wsRef            = useRef<WebSocket | null>(null);
+  // Users we've already fired an away-alert for, per room. Reconnects replay
+  // presence:join for members already in the room, which was climbing the unread
+  // badge while sitting alone/idle. Only a genuine first arrival ticks; cleared
+  // on a real presence:leave so a true leave->rejoin can alert again.
+  const alertedUsersRef  = useRef<Record<string, Set<string>>>({});
   const lastAuthTokenRef = useRef("");
   const lastJoinedRidRef = useRef("");
   const activeRoomIdRef  = useRef("");
@@ -590,12 +595,17 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
           next[idx] = { ...cur[idx], ...user };
           return { ...prev, [rid]: next };
         });
-        // Away alert when someone else enters. The roster snapshot on your own
-        // entry is presence:state, so presence:join is a genuine arrival, not a
-        // burst. Focus-gated by useUnreadIndicator (only flags while you're away),
-        // and skips your own join.
+        // Away alert when someone else enters -- but only on their genuine FIRST
+        // arrival, not the presence re-sync a reconnect replays for members who
+        // are already here (that was ticking the badge while alone/idle). Skips
+        // your own join; focus-gated by useUnreadIndicator so it only flags while
+        // you're away. The seen-set is cleared on their real leave below.
         if (user.id !== me?.id) {
-          try { window.dispatchEvent(new CustomEvent("weered:unread-tick")); } catch {}
+          const seen = alertedUsersRef.current[rid] || (alertedUsersRef.current[rid] = new Set<string>());
+          if (!seen.has(user.id)) {
+            seen.add(user.id);
+            try { window.dispatchEvent(new CustomEvent("weered:unread-tick")); } catch {}
+          }
         }
         return;
       }
@@ -604,6 +614,7 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
         const rid    = String(msg.roomId || "");
         const userId = String(msg.userId || "");
         if (!rid || !userId) return;
+        alertedUsersRef.current[rid]?.delete(userId);
         setUsersByRoom(prev => {
           const cur = prev[rid];
           if (!cur) return prev;
