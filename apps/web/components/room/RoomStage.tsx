@@ -702,6 +702,24 @@ function VoiceStage({ roomId, moduleType, roomUsers, onClose, style }: { roomId:
     voice.toggleMute();
   }, [voice]);
 
+  // Cam/screen shouldn't require "joining voice" first. If we're not connected,
+  // join the room MUTED (mic:false) and then enable the stream -- so you can
+  // show your cam or share your screen without ever opening your mic. connect()
+  // awaits the full room connection, so the toggle right after finds the room.
+  const startCam = useCallback(async () => {
+    if (voice.connState !== "connected") {
+      await voice.connect(roomId, { mic: false });
+    }
+    await voice.toggleCamera();
+  }, [voice, roomId]);
+
+  const startScreen = useCallback(async () => {
+    if (voice.connState !== "connected") {
+      await voice.connect(roomId, { mic: false });
+    }
+    await voice.toggleScreenShare();
+  }, [voice, roomId]);
+
   useEffect(() => {
     if (!prompted) return;
     const alreadyHere = voice.connState === "connected" && voice.activeRoomId === roomId;
@@ -710,7 +728,7 @@ function VoiceStage({ roomId, moduleType, roomUsers, onClose, style }: { roomId:
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [prompted, roomId]);
 
-  const { connState, errorMsg, muted, tiles, cameraOn, toggleCamera, screenShareOn, toggleScreenShare, getVideoElement } = voice;
+  const { connState, errorMsg, muted, tiles, cameraOn, screenShareOn, getVideoElement } = voice;
   const live = connState === "connected";
 
   return (
@@ -725,19 +743,26 @@ function VoiceStage({ roomId, moduleType, roomUsers, onClose, style }: { roomId:
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
           {live && (
+            <button onClick={toggleMute} style={{ padding: "5px 12px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 700, background: "rgba(255,255,255,.07)", color: "rgba(255,255,255,.8)" }}>
+              {muted ? "🔇 Unmute" : "🎙 Mute"}
+            </button>
+          )}
+          {connState === "idle" && (
+            <button onClick={connect} style={{ padding: "5px 12px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 700, background: "rgba(124,58,237,.25)", color: "#c4b5fd" }}>🎙 Join voice</button>
+          )}
+          {connState !== "connecting" && (
             <>
-              <button onClick={toggleMute} style={{ padding: "5px 12px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 700, background: "rgba(255,255,255,.07)", color: "rgba(255,255,255,.8)" }}>
-                {muted ? "🔇 Unmute" : "🎙 Mute"}
-              </button>
-              <button onClick={toggleCamera} style={{ padding: "5px 12px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 700, background: cameraOn ? "rgba(239,68,68,.15)" : "rgba(255,255,255,.07)", color: cameraOn ? "#fca5a5" : "rgba(255,255,255,.8)" }}>
+              <button onClick={startCam} style={{ padding: "5px 12px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 700, background: cameraOn ? "rgba(239,68,68,.15)" : "rgba(255,255,255,.07)", color: cameraOn ? "#fca5a5" : "rgba(255,255,255,.8)" }}>
                 {cameraOn ? "📷 Stop Cam" : "📷 Start Cam"}
               </button>
-              <button onClick={toggleScreenShare} style={{ padding: "5px 12px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 700, background: screenShareOn ? "rgba(239,68,68,.15)" : "rgba(255,255,255,.07)", color: screenShareOn ? "#fca5a5" : "rgba(255,255,255,.8)" }}>
+              <button onClick={startScreen} style={{ padding: "5px 12px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 700, background: screenShareOn ? "rgba(239,68,68,.15)" : "rgba(255,255,255,.07)", color: screenShareOn ? "#fca5a5" : "rgba(255,255,255,.8)" }}>
                 {screenShareOn ? "🖥 Stop Share" : "🖥 Share Screen"}
               </button>
-              <MicSettings />
-              <button onClick={disconnect} style={{ padding: "5px 12px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 700, background: "rgba(239,68,68,.15)", color: "#fca5a5" }}>Leave</button>
             </>
+          )}
+          {live && <MicSettings />}
+          {live && (
+            <button onClick={disconnect} style={{ padding: "5px 12px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 700, background: "rgba(239,68,68,.15)", color: "#fca5a5" }}>Leave</button>
           )}
           {connState === "error" && <button onClick={connect} style={{ padding: "5px 12px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 700, background: "rgba(255,255,255,.07)", color: "rgba(255,255,255,.8)" }}>Retry</button>}
           <button onClick={disconnect} style={{ background: "none", border: "none", cursor: "pointer", opacity: 0.4, fontSize: 16, padding: "2px 4px", color: "#fff" }} title="Close">✕</button>
