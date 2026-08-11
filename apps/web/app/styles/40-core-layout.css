@@ -1369,6 +1369,14 @@ button:hover, [role="button"]:hover {
   .weered-rail-tab { display: none !important; }
 }
 
+/* Account/logout menu inside the room Control Panel. Hidden on wide screens
+   (the desktop rail-stack carries the LogoMenu there); shown once that stack is
+   hidden (<=1099px) so phone/narrow users in a room can still reach Log out. */
+.weered-rrr-account { display: none; }
+@media (max-width: 1099px) {
+  .weered-rrr-account { display: flex; align-items: center; }
+}
+
 /* ── Mobile bottom nav — hidden by default ──────────────────────────────── */
 .weered-mobile-nav {
   display: none;
