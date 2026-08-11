@@ -1,5 +1,6 @@
 "use client";
 import InviteModal from "./InviteModal";
+import { LogoMenu } from "./LogoMenu";
 import { useOverlay } from "./overlays/OverlayProvider";
 import { useWeered, useRoomUsers } from "./WeeredProvider";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
@@ -360,13 +361,21 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
   return (
     <div className="weered-rrr" style={{ fontSize: 13, color: "rgba(243,244,246,.92)", padding: "14px 14px 20px" }}>
 
-      <div style={{ marginBottom: 4, paddingRight: 60 }}>
-        <div className="weered-rrr-title" style={{ fontWeight: 700, fontSize: 13 }}>Control Panel</div>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
-          <span style={{ fontSize: 11, opacity: 0.55 }}>context: {roomLabel}</span>
-          <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".5px", padding: "2px 8px", borderRadius: 999, background: locked ? "rgba(245,158,11,.12)" : "rgba(16,185,129,.10)", border: `1px solid ${statusColor}40`, color: statusColor }}>
-            {statusLabel}
-          </span>
+      <div style={{ marginBottom: 4, paddingRight: 60, display: "flex", alignItems: "center", gap: 10 }}>
+        {/* Account menu (Log out / Profile / Settings). Shown only on narrow
+            screens where the desktop rail-stack that normally carries it is
+            hidden — otherwise phone users in a room have no logout path. */}
+        <div className="weered-rrr-account" style={{ flexShrink: 0 }}>
+          <LogoMenu />
+        </div>
+        <div style={{ minWidth: 0 }}>
+          <div className="weered-rrr-title" style={{ fontWeight: 700, fontSize: 13 }}>Control Panel</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
+            <span style={{ fontSize: 11, opacity: 0.55 }}>context: {roomLabel}</span>
+            <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".5px", padding: "2px 8px", borderRadius: 999, background: locked ? "rgba(245,158,11,.12)" : "rgba(16,185,129,.10)", border: `1px solid ${statusColor}40`, color: statusColor }}>
+              {statusLabel}
+            </span>
+          </div>
         </div>
       </div>
 
