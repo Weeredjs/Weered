@@ -438,26 +438,37 @@ export function PresentedPlanViewer({
             updated just now
           </div>
         )}
-        {data.deckHtml && !data.projection ? (
+        {data.deckHtml ? (
           // The engine's own rendered review — byte-identical to the emailable
           // /p link, so the room and the inbox present ONE document. Sandboxed:
           // scripts only (the deck's lever toggles/HSA slider), no same-origin.
-          // PresentationDoc renders instead when no deck came back, and ALWAYS
-          // when the live model (projection) is being presented — its sliders
-          // update live in a way a static document can't.
-          <iframe
-            title="The review"
-            srcDoc={data.deckHtml}
-            sandbox="allow-scripts"
-            style={{
-              width: "100%",
-              height: "78vh",
-              border: `1px solid ${P.cardBorder}`,
-              borderRadius: 6,
-              background: "#ffffff",
-              display: "block",
-            }}
-          />
+          // When the live model is ALSO being presented, it rides below in its
+          // own document — the sliders update live in a way a static page
+          // can't, but they must never suppress the review itself (presenting
+          // "everything" used to fall back to the old hand-drawn layout).
+          <>
+            <iframe
+              title="The review"
+              srcDoc={data.deckHtml}
+              sandbox="allow-scripts"
+              style={{
+                width: "100%",
+                height: "78vh",
+                border: `1px solid ${P.cardBorder}`,
+                borderRadius: 6,
+                background: "#ffffff",
+                display: "block",
+              }}
+            />
+            {data.projection && (
+              <div style={{ marginTop: 14 }}>
+                <PresentationDoc
+                  data={{ ...data, review: null, deckHtml: null }}
+                  clientName={data.employer?.name}
+                />
+              </div>
+            )}
+          </>
         ) : (
           <PresentationDoc data={data} clientName={data.employer?.name} />
         )}
