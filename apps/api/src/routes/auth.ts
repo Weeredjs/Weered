@@ -854,6 +854,21 @@ export default async function authRoutes(app: FastifyInstance, opts: Opts) {
     return reply.code(r.status).header("content-type", "application/json").send(r.text);
   });
 
+  // Host-only: the engine's rendered client deck for this employer — the SAME
+  // document the emailable /p link serves, so the room presents one artifact
+  // instead of a hand-drawn twin that drifts. Returned as {html} for the host
+  // to include in the presented snapshot (guests render it in a sandboxed
+  // iframe via /office/plan/presented).
+  app.get("/office/plan/deck/:employerId", async (req, reply) => {
+    if (!(await planGate(req, reply))) return;
+    const book = String((req.query as any)?.book ?? "eceb");
+    const id = encodeURIComponent(String((req.params as any).employerId));
+    const r = await engineGet(`/api/office/employers/${id}/deck`, book);
+    if (r.status !== 200)
+      return reply.code(r.status).send({ ok: false, error: "deck_unavailable" });
+    return reply.send({ ok: true, html: r.text });
+  });
+
   // Host-only: full client detail + current plan of record.
   app.get("/office/plan/employer/:id", async (req, reply) => {
     if (!(await planGate(req, reply))) return;
@@ -1327,10 +1342,20 @@ export default async function authRoutes(app: FastifyInstance, opts: Opts) {
           projection: sanitizeProjection(raw.projection),
           review: sanitizeReview(raw.review),
           proposal: sanitizeProposal(raw.proposal),
+          // The engine's rendered client deck — the SAME document the emailable
+          // /p link serves, produced entirely by the Fathom engine (which owns
+          // the client-privacy scrub). Carried as display-only HTML the viewer
+          // renders in a sandboxed iframe; size-capped below with the rest.
+          deckHtml:
+            typeof raw.deckHtml === "string" && raw.deckHtml.length <= 150_000
+              ? raw.deckHtml
+              : null,
         }
       : null;
     if (data) {
-      if (JSON.stringify(data).length > 200_000)
+      // 400k, up from 200k: the snapshot may now carry the engine's rendered
+      // deck (~50-80k of HTML) alongside the JSON sections.
+      if (JSON.stringify(data).length > 400_000)
         return reply.code(400).send({ ok: false, error: "too_large" });
       presentedPlans.set(office, { data, seq: ++presentedSeq, at: Date.now() });
     } else {

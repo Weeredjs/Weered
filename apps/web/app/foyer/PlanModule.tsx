@@ -414,7 +414,7 @@ export function PresentedPlanViewer({
   // When the advisor is presenting the review and/or the live model, the client
   // sees the full PRESENTATION document (the "beautiful PDF that changes live").
   // Proposal + rate card, presented on their own, ride below in light cards.
-  const isPresentation = !!(data.review || data.projection);
+  const isPresentation = !!(data.review || data.projection || data.deckHtml);
   if (isPresentation) {
     return (
       <div style={{ position: "relative" }}>
@@ -438,7 +438,29 @@ export function PresentedPlanViewer({
             updated just now
           </div>
         )}
-        <PresentationDoc data={data} clientName={data.employer?.name} />
+        {data.deckHtml && !data.projection ? (
+          // The engine's own rendered review — byte-identical to the emailable
+          // /p link, so the room and the inbox present ONE document. Sandboxed:
+          // scripts only (the deck's lever toggles/HSA slider), no same-origin.
+          // PresentationDoc renders instead when no deck came back, and ALWAYS
+          // when the live model (projection) is being presented — its sliders
+          // update live in a way a static document can't.
+          <iframe
+            title="The review"
+            srcDoc={data.deckHtml}
+            sandbox="allow-scripts"
+            style={{
+              width: "100%",
+              height: "78vh",
+              border: `1px solid ${P.cardBorder}`,
+              borderRadius: 6,
+              background: "#ffffff",
+              display: "block",
+            }}
+          />
+        ) : (
+          <PresentationDoc data={data} clientName={data.employer?.name} />
+        )}
         {data.proposal && (
           <div style={{ ...lightPanel, borderColor: accent, marginTop: 14 }}>
             <div style={lightHead}>
@@ -570,6 +592,9 @@ export function PlanModule({ jwt, accent }: { jwt: string; accent: string }) {
   const [reviewLoading, setReviewLoading] = useState(false);
   const [reviewErr, setReviewErr] = useState("");
   const reviewRef = useRef<any | null>(null);
+  // The engine's rendered client deck for the selected employer — fetched with
+  // the review, presented alongside it (see postPresent).
+  const deckHtmlRef = useRef<string | null>(null);
   useEffect(() => {
     reviewRef.current = review;
   }, [review]);
@@ -588,6 +613,21 @@ export function PlanModule({ jwt, accent }: { jwt: string; accent: string }) {
     setReviewLoading(true);
     setReviewErr("");
     try {
+      // The engine's rendered deck rides along with the review: it is the SAME
+      // document the emailable link serves, and presenting it (instead of the
+      // hand-drawn PresentationDoc) is what keeps the room and the inbox
+      // telling one story. Fetched first so a present fired on the review's
+      // arrival already carries it; failure just falls back to PresentationDoc.
+      try {
+        const dr = await fetch(
+          `${API}/office/plan/deck/${encodeURIComponent(employerId)}?book=${book}`,
+          { headers: authHeaders() },
+        );
+        const dj = await dr.json().catch(() => null);
+        deckHtmlRef.current = dr.ok && dj && typeof dj.html === "string" ? dj.html : null;
+      } catch {
+        deckHtmlRef.current = null;
+      }
       const r = await fetch(
         `${API}/office/plan/review/${encodeURIComponent(employerId)}?book=${book}`,
         {
@@ -816,10 +856,13 @@ export function PlanModule({ jwt, accent }: { jwt: string; accent: string }) {
   const postPresent = useCallback(
     async (data: any): Promise<boolean> => {
       try {
+        // One seam, not six call sites: whenever the presented snapshot carries
+        // the review, it carries the engine's rendered deck with it.
+        const payload = data && data.review ? { ...data, deckHtml: deckHtmlRef.current } : data;
         const r = await fetch(`${API}/office/plan/present`, {
           method: "POST",
           headers: authHeaders({ "Content-Type": "application/json" }),
-          body: JSON.stringify({ data }),
+          body: JSON.stringify({ data: payload }),
         });
         const j = await r.json().catch(() => null);
         return !!(r.ok && j && j.ok !== false);
