@@ -1159,11 +1159,27 @@ export default async function authRoutes(app: FastifyInstance, opts: Opts) {
   const sanitizeReview = (raw: any): any | null => {
     if (!raw || typeof raw !== "object" || !raw.headline) return null;
     const h: any = raw.headline;
+    const recon: any = raw.reconciliation;
     return {
       builtAt: rcStrN(raw.builtAt, 40),
       disclaimers: Array.isArray(raw.disclaimers)
         ? raw.disclaimers.slice(0, 6).map((s: any) => rcStr(s, 500))
         : [],
+      // The engine's reconciliation (ask / supported / gap) — numbers only.
+      // The presentation prefers this over deriving its own supported figure.
+      reconciliation:
+        recon && typeof recon === "object"
+          ? {
+              askAnnual: rcNum(recon.askAnnual),
+              askMonthly: rcNum(recon.askMonthly),
+              askPct: rcNum(recon.askPct),
+              supportedAnnual: rcNum(recon.supportedAnnual),
+              supportedPct: rcNum(recon.supportedPct),
+              gapAnnual: rcNum(recon.gapAnnual),
+              gapPctOfAsk: rcNum(recon.gapPctOfAsk),
+              fair: recon.fair === true,
+            }
+          : null,
       headline: {
         carrier: rcStrN(h.carrier, 60),
         policy: rcStrN(h.policy, 40),

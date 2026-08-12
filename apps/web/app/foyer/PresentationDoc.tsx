@@ -413,19 +413,32 @@ export function PresentationDoc({ data, clientName }: { data: any; clientName?: 
   const wl = paths?.withLevers || null;
   const cap = paths?.capped || null;
 
-  // Fathom's modeled figure: the engine's independent view of the SAME, UNADJUSTED
-  // plan (statusQuo first, deliberately). Reconciling the carrier's ask against the
-  // pre-lever projection keeps the audit honest: staging a plan-design Adjustment
-  // mid-meeting must never flip a FAIR renewal into an accusatory gap (the levers
-  // get their own line in the outlook instead).
+  // Fathom's modeled figure. PREFERRED SOURCE: the engine's own reconciliation
+  // (review.reconciliation) — whole-plan supported (rated-lines projection plus
+  // the pooled lines at their ask, experience-period annualized), computed once
+  // in the engine so this screen and the client deck can never disagree. The
+  // projection-path derivation below remains only as the fallback for older
+  // payloads; it compares a rated-lines-only figure to a whole-plan ask and
+  // manufactures a gap out of the pooled benefits.
+  const engineRecon: any = (data.review as any)?.reconciliation || null;
   const supported: number | null =
-    typeof sq?.annual === "number" ? sq.annual : typeof wl?.annual === "number" ? wl.annual : null;
+    typeof engineRecon?.supportedAnnual === "number"
+      ? engineRecon.supportedAnnual
+      : typeof sq?.annual === "number"
+        ? sq.annual
+        : typeof wl?.annual === "number"
+          ? wl.annual
+          : null;
   const supportedPct: number | null =
-    typeof sq?.annual === "number" && typeof sq?.changePct === "number"
-      ? sq.changePct
-      : typeof wl?.changePct === "number"
-        ? wl.changePct
-        : null;
+    typeof engineRecon?.supportedAnnual === "number"
+      ? typeof engineRecon.supportedPct === "number"
+        ? engineRecon.supportedPct
+        : null
+      : typeof sq?.annual === "number" && typeof sq?.changePct === "number"
+        ? sq.changePct
+        : typeof wl?.changePct === "number"
+          ? wl.changePct
+          : null;
 
   const gap: number | null = askAnnual != null && supported != null ? askAnnual - supported : null;
   const gapPctOfAsk: number | null =
