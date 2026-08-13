@@ -666,9 +666,22 @@ export function ProposalDoc({
                 <span style={{ color: P.strong }}>{f.label || f.scenario}</span>
                 {f.notes ? <div style={S.tiny}>{f.notes}</div> : null}
               </span>
-              <span style={{ ...S.num, fontWeight: 700 }}>{money0(f.nextRenewalAnnual)}</span>
-              <span style={{ ...S.num, maxWidth: 70, color: pcolor(f.changePct), fontWeight: 700 }}>
-                {pctTxt(f.changePct)}
+              <span style={{ ...S.num, fontWeight: 700 }}>
+                {f.nextRenewalHighAnnual != null
+                  ? `${money0(f.nextRenewalAnnual)}–${money0(f.nextRenewalHighAnnual)}`
+                  : money0(f.nextRenewalAnnual)}
+              </span>
+              <span
+                style={{
+                  ...S.num,
+                  maxWidth: 70,
+                  color: pcolor(f.changePctHigh ?? f.changePct),
+                  fontWeight: 700,
+                }}
+              >
+                {f.changePctHigh != null
+                  ? `${pctTxt(f.changePct)}–${pctTxt(f.changePctHigh)}`
+                  : pctTxt(f.changePct)}
               </span>
             </div>
           ))}
