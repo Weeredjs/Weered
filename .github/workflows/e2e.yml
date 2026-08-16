@@ -30,7 +30,7 @@ jobs:
       WS_PORT: "4001"
       ENABLE_CORS: "1"
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
         with:
           version: 10.29.3
