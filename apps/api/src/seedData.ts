@@ -369,6 +369,40 @@ export const SEED_LOBBIES = [
     accentColor: "#e84393",
   },
   {
+    id: "division2",
+    name: "The Division 2",
+    description:
+      "The unofficial community hub for Tom Clancy's The Division 2. Find agents, build a raid team, run the Dark Zone, post LFG, run voice, and follow the news. Squad finder and matchmaking for the agents of D.C. and New York, where players actually link up.",
+    keywords: [
+      "division 2",
+      "the division 2",
+      "div2",
+      "tom clancy",
+      "tom clancy's the division 2",
+      "division 2 lfg",
+      "division 2 squad finder",
+      "find division 2 players",
+      "division 2 community",
+      "dark zone",
+      "warlords of new york",
+      "shd",
+      "agent",
+      "raid",
+      "dark hours",
+      "iron horse",
+      "massive entertainment",
+      "ubisoft",
+    ],
+    moduleType: ModuleType.FEED,
+    moduleConfig: {
+      subreddit: "r/thedivision",
+      twitchCategory: "Tom Clancy's The Division 2",
+      steamAppId: "2221490",
+    },
+    accentColor: "#f26b21",
+    websiteUrl: "https://www.ubisoft.com/en-us/game/the-division/the-division-2",
+  },
+  {
     id: "league-of-legends",
     name: "League of Legends",
     description: "League of Legends community lobby. LFG for Solo/Duo, Flex, Clash, and ARAM.",
@@ -913,6 +947,48 @@ export const SEED_ROOMS: {
     name: "Clip Vault",
     description: "Best plays, funniest deaths, cinematic shots. Post the clip.",
     lobbyId: "gta6",
+  },
+
+  {
+    id: "division2-basecamp",
+    name: "Base of Operations",
+    description:
+      "General Division 2 chat. News, builds, patch talk, war stories. Everyone starts here.",
+    lobbyId: "division2",
+  },
+  {
+    id: "division2-lfg",
+    name: "LFG · Find Agents",
+    description:
+      "Looking for agents to run with. Post platform, region, mic, and what you're farming.",
+    lobbyId: "division2",
+  },
+  {
+    id: "division2-raids",
+    name: "Raid Team",
+    description:
+      "Build an 8-agent raid team for Dark Hours or Iron Horse. Coordinate roles, gear, and time.",
+    lobbyId: "division2",
+  },
+  {
+    id: "division2-darkzone",
+    name: "Dark Zone",
+    description:
+      "Rogue up or go manhunt. Find a DZ crew, talk extraction, and settle the eternal rogue debate.",
+    lobbyId: "division2",
+  },
+  {
+    id: "division2-builds",
+    name: "Builds & Gear",
+    description: "Share loadouts, talent combos, and god-roll chases. Min-max the SHD tech.",
+    lobbyId: "division2",
+  },
+  {
+    id: "division2-news",
+    name: "News & Patch Notes",
+    description:
+      "State of the Game, title updates, seasons, and PTS. Sort the real from the datamined.",
+    lobbyId: "division2",
   },
 
   {
