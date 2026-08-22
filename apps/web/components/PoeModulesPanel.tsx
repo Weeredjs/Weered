@@ -30,14 +30,30 @@ const S = {
   label: { fontSize: 10, fontWeight: 700, opacity: 0.45, letterSpacing: ".7px", textTransform: "uppercase" as const, marginBottom: 6 } as React.CSSProperties,
 };
 
-const DEFAULT_LEAGUE = "Mirage";
+type PoeGame = "poe1" | "poe2";
 
-const LEAGUES = [
-  "Mirage",
-  "Hardcore Mirage",
-  "Standard",
-  "Hardcore",
-];
+// One panel serves both games; `game` flips league defaults, the Twitch
+// category, the accent, and the economy data source (PoE1 = GGG official
+// cxapi, PoE2 = poe.ninja). The lobby-page render switch picks the game.
+const GAME_CFG: Record<
+  PoeGame,
+  { defaultLeague: string; leagues: string[]; twitch: string; accent: string; dataSource: string }
+> = {
+  poe1: {
+    defaultLeague: "Mirage",
+    leagues: ["Mirage", "Hardcore Mirage", "Standard", "Hardcore"],
+    twitch: "Path of Exile",
+    accent: ACCENT_POE,
+    dataSource: "Grinding Gear Games' official API",
+  },
+  poe2: {
+    defaultLeague: "Runes of Aldur",
+    leagues: ["Runes of Aldur", "HC Runes of Aldur", "SSF Runes of Aldur", "Standard", "Hardcore"],
+    twitch: "Path of Exile 2",
+    accent: "#c9a24a",
+    dataSource: "poe2scout and Grinding Gear Games' official API",
+  },
+};
 
 const ITEM_CATEGORIES = [
   { id: "UniqueWeapon",    label: "Weapons" },
@@ -98,8 +114,8 @@ const TABS = [
 ];
 type TabId = typeof TABS[number]["id"];
 
-function EconomyTab({ league, accent, filterCat }: { league: string; accent: string; filterCat?: string }) {
-  const [data, setData] = useState<{ asOf?: string; divineChaos?: number; chaosIcon?: string; divineIcon?: string; currencies: any[] }>({ currencies: [] });
+function EconomyTab({ league, accent, filterCat, game }: { league: string; accent: string; filterCat?: string; game: PoeGame }) {
+  const [data, setData] = useState<{ asOf?: string; divineChaos?: number; chaosIcon?: string; divineIcon?: string; baseName?: string; quoteSymbol?: string; currencies: any[] }>({ currencies: [] });
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<"value" | "volume">("value");
@@ -107,14 +123,14 @@ function EconomyTab({ league, accent, filterCat }: { league: string; accent: str
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const j: any = await apiFetch(`/poe/economy?league=${encodeURIComponent(league)}`);
-      setData({ asOf: j?.asOf, divineChaos: j?.divineChaos, chaosIcon: j?.chaosIcon, divineIcon: j?.divineIcon, currencies: Array.isArray(j?.currencies) ? j.currencies : [] });
+      const j: any = await apiFetch(`/poe/economy?league=${encodeURIComponent(league)}&game=${game}`);
+      setData({ asOf: j?.asOf, divineChaos: j?.divineChaos, chaosIcon: j?.chaosIcon, divineIcon: j?.divineIcon, baseName: j?.baseName, quoteSymbol: j?.quoteSymbol, currencies: Array.isArray(j?.currencies) ? j.currencies : [] });
     } catch (e) {
       console.warn("economy error:", e);
       setData({ currencies: [] });
     }
     setLoading(false);
-  }, [league]);
+  }, [league, game]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -135,7 +151,7 @@ function EconomyTab({ league, accent, filterCat }: { league: string; accent: str
     : pool;
   const maxVol = Math.max(1, ...data.currencies.map((c: any) => c.volume || 0));
 
-  if (loading) return <div style={{ padding: 30, textAlign: "center", opacity: 0.4, fontSize: 13 }}>Loading Wraeclast economy...</div>;
+  if (loading) return <div style={{ padding: 30, textAlign: "center", opacity: 0.4, fontSize: 13 }}>Loading economy...</div>;
 
   const Orb = ({ src, size = 13 }: { src?: string; size?: number }) =>
     src ? <img src={src} alt="" style={{ width: size, height: size, verticalAlign: "-2px", objectFit: "contain", filter: "drop-shadow(0 0 2px rgba(0,0,0,.6))" }} /> : null;
@@ -156,9 +172,9 @@ function EconomyTab({ league, accent, filterCat }: { league: string; accent: str
               <Orb src={data.divineIcon} size={26} />
               <div style={{ lineHeight: 1.15 }}>
                 <div style={{ fontSize: 16, fontWeight: 800, color: "rgba(243,244,246,.96)", fontFamily: "monospace", letterSpacing: ".3px" }}>
-                  {data.divineChaos.toLocaleString(undefined, { maximumFractionDigits: 0 })} <span style={{ color: accent }}>c</span>
+                  {data.divineChaos.toLocaleString(undefined, { maximumFractionDigits: 0 })} <span style={{ color: accent }}>{data.quoteSymbol || "c"}</span>
                 </div>
-                <div style={{ fontSize: 9, color: "rgba(148,163,184,.55)", letterSpacing: ".6px", textTransform: "uppercase" }}>1 Divine Orb</div>
+                <div style={{ fontSize: 9, color: "rgba(148,163,184,.55)", letterSpacing: ".6px", textTransform: "uppercase" }}>1 {data.baseName || "Divine Orb"}</div>
               </div>
               <Orb src={data.chaosIcon} size={26} />
             </>
@@ -444,7 +460,7 @@ function FindTeam({ lobbyId, accent }: { lobbyId: string; accent: string }) {
   );
 }
 
-function TwitchStreams({ lobbyId, accent }: { lobbyId: string; accent: string }) {
+function TwitchStreams({ lobbyId, accent, twitch }: { lobbyId: string; accent: string; twitch: string }) {
   const [streams, setStreams] = useState<StreamInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [interceptStream, setInterceptStream] = useState<StreamInfo | null>(null);
@@ -457,7 +473,7 @@ function TwitchStreams({ lobbyId, accent }: { lobbyId: string; accent: string })
 
   const load = useCallback(async () => {
     try {
-      const j = await apiFetch(`/twitch/streams?game=${encodeURIComponent("Path of Exile")}&first=20`);
+      const j = await apiFetch(`/twitch/streams?game=${encodeURIComponent(twitch)}&first=20`);
       if (j.ok) setStreams(j.streams || []);
     } catch {}
     setLoading(false);
@@ -472,7 +488,7 @@ function TwitchStreams({ lobbyId, accent }: { lobbyId: string; accent: string })
       title: s.title || "",
       viewerCount: Number(s.viewerCount || s.viewer_count || 0),
       thumbnailUrl: s.thumbnailUrl || s.thumbnail_url || "",
-      gameName: "Path of Exile",
+      gameName: twitch,
     });
   }
 
@@ -543,6 +559,7 @@ interface Props {
   gameName?: string;
   accentColor?: string;
   style?: React.CSSProperties;
+  game?: PoeGame;
 }
 
 const POE_FRAME_COLOR: Record<number, string> = { 0: "#c8c8c8", 1: "#8888ff", 2: "#ffff77", 3: "#af6025", 4: "#1ba29b", 9: "#aa9e82" };
@@ -577,7 +594,7 @@ function GearGrid({ items, accent: _accent }: { items: any[]; accent: string }) 
   );
 }
 
-function PoeAccountTab({ accent }: { accent: string }) {
+function PoeAccountTab({ accent, game }: { accent: string; game: PoeGame }) {
   const [me, setMe] = useState<any>(null);
   const [chars, setChars] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -589,7 +606,7 @@ function PoeAccountTab({ accent }: { accent: string }) {
   async function openChar(c: any) {
     if (selChar === c.name) { setSelChar(null); return; }
     setSelChar(c.name); setGear(null); setGearLoading(true);
-    const j = await apiFetch(`/poe/character?name=${encodeURIComponent(c.name)}&realm=${encodeURIComponent(c.realm || "pc")}`);
+    const j = await apiFetch(`/poe/character?name=${encodeURIComponent(c.name)}&realm=${encodeURIComponent(c.realm || (game === "poe2" ? "poe2" : "pc"))}&game=${game}`);
     setGear(j); setGearLoading(false);
   }
 
@@ -598,7 +615,7 @@ function PoeAccountTab({ accent }: { accent: string }) {
     const j = await apiFetch("/poe/me");
     setMe(j);
     if (j?.linked) {
-      const c = await apiFetch("/poe/me/characters");
+      const c = await apiFetch(`/poe/me/characters?game=${game}`);
       setChars(c?.characters || []);
     }
     setLoading(false);
@@ -692,19 +709,19 @@ function PoeAccountTab({ accent }: { accent: string }) {
   );
 }
 
-function LadderTab({ league, accent }: { league: string; accent: string }) {
+function LadderTab({ league, accent, game }: { league: string; accent: string; game: PoeGame }) {
   const [data, setData] = useState<{ total: number; entries: any[] } | null>(null);
   const [loading, setLoading] = useState(true);
   useEffect(() => {
     let alive = true;
     setLoading(true);
-    apiFetch(`/poe/ladder?league=${encodeURIComponent(league)}`).then((j: any) => {
+    apiFetch(`/poe/ladder?league=${encodeURIComponent(league)}&game=${game}`).then((j: any) => {
       if (!alive) return;
       setData({ total: j?.total || 0, entries: j?.entries || [] });
       setLoading(false);
     });
     return () => { alive = false; };
-  }, [league]);
+  }, [league, game]);
 
   if (loading) return <div style={{ padding: 20, opacity: 0.5, fontSize: 12 }}>Loading ladder…</div>;
   const entries = data?.entries || [];
@@ -741,17 +758,22 @@ function LadderTab({ league, accent }: { league: string; accent: string }) {
 export default function PoeModulesPanel({
   lobbyId,
   gameName: _gameName = "Path of Exile",
-  accentColor = ACCENT_POE,
+  accentColor,
   style,
+  game = "poe1",
 }: Props) {
-  const accent = accentColor || ACCENT_POE;
+  const cfg = GAME_CFG[game];
+  const accent = accentColor || cfg.accent;
+  // PoE2 has no divination cards, and its passive tree ships without an icon
+  // atlas (a separate follow-up), so those two tabs are PoE1-only for now.
+  const gameTabs = game === "poe2" ? TABS.filter(t => t.id !== "tree" && t.id !== "divcards") : TABS;
   const [tab, setTab] = useState<TabId>("economy");
   useWatchHere(useCallback(() => { setTab("streams"); }, []));
-  const [league, setLeague] = useState(DEFAULT_LEAGUE);
+  const [league, setLeague] = useState(cfg.defaultLeague);
   const [leagues, setLeagues] = useState<{ id: string; current?: boolean }[]>([]);
   useEffect(() => {
-    apiFetch("/poe/leagues").then((j: any) => { const ls = j?.leagues || []; if (ls.length) setLeagues(ls); });
-  }, []);
+    apiFetch(`/poe/leagues?game=${game}`).then((j: any) => { const ls = j?.leagues || []; if (ls.length) setLeagues(ls); });
+  }, [game]);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0, ...style }}>
@@ -761,7 +783,7 @@ export default function PoeModulesPanel({
         alignItems: "center",
       }}>
         <ModuleTabBar
-          tabs={TABS.map(t => ({ id: t.id, label: t.label, icon: <span style={{ fontSize: 13 }}>{t.icon}</span> }))}
+          tabs={gameTabs.map(t => ({ id: t.id, label: t.label, icon: <span style={{ fontSize: 13 }}>{t.icon}</span> }))}
           active={tab}
           onSelect={(id) => setTab(id as TabId)}
           accent={accent}
@@ -776,24 +798,24 @@ export default function PoeModulesPanel({
               border: `1px solid ${accent}33`, background: `${accent}08`,
             }}
           >
-            {(leagues.length ? leagues.map(l => l.id) : LEAGUES).map(l => <option key={l} value={l}>{l}</option>)}
+            {(leagues.length ? leagues.map(l => l.id) : cfg.leagues).map(l => <option key={l} value={l}>{l}</option>)}
           </select>
         )}
       </div>
 
       <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "14px 14px 14px", display: "flex", flexDirection: "column" }}>
-        {tab === "economy"  && <EconomyTab league={league} accent={accent} />}
+        {tab === "economy"  && <EconomyTab league={league} accent={accent} game={game} />}
         {tab === "tree"     && <PassiveTree accent={accent} />}
-        {tab === "divcards" && <EconomyTab league={league} accent={accent} filterCat="Cards" />}
-        {tab === "ladder"   && <LadderTab league={league} accent={accent} />}
-        {tab === "streams"  && <TwitchStreams lobbyId={lobbyId} accent={accent} />}
+        {tab === "divcards" && <EconomyTab league={league} accent={accent} filterCat="Cards" game={game} />}
+        {tab === "ladder"   && <LadderTab league={league} accent={accent} game={game} />}
+        {tab === "streams"  && <TwitchStreams lobbyId={lobbyId} accent={accent} twitch={cfg.twitch} />}
         {tab === "lfg"      && <FindTeam lobbyId={lobbyId} accent={accent} />}
-        {tab === "account"  && <PoeAccountTab accent={accent} />}
+        {tab === "account"  && <PoeAccountTab accent={accent} game={game} />}
       </div>
 
       <div style={{ padding: "6px 14px 8px", flexShrink: 0, borderTop: "1px solid rgba(255,255,255,.04)" }}>
         <p style={{ fontSize: 9, color: "rgba(100,116,139,.35)", lineHeight: 1.4, margin: 0, textAlign: "center" }}>
-          Weered is not affiliated with, endorsed by, or sponsored by Grinding Gear Games. Path of Exile is a registered trademark of Grinding Gear Games. Economy and passive tree data via Grinding Gear Games' official API.
+          Weered is not affiliated with, endorsed by, or sponsored by Grinding Gear Games. Path of Exile{game === "poe2" ? " 2" : ""} is a registered trademark of Grinding Gear Games. Data via {cfg.dataSource}.
         </p>
       </div>
     </div>
