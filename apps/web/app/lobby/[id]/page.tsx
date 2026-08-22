@@ -112,6 +112,10 @@ const PoeModulesPanel = dynamic(() => import("../../../components/PoeModulesPane
   loading: panelLoading,
   ssr: false,
 });
+const Poe2ModulesPanel = dynamic(() => import("../../../components/Poe2ModulesPanel"), {
+  loading: panelLoading,
+  ssr: false,
+});
 const EveModulesPanel = dynamic(() => import("../../../components/EveModulesPanel"), {
   loading: panelLoading,
   ssr: false,
@@ -210,6 +214,7 @@ const MODULE_GAME_NAMES: Record<string, string> = {
   PUBG: "PUBG: Battlegrounds",
   DND: "Dungeons & Dragons",
   POE: "Path of Exile",
+  POE2: "Path of Exile 2",
   WINDROSE: "Windrose",
   EVE: "EVE Online",
   HLL: "Hell Let Loose",
@@ -697,6 +702,7 @@ export default function LobbyIdPage() {
             j.lobby.moduleType === "PUBG" ||
             j.lobby.moduleType === "DND" ||
             j.lobby.moduleType === "POE" ||
+            j.lobby.moduleType === "POE2" ||
             j.lobby.moduleType === "WINDROSE" ||
             j.lobby.moduleType === "HELLDIVERS2" ||
             j.lobby.moduleType === "CHESS" ||
@@ -785,6 +791,7 @@ export default function LobbyIdPage() {
       "PUBG",
       "DND",
       "POE",
+      "POE2",
       "WINDROSE",
       "HELLDIVERS2",
       "CHESS",
@@ -824,6 +831,7 @@ export default function LobbyIdPage() {
     lobbyInfo?.moduleType === "PUBG" ||
     lobbyInfo?.moduleType === "DND" ||
     lobbyInfo?.moduleType === "POE" ||
+    lobbyInfo?.moduleType === "POE2" ||
     lobbyInfo?.moduleType === "WINDROSE" ||
     lobbyInfo?.moduleType === "HELLDIVERS2" ||
     lobbyInfo?.moduleType === "CHESS" ||
@@ -1268,6 +1276,13 @@ export default function LobbyIdPage() {
                       accentColor={accent}
                       style={{ flex: 1, minHeight: 0 }}
                     />
+                  ) : lobbyInfo?.moduleType === "POE2" ? (
+                    <Poe2ModulesPanel
+                      lobbyId={lobbyId}
+                      gameName={gameName}
+                      accentColor={accent}
+                      style={{ flex: 1, minHeight: 0 }}
+                    />
                   ) : lobbyInfo?.moduleType === "WINDROSE" ? (
                     <WindroseModulesPanel
                       lobbyId={lobbyId}
@@ -1417,6 +1432,7 @@ const MODULE_CHIP_LABEL: Record<string, string> = {
   PGA: "PGA",
   DND: "D&D",
   POE: "PoE",
+  POE2: "PoE2",
   POKER: "Poker",
   TRADING: "Trade",
   NEWS: "News",

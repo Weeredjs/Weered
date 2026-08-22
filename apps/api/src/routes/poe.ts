@@ -16,6 +16,14 @@ const POE_REDIRECT = process.env.POE_REDIRECT_URI || "https://weered.ca/auth/poe
 
 const POE_SCOPES = "account:characters";
 
+// PoE1 vs PoE2 select the same GGG service API via the realm axis: PoE1 uses the
+// platform realm (pc), PoE2 uses realm=poe2. Leagues + ladder honor this. (The
+// cxapi currency-exchange feed is PoE1-only; PoE2 economy is sourced separately.)
+// Query param ?game=poe2 flips it; anything else stays PoE1/pc.
+function gameRealm(game: unknown): "pc" | "poe2" {
+  return String(game) === "poe2" ? "poe2" : "pc";
+}
+
 function userAgent(): string {
   const id = POE_CLIENT_ID || "weered";
   return `OAuth ${id}/1.0.0 (contact: ${POE_CONTACT})`;
@@ -158,7 +166,7 @@ async function serviceGet(path: string): Promise<{ status: number; body: any }> 
   }
 }
 
-let _leaguesCache: { data: any[]; exp: number } | null = null;
+const _leaguesCache = new Map<string, { data: any[]; exp: number }>();
 const _ladderCache = new Map<string, { data: any; exp: number }>();
 const _cxCache = new Map<string, { data: any; exp: number }>();
 let _cxStatic: {
@@ -333,6 +341,70 @@ async function buildPassiveTree(): Promise<any> {
 }
 const _charCache = new Map<string, { data: any; exp: number }>();
 
+// PoE2 economy — poe2scout.com (GGG's cxapi currency-exchange feed is PoE1-only).
+// Prices are denominated in Exalted Orbs (PoE2's base currency); we also pull the
+// exalted-per-divine cross-rate so the UI shows a Divine banner + divine column,
+// matching the PoE1 economy response shape. Cached 15 min.
+const _poe2EcoCache = new Map<string, { data: any; exp: number }>();
+async function poe2Economy(league: string): Promise<any> {
+  const hit = _poe2EcoCache.get(league);
+  if (hit && hit.exp > Date.now()) return hit.data;
+  const ua = userAgent();
+  const base = "https://api.poe2scout.com/poe2";
+  const cleanIcon = (it: any): string =>
+    (it && it.ItemMetadata && it.ItemMetadata.icon) ||
+    String((it && it.IconUrl) || "").replace("//gen", "/gen") ||
+    "";
+  // exalted-per-divine cross rate, from the league list.
+  let divinePrice = 0;
+  try {
+    const lr = await fetchWithTimeout(`${base}/Leagues`, {
+      headers: { "User-Agent": ua, Accept: "application/json" },
+    });
+    const lj: any = await lr.json().catch(() => null);
+    const list: any[] = Array.isArray(lj) ? lj : lj?.Leagues || lj?.leagues || [];
+    const row = list.find((l: any) => (l.Value || l.value) === league);
+    divinePrice = Number(row && row.DivinePrice) || 0;
+  } catch (e) {
+    swallow(e);
+  }
+  const url = `${base}/Leagues/${encodeURIComponent(league)}/Currencies/ByCategory?category=currency&perPage=250&referenceCurrency=exalted`;
+  const r = await fetchWithTimeout(url, {
+    headers: { "User-Agent": ua, Accept: "application/json" },
+  });
+  if (!r.ok) throw new Error(`poe2scout ${r.status}`);
+  const j: any = await r.json().catch(() => null);
+  const items: any[] = (j && j.Items) || [];
+  const exIcon = cleanIcon(items.find((it) => it.ApiId === "exalted"));
+  const divIcon = cleanIcon(items.find((it) => it.ApiId === "divine"));
+  const currencies = items
+    .filter((it) => Number(it.CurrentPrice) > 0)
+    .map((it: any) => {
+      const ex = Number(it.CurrentPrice) || 0; // price in exalted (the PoE2 quote)
+      return {
+        id: it.ApiId,
+        name: it.Text || it.ApiId,
+        icon: cleanIcon(it),
+        chaos: Math.round(ex * 100) / 100,
+        divine: divinePrice ? Math.round((ex / divinePrice) * 1000) / 1000 : null,
+        volume: Number(it.CurrentQuantity) || 0,
+        cat: it.CategoryApiId || "currency",
+      };
+    })
+    .sort((a, b) => b.chaos - a.chaos);
+  const data = {
+    asOf: new Date().toISOString(),
+    divineChaos: Math.round(divinePrice * 100) / 100, // 1 Divine = divinePrice exalted
+    chaosIcon: exIcon, // quote-currency icon = Exalted Orb
+    divineIcon: divIcon,
+    baseName: "Divine Orb",
+    quoteSymbol: "ex",
+    currencies,
+  };
+  _poe2EcoCache.set(league, { data, exp: Date.now() + 15 * 60_000 });
+  return data;
+}
+
 type Opts = {
   authFromHeader: (h?: string) => { id: string } | null;
   awardNotoriety: (userId: string, action: string) => Promise<number | null>;
@@ -471,9 +543,11 @@ export default async function poeRoutes(app: FastifyInstance, opts: Opts) {
     }
 
     const accountName = acct.displayName || "";
+    const realms =
+      gameRealm((req as any).query?.game) === "poe2" ? ["poe2"] : ["pc", "xbox", "sony"];
     let chars: any[] = [];
     let forbidden = false;
-    for (const realm of ["pc", "xbox", "sony"]) {
+    for (const realm of realms) {
       const qs = new URLSearchParams({ accountName, realm }).toString();
       try {
         const r = await fetchWithTimeout(
@@ -526,30 +600,35 @@ export default async function poeRoutes(app: FastifyInstance, opts: Opts) {
     return reply.send({ ok: true });
   });
 
-  app.get("/poe/leagues", async (_req, reply) => {
-    if (_leaguesCache && _leaguesCache.exp > Date.now()) {
-      return reply.send({ ok: true, leagues: _leaguesCache.data, cached: true });
+  app.get("/poe/leagues", async (req, reply) => {
+    const realm = gameRealm((req as any).query?.game);
+    const cached = _leaguesCache.get(realm);
+    if (cached && cached.exp > Date.now()) {
+      return reply.send({ ok: true, leagues: cached.data, cached: true });
     }
-    const { status, body } = await serviceGet("/league?type=main&realm=pc");
-    if (status !== 200) return reply.send({ ok: true, leagues: _leaguesCache?.data || [] });
+    const { status, body } = await serviceGet(`/league?type=main&realm=${realm}`);
+    if (status !== 200)
+      return reply.send({ ok: true, leagues: _leaguesCache.get(realm)?.data || [] });
     const arr: any[] = Array.isArray(body) ? body : body?.leagues || [];
     const leagues = arr.map((l: any) => ({
       id: l.id,
-      realm: l.realm || "pc",
+      realm: l.realm || realm,
       description: l.description || "",
       current: !!(l.category && l.category.current),
     }));
-    _leaguesCache = { data: leagues, exp: Date.now() + 60 * 60_000 };
+    _leaguesCache.set(realm, { data: leagues, exp: Date.now() + 60 * 60_000 });
     return reply.send({ ok: true, leagues });
   });
 
   app.get("/poe/ladder", async (req, reply) => {
     const league = String((req as any).query?.league || "Standard").slice(0, 60);
-    const hit = _ladderCache.get(league);
+    const realm = gameRealm((req as any).query?.game);
+    const cacheKey = `${realm}|${league}`;
+    const hit = _ladderCache.get(cacheKey);
     if (hit && hit.exp > Date.now())
       return reply.send({ ok: true, league, cached: true, ...hit.data });
     const { status, body } = await serviceGet(
-      `/league/${encodeURIComponent(league)}/ladder?realm=pc&limit=50`,
+      `/league/${encodeURIComponent(league)}/ladder?realm=${realm}&limit=50`,
     );
     if (status !== 200) {
       return reply.send({
@@ -573,7 +652,7 @@ export default async function poeRoutes(app: FastifyInstance, opts: Opts) {
       twitch: e.account?.twitch?.name || null,
     }));
     const data = { total: (body && body.ladder && body.ladder.total) ?? entries.length, entries };
-    _ladderCache.set(league, { data, exp: Date.now() + 5 * 60_000 });
+    _ladderCache.set(cacheKey, { data, exp: Date.now() + 5 * 60_000 });
     return reply.send({ ok: true, league, ...data });
   });
 
@@ -582,6 +661,21 @@ export default async function poeRoutes(app: FastifyInstance, opts: Opts) {
   // price + volume, enriches names/icons. Cached 30 min (data is hourly).
   app.get("/poe/economy", async (req, reply) => {
     const league = String((req as any).query?.league || "Standard").slice(0, 60);
+    // PoE2 economy is sourced from poe2scout (GGG's cxapi feed is PoE1-only).
+    if (gameRealm((req as any).query?.game) === "poe2") {
+      try {
+        const data = await poe2Economy(league);
+        return reply.send({ ok: true, league, ...data });
+      } catch {
+        return reply.send({
+          ok: true,
+          league,
+          currencies: [],
+          divineChaos: 0,
+          error: "unavailable",
+        });
+      }
+    }
     const hit = _cxCache.get(league);
     if (hit && hit.exp > Date.now())
       return reply.send({ ok: true, league, cached: true, ...hit.data });
@@ -663,7 +757,8 @@ export default async function poeRoutes(app: FastifyInstance, opts: Opts) {
     const accountName = acct.displayName || "";
     const q: any = (req as any).query || {};
     const name = String(q.name || "").slice(0, 80);
-    const realm = ["pc", "xbox", "sony"].indexOf(String(q.realm)) !== -1 ? String(q.realm) : "pc";
+    const realm =
+      ["pc", "xbox", "sony", "poe2"].indexOf(String(q.realm)) !== -1 ? String(q.realm) : "pc";
     if (!name) return reply.send({ ok: false, error: "character required" });
     try {
       const qs = new URLSearchParams({ accountName, character: name, realm }).toString();

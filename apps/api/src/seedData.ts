@@ -192,6 +192,35 @@ export const SEED_LOBBIES = [
     websiteUrl: "https://www.pathofexile.com",
   },
   {
+    id: "poe2",
+    name: "Path of Exile 2",
+    description:
+      "Wraeclast, generations on. Live PoE2 economy, league ladder, the passive tree, party finder, and character linking. Currency prices, build talk, and LFG for the campaign and endgame. The unofficial exile hub for Path of Exile 2.",
+    keywords: [
+      "poe2",
+      "path of exile 2",
+      "poe 2",
+      "exile",
+      "wraeclast",
+      "arpg",
+      "grinding gear",
+      "ggg",
+      "runes of aldur",
+      "exalted",
+      "divine",
+      "endgame",
+      "atlas",
+      "builds",
+      "trials",
+    ],
+    moduleType: ModuleType.POE2,
+    moduleConfig: { twitchCategory: "Path of Exile 2", steamAppId: "2694490" },
+    accentColor: "#c9a24a",
+    logoUrl: null,
+    bannerUrl: null,
+    websiteUrl: "https://www.pathofexile2.com",
+  },
+  {
     id: "windrose",
     name: "Windrose",
     description:
@@ -714,6 +743,45 @@ export const SEED_ROOMS: {
     description:
       "Fresh economy chaos. Day-1 plans, leveling routes, first-target farming. Race the curve.",
     lobbyId: "poe",
+  },
+
+  {
+    id: "poe2-wraeclast",
+    name: "Wraeclast",
+    description:
+      "General Path of Exile 2 chat. Campaign, endgame, patch talk, and the 'is my build cooked' discourse.",
+    lobbyId: "poe2",
+  },
+  {
+    id: "poe2-trade",
+    name: "Trade Hall",
+    description: "Buy, sell, price-check PoE2. Currency, gear, runes. Post your shop, no scams.",
+    lobbyId: "poe2",
+  },
+  {
+    id: "poe2-builds",
+    name: "Build Lab",
+    description:
+      "Theorycraft PoE2 builds, skill gems, and passive trees. League-starter debates welcome.",
+    lobbyId: "poe2",
+  },
+  {
+    id: "poe2-endgame",
+    name: "Atlas & Endgame",
+    description: "Maps, pinnacle bosses, towers, and endgame farming strategy for Path of Exile 2.",
+    lobbyId: "poe2",
+  },
+  {
+    id: "poe2-bosses",
+    name: "Boss Lounge",
+    description: "Pinnacle carries, deathless runs, and boss strats. Share the fight.",
+    lobbyId: "poe2",
+  },
+  {
+    id: "poe2-leaguestart",
+    name: "League Start",
+    description: "Fresh economy chaos. Day-1 plans, leveling routes, and first-target farming.",
+    lobbyId: "poe2",
   },
 
   {
