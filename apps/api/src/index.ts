@@ -88,6 +88,7 @@ import lfgRoutes from "./routes/lfg";
 import redditRoutes from "./routes/reddit";
 import helldiversMoRoutes from "./routes/helldivers-mo";
 import { runHelldiversWorker } from "./helldiversWorker";
+import { runDivision2Worker } from "./division2Worker";
 import paperRoutes from "./routes/paper";
 import invitesRoutes from "./routes/invites";
 import chessRoutes from "./routes/chess";
@@ -958,6 +959,15 @@ async function main() {
   setTimeout(() => {
     void runHelldiversWorker({ getAI, broadcastToLobby, countLobbyActiveUsers });
   }, 30_000);
+  setInterval(
+    () => {
+      void runDivision2Worker({ getAI, broadcastToLobby, countLobbyActiveUsers });
+    },
+    10 * 60 * 1000,
+  );
+  setTimeout(() => {
+    void runDivision2Worker({ getAI, broadcastToLobby, countLobbyActiveUsers });
+  }, 45_000);
 
   await app.register(forumRoutes, {
     authFromHeader,

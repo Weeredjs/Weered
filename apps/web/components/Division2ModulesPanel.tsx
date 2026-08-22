@@ -133,11 +133,38 @@ type PlatformStatus = {
   impacted: string[];
 };
 
+type NewsItem = { title: string; url: string; date: string; source: string; snippet: string };
+
+const FIELD_RESOURCES: { label: string; url: string }[] = [
+  { label: "Interactive Map", url: "https://division2map.com" },
+  { label: "Vendor Tracker", url: "https://rubenalamina.mx/the-division-weekly-vendor-reset/" },
+  { label: "Subreddit Wiki", url: "https://www.reddit.com/r/thedivision/wiki/index" },
+  {
+    label: "Megathreads",
+    url: "https://www.reddit.com/r/thedivision/?f=flair_name%3A%22Megathread%22",
+  },
+];
+
 function OpsBoard({ accent }: { accent: string }) {
   const [platforms, setPlatforms] = useState<PlatformStatus[] | null>(null);
   const [updatedAt, setUpdatedAt] = useState("");
   const [failed, setFailed] = useState(false);
+  const [news, setNews] = useState<NewsItem[] | null>(null);
   const [, forceTick] = useState(0);
+
+  useEffect(() => {
+    let alive = true;
+    apiFetch("/division2/news")
+      .then((j: any) => {
+        if (alive && j?.ok) setNews(Array.isArray(j.items) ? j.items : []);
+      })
+      .catch(() => {
+        if (alive) setNews([]);
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   const load = useCallback(async () => {
     try {
@@ -327,6 +354,116 @@ function OpsBoard({ accent }: { accent: string }) {
               </a>
             </div>
           </div>
+        </div>
+      </div>
+
+      <div>
+        <div style={S.label}>INTEL · OFFICIAL ANNOUNCEMENTS</div>
+        {news === null ? (
+          <div style={{ padding: 12, opacity: 0.4, fontSize: 12 }}>Decrypting intel…</div>
+        ) : news.length === 0 ? (
+          <div style={{ padding: 12, opacity: 0.5, fontSize: 12 }}>
+            No intel available right now.
+          </div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {news.slice(0, 6).map((n) => {
+              const when = (() => {
+                try {
+                  return new Date(n.date).toLocaleDateString(undefined, {
+                    month: "short",
+                    day: "numeric",
+                  });
+                } catch {
+                  return "";
+                }
+              })();
+              return (
+                <a
+                  key={n.url}
+                  href={n.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    ...S.card,
+                    display: "block",
+                    textDecoration: "none",
+                    transition: "border-color .12s",
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.borderColor = `${accent}44`)}
+                  onMouseLeave={(e) =>
+                    (e.currentTarget.style.borderColor = "rgba(255,255,255,.06)")
+                  }
+                >
+                  <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+                    <div
+                      style={{
+                        flex: 1,
+                        minWidth: 0,
+                        fontSize: 12.5,
+                        fontWeight: 700,
+                        color: "rgba(243,244,246,.92)",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {n.title}
+                    </div>
+                    <span
+                      style={{
+                        fontSize: 10,
+                        color: "rgba(148,163,184,.5)",
+                        flexShrink: 0,
+                        fontFamily: "monospace",
+                      }}
+                    >
+                      {when}
+                    </span>
+                  </div>
+                  {n.snippet && (
+                    <div
+                      style={{
+                        fontSize: 11,
+                        color: "rgba(148,163,184,.55)",
+                        marginTop: 4,
+                        overflow: "hidden",
+                        display: "-webkit-box",
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: "vertical" as any,
+                      }}
+                    >
+                      {n.snippet}
+                    </div>
+                  )}
+                </a>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      <div>
+        <div style={S.label}>FIELD RESOURCES</div>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          {FIELD_RESOURCES.map((r) => (
+            <a
+              key={r.url}
+              href={r.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                ...S.btn,
+                textDecoration: "none",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                border: `1px solid ${accent}33`,
+              }}
+            >
+              {r.label} <span style={{ opacity: 0.5, fontSize: 10 }}>{"↗"}</span>
+            </a>
+          ))}
         </div>
       </div>
     </div>
