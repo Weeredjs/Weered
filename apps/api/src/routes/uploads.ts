@@ -33,7 +33,11 @@ export default async function uploadsRoutes(app: FastifyInstance, opts: Opts) {
     writeFileSync(join(dir, filename), webp);
     if (prevUrl.startsWith(`${SITE_BASE}/${subpath}/`)) {
       const prevName = prevUrl.split("/").pop() || "";
-      if (prevName && prevName !== filename && /^[a-zA-Z0-9._-]+\.(webp|png|jpe?g|gif)$/.test(prevName)) {
+      if (
+        prevName &&
+        prevName !== filename &&
+        /^[a-zA-Z0-9._-]+\.(webp|png|jpe?g|gif)$/.test(prevName)
+      ) {
         try {
           unlinkSync(join(dir, prevName));
         } catch (e) {
@@ -44,7 +48,7 @@ export default async function uploadsRoutes(app: FastifyInstance, opts: Opts) {
     return `${SITE_BASE}/${subpath}/${filename}`;
   };
 
-  app.post("/profile/avatar/upload", async (req, reply) => {
+  app.post("/profile/avatar/upload", { bodyLimit: 8 * 1024 * 1024 }, async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ error: "unauthorized" });
 
@@ -88,7 +92,13 @@ export default async function uploadsRoutes(app: FastifyInstance, opts: Opts) {
 
     try {
       const prevWasCustom = String(dbUser?.avatar || "").startsWith(`${SITE_BASE}/avatars/`);
-      const avatarUrl = persistImage(AVATAR_DIR, "avatars", String(dbUser?.avatar || ""), mod.webp, u.id);
+      const avatarUrl = persistImage(
+        AVATAR_DIR,
+        "avatars",
+        String(dbUser?.avatar || ""),
+        mod.webp,
+        u.id,
+      );
       await prisma.user.update({ where: { id: u.id }, data: { avatar: avatarUrl } });
 
       // Award only on the first switch to a custom avatar — no farming by re-upload.
@@ -129,7 +139,7 @@ export default async function uploadsRoutes(app: FastifyInstance, opts: Opts) {
   if (!existsSync(BANNER_DIR)) mkdirSync(BANNER_DIR, { recursive: true });
   const BANNER_MAX_BYTES = 4 * 1024 * 1024;
 
-  app.post("/profile/banner/upload", async (req, reply) => {
+  app.post("/profile/banner/upload", { bodyLimit: 8 * 1024 * 1024 }, async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ error: "unauthorized" });
 
@@ -171,7 +181,13 @@ export default async function uploadsRoutes(app: FastifyInstance, opts: Opts) {
     if (!mod.ok) return reply.code(mod.code).send({ error: mod.error, message: mod.message });
 
     try {
-      const bannerUrl = persistImage(BANNER_DIR, "banners", String(dbUser?.bannerUrl || ""), mod.webp, u.id);
+      const bannerUrl = persistImage(
+        BANNER_DIR,
+        "banners",
+        String(dbUser?.bannerUrl || ""),
+        mod.webp,
+        u.id,
+      );
       await prisma.user.update({ where: { id: u.id }, data: { bannerUrl } as any });
       return reply.send({ ok: true, bannerUrl });
     } catch (e) {
@@ -180,7 +196,7 @@ export default async function uploadsRoutes(app: FastifyInstance, opts: Opts) {
     }
   });
 
-  app.post("/lobbies/upload-image", async (req, reply) => {
+  app.post("/lobbies/upload-image", { bodyLimit: 8 * 1024 * 1024 }, async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ error: "unauthorized" });
     const dbUser = await prisma.user.findUnique({
