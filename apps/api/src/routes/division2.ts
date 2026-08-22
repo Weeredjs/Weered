@@ -67,13 +67,18 @@ type NewsItem = { title: string; url: string; date: string; source: string; snip
 let _newsCache: { data: NewsItem[]; exp: number } | null = null;
 
 function stripMarkup(s: string): string {
-  return s
+  let out = s
     .replace(/\[img\][^[]*\[\/img\]/gi, "")
     .replace(/\[[^\]]{1,24}\]/g, "") // bbcode tags
-    .replace(/<[^>]+>/g, "")
-    .replace(/https?:\/\/\S+/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
+    .replace(/https?:\/\/\S+/g, "");
+  // Strip HTML tags to a fixpoint, then drop any leftover angle brackets
+  // outright — the snippet is plain text, so no markup may survive at all.
+  let prev: string;
+  do {
+    prev = out;
+    out = out.replace(/<[^>]*>/g, "");
+  } while (out !== prev);
+  return out.replace(/[<>]/g, " ").replace(/\s+/g, " ").trim();
 }
 
 async function fetchDivision2News(): Promise<NewsItem[]> {
