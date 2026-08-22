@@ -677,7 +677,7 @@ function PoeAccountTab({ accent, game }: { accent: string; game: PoeGame }) {
       <div>
         <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1, color: accent, textTransform: "uppercase", marginBottom: 8 }}>Characters ({chars.length})</div>
         {chars.length === 0 ? (
-          <div style={{ fontSize: 12, color: "rgba(255,255,255,.4)", padding: 12 }}>No characters returned (private profile, or the token expired — re-link to refresh).</div>
+          <div style={{ fontSize: 12, color: "rgba(255,255,255,.4)", padding: 12 }}>{game === "poe2" ? "No Path of Exile 2 characters on this account yet — GGG's PoE2 character API is still limited, so this may stay empty even if you have PoE2 characters." : "No characters returned (private profile, or the token expired — re-link to refresh)."}</div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             {chars.map((c: any) => {
