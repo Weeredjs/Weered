@@ -536,10 +536,27 @@ export default async function poeRoutes(app: FastifyInstance, opts: Opts) {
     });
     if (!acct) return reply.send({ ok: true, linked: false, characters: [] });
 
+    // Characters are per-game (per realm). GGG's legacy get-characters ignores
+    // realm=poe2 and returns the PC (PoE1) list, and the account character cache
+    // is shared across both games -- so we filter the OUTPUT by realm: the PoE2
+    // lobby shows only realm=poe2 characters (empty until GGG exposes them via
+    // the API), never PoE1 ones; PoE1 shows everything that isn't poe2.
+    const forGame = (list: any): any[] => {
+      const arr = Array.isArray(list) ? list : [];
+      return gameRealm((req as any).query?.game) === "poe2"
+        ? arr.filter((c: any) => String(c?.realm) === "poe2")
+        : arr.filter((c: any) => String(c?.realm) !== "poe2");
+    };
+
     const card: any = acct.cardData || {};
     const cachedAt = card.charsCachedAt ? new Date(card.charsCachedAt).getTime() : 0;
     if (Array.isArray(card.characters) && Date.now() - cachedAt < 5 * 60_000) {
-      return reply.send({ ok: true, linked: true, characters: card.characters, cached: true });
+      return reply.send({
+        ok: true,
+        linked: true,
+        characters: forGame(card.characters),
+        cached: true,
+      });
     }
 
     const accountName = acct.displayName || "";
@@ -581,7 +598,7 @@ export default async function poeRoutes(app: FastifyInstance, opts: Opts) {
         ok: true,
         linked: true,
         private: true,
-        characters: card.characters || [],
+        characters: forGame(card.characters || []),
       });
     }
     await prisma.userGameAccount
@@ -590,7 +607,7 @@ export default async function poeRoutes(app: FastifyInstance, opts: Opts) {
         data: { cardData: { ...card, characters: chars, charsCachedAt: new Date().toISOString() } },
       })
       .catch(swallow);
-    return reply.send({ ok: true, linked: true, characters: chars });
+    return reply.send({ ok: true, linked: true, characters: forGame(chars) });
   });
 
   app.delete("/poe/me", async (req, reply) => {
