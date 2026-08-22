@@ -422,7 +422,7 @@ export const SEED_LOBBIES = [
       "massive entertainment",
       "ubisoft",
     ],
-    moduleType: ModuleType.FEED,
+    moduleType: ModuleType.DIVISION2,
     moduleConfig: {
       subreddit: "r/thedivision",
       twitchCategory: "Tom Clancy's The Division 2",
