@@ -48,69 +48,73 @@ export default async function uploadsRoutes(app: FastifyInstance, opts: Opts) {
     return `${SITE_BASE}/${subpath}/${filename}`;
   };
 
-  app.post("/profile/avatar/upload", { bodyLimit: 8 * 1024 * 1024 }, async (req, reply) => {
-    const u = authFromHeader((req as any).headers?.authorization);
-    if (!u) return reply.code(401).send({ error: "unauthorized" });
+  app.post(
+    "/profile/avatar/upload",
+    { bodyLimit: 8 * 1024 * 1024, config: { rateLimit: { max: 10, timeWindow: "1 minute" } } },
+    async (req, reply) => {
+      const u = authFromHeader((req as any).headers?.authorization);
+      if (!u) return reply.code(401).send({ error: "unauthorized" });
 
-    // Custom avatars are free for every user, from signup. The only gate is a
-    // standing media-ban (earned by a prior violation). Safety is handled by
-    // moderation below, not by tier.
-    const dbUser: any = await prisma.user.findUnique({
-      where: { id: u.id },
-      select: { avatar: true, mediaBannedUntil: true } as any,
-    });
-    if (dbUser?.mediaBannedUntil && new Date(dbUser.mediaBannedUntil).getTime() > Date.now()) {
-      return reply
-        .code(403)
-        .send({ error: "media_banned", message: "Your upload privileges are suspended." });
-    }
+      // Custom avatars are free for every user, from signup. The only gate is a
+      // standing media-ban (earned by a prior violation). Safety is handled by
+      // moderation below, not by tier.
+      const dbUser: any = await prisma.user.findUnique({
+        where: { id: u.id },
+        select: { avatar: true, mediaBannedUntil: true } as any,
+      });
+      if (dbUser?.mediaBannedUntil && new Date(dbUser.mediaBannedUntil).getTime() > Date.now()) {
+        return reply
+          .code(403)
+          .send({ error: "media_banned", message: "Your upload privileges are suspended." });
+      }
 
-    const body: any = (req as any).body || {};
-    const dataUrl = body.image;
-    if (!dataUrl || typeof dataUrl !== "string") {
-      return reply.code(400).send({ error: "missing_image" });
-    }
+      const body: any = (req as any).body || {};
+      const dataUrl = body.image;
+      if (!dataUrl || typeof dataUrl !== "string") {
+        return reply.code(400).send({ error: "missing_image" });
+      }
 
-    const match = dataUrl.match(/^data:image\/(png|jpeg|jpg|webp|gif);base64,(.+)$/);
-    if (!match) {
-      return reply
-        .code(400)
-        .send({ error: "invalid_format", message: "Image must be PNG, JPEG, WebP, or GIF." });
-    }
+      const match = dataUrl.match(/^data:image\/(png|jpeg|jpg|webp|gif);base64,(.+)$/);
+      if (!match) {
+        return reply
+          .code(400)
+          .send({ error: "invalid_format", message: "Image must be PNG, JPEG, WebP, or GIF." });
+      }
 
-    const buffer = Buffer.from(match[2], "base64");
-    if (buffer.length > AVATAR_MAX_BYTES) {
-      return reply.code(400).send({ error: "too_large", message: "Image must be under 2MB." });
-    }
+      const buffer = Buffer.from(match[2], "base64");
+      if (buffer.length > AVATAR_MAX_BYTES) {
+        return reply.code(400).send({ error: "too_large", message: "Image must be under 2MB." });
+      }
 
-    // Sanitizing re-encode + hash-ban + NSFW screen. We store mod.webp, never
-    // the raw upload.
-    const mod = await moderateProfileImage(buffer, { userId: u.id, square: true, maxDim: 512 });
-    if (!mod.ok) {
-      return reply.code(mod.code).send({ error: mod.error, message: mod.message });
-    }
+      // Sanitizing re-encode + hash-ban + NSFW screen. We store mod.webp, never
+      // the raw upload.
+      const mod = await moderateProfileImage(buffer, { userId: u.id, square: true, maxDim: 512 });
+      if (!mod.ok) {
+        return reply.code(mod.code).send({ error: mod.error, message: mod.message });
+      }
 
-    try {
-      const prevWasCustom = String(dbUser?.avatar || "").startsWith(`${SITE_BASE}/avatars/`);
-      const avatarUrl = persistImage(
-        AVATAR_DIR,
-        "avatars",
-        String(dbUser?.avatar || ""),
-        mod.webp,
-        u.id,
-      );
-      await prisma.user.update({ where: { id: u.id }, data: { avatar: avatarUrl } });
+      try {
+        const prevWasCustom = String(dbUser?.avatar || "").startsWith(`${SITE_BASE}/avatars/`);
+        const avatarUrl = persistImage(
+          AVATAR_DIR,
+          "avatars",
+          String(dbUser?.avatar || ""),
+          mod.webp,
+          u.id,
+        );
+        await prisma.user.update({ where: { id: u.id }, data: { avatar: avatarUrl } });
 
-      // Award only on the first switch to a custom avatar — no farming by re-upload.
-      if (!prevWasCustom) awardNotoriety(u.id, "AVATAR_SET").catch(swallow);
+        // Award only on the first switch to a custom avatar — no farming by re-upload.
+        if (!prevWasCustom) awardNotoriety(u.id, "AVATAR_SET").catch(swallow);
 
-      onAvatarChanged?.(u.id, avatarUrl);
-      return reply.send({ ok: true, avatar: avatarUrl });
-    } catch (e) {
-      log.error("[avatar upload]", e);
-      return reply.code(500).send({ error: "upload_failed" });
-    }
-  });
+        onAvatarChanged?.(u.id, avatarUrl);
+        return reply.send({ ok: true, avatar: avatarUrl });
+      } catch (e) {
+        log.error("[avatar upload]", e);
+        return reply.code(500).send({ error: "upload_failed" });
+      }
+    },
+  );
 
   app.get("/avatars/:filename", async (req, reply) => {
     const filename = String((req as any).params?.filename || "").replaceAll(/[^a-zA-Z0-9._-]/g, "");
@@ -139,107 +143,122 @@ export default async function uploadsRoutes(app: FastifyInstance, opts: Opts) {
   if (!existsSync(BANNER_DIR)) mkdirSync(BANNER_DIR, { recursive: true });
   const BANNER_MAX_BYTES = 4 * 1024 * 1024;
 
-  app.post("/profile/banner/upload", { bodyLimit: 8 * 1024 * 1024 }, async (req, reply) => {
-    const u = authFromHeader((req as any).headers?.authorization);
-    if (!u) return reply.code(401).send({ error: "unauthorized" });
+  app.post(
+    "/profile/banner/upload",
+    { bodyLimit: 8 * 1024 * 1024, config: { rateLimit: { max: 10, timeWindow: "1 minute" } } },
+    async (req, reply) => {
+      const u = authFromHeader((req as any).headers?.authorization);
+      if (!u) return reply.code(401).send({ error: "unauthorized" });
 
-    // Banner stays a tier perk (Indicted+), but now gets the same moderation
-    // as avatars — it was previously an unmoderated hole.
-    const dbUser: any = await prisma.user.findUnique({
-      where: { id: u.id },
-      select: { tier: true, bannerUrl: true, mediaBannedUntil: true } as any,
-    });
-    const tier = String(dbUser?.tier ?? "INNOCENT").toUpperCase();
-    if (tier === "INNOCENT") {
-      return reply.code(403).send({
-        error: "tier_required",
-        message: "Custom banner uploads require Indicted tier or higher.",
+      // Banner stays a tier perk (Indicted+), but now gets the same moderation
+      // as avatars — it was previously an unmoderated hole.
+      const dbUser: any = await prisma.user.findUnique({
+        where: { id: u.id },
+        select: { tier: true, bannerUrl: true, mediaBannedUntil: true } as any,
       });
-    }
-    if (dbUser?.mediaBannedUntil && new Date(dbUser.mediaBannedUntil).getTime() > Date.now()) {
-      return reply
-        .code(403)
-        .send({ error: "media_banned", message: "Your upload privileges are suspended." });
-    }
+      const tier = String(dbUser?.tier ?? "INNOCENT").toUpperCase();
+      if (tier === "INNOCENT") {
+        return reply.code(403).send({
+          error: "tier_required",
+          message: "Custom banner uploads require Indicted tier or higher.",
+        });
+      }
+      if (dbUser?.mediaBannedUntil && new Date(dbUser.mediaBannedUntil).getTime() > Date.now()) {
+        return reply
+          .code(403)
+          .send({ error: "media_banned", message: "Your upload privileges are suspended." });
+      }
 
-    const body: any = (req as any).body || {};
-    const dataUrl = body.image;
-    if (!dataUrl || typeof dataUrl !== "string")
-      return reply.code(400).send({ error: "missing_image" });
+      const body: any = (req as any).body || {};
+      const dataUrl = body.image;
+      if (!dataUrl || typeof dataUrl !== "string")
+        return reply.code(400).send({ error: "missing_image" });
 
-    const match = dataUrl.match(/^data:image\/(png|jpeg|jpg|webp|gif);base64,(.+)$/);
-    if (!match)
-      return reply
-        .code(400)
-        .send({ error: "invalid_format", message: "Image must be PNG, JPEG, WebP, or GIF." });
+      const match = dataUrl.match(/^data:image\/(png|jpeg|jpg|webp|gif);base64,(.+)$/);
+      if (!match)
+        return reply
+          .code(400)
+          .send({ error: "invalid_format", message: "Image must be PNG, JPEG, WebP, or GIF." });
 
-    const buffer = Buffer.from(match[2], "base64");
-    if (buffer.length > BANNER_MAX_BYTES)
-      return reply.code(400).send({ error: "too_large", message: "Image must be under 4MB." });
+      const buffer = Buffer.from(match[2], "base64");
+      if (buffer.length > BANNER_MAX_BYTES)
+        return reply.code(400).send({ error: "too_large", message: "Image must be under 4MB." });
 
-    const mod = await moderateProfileImage(buffer, { userId: u.id, square: false, maxDim: 1600 });
-    if (!mod.ok) return reply.code(mod.code).send({ error: mod.error, message: mod.message });
+      const mod = await moderateProfileImage(buffer, { userId: u.id, square: false, maxDim: 1600 });
+      if (!mod.ok) return reply.code(mod.code).send({ error: mod.error, message: mod.message });
 
-    try {
-      const bannerUrl = persistImage(
-        BANNER_DIR,
-        "banners",
-        String(dbUser?.bannerUrl || ""),
-        mod.webp,
-        u.id,
-      );
-      await prisma.user.update({ where: { id: u.id }, data: { bannerUrl } as any });
-      return reply.send({ ok: true, bannerUrl });
-    } catch (e) {
-      log.error("[banner upload]", e);
-      return reply.code(500).send({ error: "upload_failed" });
-    }
-  });
+      try {
+        const bannerUrl = persistImage(
+          BANNER_DIR,
+          "banners",
+          String(dbUser?.bannerUrl || ""),
+          mod.webp,
+          u.id,
+        );
+        await prisma.user.update({ where: { id: u.id }, data: { bannerUrl } as any });
+        return reply.send({ ok: true, bannerUrl });
+      } catch (e) {
+        log.error("[banner upload]", e);
+        return reply.code(500).send({ error: "upload_failed" });
+      }
+    },
+  );
 
-  app.post("/lobbies/upload-image", { bodyLimit: 8 * 1024 * 1024 }, async (req, reply) => {
-    const u = authFromHeader((req as any).headers?.authorization);
-    if (!u) return reply.code(401).send({ error: "unauthorized" });
-    const dbUser = await prisma.user.findUnique({
-      where: { id: u.id },
-      select: { tier: true, globalRole: true },
-    });
-    const tier = String(dbUser?.tier ?? "INNOCENT").toUpperCase();
-    const isStaff = canAccessStaff(dbUser?.globalRole as any);
-    if (tier === "INNOCENT" && !isStaff) {
-      return reply.code(403).send({
-        error: "tier_required",
-        message: "Lobby branding requires Indicted tier or higher.",
+  app.post(
+    "/lobbies/upload-image",
+    { bodyLimit: 8 * 1024 * 1024, config: { rateLimit: { max: 10, timeWindow: "1 minute" } } },
+    async (req, reply) => {
+      const u = authFromHeader((req as any).headers?.authorization);
+      if (!u) return reply.code(401).send({ error: "unauthorized" });
+      const dbUser = await prisma.user.findUnique({
+        where: { id: u.id },
+        select: { tier: true, globalRole: true },
       });
-    }
-    const body: any = (req as any).body || {};
-    const dataUrl = body.image;
-    if (!dataUrl || typeof dataUrl !== "string")
-      return reply.code(400).send({ error: "missing_image" });
-    const match = dataUrl.match(/^data:image\/(png|jpeg|jpg|webp|gif|svg\+xml);base64,(.+)$/);
-    if (!match)
-      return reply
-        .code(400)
-        .send({ error: "invalid_format", message: "Image must be PNG, JPEG, WebP, GIF, or SVG." });
-    const ext =
-      match[1] === "jpeg" || match[1] === "jpg" ? "jpg" : match[1] === "svg+xml" ? "svg" : match[1];
-    const buffer = Buffer.from(match[2], "base64");
-    if (buffer.length > BANNER_MAX_BYTES)
-      return reply.code(400).send({ error: "too_large", message: "Image must be under 4MB." });
-    try {
-      const kind =
-        String(body.kind || "img")
-          .replaceAll(/[^a-z]/g, "")
-          .slice(0, 8) || "img";
-      const filename = `lobby-${kind}-${u.id}-${Date.now()}.${ext}`;
-      const filepath = join(BANNER_DIR, filename);
-      writeFileSync(filepath, buffer);
-      const url = `${SITE_BASE}/banners/${filename}`;
-      return reply.send({ ok: true, url });
-    } catch (e) {
-      log.error("[lobby image upload]", e);
-      return reply.code(500).send({ error: "upload_failed" });
-    }
-  });
+      const tier = String(dbUser?.tier ?? "INNOCENT").toUpperCase();
+      const isStaff = canAccessStaff(dbUser?.globalRole as any);
+      if (tier === "INNOCENT" && !isStaff) {
+        return reply.code(403).send({
+          error: "tier_required",
+          message: "Lobby branding requires Indicted tier or higher.",
+        });
+      }
+      const body: any = (req as any).body || {};
+      const dataUrl = body.image;
+      if (!dataUrl || typeof dataUrl !== "string")
+        return reply.code(400).send({ error: "missing_image" });
+      const match = dataUrl.match(/^data:image\/(png|jpeg|jpg|webp|gif|svg\+xml);base64,(.+)$/);
+      if (!match)
+        return reply
+          .code(400)
+          .send({
+            error: "invalid_format",
+            message: "Image must be PNG, JPEG, WebP, GIF, or SVG.",
+          });
+      const ext =
+        match[1] === "jpeg" || match[1] === "jpg"
+          ? "jpg"
+          : match[1] === "svg+xml"
+            ? "svg"
+            : match[1];
+      const buffer = Buffer.from(match[2], "base64");
+      if (buffer.length > BANNER_MAX_BYTES)
+        return reply.code(400).send({ error: "too_large", message: "Image must be under 4MB." });
+      try {
+        const kind =
+          String(body.kind || "img")
+            .replaceAll(/[^a-z]/g, "")
+            .slice(0, 8) || "img";
+        const filename = `lobby-${kind}-${u.id}-${Date.now()}.${ext}`;
+        const filepath = join(BANNER_DIR, filename);
+        writeFileSync(filepath, buffer);
+        const url = `${SITE_BASE}/banners/${filename}`;
+        return reply.send({ ok: true, url });
+      } catch (e) {
+        log.error("[lobby image upload]", e);
+        return reply.code(500).send({ error: "upload_failed" });
+      }
+    },
+  );
 
   app.get("/banners/:filename", async (req, reply) => {
     const filename = String((req as any).params?.filename || "").replaceAll(/[^a-zA-Z0-9._-]/g, "");
