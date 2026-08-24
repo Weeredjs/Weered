@@ -295,10 +295,21 @@ function EventCard({ ev }: { ev: UpcomingEvent }) {
   );
 }
 
-function LobbyCardComp({ lobby, showRole }: { lobby: LobbyCard; showRole?: boolean }) {
+type LiveFace = { id: string; name?: string; avatar?: string | null; avatarColor?: string | null };
+
+function LobbyCardComp({
+  lobby,
+  showRole,
+  faces,
+}: {
+  lobby: LobbyCard;
+  showRole?: boolean;
+  faces?: LiveFace[];
+}) {
   const [hovered, setHovered] = useState(false);
   const ac = lobby.accentColor || "#7C3AED";
-  const hasOnline = lobby.onlineCount > 0;
+  const hasOnline = lobby.onlineCount > 0 || (faces?.length ?? 0) > 0;
+  const stack = (faces || []).slice(0, 5);
 
   return (
     <Link
@@ -396,6 +407,48 @@ function LobbyCardComp({ lobby, showRole }: { lobby: LobbyCard; showRole?: boole
           </div>
         </div>
 
+        {stack.length > 0 && (
+          <div style={{ display: "flex", alignItems: "center", flexShrink: 0 }}>
+            {stack.map((u, i) => {
+              const nm = u.name || "?";
+              return (
+                <div
+                  key={u.id || i}
+                  title={nm}
+                  style={{
+                    width: 26,
+                    height: 26,
+                    borderRadius: "50%",
+                    overflow: "hidden",
+                    marginLeft: i === 0 ? 0 : -8,
+                    zIndex: 5 - i,
+                    position: "relative",
+                    border: "2px solid rgba(10,10,15,.9)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: 10,
+                    fontWeight: 800,
+                    color: "#fff",
+                    background: u.avatar ? "rgba(255,255,255,.08)" : u.avatarColor || `${ac}aa`,
+                    flexShrink: 0,
+                  }}
+                >
+                  {u.avatar ? (
+                    <img
+                      src={u.avatar}
+                      alt={nm + " avatar"}
+                      style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                    />
+                  ) : (
+                    (nm[0]?.toUpperCase() ?? "?")
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+
         <div
           style={{
             display: "flex",
@@ -423,7 +476,7 @@ function LobbyCardComp({ lobby, showRole }: { lobby: LobbyCard; showRole?: boole
                 fontVariantNumeric: "tabular-nums",
               }}
             >
-              {lobby.onlineCount} online
+              {Math.max(lobby.onlineCount, faces?.length ?? 0)} online
             </span>
           </div>
           <span style={{ fontSize: 10, color: "rgba(100,116,139,0.35)" }}>
@@ -631,6 +684,40 @@ export default function LobbyPage() {
     });
   }, []);
 
+  // Live faces per lobby: /live/rooms lists every occupied room with up to 5
+  // user avatars and its lobbyId — aggregate per lobby, poll every 15s, so
+  // the index shows PEOPLE on the rows, not just a grey count.
+  const [facesByLobby, setFacesByLobby] = useState<Map<string, LiveFace[]>>(new Map());
+  useEffect(() => {
+    let alive = true;
+    const load = () =>
+      fetch(`${API}/live/rooms`)
+        .then((r) => r.json())
+        .then((j) => {
+          if (!alive || !j?.ok || !Array.isArray(j.rooms)) return;
+          const m = new Map<string, LiveFace[]>();
+          for (const r of j.rooms) {
+            if (!r?.lobbyId || !Array.isArray(r.avatars)) continue;
+            const arr = m.get(r.lobbyId) || [];
+            for (const u of r.avatars) {
+              if (u?.id && !arr.some((x) => x.id === u.id)) arr.push(u);
+            }
+            m.set(r.lobbyId, arr);
+          }
+          setFacesByLobby(m);
+        })
+        .catch(() => {});
+    load();
+    const iv = setInterval(load, 15_000);
+    return () => {
+      alive = false;
+      clearInterval(iv);
+    };
+  }, []);
+
+  const liveOf = (l: LobbyCard) => Math.max(l.onlineCount, facesByLobby.get(l.id)?.length ?? 0);
+  const myIds = new Set(myLobbies.map((l) => l.id));
+
   const loggedIn = myLobbies.length > 0;
 
   return (
@@ -740,9 +827,16 @@ export default function LobbyPage() {
                   <div className="lobby-section">
                     <SectionHeader title="Your Lobbies" icon="⭐" />
                     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                      {myLobbies.map((l) => (
-                        <LobbyCardComp key={l.id} lobby={l} showRole />
-                      ))}
+                      {[...myLobbies]
+                        .sort((a, b) => liveOf(b) - liveOf(a))
+                        .map((l) => (
+                          <LobbyCardComp
+                            key={l.id}
+                            lobby={l}
+                            showRole
+                            faces={facesByLobby.get(l.id)}
+                          />
+                        ))}
                     </div>
                   </div>
                 )}
@@ -766,12 +860,13 @@ export default function LobbyPage() {
                   ) : (
                     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                       {allLobbies
+                        // Don't re-list lobbies already shown under Your Lobbies.
+                        .filter((l) => !myIds.has(l.id))
                         .sort(
-                          (a, b) =>
-                            b.onlineCount - a.onlineCount || b._count.members - a._count.members,
+                          (a, b) => liveOf(b) - liveOf(a) || b._count.members - a._count.members,
                         )
                         .map((l) => (
-                          <LobbyCardComp key={l.id} lobby={l} />
+                          <LobbyCardComp key={l.id} lobby={l} faces={facesByLobby.get(l.id)} />
                         ))}
                     </div>
                   )}
