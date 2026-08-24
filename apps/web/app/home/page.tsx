@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { useWeered, useUsersByRoom } from "../../components/WeeredProvider";
-import { avatarBg } from "../../lib/avatarColor";
 import DmPreviewStrip from "../../components/DmPreviewStrip";
 import ActivityFeed from "../../components/ActivityFeed";
 import FeatureShowcase from "../../components/FeatureShowcase";
@@ -14,6 +13,7 @@ import LobbyChatDrawer from "../../components/LobbyChatDrawer";
 import HomeActivityTicker from "../../components/HomeActivityTicker";
 import FirstTimePrompt from "../../components/FirstTimePrompt";
 import HomePinnedNews from "../../components/HomePinnedNews";
+import HomePulse from "../../components/HomePulse";
 import LobbySearch from "../../components/LobbySearch";
 import { onActivate } from "@/lib/a11y";
 
@@ -671,63 +671,8 @@ function LobbyCard({ room, idx, onJoin }: { room: any; idx: number; onJoin: (id:
   );
 }
 
-function FriendStrip({ friends, onDm, onJoin: _onJoin }: { friends: any[]; onDm: (u: any) => void; onJoin: (u: any) => void }) {
-  if (friends.length === 0) return null;
-  return (
-    <div style={{ marginTop: 24 }}>
-      <SectionHeader icon="👥" label="Active Now" count={friends.length} />
-      <div style={{ display: "flex", gap: 10, overflowX: "auto", paddingBottom: 6, scrollbarWidth: "none" }}>
-        {friends.map((u, i) => {
-          const name = pickFirst(u?.name, u?.username, "?");
-          const initial = name[0]?.toUpperCase() ?? "?";
-          const inRoom = Boolean(u?.room ?? u?.roomId ?? u?.activeRoom);
-          const loc = inRoom ? String(u?.room ?? u?.roomId ?? "a room").replace("room:", "") : "lobby";
-          const avatar = u?.avatar || null;
-          const color = u?.avatarColor || avatarBg(name);
-          return (
-            <div
-              key={u?.id || i}
-              onClick={() => onDm(u)}
-              onKeyDown={onActivate(() => onDm(u))}
-              role="button"
-              tabIndex={0}
-              style={{
-                flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "center",
-                gap: 5, padding: "10px 14px", borderRadius: 2,
-                background: "rgba(255,255,255,.02)", border: "1px solid rgba(255,255,255,.06)",
-                cursor: "pointer", transition: "all .15s", minWidth: 72,
-              }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,.14)"; (e.currentTarget as HTMLElement).style.transform = "translateY(-1px)"; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,.06)"; (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; }}
-            >
-              <div style={{ position: "relative" }}>
-                <div style={{
-                  width: 36, height: 36, borderRadius: "50%",
-                  background: avatar ? "rgba(255,255,255,.08)" : color,
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  fontWeight: 800, fontSize: 14, color: "#fff", overflow: "hidden",
-                }}>
-                  {avatar ? <img src={avatar} alt={`${name} avatar`} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : initial}
-                </div>
-                <span style={{
-                  position: "absolute", bottom: 0, right: 0,
-                  width: 9, height: 9, borderRadius: "50%",
-                  background: inRoom ? "#5800E5" : "#22c55e",
-                  border: "2px solid rgba(10,10,15,1)",
-                  boxShadow: `0 0 4px ${inRoom ? "#5800E5" : "#22c55e"}`,
-                }} />
-              </div>
-              <span style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,.8)", maxWidth: 64, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textAlign: "center" }}>{name}</span>
-              <span style={{ fontSize: 9, fontFamily: "monospace", color: "rgba(255,255,255,.3)", maxWidth: 64, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                {inRoom ? loc : "lobby"}
-              </span>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
+// (The old FriendStrip lived here — replaced by components/HomePulse, which
+// adds live refresh and the join-a-friend door.)
 
 function RecentRow({ room, onJoin }: { room: any; onJoin: (id: string, pinned: boolean) => void }) {
   const name = roomName(room);
@@ -909,22 +854,6 @@ export default function HomePage() {
     return base;
   }, [rooms, fetchedRooms, lobbyPresenceCounts]);
 
-  const allUsers: any[] = useMemo(() => {
-    if (!usersByRoom || typeof usersByRoom !== "object") return [];
-    const seen = new Set<string>();
-    const out: any[] = [];
-    for (const roomUsers of Object.values(usersByRoom) as any[][]) {
-      for (const u of roomUsers) {
-        const id = u?.id ?? u?.userId;
-        if (!id || seen.has(id)) continue;
-        seen.add(id);
-        const rid = Object.keys(usersByRoom).find(rid => (usersByRoom[rid] as any[]).some((ru: any) => ru.id === id));
-        out.push({ ...u, room: rid });
-      }
-    }
-    return out;
-  }, [usersByRoom]);
-
   const filtered = useMemo(() => allRooms, [allRooms]);
 
   const lobbies = useMemo(() => {
@@ -979,18 +908,6 @@ export default function HomePage() {
       .filter((r: any) => !isPrivateRoom(r))
       .slice(0, 6);
   }, [serverRecents, allRooms]);
-
-  const [friendsList, setFriendsList] = React.useState<any[]>([]);
-  React.useEffect(() => {
-    const token = localStorage.getItem("weered_token") ?? "";
-    if (!token) return;
-    fetch("https://api.weered.ca/friends", { headers: { Authorization: `Bearer ${token}` } })
-      .then(r => r.json())
-      .then(d => { if (Array.isArray(d?.friends)) setFriendsList(d.friends); })
-      .catch(() => {});
-  }, []);
-
-  const onlineFriends = useMemo(() => friendsList.filter(u => u?.online).slice(0, 12), [friendsList]);
 
   function handleJoin(id: string, pinned?: boolean) {
     if (!id) return;
@@ -1086,6 +1003,13 @@ export default function HomePage() {
         <div style={{ paddingTop: 14 }}>
           <HomeActivityTicker />
         </div>
+
+        {/* Mplayer, the home way: people are the doors. Live Home Lobby faces
+            + friends/crew with where they are and one-click Join. */}
+        <HomePulse
+          homeUsers={(usersByRoom as any)?.["lobby"] ?? (usersByRoom as any)?.["room:lobby"] ?? []}
+          onDm={handleDm}
+        />
 
         <div style={{ paddingTop: 14 }}>
           <HeroBanner lobby={featured} onJoin={handleJoin} />
@@ -1211,7 +1135,6 @@ export default function HomePage() {
           </div>
         )}
 
-        <FriendStrip friends={onlineFriends} onDm={handleDm} onJoin={u => { const rid = pickFirst(u?.room, u?.roomId, ""); if (rid) handleJoin(rid); }} />
 
         <div style={{ marginTop: 24 }}>
           <DmPreviewStrip />
