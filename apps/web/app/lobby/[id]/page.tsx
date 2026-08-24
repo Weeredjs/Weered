@@ -15,7 +15,7 @@ import LobbySplash, {
   WINDROSE_SPLASH_PALETTE,
   DESTINY_SPLASH_PALETTE,
 } from "../../../components/LobbySplash";
-import LobbyRoomDirectory from "../../../components/LobbyRoomDirectory";
+import LobbyHall from "../../../components/LobbyHall";
 import LobbyTierCards from "../../../components/LobbyTierCards";
 import LobbyEvents from "../../../components/LobbyEvents";
 import GuestLaunchBar from "../../../components/GuestLaunchBar";
@@ -689,38 +689,9 @@ export default function LobbyIdPage() {
             _count: j.lobby._count,
             tiers: j.lobby.tiers || [],
           });
-          if (
-            j.lobby.moduleType === "BUNGIE" ||
-            j.lobby.moduleType === "TWITCH" ||
-            j.lobby.moduleType === "MARATHON" ||
-            j.lobby.moduleType === "MLB" ||
-            j.lobby.moduleType === "PGA" ||
-            j.lobby.moduleType === "NEWS" ||
-            j.lobby.moduleType === "RIOT" ||
-            j.lobby.moduleType === "FORTNITE" ||
-            j.lobby.moduleType === "TRADING" ||
-            j.lobby.moduleType === "POKER" ||
-            j.lobby.moduleType === "HEADQUARTERS" ||
-            j.lobby.moduleType === "CS2" ||
-            j.lobby.moduleType === "DOTA2" ||
-            j.lobby.moduleType === "STUDY" ||
-            j.lobby.moduleType === "PUBG" ||
-            j.lobby.moduleType === "DND" ||
-            j.lobby.moduleType === "POE" ||
-            j.lobby.moduleType === "POE2" ||
-            j.lobby.moduleType === "DIVISION2" ||
-            j.lobby.moduleType === "WINDROSE" ||
-            j.lobby.moduleType === "HELLDIVERS2" ||
-            j.lobby.moduleType === "CHESS" ||
-            j.lobby.moduleType === "EVE" ||
-            j.lobby.moduleType === "MTG" ||
-            j.lobby.moduleType === "HLL" ||
-            j.lobby.moduleType === "COWORK"
-          ) {
-            setView("modules");
-          } else {
-            setView("rooms");
-          }
+          // Mplayer Mode: every lobby lands on the Lobby (rooms) view — people
+          // first. Modules stay one tab away; the hall's pulse rail links there.
+          setView("rooms");
           setMembership(j.membership || null);
           setJoinRequest(j.joinRequest || null);
           setMemberChecked(true);
@@ -1013,7 +984,7 @@ export default function LobbyIdPage() {
                   anchor
                   onClick={() => setView("rooms")}
                 >
-                  Rooms
+                  Lobby
                 </TabBtn>
                 {hasLfgBoard && (
                   <TabBtn active={view === "lfg"} accent={accent} onClick={() => setView("lfg")}>
@@ -1373,11 +1344,13 @@ export default function LobbyIdPage() {
                     />
                   )
                 ) : view === "rooms" ? (
-                  <LobbyRoomDirectory
+                  <LobbyHall
                     lobbyId={lobbyId}
                     accentColor={accent}
                     bannerUrl={lobbyInfo?.bannerUrl}
                     moduleType={lobbyInfo?.moduleType}
+                    hasModules={hasModules}
+                    onOpenModules={() => setView("modules")}
                     style={{ flex: 1, minHeight: 0 }}
                   />
                 ) : view === "lfg" && hasLfgBoard ? (
