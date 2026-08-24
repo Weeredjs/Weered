@@ -5,6 +5,7 @@ import { prisma } from "../lib/prisma";
 import { z } from "zod";
 import { LobbyRole } from "@prisma/client";
 import { isAIAvailable, OPERATOR_PRESENCE } from "../lib/roomState";
+import { lastMessageMap } from "../lib/roomRecency";
 
 // Public read-only "N viewing" registry — ephemeral in-memory presence for anon
 // visitors on lobby pages (they're not in the WS presence system). No DB, no
@@ -97,6 +98,7 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
         _count: { select: { members: true } },
       },
     });
+    const lastMsgByRoom = await lastMessageMap(list.map((r) => r.id));
     const out = list.map((r) => {
       const wsRoom = rooms.get(r.id);
       const onlineUsers: { id: string; name: string; avatar?: string }[] = [];
@@ -113,6 +115,8 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
         description: r.description || "",
         onlineCount: wsRoom?.users?.size ?? 0,
         onlineUsers,
+        lastMessageAt: lastMsgByRoom.get(r.id)?.toISOString() ?? null,
+        lastActiveAt: wsRoom?.lastActiveAt ?? null,
         locked: Boolean(r.locked),
         pinned: Boolean((r as any).pinned),
         isEvent: Boolean((r as any).isEvent),
@@ -321,6 +325,7 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
     });
     if (!lobby) return reply.code(404).send({ ok: false, error: "not_found" });
 
+    const lastMsgByRoom = await lastMessageMap(lobby.rooms.map((r: any) => r.id));
     const enrichedRooms = lobby.rooms.map((r: any) => {
       const wsRoom = rooms.get(r.id);
       const onlineUsers: { id: string; name: string; avatar?: string }[] = [];
@@ -330,7 +335,13 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
           onlineUsers.push({ id: uid, name: u?.name || uid, avatar: u?.avatar || undefined });
         }
       }
-      return { ...r, onlineCount: wsRoom?.users?.size ?? 0, onlineUsers };
+      return {
+        ...r,
+        onlineCount: wsRoom?.users?.size ?? 0,
+        onlineUsers,
+        lastMessageAt: lastMsgByRoom.get(r.id)?.toISOString() ?? null,
+        lastActiveAt: wsRoom?.lastActiveAt ?? null,
+      };
     });
 
     let membership: any = null;
@@ -794,7 +805,9 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
     if (isAIAvailable() && !seen.has("operator")) {
       users.push({ ...OPERATOR_PRESENCE, isAway: false });
     }
-    return reply.send({ ok: true, users });
+    // `count` included for consumers that only need the headline number
+    // (home/page.tsx reads it; omitting it silently zeroed home live counts).
+    return reply.send({ ok: true, count: users.length, users });
   });
 
   app.get("/lobbies/:lobbyId/presence/:userId/game-card", async (req, reply) => {

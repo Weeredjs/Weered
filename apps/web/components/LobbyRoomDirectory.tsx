@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useWeered } from "./WeeredProvider";
 
@@ -10,6 +10,19 @@ interface RoomUser {
   id?: string;
   name?: string;
   avatar?: string;
+  isAway?: boolean;
+}
+
+// Lobby-wide presence row (from /lobbies/:id/presence) — every online user
+// tagged with the room they're in. Passed down by LobbyHall so the directory
+// can show full occupant stacks instead of the API's 4-user cap.
+export interface LobbyPresenceUser {
+  id: string;
+  name?: string;
+  avatar?: string | null;
+  isAway?: boolean;
+  roomId?: string;
+  roomName?: string;
 }
 
 interface RoomData {
@@ -21,11 +34,25 @@ interface RoomData {
   _count?: { members: number };
   onlineCount?: number;
   onlineUsers?: RoomUser[];
+  lastMessageAt?: string | null;
+  lastActiveAt?: number | null;
   pinned?: boolean;
   isEvent?: boolean;
   iconUrl?: string | null;
   bannerUrl?: string | null;
   accentColor?: string | null;
+}
+
+// "2m" / "3h" / "2d" — recency chip for quiet rooms.
+function timeAgo(iso?: string | null, epochMs?: number | null): string | null {
+  const t = iso ? Date.parse(iso) : typeof epochMs === "number" ? epochMs : NaN;
+  if (!Number.isFinite(t)) return null;
+  const s = Math.max(0, (Date.now() - t) / 1000);
+  if (s < 90) return "just now";
+  if (s < 3600) return `${Math.floor(s / 60)}m ago`;
+  if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
+  if (s < 7 * 86400) return `${Math.floor(s / 86400)}d ago`;
+  return null; // older than a week reads as noise — say nothing
 }
 
 function authHeaders(): Record<string, string> {
@@ -237,12 +264,14 @@ export default function LobbyRoomDirectory({
   bannerUrl,
   moduleType,
   style,
+  presenceUsers,
 }: {
   lobbyId: string;
   accentColor?: string;
   bannerUrl?: string;
   moduleType?: string;
   style?: React.CSSProperties;
+  presenceUsers?: LobbyPresenceUser[];
 }) {
   const router = useRouter();
   const { join } = useWeered() as any;
@@ -263,17 +292,72 @@ export default function LobbyRoomDirectory({
   const LIVE_COLOR = "#22c55e";
   const labels = CREATE_LABELS[moduleType || ""] || DEFAULT_LABEL;
 
-  useEffect(() => {
-    setLoading(true);
+  const load = useCallback(() => {
     fetch(`${API}/lobbies/${encodeURIComponent(lobbyId)}`, { headers: authHeaders() as any })
       .then((r) => r.json())
       .then((j) => {
         if (j.ok && j.lobby?.rooms) setRooms(j.lobby.rooms);
-        if (j.ok && j.lobby?.bannerUrl && !lobbyBanner) setLobbyBanner(j.lobby.bannerUrl);
+        if (j.ok && j.lobby?.bannerUrl) setLobbyBanner((prev) => prev || j.lobby.bannerUrl);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [lobbyId]);
+
+  // Live directory: initial load + 45s poll + refetch on presence WS events
+  // (WeeredProvider re-dispatches them as weered:* CustomEvents), debounced so
+  // a burst of joins costs one refetch. This is what makes rooms feel alive.
+  useEffect(() => {
+    setLoading(true);
+    load();
+    const iv = setInterval(load, 45_000);
+    let t: ReturnType<typeof setTimeout> | null = null;
+    const onActivity = () => {
+      if (t) clearTimeout(t);
+      t = setTimeout(load, 800);
+    };
+    const events = ["weered:lobby:activity", "weered:presence:join", "weered:presence:leave"];
+    for (const e of events) window.addEventListener(e, onActivity);
+    return () => {
+      clearInterval(iv);
+      if (t) clearTimeout(t);
+      for (const e of events) window.removeEventListener(e, onActivity);
+    };
+  }, [load]);
+
+  // Full per-room occupant lists from lobby presence (uncapped, with away
+  // state) — beats the API's 4-user onlineUsers cap when available.
+  const occupantsByRoom = useMemo(() => {
+    const m = new Map<string, RoomUser[]>();
+    for (const u of presenceUsers || []) {
+      if (!u.roomId) continue;
+      const arr = m.get(u.roomId) || [];
+      arr.push({ id: u.id, name: u.name, avatar: u.avatar || undefined, isAway: u.isAway });
+      m.set(u.roomId, arr);
+    }
+    return m;
+  }, [presenceUsers]);
+
+  // Mplayer ordering: people first. Occupied rooms float to the top by live
+  // headcount; quiet rooms fall back to event > pinned > most recent chatter.
+  const sortedRooms = useMemo(() => {
+    const recency = (r: RoomData) => {
+      const t = r.lastMessageAt ? Date.parse(r.lastMessageAt) : NaN;
+      return Number.isFinite(t) ? t : 0;
+    };
+    const liveOf = (r: RoomData) =>
+      Math.max(r.onlineCount ?? 0, occupantsByRoom.get(r.id)?.length ?? 0);
+    return [...rooms].sort((a, b) => {
+      const live = liveOf(b) - liveOf(a);
+      if (live !== 0) return live;
+      const ev = Number(b.isEvent ?? false) - Number(a.isEvent ?? false);
+      if (ev !== 0) return ev;
+      const pin = Number(b.pinned ?? false) - Number(a.pinned ?? false);
+      if (pin !== 0) return pin;
+      const rec = recency(b) - recency(a);
+      if (rec !== 0) return rec;
+      return (a.name || "").localeCompare(b.name || "");
+    });
+  }, [rooms, occupantsByRoom]);
 
   function handleJoin(room: RoomData) {
     try {
@@ -773,7 +857,7 @@ export default function LobbyRoomDirectory({
             gap: 14,
           }}
         >
-          {rooms.map((room) => {
+          {sortedRooms.map((room) => {
             const customIcon = room.iconUrl ? String(room.iconUrl) : null;
             const customBanner = room.bannerUrl ? String(room.bannerUrl) : null;
             const icon: React.ReactNode = customIcon ? (
@@ -788,9 +872,11 @@ export default function LobbyRoomDirectory({
             );
             const subtitle = room.description || roomSubtitle(room.name);
             const memberCount = room._count?.members ?? 0;
-            const liveCount = room.onlineCount ?? 0;
+            const occupants = occupantsByRoom.get(room.id) ?? room.onlineUsers ?? [];
+            const liveCount = Math.max(room.onlineCount ?? 0, occupants.length);
             const isLive = liveCount > 0;
-            const onlineUsers: RoomUser[] = room.onlineUsers ?? [];
+            const onlineUsers: RoomUser[] = occupants;
+            const quietAgo = isLive ? null : timeAgo(room.lastMessageAt, room.lastActiveAt);
 
             const cardColor =
               room.accentColor && /^#[0-9a-f]{6}$/i.test(room.accentColor)
@@ -1138,7 +1224,13 @@ export default function LobbyRoomDirectory({
                           <circle cx="12" cy="8" r="3.5" />
                           <path d="M5.5 21v-1.5A5 5 0 0110.5 14h3a5 5 0 015 5.5V21" />
                         </svg>
-                        {memberCount > 0 ? `${memberCount} joined` : "Empty"}
+                        {isLive
+                          ? `${liveCount} here now`
+                          : memberCount > 0
+                            ? `${memberCount} joined${quietAgo ? ` · ${quietAgo}` : ""}`
+                            : quietAgo
+                              ? `active ${quietAgo}`
+                              : "Be first in"}
                       </span>
                     </div>
 
