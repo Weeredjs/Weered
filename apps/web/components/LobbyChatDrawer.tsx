@@ -9,11 +9,27 @@ interface Props {
   roomId: string;
   title?: string;
   accentColor?: string;
+  // Start closed regardless of viewport (lobby pages embed the chat inline on
+  // the Lobby tab, so the drawer is a companion for the other tabs).
+  defaultOpen?: boolean;
+  // Hide the CHAT edge tab (used while the inline chat is on screen); the
+  // drawer still listens for weered:chat:dialin to go fullscreen.
+  hideTab?: boolean;
 }
 
-export default function LobbyChatDrawer({ roomId, title = "Lobby Chat", accentColor }: Props) {
+export default function LobbyChatDrawer({
+  roomId,
+  title = "Lobby Chat",
+  accentColor,
+  defaultOpen,
+  hideTab,
+}: Props) {
   const [open, setOpen] = useState(() =>
-    typeof window !== "undefined" ? window.innerWidth > 767 : true,
+    defaultOpen !== undefined
+      ? defaultOpen
+      : typeof window !== "undefined"
+        ? window.innerWidth > 767
+        : true,
   );
   const [mounted, setMounted] = useState(false);
   const [unread, setUnread] = useState(0);
@@ -72,6 +88,21 @@ export default function LobbyChatDrawer({ roomId, title = "Lobby Chat", accentCo
 
   useEffect(() => {
     setMounted(true);
+  }, []);
+
+  // "Dial In" from the inline lobby chat: open the drawer straight into
+  // fullscreen — the chat takes the whole stage.
+  useEffect(() => {
+    const onDialIn = () => {
+      try {
+        localStorage.setItem("weered_chat_fullscreen", "1");
+      } catch {}
+      setFullscreen(true);
+      setOpen(true);
+      setUnread(0);
+    };
+    window.addEventListener("weered:chat:dialin", onDialIn);
+    return () => window.removeEventListener("weered:chat:dialin", onDialIn);
   }, []);
 
   useEffect(() => {
@@ -228,7 +259,7 @@ export default function LobbyChatDrawer({ roomId, title = "Lobby Chat", accentCo
         }
       `}</style>
 
-      {mounted && (
+      {mounted && !hideTab && (
         <div
           className={`lobby-chat-tab${open ? " open" : ""}${hasUnread && !open ? " has-unread" : ""}`}
           onClick={handleToggle}

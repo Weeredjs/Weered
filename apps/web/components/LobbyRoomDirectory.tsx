@@ -265,6 +265,7 @@ export default function LobbyRoomDirectory({
   moduleType,
   style,
   presenceUsers,
+  compact,
 }: {
   lobbyId: string;
   accentColor?: string;
@@ -272,6 +273,8 @@ export default function LobbyRoomDirectory({
   moduleType?: string;
   style?: React.CSSProperties;
   presenceUsers?: LobbyPresenceUser[];
+  // Narrow single-column stack (the Lobby tab, where chat holds the centre).
+  compact?: boolean;
 }) {
   const router = useRouter();
   const { join } = useWeered() as any;
@@ -853,8 +856,8 @@ export default function LobbyRoomDirectory({
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
-            gap: 14,
+            gridTemplateColumns: compact ? "1fr" : "repeat(auto-fill, minmax(300px, 1fr))",
+            gap: compact ? 8 : 14,
           }}
         >
           {sortedRooms.map((room) => {
