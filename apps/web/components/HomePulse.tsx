@@ -78,14 +78,46 @@ function Face({
   );
 }
 
+type HomeRoom = {
+  id: string;
+  name: string;
+  onlineCount?: number;
+  onlineUsers?: { id: string; name?: string; avatar?: string | null }[];
+  lastMessageAt?: string | null;
+};
+
+function timeAgo(iso?: string | null): string | null {
+  const t = iso ? Date.parse(iso) : NaN;
+  if (!Number.isFinite(t)) return null;
+  const s = Math.max(0, (Date.now() - t) / 1000);
+  if (s < 90) return "just now";
+  if (s < 3600) return `${Math.floor(s / 60)}m`;
+  if (s < 86400) return `${Math.floor(s / 3600)}h`;
+  if (s < 7 * 86400) return `${Math.floor(s / 86400)}d`;
+  return null;
+}
+
 export default function HomePulse({
-  homeUsers,
+  homeUsers: _homeUsers,
   onDm,
 }: {
   homeUsers: any[];
   onDm: (u: any) => void;
 }) {
   const [friends, setFriends] = useState<any[]>([]);
+  const [rooms, setRooms] = useState<HomeRoom[]>([]);
+
+  // The Home Lobby's rooms — the hidden pool you're already inside once you're
+  // on /home. Listed here (not as a browsable directory) so people who made it
+  // through the door can actually see where to go.
+  const loadRooms = useCallback(() => {
+    fetch(`${API}/lobbies/lobby/rooms`, { headers: authHeaders() as any })
+      .then((r) => r.json())
+      .then((j) => {
+        if (j?.ok && Array.isArray(j.rooms)) setRooms(j.rooms);
+      })
+      .catch(() => {});
+  }, []);
 
   const loadFriends = useCallback(() => {
     fetch(`${API}/friends`, { headers: authHeaders() as any })
@@ -99,12 +131,16 @@ export default function HomePulse({
   // Friends go LIVE: 60s poll + refetch on presence WS events (the old home
   // strip fetched once and quietly went stale for the whole session).
   useEffect(() => {
-    loadFriends();
-    const iv = setInterval(loadFriends, 60_000);
+    const refresh = () => {
+      loadFriends();
+      loadRooms();
+    };
+    refresh();
+    const iv = setInterval(refresh, 60_000);
     let t: ReturnType<typeof setTimeout> | null = null;
     const onActivity = () => {
       if (t) clearTimeout(t);
-      t = setTimeout(loadFriends, 800);
+      t = setTimeout(refresh, 800);
     };
     const events = ["weered:presence:join", "weered:presence:leave", "weered:lobby:activity"];
     for (const e of events) window.addEventListener(e, onActivity);
@@ -113,22 +149,23 @@ export default function HomePulse({
       if (t) clearTimeout(t);
       for (const e of events) window.removeEventListener(e, onActivity);
     };
-  }, [loadFriends]);
+  }, [loadFriends, loadRooms]);
 
   const online = useMemo(() => (friends || []).filter((u) => u?.online).slice(0, 16), [friends]);
-  const here = useMemo(() => {
-    const seen = new Set<string>();
-    const out: any[] = [];
-    for (const u of homeUsers || []) {
-      const id = u?.id ?? u?.userId;
-      if (!id || seen.has(id)) continue;
-      seen.add(id);
-      out.push(u);
-    }
-    return out;
-  }, [homeUsers]);
+  // Live rooms first, then most recently active.
+  const sortedRooms = useMemo(
+    () =>
+      [...rooms].sort((a, b) => {
+        const live = (b.onlineCount ?? 0) - (a.onlineCount ?? 0);
+        if (live !== 0) return live;
+        const ra = a.lastMessageAt ? Date.parse(a.lastMessageAt) : 0;
+        const rb = b.lastMessageAt ? Date.parse(b.lastMessageAt) : 0;
+        return rb - ra;
+      }),
+    [rooms],
+  );
 
-  if (here.length === 0 && online.length === 0) return null;
+  if (sortedRooms.length === 0 && online.length === 0) return null;
 
   const label: React.CSSProperties = {
     fontSize: 10,
@@ -152,38 +189,65 @@ export default function HomePulse({
         background: "linear-gradient(135deg, rgba(88,0,229,.07), rgba(255,255,255,.02))",
       }}
     >
-      {here.length > 0 && (
-        <div style={{ minWidth: 180 }}>
-          <div style={label}>Here now · {here.length}</div>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-            {here.slice(0, 14).map((u, i) => (
-              <Face
-                key={u?.id || i}
-                name={u?.name || "?"}
-                avatar={u?.avatar}
-                color={u?.avatarColor}
-                title={(u?.name || "?") + " · here in the lobby"}
-              />
-            ))}
-            {here.length > 14 && (
-              <div
-                style={{
-                  width: 30,
-                  height: 30,
-                  borderRadius: "50%",
-                  background: "rgba(255,255,255,.06)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: 10,
-                  fontWeight: 700,
-                  color: "rgba(255,255,255,.45)",
-                  fontFamily: "monospace",
-                }}
-              >
-                +{here.length - 14}
-              </div>
-            )}
+      {sortedRooms.length > 0 && (
+        <div style={{ minWidth: 210, maxWidth: 320 }}>
+          <div style={label}>Home rooms · {sortedRooms.length}</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+            {sortedRooms.slice(0, 4).map((r) => {
+              const live = r.onlineCount ?? 0;
+              const ago = live > 0 ? null : timeAgo(r.lastMessageAt);
+              return (
+                <Link
+                  key={r.id}
+                  href={`/room/${encodeURIComponent(r.id)}`}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    padding: "6px 9px",
+                    borderRadius: 2,
+                    textDecoration: "none",
+                    background: "rgba(255,255,255,.03)",
+                    border: `1px solid ${live > 0 ? "rgba(34,197,94,.28)" : "rgba(255,255,255,.07)"}`,
+                  }}
+                >
+                  <span
+                    style={{
+                      width: 7,
+                      height: 7,
+                      borderRadius: "50%",
+                      flexShrink: 0,
+                      background: live > 0 ? "#22c55e" : "rgba(148,163,184,.3)",
+                      boxShadow: live > 0 ? "0 0 6px #22c55e88" : "none",
+                    }}
+                  />
+                  <span
+                    style={{
+                      fontSize: 11.5,
+                      fontWeight: 700,
+                      color: "rgba(243,244,246,.88)",
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      flex: 1,
+                      minWidth: 0,
+                    }}
+                  >
+                    {r.name}
+                  </span>
+                  <span
+                    style={{
+                      fontSize: 9.5,
+                      fontFamily: "monospace",
+                      color: live > 0 ? "rgba(34,197,94,.85)" : "rgba(148,163,184,.45)",
+                      flexShrink: 0,
+                    }}
+                  >
+                    {live > 0 ? `${live} here` : ago ? ago : "quiet"}
+                  </span>
+                </Link>
+              );
+            })}
           </div>
         </div>
       )}
