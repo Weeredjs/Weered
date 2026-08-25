@@ -1346,11 +1346,10 @@ export default function LobbyIdPage() {
                 ) : view === "rooms" ? (
                   <LobbyHall
                     lobbyId={lobbyId}
+                    lobbyName={lobbyInfo?.name}
                     accentColor={accent}
                     bannerUrl={lobbyInfo?.bannerUrl}
                     moduleType={lobbyInfo?.moduleType}
-                    hasModules={hasModules}
-                    onOpenModules={() => setView("modules")}
                     style={{ flex: 1, minHeight: 0 }}
                   />
                 ) : view === "lfg" && hasLfgBoard ? (
@@ -1371,10 +1370,16 @@ export default function LobbyIdPage() {
                 <LobbyTierCards lobbyId={lobbyId} />
               </div>
 
+              {/* Default closed: the Lobby tab shows the chat inline, so the
+                  drawer is for browsing modules / watching video. Its edge tab
+                  hides while the inline chat is on screen; "Dial In" there
+                  opens this drawer fullscreen. */}
               <LobbyChatDrawer
                 roomId={lobbyId}
                 title={`${lobbyInfo?.name || lobbyId} · Chat`}
                 accentColor={accent}
+                defaultOpen={false}
+                hideTab={view === "rooms"}
               />
             </>
           )}
