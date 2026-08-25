@@ -179,7 +179,10 @@ export default function LobbyHall({
         </div>
 
         <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
-          <LobbyChatPanel roomId={lobbyId} title={`${lobbyName || lobbyId} · Chat`} />
+          {/* embedded: the stage header above already names the chat, and the
+              panel's own title + "Open Dock" CTA don't belong inline (the Dock
+              stays the subtle slide-out it always was). */}
+          <LobbyChatPanel roomId={lobbyId} embedded />
         </div>
       </div>
 
