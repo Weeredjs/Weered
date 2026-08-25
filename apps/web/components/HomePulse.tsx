@@ -196,6 +196,7 @@ export default function HomePulse({
             {sortedRooms.slice(0, 4).map((r) => {
               const live = r.onlineCount ?? 0;
               const ago = live > 0 ? null : timeAgo(r.lastMessageAt);
+              const occupants = r.onlineUsers ?? [];
               return (
                 <Link
                   key={r.id}
@@ -235,6 +236,39 @@ export default function HomePulse({
                   >
                     {r.name}
                   </span>
+                  {occupants.length > 0 && (
+                    <span style={{ display: "flex", alignItems: "center", flexShrink: 0 }}>
+                      {occupants.slice(0, 3).map((u, i) => (
+                        <span
+                          key={u.id || i}
+                          style={{ marginLeft: i === 0 ? 0 : -7, zIndex: 3 - i, display: "flex" }}
+                        >
+                          <Face name={u.name || "?"} avatar={u.avatar} size={20} />
+                        </span>
+                      ))}
+                      {live > occupants.length && (
+                        <span
+                          style={{
+                            marginLeft: -7,
+                            width: 20,
+                            height: 20,
+                            borderRadius: "50%",
+                            background: "rgba(255,255,255,.08)",
+                            border: "2px solid rgba(10,10,15,.9)",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            fontSize: 8,
+                            fontWeight: 800,
+                            color: "rgba(255,255,255,.5)",
+                            fontFamily: "monospace",
+                          }}
+                        >
+                          +{live - occupants.length}
+                        </span>
+                      )}
+                    </span>
+                  )}
                   <span
                     style={{
                       fontSize: 9.5,
