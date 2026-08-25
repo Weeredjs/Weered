@@ -199,10 +199,15 @@ export default function LobbyHall({
       />
 
       <div
-        className="weered-lobby-pulse"
+        className={`weered-lobby-pulse${
+          moduleType === "DIVISION2" || hasModules ? "" : " weered-pulse-mobile-only"
+        }`}
         style={{ width: 264, flexShrink: 0, display: "flex", flexDirection: "column", gap: 12 }}
       >
-        <div style={card}>
+        {/* One presence list per viewport: the LeftRail's PRESENCE panel owns
+            desktop (>=1100px); this card exists for narrow screens where that
+            rail is hidden. */}
+        <div style={card} className="weered-pulse-herenow">
           <div style={label}>HERE NOW {faces.length > 0 ? `· ${active.length}` : ""}</div>
           {faces.length === 0 ? (
             <div style={{ fontSize: 11.5, color: "rgba(148,163,184,.55)", lineHeight: 1.5 }}>
@@ -326,6 +331,10 @@ export default function LobbyHall({
         @media (max-width: 980px) {
           .weered-lobby-hall { flex-direction: column !important; }
           .weered-lobby-pulse { order: -1; width: auto !important; flex-direction: column; }
+        }
+        @media (min-width: 1100px) {
+          .weered-pulse-herenow { display: none; }
+          .weered-pulse-mobile-only { display: none !important; }
         }
       `}</style>
     </div>
