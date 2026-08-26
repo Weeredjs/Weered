@@ -1797,7 +1797,7 @@ async function main() {
 
   await app.register(leagueRoutes);
   await app.register(division2Routes);
-  await app.register(assettoRoutes);
+  await app.register(assettoRoutes, { lobbyAdminAccess } as any);
 
   await app.register(fortniteRoutes, { authFromHeader, sendPush });
   await app.register(scryfallRoutes, {});

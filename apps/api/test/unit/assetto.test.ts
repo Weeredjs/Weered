@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   isPublicHost,
   readConfiguredServers,
+  validateServers,
   prettyTrack,
   prettyCar,
 } from "../../src/routes/assetto";
@@ -153,5 +154,72 @@ describe("display names off AC asset paths", () => {
     expect(prettyCar("ks_nissan_gtr_gt3")).toBe("Nissan GT-R GT3");
     expect(prettyCar("ks_porsche_911_gt3_rsr")).toBe("Porsche 911 GT3 RSR");
     expect(prettyCar("ks_mclaren_650s_gt3")).toBe("McLaren 650S GT3");
+  });
+});
+
+// The admin editor and the poller share one validator. These tests pin the
+// property that makes that worth doing: whatever the editor accepts is exactly
+// what the board will later read back, and whatever it refuses says why.
+describe("validateServers — the shared write/read gate", () => {
+  it("gives a reason for every rejected row, keyed to its position in the form", () => {
+    const { servers, rejected } = validateServers([
+      { host: "ok.example.com", httpPort: 8081 },
+      { host: "127.0.0.1", httpPort: 8081 },
+      { host: "good.example.com", httpPort: 0 },
+    ]);
+    expect(servers.map((s) => s.host)).toEqual(["ok.example.com"]);
+    expect(rejected.map((r) => r.index)).toEqual([1, 2]);
+    expect(rejected[0].reason).toMatch(/public/i);
+    expect(rejected[1].reason).toMatch(/port/i);
+  });
+
+  it("refuses internal targets from the admin form, not just from seed data", () => {
+    for (const host of ["169.254.169.254", "10.0.0.5", "192.168.1.1", "localhost", "::1"]) {
+      const { servers, rejected } = validateServers([{ host, httpPort: 8081 }]);
+      expect(servers).toEqual([]);
+      expect(rejected).toHaveLength(1);
+    }
+  });
+
+  it("rejects a duplicate host:port instead of polling the same server twice", () => {
+    const { servers, rejected } = validateServers([
+      { host: "a.example.com", httpPort: 8081 },
+      { host: "A.example.com", httpPort: 8081 },
+    ]);
+    expect(servers).toHaveLength(1);
+    expect(rejected[0].reason).toMatch(/already/i);
+  });
+
+  it("keeps a different port on the same host — communities run several", () => {
+    const { servers } = validateServers([
+      { host: "a.example.com", httpPort: 8081 },
+      { host: "a.example.com", httpPort: 8092 },
+    ]);
+    expect(servers).toHaveLength(2);
+  });
+
+  it("reports rows dropped for exceeding the cap rather than truncating in silence", () => {
+    const many = Array.from({ length: 15 }, (_, i) => ({
+      host: `s${i}.example.com`,
+      httpPort: 8081,
+    }));
+    const { servers, rejected } = validateServers(many);
+    expect(servers).toHaveLength(12);
+    expect(rejected).toHaveLength(3);
+    expect(rejected[0].reason).toMatch(/limit/i);
+  });
+
+  it("blanks a whitespace-only label rather than storing it", () => {
+    const { servers } = validateServers([{ host: "a.example.com", httpPort: 8081, label: "   " }]);
+    expect(servers[0].label).toBeNull();
+  });
+
+  it("accepts exactly what readConfiguredServers will later hand the poller", () => {
+    const input = [
+      { host: "Race.Example.com", httpPort: 8081, label: "GT3" },
+      { host: "10.0.0.1", httpPort: 8081 },
+    ];
+    const { servers } = validateServers(input);
+    expect(readConfiguredServers({ acServers: input })).toEqual(servers);
   });
 });

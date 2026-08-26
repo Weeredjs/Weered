@@ -24,6 +24,8 @@ import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
 import { fetchWithTimeout } from "../lib/fetchWithTimeout";
 import { swallow } from "../lib/logger";
+import { hasLobbyPerm } from "../lib/lobbyPerms";
+import { logLobbyAudit } from "../lib/lobbyAudit";
 
 const CACHE_MS = 20_000;
 const MAX_SERVERS = 12; // a community board, not a global scraper
@@ -179,29 +181,61 @@ function titleise(s: string): string {
 
 type Configured = { host: string; httpPort: number; label?: string | null };
 
+export type Rejected = { index: number; host: string; reason: string };
+
+/**
+ * The single gate every server address passes through, on the way in from an
+ * admin form AND on the way out to the poller.
+ *
+ * Sharing it matters: if the editor validated with different rules than the
+ * board reads with, an admin could save a row, see it accepted, and then watch
+ * it never appear — with nothing anywhere saying why. Rejections carry a reason
+ * so the editor can show it instead of silently dropping the row.
+ */
+export function validateServers(raw: unknown): { servers: Configured[]; rejected: Rejected[] } {
+  const servers: Configured[] = [];
+  const rejected: Rejected[] = [];
+  if (!Array.isArray(raw)) return { servers, rejected };
+
+  const seen = new Set<string>();
+  raw.forEach((item, index) => {
+    const r = (item && typeof item === "object" ? item : {}) as Record<string, unknown>;
+    const host = typeof r.host === "string" ? r.host.trim().toLowerCase() : "";
+    const portRaw = r.httpPort;
+    const httpPort = Number(portRaw);
+    const push = (reason: string) => rejected.push({ index, host, reason });
+
+    if (!host) return push("No address.");
+    if (!isPublicHost(host)) {
+      return push(
+        "Not a public address. Use the server's public hostname or IP — private, " +
+          "loopback and link-local addresses are refused.",
+      );
+    }
+    if (!Number.isInteger(httpPort) || httpPort < 1 || httpPort > 65535) {
+      return push("HTTP port must be a whole number between 1 and 65535.");
+    }
+    const key = `${host}:${httpPort}`;
+    if (seen.has(key)) return push("Already in the list.");
+    if (servers.length >= MAX_SERVERS) return push(`Over the ${MAX_SERVERS}-server limit.`);
+
+    seen.add(key);
+    servers.push({
+      host,
+      httpPort,
+      label: typeof r.label === "string" && r.label.trim() ? r.label.trim().slice(0, 60) : null,
+    });
+  });
+
+  return { servers, rejected };
+}
+
 /** Pull the configured server list off a lobby's moduleConfig, defensively —
  *  it is operator-entered JSON, so anything malformed is dropped rather than
  *  trusted. */
 export function readConfiguredServers(moduleConfig: unknown): Configured[] {
   const cfg = (moduleConfig ?? {}) as Record<string, unknown>;
-  const raw = cfg.acServers;
-  if (!Array.isArray(raw)) return [];
-  const out: Configured[] = [];
-  for (const item of raw) {
-    if (!item || typeof item !== "object") continue;
-    const r = item as Record<string, unknown>;
-    const host = typeof r.host === "string" ? r.host.trim() : "";
-    const httpPort = Number(r.httpPort);
-    if (!host || !isPublicHost(host)) continue;
-    if (!Number.isInteger(httpPort) || httpPort < 1 || httpPort > 65535) continue;
-    out.push({
-      host,
-      httpPort,
-      label: typeof r.label === "string" ? r.label.slice(0, 60) : null,
-    });
-    if (out.length >= MAX_SERVERS) break;
-  }
-  return out;
+  return validateServers(cfg.acServers).servers;
 }
 
 async function pollServer(s: Configured): Promise<AcServer> {
@@ -278,7 +312,74 @@ async function pollServer(s: Configured): Promise<AcServer> {
 
 const cache = new Map<string, { data: AcServer[]; exp: number }>();
 
-export default async function assettoRoutes(app: FastifyInstance) {
+type Opts = {
+  lobbyAdminAccess: (
+    req: any,
+    reply: any,
+    requiredLevel: number,
+  ) => Promise<{
+    user: { id: string; name: string };
+    lobby: { id: string; moduleConfig?: unknown };
+    member?: { roleLevel?: number } | null;
+    overrideRole?: string | null;
+  } | null>;
+};
+
+export default async function assettoRoutes(app: FastifyInstance, opts: Opts) {
+  const { lobbyAdminAccess } = opts;
+
+  /**
+   * Configure the board. Without this the server list is only settable by
+   * editing seed data, which would mean no community could point the board at
+   * its own servers without us shipping a release for them.
+   *
+   * Gated at level 4 / edit_branding — the same bar as the rest of a lobby's
+   * module configuration.
+   */
+  // Path carries the lobby id because lobbyAdminAccess resolves the lobby from
+  // route params — a body-only lobby id would resolve to nothing and 404.
+  app.patch("/assetto/:id/servers", async (req, reply) => {
+    const ctx = await lobbyAdminAccess(req, reply, 4);
+    if (!ctx) return;
+    if (
+      !hasLobbyPerm(
+        ctx.member?.roleLevel ?? (ctx.overrideRole ? 5 : 1),
+        "edit_branding",
+        ctx.overrideRole ?? null,
+      )
+    ) {
+      return reply.code(403).send({ ok: false, error: "no_permission" });
+    }
+
+    const body: any = (req as any).body || {};
+    if (!Array.isArray(body.servers)) {
+      return reply.code(400).send({ ok: false, error: "servers array required" });
+    }
+    const { servers, rejected } = validateServers(body.servers);
+
+    // Merge into the existing moduleConfig rather than replacing it — the same
+    // blob carries steamAppId, twitch category and friends, and stomping it
+    // would quietly break the rest of the lobby's modules.
+    const existing = (ctx.lobby.moduleConfig ?? {}) as Record<string, unknown>;
+    const moduleConfig = { ...existing, acServers: servers };
+
+    await prisma.lobby.update({
+      where: { id: ctx.lobby.id },
+      data: { moduleConfig: moduleConfig as any },
+    });
+    cache.delete(ctx.lobby.id); // otherwise the board shows the old list for up to CACHE_MS
+
+    await logLobbyAudit({
+      lobbyId: ctx.lobby.id,
+      type: "assetto_servers_update",
+      actorId: ctx.user.id,
+      actorName: ctx.user.name,
+      note: servers.map((s) => `${s.host}:${s.httpPort}`).join(", ") || "(cleared)",
+    }).catch(swallow);
+
+    return reply.send({ ok: true, servers, rejected });
+  });
+
   app.get("/assetto/servers", async (req, reply) => {
     const lobbyId = String((req as any).query?.lobby || "").slice(0, 64);
     if (!lobbyId) return reply.send({ ok: true, servers: [] });
