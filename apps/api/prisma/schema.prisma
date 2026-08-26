@@ -113,6 +113,13 @@ model Lobby {
   // Lobby admin ΓÇö custom role titles and module toggles
   // roleNames: JSON map of levelΓåÆtitle, e.g. {"5":"Boss","4":"Lieutenant","3":"Bouncer","2":"VIP","1":"Viewer"}
   roleNames       Json?
+  // roleIcons: JSON map of level->icon shown beside the names of members at that
+  // level, e.g. {"5":"[crown]","4":"[shield]","3":"","2":"","1":""}. A level with
+  // an empty or absent value simply shows no icon.
+  // Presence carries only a member's LEVEL; every surface resolves the icon from
+  // this map, so changing an icon updates everywhere at once instead of leaving
+  // stale copies on each connected user.
+  roleIcons       Json?
   // enabledModules: which modules lobby rooms can use, e.g. ["voice","youtube","reddit"]
   enabledModules  String[]  @default(["voice", "youtube", "reddit"])
 

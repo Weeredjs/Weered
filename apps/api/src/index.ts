@@ -513,9 +513,27 @@ async function doJoin(ws: Sock, roomId: string) {
   if (ws.user) room.pending.delete(ws.user.id);
 
   if (ws.user && !room.users.has(ws.user.id)) {
+    // Lobby rank drives the role title + icon shown beside this member's name.
+    // One indexed lookup (LobbyMember is unique on lobbyId+userId), best-effort:
+    // a slow or failing DB must never stop someone entering a room, it just
+    // means no icon this session. Refreshed on their next join, so a promotion
+    // shows up without a restart.
+    let lobbyRoleLevel: number | undefined;
+    if (room.lobbyId && !(ws.user as any).guest) {
+      try {
+        const lm = await prisma.lobbyMember.findUnique({
+          where: { lobbyId_userId: { lobbyId: room.lobbyId, userId: ws.user.id } },
+          select: { roleLevel: true },
+        });
+        if (lm?.roleLevel != null) lobbyRoleLevel = lm.roleLevel;
+      } catch (e) {
+        swallow(e);
+      }
+    }
     const userEntry = {
       id: ws.user.id,
       name: ws.user.name,
+      lobbyRoleLevel,
       isGuest: Boolean((ws.user as any).guest),
       usernameKey: (ws.user as any).usernameKey ?? undefined,
       globalRole: ws.user.globalRole || "USER",

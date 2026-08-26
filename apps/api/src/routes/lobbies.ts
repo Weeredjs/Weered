@@ -6,16 +6,9 @@ import { z } from "zod";
 import { LobbyRole } from "@prisma/client";
 import { isAIAvailable, OPERATOR_PRESENCE } from "../lib/roomState";
 import { lastMessageMap } from "../lib/roomRecency";
+import { DEFAULT_ROLE_NAMES, DEFAULT_ROLE_ICONS, cleanRoleMap } from "../lib/lobbyRoles";
 
-// Public read-only "N viewing" registry — ephemeral in-memory presence for anon
-// visitors on lobby pages (they're not in the WS presence system). No DB, no
-// auth. Every lobby page is public now, so this can't be allowlist-bounded;
-// instead hard caps + TTL pruning (that drops empty buckets) keep the map
-// bounded, so a flood of junk ids self-heals within one TTL.
-const VIEWER_TTL_MS = 45_000;
-const MAX_TRACKED_LOBBIES = 500; // distinct lobby buckets held at once
-const MAX_VIEWERS_PER_LOBBY = 5000; // sids counted per lobby
-const viewerReg = new Map<string, Map<string, number>>();
+import { touchLobbyViewer } from "../lib/lobbyViewers";
 
 type Opts = {
   authFromHeader: (h?: string) => { id: string; name: string } | null;
@@ -56,25 +49,13 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
   } = opts;
 
   // Public "N viewing" ping — records an anonymous viewer and returns the live
-  // count. Works on any lobby page; no auth, no DB, no PII. Bounded by hard caps
-  // + TTL pruning (see viewerReg above) so junk ids can't grow the map.
+  // count. Works on any lobby page; no auth, no DB, no PII. See lib/lobbyViewers
+  // for the caps and TTL pruning that keep the registry bounded.
   app.post("/lobbies/:id/viewing", async (req, reply) => {
     const id = String((req as any).params?.id || "").slice(0, 64);
     if (!id) return reply.send({ ok: true, count: 0 });
     const sid = String((req as any).body?.sid || "").slice(0, 64) || "anon";
-    const now = Date.now();
-    let m = viewerReg.get(id);
-    if (!m) {
-      // Refuse a NEW bucket once we're at the cap — protects against a flood of
-      // distinct junk lobby ids. Existing buckets keep updating.
-      if (viewerReg.size >= MAX_TRACKED_LOBBIES) return reply.send({ ok: true, count: 0 });
-      m = new Map();
-      viewerReg.set(id, m);
-    }
-    if (m.size < MAX_VIEWERS_PER_LOBBY || m.has(sid)) m.set(sid, now);
-    for (const [k, ts] of m) if (now - ts > VIEWER_TTL_MS) m.delete(k);
-    if (m.size === 0) viewerReg.delete(id); // drop empty bucket so the map self-heals
-    return reply.send({ ok: true, count: m.size });
+    return reply.send({ ok: true, count: touchLobbyViewer(id, sid) });
   });
 
   app.get("/lobbies/:lobbyId/rooms", async (req, reply) => {
@@ -291,6 +272,10 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
         joinMode: true,
         ownerId: true,
         enabledModules: true,
+        // Display labels, not secrets — every surface that renders a member's
+        // name needs these to turn their role level into a title and icon.
+        roleNames: true,
+        roleIcons: true,
         memberPerks: true,
         rooms: {
           select: {
@@ -777,6 +762,9 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
             id: uid,
             name: u.name,
             role: u.role,
+            // Rank in this lobby (1..5) — the client turns it into a title and
+            // icon via the lobby's roleNames/roleIcons.
+            lobbyRoleLevel: u.lobbyRoleLevel ?? null,
             globalRole: u.globalRole,
             tier: u.tier,
             avatarColor: u.avatarColor,
@@ -854,14 +842,6 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
     1: [],
   };
 
-  const DEFAULT_ROLE_NAMES: Record<string, string> = {
-    "5": "Owner",
-    "4": "Admin",
-    "3": "Moderator",
-    "2": "Trusted",
-    "1": "Member",
-  };
-
   function hasLobbyPerm(level: number, perm: string, overrideRole: string | null): boolean {
     if (overrideRole && ["STAFF", "ADMIN", "GOD"].includes(overrideRole)) return true;
     return (LEVEL_PERMS[level] || []).includes(perm);
@@ -909,6 +889,7 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
     ]);
 
     const roleNames = lobby.roleNames || DEFAULT_ROLE_NAMES;
+    const roleIcons = lobby.roleIcons || DEFAULT_ROLE_ICONS;
     const myLevel = overrideRole ? 5 : (member?.roleLevel ?? 1);
 
     return reply.send({
@@ -928,6 +909,7 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
         keywords: lobby.keywords,
         enabledModules: lobby.enabledModules,
         roleNames,
+        roleIcons,
         joinMode: lobby.joinMode || "OPEN",
         joinPassword: lobby.joinPassword || null,
         blockedWords: lobby.blockedWords || [],
@@ -1168,24 +1150,32 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
       const roleNames = body.roleNames;
       if (!roleNames || typeof roleNames !== "object")
         return reply.code(400).send({ ok: false, error: "roleNames required" });
-      const clean: Record<string, string> = {};
-      for (const k of ["1", "2", "3", "4", "5"]) {
-        clean[k] =
-          typeof roleNames[k] === "string" ? roleNames[k].slice(0, 24) : DEFAULT_ROLE_NAMES[k];
-      }
+      const clean = cleanRoleMap(roleNames, DEFAULT_ROLE_NAMES, 24);
+
+      // Icons are optional: a client that never sends them (or an older one)
+      // leaves whatever the lobby already had rather than clearing it.
+      const iconsIn = body.roleIcons;
+      const cleanIcons =
+        iconsIn && typeof iconsIn === "object"
+          ? cleanRoleMap(
+              iconsIn,
+              (ctx.lobby.roleIcons as Record<string, string> | null) ?? DEFAULT_ROLE_ICONS,
+              8,
+            )
+          : null;
 
       await prisma.lobby.update({
         where: { id: ctx.lobby.id },
-        data: { roleNames: clean },
+        data: { roleNames: clean, ...(cleanIcons ? { roleIcons: cleanIcons } : {}) },
       });
       await logLobbyAudit({
         lobbyId: ctx.lobby.id,
         type: "roles_renamed",
         actorId: ctx.user.id,
         actorName: ctx.user.name,
-        note: JSON.stringify(clean),
+        note: JSON.stringify(cleanIcons ? { names: clean, icons: cleanIcons } : clean),
       });
-      return reply.send({ ok: true, roleNames: clean });
+      return reply.send({ ok: true, roleNames: clean, roleIcons: cleanIcons ?? undefined });
     },
   );
 

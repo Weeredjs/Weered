@@ -285,6 +285,31 @@ export default function LeftRail() {
     };
   }, [lobbyPresenceId]);
 
+  // The lobby's role titles + icons, so a member's level (which presence
+  // carries) can be shown as this community's own rank beside their name.
+  // Fetched once per lobby — it changes only when an owner edits it.
+  const [roleNames, setRoleNames] = useState<Record<string, string>>({});
+  const [roleIcons, setRoleIcons] = useState<Record<string, string>>({});
+  useEffect(() => {
+    if (!lobbyPresenceId || lobbyPresenceId === "lobby") {
+      setRoleNames({});
+      setRoleIcons({});
+      return;
+    }
+    let cancelled = false;
+    fetch(`${API_BASE}/lobbies/${encodeURIComponent(lobbyPresenceId)}`, { headers: authHeaders() })
+      .then((r) => r.json())
+      .then((j) => {
+        if (cancelled || !j?.ok || !j.lobby) return;
+        setRoleNames((j.lobby.roleNames as Record<string, string>) || {});
+        setRoleIcons((j.lobby.roleIcons as Record<string, string>) || {});
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [lobbyPresenceId]);
+
   const effectiveUsers = useMemo(() => {
     if (!isLobbyActive || !lobbyPresence.length) return users;
     const seen = new Map<string, any>();
@@ -840,6 +865,12 @@ export default function LeftRail() {
                   avatarColor={u?.avatarColor}
                   globalRole={u?.globalRole}
                   tier={u?.tier}
+                  roleIcon={
+                    u?.lobbyRoleLevel != null ? roleIcons[String(u.lobbyRoleLevel)] : undefined
+                  }
+                  roleTitle={
+                    u?.lobbyRoleLevel != null ? roleNames[String(u.lobbyRoleLevel)] : undefined
+                  }
                   online={true}
                   isAway={!!u?.isAway}
                   livePresence={u?.livePresence}
