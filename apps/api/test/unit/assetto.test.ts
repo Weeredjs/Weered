@@ -223,3 +223,20 @@ describe("validateServers — the shared write/read gate", () => {
     expect(readConfiguredServers({ acServers: input })).toEqual(servers);
   });
 });
+
+// Real ids seen on FastFox's servers during a track rotation. Multi-layout
+// circuits are the common case on a league server, so this is not an edge case.
+describe("prettyTrack — multi-layout circuits", () => {
+  it("drops the asset-path word 'layout' but keeps the layout itself", () => {
+    expect(prettyTrack("ks_nurburgring-layout_gp_b")).toBe("Nürburgring GP B");
+    expect(prettyTrack("ks_silverstone-layout_national")).toBe("Silverstone National");
+    expect(prettyTrack("ks_brands_hatch-layout_indy")).toBe("Brands Hatch Indy");
+  });
+
+  it("still handles ids with no layout segment", () => {
+    expect(prettyTrack("imola")).toBe("Imola");
+    expect(prettyTrack("csp/2651/../H/../ks_vallelunga-extended_circuit")).toBe(
+      "Vallelunga Extended Circuit",
+    );
+  });
+});

@@ -87,12 +87,21 @@ export function isPublicHost(host: string): boolean {
 }
 
 /** "csp/2651/../H/../ks_vallelunga-extended_circuit" -> "Vallelunga Extended Circuit".
- *  AC track ids arrive as asset paths, often wrapped in CSP prefixes. */
+ *  AC track ids arrive as asset paths, often wrapped in CSP prefixes.
+ *
+ *  Multi-layout circuits encode the layout as "<track>-layout_<layout>", which
+ *  titleised whole reads "Nurburgring Layout Gp B". The word "layout" is an
+ *  asset-path artefact, not part of the circuit's name — drop it and keep the
+ *  layout, which is the part a driver actually needs (GP and Sprint are
+ *  different tracks to them). */
 export function prettyTrack(raw: string | null | undefined): string | null {
   if (!raw) return null;
   const last = String(raw).split("/").filter(Boolean).pop() || "";
   if (!last) return null;
-  return titleise(last.replace(/^ks_/, ""));
+  const [track, layout] = last.replace(/^ks_/, "").split("-layout_");
+  const name = titleise(track);
+  if (!layout) return name || null;
+  return [name, titleise(layout)].filter(Boolean).join(" ") || null;
 }
 
 /** "bmw_z4_gt3" -> "BMW Z4 GT3". Keeps well-known racing acronyms upper-case. */
@@ -141,6 +150,8 @@ const UPPER = new Set([
   "c7",
   "c6",
   "gt2rs",
+  "gp", // circuit layouts: nurburgring GP, red bull ring GP
+  "wtc",
 ]);
 
 /** Tokens whose correct form is neither lower, Title, nor UPPER. Racing people
@@ -160,6 +171,9 @@ const FIXUPS: Record<string, string> = {
   lafferrari: "LaFerrari",
   countach: "Countach",
   huracan: "Huracán",
+  // Circuit spelling a sim racer would notice. The rest of the calendar
+  // titleises correctly on its own and needs no entry here.
+  nurburgring: "Nürburgring",
   "935": "935",
   ks: "",
 };
