@@ -116,6 +116,10 @@ const Poe2ModulesPanel = dynamic(() => import("../../../components/Poe2ModulesPa
   loading: panelLoading,
   ssr: false,
 });
+const AssettoCorsaModulesPanel = dynamic(
+  () => import("../../../components/AssettoCorsaModulesPanel"),
+  { loading: panelLoading, ssr: false },
+);
 const Division2ModulesPanel = dynamic(() => import("../../../components/Division2ModulesPanel"), {
   loading: panelLoading,
   ssr: false,
@@ -220,6 +224,7 @@ const MODULE_GAME_NAMES: Record<string, string> = {
   POE: "Path of Exile",
   POE2: "Path of Exile 2",
   DIVISION2: "The Division 2",
+  ASSETTOCORSA: "Assetto Corsa",
   WINDROSE: "Windrose",
   EVE: "EVE Online",
   HLL: "Hell Let Loose",
@@ -770,6 +775,7 @@ export default function LobbyIdPage() {
       "POE",
       "POE2",
       "DIVISION2",
+      "ASSETTOCORSA",
       "WINDROSE",
       "HELLDIVERS2",
       "CHESS",
@@ -811,6 +817,7 @@ export default function LobbyIdPage() {
     lobbyInfo?.moduleType === "POE" ||
     lobbyInfo?.moduleType === "POE2" ||
     lobbyInfo?.moduleType === "DIVISION2" ||
+    lobbyInfo?.moduleType === "ASSETTOCORSA" ||
     lobbyInfo?.moduleType === "WINDROSE" ||
     lobbyInfo?.moduleType === "HELLDIVERS2" ||
     lobbyInfo?.moduleType === "CHESS" ||
@@ -1269,6 +1276,13 @@ export default function LobbyIdPage() {
                       accentColor={accent}
                       style={{ flex: 1, minHeight: 0 }}
                     />
+                  ) : lobbyInfo?.moduleType === "ASSETTOCORSA" ? (
+                    <AssettoCorsaModulesPanel
+                      lobbyId={lobbyId}
+                      gameName={gameName}
+                      accentColor={accent}
+                      style={{ flex: 1, minHeight: 0 }}
+                    />
                   ) : lobbyInfo?.moduleType === "WINDROSE" ? (
                     <WindroseModulesPanel
                       lobbyId={lobbyId}
@@ -1427,6 +1441,7 @@ const MODULE_CHIP_LABEL: Record<string, string> = {
   POE: "PoE",
   POE2: "PoE2",
   DIVISION2: "D2",
+  ASSETTOCORSA: "AC",
   POKER: "Poker",
   TRADING: "Trade",
   NEWS: "News",
