@@ -1154,12 +1154,14 @@ export const SEED_ROOMS: {
     name: "Ligas Rankeadas",
     description: "Ranked league racing — standings, promotions, and race-night sign-ups.",
     lobbyId: "fastfox",
+    defaultModule: "assetto",
   },
   {
     id: "ff-recordes",
     name: "Recordes e Histórico",
     description: "Lap records and race history. Post the lap, post the replay.",
     lobbyId: "fastfox",
+    defaultModule: "assetto",
   },
   {
     id: "ff-corridas-limpas",
@@ -1179,6 +1181,7 @@ export const SEED_ROOMS: {
     name: "Pit Wall",
     description: "Voice for race nights — spotting, strategy, and the post-race stewards' inquiry.",
     lobbyId: "fastfox",
+    defaultModule: "voice",
   },
   {
     id: "ac-paddock",
@@ -1193,6 +1196,7 @@ export const SEED_ROOMS: {
     description:
       "Looking for a race. Post the server, class, and time — or jump on whatever's live on the board.",
     lobbyId: "assettocorsa",
+    defaultModule: "assetto",
   },
   {
     id: "ac-setups",
@@ -1217,6 +1221,7 @@ export const SEED_ROOMS: {
     name: "Pit Wall",
     description: "Voice for race nights — spotting, strategy, and the post-race stewards' inquiry.",
     lobbyId: "assettocorsa",
+    defaultModule: "voice",
   },
 
   {

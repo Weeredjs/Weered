@@ -6,6 +6,7 @@ import {
   prettyTrack,
   prettyCar,
 } from "../../src/routes/assetto";
+import { VALID_ROOM_MODULES, isValidRoomModule } from "../../src/lib/roomModules";
 
 // The server board fetches whatever host a lobby admin configured. If that list
 // could name an internal address, the endpoint becomes a probe of the droplet's
@@ -238,5 +239,40 @@ describe("prettyTrack — multi-layout circuits", () => {
     expect(prettyTrack("csp/2651/../H/../ks_vallelunga-extended_circuit")).toBe(
       "Vallelunga Extended Circuit",
     );
+  });
+});
+
+// The room module whitelist was two inline copies that had drifted: every game
+// module added after "dnd" was missing from both, so those modules rendered in
+// the client but were discarded on save. The failure is silent — an unknown
+// value becomes null rather than an error — so it needs a test that fails loudly
+// if the list falls behind the client again.
+describe("VALID_ROOM_MODULES — the room module whitelist", () => {
+  it("accepts the Assetto Corsa module so a room can open on the board", () => {
+    expect(isValidRoomModule("assetto")).toBe(true);
+  });
+
+  it("accepts the game modules that were silently dropped before extraction", () => {
+    for (const m of ["windrose", "helldivers", "hll", "chess", "gta", "eve"]) {
+      expect(isValidRoomModule(m), m).toBe(true);
+    }
+  });
+
+  it("still accepts the core non-game modules", () => {
+    for (const m of ["voice", "video", "screen", "youtube", "twitch", "browser"]) {
+      expect(isValidRoomModule(m), m).toBe(true);
+    }
+  });
+
+  it("rejects anything not on the list, including office", () => {
+    // office is staff-gated in meeting rooms and carries its own access rules,
+    // so it must not be freely settable as a room's module.
+    for (const m of ["office", "nonsense", "", "ASSETTO"]) {
+      expect(isValidRoomModule(m), m).toBe(false);
+    }
+  });
+
+  it("has no duplicates", () => {
+    expect(new Set(VALID_ROOM_MODULES).size).toBe(VALID_ROOM_MODULES.length);
   });
 });

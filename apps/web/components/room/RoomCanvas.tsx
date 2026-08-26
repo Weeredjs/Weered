@@ -107,6 +107,7 @@ const ALL_MODULES: { id: NonNullable<StageMode>; label: string; icon: string; li
   { id: "chess",   icon: "♟",  label: "Chess",    live: true  },
   { id: "gta",     icon: "🌴", label: "GTA",      live: true  },
   { id: "eve",     icon: "🛰", label: "EVE",      live: true  },
+  { id: "assetto", icon: "🏁", label: "Assetto",  live: true  },
 ];
 
 const LOBBY_MODULE_MAP: Record<string, string[]> = {
@@ -127,6 +128,9 @@ const LOBBY_MODULE_MAP: Record<string, string[]> = {
   HLL:         ["voice", "hll", "youtube", "twitch", "video", "screen"],
   CHESS:       ["voice", "chess", "youtube", "twitch", "video", "screen"],
   EVE:         ["voice", "eve", "youtube", "twitch", "video", "screen"],
+  // The server board belongs in the room as much as the lobby — a race night
+  // happens in voice with the grid on screen, not on a separate page.
+  ASSETTOCORSA:["voice", "assetto", "youtube", "twitch", "video", "screen"],
 };
 
 const DEFAULT_ROOM_MODULES = ["voice", "youtube", "twitch", "browser", "video", "screen"];
