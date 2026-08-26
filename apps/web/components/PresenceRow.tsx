@@ -95,6 +95,13 @@ export interface PresenceRowProps {
   globalRole?: string;
   tier?: string;
 
+  /** Icon for this member's rank in the CURRENT lobby, already resolved by the
+   *  caller from the lobby's roleIcons map (callers know the lobby; this row
+   *  does not). Blank or absent renders nothing — which is every lobby that has
+   *  not set icons. `roleTitle` is the hover label that goes with it. */
+  roleIcon?: string | null;
+  roleTitle?: string | null;
+
   online?: boolean;
   roomName?: string | null;
   livePresence?: LivePresence | null;
@@ -125,6 +132,8 @@ export default function PresenceRow({
   avatarColor,
   globalRole,
   tier,
+  roleIcon,
+  roleTitle,
   online,
   roomName: _roomName,
   livePresence,
@@ -407,6 +416,20 @@ export default function PresenceRow({
           >
             {name}
           </span>
+          {roleIcon ? (
+            <span
+              title={roleTitle || undefined}
+              aria-label={roleTitle ? `Role: ${roleTitle}` : undefined}
+              style={{
+                fontSize: compact ? 12 : 13,
+                lineHeight: 1,
+                flexShrink: 0,
+                userSelect: "none",
+              }}
+            >
+              {roleIcon}
+            </span>
+          ) : null}
           {globalRole && globalRole !== "USER" ? (
             <RoleIcon
               role={globalRole}

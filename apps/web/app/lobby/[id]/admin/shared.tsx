@@ -45,6 +45,8 @@ export type LobbyData = {
   keywords: string[];
   enabledModules: string[];
   roleNames: Record<string, string>;
+  /** Per-level icon shown beside members at that level; blank means none. */
+  roleIcons?: Record<string, string>;
   joinMode: string;
   joinPassword?: string | null;
   blockedWords?: string[];
@@ -169,12 +171,16 @@ export const LEVEL_COLORS: Record<number, { bg: string; border: string; color: s
 export function LevelBadge({
   level,
   roleNames,
+  roleIcons,
 }: {
   level: number;
   roleNames: Record<string, string>;
+  /** Optional per-level icon; a blank or absent entry just renders no icon. */
+  roleIcons?: Record<string, string>;
 }) {
   const c = LEVEL_COLORS[level] || LEVEL_COLORS[1];
   const name = roleNames[String(level)] || `Level ${level}`;
+  const icon = roleIcons?.[String(level)] || "";
   return (
     <span
       style={{
@@ -189,6 +195,7 @@ export function LevelBadge({
         flexShrink: 0,
       }}
     >
+      {icon ? <span style={{ marginRight: 4 }}>{icon}</span> : null}
       {name}
     </span>
   );

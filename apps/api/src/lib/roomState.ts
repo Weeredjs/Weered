@@ -56,6 +56,12 @@ export type RoomUser = {
   tier?: string;
   avatarColor?: string | null;
   avatar?: string | null;
+  /** This member's rank in the LOBBY that owns the room (1..5) — distinct from
+   *  `role`, which is their standing in this room. Surfaces resolve the title and
+   *  icon for it from the lobby's roleNames/roleIcons maps rather than carrying
+   *  copies here, so an owner editing an icon changes it everywhere at once.
+   *  Absent for guests and for rooms that belong to no lobby. */
+  lobbyRoleLevel?: number;
 };
 export type ReplyTo = { id: string; userId: string; userName: string; body: string };
 export type ChatAttachmentRef = {

@@ -26,17 +26,32 @@ export const LEVEL_PERMS_DISPLAY: Record<number, string[]> = {
   1: ["Base access"],
 };
 
+export const DEFAULT_ROLE_ICONS: Record<string, string> = {
+  "5": "",
+  "4": "",
+  "3": "",
+  "2": "",
+  "1": "",
+};
+
+/** A starting palette for the icon field. Anything typed or pasted works —
+ *  these are just one click away for owners who don't want to hunt for an
+ *  emoji picker. Leaving a level blank means no icon, which is the default. */
+const ICON_SUGGESTIONS = ["👑", "🛡️", "🔧", "⭐", "🎖️", "🏁", "🔰", "💠", "⚑", "🅥"];
+
 export function RolesTab({ lobby, onRefresh }: { lobby: LobbyData; onRefresh: () => void }) {
   const [names, setNames] = useState<Record<string, string>>(lobby.roleNames || DEFAULT_ROLE_NAMES);
+  const [icons, setIcons] = useState<Record<string, string>>(lobby.roleIcons || DEFAULT_ROLE_ICONS);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState("");
+  const [pickerFor, setPickerFor] = useState<string | null>(null);
 
   async function save() {
     setSaving(true);
     setMsg("");
     const j = await apiFetch(`/lobbies/${encodeURIComponent(lobby.id)}/admin/roles`, {
       method: "PATCH",
-      body: JSON.stringify({ roleNames: names }),
+      body: JSON.stringify({ roleNames: names, roleIcons: icons }),
     });
     setSaving(false);
     setMsg(j.ok ? "Saved." : j.error || "Failed.");
@@ -47,7 +62,8 @@ export function RolesTab({ lobby, onRefresh }: { lobby: LobbyData; onRefresh: ()
     <div style={{ maxWidth: 560 }}>
       <div style={S.sectionTitle}>Custom Role Titles</div>
       <div style={{ fontSize: 12, opacity: 0.5, marginBottom: 16 }}>
-        Rename roles to match your community. Permissions are fixed per level.
+        Rename roles to match your community and give each one an icon that shows beside
+        members&apos; names. Permissions are fixed per level.
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 20 }}>
         {[5, 4, 3, 2, 1].map((lvl) => {
@@ -74,7 +90,91 @@ export function RolesTab({ lobby, onRefresh }: { lobby: LobbyData; onRefresh: ()
                   placeholder={DEFAULT_ROLE_NAMES[String(lvl)]}
                   maxLength={24}
                 />
+                <button
+                  type="button"
+                  onClick={() => setPickerFor(pickerFor === String(lvl) ? null : String(lvl))}
+                  title={
+                    icons[String(lvl)] ? "Change this role's icon" : "Add an icon for this role"
+                  }
+                  aria-label={`Icon for ${names[String(lvl)] || DEFAULT_ROLE_NAMES[String(lvl)]}`}
+                  style={{
+                    width: 40,
+                    height: 34,
+                    flexShrink: 0,
+                    borderRadius: 8,
+                    cursor: "pointer",
+                    fontSize: 16,
+                    lineHeight: 1,
+                    border: `1px solid ${pickerFor === String(lvl) ? c.color : "rgba(255,255,255,.14)"}`,
+                    background: "rgba(0,0,0,.25)",
+                    color: "rgba(243,244,246,.9)",
+                  }}
+                >
+                  {icons[String(lvl)] || "+"}
+                </button>
               </div>
+
+              {pickerFor === String(lvl) && (
+                <div
+                  style={{
+                    display: "flex",
+                    flexWrap: "wrap",
+                    gap: 6,
+                    alignItems: "center",
+                    padding: "8px 10px",
+                    marginBottom: 8,
+                    borderRadius: 8,
+                    background: "rgba(0,0,0,.22)",
+                    border: "1px solid rgba(255,255,255,.08)",
+                  }}
+                >
+                  {ICON_SUGGESTIONS.map((ic) => (
+                    <button
+                      key={ic}
+                      type="button"
+                      onClick={() => {
+                        setIcons((prev) => ({ ...prev, [String(lvl)]: ic }));
+                        setPickerFor(null);
+                      }}
+                      style={{
+                        width: 30,
+                        height: 30,
+                        borderRadius: 6,
+                        cursor: "pointer",
+                        fontSize: 15,
+                        border: "1px solid rgba(255,255,255,.10)",
+                        background: "rgba(255,255,255,.04)",
+                      }}
+                    >
+                      {ic}
+                    </button>
+                  ))}
+                  <input
+                    style={{ ...S.input, background: "rgba(0,0,0,.3)", width: 80, fontSize: 13 }}
+                    value={icons[String(lvl)] || ""}
+                    onChange={(e) =>
+                      setIcons((prev) => ({ ...prev, [String(lvl)]: e.target.value.slice(0, 8) }))
+                    }
+                    placeholder="or type"
+                    maxLength={8}
+                    aria-label="Custom icon"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIcons((prev) => ({ ...prev, [String(lvl)]: "" }));
+                      setPickerFor(null);
+                    }}
+                    style={{
+                      ...S.btn,
+                      padding: "4px 10px",
+                      fontSize: 11,
+                    }}
+                  >
+                    None
+                  </button>
+                </div>
+              )}
               <div
                 style={{ fontSize: 11, opacity: 0.6, display: "flex", flexWrap: "wrap", gap: 4 }}
               >
