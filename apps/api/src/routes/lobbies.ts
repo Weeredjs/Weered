@@ -350,7 +350,16 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
 
     return reply.send({
       ok: true,
-      lobby: applyWindroseReel({ ...lobby, rooms: enrichedRooms }),
+      // Fall back to the standard titles the way the admin view does, so a lobby
+      // that never customised its roles still labels ranks ("Owner",
+      // "Moderator") wherever a member's level is shown. Icons default to none —
+      // an unconfigured lobby stays visually exactly as it was.
+      lobby: applyWindroseReel({
+        ...lobby,
+        roleNames: lobby.roleNames || DEFAULT_ROLE_NAMES,
+        roleIcons: lobby.roleIcons || DEFAULT_ROLE_ICONS,
+        rooms: enrichedRooms,
+      }),
       membership,
       joinRequest,
     });
