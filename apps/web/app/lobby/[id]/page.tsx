@@ -1281,6 +1281,7 @@ export default function LobbyIdPage() {
                       lobbyId={lobbyId}
                       gameName={gameName}
                       accentColor={accent}
+                      demoData={(lobbyInfo as any)?.moduleConfig?.demoData}
                       style={{ flex: 1, minHeight: 0 }}
                     />
                   ) : lobbyInfo?.moduleType === "WINDROSE" ? (

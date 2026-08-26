@@ -274,10 +274,16 @@ async function seedLobbies() {
         where: { id: l.id },
         select: { moduleConfig: true },
       });
+      // Seeded lobbies are pinned (surfaced on home) unless they opt out. An
+      // unlisted lobby must never be pinned — pinning is the one thing that puts
+      // it on the home dashboard, which would defeat the point of unlisting it.
+      const pinned = (l as any).unlisted ? false : ((l as any).pinned ?? true);
+      const unlisted = Boolean((l as any).unlisted);
       await prisma.lobby.upsert({
         where: { id: l.id },
         update: {
-          pinned: true,
+          pinned,
+          unlisted,
           moduleType: l.moduleType,
           ...(existing?.moduleConfig != null ? {} : { moduleConfig: l.moduleConfig as any }),
         },
@@ -285,7 +291,8 @@ async function seedLobbies() {
           id: l.id,
           name: l.name,
           description: l.description,
-          pinned: true,
+          pinned,
+          unlisted,
           verified: true,
           moduleType: l.moduleType,
           moduleConfig: l.moduleConfig as any,

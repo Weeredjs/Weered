@@ -170,7 +170,10 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
         take: 100,
       }),
       prisma.room.findMany({
-        where: { name: { contains: q, mode: "insensitive" } },
+        // The lobby filter matters as much as the pinned one above: a room
+        // search returns its lobby's name, logo and accent, so without this an
+        // unlisted lobby leaks through its own room names.
+        where: { name: { contains: q, mode: "insensitive" }, lobby: { unlisted: false } },
         select: {
           id: true,
           name: true,
@@ -197,6 +200,7 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
 
   app.get("/lobbies", async (_req, reply) => {
     const lobbies = await prisma.lobby.findMany({
+      where: { unlisted: false }, // browse is a listing surface; unlisted means absent from it
       select: {
         id: true,
         name: true,

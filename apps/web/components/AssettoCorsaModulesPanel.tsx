@@ -11,6 +11,7 @@ import EmptyState from "./EmptyState";
 import ModuleTabBar from "./ModuleTabBar";
 import { useWatchHere, consumePendingStream } from "../lib/useWatchHere";
 import { onActivate } from "@/lib/a11y";
+import { ConfigBoard, readBoard, type BoardSpec } from "./ConfigBoards";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 const ACCENT_AC = "#e8452f";
@@ -112,7 +113,17 @@ const TABS = [
   { id: "lfg" as const, label: "Find a Race", icon: "\u{1F91D}" },
   { id: "streams" as const, label: "Live Streams", icon: "\u{1F4FA}" },
 ];
-type TabId = (typeof TABS)[number]["id"];
+type TabId = (typeof TABS)[number]["id"] | string;
+
+/** Boards a lobby can define in moduleConfig.demoData. The keys are fixed but
+ *  every one is optional — a community configures only what it has. Tabs appear
+ *  between the live board and the general tabs, because a community's own
+ *  standings matter more to its members than our generic tooling does. */
+const DEMO_BOARDS = [
+  { key: "ranked", id: "demo-ranked", fallback: "Ranked", icon: "\u{1F3C6}" },
+  { key: "records", id: "demo-records", fallback: "Records", icon: "\u{23F1}" },
+  { key: "clean", id: "demo-clean", fallback: "Clean Racing", icon: "\u{1F6E1}" },
+];
 
 type AcDriver = { name: string; car: string; carLabel: string };
 type AcServer = {
@@ -803,10 +814,13 @@ interface Props {
   lobbyId: string;
   gameName?: string;
   accentColor?: string;
+  /** moduleConfig.demoData — boards this community has configured. Optional;
+   *  a lobby without it renders exactly the tabs it always did. */
+  demoData?: unknown;
   style?: React.CSSProperties;
 }
 
-export default function AssettoCorsaModulesPanel({ lobbyId, accentColor, style }: Props) {
+export default function AssettoCorsaModulesPanel({ lobbyId, accentColor, demoData, style }: Props) {
   const accent = accentColor || ACCENT_AC;
   const [tab, setTab] = useState<TabId>("servers");
   useWatchHere(
@@ -814,15 +828,31 @@ export default function AssettoCorsaModulesPanel({ lobbyId, accentColor, style }
       setTab("streams");
     }, []),
   );
-  const tabs = useMemo(
-    () =>
-      TABS.map((t) => ({
-        id: t.id,
-        label: t.label,
-        icon: <span style={{ fontSize: 13 }}>{t.icon}</span>,
-      })),
-    [],
-  );
+
+  // Boards this lobby actually defines, in a fixed order. A community with no
+  // configured boards sees exactly the tabs it saw before.
+  const boards = useMemo(() => {
+    const src = (demoData ?? {}) as Record<string, unknown>;
+    return DEMO_BOARDS.map((b) => ({ ...b, board: readBoard(src[b.key]) })).filter(
+      (b): b is typeof b & { board: BoardSpec } => b.board != null,
+    );
+  }, [demoData]);
+  const isSample = Boolean((demoData as any)?.sample);
+
+  const tabs = useMemo(() => {
+    const base = TABS.map((t) => ({ id: t.id as string, label: t.label, icon: t.icon }));
+    const extra = boards.map((b) => ({
+      id: b.id,
+      label: b.board.title || b.fallback,
+      icon: b.icon,
+    }));
+    // Live board first, then the community's own boards, then generic tooling.
+    return [base[0], ...extra, ...base.slice(1)].map((t) => ({
+      id: t.id,
+      label: t.label,
+      icon: <span style={{ fontSize: 13 }}>{t.icon}</span>,
+    }));
+  }, [boards]);
 
   return (
     <div
@@ -858,6 +888,12 @@ export default function AssettoCorsaModulesPanel({ lobbyId, accentColor, style }
         {tab === "servers" && <ServerBoard lobbyId={lobbyId} accent={accent} />}
         {tab === "lfg" && <FindARace lobbyId={lobbyId} accent={accent} />}
         {tab === "streams" && <TwitchStreams lobbyId={lobbyId} accent={accent} />}
+        {boards.map(
+          (b) =>
+            tab === b.id && (
+              <ConfigBoard key={b.id} board={b.board} accent={accent} sample={isSample} />
+            ),
+        )}
       </div>
       <div
         style={{
