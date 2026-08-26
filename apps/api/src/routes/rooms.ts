@@ -2,6 +2,7 @@ import { log, swallow } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 import { fetchWithTimeout } from "../lib/fetchWithTimeout";
 import { prisma } from "../lib/prisma";
+import { isValidRoomModule } from "../lib/roomModules";
 import { z } from "zod";
 import { RoomRole } from "@prisma/client";
 import bcrypt from "bcryptjs";
@@ -209,29 +210,9 @@ export default async function roomsRoutes(app: FastifyInstance, opts: Opts) {
         if (!isStaff && !isLobbyOwner) isEvent = false;
       }
 
-      const VALID_MODULES = [
-        "voice",
-        "youtube",
-        "twitch",
-        "browser",
-        "article",
-        "video",
-        "screen",
-        "fakeout",
-        "poker",
-        "destiny",
-        "league",
-        "fortnite",
-        "pubg",
-        "hq",
-        "cs2",
-        "dota2",
-        "study",
-        "dnd",
-      ];
       const rawDM =
         typeof body.defaultModule === "string" ? body.defaultModule.trim().toLowerCase() : "";
-      const defaultModule = VALID_MODULES.includes(rawDM) ? rawDM : null;
+      const defaultModule = isValidRoomModule(rawDM) ? rawDM : null;
       const rawDisabled = Array.isArray(body.disabledModules) ? body.disabledModules : [];
       const disabledModules = Array.from(
         new Set(
@@ -241,7 +222,7 @@ export default async function roomsRoutes(app: FastifyInstance, opts: Opts) {
                 .trim()
                 .toLowerCase(),
             )
-            .filter((m: string) => VALID_MODULES.includes(m) && m !== defaultModule),
+            .filter((m: string) => isValidRoomModule(m) && m !== defaultModule),
         ),
       );
       await prisma.room.create({
@@ -365,26 +346,6 @@ export default async function roomsRoutes(app: FastifyInstance, opts: Opts) {
         data.accentColor = v;
       }
       if (Array.isArray(body.disabledModules)) {
-        const VALID_MODULES = [
-          "voice",
-          "youtube",
-          "twitch",
-          "browser",
-          "article",
-          "video",
-          "screen",
-          "fakeout",
-          "poker",
-          "destiny",
-          "league",
-          "fortnite",
-          "pubg",
-          "hq",
-          "cs2",
-          "dota2",
-          "study",
-          "dnd",
-        ];
         data.disabledModules = Array.from(
           new Set(
             body.disabledModules
@@ -393,7 +354,7 @@ export default async function roomsRoutes(app: FastifyInstance, opts: Opts) {
                   .trim()
                   .toLowerCase(),
               )
-              .filter((m: string) => VALID_MODULES.includes(m)),
+              .filter((m: string) => isValidRoomModule(m)),
           ),
         );
       }

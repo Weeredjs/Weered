@@ -162,6 +162,37 @@ function tidyServerName(raw: string | null): string | null {
   return cut.length ? cut.join(" · ") : raw;
 }
 
+/**
+ * Resolves the lobby's accent and configured boards when the caller did not
+ * supply them.
+ *
+ * The lobby page passes both. A ROOM cannot — the room stage only knows its
+ * lobby id, and threading moduleConfig down through it would mean every future
+ * game panel needs the same plumbing. So the panel asks for what it is missing,
+ * and only for what it is missing: when both props are supplied, no request is
+ * made at all.
+ */
+function useLobbyChrome(lobbyId: string, haveDemo: boolean, haveAccent: boolean) {
+  const [chrome, setChrome] = useState<{ accent?: string; demoData?: unknown }>({});
+  useEffect(() => {
+    if (haveDemo && haveAccent) return;
+    let dead = false;
+    apiFetch(`/lobbies/${encodeURIComponent(lobbyId)}`)
+      .then((j: any) => {
+        if (dead || !j?.ok || !j.lobby) return;
+        setChrome({
+          accent: j.lobby.accentColor || undefined,
+          demoData: j.lobby.moduleConfig?.demoData,
+        });
+      })
+      .catch(() => {});
+    return () => {
+      dead = true;
+    };
+  }, [lobbyId, haveDemo, haveAccent]);
+  return chrome;
+}
+
 function ServerBoard({ lobbyId, accent }: { lobbyId: string; accent: string }) {
   const [servers, setServers] = useState<AcServer[] | null>(null);
   const [failed, setFailed] = useState(false);
@@ -821,7 +852,9 @@ interface Props {
 }
 
 export default function AssettoCorsaModulesPanel({ lobbyId, accentColor, demoData, style }: Props) {
-  const accent = accentColor || ACCENT_AC;
+  const chrome = useLobbyChrome(lobbyId, demoData !== undefined, Boolean(accentColor));
+  const accent = accentColor || chrome.accent || ACCENT_AC;
+  const effectiveDemo = demoData !== undefined ? demoData : chrome.demoData;
   const [tab, setTab] = useState<TabId>("servers");
   useWatchHere(
     useCallback(() => {
@@ -832,12 +865,12 @@ export default function AssettoCorsaModulesPanel({ lobbyId, accentColor, demoDat
   // Boards this lobby actually defines, in a fixed order. A community with no
   // configured boards sees exactly the tabs it saw before.
   const boards = useMemo(() => {
-    const src = (demoData ?? {}) as Record<string, unknown>;
+    const src = (effectiveDemo ?? {}) as Record<string, unknown>;
     return DEMO_BOARDS.map((b) => ({ ...b, board: readBoard(src[b.key]) })).filter(
       (b): b is typeof b & { board: BoardSpec } => b.board != null,
     );
-  }, [demoData]);
-  const isSample = Boolean((demoData as any)?.sample);
+  }, [effectiveDemo]);
+  const isSample = Boolean((effectiveDemo as any)?.sample);
 
   const tabs = useMemo(() => {
     const base = TABS.map((t) => ({ id: t.id as string, label: t.label, icon: t.icon }));
