@@ -398,6 +398,129 @@ export const SEED_LOBBIES = [
     accentColor: "#e84393",
   },
   {
+    id: "assettocorsa",
+    name: "Assetto Corsa",
+    description:
+      "The sim racing hub for Assetto Corsa. Live server board — who's on track, which circuit, what session, how long left — plus a race finder, setup talk, and the community's own servers. Bring your league; point the board at your servers and it runs itself.",
+    keywords: [
+      "assetto corsa",
+      "assetto",
+      "ac",
+      "sim racing",
+      "simracing",
+      "racing",
+      "kunos",
+      "gt3",
+      "content manager",
+      "csp",
+      "nordschleife",
+      "spa",
+      "monza",
+      "hotlap",
+      "league racing",
+      "endurance",
+    ],
+    moduleType: ModuleType.ASSETTOCORSA,
+    moduleConfig: {
+      subreddit: "r/assettocorsa",
+      twitchCategory: "Assetto Corsa",
+      steamAppId: "244210",
+      // The server board reads this list. Any community can point it at their
+      // own servers; these are FastFox Racing's public ranked servers, which
+      // publish the standard AC /INFO endpoint.
+      acServers: [
+        { host: "fastfox.racing", httpPort: 8084, label: "GT3 · Kunos NoDLC" },
+        { host: "fastfox.racing", httpPort: 8092, label: "F1 · Kunos NoDLC" },
+      ],
+    },
+    accentColor: "#e8452f",
+    logoUrl: null,
+    bannerUrl: null,
+    websiteUrl: "https://www.assettocorsa.net",
+  },
+  // ---------------------------------------------------------------------------
+  // FastFox Racing — UNLISTED client preview.
+  //
+  // Reachable only by direct link: absent from browse, search, the map and the
+  // home dashboard (see Lobby.unlisted). Keywords are deliberately empty so it
+  // cannot be found by searching either.
+  //
+  // The Server Board here is REAL — it polls FastFox's two public servers. The
+  // Ranked / Recordes / Corridas Limpas tabs render SAMPLE data carried in
+  // moduleConfig.demoData and are labelled as such in the UI, because FastFox's
+  // real figures live in their own systems and we have not been given access.
+  // Driver names in that sample are deliberately synthetic placeholders — real
+  // drivers' names beside invented ratings would be a fabricated record about
+  // identifiable people.
+  // ---------------------------------------------------------------------------
+  {
+    id: "fastfox",
+    name: "FastFox Racing",
+    description:
+      "Brasil · Sim racing · Assetto Corsa. Ranked leagues, lap records, and clean-racing standards — with the live server board showing who is on track right now.",
+    keywords: [], // intentionally empty: unlisted lobbies are not searchable
+    unlisted: true,
+    moduleType: ModuleType.ASSETTOCORSA,
+    moduleConfig: {
+      twitchCategory: "Assetto Corsa",
+      steamAppId: "244210",
+      // FastFox's two PUBLIC servers. Their third (GT3 | Pro Ranked) is
+      // members-only and its address is not published, so it is not listed here
+      // — they can add it themselves from the admin panel.
+      acServers: [
+        { host: "fastfox.racing", httpPort: 8084, label: "GT3 · Kunos NoDLC" },
+        { host: "fastfox.racing", httpPort: 8092, label: "F1 · Kunos NoDLC" },
+      ],
+      // Section names taken verbatim from fastfox.racing so the lobby speaks
+      // the community's own vocabulary rather than ours.
+      demoData: {
+        sample: true,
+        ranked: {
+          title: "Ligas Rankeadas",
+          season: "Temporada 2026 · GT3 Pro",
+          columns: ["#", "Piloto", "Corridas", "Pódios", "Rating"],
+          rows: [
+            ["1", "Piloto 01", "24", "11", "2418"],
+            ["2", "Piloto 02", "22", "9", "2377"],
+            ["3", "Piloto 03", "26", "8", "2341"],
+            ["4", "Piloto 04", "19", "6", "2290"],
+            ["5", "Piloto 05", "21", "5", "2264"],
+            ["6", "Piloto 06", "17", "4", "2231"],
+            ["7", "Piloto 07", "23", "3", "2198"],
+            ["8", "Piloto 08", "15", "2", "2170"],
+          ],
+        },
+        records: {
+          title: "Recordes e Histórico",
+          columns: ["Circuito", "Carro", "Piloto", "Tempo"],
+          rows: [
+            ["Monza", "Ferrari 488 GT3", "Piloto 02", "1:47.412"],
+            ["Spa-Francorchamps", "Porsche 911 GT3 R", "Piloto 01", "2:16.883"],
+            ["Nürburgring GP", "Mercedes AMG GT3", "Piloto 04", "1:54.207"],
+            ["Imola", "BMW M4 GT3", "Piloto 01", "1:41.559"],
+            ["Vallelunga", "Audi R8 LMS", "Piloto 03", "1:32.914"],
+          ],
+        },
+        clean: {
+          title: "Corridas Limpas",
+          blurb:
+            "Clean-racing standards are what the community is actually built on. This is where a rating, an incident review and a Largada Segura record would live.",
+          columns: ["Piloto", "Corridas", "Incidentes", "Índice"],
+          rows: [
+            ["Piloto 01", "24", "3", "99.1%"],
+            ["Piloto 05", "21", "4", "98.4%"],
+            ["Piloto 02", "22", "6", "97.8%"],
+            ["Piloto 07", "23", "9", "96.2%"],
+          ],
+        },
+      },
+    },
+    accentColor: "#fd751a",
+    logoUrl: null,
+    bannerUrl: null,
+    websiteUrl: "https://fastfox.racing",
+  },
+  {
     id: "division2",
     name: "The Division 2",
     description:
@@ -1015,6 +1138,85 @@ export const SEED_ROOMS: {
     name: "Clip Vault",
     description: "Best plays, funniest deaths, cinematic shots. Post the clip.",
     lobbyId: "gta6",
+  },
+
+  // FastFox Racing (unlisted client preview). Room names use the community's
+  // own vocabulary, taken from fastfox.racing.
+  {
+    id: "ff-paddock",
+    name: "Paddock",
+    description:
+      "General FastFox chat. Servers, mods, wheel settings, and what happened in turn one.",
+    lobbyId: "fastfox",
+  },
+  {
+    id: "ff-ranked",
+    name: "Ligas Rankeadas",
+    description: "Ranked league racing — standings, promotions, and race-night sign-ups.",
+    lobbyId: "fastfox",
+  },
+  {
+    id: "ff-recordes",
+    name: "Recordes e Histórico",
+    description: "Lap records and race history. Post the lap, post the replay.",
+    lobbyId: "fastfox",
+  },
+  {
+    id: "ff-corridas-limpas",
+    name: "Corridas Limpas",
+    description:
+      "Incident review and clean-racing standards. Stewards' inquiries and Largada Segura reports.",
+    lobbyId: "fastfox",
+  },
+  {
+    id: "ff-setups",
+    name: "Setups & Telemetria",
+    description: "Share setups, compare telemetry, argue about diff settings and tyre pressures.",
+    lobbyId: "fastfox",
+  },
+  {
+    id: "ff-pitwall",
+    name: "Pit Wall",
+    description: "Voice for race nights — spotting, strategy, and the post-race stewards' inquiry.",
+    lobbyId: "fastfox",
+  },
+  {
+    id: "ac-paddock",
+    name: "The Paddock",
+    description:
+      "General Assetto Corsa chat. Servers, mods, CSP, wheel settings, and what went wrong in turn one.",
+    lobbyId: "assettocorsa",
+  },
+  {
+    id: "ac-race-finder",
+    name: "Race Finder",
+    description:
+      "Looking for a race. Post the server, class, and time — or jump on whatever's live on the board.",
+    lobbyId: "assettocorsa",
+  },
+  {
+    id: "ac-setups",
+    name: "Setups & Telemetry",
+    description: "Share setups, compare telemetry, argue about diff settings and tyre pressures.",
+    lobbyId: "assettocorsa",
+  },
+  {
+    id: "ac-leagues",
+    name: "Leagues & Events",
+    description: "League seasons, endurance events, sign-ups, and race control notices.",
+    lobbyId: "assettocorsa",
+  },
+  {
+    id: "ac-hotlaps",
+    name: "Hotlap Hall",
+    description: "Post your lap, get told it was a cut. Track records and replay links.",
+    lobbyId: "assettocorsa",
+  },
+  {
+    id: "ac-pitwall",
+    name: "Pit Wall",
+    description: "Voice for race nights — spotting, strategy, and the post-race stewards' inquiry.",
+    lobbyId: "assettocorsa",
   },
 
   {

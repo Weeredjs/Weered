@@ -7,6 +7,7 @@ import { LobbyRole } from "@prisma/client";
 import { isAIAvailable, OPERATOR_PRESENCE } from "../lib/roomState";
 import { lastMessageMap } from "../lib/roomRecency";
 import { DEFAULT_ROLE_NAMES, DEFAULT_ROLE_ICONS, cleanRoleMap } from "../lib/lobbyRoles";
+import { LEVEL_PERMS, hasLobbyPerm } from "../lib/lobbyPerms";
 
 import { touchLobbyViewer } from "../lib/lobbyViewers";
 
@@ -169,7 +170,10 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
         take: 100,
       }),
       prisma.room.findMany({
-        where: { name: { contains: q, mode: "insensitive" } },
+        // The lobby filter matters as much as the pinned one above: a room
+        // search returns its lobby's name, logo and accent, so without this an
+        // unlisted lobby leaks through its own room names.
+        where: { name: { contains: q, mode: "insensitive" }, lobby: { unlisted: false } },
         select: {
           id: true,
           name: true,
@@ -196,6 +200,7 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
 
   app.get("/lobbies", async (_req, reply) => {
     const lobbies = await prisma.lobby.findMany({
+      where: { unlisted: false }, // browse is a listing surface; unlisted means absent from it
       select: {
         id: true,
         name: true,
@@ -842,19 +847,6 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
       isStale,
     });
   });
-
-  const LEVEL_PERMS: Record<number, string[]> = {
-    5: ["kick", "ban", "manage_rooms", "edit_branding", "manage_roles", "pin_rooms", "admin_chat"],
-    4: ["kick", "ban", "manage_rooms", "edit_branding", "pin_rooms", "admin_chat"],
-    3: ["kick", "ban", "manage_rooms", "pin_rooms", "admin_chat"],
-    2: ["kick", "admin_chat"],
-    1: [],
-  };
-
-  function hasLobbyPerm(level: number, perm: string, overrideRole: string | null): boolean {
-    if (overrideRole && ["STAFF", "ADMIN", "GOD"].includes(overrideRole)) return true;
-    return (LEVEL_PERMS[level] || []).includes(perm);
-  }
 
   app.get("/lobbies/:id/admin", async (req, reply) => {
     const ctx = await lobbyAdminAccess(req, reply, 2);

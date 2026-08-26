@@ -48,7 +48,7 @@ export default async function publicRoutes(app: FastifyInstance, opts: Opts) {
 
   app.get("/public/lobbies/featured", async (_req, reply) => {
     const lobbies = await prisma.lobby.findMany({
-      where: { OR: [{ pinned: true }, { id: { in: FEATURED_ORDER } }] },
+      where: { unlisted: false, OR: [{ pinned: true }, { id: { in: FEATURED_ORDER } }] },
       select: {
         id: true,
         name: true,

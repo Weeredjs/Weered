@@ -63,6 +63,7 @@ import mtgRoutes from "./routes/mtg";
 import pubgRoutes from "./routes/pubg";
 import leagueRoutes from "./routes/league";
 import division2Routes from "./routes/division2";
+import assettoRoutes from "./routes/assetto";
 import bungieRoutes from "./routes/bungie";
 import eveRoutes from "./routes/eve";
 import poeRoutes from "./routes/poe";
@@ -273,10 +274,16 @@ async function seedLobbies() {
         where: { id: l.id },
         select: { moduleConfig: true },
       });
+      // Seeded lobbies are pinned (surfaced on home) unless they opt out. An
+      // unlisted lobby must never be pinned — pinning is the one thing that puts
+      // it on the home dashboard, which would defeat the point of unlisting it.
+      const pinned = (l as any).unlisted ? false : ((l as any).pinned ?? true);
+      const unlisted = Boolean((l as any).unlisted);
       await prisma.lobby.upsert({
         where: { id: l.id },
         update: {
-          pinned: true,
+          pinned,
+          unlisted,
           moduleType: l.moduleType,
           ...(existing?.moduleConfig != null ? {} : { moduleConfig: l.moduleConfig as any }),
         },
@@ -284,7 +291,8 @@ async function seedLobbies() {
           id: l.id,
           name: l.name,
           description: l.description,
-          pinned: true,
+          pinned,
+          unlisted,
           verified: true,
           moduleType: l.moduleType,
           moduleConfig: l.moduleConfig as any,
@@ -1796,6 +1804,7 @@ async function main() {
 
   await app.register(leagueRoutes);
   await app.register(division2Routes);
+  await app.register(assettoRoutes, { lobbyAdminAccess } as any);
 
   await app.register(fortniteRoutes, { authFromHeader, sendPush });
   await app.register(scryfallRoutes, {});

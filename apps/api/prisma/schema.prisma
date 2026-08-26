@@ -50,6 +50,7 @@ enum ModuleType {
   TRADING
   POKER
   HEADQUARTERS
+  ASSETTOCORSA
   CS2
   DIVISION2
   DOTA2
@@ -97,6 +98,13 @@ model Lobby {
   // (shows featured-first). The monetization hook: sell these slots later.
   // Distinct from `pinned` (system/seeded) and the single hero featuredLobbyId.
   featured    Boolean    @default(false)
+  // Unlisted = reachable by direct link, but absent from every listing surface:
+  // browse, search (lobby AND room), and the geo map. This is NOT a privacy
+  // control — an unlisted lobby is still readable by anyone holding the link,
+  // and join/admit rules are what actually gate entry. It exists so a lobby can
+  // be handed to a specific audience (a client preview, a private community)
+  // without appearing to everyone else first.
+  unlisted    Boolean    @default(false)
   moduleType  ModuleType @default(FEED)
   moduleConfig Json?
 

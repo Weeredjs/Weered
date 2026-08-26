@@ -129,6 +129,7 @@ export default async function geoRoutes(app: FastifyInstance, opts: Opts) {
     });
     const locUserIds = new Set(allLocUsers.map((u) => u.id));
     const lobbies = await prisma.lobby.findMany({
+      where: { unlisted: false }, // the map is a listing surface too
       select: { id: true, name: true, moduleType: true, members: { select: { userId: true } } },
     });
     const gameMap = new Map<string, { name: string; count: number }>();
@@ -210,6 +211,7 @@ export default async function geoRoutes(app: FastifyInstance, opts: Opts) {
     }
 
     const lobbies = await prisma.lobby.findMany({
+      where: { unlisted: false }, // the map is a listing surface too
       select: {
         id: true,
         name: true,
