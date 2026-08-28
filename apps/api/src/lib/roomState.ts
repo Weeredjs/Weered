@@ -1,5 +1,6 @@
 import { WebSocket, WebSocketServer } from "ws";
 import { prisma } from "./prisma";
+import { resolveUserNames, displayName } from "./userNames";
 import { swallow } from "./logger";
 import { randomUUID } from "node:crypto";
 import { type ReactionAgg } from "./chatHelpers";
@@ -253,9 +254,21 @@ export async function ensureRoomLoaded(roomId: string): Promise<RoomState> {
       if (m.role === "MOD") r.mods.add(m.userId);
     }
     for (const b of dbRoom.bans) r.banned.add(b.userId);
+    // Author names come from the User record, not the copy stored on each
+    // message. That copy is the name at send time, so without this a rename
+    // leaves every past message showing the old name. One batched lookup for
+    // the whole backlog, authors and reply targets together.
+    const nameIds = new Set<string>();
+    for (const m of dbRoom.messages) {
+      if (m.userId) nameIds.add(m.userId);
+      const rid = (m as any).replyToUserId;
+      if (rid) nameIds.add(String(rid));
+    }
+    const liveNames = await resolveUserNames(nameIds);
+
     r.msgs = dbRoom.messages.map((m) => ({
       id: m.id,
-      user: { id: m.userId, name: m.userName || "?", role: "member" },
+      user: { id: m.userId, name: displayName(liveNames, m.userId, m.userName), role: "member" },
       body: m.body,
       ts: new Date(m.ts).getTime(),
       editedAt: (m as any).editedAt ? new Date((m as any).editedAt).getTime() : undefined,
@@ -264,7 +277,7 @@ export async function ensureRoomLoaded(roomId: string): Promise<RoomState> {
         ? {
             id: (m as any).replyToId,
             userId: (m as any).replyToUserId || "",
-            userName: (m as any).replyToUserName || "?",
+            userName: displayName(liveNames, (m as any).replyToUserId, (m as any).replyToUserName),
             body: (m as any).replyToBody || "",
           }
         : undefined,

@@ -1,6 +1,7 @@
 import { log, swallow } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
+import { resolveUserNames, displayName } from "../lib/userNames";
 import { z } from "zod";
 
 type Opts = {
@@ -726,7 +727,23 @@ export default async function crewsRoutes(app: FastifyInstance, opts: Opts) {
       "CREW_MESSAGE",
       messages.map((m: any) => m.id),
     );
-    const enriched = messages.map((m: any) => ({ ...m, reactions: reactionsByMsg[m.id] || [] }));
+    // userName on a message is the author's name at send time, so a rename
+    // would otherwise leave it stale forever. Resolve live, fall back to the
+    // stored copy for deleted accounts.
+    const nameIds = new Set<string>();
+    for (const m of messages as any[]) {
+      if (m.userId) nameIds.add(m.userId);
+      if (m.replyToUserId) nameIds.add(String(m.replyToUserId));
+    }
+    const liveNames = await resolveUserNames(nameIds);
+    const enriched = messages.map((m: any) => ({
+      ...m,
+      userName: displayName(liveNames, m.userId, m.userName),
+      replyToUserName: m.replyToId
+        ? displayName(liveNames, m.replyToUserId, m.replyToUserName)
+        : m.replyToUserName,
+      reactions: reactionsByMsg[m.id] || [],
+    }));
 
     return reply.send({ ok: true, messages: enriched.reverse() });
   });

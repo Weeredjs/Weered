@@ -15,6 +15,7 @@ import { ChatMessage } from "./chat/ChatMessage";
 import { API, ChatAtt, authHeadersChat } from "./chat/chatShared";
 import { onActivate } from "@/lib/a11y";
 import { screenImageFile } from "@/lib/nsfwScreen";
+import { useStickToBottom } from "@/lib/useStickToBottom";
 
 export default function LobbyChatPanel(
   props: {
@@ -389,14 +390,9 @@ export default function LobbyChatPanel(
   const msgTrim = String(text || "").trim();
   const canSend = !!canType && msgTrim.length > 0; // attachment-only send handled via canSendNow below
 
-  useEffect(() => {
-    const el = listRef.current;
-    if (!el) return;
-    const id = requestAnimationFrame(() => {
-      el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
-    });
-    return () => cancelAnimationFrame(id);
-  }, [msgs.length, effectiveRoomId]);
+  // Pinning the list to the newest message is subtler than one scrollTo — see
+  // useStickToBottom for why measuring once lands short.
+  useStickToBottom(listRef, effectiveRoomId, msgs.length);
 
   useEffect(() => {
     const el = listRef.current;

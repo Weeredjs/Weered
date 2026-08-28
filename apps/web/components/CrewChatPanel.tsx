@@ -5,6 +5,7 @@ import { avatarBg } from "../lib/avatarColor";
 import EmptyState from "./EmptyState";
 import { useWeered } from "./WeeredProvider";
 import { weeredConfirm } from "../lib/confirm";
+import { useStickToBottom } from "@/lib/useStickToBottom";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 function getToken() {
@@ -102,11 +103,12 @@ export default function CrewChatPanel({ crewId, crewName, myId, myName }: Props)
   const inputRef = useRef<HTMLInputElement>(null);
   const ctx = useWeered() as any;
 
+  // Delegated to the shared pin: a single rAF measures the list before avatars
+  // and link cards have loaded, so it lands short. See useStickToBottom.
+  const stick = useStickToBottom(scrollRef, crewId, messages.length);
   const scrollToBottom = useCallback(() => {
-    requestAnimationFrame(() => {
-      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-    });
-  }, []);
+    stick.jumpToBottom();
+  }, [stick]);
 
   useEffect(() => {
     const tok = getToken();
@@ -129,9 +131,8 @@ export default function CrewChatPanel({ crewId, crewName, myId, myName }: Props)
       .finally(() => {
         if (!cancelled) {
           setLoading(false);
-          requestAnimationFrame(() => {
-            bottomRef.current?.scrollIntoView({ behavior: "instant" as any });
-          });
+          // the shared pin handles landing at the bottom, and keeps re-pinning
+          // while late media resolves
         }
       });
 
