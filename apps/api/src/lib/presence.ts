@@ -140,9 +140,18 @@ export function xblGet(pathname: string): Promise<{ status: number; json: any | 
         headers: { "X-Authorization": OPENXBL_API_KEY, Accept: "application/json" },
       },
       (res: any) => {
-        let body = "";
-        res.on("data", (c: any) => {
-          body += c;
+        // Collect BUFFERS and decode once at the end.
+        //
+        // Appending each chunk to a string decodes every chunk on its own, so
+        // any multi-byte character straddling a chunk boundary is destroyed.
+        // The apostrophe in the Division's title is U+2019 -- three bytes in
+        // UTF-8. When a TCP read split them, the leading byte decoded to one
+        // replacement character and the orphaned continuation bytes to another,
+        // and the room showed "Tom Clancy??s The Division". Intermittent by
+        // nature, because it depended on where the network happened to split.
+        const chunks: Buffer[] = [];
+        res.on("data", (c: Buffer) => {
+          chunks.push(c);
         });
         res.on("end", () => {
           if (res.statusCode === 429) {
@@ -151,6 +160,7 @@ export function xblGet(pathname: string): Promise<{ status: number; json: any | 
             return settle({ status: 429, json: null });
           }
           try {
+            const body = Buffer.concat(chunks).toString("utf8");
             settle({ status: res.statusCode || 0, json: JSON.parse(body) });
           } catch {
             settle({ status: res.statusCode || 0, json: null });
