@@ -245,6 +245,29 @@ export default function AlternativesDiscordPage() {
           </div>
         </section>
 
+        <section className="mkt-section">
+          <div className="mkt-wrap">
+            <h2 className="mkt-h2">If you got here for a more specific reason</h2>
+            <ul className="mkt-bullet-list">
+              <li>
+                <strong>
+                  <Link href="/alternatives/guilded">You came from Guilded.</Link>
+                </strong>{" "}
+                Roblox shut it down on December 19, 2025. What replaced each thing you had.
+              </li>
+              <li>
+                <strong>
+                  <Link href="/alternativas/discord-brasil" hrefLang="pt-BR">
+                    Você está no Brasil e o vídeo do Discord parou.
+                  </Link>
+                </strong>{" "}
+                Câmera, tela e Go Live estão suspensos desde 17 de agosto de 2026 por determinação
+                da ANPD. O que foi bloqueado e o que fazer.
+              </li>
+            </ul>
+          </div>
+        </section>
+
         <section className="mkt-wrap">
           <div className="mkt-final-cta">
             <h2>Try it.</h2>

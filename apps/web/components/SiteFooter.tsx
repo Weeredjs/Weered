@@ -88,6 +88,14 @@ export default function SiteFooter() {
           <Link href="/contact">contact</Link>
           <div className="site-footer-divider" />
           <Link href="/apply">apply to mod</Link>
+          <div className="site-footer-divider" />
+          <Link href="/alternatives/guilded">guilded alternative</Link>
+          <div className="site-footer-divider" />
+          {/* Portuguese label on purpose: the people this page is for are not
+              scanning an English footer for the word "Brazil". */}
+          <Link href="/alternativas/discord-brasil" hrefLang="pt-BR">
+            discord sem vídeo (BR)
+          </Link>
         </nav>
       </footer>
     </>
