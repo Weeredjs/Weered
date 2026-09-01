@@ -79,6 +79,8 @@ export default function SiteFooter() {
           <div className="site-footer-divider" />
           <Link href="/premium">premium</Link>
           <div className="site-footer-divider" />
+          <Link href="/pricing">pricing</Link>
+          <div className="site-footer-divider" />
           <Link href="/terms">terms</Link>
           <div className="site-footer-divider" />
           <Link href="/privacy">privacy</Link>
