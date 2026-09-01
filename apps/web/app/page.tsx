@@ -831,8 +831,11 @@ function Landing({ nextPath }: { nextPath: string }) {
         <section className="lp-hero">
           <div className="lp-eyebrow">Bringing back the game lobby</div>
           <h1 className="lp-headline">
-            Every game
-            <br />
+            {/* The explicit space is load-bearing. JSX strips the whitespace
+                either side of the <br />, so the rendered TEXT was
+                "Every gamegets a lobby." -- fine on screen, but that is the
+                string crawlers and language models extract from the H1. */}
+            Every game <br />
             gets a lobby.
           </h1>
           <p className="lp-sub">
