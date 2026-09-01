@@ -62,7 +62,7 @@ const faqLd = {
       name: "Is it free to host?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "Yes. Hosting a tournament in the Destiny 2 lobby on Weered is free. Premium cosmetic flair grants and custom branding are paid extras for serious community organisers, but the tournament engine itself costs nothing.",
+        text: "Yes. Hosting a tournament in the Destiny 2 lobby on Weered is free, and the tournament engine costs nothing to use. Running your own lobby, with its own branding and roles, is a paid tier at $6 a month.",
       },
     },
   ],

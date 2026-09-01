@@ -36,7 +36,7 @@ const faqLd = {
       name: "Is Weered free like Discord?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "Yes. Weered is free to use. Premium tiers exist for extras like custom flair and storage, starting at $4/month, but the core platform (lobbies, rooms, voice, presence, integrations) is free.",
+        text: "Yes. Joining Weered and using it is free: lobbies, rooms, voice, video, presence and the game integrations. Running your own lobby is a paid tier at $6 a month. A fully custom lobby, with your bots rebuilt as native features and your own branding, is quoted separately by community size.",
       },
     },
     {
@@ -222,8 +222,9 @@ export default function AlternativesDiscordPage() {
             <h2 className="mkt-h2">Common questions</h2>
             <h3 className="mkt-h3">Is Weered free like Discord?</h3>
             <p className="mkt-p">
-              Yes. Premium tiers exist for cosmetics + storage starting at $4 / month, but the core
-              platform (lobbies, rooms, voice, presence, game integrations) is free.
+              Yes. Joining and using Weered is free. Running your own lobby is a paid tier at $6 a
+              month, and a fully custom build is quoted separately. The core platform (lobbies,
+              rooms, voice, presence, game integrations) is free.
             </p>
             <h3 className="mkt-h3">Do I have to host a server?</h3>
             <p className="mkt-p">
