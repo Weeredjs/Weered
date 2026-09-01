@@ -43,6 +43,20 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.8,
     },
     {
+      url: `${BASE}/alternatives/guilded`,
+      lastModified: now,
+      changeFrequency: "weekly",
+      priority: 0.8,
+    },
+    {
+      // Live regulatory situation with no announced end date, so it is worth
+      // recrawling more often than the evergreen comparison pages.
+      url: `${BASE}/alternativas/discord-brasil`,
+      lastModified: now,
+      changeFrequency: "daily",
+      priority: 0.9,
+    },
+    {
       url: `${BASE}/tournaments/destiny-2`,
       lastModified: now,
       changeFrequency: "weekly",
