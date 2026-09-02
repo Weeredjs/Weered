@@ -208,11 +208,20 @@ export async function ensureRoomLoaded(roomId: string): Promise<RoomState> {
   const cached = rooms.get(roomId);
   if (cached) return cached;
 
+  // The Home Lobby used to be built here as an empty in-memory room with no
+  // Room row, and every persistence path skipped it. Its chat therefore lived
+  // exactly as long as the API process, which restarts on every deploy. Give
+  // it a row (idempotently) and let it load like any other room so its
+  // messages and reactions come back. Name and pinned are re-asserted after
+  // load so nothing about its identity depends on what the row says.
   if (roomId === "lobby") {
-    const r = makeEmptyRoom(roomId);
-    r.name = "Home Lobby";
-    rooms.set(roomId, r);
-    return r;
+    await prisma.room
+      .upsert({
+        where: { id: roomId },
+        update: {},
+        create: { id: roomId, name: "Home Lobby", pinned: true, locked: false, ownerId: null },
+      })
+      .catch(swallow);
   }
 
   const dbRoom = await prisma.room.findUnique({
@@ -250,6 +259,10 @@ export async function ensureRoomLoaded(roomId: string): Promise<RoomState> {
       : [];
     const vm = String((dbRoom as any).voiceMode || "OPEN").toUpperCase();
     r.voiceMode = vm === "QUEUED" || vm === "LISTEN_ONLY" ? vm : "OPEN";
+    if (roomId === "lobby") {
+      r.name = "Home Lobby";
+      r.pinned = true;
+    }
     for (const m of dbRoom.members) {
       if (m.role === "MOD") r.mods.add(m.userId);
     }
@@ -260,15 +273,28 @@ export async function ensureRoomLoaded(roomId: string): Promise<RoomState> {
     // the whole backlog, authors and reply targets together.
     const nameIds = new Set<string>();
     for (const m of dbRoom.messages) {
-      if (m.userId) nameIds.add(m.userId);
+      if (m.userId && m.userId !== "operator") nameIds.add(m.userId);
       const rid = (m as any).replyToUserId;
       if (rid) nameIds.add(String(rid));
     }
     const liveNames = await resolveUserNames(nameIds);
 
+    // The operator's replies are persisted with userId "operator" (no User row
+    // behind it). Rebuild the exact shape the live broadcast used, or a reload
+    // turns The Operator into a plain member called "operator" with no avatar.
+    const OPERATOR_USER = {
+      id: "operator",
+      name: "The Operator",
+      role: "SYSTEM" as any,
+      avatarColor: "#D4A017",
+      avatar: "/brand/roles/operator.svg",
+    };
     r.msgs = dbRoom.messages.map((m) => ({
       id: m.id,
-      user: { id: m.userId, name: displayName(liveNames, m.userId, m.userName), role: "member" },
+      user:
+        m.userId === "operator"
+          ? OPERATOR_USER
+          : { id: m.userId, name: displayName(liveNames, m.userId, m.userName), role: "member" },
       body: m.body,
       ts: new Date(m.ts).getTime(),
       editedAt: (m as any).editedAt ? new Date((m as any).editedAt).getTime() : undefined,
