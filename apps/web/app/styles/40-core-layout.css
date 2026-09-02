@@ -959,10 +959,14 @@ button:hover, [role="button"]:hover {
   height: calc(100vh - var(--wtb-h, 0px)); /* fallback when a more specific rule forces position: relative */
   overflow: hidden;
   box-sizing: border-box;
+  /* How much of the viewport the footer strip takes. Children that size
+     themselves from 100vh (the lobby page) subtract this instead of guessing. */
+  --shell-footer-h: 0px;
 }
 .weered-shell.has-footer {
   bottom: 28px;
   height: calc(100vh - 28px - var(--wtb-h, 0px));
+  --shell-footer-h: 28px;
 }
 
 .weered-left  { width: 320px; flex: 0 0 320px; }
