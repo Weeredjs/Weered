@@ -736,8 +736,13 @@ export default function LobbyIdPage() {
     return () => window.removeEventListener("weered:settings", read);
   }, []);
 
+  // Windrose is a demo lobby and is FORCED: every viewer, member or not,
+  // whatever their keep-default setting. The other themeable lobbies keep the
+  // opt-in + member-only rule. If Windrose ever stops being a demo, replace
+  // this id check with a per-lobby takeover flag.
   const wantLobbyTheme =
-    THEMEABLE_LOBBIES.includes(lobbyId) && memberChecked && isMember && !keepDefaultTheme;
+    lobbyId === "windrose" ||
+    (THEMEABLE_LOBBIES.includes(lobbyId) && memberChecked && isMember && !keepDefaultTheme);
 
   useEffect(() => {
     if (!lobbyId) return;
