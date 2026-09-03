@@ -1,6 +1,6 @@
 import { WebSocket, WebSocketServer } from "ws";
 import { prisma } from "./prisma";
-import { resolveUserNames, displayName } from "./userNames";
+import { displayName, resolveUserProfiles, namesOf } from "./userNames";
 import { swallow } from "./logger";
 import { randomUUID } from "node:crypto";
 import { type ReactionAgg } from "./chatHelpers";
@@ -277,7 +277,10 @@ export async function ensureRoomLoaded(roomId: string): Promise<RoomState> {
       const rid = (m as any).replyToUserId;
       if (rid) nameIds.add(String(rid));
     }
-    const liveNames = await resolveUserNames(nameIds);
+    // One query for the whole backlog: live name AND avatar/avatarColor, so a
+    // reload shows the same avatars the live broadcast did.
+    const liveProfiles = await resolveUserProfiles(nameIds);
+    const liveNames = namesOf(liveProfiles);
 
     // The operator's replies are persisted with userId "operator" (no User row
     // behind it). Rebuild the exact shape the live broadcast used, or a reload
@@ -294,7 +297,13 @@ export async function ensureRoomLoaded(roomId: string): Promise<RoomState> {
       user:
         m.userId === "operator"
           ? OPERATOR_USER
-          : { id: m.userId, name: displayName(liveNames, m.userId, m.userName), role: "member" },
+          : {
+              id: m.userId,
+              name: displayName(liveNames, m.userId, m.userName),
+              role: "member" as const,
+              avatar: liveProfiles.get(m.userId)?.avatar ?? undefined,
+              avatarColor: liveProfiles.get(m.userId)?.avatarColor ?? undefined,
+            },
       body: m.body,
       ts: new Date(m.ts).getTime(),
       editedAt: (m as any).editedAt ? new Date((m as any).editedAt).getTime() : undefined,
