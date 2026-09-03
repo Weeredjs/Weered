@@ -222,7 +222,6 @@ export default function LeftRail() {
   const [paperBal, setPaperBal] = useState<number | null>(null);
   useEffect(() => {
     const tok = typeof localStorage !== "undefined" ? localStorage.getItem("weered_token") : null;
-    if (!tok) return;
     fetch("https://api.weered.ca/paper/wallet", { headers: { Authorization: `Bearer ${tok}` } })
       .then((r) => r.json())
       .then((j) => {

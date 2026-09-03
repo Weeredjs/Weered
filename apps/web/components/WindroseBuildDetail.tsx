@@ -104,7 +104,6 @@ export default function WindroseBuildDetail({
         return "";
       }
     })();
-    if (!tok) return;
     const newValue = myVote === value ? 0 : value;
     const prevVote = myVote;
     setMyVote(newValue);
@@ -135,7 +134,6 @@ export default function WindroseBuildDetail({
         return "";
       }
     })();
-    if (!tok) return;
     setMySave((prev) => !prev);
     try {
       const r = await fetch(`${API}/windrose/builds/${encodeURIComponent(slug)}/save`, {
@@ -161,7 +159,6 @@ export default function WindroseBuildDetail({
           return "";
         }
       })();
-      if (!tok) return;
       const r = await fetch(`${API}/windrose/builds/${encodeURIComponent(slug)}/comment`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${tok}` },
@@ -194,7 +191,6 @@ export default function WindroseBuildDetail({
         return "";
       }
     })();
-    if (!tok) return;
     const r = await fetch(`${API}/windrose/builds/${encodeURIComponent(slug)}`, {
       method: "DELETE",
       headers: { Authorization: `Bearer ${tok}` },
@@ -850,7 +846,6 @@ function ReportDialog({ slug, onClose }: { slug: string; onClose: () => void }) 
         return "";
       }
     })();
-    if (!tok) return;
     await fetch(`${API}/windrose/builds/${encodeURIComponent(slug)}/report`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${tok}` },

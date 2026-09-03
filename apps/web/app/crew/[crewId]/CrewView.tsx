@@ -107,7 +107,6 @@ export default function CrewView({ crewId, initial }: { crewId: string; initial:
 
   async function removeMod(modId: string) {
     const token = typeof window !== "undefined" ? localStorage.getItem("weered_token") || "" : "";
-    if (!token) return;
     await fetch(`${API}/crews/${encodeURIComponent(crewId)}/mods/${encodeURIComponent(modId)}`, {
       method: "DELETE",
       headers: { Authorization: `Bearer ${token}` },
@@ -1045,7 +1044,6 @@ function AddModDialog({
 
   async function pick(modId: string) {
     const token = typeof window !== "undefined" ? localStorage.getItem("weered_token") || "" : "";
-    if (!token) return;
     setSubmitting(modId);
     try {
       const r = await fetch(`${API}/crews/${encodeURIComponent(crewId)}/mods`, {
