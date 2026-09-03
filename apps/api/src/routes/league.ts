@@ -189,10 +189,27 @@ export default async function leagueRoutes(app: FastifyInstance) {
     const rotation = await riotGet(`${riotPlatformUrl(region)}/lol/platform/v3/champion-rotations`);
     if (!rotation) return reply.send({ ok: false, error: "rotation_unavailable" });
 
+    // Riot renamed the fields (2026): {sr, newplayer} replaced
+    // {freeChampionIds, freeChampionIdsForNewPlayers}. Accept either; keep our
+    // output keys stable for the client.
+    const freeChampionIds: number[] = Array.isArray(rotation.freeChampionIds)
+      ? rotation.freeChampionIds
+      : Array.isArray(rotation.sr)
+        ? rotation.sr
+        : [];
+    const freeChampionIdsForNewPlayers: number[] = Array.isArray(
+      rotation.freeChampionIdsForNewPlayers,
+    )
+      ? rotation.freeChampionIdsForNewPlayers
+      : Array.isArray(rotation.newplayer)
+        ? rotation.newplayer
+        : [];
+    if (freeChampionIds.length === 0)
+      return reply.send({ ok: false, error: "rotation_unavailable" });
     const result = {
       ok: true,
-      freeChampionIds: rotation.freeChampionIds,
-      freeChampionIdsForNewPlayers: rotation.freeChampionIdsForNewPlayers,
+      freeChampionIds,
+      freeChampionIdsForNewPlayers,
       ddragonVersion,
     };
     leagueCacheSet(cacheKey, result, 60 * 60 * 1000);
