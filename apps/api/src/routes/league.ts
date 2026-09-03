@@ -85,7 +85,7 @@ export default async function leagueRoutes(app: FastifyInstance) {
 
     const ranked =
       (await riotGet(
-        `${riotPlatformUrl(region)}/lol/league/v4/entries/by-summoner/${summoner.id}`,
+        `${riotPlatformUrl(region)}/lol/league/v4/entries/by-puuid/${account.puuid}`,
       )) || [];
 
     const masteries =
@@ -253,13 +253,16 @@ export default async function leagueRoutes(app: FastifyInstance) {
     return reply.send(result);
   });
 
-  app.get("/league/live/:summonerId", async (req, reply) => {
+  // Keyed on the PUUID: spectator-v4 (summoner IDs) was removed by Riot on
+  // 2025-06-20. Riot has also announced Spectator-V5 will be switched off for
+  // LoL to protect player anonymity; when that lands this returns inGame:false.
+  app.get("/league/live/:puuid", async (req, reply) => {
     if (!RIOT_API_KEY) return reply.send({ ok: false, error: "riot_not_configured" });
-    const summonerId = String((req as any).params.summonerId);
+    const puuid = String((req as any).params.puuid);
     const region = String((req as any).query?.region || RIOT_REGION);
 
     const game = await riotGet(
-      `${riotPlatformUrl(region)}/lol/spectator/v4/active-games/by-summoner/${summonerId}`,
+      `${riotPlatformUrl(region)}/lol/spectator/v5/active-games/by-summoner/${puuid}`,
     );
     if (!game) return reply.send({ ok: true, inGame: false });
 
@@ -272,8 +275,8 @@ export default async function leagueRoutes(app: FastifyInstance) {
       mapId: game.mapId,
       gameLength: game.gameLength,
       participants: (game.participants || []).map((p: any) => ({
-        summonerName: p.summonerName,
-        summonerId: p.summonerId,
+        summonerName: p.riotId || p.summonerName || "",
+        puuid: p.puuid,
         championId: p.championId,
         teamId: p.teamId,
         spell1Id: p.spell1Id,
