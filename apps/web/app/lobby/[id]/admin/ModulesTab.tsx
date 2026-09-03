@@ -3,6 +3,7 @@ import React, { useState } from "react";
 import { LobbyData, S, apiFetch } from "./shared";
 import { onActivate } from "@/lib/a11y";
 import { AcServersEditor } from "./AcServersEditor";
+import { StartggEditor } from "./StartggEditor";
 
 export const ALL_MODULES = [
   { key: "voice", label: "Voice (LiveKit)", desc: "Real-time voice chat in rooms" },
@@ -109,7 +110,9 @@ export function ModulesTab({ lobby, onRefresh }: { lobby: LobbyData; onRefresh: 
         {msg && <span style={{ fontSize: 12, opacity: 0.7 }}>{msg}</span>}
       </div>
 
-      {/* Module-specific configuration, shown only for the lobby's own game. */}
+      {/* start.gg link: any lobby can follow a tournament, organizer or league. */}
+      <StartggEditor lobby={lobby} onRefresh={onRefresh} />
+
       {lobby.moduleType === "ASSETTOCORSA" && (
         <AcServersEditor lobby={lobby} onRefresh={onRefresh} />
       )}
