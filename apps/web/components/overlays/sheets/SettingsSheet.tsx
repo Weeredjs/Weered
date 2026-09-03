@@ -5,6 +5,28 @@ import { openConsentBanner } from "../../CookieConsent";
 import PresenceSection from "./PresenceSection";
 import { onActivate } from "@/lib/a11y";
 
+
+// Web sessions are an httpOnly cookie (Domain=.weered.ca); mobile/desktop send a
+// Bearer token from localStorage. Every request in this sheet sends the cookie,
+// adds the Bearer only if one exists, and if a stale Bearer is refused (401)
+// retries on the cookie alone and discards that token. The previous code gated
+// every save on the localStorage token, which web logins stopped writing when
+// auth moved to the cookie, so the sheet silently saved nothing.
+async function settingsFetch(url: string, init: RequestInit = {}): Promise<Response> {
+  let tok = "";
+  try { tok = localStorage.getItem("weered_token") || ""; } catch {}
+  const withAuth = (t: string): RequestInit => ({
+    ...init,
+    credentials: "include",
+    headers: { ...((init.headers as Record<string, string>) || {}), ...(t ? { Authorization: `Bearer ${t}` } : {}) },
+  });
+  let r = await fetch(url, withAuth(tok));
+  if (r.status === 401 && tok) {
+    r = await fetch(url, withAuth(""));
+    if (r.status !== 401) { try { localStorage.removeItem("weered_token"); } catch {} }
+  }
+  return r;
+}
 type Settings = {
   theme: "stone" | "slate" | "zinc" | "gray" | "ishimura" | "broadcast" | "press";
   density: "comfortable" | "compact";
@@ -145,16 +167,13 @@ function JoinPolicyRow({ field = "joinPolicy", label = "Who can join your sessio
   const [policy, setPolicy] = React.useState<string>("FRIENDS");
   const [loaded, setLoaded] = React.useState(false);
   const apiBase = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
-  const hdr = (): Record<string, string> => {
-    try { const t = localStorage.getItem("weered_token") || ""; return t ? { Authorization: `Bearer ${t}` } : {}; } catch { return {}; }
-  };
   React.useEffect(() => {
     let alive = true;
     (async () => {
       try {
         const me = JSON.parse(localStorage.getItem("weered_user") || "null");
         if (!me?.id) return;
-        const j = await fetch(`${apiBase}/profile/${me.id}`, { headers: hdr() }).then(r => r.json());
+        const j = await settingsFetch(`${apiBase}/profile/${me.id}`, {}).then(r => r.json());
         if (alive && j?.[field]) setPolicy(String(j[field]));
       } catch {} finally { if (alive) setLoaded(true); }
     })();
@@ -164,9 +183,9 @@ function JoinPolicyRow({ field = "joinPolicy", label = "Who can join your sessio
   const save = async (v: string) => {
     setPolicy(v);
     try {
-      await fetch(`${apiBase}/profile/me`, {
+      await settingsFetch(`${apiBase}/profile/me`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", ...hdr() },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ [field]: v }),
       });
     } catch {}
@@ -529,8 +548,6 @@ export function Section({ title, children, onReset }: { title: string; children:
 
 function ProfileCustomizationSection() {
   const apiBase = (process.env.NEXT_PUBLIC_API_BASE as string) || "https://api.weered.ca";
-  function token() { try { return localStorage.getItem("weered_token") || ""; } catch { return ""; } }
-
   const [panelBgColor, setPanelBgColor] = React.useState<string>("");
   const [panelAccentColor, setPanelAccentColor] = React.useState<string>("");
   const [pillBgColor, setPillBgColor] = React.useState<string>("");
@@ -554,12 +571,10 @@ function ProfileCustomizationSection() {
   function scheduleSave(field: "panelBgColor" | "panelAccentColor" | "pillBgColor" | "pillAccentColor", value: string) {
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(async () => {
-      const tok = token();
-      if (!tok) return;
       try {
-        const r = await fetch(`${apiBase}/profile/me`, {
+        const r = await settingsFetch(`${apiBase}/profile/me`, {
           method: "PATCH",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${tok}` },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ [field]: value }),
         });
         if (r.ok) {
@@ -575,8 +590,14 @@ function ProfileCustomizationSection() {
           try { window.dispatchEvent(new CustomEvent("weered:profile:updated")); } catch {}
           setSavedMsg("Saved");
           setTimeout(() => setSavedMsg(""), 1200);
+        } else {
+          setSavedMsg(r.status === 401 ? "Not saved: sign in again" : "Not saved (" + r.status + ")");
+          setTimeout(() => setSavedMsg(""), 4000);
         }
-      } catch {}
+      } catch {
+        setSavedMsg("Not saved: no connection");
+        setTimeout(() => setSavedMsg(""), 4000);
+      }
     }, 400);
   }
 
@@ -710,23 +731,19 @@ function ColorPreview({ accent, panelBg, pillBg, pillStripe }: { accent: string;
 
 function BannerUploadRow() {
   const apiBase = (process.env.NEXT_PUBLIC_API_BASE as string) || "https://api.weered.ca";
-  function token() { try { return localStorage.getItem("weered_token") || ""; } catch { return ""; } }
-
   const [bannerUrl, setBannerUrl] = React.useState<string>("");
   const [busy, setBusy] = React.useState(false);
   const [err, setErr] = React.useState<string>("");
   const fileRef = React.useRef<HTMLInputElement>(null);
 
   React.useEffect(() => {
-    const tok = token();
-    if (!tok) return;
     try {
       const raw = localStorage.getItem("weered_user");
       if (raw) {
         const u = JSON.parse(raw);
         if (u?.id) {
-          fetch(`${apiBase}/profile/${encodeURIComponent(u.id)}`, {
-            headers: { Authorization: `Bearer ${tok}` },
+          settingsFetch(`${apiBase}/profile/${encodeURIComponent(u.id)}`, {
+            headers: {},
           }).then(r => r.json()).then(j => {
             if (j?.bannerUrl) setBannerUrl(String(j.bannerUrl));
           }).catch(() => {});
@@ -749,10 +766,9 @@ function BannerUploadRow() {
         r.onerror = () => rej(new Error("read_failed"));
         r.readAsDataURL(f);
       });
-      const tok = token();
-      const r = await fetch(`${apiBase}/profile/banner/upload`, {
+      const r = await settingsFetch(`${apiBase}/profile/banner/upload`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${tok}` },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ image: dataUrl }),
       });
       const j = await r.json();
@@ -774,10 +790,9 @@ function BannerUploadRow() {
   async function clear() {
     setBusy(true); setErr("");
     try {
-      const tok = token();
-      const r = await fetch(`${apiBase}/profile/me`, {
+      const r = await settingsFetch(`${apiBase}/profile/me`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${tok}` },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ bannerUrl: "" }),
       });
       if (r.ok) {
@@ -917,12 +932,10 @@ function BlockedUsersSection() {
   const [loading, setLoading] = React.useState(true);
   const [busyId, setBusyId] = React.useState<string>("");
   const apiBase = (process.env.NEXT_PUBLIC_API_BASE as string) || "https://api.weered.ca";
-  function token() { try { return localStorage.getItem("weered_token") || ""; } catch { return ""; } }
-
   const load = React.useCallback(async () => {
     setLoading(true);
     try {
-      const r = await fetch(`${apiBase}/blocks`, { headers: { Authorization: `Bearer ${token()}` } });
+      const r = await settingsFetch(`${apiBase}/blocks`, { headers: {} });
       const j = await r.json();
       setBlocks(Array.isArray(j?.blocks) ? j.blocks : []);
     } catch {} finally { setLoading(false); }
@@ -933,9 +946,9 @@ function BlockedUsersSection() {
   async function unblock(userId: string) {
     setBusyId(userId);
     try {
-      await fetch(`${apiBase}/users/${encodeURIComponent(userId)}/block`, {
+      await settingsFetch(`${apiBase}/users/${encodeURIComponent(userId)}/block`, {
         method: "DELETE",
-        headers: { Authorization: `Bearer ${token()}` },
+        headers: {},
       });
       setBlocks(cur => cur.filter(b => b.userId !== userId));
     } finally { setBusyId(""); }
@@ -987,15 +1000,13 @@ function DangerZoneSection() {
   const [confirmText, setConfirmText] = React.useState("");
   const [busy, setBusy] = React.useState(false);
   const apiBase = (process.env.NEXT_PUBLIC_API_BASE as string) || "https://api.weered.ca";
-  function token() { try { return localStorage.getItem("weered_token") || ""; } catch { return ""; } }
-
   async function submit() {
     if (confirmText.trim() !== "DELETE" || busy) return;
     setBusy(true);
     try {
-      const r = await fetch(`${apiBase}/profile/me/delete`, {
+      const r = await settingsFetch(`${apiBase}/profile/me/delete`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token()}` },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ confirm: "DELETE" }),
       });
       const j = await r.json();
