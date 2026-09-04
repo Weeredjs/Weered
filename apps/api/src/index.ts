@@ -589,7 +589,7 @@ async function doJoin(ws: Sock, roomId: string) {
 }
 
 async function main() {
-  const app = Fastify({ loggerInstance: logger });
+  const app = Fastify({ loggerInstance: logger, trustProxy: true });
 
   // CORS is normally added at the Caddy edge in production. Non-prod stacks
   // with no edge (e.g. the E2E CI job, where the browser calls the API
@@ -1310,7 +1310,7 @@ async function main() {
 
   await app.register(modsRoutes, { verifyToken });
 
-  wss = new WebSocketServer({ port: WS_PORT, maxPayload: 256 * 1024 });
+  wss = new WebSocketServer({ host: "127.0.0.1", port: WS_PORT, maxPayload: 256 * 1024 });
   setRoomStateDeps({ wss, isAIAvailable });
   setPokerTableDeps({ wss, broadcastToLobby });
   setNotorietyDeps({ wss, createNotification });
@@ -2107,7 +2107,7 @@ async function main() {
   startNexusPoller(prisma);
 
   try {
-    await app.listen({ host: "0.0.0.0", port: HTTP_PORT });
+    await app.listen({ host: "127.0.0.1", port: HTTP_PORT });
     app.log.info(`HTTP listening at http://127.0.0.1:${HTTP_PORT}`);
   } catch (err) {
     app.log.error({ err }, `FATAL: failed to bind HTTP port ${HTTP_PORT}`);
