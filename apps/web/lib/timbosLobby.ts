@@ -30,6 +30,11 @@ export const FORCED_THEME_LOBBIES: string[] = [TIMBOS_LOBBY_ID];
  *
  * Caught on the live Timbo's room: the theme applied correctly but a logged-out
  * visitor saw only the join modal over a blurred page.
+ *
+ * They also open on the Modules tab rather than Rooms. "Rooms" is the right
+ * default for a live community, but a preview room has no rooms yet, so a
+ * prospect lands on "No rooms open here. Be the first to start one." — which
+ * reads as an empty product. Modules is where the room we actually built lives.
  */
 
 export function isForcedThemeLobby(lobbyId: string): boolean {

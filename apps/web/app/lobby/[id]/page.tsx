@@ -607,8 +607,9 @@ export default function LobbyIdPage() {
   const [membership, setMembership] = useState<Membership>(null);
   const [joinRequest, setJoinRequest] = useState<JoinRequestStatus>(null);
   const [memberChecked, setMemberChecked] = useState(false);
+  // Preview lobbies open on Modules — see lib/timbosLobby.ts.
   const [view, setView] = useState<"rooms" | "feed" | "modules" | "events" | "lfg" | "reddit">(
-    "rooms",
+    isForcedThemeLobby(lobbyId) ? "modules" : "rooms",
   );
 
   useWatchHere(
