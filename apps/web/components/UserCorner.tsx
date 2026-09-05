@@ -7,6 +7,8 @@ import RoleIcon, { TierIcon } from "./RoleIcon";
 import { avatarBg } from "../lib/avatarColor";
 import NotorietyBar from "./NotorietyBar";
 import { onActivate } from "@/lib/a11y";
+import { useLobbyLang, pick, type LobbyLang } from "../lib/lobbyLang";
+import { TIMBOS_ROLES, TIMBOS_LOBBY_ID } from "../lib/timbosCopy";
 
 function useFitText(ref: any, text: string, sizes: number[]): number {
   const [size, setSize] = useState(sizes[0]);
@@ -73,11 +75,15 @@ const ROLE_DISPLAY_HELLDIVERS: Record<string, string> = {
   OWNER: "DIVE LEAD",
   MEMBER: "HELLDIVER",
 };
-function roleDisplay(dbRole: string, lobbyTheme?: string | null): string {
+function roleDisplay(dbRole: string, lobbyTheme?: string | null, lang: LobbyLang = "en"): string {
   if (lobbyTheme === "windrose" && ROLE_DISPLAY_WINDROSE[dbRole])
     return ROLE_DISPLAY_WINDROSE[dbRole];
   if (lobbyTheme === "helldivers2" && ROLE_DISPLAY_HELLDIVERS[dbRole])
     return ROLE_DISPLAY_HELLDIVERS[dbRole];
+  // Timbo's ranks exist in both languages; every other lobby is English-only,
+  // so `lang` is simply ignored for them.
+  if (lobbyTheme === TIMBOS_LOBBY_ID && TIMBOS_ROLES[dbRole])
+    return pick(TIMBOS_ROLES[dbRole], lang);
   return ROLE_DISPLAY[dbRole] || dbRole;
 }
 
@@ -96,6 +102,7 @@ export default function UserCorner() {
     });
     return () => obs.disconnect();
   }, []);
+  const lobbyLang = useLobbyLang();
   const burnerLabel =
     lobbyTheme === "windrose"
       ? "Bottle"
@@ -103,7 +110,11 @@ export default function UserCorner() {
         ? "Transmat"
         : lobbyTheme === "helldivers2"
           ? "Comms"
-          : "Burner";
+          : lobbyTheme === TIMBOS_LOBBY_ID
+            ? lobbyLang === "fr"
+              ? "Anonyme"
+              : "Burner"
+            : "Burner";
 
   const API_BASE = (process.env.NEXT_PUBLIC_API_BASE as string) || "http://127.0.0.1:4000";
   const [lobbyLogo, setLobbyLogo] = React.useState<string | null>(null);
@@ -775,7 +786,7 @@ export default function UserCorner() {
                 }}
               >
                 <RoleIcon role={bestRole} size={11} />
-                {roleDisplay(bestRole, lobbyTheme)}
+                {roleDisplay(bestRole, lobbyTheme, lobbyLang)}
               </div>
             );
           })()}

@@ -11,6 +11,9 @@ import LobbyChatDrawer from "../../../components/LobbyChatDrawer";
 import LobbyHeroBar from "../../../components/LobbyHeroBar";
 import TournamentLiveStrip from "../../../components/TournamentLiveStrip";
 import FlairContestStrip from "../../../components/FlairContestStrip";
+import TimbosPanel from "../../../components/TimbosPanel";
+import { TIMBOS_LOBBY_ID } from "../../../lib/timbosCopy";
+import { isForcedThemeLobby, useBilingualLobby } from "../../../lib/timbosLobby";
 import LobbySplash, {
   WINDROSE_SPLASH_PALETTE,
   DESTINY_SPLASH_PALETTE,
@@ -712,7 +715,7 @@ export default function LobbyIdPage() {
     loadLobby();
   }, [lobbyId]);
 
-  const THEMEABLE_LOBBIES = ["windrose", "destiny2", "dnd", "helldivers2"];
+  const THEMEABLE_LOBBIES = ["windrose", "destiny2", "dnd", "helldivers2", TIMBOS_LOBBY_ID];
   const [keepDefaultTheme, setKeepDefaultTheme] = useState<boolean>(() => {
     if (typeof window === "undefined") return true;
     try {
@@ -737,7 +740,8 @@ export default function LobbyIdPage() {
   }, []);
 
   const wantLobbyTheme =
-    THEMEABLE_LOBBIES.includes(lobbyId) && memberChecked && isMember && !keepDefaultTheme;
+    isForcedThemeLobby(lobbyId) ||
+    (THEMEABLE_LOBBIES.includes(lobbyId) && memberChecked && isMember && !keepDefaultTheme);
 
   useEffect(() => {
     if (!lobbyId) return;
@@ -748,6 +752,8 @@ export default function LobbyIdPage() {
       };
     }
   }, [lobbyId, wantLobbyTheme]);
+
+  useBilingualLobby(lobbyId);
 
   useEffect(() => {
     if (!lobbyId) return;
@@ -798,6 +804,8 @@ export default function LobbyIdPage() {
   }, [lobbyId, memberChecked, isMember]);
 
   const hasModules =
+    // Timbo's carries its panel without a ModuleType — see the render branch.
+    lobbyId === TIMBOS_LOBBY_ID ||
     lobbyInfo?.moduleType === "BUNGIE" ||
     lobbyInfo?.moduleType === "TWITCH" ||
     lobbyInfo?.moduleType === "MARATHON" ||
@@ -846,7 +854,7 @@ export default function LobbyIdPage() {
         <JoinLobbyOverlay
           lobbyId={lobbyId}
           lobbyName={lobbyInfo.name || lobbyId}
-          themeable={["windrose", "destiny2", "dnd", "helldivers2"].includes(lobbyId)}
+          themeable={THEMEABLE_LOBBIES.includes(lobbyId)}
           memberPerks={Array.isArray(lobbyInfo.memberPerks) ? lobbyInfo.memberPerks : []}
           accentColor={lobbyInfo.accentColor || undefined}
           joinMode={lobbyInfo.joinMode || "OPEN"}
@@ -1173,7 +1181,11 @@ export default function LobbyIdPage() {
                 }}
               >
                 {view === "modules" && hasModules ? (
-                  lobbyInfo?.moduleType === "MARATHON" ? (
+                  // Keyed on the lobby, not a ModuleType: an enum value for one
+                  // demo room would mean a prod migration. See lib/timbosLobby.ts.
+                  lobbyId === TIMBOS_LOBBY_ID ? (
+                    <TimbosPanel accent={accent} />
+                  ) : lobbyInfo?.moduleType === "MARATHON" ? (
                     <MarathonModulesPanel
                       lobbyId={lobbyId}
                       accentColor={accent}

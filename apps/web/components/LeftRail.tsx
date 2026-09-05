@@ -11,6 +11,8 @@ import RoleIcon, { TierIcon } from "./RoleIcon";
 import PresenceRow from "./PresenceRow";
 import { useOfficeSkin } from "./useOfficeSkin";
 import AdvisorCredentialCard from "./AdvisorCredentialCard";
+import { useLobbyLang, pick } from "../lib/lobbyLang";
+import { TIMBOS_NAV, TIMBOS_NAV_ICONS, TIMBOS_LOBBY_ID } from "../lib/timbosCopy";
 
 function pickFirstString(...vals: any[]): string {
   for (const v of vals) if (typeof v === "string" && v.trim()) return v.trim();
@@ -198,22 +200,44 @@ export default function LeftRail() {
   const isWindrose = lobbyTheme === "windrose";
   const isDestiny = lobbyTheme === "destiny2";
   const isDnd = lobbyTheme === "dnd";
+  // Timbo's is the first BILINGUAL lobby: its vocabulary varies by language as
+  // well as by theme, so its labels come from a map keyed on both rather than
+  // from another arm of the ternary chain. See lib/timbosCopy.ts.
+  const isTimbos = lobbyTheme === TIMBOS_LOBBY_ID;
+  const lang = useLobbyLang();
+  const tb = (key: string, fallback: string) =>
+    isTimbos && TIMBOS_NAV[key] ? pick(TIMBOS_NAV[key], lang) : fallback;
+
   const navLabels = {
-    lobby: isWindrose ? "Port" : isDestiny ? "Tower" : isDnd ? "Tavern" : "Lobby",
-    home: isWindrose ? "Home" : isDestiny ? "Relay" : isDnd ? "Hearth" : "Home",
-    forum: isWindrose ? "Ship's Log" : isDestiny ? "Vanguard Report" : isDnd ? "Tales" : "Forum",
-    paper: isWindrose ? "Doubloons" : isDestiny ? "Glimmer" : isDnd ? "Gold" : "Paper",
-    locator: isWindrose ? "Sextant" : isDestiny ? "Ghost" : isDnd ? "Compass" : "Locator",
-    ops: isWindrose ? "Quartermaster" : isDestiny ? "Vanguard" : isDnd ? "DM Screen" : "Ops",
-    communities: isWindrose ? "Fleet" : isDestiny ? "Clans" : isDnd ? "Parties" : "Communities",
+    lobby: tb("lobby", isWindrose ? "Port" : isDestiny ? "Tower" : isDnd ? "Tavern" : "Lobby"),
+    home: tb("home", isWindrose ? "Home" : isDestiny ? "Relay" : isDnd ? "Hearth" : "Home"),
+    forum: tb(
+      "forum",
+      isWindrose ? "Ship's Log" : isDestiny ? "Vanguard Report" : isDnd ? "Tales" : "Forum",
+    ),
+    paper: tb("paper", isWindrose ? "Doubloons" : isDestiny ? "Glimmer" : isDnd ? "Gold" : "Paper"),
+    locator: tb(
+      "locator",
+      isWindrose ? "Sextant" : isDestiny ? "Ghost" : isDnd ? "Compass" : "Locator",
+    ),
+    ops: tb(
+      "ops",
+      isWindrose ? "Quartermaster" : isDestiny ? "Vanguard" : isDnd ? "DM Screen" : "Ops",
+    ),
+    communities: tb(
+      "communities",
+      isWindrose ? "Fleet" : isDestiny ? "Clans" : isDnd ? "Parties" : "Communities",
+    ),
   };
+  const ti = (key: string, fallback: string) =>
+    isTimbos && TIMBOS_NAV_ICONS[key] ? TIMBOS_NAV_ICONS[key] : fallback;
   const navIcons = {
-    lobby: isWindrose ? "⚓" : isDestiny ? "🛡" : isDnd ? "🍺" : "🏠",
-    home: isWindrose ? "🏴‍☠️" : isDestiny ? "🛰" : isDnd ? "🔥" : "📡",
-    forum: isWindrose ? "📜" : isDestiny ? "📖" : isDnd ? "📜" : "💬",
-    paper: isWindrose ? "🪙" : isDestiny ? "💠" : isDnd ? "🪙" : "💵",
-    locator: isWindrose ? "🧭" : isDestiny ? "👁" : isDnd ? "🗺" : "🎯",
-    ops: isWindrose ? "🗝" : isDestiny ? "⚔" : isDnd ? "🎲" : "⚙",
+    lobby: ti("lobby", isWindrose ? "⚓" : isDestiny ? "🛡" : isDnd ? "🍺" : "🏠"),
+    home: ti("home", isWindrose ? "🏴‍☠️" : isDestiny ? "🛰" : isDnd ? "🔥" : "📡"),
+    forum: ti("forum", isWindrose ? "📜" : isDestiny ? "📖" : isDnd ? "📜" : "💬"),
+    paper: ti("paper", isWindrose ? "🪙" : isDestiny ? "💠" : isDnd ? "🪙" : "💵"),
+    locator: ti("locator", isWindrose ? "🧭" : isDestiny ? "👁" : isDnd ? "🗺" : "🎯"),
+    ops: ti("ops", isWindrose ? "🗝" : isDestiny ? "⚔" : isDnd ? "🎲" : "⚙"),
   };
 
   const profileUserId = (me?.id ?? me?.userId ?? me?.name ?? me?.username ?? "me").toString();

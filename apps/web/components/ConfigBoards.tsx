@@ -45,7 +45,10 @@ export function readBoard(raw: unknown): BoardSpec | null {
   };
 }
 
-export function SampleNotice({ accent }: { accent: string }) {
+/** `text` overrides the wording only — the SAMPLE badge is not optional, because
+ *  the whole point of this notice is that it cannot be quietly turned off. Used
+ *  by bilingual lobbies to say the same thing in the room's own language. */
+export function SampleNotice({ accent, text }: { accent: string; text?: string }) {
   return (
     <div
       style={{
@@ -74,8 +77,8 @@ export function SampleNotice({ accent }: { accent: string }) {
         SAMPLE
       </span>
       <span style={{ fontSize: 11, lineHeight: 1.5, opacity: 0.8 }}>
-        Example layout with placeholder figures — not connected to live data yet. Point us at the
-        source and this fills with the real thing.
+        {text ??
+          "Example layout with placeholder figures — not connected to live data yet. Point us at the source and this fills with the real thing."}
       </span>
     </div>
   );
@@ -85,16 +88,18 @@ export function ConfigBoard({
   board,
   accent,
   sample,
+  sampleText,
 }: {
   board: BoardSpec;
   accent: string;
   sample?: boolean;
+  sampleText?: string;
 }) {
   const cols = board.columns ?? [];
   const rows = board.rows ?? [];
   return (
     <div>
-      {sample && <SampleNotice accent={accent} />}
+      {sample && <SampleNotice accent={accent} text={sampleText} />}
       {board.title && (
         <div style={{ fontSize: 14, fontWeight: 800, letterSpacing: ".01em" }}>{board.title}</div>
       )}

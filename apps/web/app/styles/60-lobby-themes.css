@@ -3417,3 +3417,425 @@ html[data-weered-lobby="helldivers2"] .weered-usercorner [data-custom-accent="1"
 html[data-weered-lobby="helldivers2"] .weered-usercorner {
   border-color: rgba(255, 215, 0, 0.3) !important;
 }
+
+/* =====================================================================
+   TIMBO'S / LE GROS TIMBO — LOBBY-SPECIFIC THEME TAKEOVER
+   Scope: html[data-weered-lobby="timbos"]
+
+   A Quebec Smash community. Two things drive every decision below.
+
+   1. NO NINTENDO IP. Not a logo, not a character, not a trademark, not a
+      colour lifted from a box. This URL is public and goes to a prospect.
+      What it evokes instead is the SCENE, which belongs to the players:
+      the CRT, the dojo banner, the setup row, the bracket sheet.
+
+   2. IT IS BILINGUAL. French copy runs roughly 20% longer than English, so
+      nothing here may be sized to fit an English string. Rails use min-width
+      and wrap, never fixed width; the [lang] hooks at the bottom relax
+      letter-spacing on the longer language rather than truncating it.
+   ===================================================================== */
+
+html[data-weered-lobby="timbos"] {
+  --weered-bg: #0b0a14;
+  --weered-panel: rgba(26, 22, 45, 0.86);
+  --weered-panel2: rgba(20, 17, 36, 0.93);
+  --weered-border: rgba(123, 92, 255, 0.24);
+  --weered-border2: rgba(157, 132, 255, 0.46);
+  --weered-text: #ece8ff;
+  --weered-muted: rgba(178, 168, 214, 0.82);
+  --weered-accent-1: #7b5cff;
+  --weered-accent-2: #b98cff;
+  --weered-accent-bg: rgba(123, 92, 255, 0.16);
+  --weered-accent-ring: rgba(185, 140, 255, 0.5);
+  --weered-accent-grad: linear-gradient(135deg, #7b5cff 0%, #b98cff 100%);
+  --weered-scrollbar-track: rgba(8, 7, 16, 0.6);
+  --weered-scrollbar-thumb: rgba(123, 92, 255, 0.34);
+  --weered-scrollbar-thumb-hover: rgba(185, 140, 255, 0.56);
+
+  /* dojo + CRT palette */
+  --tb-violet: #7b5cff;
+  --tb-violet-hi: #b98cff;
+  --tb-violet-low: #4a37a0;
+  --tb-ember: #ff5c7a; /* the hot accent: last-stock red */
+  --tb-ember-dim: #b53a52;
+  --tb-phosphor: #6bffcf; /* CRT green-cyan, used sparingly for "live" */
+  --tb-ink: #06050d;
+  --tb-night: #0b0a14;
+  --tb-slate: #141124;
+  --tb-slate-hi: #1f1a38;
+  --tb-paper: #ece8ff;
+  --tb-paper-dim: #b2a8d6;
+  --tb-scan: rgba(255, 255, 255, 0.028);
+}
+
+html[data-weered-lobby="timbos"] body {
+  background:
+    radial-gradient(ellipse 85% 55% at 50% -12%, rgba(123, 92, 255, 0.1) 0%, transparent 62%),
+    radial-gradient(ellipse 60% 45% at 8% 100%, rgba(255, 92, 122, 0.055) 0%, transparent 58%),
+    radial-gradient(ellipse 55% 40% at 92% 96%, rgba(107, 255, 207, 0.035) 0%, transparent 52%),
+    linear-gradient(180deg, #0b0a14 0%, #06050d 100%) !important;
+  color: var(--tb-paper);
+  font-family: var(--font-rajdhani), "Segoe UI", system-ui, sans-serif !important;
+}
+
+html[data-weered-lobby="timbos"] .weered-left,
+html[data-weered-lobby="timbos"] .weered-right,
+html[data-weered-lobby="timbos"] .weered-center,
+html[data-weered-lobby="timbos"] .weered-dock,
+html[data-weered-lobby="timbos"] .weered-overlay-panel,
+html[data-weered-lobby="timbos"] .weered-usercorner,
+html[data-weered-lobby="timbos"] button,
+html[data-weered-lobby="timbos"] input,
+html[data-weered-lobby="timbos"] textarea,
+html[data-weered-lobby="timbos"] select {
+  font-family: var(--font-rajdhani), "Segoe UI", system-ui, sans-serif !important;
+}
+
+/* ── CRT scanline wash over the whole room. Very low contrast on purpose:
+   it should read as texture at a glance and vanish when you actually look
+   at text. Disabled entirely under reduced-motion + high-contrast below. */
+html[data-weered-lobby="timbos"] body::before {
+  content: "" !important;
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    180deg,
+    var(--tb-scan) 0px,
+    var(--tb-scan) 1px,
+    transparent 1px,
+    transparent 3px
+  ) !important;
+  opacity: 0.9 !important;
+  pointer-events: none;
+  z-index: 0;
+  mix-blend-mode: normal !important;
+}
+
+/* ── Dojo banner glow, bottom-right, slow breathing. Pure CSS so there is no
+   asset to ship and nothing to mistake for someone's artwork. */
+html[data-weered-lobby="timbos"] body::after {
+  content: "" !important;
+  position: fixed;
+  bottom: -18%;
+  right: -10%;
+  width: 560px;
+  height: 560px;
+  background: conic-gradient(
+    from 210deg at 50% 50%,
+    rgba(123, 92, 255, 0.2) 0deg,
+    rgba(255, 92, 122, 0.13) 120deg,
+    rgba(107, 255, 207, 0.08) 240deg,
+    rgba(123, 92, 255, 0.2) 360deg
+  ) !important;
+  filter: blur(58px);
+  opacity: 0.5 !important;
+  pointer-events: none;
+  z-index: 0;
+  animation: timbos-breathe 22s ease-in-out infinite !important;
+}
+
+@keyframes timbos-breathe {
+  0%,
+  100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 0.42;
+  }
+  50% {
+    transform: scale(1.09) rotate(8deg);
+    opacity: 0.6;
+  }
+}
+
+/* ── Panels: matte slate with a violet edge and a thin top filament. */
+html[data-weered-lobby="timbos"] .weered-left,
+html[data-weered-lobby="timbos"] .weered-right,
+html[data-weered-lobby="timbos"] .weered-center,
+html[data-weered-lobby="timbos"] .weered-dock,
+html[data-weered-lobby="timbos"] .weered-overlay-panel {
+  background: linear-gradient(
+    180deg,
+    rgba(31, 26, 56, 0.9) 0%,
+    rgba(20, 17, 36, 0.95) 100%
+  ) !important;
+  border-color: rgba(123, 92, 255, 0.24) !important;
+  position: relative;
+}
+html[data-weered-lobby="timbos"] .weered-left::before,
+html[data-weered-lobby="timbos"] .weered-right::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 10%;
+  right: 10%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--tb-violet-hi), transparent);
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+/* ── Left rail: stencilled section titles, ember active state. */
+html[data-weered-lobby="timbos"] .weered-left-title,
+html[data-weered-lobby="timbos"] .weered-left-section {
+  font-family: var(--font-saira-stencil), var(--font-rajdhani), sans-serif !important;
+  letter-spacing: 0.14em !important;
+  text-transform: uppercase;
+  color: var(--tb-paper-dim) !important;
+}
+html[data-weered-lobby="timbos"] .weered-left-link {
+  color: var(--tb-paper-dim) !important;
+  border-radius: 6px;
+  transition:
+    background 140ms ease,
+    color 140ms ease,
+    box-shadow 140ms ease;
+}
+html[data-weered-lobby="timbos"] .weered-left-link:hover {
+  color: var(--tb-paper) !important;
+  background: rgba(123, 92, 255, 0.13) !important;
+}
+html[data-weered-lobby="timbos"] .weered-left-link-active {
+  color: #fff !important;
+  background: linear-gradient(90deg, rgba(123, 92, 255, 0.3), rgba(123, 92, 255, 0.05)) !important;
+  box-shadow: inset 3px 0 0 var(--tb-ember);
+}
+
+/* ── Presence: "At the setups / Aux bornes". A live dot uses phosphor green,
+   the one place the CRT colour is allowed to be loud. */
+html[data-weered-lobby="timbos"] .weered-presence-title {
+  font-family: var(--font-saira-stencil), var(--font-rajdhani), sans-serif !important;
+  letter-spacing: 0.12em !important;
+  text-transform: uppercase;
+  color: var(--tb-paper) !important;
+}
+html[data-weered-lobby="timbos"] .weered-presence-row {
+  border-radius: 6px;
+  transition: background 130ms ease;
+}
+html[data-weered-lobby="timbos"] .weered-presence-row:hover {
+  background: rgba(123, 92, 255, 0.12) !important;
+}
+html[data-weered-lobby="timbos"] .weered-presence-search {
+  background: rgba(6, 5, 13, 0.6) !important;
+  border: 1px solid rgba(123, 92, 255, 0.26) !important;
+  color: var(--tb-paper) !important;
+}
+html[data-weered-lobby="timbos"] .weered-presence-search::placeholder {
+  color: rgba(178, 168, 214, 0.55) !important;
+}
+html[data-weered-lobby="timbos"] .weered-presence-search:focus {
+  border-color: var(--tb-violet-hi) !important;
+  box-shadow: 0 0 0 3px rgba(123, 92, 255, 0.18) !important;
+  outline: none;
+}
+
+/* ── Buttons and inputs. */
+html[data-weered-lobby="timbos"] .weered-btn {
+  background: linear-gradient(135deg, rgba(123, 92, 255, 0.9), rgba(74, 55, 160, 0.9)) !important;
+  border: 1px solid rgba(185, 140, 255, 0.42) !important;
+  color: #fff !important;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+  text-transform: uppercase;
+  border-radius: 6px;
+}
+html[data-weered-lobby="timbos"] .weered-btn:hover {
+  background: linear-gradient(
+    135deg,
+    rgba(157, 132, 255, 0.95),
+    rgba(101, 76, 205, 0.95)
+  ) !important;
+  box-shadow: 0 0 18px rgba(123, 92, 255, 0.32) !important;
+}
+html[data-weered-lobby="timbos"] .weered-input {
+  background: rgba(6, 5, 13, 0.62) !important;
+  border: 1px solid rgba(123, 92, 255, 0.26) !important;
+  color: var(--tb-paper) !important;
+  border-radius: 6px;
+}
+html[data-weered-lobby="timbos"] .weered-input::placeholder {
+  color: rgba(178, 168, 214, 0.52) !important;
+}
+html[data-weered-lobby="timbos"] .weered-input:focus {
+  border-color: var(--tb-violet-hi) !important;
+  box-shadow: 0 0 0 3px rgba(123, 92, 255, 0.18) !important;
+  outline: none;
+}
+
+/* ── Header row: a hanging dojo banner rather than a plaque. */
+html[data-weered-lobby="timbos"] .weered-lobby-header-row {
+  background: linear-gradient(180deg, rgba(31, 26, 56, 0.94), rgba(11, 10, 20, 0.9)) !important;
+  border-bottom: 1px solid rgba(123, 92, 255, 0.28) !important;
+  position: relative;
+}
+html[data-weered-lobby="timbos"] .weered-lobby-header-row::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--tb-violet) 18%,
+    var(--tb-ember) 50%,
+    var(--tb-violet) 82%,
+    transparent 100%
+  );
+  opacity: 0.75;
+}
+
+/* ── Tabs. */
+html[data-weered-lobby="timbos"] .weered-lobby-tab {
+  color: var(--tb-paper-dim) !important;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 600;
+}
+html[data-weered-lobby="timbos"] .weered-lobby-tab:hover {
+  color: var(--tb-paper) !important;
+}
+html[data-weered-lobby="timbos"] .weered-lobby-tab-active {
+  color: #fff !important;
+  border-bottom-color: var(--tb-ember) !important;
+}
+
+/* =====================================================================
+   BILINGUAL TOGGLE
+   Two real buttons, both always legible. The inactive one is not dimmed
+   into unreadability: someone who has landed in the wrong language needs
+   to be able to READ the way out.
+   ===================================================================== */
+.weered-lang-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 8px;
+  border: 1px solid rgba(123, 92, 255, 0.3);
+  background: rgba(6, 5, 13, 0.5);
+}
+.weered-lang-opt {
+  appearance: none;
+  border: 0;
+  cursor: pointer;
+  padding: 4px 12px;
+  border-radius: 6px;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  background: transparent;
+  color: var(--tb-paper-dim, #b2a8d6);
+  transition:
+    background 140ms ease,
+    color 140ms ease;
+}
+.weered-lang-opt:hover {
+  color: var(--tb-paper, #ece8ff);
+}
+.weered-lang-opt[data-active] {
+  background: var(--weered-accent-grad, linear-gradient(135deg, #7b5cff, #b98cff));
+  color: #fff;
+  box-shadow: 0 0 12px rgba(123, 92, 255, 0.35);
+}
+.weered-lang-opt:focus-visible {
+  outline: 2px solid var(--tb-violet-hi, #b98cff);
+  outline-offset: 2px;
+}
+.weered-lang-sep {
+  width: 1px;
+  height: 14px;
+  background: rgba(123, 92, 255, 0.28);
+}
+
+/* =====================================================================
+   TIMBO'S PANEL
+   ===================================================================== */
+.weered-timbos-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.weered-timbos-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap; /* French headings wrap rather than clip */
+}
+.weered-timbos-title {
+  margin: 0;
+  font-family: var(--font-saira-stencil), var(--font-rajdhani), sans-serif;
+  font-size: clamp(20px, 3.4vw, 30px);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--tb-paper, #ece8ff);
+  text-shadow: 0 0 22px rgba(123, 92, 255, 0.4);
+}
+.weered-timbos-sub {
+  margin: 2px 0 0;
+  font-size: 12px;
+  letter-spacing: 0.22em;
+  color: var(--tb-ember, #ff5c7a);
+  font-variant-numeric: tabular-nums;
+}
+.weered-timbos-card {
+  padding: 14px 16px;
+  border-radius: 10px;
+  border: 1px solid rgba(123, 92, 255, 0.22);
+  background: linear-gradient(180deg, rgba(31, 26, 56, 0.72), rgba(20, 17, 36, 0.82));
+}
+.weered-timbos-h3 {
+  margin: 0 0 4px;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--tb-paper, #ece8ff);
+}
+.weered-timbos-blurb {
+  margin: 0 0 10px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--tb-paper-dim, #b2a8d6);
+  max-width: 68ch; /* keeps the longer French line readable */
+}
+.weered-timbos-split {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+}
+
+/* ── Language-specific typography. French sets longer, so it loses a little
+   tracking rather than being cut off or shrunk to a different size. */
+html[data-weered-lang="fr"] .weered-timbos-title {
+  letter-spacing: 0.03em;
+}
+html[data-weered-lang="fr"] .weered-left-title,
+html[data-weered-lang="fr"] .weered-left-section {
+  letter-spacing: 0.09em !important;
+}
+html[data-weered-lang="fr"] .weered-left-link {
+  font-size: 0.96em;
+}
+
+/* ── Accessibility. The scanlines and the breathing banner are decoration;
+   anyone who has asked the OS for less motion or more contrast gets neither. */
+@media (prefers-reduced-motion: reduce) {
+  html[data-weered-lobby="timbos"] body::after {
+    animation: none !important;
+  }
+}
+@media (prefers-contrast: more) {
+  html[data-weered-lobby="timbos"] body::before {
+    display: none !important;
+  }
+  html[data-weered-lobby="timbos"] body::after {
+    opacity: 0.2 !important;
+  }
+  html[data-weered-lobby="timbos"] .weered-timbos-blurb {
+    color: #ded8ff;
+  }
+}
