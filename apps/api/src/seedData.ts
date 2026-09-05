@@ -520,6 +520,38 @@ export const SEED_LOBBIES = [
     bannerUrl: null,
     websiteUrl: "https://fastfox.racing",
   },
+  // ---------------------------------------------------------------------------
+  // Timbo's / Le Gros Timbo — UNLISTED prospect preview.
+  //
+  // A Quebec Smash community running a 95-entrant event on 17 October who asked
+  // for a demo. Unlisted and keyword-less for the same reason FastFox is: it is
+  // reachable by the link we send and by nothing else.
+  //
+  // moduleType stays FEED. The panel, the bilingual chrome and the forced reskin
+  // are keyed on the LOBBY ID in the web app, not on a ModuleType — an enum value
+  // for one demo room would mean a Prisma migration against the production
+  // database, which is not a trade worth making. See apps/web/lib/timbosLobby.ts.
+  //
+  // Every board in this room renders SAMPLE data and is badged as such. The
+  // Slippi ladder in particular is a SHELF, not an integration: Slippi's ranked
+  // API is undocumented and unofficial, and reading it uninvited while asking
+  // them for a partnership would be indefensible. The room says exactly that, in
+  // both languages — see apps/web/lib/timbosCopy.ts.
+  // ---------------------------------------------------------------------------
+  {
+    id: "timbos",
+    name: "Timbo's: The Big One | Le Gros Timbo",
+    description:
+      "Québec · Super Smash Bros. · 17 October. Brackets, setups, rides and the stream room — in English and in French. Le dojo bilingue de la communauté.",
+    keywords: [], // intentionally empty: unlisted lobbies are not searchable
+    unlisted: true,
+    moduleType: ModuleType.FEED,
+    moduleConfig: null,
+    accentColor: "#7b5cff",
+    logoUrl: null,
+    bannerUrl: null,
+    websiteUrl: null,
+  },
   {
     id: "division2",
     name: "The Division 2",
