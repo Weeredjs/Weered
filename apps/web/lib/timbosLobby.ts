@@ -19,6 +19,19 @@ import { TIMBOS_LOBBY_ID } from "./timbosCopy";
  *  its members chose for themselves. */
 export const FORCED_THEME_LOBBIES: string[] = [TIMBOS_LOBBY_ID];
 
+/**
+ * These rooms also suppress the JoinLobbyOverlay.
+ *
+ * A preview lobby exists to be handed to one person who has not signed up and
+ * may never sign up. Confronting them with "Join to unlock the full experience"
+ * before they can see anything is the opposite of a demo — it asks for the
+ * commitment before showing the thing the commitment is for. The join path
+ * stays available in GuestLaunchBar for anyone who does want it.
+ *
+ * Caught on the live Timbo's room: the theme applied correctly but a logged-out
+ * visitor saw only the join modal over a blurred page.
+ */
+
 export function isForcedThemeLobby(lobbyId: string): boolean {
   return FORCED_THEME_LOBBIES.includes(lobbyId);
 }

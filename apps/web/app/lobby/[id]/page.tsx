@@ -850,7 +850,8 @@ export default function LobbyIdPage() {
         lobbyName={lobbyInfo?.name || "this lobby"}
         loggedIn={!!me?.id}
       />
-      {memberChecked && !isMember && lobbyInfo && (
+      {/* No join wall on preview lobbies — see lib/timbosLobby.ts. */}
+      {memberChecked && !isMember && lobbyInfo && !isForcedThemeLobby(lobbyId) && (
         <JoinLobbyOverlay
           lobbyId={lobbyId}
           lobbyName={lobbyInfo.name || lobbyId}
