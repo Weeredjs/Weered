@@ -4029,3 +4029,120 @@ html[data-weered-lobby="timbos"] {
   --weered-room-scrim: rgba(6, 5, 13, 0.55);
   --weered-room-scrim-2: rgba(6, 5, 13, 0.35);
 }
+
+/* ─────────────────────────────────────────────────────────────────────
+   TIMBO'S — CONTAINERS AND ROOM RAIL
+   The gap that kept rooms looking like the platform default.
+
+   The first pass themed text, links and the panels I could see on the
+   lobby page, and stopped there. A diff against Windrose showed 28
+   selectors it themes that this did not, and almost all of them are the
+   things that actually carry colour: the section shells, the presence
+   panel, the user corner, and the entire .weered-rr-* family, which is
+   the RIGHT RAIL INSIDE A ROOM. Theming .weered-rrr (RightRailRoom's
+   outer div) was not the same thing and did almost nothing.
+
+   Every rule here is !important on purpose. 80-chrome-min.css and
+   90-desktop-chrome.css are imported AFTER this file at equal
+   specificity, so without it they win and the theme silently loses in
+   exactly the chrome state rooms use.
+   ───────────────────────────────────────────────────────────────────── */
+
+/* ── Section shells ───────────────────────────────────────────────── */
+html[data-weered-lobby="timbos"] .weered-left-section,
+html[data-weered-lobby="timbos"] .weered-presence,
+html[data-weered-lobby="timbos"] .weered-usercorner,
+html[data-weered-lobby="timbos"] .weered-rr-section {
+  background: linear-gradient(
+    180deg,
+    rgba(31, 26, 56, 0.92) 0%,
+    rgba(20, 17, 36, 0.96) 100%
+  ) !important;
+  border: 1px solid rgba(123, 92, 255, 0.28) !important;
+  border-radius: 8px !important;
+  box-shadow:
+    inset 0 1px 0 rgba(185, 140, 255, 0.1),
+    0 4px 18px rgba(0, 0, 0, 0.45) !important;
+}
+
+/* ── Title bars. These are the filled purple strips that gave the room
+   away — the base fill was never overridden. ──────────────────────── */
+html[data-weered-lobby="timbos"] .weered-left-title,
+html[data-weered-lobby="timbos"] .weered-presence-head,
+html[data-weered-lobby="timbos"] .weered-rr-section-title {
+  background: linear-gradient(90deg, rgba(123, 92, 255, 0.22), rgba(123, 92, 255, 0.04)) !important;
+  border-bottom: 1px solid rgba(123, 92, 255, 0.24) !important;
+  color: var(--tb-paper) !important;
+  font-family: var(--font-saira-stencil), var(--font-rajdhani), sans-serif !important;
+  letter-spacing: 0.12em !important;
+}
+
+html[data-weered-lobby="timbos"] .weered-shell {
+  background: transparent !important;
+}
+
+/* ── Room rail: cards, search, buttons, mod panel ─────────────────── */
+html[data-weered-lobby="timbos"] .weered-rr-room-card {
+  background: rgba(123, 92, 255, 0.06) !important;
+  border: 1px solid rgba(123, 92, 255, 0.18) !important;
+  border-radius: 6px !important;
+}
+html[data-weered-lobby="timbos"] .weered-rr-room-card:hover {
+  background: rgba(123, 92, 255, 0.13) !important;
+  border-color: rgba(185, 140, 255, 0.36) !important;
+}
+html[data-weered-lobby="timbos"] .weered-rr-room-card-active {
+  background: linear-gradient(90deg, rgba(123, 92, 255, 0.3), rgba(123, 92, 255, 0.06)) !important;
+  box-shadow: inset 3px 0 0 var(--tb-ember) !important;
+}
+/* Live keeps the phosphor edge — same meaning in every room, themed or not. */
+html[data-weered-lobby="timbos"] .weered-rr-room-card-live {
+  border-color: rgba(107, 255, 207, 0.42) !important;
+}
+html[data-weered-lobby="timbos"] .weered-rr-search {
+  background: rgba(6, 5, 13, 0.6) !important;
+  border: 1px solid rgba(123, 92, 255, 0.26) !important;
+  color: var(--tb-paper) !important;
+}
+html[data-weered-lobby="timbos"] .weered-rr-primary,
+html[data-weered-lobby="timbos"] .weered-rr-primary-solid {
+  background: linear-gradient(135deg, #7b5cff, #b98cff) !important;
+  border: 1px solid rgba(185, 140, 255, 0.45) !important;
+  color: #fff !important;
+}
+html[data-weered-lobby="timbos"] .weered-rr-status-chip {
+  background: rgba(123, 92, 255, 0.16) !important;
+  border: 1px solid rgba(123, 92, 255, 0.3) !important;
+  color: var(--tb-paper) !important;
+}
+html[data-weered-lobby="timbos"] .weered-rr-mod-panel {
+  background: rgba(10, 8, 20, 0.6) !important;
+  border: 1px solid rgba(123, 92, 255, 0.24) !important;
+}
+html[data-weered-lobby="timbos"] .weered-rr-mod-panel button {
+  background: rgba(123, 92, 255, 0.1) !important;
+  border: 1px solid rgba(123, 92, 255, 0.24) !important;
+  color: var(--tb-paper) !important;
+}
+
+/* ── User corner + hero ───────────────────────────────────────────── */
+html[data-weered-lobby="timbos"] .weered-uc-action,
+html[data-weered-lobby="timbos"] .weered-burner-hot {
+  background: rgba(123, 92, 255, 0.12) !important;
+  border: 1px solid rgba(123, 92, 255, 0.26) !important;
+  color: var(--tb-paper) !important;
+}
+html[data-weered-lobby="timbos"] .weered-hero-scrim {
+  background: linear-gradient(
+    180deg,
+    rgba(11, 10, 20, 0.15) 0%,
+    rgba(11, 10, 20, 0.88) 100%
+  ) !important;
+}
+html[data-weered-lobby="timbos"] .weered-lobby-tabs {
+  border-bottom: 1px solid rgba(123, 92, 255, 0.2) !important;
+}
+html[data-weered-lobby="timbos"] .weered-event-badge,
+html[data-weered-lobby="timbos"] .weered-room-card.weered-room-card-event {
+  border-color: rgba(255, 92, 122, 0.4) !important;
+}
