@@ -3436,44 +3436,44 @@ html[data-weered-lobby="helldivers2"] .weered-usercorner {
    ===================================================================== */
 
 html[data-weered-lobby="timbos"] {
-  --weered-bg: #0b0a14;
+  --weered-bg: #120809;
   --weered-panel: rgba(26, 22, 45, 0.86);
-  --weered-panel2: rgba(20, 17, 36, 0.93);
-  --weered-border: rgba(123, 92, 255, 0.24);
+  --weered-panel2: rgba(28, 15, 17, 0.93);
+  --weered-border: rgba(226, 56, 79, 0.24);
   --weered-border2: rgba(157, 132, 255, 0.46);
-  --weered-text: #ece8ff;
-  --weered-muted: rgba(178, 168, 214, 0.82);
-  --weered-accent-1: #7b5cff;
-  --weered-accent-2: #b98cff;
-  --weered-accent-bg: rgba(123, 92, 255, 0.16);
-  --weered-accent-ring: rgba(185, 140, 255, 0.5);
-  --weered-accent-grad: linear-gradient(135deg, #7b5cff 0%, #b98cff 100%);
+  --weered-text: #f5e9e6;
+  --weered-muted: rgba(196, 169, 167, 0.82);
+  --weered-accent-1: #e2384f;
+  --weered-accent-2: #ff6b7f;
+  --weered-accent-bg: rgba(226, 56, 79, 0.16);
+  --weered-accent-ring: rgba(255, 107, 127, 0.5);
+  --weered-accent-grad: linear-gradient(135deg, #e2384f 0%, #ff6b7f 100%);
   --weered-scrollbar-track: rgba(8, 7, 16, 0.6);
-  --weered-scrollbar-thumb: rgba(123, 92, 255, 0.34);
-  --weered-scrollbar-thumb-hover: rgba(185, 140, 255, 0.56);
+  --weered-scrollbar-thumb: rgba(226, 56, 79, 0.34);
+  --weered-scrollbar-thumb-hover: rgba(255, 107, 127, 0.56);
 
   /* dojo + CRT palette */
-  --tb-violet: #7b5cff;
-  --tb-violet-hi: #b98cff;
-  --tb-violet-low: #4a37a0;
+  --tb-crimson: #e2384f;
+  --tb-crimson-hi: #ff6b7f;
+  --tb-crimson-low: #8f1f2f;
   --tb-ember: #ff5c7a; /* the hot accent: last-stock red */
   --tb-ember-dim: #b53a52;
   --tb-phosphor: #6bffcf; /* CRT green-cyan, used sparingly for "live" */
-  --tb-ink: #06050d;
-  --tb-night: #0b0a14;
+  --tb-ink: #0a0506;
+  --tb-night: #120809;
   --tb-slate: #141124;
   --tb-slate-hi: #1f1a38;
-  --tb-paper: #ece8ff;
-  --tb-paper-dim: #b2a8d6;
+  --tb-paper: #f5e9e6;
+  --tb-paper-dim: #c4a9a7;
   --tb-scan: rgba(255, 255, 255, 0.028);
 }
 
 html[data-weered-lobby="timbos"] body {
   background:
-    radial-gradient(ellipse 85% 55% at 50% -12%, rgba(123, 92, 255, 0.1) 0%, transparent 62%),
+    radial-gradient(ellipse 85% 55% at 50% -12%, rgba(226, 56, 79, 0.1) 0%, transparent 62%),
     radial-gradient(ellipse 60% 45% at 8% 100%, rgba(255, 92, 122, 0.055) 0%, transparent 58%),
     radial-gradient(ellipse 55% 40% at 92% 96%, rgba(107, 255, 207, 0.035) 0%, transparent 52%),
-    linear-gradient(180deg, #0b0a14 0%, #06050d 100%) !important;
+    linear-gradient(180deg, #120809 0%, #0a0506 100%) !important;
   color: var(--tb-paper);
   font-family: var(--font-rajdhani), "Segoe UI", system-ui, sans-serif !important;
 }
@@ -3522,10 +3522,10 @@ html[data-weered-lobby="timbos"] body::after {
   height: 560px;
   background: conic-gradient(
     from 210deg at 50% 50%,
-    rgba(123, 92, 255, 0.2) 0deg,
+    rgba(226, 56, 79, 0.2) 0deg,
     rgba(255, 92, 122, 0.13) 120deg,
-    rgba(107, 255, 207, 0.08) 240deg,
-    rgba(123, 92, 255, 0.2) 360deg
+    rgba(232, 184, 75, 0.1) 240deg,
+    rgba(226, 56, 79, 0.2) 360deg
   ) !important;
   filter: blur(58px);
   opacity: 0.5 !important;
@@ -3554,10 +3554,10 @@ html[data-weered-lobby="timbos"] .weered-dock,
 html[data-weered-lobby="timbos"] .weered-overlay-panel {
   background: linear-gradient(
     180deg,
-    rgba(31, 26, 56, 0.9) 0%,
-    rgba(20, 17, 36, 0.95) 100%
+    rgba(40, 21, 24, 0.9) 0%,
+    rgba(28, 15, 17, 0.95) 100%
   ) !important;
-  border-color: rgba(123, 92, 255, 0.24) !important;
+  border-color: rgba(226, 56, 79, 0.24) !important;
   position: relative;
 }
 html[data-weered-lobby="timbos"] .weered-left::before,
@@ -3568,7 +3568,7 @@ html[data-weered-lobby="timbos"] .weered-right::before {
   left: 10%;
   right: 10%;
   height: 1px;
-  background: linear-gradient(90deg, transparent, var(--tb-violet-hi), transparent);
+  background: linear-gradient(90deg, transparent, var(--tb-crimson-hi), transparent);
   opacity: 0.55;
   pointer-events: none;
 }
@@ -3591,11 +3591,11 @@ html[data-weered-lobby="timbos"] .weered-left-link {
 }
 html[data-weered-lobby="timbos"] .weered-left-link:hover {
   color: var(--tb-paper) !important;
-  background: rgba(123, 92, 255, 0.13) !important;
+  background: rgba(226, 56, 79, 0.13) !important;
 }
 html[data-weered-lobby="timbos"] .weered-left-link-active {
   color: #fff !important;
-  background: linear-gradient(90deg, rgba(123, 92, 255, 0.3), rgba(123, 92, 255, 0.05)) !important;
+  background: linear-gradient(90deg, rgba(226, 56, 79, 0.3), rgba(226, 56, 79, 0.05)) !important;
   box-shadow: inset 3px 0 0 var(--tb-ember);
 }
 
@@ -3612,26 +3612,26 @@ html[data-weered-lobby="timbos"] .weered-presence-row {
   transition: background 130ms ease;
 }
 html[data-weered-lobby="timbos"] .weered-presence-row:hover {
-  background: rgba(123, 92, 255, 0.12) !important;
+  background: rgba(226, 56, 79, 0.12) !important;
 }
 html[data-weered-lobby="timbos"] .weered-presence-search {
-  background: rgba(6, 5, 13, 0.6) !important;
-  border: 1px solid rgba(123, 92, 255, 0.26) !important;
+  background: rgba(10, 5, 6, 0.6) !important;
+  border: 1px solid rgba(226, 56, 79, 0.26) !important;
   color: var(--tb-paper) !important;
 }
 html[data-weered-lobby="timbos"] .weered-presence-search::placeholder {
-  color: rgba(178, 168, 214, 0.55) !important;
+  color: rgba(196, 169, 167, 0.55) !important;
 }
 html[data-weered-lobby="timbos"] .weered-presence-search:focus {
-  border-color: var(--tb-violet-hi) !important;
-  box-shadow: 0 0 0 3px rgba(123, 92, 255, 0.18) !important;
+  border-color: var(--tb-crimson-hi) !important;
+  box-shadow: 0 0 0 3px rgba(226, 56, 79, 0.18) !important;
   outline: none;
 }
 
 /* ── Buttons and inputs. */
 html[data-weered-lobby="timbos"] .weered-btn {
-  background: linear-gradient(135deg, rgba(123, 92, 255, 0.9), rgba(74, 55, 160, 0.9)) !important;
-  border: 1px solid rgba(185, 140, 255, 0.42) !important;
+  background: linear-gradient(135deg, rgba(226, 56, 79, 0.9), rgba(74, 55, 160, 0.9)) !important;
+  border: 1px solid rgba(255, 107, 127, 0.42) !important;
   color: #fff !important;
   letter-spacing: 0.05em;
   font-weight: 600;
@@ -3644,27 +3644,27 @@ html[data-weered-lobby="timbos"] .weered-btn:hover {
     rgba(157, 132, 255, 0.95),
     rgba(101, 76, 205, 0.95)
   ) !important;
-  box-shadow: 0 0 18px rgba(123, 92, 255, 0.32) !important;
+  box-shadow: 0 0 18px rgba(226, 56, 79, 0.32) !important;
 }
 html[data-weered-lobby="timbos"] .weered-input {
-  background: rgba(6, 5, 13, 0.62) !important;
-  border: 1px solid rgba(123, 92, 255, 0.26) !important;
+  background: rgba(10, 5, 6, 0.62) !important;
+  border: 1px solid rgba(226, 56, 79, 0.26) !important;
   color: var(--tb-paper) !important;
   border-radius: 6px;
 }
 html[data-weered-lobby="timbos"] .weered-input::placeholder {
-  color: rgba(178, 168, 214, 0.52) !important;
+  color: rgba(196, 169, 167, 0.52) !important;
 }
 html[data-weered-lobby="timbos"] .weered-input:focus {
-  border-color: var(--tb-violet-hi) !important;
-  box-shadow: 0 0 0 3px rgba(123, 92, 255, 0.18) !important;
+  border-color: var(--tb-crimson-hi) !important;
+  box-shadow: 0 0 0 3px rgba(226, 56, 79, 0.18) !important;
   outline: none;
 }
 
 /* ── Header row: a hanging dojo banner rather than a plaque. */
 html[data-weered-lobby="timbos"] .weered-lobby-header-row {
-  background: linear-gradient(180deg, rgba(31, 26, 56, 0.94), rgba(11, 10, 20, 0.9)) !important;
-  border-bottom: 1px solid rgba(123, 92, 255, 0.28) !important;
+  background: linear-gradient(180deg, rgba(40, 21, 24, 0.94), rgba(11, 10, 20, 0.9)) !important;
+  border-bottom: 1px solid rgba(226, 56, 79, 0.28) !important;
   position: relative;
 }
 html[data-weered-lobby="timbos"] .weered-lobby-header-row::after {
@@ -3677,9 +3677,9 @@ html[data-weered-lobby="timbos"] .weered-lobby-header-row::after {
   background: linear-gradient(
     90deg,
     transparent 0%,
-    var(--tb-violet) 18%,
+    var(--tb-crimson) 18%,
     var(--tb-ember) 50%,
-    var(--tb-violet) 82%,
+    var(--tb-crimson) 82%,
     transparent 100%
   );
   opacity: 0.75;
@@ -3712,8 +3712,8 @@ html[data-weered-lobby="timbos"] .weered-lobby-tab-active {
   gap: 2px;
   padding: 3px;
   border-radius: 8px;
-  border: 1px solid rgba(123, 92, 255, 0.3);
-  background: rgba(6, 5, 13, 0.5);
+  border: 1px solid rgba(226, 56, 79, 0.3);
+  background: rgba(10, 5, 6, 0.5);
 }
 .weered-lang-opt {
   appearance: none;
@@ -3726,27 +3726,27 @@ html[data-weered-lobby="timbos"] .weered-lobby-tab-active {
   font-weight: 700;
   letter-spacing: 0.1em;
   background: transparent;
-  color: var(--tb-paper-dim, #b2a8d6);
+  color: var(--tb-paper-dim, #c4a9a7);
   transition:
     background 140ms ease,
     color 140ms ease;
 }
 .weered-lang-opt:hover {
-  color: var(--tb-paper, #ece8ff);
+  color: var(--tb-paper, #f5e9e6);
 }
 .weered-lang-opt[data-active] {
-  background: var(--weered-accent-grad, linear-gradient(135deg, #7b5cff, #b98cff));
+  background: var(--weered-accent-grad, linear-gradient(135deg, #e2384f, #ff6b7f));
   color: #fff;
-  box-shadow: 0 0 12px rgba(123, 92, 255, 0.35);
+  box-shadow: 0 0 12px rgba(226, 56, 79, 0.35);
 }
 .weered-lang-opt:focus-visible {
-  outline: 2px solid var(--tb-violet-hi, #b98cff);
+  outline: 2px solid var(--tb-crimson-hi, #ff6b7f);
   outline-offset: 2px;
 }
 .weered-lang-sep {
   width: 1px;
   height: 14px;
-  background: rgba(123, 92, 255, 0.28);
+  background: rgba(226, 56, 79, 0.28);
 }
 
 /* =====================================================================
@@ -3771,8 +3771,8 @@ html[data-weered-lobby="timbos"] .weered-lobby-tab-active {
   font-size: clamp(20px, 3.4vw, 30px);
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--tb-paper, #ece8ff);
-  text-shadow: 0 0 22px rgba(123, 92, 255, 0.4);
+  color: var(--tb-paper, #f5e9e6);
+  text-shadow: 0 0 22px rgba(226, 56, 79, 0.4);
 }
 .weered-timbos-sub {
   margin: 2px 0 0;
@@ -3784,8 +3784,8 @@ html[data-weered-lobby="timbos"] .weered-lobby-tab-active {
 .weered-timbos-card {
   padding: 14px 16px;
   border-radius: 10px;
-  border: 1px solid rgba(123, 92, 255, 0.22);
-  background: linear-gradient(180deg, rgba(31, 26, 56, 0.72), rgba(20, 17, 36, 0.82));
+  border: 1px solid rgba(226, 56, 79, 0.22);
+  background: linear-gradient(180deg, rgba(40, 21, 24, 0.72), rgba(28, 15, 17, 0.82));
 }
 .weered-timbos-h3 {
   margin: 0 0 4px;
@@ -3793,13 +3793,13 @@ html[data-weered-lobby="timbos"] .weered-lobby-tab-active {
   font-weight: 800;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--tb-paper, #ece8ff);
+  color: var(--tb-paper, #f5e9e6);
 }
 .weered-timbos-blurb {
   margin: 0 0 10px;
   font-size: 12px;
   line-height: 1.6;
-  color: var(--tb-paper-dim, #b2a8d6);
+  color: var(--tb-paper-dim, #c4a9a7);
   max-width: 68ch; /* keeps the longer French line readable */
 }
 .weered-timbos-split {
@@ -3871,10 +3871,10 @@ html[data-weered-lang="fr"] .weered-left-link {
 html[data-weered-lobby="timbos"] .weered-rrr {
   background: linear-gradient(
     180deg,
-    rgba(31, 26, 56, 0.9) 0%,
-    rgba(20, 17, 36, 0.95) 100%
+    rgba(40, 21, 24, 0.9) 0%,
+    rgba(28, 15, 17, 0.95) 100%
   ) !important;
-  border-color: rgba(123, 92, 255, 0.24) !important;
+  border-color: rgba(226, 56, 79, 0.24) !important;
   color: var(--tb-paper) !important;
 }
 html[data-weered-lobby="timbos"] .weered-rrr-title,
@@ -3885,13 +3885,13 @@ html[data-weered-lobby="timbos"] .weered-rrr-section-label {
   color: var(--tb-paper-dim) !important;
 }
 html[data-weered-lobby="timbos"] .weered-rrr-account {
-  border-color: rgba(123, 92, 255, 0.26) !important;
+  border-color: rgba(226, 56, 79, 0.26) !important;
 }
 
 /* ── Room-list rail widgets ───────────────────────────────────────── */
 html[data-weered-lobby="timbos"] .weered-rr-create-panel {
-  background: rgba(6, 5, 13, 0.5) !important;
-  border-color: rgba(123, 92, 255, 0.24) !important;
+  background: rgba(10, 5, 6, 0.5) !important;
+  border-color: rgba(226, 56, 79, 0.24) !important;
 }
 html[data-weered-lobby="timbos"] .weered-rr-create-title {
   font-family: var(--font-saira-stencil), var(--font-rajdhani), sans-serif !important;
@@ -3900,16 +3900,16 @@ html[data-weered-lobby="timbos"] .weered-rr-create-title {
 }
 html[data-weered-lobby="timbos"] .weered-rr-crew-row:hover,
 html[data-weered-lobby="timbos"] .weered-rr-friend-row:hover {
-  background: rgba(123, 92, 255, 0.12) !important;
+  background: rgba(226, 56, 79, 0.12) !important;
 }
 html[data-weered-lobby="timbos"] .weered-rr-id-chip {
-  background: rgba(123, 92, 255, 0.16) !important;
-  border-color: rgba(123, 92, 255, 0.3) !important;
+  background: rgba(226, 56, 79, 0.16) !important;
+  border-color: rgba(226, 56, 79, 0.3) !important;
   color: var(--tb-paper) !important;
 }
 html[data-weered-lobby="timbos"] .weered-rr-join {
-  background: linear-gradient(135deg, rgba(123, 92, 255, 0.9), rgba(74, 55, 160, 0.9)) !important;
-  border-color: rgba(185, 140, 255, 0.42) !important;
+  background: linear-gradient(135deg, rgba(226, 56, 79, 0.9), rgba(74, 55, 160, 0.9)) !important;
+  border-color: rgba(255, 107, 127, 0.42) !important;
   color: #fff !important;
 }
 
@@ -3917,15 +3917,15 @@ html[data-weered-lobby="timbos"] .weered-rr-join {
 html[data-weered-lobby="timbos"] .weered-dock {
   background: linear-gradient(
     180deg,
-    rgba(31, 26, 56, 0.94) 0%,
-    rgba(17, 14, 31, 0.96) 100%
+    rgba(40, 21, 24, 0.94) 0%,
+    rgba(20, 11, 13, 0.96) 100%
   ) !important;
-  border-color: rgba(123, 92, 255, 0.26) !important;
+  border-color: rgba(226, 56, 79, 0.26) !important;
 }
 html[data-weered-lobby="timbos"] .weered-dock-header,
 html[data-weered-lobby="timbos"] .weered-dock-conv-header {
-  background: rgba(6, 5, 13, 0.42) !important;
-  border-bottom: 1px solid rgba(123, 92, 255, 0.22) !important;
+  background: rgba(10, 5, 6, 0.42) !important;
+  border-bottom: 1px solid rgba(226, 56, 79, 0.22) !important;
 }
 html[data-weered-lobby="timbos"] .weered-dock-title {
   font-family: var(--font-saira-stencil), var(--font-rajdhani), sans-serif !important;
@@ -3946,18 +3946,18 @@ html[data-weered-lobby="timbos"] .weered-dock-tab-active {
    neutral slate so the two are told apart by hue, not just by side. */
 html[data-weered-lobby="timbos"] .weered-dock-bubble {
   background: rgba(255, 255, 255, 0.05) !important;
-  border: 1px solid rgba(123, 92, 255, 0.14) !important;
+  border: 1px solid rgba(226, 56, 79, 0.14) !important;
 }
 html[data-weered-lobby="timbos"] .weered-dock-bubble-me {
-  background: linear-gradient(135deg, rgba(123, 92, 255, 0.26), rgba(74, 55, 160, 0.22)) !important;
-  border: 1px solid rgba(185, 140, 255, 0.3) !important;
+  background: linear-gradient(135deg, rgba(226, 56, 79, 0.26), rgba(74, 55, 160, 0.22)) !important;
+  border: 1px solid rgba(255, 107, 127, 0.3) !important;
 }
 html[data-weered-lobby="timbos"] .weered-dock-compose {
-  background: rgba(6, 5, 13, 0.55) !important;
-  border-top: 1px solid rgba(123, 92, 255, 0.22) !important;
+  background: rgba(10, 5, 6, 0.55) !important;
+  border-top: 1px solid rgba(226, 56, 79, 0.22) !important;
 }
 html[data-weered-lobby="timbos"] .weered-dock-send {
-  background: linear-gradient(135deg, #7b5cff, #b98cff) !important;
+  background: linear-gradient(135deg, #e2384f, #ff6b7f) !important;
   color: #fff !important;
 }
 html[data-weered-lobby="timbos"] .weered-dock-close:hover {
@@ -3966,8 +3966,8 @@ html[data-weered-lobby="timbos"] .weered-dock-close:hover {
 
 /* ── Voice dock. Fully class-driven, so it themes completely. ─────── */
 html[data-weered-lobby="timbos"] .weered-voicedock {
-  background: linear-gradient(180deg, rgba(31, 26, 56, 0.92), rgba(17, 14, 31, 0.95)) !important;
-  border-color: rgba(123, 92, 255, 0.26) !important;
+  background: linear-gradient(180deg, rgba(40, 21, 24, 0.92), rgba(20, 11, 13, 0.95)) !important;
+  border-color: rgba(226, 56, 79, 0.26) !important;
   color: var(--tb-paper) !important;
 }
 html[data-weered-lobby="timbos"] .wvd-head {
@@ -3985,8 +3985,8 @@ html[data-weered-lobby="timbos"] .wvd-dot.on {
 
 /* ── Chat panel edge ──────────────────────────────────────────────── */
 html[data-weered-lobby="timbos"] .weered-chat-fullscreen-cta {
-  background: rgba(123, 92, 255, 0.16) !important;
-  border-color: rgba(123, 92, 255, 0.3) !important;
+  background: rgba(226, 56, 79, 0.16) !important;
+  border-color: rgba(226, 56, 79, 0.3) !important;
   color: var(--tb-paper) !important;
 }
 
@@ -4022,10 +4022,10 @@ html[data-weered-lobby] {
    cooler than the platform default, so the overlays get a violet cast to
    sit on it rather than looking like grey film. */
 html[data-weered-lobby="timbos"] {
-  --weered-room-hollow: rgba(123, 92, 255, 0.04);
-  --weered-room-surface: rgba(123, 92, 255, 0.07);
-  --weered-room-surface-2: rgba(123, 92, 255, 0.1);
-  --weered-room-surface-3: rgba(123, 92, 255, 0.14);
-  --weered-room-scrim: rgba(6, 5, 13, 0.55);
-  --weered-room-scrim-2: rgba(6, 5, 13, 0.35);
+  --weered-room-hollow: rgba(226, 56, 79, 0.04);
+  --weered-room-surface: rgba(226, 56, 79, 0.07);
+  --weered-room-surface-2: rgba(226, 56, 79, 0.1);
+  --weered-room-surface-3: rgba(226, 56, 79, 0.14);
+  --weered-room-scrim: rgba(10, 5, 6, 0.55);
+  --weered-room-scrim-2: rgba(10, 5, 6, 0.35);
 }
