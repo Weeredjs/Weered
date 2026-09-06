@@ -4149,3 +4149,19 @@ html[data-weered-lobby="timbos"] .weered-event-badge,
 html[data-weered-lobby="timbos"] .weered-room-card.weered-room-card-event {
   border-color: rgba(255, 92, 122, 0.4) !important;
 }
+
+/* Presence rows sit flat on the panel, as they do in the default theme.
+   They only LOOK flat there because chrome=min blanket-strips backgrounds in
+   the left rail, and a themed lobby turns min off — so the row's own card
+   decoration (and any per-user pill tint) reappears and every user gets a box.
+   Flatten it here and keep just the hover, so the panel reads as one surface. */
+html[data-weered-lobby="timbos"] .weered-left .weered-presence-row,
+html[data-weered-lobby="timbos"] .weered-left .weered-presence-row-inner {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 6px !important;
+}
+html[data-weered-lobby="timbos"] .weered-left .weered-presence-row-inner:hover {
+  background: rgba(123, 92, 255, 0.12) !important;
+}
