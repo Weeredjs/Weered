@@ -236,11 +236,16 @@ export default function LeftRail() {
   // from another arm of the ternary chain. See lib/timbosCopy.ts.
   const isTimbos = lobbyTheme === TIMBOS_LOBBY_ID;
   const lang = useLobbyLang();
-  // Scoped rail: inside a branded lobby the rail lists that lobby's sections
+  // Scoped rail: inside a community the rail lists that lobby's sections
   // instead of platform navigation. See lib/lobbyChrome.ts for why.
+  //
+  // Rooms count. A room belongs to a lobby, so standing in one is still
+  // standing in that community — leaving the platform rail there was the last
+  // door out, and it is the one a member is most likely to be looking at.
   // pathname, not isLobbyActive — that is declared further down.
   const scopedLobbyId = String(currentLobbyId || "");
-  const scopedRail = isScopedRailLobby(scopedLobbyId) && pathname.startsWith("/lobby");
+  const inCommunity = pathname.startsWith("/lobby") || pathname.startsWith("/room");
+  const scopedRail = isScopedRailLobby(scopedLobbyId) && inCommunity;
   const [searchView, setSearchView] = useState<string | null>(null);
   const [availableViews, setAvailableViews] = useState<string[]>([]);
   const tb = (key: string, fallback: string) =>

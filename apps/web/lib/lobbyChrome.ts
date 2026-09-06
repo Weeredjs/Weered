@@ -75,6 +75,49 @@ export function isScopedRailLobby(lobbyId: string): boolean {
   return !!lobbyId && lobbyId !== "lobby";
 }
 
+/**
+ * Module types that give a lobby a Modules tab.
+ *
+ * Was a 27-arm `||` chain inside the lobby page, which meant a room could not
+ * ask the same question — and a room needs to, or its scoped rail cannot offer
+ * the section holding the lobby's actual content.
+ */
+const MODULE_TYPES = new Set([
+  "BUNGIE",
+  "TWITCH",
+  "MARATHON",
+  "MLB",
+  "PGA",
+  "NEWS",
+  "RIOT",
+  "FORTNITE",
+  "TRADING",
+  "POKER",
+  "HEADQUARTERS",
+  "CS2",
+  "DOTA2",
+  "STUDY",
+  "PUBG",
+  "DND",
+  "POE",
+  "POE2",
+  "DIVISION2",
+  "ASSETTOCORSA",
+  "WINDROSE",
+  "HELLDIVERS2",
+  "CHESS",
+  "EVE",
+  "MTG",
+  "HLL",
+  "COWORK",
+]);
+
+/** Timbo's panel is keyed on the lobby id rather than a ModuleType, so it is
+ *  named here too. See the render branch in the lobby page. */
+export function lobbyHasModules(lobbyId: string, moduleType?: string | null): boolean {
+  return lobbyId === TIMBOS_LOBBY_ID || MODULE_TYPES.has(String(moduleType || ""));
+}
+
 // ── Which section the lobby is showing ───────────────────────────────────
 const VIEWS = ["rooms", "feed", "modules", "events", "lfg", "reddit"] as const;
 export type LobbyView = (typeof VIEWS)[number];
@@ -112,10 +155,17 @@ export function useLobbyView(lobbyId: string): [LobbyView, (v: LobbyView) => voi
  * offers a tab that would render empty.
  */
 export function usePublishLobbyViews(lobbyId: string, hasModules: boolean): void {
-  const joined = lobbyViews(lobbyId, hasModules).join(",");
+  // Empty when there is no lobby — a standalone room must not advertise
+  // sections that belong to nobody.
+  const joined = lobbyId ? lobbyViews(lobbyId, hasModules).join(",") : "";
   useEffect(() => {
-    document.documentElement.setAttribute("data-weered-views", joined);
-    return () => document.documentElement.removeAttribute("data-weered-views");
+    const d = document.documentElement;
+    if (!joined) {
+      d.removeAttribute("data-weered-views");
+      return;
+    }
+    d.setAttribute("data-weered-views", joined);
+    return () => d.removeAttribute("data-weered-views");
   }, [joined]);
 }
 

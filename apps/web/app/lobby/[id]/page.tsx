@@ -19,6 +19,7 @@ import {
   isThemeableLobby,
   useBilingualLobby,
   useLobbyView,
+  lobbyHasModules,
   usePublishLobbyViews,
 } from "../../../lib/lobbyChrome";
 import LobbySplash, {
@@ -803,35 +804,7 @@ export default function LobbyIdPage() {
     if (lobbyId && memberChecked && isMember) join(lobbyId);
   }, [lobbyId, memberChecked, isMember]);
 
-  const hasModules =
-    lobbyId === TIMBOS_LOBBY_ID || // panel is lobby-keyed, not ModuleType
-    lobbyInfo?.moduleType === "BUNGIE" ||
-    lobbyInfo?.moduleType === "TWITCH" ||
-    lobbyInfo?.moduleType === "MARATHON" ||
-    lobbyInfo?.moduleType === "MLB" ||
-    lobbyInfo?.moduleType === "PGA" ||
-    lobbyInfo?.moduleType === "NEWS" ||
-    lobbyInfo?.moduleType === "RIOT" ||
-    lobbyInfo?.moduleType === "FORTNITE" ||
-    lobbyInfo?.moduleType === "TRADING" ||
-    lobbyInfo?.moduleType === "POKER" ||
-    lobbyInfo?.moduleType === "HEADQUARTERS" ||
-    lobbyInfo?.moduleType === "CS2" ||
-    lobbyInfo?.moduleType === "DOTA2" ||
-    lobbyInfo?.moduleType === "STUDY" ||
-    lobbyInfo?.moduleType === "PUBG" ||
-    lobbyInfo?.moduleType === "DND" ||
-    lobbyInfo?.moduleType === "POE" ||
-    lobbyInfo?.moduleType === "POE2" ||
-    lobbyInfo?.moduleType === "DIVISION2" ||
-    lobbyInfo?.moduleType === "ASSETTOCORSA" ||
-    lobbyInfo?.moduleType === "WINDROSE" ||
-    lobbyInfo?.moduleType === "HELLDIVERS2" ||
-    lobbyInfo?.moduleType === "CHESS" ||
-    lobbyInfo?.moduleType === "EVE" ||
-    lobbyInfo?.moduleType === "MTG" ||
-    lobbyInfo?.moduleType === "HLL" ||
-    lobbyInfo?.moduleType === "COWORK";
+  const hasModules = lobbyHasModules(lobbyId, lobbyInfo?.moduleType);
   const hasLfgBoard = LFG_BOARD_LOBBIES.has(lobbyId);
   usePublishLobbyViews(lobbyId, hasModules); // feeds the scoped rail
   const redditSub = REDDIT_TAB_LOBBIES[lobbyId];

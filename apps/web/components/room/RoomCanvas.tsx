@@ -15,7 +15,12 @@ import MeetingFaceStrip from "./MeetingFaceStrip";
 import { weeredToast } from "../../lib/toast";
 import { onActivate } from "@/lib/a11y";
 import { safeUrl } from "@/lib/safeUrl";
-import { isThemeableLobby, isBilingualLobby } from "../../lib/lobbyChrome";
+import {
+  isThemeableLobby,
+  isBilingualLobby,
+  lobbyHasModules,
+  usePublishLobbyViews,
+} from "../../lib/lobbyChrome";
 import { hydrateLobbyLang, clearLobbyLang } from "../../lib/lobbyLang";
 
 // A short "knock-knock" chime for office walk-ins — synthesized (no asset to
@@ -267,6 +272,13 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
     return base;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lobbyContext?.moduleType, currentLobbyId, isOfficeRoom, w?.me?.id, w?.globalRole, w?.meta?.ownerId, w?.meta?.mods]);
+
+  // A room is inside its lobby, so its scoped rail needs the same section
+  // list the lobby page publishes — otherwise the rail has nothing to show.
+  usePublishLobbyViews(
+    lobbyContext?.id || "",
+    lobbyHasModules(lobbyContext?.id || "", lobbyContext?.moduleType),
+  );
 
   useEffect(() => {
     const id = lobbyContext?.id;

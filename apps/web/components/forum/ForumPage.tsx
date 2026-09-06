@@ -1,13 +1,14 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useWeered } from "../WeeredProvider";
 import { forumFetch, timeAgo, CATEGORY_CONFIG, TIER_COLORS, FONT } from "./ForumHelpers";
 import { apiFetch } from "../../lib/api";
 import { avatarBg } from "../../lib/avatarColor";
 import { weeredForumReport } from "../../lib/forumReport";
 import { onActivate } from "@/lib/a11y";
+import PostDetail from "./PostDetail";
 
 type Post = {
   id: string; title: string; body: string; category: string;
@@ -55,6 +56,24 @@ const CATS = [
 export default function ForumPage({ lobbyId, lobbyName }: { lobbyId?: string; lobbyName?: string } = {}) {
   const embedded = !!lobbyId;
   const router = useRouter();
+  // Inside a lobby a thread opens IN PLACE. Routing to /forum/<id> leaves the
+  // lobby entirely: the scoped rail reverts to platform navigation and the
+  // reskin disappears, so reading a notice dumps a member out of the community
+  // they were standing in. `?post=` keeps them here and keeps the URL
+  // shareable, and browser back still works because it is a real navigation.
+  const openPostId = useSearchParams()?.get("post") || null;
+  const openPost = (id: string) => {
+    if (!embedded) return router.push(`/forum/${id}`);
+    const sp = new URLSearchParams(window.location.search);
+    sp.set("view", "feed");
+    sp.set("post", id);
+    router.push(`${window.location.pathname}?${sp.toString()}`);
+  };
+  const closePost = () => {
+    const sp = new URLSearchParams(window.location.search);
+    sp.delete("post");
+    router.push(`${window.location.pathname}?${sp.toString()}`);
+  };
   const w: any = useWeered();
   const me = w?.me;
   const myLobbyRole: string | undefined = w?.lobbyRole || w?.myLobbyRole;
@@ -163,6 +182,19 @@ export default function ForumPage({ lobbyId, lobbyName }: { lobbyId?: string; lo
   }
 
   return (
+    embedded && openPostId ? (
+      <div style={{ height: "100%", overflow: "auto", fontFamily: FONT, padding: "12px 14px 40px" }}>
+        <button
+          type="button"
+          onClick={closePost}
+          className="weered-btn"
+          style={{ marginBottom: 12, fontSize: 12, padding: "6px 12px" }}
+        >
+          &larr; {lobbyName || "Back"}
+        </button>
+        <PostDetail postId={openPostId} />
+      </div>
+    ) : (
     <div style={{
       display: "flex",
       maxWidth: embedded ? undefined : 1100,
@@ -403,7 +435,7 @@ export default function ForumPage({ lobbyId, lobbyName }: { lobbyId?: string; lo
             results={searchResults}
             loading={searching}
             query={searchQ}
-            onPostClick={(id) => router.push(`/forum/${id}`)}
+            onPostClick={openPost}
             sections={sections}
           />
         ) : loading ? (
@@ -436,8 +468,8 @@ export default function ForumPage({ lobbyId, lobbyName }: { lobbyId?: string; lo
                     border: `1px solid ${post.pinned ? "rgba(245,158,11,.2)" : "rgba(255,255,255,.06)"}`,
                     cursor: "pointer", transition: "border-color 0.15s, background 0.15s",
                   }}
-                  onClick={() => router.push(`/forum/${post.id}`)}
-                  onKeyDown={onActivate(() => router.push(`/forum/${post.id}`))}
+                  onClick={() => openPost(post.id)}
+                  onKeyDown={onActivate(() => openPost(post.id))}
                   tabIndex={0}
                   role="button"
                   onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.05)"; }}
@@ -566,6 +598,7 @@ export default function ForumPage({ lobbyId, lobbyName }: { lobbyId?: string; lo
         />
       )}
     </div>
+    )
   );
 }
 
