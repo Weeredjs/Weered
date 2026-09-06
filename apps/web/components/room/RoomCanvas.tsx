@@ -272,13 +272,29 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
   useEffect(() => {
     const id = lobbyContext?.id;
     if (id && isThemeableLobby(id)) {
-      document.documentElement.setAttribute("data-weered-lobby", id);
+      const d = document.documentElement;
+      d.setAttribute("data-weered-lobby", id);
+      // Leave min chrome, or the theme is invisible.
+      //
+      // 80-chrome-min.css strips the rail flat when data-weered-chrome="min":
+      //   html[data-weered-chrome="min"] .weered-left * {
+      //     background: transparent !important; box-shadow: none !important;
+      //     border-color: transparent !important; }
+      // That is a blanket !important at equal-or-higher specificity than any
+      // lobby theme rule, so no reskin can survive it. The lobby page already
+      // handles this — `wantMin = forceMin || (!forceFull && !wantLobbyTheme)`
+      // — but rooms never did, which is why a themed lobby went flat the
+      // moment you walked into one of its rooms. Restore on the way out so
+      // ordinary rooms keep the stripped-down chrome they are meant to have.
+      const hadMin = d.getAttribute("data-weered-chrome") === "min";
+      if (hadMin) d.removeAttribute("data-weered-chrome");
       // A bilingual lobby stays bilingual inside its rooms — walking from the
       // lobby into a room used to drop the member back to English.
       const bilingual = id === TIMBOS_LOBBY_ID;
       if (bilingual) hydrateLobbyLang();
       return () => {
-        document.documentElement.removeAttribute("data-weered-lobby");
+        d.removeAttribute("data-weered-lobby");
+        if (hadMin) d.setAttribute("data-weered-chrome", "min");
         if (bilingual) clearLobbyLang();
       };
     }
