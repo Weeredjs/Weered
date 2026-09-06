@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useOverlay } from "./overlays/OverlayProvider";
 import { useWeered, useRoomUsers } from "./WeeredProvider";
 import UserCorner from "./UserCorner";
@@ -207,6 +207,19 @@ export default function LeftRail() {
     return () => obs.disconnect();
   }, []);
 
+  // The active section of a scoped rail. Published by useLobbyView as an
+  // attribute, not read from the query string — see lib/timbosLobby.ts.
+  useEffect(() => {
+    const read = () => setSearchView(document.documentElement.getAttribute("data-weered-view"));
+    read();
+    const obs = new MutationObserver(read);
+    obs.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["data-weered-view"],
+    });
+    return () => obs.disconnect();
+  }, []);
+
   const isWindrose = lobbyTheme === "windrose";
   const isDestiny = lobbyTheme === "destiny2";
   const isDnd = lobbyTheme === "dnd";
@@ -220,7 +233,7 @@ export default function LeftRail() {
   // pathname, not isLobbyActive — that is declared further down.
   const scopedRail =
     isScopedRailLobby(String(currentLobbyId || "")) && pathname.startsWith("/lobby");
-  const searchView = useSearchParams()?.get("view") || null;
+  const [searchView, setSearchView] = useState<string | null>(null);
   const tb = (key: string, fallback: string) =>
     isTimbos && TIMBOS_NAV[key] ? pick(TIMBOS_NAV[key], lang) : fallback;
 

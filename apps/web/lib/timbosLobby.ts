@@ -77,6 +77,14 @@ export function useLobbyView(lobbyId: string): [LobbyView, (v: LobbyView) => voi
   useEffect(() => {
     if (v) setView(initialLobbyView(lobbyId, v));
   }, [v, lobbyId]);
+  // Publish the view the same way the theme and language layers publish theirs.
+  // LeftRail observes this attribute rather than calling useSearchParams: the
+  // rail renders in the ROOT layout, so it is on /_not-found too, and that hook
+  // forces dynamic rendering and breaks the static export of that page.
+  useEffect(() => {
+    document.documentElement.setAttribute("data-weered-view", view);
+    return () => document.documentElement.removeAttribute("data-weered-view");
+  }, [view]);
   return [view, setView];
 }
 
