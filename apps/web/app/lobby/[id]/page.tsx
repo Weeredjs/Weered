@@ -13,7 +13,7 @@ import TournamentLiveStrip from "../../../components/TournamentLiveStrip";
 import FlairContestStrip from "../../../components/FlairContestStrip";
 import TimbosPanel from "../../../components/TimbosPanel";
 import { TIMBOS_LOBBY_ID } from "../../../lib/timbosCopy";
-import { isForcedThemeLobby, useBilingualLobby } from "../../../lib/timbosLobby";
+import { isForcedThemeLobby, useBilingualLobby, useLobbyView } from "../../../lib/timbosLobby";
 import LobbySplash, {
   WINDROSE_SPLASH_PALETTE,
   DESTINY_SPLASH_PALETTE,
@@ -607,10 +607,8 @@ export default function LobbyIdPage() {
   const [membership, setMembership] = useState<Membership>(null);
   const [joinRequest, setJoinRequest] = useState<JoinRequestStatus>(null);
   const [memberChecked, setMemberChecked] = useState(false);
-  // Preview lobbies open on Modules — see lib/timbosLobby.ts.
-  const [view, setView] = useState<"rooms" | "feed" | "modules" | "events" | "lfg" | "reddit">(
-    isForcedThemeLobby(lobbyId) ? "modules" : "rooms",
-  );
+  // Modules for preview lobbies, ?view= overrides — lib/timbosLobby.ts.
+  const [view, setView] = useLobbyView(lobbyId);
 
   useWatchHere(
     React.useCallback(() => {
@@ -698,9 +696,6 @@ export default function LobbyIdPage() {
             _count: j.lobby._count,
             tiers: j.lobby.tiers || [],
           });
-          // Mplayer Mode: every lobby lands on the Lobby (rooms) view — people
-          // first. Preview lobbies are the exception (empty hall) — timbosLobby.ts.
-          setView(isForcedThemeLobby(lobbyId) ? "modules" : "rooms");
           setMembership(j.membership || null);
           setJoinRequest(j.joinRequest || null);
           setMemberChecked(true);
@@ -805,8 +800,7 @@ export default function LobbyIdPage() {
   }, [lobbyId, memberChecked, isMember]);
 
   const hasModules =
-    // Timbo's carries its panel without a ModuleType — see the render branch.
-    lobbyId === TIMBOS_LOBBY_ID ||
+    lobbyId === TIMBOS_LOBBY_ID || // panel is lobby-keyed, not ModuleType
     lobbyInfo?.moduleType === "BUNGIE" ||
     lobbyInfo?.moduleType === "TWITCH" ||
     lobbyInfo?.moduleType === "MARATHON" ||
@@ -1183,8 +1177,7 @@ export default function LobbyIdPage() {
                 }}
               >
                 {view === "modules" && hasModules ? (
-                  // Keyed on the lobby, not a ModuleType: an enum value for one
-                  // demo room would mean a prod migration. See lib/timbosLobby.ts.
+                  // Keyed on the lobby, not a ModuleType — lib/timbosLobby.ts.
                   lobbyId === TIMBOS_LOBBY_ID ? (
                     <TimbosPanel accent={accent} />
                   ) : lobbyInfo?.moduleType === "MARATHON" ? (

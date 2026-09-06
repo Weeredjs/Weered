@@ -1,5 +1,6 @@
 "use client";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { hydrateLobbyLang, clearLobbyLang } from "./lobbyLang";
 import { TIMBOS_LOBBY_ID } from "./timbosCopy";
 
@@ -18,6 +19,66 @@ import { TIMBOS_LOBBY_ID } from "./timbosCopy";
  *  Keep this to demo lobbies: a real community's room should honour whatever
  *  its members chose for themselves. */
 export const FORCED_THEME_LOBBIES: string[] = [TIMBOS_LOBBY_ID];
+
+/**
+ * Lobbies that get a SCOPED left rail.
+ *
+ * The default rail is platform navigation — Home, Forum, Store, Map. That is
+ * right for someone browsing Weered, and wrong inside a community's own branded
+ * room: every one of those links walks their member out of the room and, via
+ * the map, straight to a rival community. That is the thing they are leaving
+ * Discord to escape, so shipping it inside a paid room sells them the problem
+ * back.
+ *
+ * Scoped means the rail carries THIS lobby's sections instead, so every link
+ * keeps the member inside. Weered stays present as a small mark rather than as
+ * a menu. Discovery is not lost, it just lives on the platform surfaces outside
+ * a branded lobby, which is where someone browsing actually is.
+ *
+ * Note this is NOT the same as hiding the rail. The rail is how the room is
+ * navigated; the question was only ever whose destinations it lists.
+ */
+export const SCOPED_RAIL_LOBBIES: string[] = [TIMBOS_LOBBY_ID];
+
+export function isScopedRailLobby(lobbyId: string): boolean {
+  return SCOPED_RAIL_LOBBIES.includes(lobbyId);
+}
+
+/** Views the lobby page understands, as used by ?view= on scoped rail links. */
+const VIEWS = ["rooms", "feed", "modules", "events", "lfg", "reddit"] as const;
+export type LobbyView = (typeof VIEWS)[number];
+
+/**
+ * Which view a lobby should open on.
+ *
+ * `?view=` lets the scoped rail use real links rather than click handlers, so
+ * a member can bookmark or share a section of the room. Falls back to Modules
+ * for preview lobbies (they have no rooms yet, so the default Rooms tab shows a
+ * prospect an empty hall) and Rooms everywhere else.
+ */
+export function initialLobbyView(lobbyId: string, view?: string | null): LobbyView {
+  if (view && (VIEWS as readonly string[]).includes(view)) return view as LobbyView;
+  return isForcedThemeLobby(lobbyId) ? "modules" : "rooms";
+}
+
+/**
+ * The lobby's current view, and a setter.
+ *
+ * Owns the state so the page does not have to import the type or the initial
+ * helper. Scoped rail links are real hrefs and Next keeps the page mounted
+ * across them, so nothing would otherwise re-run to change the view — this
+ * watches `?view=` instead. Only acts when the param is present, so it never
+ * fights the tab buttons.
+ */
+export function useLobbyView(lobbyId: string): [LobbyView, (v: LobbyView) => void] {
+  const sp = useSearchParams();
+  const v = sp?.get("view") || null;
+  const [view, setView] = useState<LobbyView>(() => initialLobbyView(lobbyId, v));
+  useEffect(() => {
+    if (v) setView(initialLobbyView(lobbyId, v));
+  }, [v, lobbyId]);
+  return [view, setView];
+}
 
 /**
  * These rooms also suppress the JoinLobbyOverlay.

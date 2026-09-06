@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useOverlay } from "./overlays/OverlayProvider";
 import { useWeered, useRoomUsers } from "./WeeredProvider";
 import UserCorner from "./UserCorner";
@@ -12,7 +12,17 @@ import PresenceRow from "./PresenceRow";
 import { useOfficeSkin } from "./useOfficeSkin";
 import AdvisorCredentialCard from "./AdvisorCredentialCard";
 import { useLobbyLang, pick } from "../lib/lobbyLang";
-import { TIMBOS_NAV, TIMBOS_NAV_ICONS, TIMBOS_LOBBY_ID } from "../lib/timbosCopy";
+import {
+  TIMBOS_NAV,
+  TIMBOS_NAV_ICONS,
+  TIMBOS_LOBBY_ID,
+  TIMBOS_SECTIONS,
+  TIMBOS_SECTION_ICONS,
+} from "../lib/timbosCopy";
+import { isScopedRailLobby } from "../lib/timbosLobby";
+
+/** Order of sections in a scoped rail. */
+const SCOPED_SECTION_KEYS = ["rooms", "modules", "feed", "events"];
 
 function pickFirstString(...vals: any[]): string {
   for (const v of vals) if (typeof v === "string" && v.trim()) return v.trim();
@@ -205,6 +215,12 @@ export default function LeftRail() {
   // from another arm of the ternary chain. See lib/timbosCopy.ts.
   const isTimbos = lobbyTheme === TIMBOS_LOBBY_ID;
   const lang = useLobbyLang();
+  // Scoped rail: inside a branded lobby the rail lists that lobby's sections
+  // instead of platform navigation. See lib/timbosLobby.ts for why.
+  // pathname, not isLobbyActive — that is declared further down.
+  const scopedRail =
+    isScopedRailLobby(String(currentLobbyId || "")) && pathname.startsWith("/lobby");
+  const searchView = useSearchParams()?.get("view") || null;
   const tb = (key: string, fallback: string) =>
     isTimbos && TIMBOS_NAV[key] ? pick(TIMBOS_NAV[key], lang) : fallback;
 
@@ -672,99 +688,111 @@ export default function LeftRail() {
       <div className="weered-left-section">
         <div className="weered-left-title">{office ? "Practice" : navLabels.communities}</div>
 
-        {(office
-          ? [
-              {
-                href: "/room/mtg-eceb-office",
-                label: "The Desk",
-                icon: "▤",
-                active: pathname.startsWith("/room/mtg-"),
-                onClick: undefined as any,
-                key: "lobby",
-              },
-              {
-                href: "https://agent.eastcoastemployeebenefits.com",
-                label: "Book of Business",
-                icon: "☰",
-                active: false,
-                onClick: undefined as any,
-                key: "book",
-                target: "_blank",
-                rel: "noopener noreferrer",
-              },
-              ...(globalRole === "GOD" || globalRole === "STAFF" || globalRole === "SUPPORT"
-                ? [
-                    {
-                      href: "/staff",
-                      label: "Admin",
-                      icon: "⚙",
-                      active: pathname.startsWith("/staff"),
-                      onClick: undefined as any,
-                      key: "ops",
-                    },
-                  ]
-                : []),
-            ]
-          : [
-              {
-                href: lobbyHrefMain,
-                label: navLabels.lobby,
-                icon: navIcons.lobby,
-                active: isLobbyActive,
-                onClick: undefined as any,
-                key: "lobby",
-              },
-              {
-                href: "/home",
-                label: navLabels.home,
-                icon: navIcons.home,
-                active: isHomeActive,
-                onClick: (e: any) => {
-                  e.preventDefault();
-                  try {
-                    leave();
-                  } catch {}
-                  router.push("/home");
+        {(scopedRail
+          ? // A branded lobby's rail lists THIS lobby's sections. Real links
+            // carrying ?view= rather than click handlers, so a member can
+            // bookmark or share a section. See lib/timbosLobby.ts.
+            SCOPED_SECTION_KEYS.map((k) => ({
+              href: `${lobbyHrefMain}?view=${k}`,
+              label: TIMBOS_SECTIONS[k] ? pick(TIMBOS_SECTIONS[k], lang) : k,
+              icon: TIMBOS_SECTION_ICONS[k] || "•",
+              active: isLobbyActive && (searchView || "modules") === k,
+              onClick: undefined as any,
+              key: k,
+            }))
+          : office
+            ? [
+                {
+                  href: "/room/mtg-eceb-office",
+                  label: "The Desk",
+                  icon: "▤",
+                  active: pathname.startsWith("/room/mtg-"),
+                  onClick: undefined as any,
+                  key: "lobby",
                 },
-                key: "home",
-              },
-              {
-                href: "/forum",
-                label: navLabels.forum,
-                icon: navIcons.forum,
-                active: pathname.startsWith("/forum"),
-                onClick: undefined as any,
-                key: "forum",
-              },
-              {
-                href: "/store",
-                label: navLabels.paper,
-                icon: navIcons.paper,
-                active: pathname.startsWith("/store"),
-                onClick: undefined as any,
-                key: "paper",
-              },
-              {
-                href: "/map",
-                label: navLabels.locator,
-                icon: navIcons.locator,
-                active: pathname.startsWith("/map"),
-                onClick: undefined as any,
-                key: "locator",
-              },
-              ...(globalRole === "GOD" || globalRole === "STAFF" || globalRole === "SUPPORT"
-                ? [
-                    {
-                      href: "/staff",
-                      label: navLabels.ops,
-                      icon: navIcons.ops,
-                      active: pathname.startsWith("/staff"),
-                      onClick: undefined as any,
-                      key: "ops",
-                    },
-                  ]
-                : []),
-            ]
+                {
+                  href: "https://agent.eastcoastemployeebenefits.com",
+                  label: "Book of Business",
+                  icon: "☰",
+                  active: false,
+                  onClick: undefined as any,
+                  key: "book",
+                  target: "_blank",
+                  rel: "noopener noreferrer",
+                },
+                ...(globalRole === "GOD" || globalRole === "STAFF" || globalRole === "SUPPORT"
+                  ? [
+                      {
+                        href: "/staff",
+                        label: "Admin",
+                        icon: "⚙",
+                        active: pathname.startsWith("/staff"),
+                        onClick: undefined as any,
+                        key: "ops",
+                      },
+                    ]
+                  : []),
+              ]
+            : [
+                {
+                  href: lobbyHrefMain,
+                  label: navLabels.lobby,
+                  icon: navIcons.lobby,
+                  active: isLobbyActive,
+                  onClick: undefined as any,
+                  key: "lobby",
+                },
+                {
+                  href: "/home",
+                  label: navLabels.home,
+                  icon: navIcons.home,
+                  active: isHomeActive,
+                  onClick: (e: any) => {
+                    e.preventDefault();
+                    try {
+                      leave();
+                    } catch {}
+                    router.push("/home");
+                  },
+                  key: "home",
+                },
+                {
+                  href: "/forum",
+                  label: navLabels.forum,
+                  icon: navIcons.forum,
+                  active: pathname.startsWith("/forum"),
+                  onClick: undefined as any,
+                  key: "forum",
+                },
+                {
+                  href: "/store",
+                  label: navLabels.paper,
+                  icon: navIcons.paper,
+                  active: pathname.startsWith("/store"),
+                  onClick: undefined as any,
+                  key: "paper",
+                },
+                {
+                  href: "/map",
+                  label: navLabels.locator,
+                  icon: navIcons.locator,
+                  active: pathname.startsWith("/map"),
+                  onClick: undefined as any,
+                  key: "locator",
+                },
+                ...(globalRole === "GOD" || globalRole === "STAFF" || globalRole === "SUPPORT"
+                  ? [
+                      {
+                        href: "/staff",
+                        label: navLabels.ops,
+                        icon: navIcons.ops,
+                        active: pathname.startsWith("/staff"),
+                        onClick: undefined as any,
+                        key: "ops",
+                      },
+                    ]
+                  : []),
+              ]
         ).map((item: any) => (
           <Link
             key={item.key}

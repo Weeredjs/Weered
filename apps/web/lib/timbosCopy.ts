@@ -28,6 +28,27 @@ export const TIMBOS_NAV: Record<string, Bi> = {
   communities: { en: "Scenes", fr: "Scènes" },
 };
 
+/**
+ * Sections of THIS lobby, for the scoped rail.
+ *
+ * A branded lobby's rail carries the community's own destinations, not the
+ * platform's. The four below map to the lobby's own tabs, so every link keeps
+ * the member inside the room they came for.
+ */
+export const TIMBOS_SECTIONS: Record<string, Bi> = {
+  rooms: { en: "The Dojo", fr: "Le Dojo" },
+  modules: { en: "The Big One", fr: "Le Gros Timbo" },
+  feed: { en: "Notice Board", fr: "Babillard" },
+  events: { en: "Schedule", fr: "Horaire" },
+};
+
+export const TIMBOS_SECTION_ICONS: Record<string, string> = {
+  rooms: "🥋",
+  modules: "🏆",
+  feed: "📋",
+  events: "🗓",
+};
+
 export const TIMBOS_NAV_ICONS: Record<string, string> = {
   lobby: "🥋",
   home: "🏮",
