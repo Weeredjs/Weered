@@ -52,6 +52,31 @@ html[data-weered-lobby="destiny2"] .weered-tier2-logo:hover::after {
   --weered-text: rgba(243, 244, 246, 0.98);
   --weered-muted: rgba(203, 213, 225, 0.72);
 
+  /* ── Room chrome ────────────────────────────────────────────────
+     RoomStage, RoomHeader and RightRailRoom are built from inline style
+     objects, so a lobby theme's CSS could never reach them — room chrome
+     was unthemed for EVERY lobby, Windrose included. These tokens are the
+     seam: the defaults below are byte-identical to the literals those
+     components used before, so the default theme renders exactly as it
+     did, and a lobby theme now has something to override.
+
+     Semantic colours are deliberately NOT here. Green live, red muted,
+     amber warning and the third-party brand colours stay literal, because
+     they must mean the same thing in every room on the platform. */
+  --weered-room-text: rgba(243, 244, 246, 0.92);
+  --weered-room-text-2: rgba(243, 244, 246, 0.85);
+  --weered-room-text-3: rgba(243, 244, 246, 0.75);
+  --weered-room-hollow: rgba(255, 255, 255, 0.02);
+  --weered-room-surface: rgba(255, 255, 255, 0.03);
+  --weered-room-surface-2: rgba(255, 255, 255, 0.05);
+  --weered-room-surface-3: rgba(255, 255, 255, 0.07);
+  --weered-room-line: rgba(255, 255, 255, 0.06);
+  --weered-room-line-2: rgba(255, 255, 255, 0.08);
+  --weered-room-scrim: rgba(0, 0, 0, 0.4);
+  --weered-room-scrim-2: rgba(0, 0, 0, 0.25);
+  --weered-room-accent: #c4bef8;
+  --weered-room-accent-2: rgb(216, 180, 254);
+
   --weered-accent-1: #5800e5;
   --weered-accent-2: #7c3aed;
   --weered-accent-bg: rgba(124, 58, 237, 0.16);

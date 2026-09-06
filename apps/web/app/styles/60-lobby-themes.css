@@ -3989,3 +3989,43 @@ html[data-weered-lobby="timbos"] .weered-chat-fullscreen-cta {
   border-color: rgba(123, 92, 255, 0.3) !important;
   color: var(--tb-paper) !important;
 }
+
+/* ─────────────────────────────────────────────────────────────────────
+   ROOM CHROME, FOR EVERY THEMED LOBBY
+   Scope: html[data-weered-lobby] — Windrose, Destiny 2, D&D, Helldivers
+   and Timbo's alike.
+
+   RoomStage, RoomHeader and RightRailRoom are inline-styled, so no lobby
+   theme could ever reach them and room chrome was unthemed platform-wide.
+   Those components now read --weered-room-* (00-base.css) instead of
+   hardcoded literals, and this is the one block that repoints them.
+
+   It derives from each theme's OWN palette rather than naming colours, so
+   a lobby themes its rooms simply by existing, and any future lobby gets
+   it for free.
+
+   Surfaces stay neutral white-alpha on purpose: they are near-transparent
+   overlays that read correctly over any dark ground, and tinting them per
+   theme muddies the contrast the room needs to stay legible.
+   ───────────────────────────────────────────────────────────────────── */
+html[data-weered-lobby] {
+  --weered-room-text: var(--weered-text);
+  --weered-room-text-2: var(--weered-muted);
+  --weered-room-text-3: var(--weered-muted);
+  --weered-room-line: var(--weered-border);
+  --weered-room-line-2: var(--weered-border2);
+  --weered-room-accent: var(--weered-accent-2);
+  --weered-room-accent-2: var(--weered-accent-1);
+}
+
+/* Timbo's takes the surfaces a step further: the dojo ground is darker and
+   cooler than the platform default, so the overlays get a violet cast to
+   sit on it rather than looking like grey film. */
+html[data-weered-lobby="timbos"] {
+  --weered-room-hollow: rgba(123, 92, 255, 0.04);
+  --weered-room-surface: rgba(123, 92, 255, 0.07);
+  --weered-room-surface-2: rgba(123, 92, 255, 0.1);
+  --weered-room-surface-3: rgba(123, 92, 255, 0.14);
+  --weered-room-scrim: rgba(6, 5, 13, 0.55);
+  --weered-room-scrim-2: rgba(6, 5, 13, 0.35);
+}

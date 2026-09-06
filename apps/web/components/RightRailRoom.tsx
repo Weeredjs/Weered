@@ -103,9 +103,9 @@ function FriendsPanel() {
                 onKeyDown={onActivate(() => { userId && openSheet("profile", { userId }); })}
                 tabIndex={0}
                 role="button"
-                style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 10px", borderRadius: 9, background: "rgba(255,255,255,.03)", border: "1px solid rgba(255,255,255,.06)", cursor: "pointer", transition: "background 0.12s" }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.07)"; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.03)"; }}
+                style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 10px", borderRadius: 9, background: "var(--weered-room-surface)", border: "1px solid rgba(255,255,255,.06)", cursor: "pointer", transition: "background 0.12s" }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "var(--weered-room-surface-3)"; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "var(--weered-room-surface)"; }}
               >
                 <div style={{ position: "relative", flexShrink: 0 }}>
                   <div style={{ width: 7, height: 7, borderRadius: "50%", background: "#22c55e", boxShadow: "0 0 5px #22c55e" }} />
@@ -202,9 +202,9 @@ function CrewPanel() {
                     onKeyDown={onActivate(() => { userId && openSheet("profile", { userId }); })}
                     tabIndex={0}
                     role="button"
-                    style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 10px", borderRadius: 8, background: "rgba(255,255,255,.03)", border: "1px solid rgba(255,255,255,.06)", opacity: m.online ? 1 : 0.4, cursor: "pointer", transition: "background 0.12s" }}
-                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.07)"; }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.03)"; }}
+                    style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 10px", borderRadius: 8, background: "var(--weered-room-surface)", border: "1px solid rgba(255,255,255,.06)", opacity: m.online ? 1 : 0.4, cursor: "pointer", transition: "background 0.12s" }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "var(--weered-room-surface-3)"; }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "var(--weered-room-surface)"; }}
                   >
                     <div style={{ width: 6, height: 6, borderRadius: "50%", background: m.online ? "#a78bfa" : "rgba(255,255,255,0.2)", boxShadow: m.online ? "0 0 5px #a78bfa" : "none", flexShrink: 0 }} />
                     <div style={{ flex: 1, minWidth: 0 }}>
@@ -339,19 +339,19 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
   }, [ctx, renameVal]);
 
   const s = {
-    section:    { marginTop: 10, borderRadius: 12, border: "1px solid rgba(255,255,255,.08)", background: "rgba(255,255,255,.03)", padding: "10px 12px" } as React.CSSProperties,
+    section:    { marginTop: 10, borderRadius: 12, border: "1px solid rgba(255,255,255,.08)", background: "var(--weered-room-surface)", padding: "10px 12px" } as React.CSSProperties,
     label:      { fontSize: 10, fontWeight: 700, opacity: 0.55, letterSpacing: ".7px", textTransform: "uppercase" as const, marginBottom: 7 },
-    btn:        { padding: "6px 10px", borderRadius: 8, border: "1px solid rgba(255,255,255,.10)", background: "rgba(255,255,255,.05)", fontSize: 11, cursor: "pointer", color: "rgba(243,244,246,.85)" } as React.CSSProperties,
-    btnPrimary: { padding: "6px 10px", borderRadius: 8, border: "1px solid rgba(124,58,237,.30)", background: "rgba(124,58,237,.14)", fontSize: 11, cursor: "pointer", color: "rgb(216,180,254)", fontWeight: 600 } as React.CSSProperties,
+    btn:        { padding: "6px 10px", borderRadius: 8, border: "1px solid rgba(255,255,255,.10)", background: "var(--weered-room-surface-2)", fontSize: 11, cursor: "pointer", color: "var(--weered-room-text-2)" } as React.CSSProperties,
+    btnPrimary: { padding: "6px 10px", borderRadius: 8, border: "1px solid rgba(124,58,237,.30)", background: "rgba(124,58,237,.14)", fontSize: 11, cursor: "pointer", color: "var(--weered-room-accent-2)", fontWeight: 600 } as React.CSSProperties,
     btnGreen:   { padding: "6px 10px", borderRadius: 8, border: "1px solid rgba(16,185,129,.30)",  background: "rgba(16,185,129,.10)",  fontSize: 11, cursor: "pointer", color: "rgb(167,243,208)" } as React.CSSProperties,
     btnRed:     { padding: "6px 10px", borderRadius: 8, border: "1px solid rgba(239,68,68,.25)",   background: "rgba(239,68,68,.08)",   fontSize: 11, cursor: "pointer", color: "rgba(252,165,165,.90)" } as React.CSSProperties,
-    input:      { width: "100%", padding: "7px 10px", borderRadius: 9, border: "1px solid rgba(255,255,255,.10)", background: "rgba(0,0,0,.25)", fontSize: 12, color: "rgba(243,244,246,.90)", outline: "none", boxSizing: "border-box" as const },
-    select:     { flex: 1, padding: "6px 10px", borderRadius: 8, border: "1px solid rgba(255,255,255,.10)", background: "rgba(0,0,0,.25)", fontSize: 11, color: "rgba(243,244,246,.90)", outline: "none" } as React.CSSProperties,
+    input:      { width: "100%", padding: "7px 10px", borderRadius: 9, border: "1px solid rgba(255,255,255,.10)", background: "var(--weered-room-scrim-2)", fontSize: 12, color: "rgba(243,244,246,.90)", outline: "none", boxSizing: "border-box" as const },
+    select:     { flex: 1, padding: "6px 10px", borderRadius: 8, border: "1px solid rgba(255,255,255,.10)", background: "var(--weered-room-scrim-2)", fontSize: 11, color: "rgba(243,244,246,.90)", outline: "none" } as React.CSSProperties,
     tabBtn:     (active: boolean, alert?: boolean) => ({
       padding: "4px 10px", borderRadius: 6, fontSize: 10, fontWeight: 700, cursor: "pointer", letterSpacing: ".4px",
       border: active ? "1px solid rgba(124,58,237,.45)" : alert ? "1px solid rgba(245,158,11,.4)" : "1px solid rgba(255,255,255,.08)",
       background: active ? "rgba(124,58,237,.18)" : "transparent",
-      color: active ? "rgb(216,180,254)" : alert ? "rgb(253,230,138)" : "rgba(255,255,255,.40)",
+      color: active ? "var(--weered-room-accent-2)" : alert ? "rgb(253,230,138)" : "rgba(255,255,255,.40)",
     } as React.CSSProperties),
   };
 
@@ -359,7 +359,7 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
   const statusLabel = locked ? "LOCKED" : slowSec > 0 ? `SLOW ${slowSec}s` : "UNLOCKED";
 
   return (
-    <div className="weered-rrr" style={{ fontSize: 13, color: "rgba(243,244,246,.92)", padding: "14px 14px 20px" }}>
+    <div className="weered-rrr" style={{ fontSize: 13, color: "var(--weered-room-text)", padding: "14px 14px 20px" }}>
 
       <div style={{ marginBottom: 4, paddingRight: 60, display: "flex", alignItems: "center", gap: 10 }}>
         {/* Account menu (Log out / Profile / Settings). Shown only on narrow
@@ -382,7 +382,7 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginTop: 10 }}>
         <button style={s.btn} onClick={() => { const base = typeof window !== "undefined" ? window.location.origin : ""; copyText("link", `${base}/room/${encodeURIComponent(roomId)}`); }}>Copy link</button>
         <button style={s.btn} onClick={() => copyText("id", roomId)}>Copy id</button>
-        <button style={{ ...s.btn, gridColumn: "span 2", borderColor: "rgba(124,58,237,.30)", color: "rgb(216,180,254)", background: "rgba(124,58,237,.08)" }} onClick={() => setShowInvite(true)}>Invite</button>
+        <button style={{ ...s.btn, gridColumn: "span 2", borderColor: "rgba(124,58,237,.30)", color: "var(--weered-room-accent-2)", background: "rgba(124,58,237,.08)" }} onClick={() => setShowInvite(true)}>Invite</button>
       </div>
 
       {allowed && (
@@ -551,7 +551,7 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
                   ? <EmptyState compact title="No actions yet." hint="Mod actions show up here as they happen." />
                   : <div style={{ display: "flex", flexDirection: "column", gap: 3, maxHeight: 300, overflowY: "auto" }}>
                     {auditLog.map((a: any) => (
-                      <div key={a.id} style={{ padding: "5px 8px", borderRadius: 7, background: "rgba(255,255,255,.02)", border: "1px solid rgba(255,255,255,.05)", fontSize: 11 }}>
+                      <div key={a.id} style={{ padding: "5px 8px", borderRadius: 7, background: "var(--weered-room-hollow)", border: "1px solid rgba(255,255,255,.05)", fontSize: 11 }}>
                         <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
                           <span style={{ fontFamily: "monospace", fontSize: 9, opacity: 0.4 }}>{new Date(a.ts).toLocaleTimeString()}</span>
                           <span style={{ fontWeight: 700, color: "rgba(167,139,250,.8)" }}>{a.type}</span>
@@ -574,8 +574,8 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
 
       {allowed && (
         <details style={{ marginTop: 8 }}>
-          <summary style={{ listStyle: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", borderRadius: 10, border: "1px solid rgba(255,255,255,.08)", background: "rgba(255,255,255,.03)", userSelect: "none" }}>
-            <span className="weered-rrr-section-label" style={{ color: "rgba(243,244,246,.75)", fontWeight: 800, fontSize: 11, letterSpacing: ".5px" }}>VOICE</span>
+          <summary style={{ listStyle: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", borderRadius: 10, border: "1px solid rgba(255,255,255,.08)", background: "var(--weered-room-surface)", userSelect: "none" }}>
+            <span className="weered-rrr-section-label" style={{ color: "var(--weered-room-text-3)", fontWeight: 800, fontSize: 11, letterSpacing: ".5px" }}>VOICE</span>
             <span style={{ fontSize: 9, padding: "2px 7px", borderRadius: 999, background: "rgba(245,158,11,.12)", border: "1px solid rgba(245,158,11,.30)", color: "rgb(253,230,138)", fontWeight: 700 }}>
               {(ctx?.voiceByRoom?.[`room:${roomId}`]?.mode || ctx?.voiceByRoom?.[roomId]?.mode || "OPEN").toLowerCase()}
             </span>
@@ -596,8 +596,8 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
 
       {allowed && (
         <details style={{ marginTop: 8 }}>
-          <summary style={{ listStyle: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", borderRadius: 10, border: "1px solid rgba(255,255,255,.08)", background: "rgba(255,255,255,.03)", userSelect: "none" }}>
-            <span className="weered-rrr-section-label" style={{ color: "rgba(243,244,246,.75)", fontWeight: 800, fontSize: 11, letterSpacing: ".5px" }}>MODULES</span>
+          <summary style={{ listStyle: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", borderRadius: 10, border: "1px solid rgba(255,255,255,.08)", background: "var(--weered-room-surface)", userSelect: "none" }}>
+            <span className="weered-rrr-section-label" style={{ color: "var(--weered-room-text-3)", fontWeight: 800, fontSize: 11, letterSpacing: ".5px" }}>MODULES</span>
             {((ctx?.meta?.disabledModules as string[]) || []).length > 0 && (
               <span style={{ fontSize: 9, padding: "2px 7px", borderRadius: 999, background: "rgba(239,68,68,.12)", border: "1px solid rgba(239,68,68,.3)", color: "rgba(252,165,165,.9)", fontWeight: 700 }}>
                 {((ctx?.meta?.disabledModules as string[]) || []).length} off
@@ -615,8 +615,8 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
 
       {allowed && (
         <details style={{ marginTop: 8 }}>
-          <summary style={{ listStyle: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", borderRadius: 10, border: "1px solid rgba(255,255,255,.08)", background: "rgba(255,255,255,.03)", userSelect: "none" }}>
-            <span className="weered-rrr-section-label" style={{ color: "rgba(243,244,246,.75)", fontWeight: 800, fontSize: 11, letterSpacing: ".5px" }}>APPEARANCE</span>
+          <summary style={{ listStyle: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", borderRadius: 10, border: "1px solid rgba(255,255,255,.08)", background: "var(--weered-room-surface)", userSelect: "none" }}>
+            <span className="weered-rrr-section-label" style={{ color: "var(--weered-room-text-3)", fontWeight: 800, fontSize: 11, letterSpacing: ".5px" }}>APPEARANCE</span>
             <span style={{ fontSize: 9, padding: "2px 7px", borderRadius: 999, background: "rgba(245,158,11,.12)", border: "1px solid rgba(245,158,11,.30)", color: "rgb(253,230,138)", fontWeight: 700 }}>owner</span>
           </summary>
           <div style={{ marginTop: 8, padding: "0 4px" }}>
@@ -716,7 +716,7 @@ function RoomAppearanceEditor({
           value={iconUrl}
           onChange={e => setIconUrl(e.target.value)}
           placeholder="https://…/icon.png"
-          style={{ width: "100%", padding: "6px 10px", borderRadius: 8, border: "1px solid rgba(255,255,255,.10)", background: "rgba(0,0,0,.25)", fontSize: 11, color: "rgba(243,244,246,.85)", outline: "none", boxSizing: "border-box", fontFamily: "monospace" }}
+          style={{ width: "100%", padding: "6px 10px", borderRadius: 8, border: "1px solid rgba(255,255,255,.10)", background: "var(--weered-room-scrim-2)", fontSize: 11, color: "var(--weered-room-text-2)", outline: "none", boxSizing: "border-box", fontFamily: "monospace" }}
         />
       </div>
       <div>
@@ -725,14 +725,14 @@ function RoomAppearanceEditor({
           value={bannerUrl}
           onChange={e => setBannerUrl(e.target.value)}
           placeholder="https://…/banner.jpg"
-          style={{ width: "100%", padding: "6px 10px", borderRadius: 8, border: "1px solid rgba(255,255,255,.10)", background: "rgba(0,0,0,.25)", fontSize: 11, color: "rgba(243,244,246,.85)", outline: "none", boxSizing: "border-box", fontFamily: "monospace" }}
+          style={{ width: "100%", padding: "6px 10px", borderRadius: 8, border: "1px solid rgba(255,255,255,.10)", background: "var(--weered-room-scrim-2)", fontSize: 11, color: "var(--weered-room-text-2)", outline: "none", boxSizing: "border-box", fontFamily: "monospace" }}
         />
       </div>
       <div>
         <div style={{ fontSize: 10, opacity: 0.5, letterSpacing: ".5px", textTransform: "uppercase", marginBottom: 4 }}>Accent color</div>
         <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
           <input type="color" value={accentColor && /^#[0-9a-f]{6}$/i.test(accentColor) ? accentColor : "#5800E5"} onChange={e => setAccentColor(e.target.value)} style={{ width: 36, height: 28, borderRadius: 6, border: "1px solid rgba(255,255,255,.10)", background: "transparent", cursor: "pointer" }} />
-          <input value={accentColor} onChange={e => setAccentColor(e.target.value)} placeholder="#5800E5" style={{ flex: 1, padding: "6px 10px", borderRadius: 8, border: "1px solid rgba(255,255,255,.10)", background: "rgba(0,0,0,.25)", fontSize: 11, color: "rgba(243,244,246,.85)", outline: "none", fontFamily: "monospace" }} />
+          <input value={accentColor} onChange={e => setAccentColor(e.target.value)} placeholder="#5800E5" style={{ flex: 1, padding: "6px 10px", borderRadius: 8, border: "1px solid rgba(255,255,255,.10)", background: "var(--weered-room-scrim-2)", fontSize: 11, color: "var(--weered-room-text-2)", outline: "none", fontFamily: "monospace" }} />
           {accentColor && (<button type="button" onClick={() => setAccentColor("")} style={{ background: "none", border: "none", color: "rgba(255,255,255,.4)", fontSize: 10, cursor: "pointer" }}>clear</button>)}
         </div>
       </div>
@@ -743,7 +743,7 @@ function RoomAppearanceEditor({
           onChange={e => setDescription(e.target.value)}
           rows={2}
           placeholder="What is this room about?"
-          style={{ width: "100%", padding: "6px 10px", borderRadius: 8, border: "1px solid rgba(255,255,255,.10)", background: "rgba(0,0,0,.25)", fontSize: 12, color: "rgba(243,244,246,.85)", outline: "none", boxSizing: "border-box", resize: "none" }}
+          style={{ width: "100%", padding: "6px 10px", borderRadius: 8, border: "1px solid rgba(255,255,255,.10)", background: "var(--weered-room-scrim-2)", fontSize: 12, color: "var(--weered-room-text-2)", outline: "none", boxSizing: "border-box", resize: "none" }}
         />
       </div>
       <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
@@ -822,8 +822,8 @@ function RoomModulesEditor({
                 fontFamily: "monospace",
                 textAlign: "left",
                 cursor: "pointer",
-                border: `1px solid ${isOff ? "rgba(239,68,68,.35)" : "rgba(255,255,255,.08)"}`,
-                background: isOff ? "rgba(239,68,68,.08)" : "rgba(255,255,255,.02)",
+                border: `1px solid ${isOff ? "rgba(239,68,68,.35)" : "var(--weered-room-line-2)"}`,
+                background: isOff ? "rgba(239,68,68,.08)" : "var(--weered-room-hollow)",
                 color: isOff ? "rgba(252,165,165,.85)" : "rgba(243,244,246,.55)",
                 display: "flex", alignItems: "center", gap: 6,
               }}
@@ -895,7 +895,7 @@ function VoiceQueueControls({
                   fontSize: 10, fontWeight: 700, letterSpacing: ".4px",
                   textAlign: "left", cursor: "pointer",
                   border: active ? "1px solid rgba(245,158,11,.45)" : "1px solid rgba(255,255,255,.08)",
-                  background: active ? "rgba(245,158,11,.12)" : "rgba(255,255,255,.02)",
+                  background: active ? "rgba(245,158,11,.12)" : "var(--weered-room-hollow)",
                   color: active ? "rgb(253,230,138)" : "rgba(243,244,246,.55)",
                 }}
               >
@@ -914,8 +914,8 @@ function VoiceQueueControls({
             {queue.map(uid => {
               const u = usersById.get(uid);
               return (
-                <div key={uid} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderRadius: 6, border: "1px solid rgba(255,255,255,.06)", background: "rgba(255,255,255,.02)", padding: "4px 8px" }}>
-                  <span style={{ fontSize: 11, color: "rgba(243,244,246,.75)", fontFamily: "monospace" }}>{u?.name || uid}</span>
+                <div key={uid} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderRadius: 6, border: "1px solid rgba(255,255,255,.06)", background: "var(--weered-room-hollow)", padding: "4px 8px" }}>
+                  <span style={{ fontSize: 11, color: "var(--weered-room-text-3)", fontFamily: "monospace" }}>{u?.name || uid}</span>
                   <button type="button" onClick={() => onApprove(uid)} style={{ padding: "2px 8px", borderRadius: 5, border: "1px solid rgba(16,185,129,.3)", background: "rgba(16,185,129,.10)", color: "rgb(167,243,208)", fontSize: 10, fontWeight: 700, cursor: "pointer" }}>Approve</button>
                 </div>
               );

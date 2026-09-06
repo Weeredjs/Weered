@@ -70,7 +70,7 @@ function AvatarStack({ users, max = 4 }: { users: any[]; max?: number }) {
       {shown.map((u, i) => {
         const name = u?.name || u?.username || "?";
         const avatar = u?.avatar || null;
-        const bg = avatar ? "rgba(255,255,255,.08)" : avatarBg(name);
+        const bg = avatar ? "var(--weered-room-line-2)" : avatarBg(name);
         return (
           <div
             key={u?.id || i}
@@ -114,7 +114,7 @@ function AvatarStack({ users, max = 4 }: { users: any[]; max?: number }) {
             border: "2px solid rgba(10,10,18,0.95)",
             marginLeft: -7,
             zIndex: 0,
-            background: "rgba(255,255,255,.06)",
+            background: "var(--weered-room-line)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -268,7 +268,7 @@ export default function RoomHeader({
                   height: 30,
                   borderRadius: 8,
                   flexShrink: 0,
-                  background: "rgba(0,0,0,.4)",
+                  background: "var(--weered-room-scrim)",
                   border: `1px solid ${activeAccent}33`,
                   display: "flex",
                   alignItems: "center",
@@ -287,7 +287,7 @@ export default function RoomHeader({
                   height: 30,
                   borderRadius: 8,
                   flexShrink: 0,
-                  background: "rgba(0,0,0,.4)",
+                  background: "var(--weered-room-scrim)",
                   border: "1px solid rgba(255,255,255,.06)",
                   display: "flex",
                   alignItems: "center",
@@ -366,7 +366,7 @@ export default function RoomHeader({
                 gap: 7,
                 padding: "4px 10px 4px 5px",
                 borderRadius: 10,
-                background: "rgba(255,255,255,.02)",
+                background: "var(--weered-room-hollow)",
                 border: "1px solid rgba(255,255,255,.05)",
               }}
             >
@@ -477,7 +477,7 @@ export default function RoomHeader({
                     background: m.active
                       ? `${accent}15`
                       : m.live
-                        ? "rgba(255,255,255,0.02)"
+                        ? "var(--weered-room-hollow)"
                         : "transparent",
                     color: m.active
                       ? "rgba(255,255,255,.92)"
@@ -496,7 +496,7 @@ export default function RoomHeader({
                   }}
                   onMouseLeave={(e) => {
                     if (!m.live || m.active) return;
-                    e.currentTarget.style.background = "rgba(255,255,255,0.02)";
+                    e.currentTarget.style.background = "var(--weered-room-hollow)";
                     e.currentTarget.style.borderColor = "rgba(255,255,255,0.06)";
                     e.currentTarget.style.color = "rgba(226,232,240,0.5)";
                   }}

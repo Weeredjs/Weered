@@ -314,7 +314,7 @@ function YoutubeStage({ roomId, onClose, style }: { roomId: string; onClose: () 
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%", background: "rgba(0,0,0,.4)", ...style }}>
+    <div style={{ display: "flex", flexDirection: "column", height: "100%", background: "var(--weered-room-scrim)", ...style }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", borderBottom: "1px solid rgba(255,255,255,.07)", flexShrink: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", opacity: 0.6 }}>
           <span style={{ width: 7, height: 7, borderRadius: "50%", background: videoId ? "#22c55e" : "rgba(255,255,255,.2)", boxShadow: videoId ? "0 0 6px #22c55e" : "none", display: "inline-block" }} />
@@ -333,9 +333,9 @@ function YoutubeStage({ roomId, onClose, style }: { roomId: string; onClose: () 
         <div style={{ flex: 1, background: "#000", position: "relative", minWidth: 0, overflow: "hidden" }}>
           <div ref={playerDivRef} className="yt-stage-player" style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }} />
         </div>
-          <div style={{ width: 220, borderLeft: "1px solid rgba(255,255,255,.07)", background: "rgba(255,255,255,.02)", padding: "10px 10px", display: "flex", flexDirection: "column", gap: 6, flexShrink: 0, overflow: "hidden" }}>
+          <div style={{ width: 220, borderLeft: "1px solid rgba(255,255,255,.07)", background: "var(--weered-room-hollow)", padding: "10px 10px", display: "flex", flexDirection: "column", gap: 6, flexShrink: 0, overflow: "hidden" }}>
             <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", opacity: 0.35 }}>Now Playing</div>
-            <div style={{ fontSize: 11, padding: "5px 8px", borderRadius: 6, border: "1px solid rgba(124,106,245,.3)", background: "rgba(124,106,245,.1)", color: "#c4bef8", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            <div style={{ fontSize: 11, padding: "5px 8px", borderRadius: 6, border: "1px solid rgba(124,106,245,.3)", background: "rgba(124,106,245,.1)", color: "var(--weered-room-accent)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               ▶ {videoId}
             </div>
             <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", opacity: 0.35, marginTop: 6 }}>Search / Load Next</div>
@@ -358,7 +358,7 @@ function YoutubeStage({ roomId, onClose, style }: { roomId: string; onClose: () 
                 >
                   {r.thumbnail && <img src={r.thumbnail} alt="Video thumbnail" style={{ width: 64, height: 36, objectFit: "cover", borderRadius: 4, flexShrink: 0, background: "#111" }} />}
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 10, fontWeight: 600, color: "rgba(243,244,246,.85)", lineHeight: 1.2, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as any }}
+                    <div style={{ fontSize: 10, fontWeight: 600, color: "var(--weered-room-text-2)", lineHeight: 1.2, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as any }}
                     >{decodeEntities(r.title)}</div>
                     <div style={{ fontSize: 9, color: "rgba(148,163,184,.4)", marginTop: 1 }}>{r.channel}</div>
                   </div>
@@ -385,11 +385,11 @@ function YoutubeStage({ roomId, onClose, style }: { roomId: string; onClose: () 
                 onChange={e => onSearchInput(e.target.value)}
                 onKeyDown={e => e.key === "Enter" && doSearch(searchQuery)}
                 placeholder="Search YouTube..."
-                style={{ width: "100%", background: "rgba(255,255,255,.05)", border: "1px solid rgba(255,255,255,.12)", borderRadius: 8, padding: "9px 14px 9px 34px", fontSize: 13, color: "#fff", outline: "none" }}
+                style={{ width: "100%", background: "var(--weered-room-surface-2)", border: "1px solid rgba(255,255,255,.12)", borderRadius: 8, padding: "9px 14px 9px 34px", fontSize: 13, color: "#fff", outline: "none" }}
               />
               <span style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)", fontSize: 14, opacity: 0.35 }}>🔍</span>
             </div>
-            <button onClick={() => setSearchMode(!searchMode)} style={{ padding: "9px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,.1)", background: searchMode ? "transparent" : "rgba(124,106,245,.15)", color: searchMode ? "rgba(255,255,255,.5)" : "#c4bef8", fontSize: 11, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}>
+            <button onClick={() => setSearchMode(!searchMode)} style={{ padding: "9px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,.1)", background: searchMode ? "transparent" : "rgba(124,106,245,.15)", color: searchMode ? "rgba(255,255,255,.5)" : "var(--weered-room-accent)", fontSize: 11, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}>
               {searchMode ? "Paste URL" : "Search"}
             </button>
           </div>
@@ -403,9 +403,9 @@ function YoutubeStage({ roomId, onClose, style }: { roomId: string; onClose: () 
                   onChange={e => { setInputVal(e.target.value); setInputErr(""); }}
                   onKeyDown={e => e.key === "Enter" && loadVideo()}
                   placeholder="https://youtube.com/watch?v=…"
-                  style={{ flex: 1, background: "rgba(255,255,255,.05)", border: `1px solid ${inputErr ? "rgba(239,68,68,.5)" : "rgba(255,255,255,.12)"}`, borderRadius: 8, padding: "9px 14px", fontSize: 13, color: "#fff", outline: "none" }}
+                  style={{ flex: 1, background: "var(--weered-room-surface-2)", border: `1px solid ${inputErr ? "rgba(239,68,68,.5)" : "rgba(255,255,255,.12)"}`, borderRadius: 8, padding: "9px 14px", fontSize: 13, color: "#fff", outline: "none" }}
                 />
-                <button onClick={loadVideo} style={{ padding: "9px 20px", borderRadius: 8, border: "1px solid rgba(124,106,245,.35)", background: "rgba(124,106,245,.15)", color: "#c4bef8", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+                <button onClick={loadVideo} style={{ padding: "9px 20px", borderRadius: 8, border: "1px solid rgba(124,106,245,.35)", background: "rgba(124,106,245,.15)", color: "var(--weered-room-accent)", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
                   Load
                 </button>
               </div>
@@ -430,11 +430,11 @@ function YoutubeStage({ roomId, onClose, style }: { roomId: string; onClose: () 
                     onClick={() => loadFromSearch(r.videoId)}
                     style={{
                       display: "flex", gap: 10, padding: 8, borderRadius: 8, border: "1px solid rgba(255,255,255,.06)",
-                      background: "rgba(255,255,255,.03)", cursor: "pointer", textAlign: "left", width: "100%",
+                      background: "var(--weered-room-surface)", cursor: "pointer", textAlign: "left", width: "100%",
                       transition: "all 0.12s",
                     }}
                     onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(124,106,245,.12)"; (e.currentTarget as HTMLElement).style.borderColor = "rgba(124,106,245,.3)"; }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.03)"; (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,.06)"; }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "var(--weered-room-surface)"; (e.currentTarget as HTMLElement).style.borderColor = "var(--weered-room-line)"; }}
                   >
                     {r.thumbnail && (
                       <img
@@ -563,10 +563,10 @@ function VoiceCard({ tile, moduleType, roomUsers, getVideoElement }: { tile: any
 
   const borderColor = tile.isSpeaking
     ? "rgba(34,197,94,.5)"
-    : tile.isLocal ? "rgba(124,58,237,.35)" : "rgba(255,255,255,.08)";
+    : tile.isLocal ? "rgba(124,58,237,.35)" : "var(--weered-room-line-2)";
   const bgColor = tile.isSpeaking
     ? "rgba(34,197,94,.06)"
-    : tile.isLocal ? "rgba(124,58,237,.06)" : "rgba(255,255,255,.02)";
+    : tile.isLocal ? "rgba(124,58,237,.06)" : "var(--weered-room-hollow)";
 
   return (
     <div style={{
@@ -590,7 +590,7 @@ function VoiceCard({ tile, moduleType, roomUsers, getVideoElement }: { tile: any
 
           <div style={{
             width: 40, height: 40, borderRadius: "50%", position: "absolute", top: 28, left: 12,
-            background: userAvatar ? "rgba(255,255,255,.08)" : avatarColor(tile.name, tile.isLocal),
+            background: userAvatar ? "var(--weered-room-line-2)" : avatarColor(tile.name, tile.isLocal),
             border: "2.5px solid rgba(10,10,20,.9)",
             display: "flex", alignItems: "center", justifyContent: "center",
             fontSize: 16, fontWeight: 900, color: "#fff",
@@ -744,7 +744,7 @@ function VoiceStage({ roomId, moduleType, roomUsers, onClose, style }: { roomId:
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
           {live && (
-            <button onClick={toggleMute} style={{ padding: "5px 12px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 700, background: "rgba(255,255,255,.07)", color: "rgba(255,255,255,.8)" }}>
+            <button onClick={toggleMute} style={{ padding: "5px 12px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 700, background: "var(--weered-room-surface-3)", color: "rgba(255,255,255,.8)" }}>
               {muted ? "🔇 Unmute" : "🎙 Mute"}
             </button>
           )}
@@ -753,10 +753,10 @@ function VoiceStage({ roomId, moduleType, roomUsers, onClose, style }: { roomId:
           )}
           {connState !== "connecting" && (
             <>
-              <button onClick={startCam} style={{ padding: "5px 12px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 700, background: cameraOn ? "rgba(239,68,68,.15)" : "rgba(255,255,255,.07)", color: cameraOn ? "#fca5a5" : "rgba(255,255,255,.8)" }}>
+              <button onClick={startCam} style={{ padding: "5px 12px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 700, background: cameraOn ? "rgba(239,68,68,.15)" : "var(--weered-room-surface-3)", color: cameraOn ? "#fca5a5" : "rgba(255,255,255,.8)" }}>
                 {cameraOn ? "📷 Stop Cam" : "📷 Start Cam"}
               </button>
-              <button onClick={startScreen} style={{ padding: "5px 12px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 700, background: screenShareOn ? "rgba(239,68,68,.15)" : "rgba(255,255,255,.07)", color: screenShareOn ? "#fca5a5" : "rgba(255,255,255,.8)" }}>
+              <button onClick={startScreen} style={{ padding: "5px 12px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 700, background: screenShareOn ? "rgba(239,68,68,.15)" : "var(--weered-room-surface-3)", color: screenShareOn ? "#fca5a5" : "rgba(255,255,255,.8)" }}>
                 {screenShareOn ? "🖥 Stop Share" : "🖥 Share Screen"}
               </button>
             </>
@@ -765,7 +765,7 @@ function VoiceStage({ roomId, moduleType, roomUsers, onClose, style }: { roomId:
           {live && (
             <button onClick={disconnect} style={{ padding: "5px 12px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 700, background: "rgba(239,68,68,.15)", color: "#fca5a5" }}>Leave</button>
           )}
-          {connState === "error" && <button onClick={connect} style={{ padding: "5px 12px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 700, background: "rgba(255,255,255,.07)", color: "rgba(255,255,255,.8)" }}>Retry</button>}
+          {connState === "error" && <button onClick={connect} style={{ padding: "5px 12px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 700, background: "var(--weered-room-surface-3)", color: "rgba(255,255,255,.8)" }}>Retry</button>}
           <button onClick={disconnect} style={{ background: "none", border: "none", cursor: "pointer", opacity: 0.4, fontSize: 16, padding: "2px 4px", color: "#fff" }} title="Close">✕</button>
         </div>
       </div>
@@ -844,7 +844,7 @@ function VideoTile({ tile, getVideoElement }: { tile: any; getVideoElement: (sid
   return (
     <div style={{
       position: "relative", borderRadius: 10, overflow: "hidden",
-      background: "rgba(0,0,0,.4)", border: "1px solid rgba(255,255,255,.06)",
+      background: "var(--weered-room-scrim)", border: "1px solid rgba(255,255,255,.06)",
       aspectRatio: tile.hasScreenShare ? undefined : "16/10",
       width: "100%", height: tile.hasScreenShare ? "100%" : undefined,
       display: "flex", alignItems: "center", justifyContent: "center",
@@ -998,7 +998,7 @@ function ScreenStage({ roomId, onClose, style }: { roomId: string; onClose?: () 
           ref={screenRef}
           style={{
             position: "absolute", inset: 0,
-            background: "rgba(0,0,0,.4)",
+            background: "var(--weered-room-scrim)",
             overflow: "hidden",
           }}
         />
@@ -1030,7 +1030,7 @@ function ScreenStage({ roomId, onClose, style }: { roomId: string; onClose?: () 
 
 const ctrlBtn: React.CSSProperties = {
   padding: "4px 10px", borderRadius: 6, border: "1px solid rgba(255,255,255,.1)",
-  background: "rgba(255,255,255,.05)", color: "rgba(255,255,255,.6)",
+  background: "var(--weered-room-surface-2)", color: "rgba(255,255,255,.6)",
   fontSize: 10, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
 };
 
