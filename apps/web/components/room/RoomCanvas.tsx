@@ -15,6 +15,9 @@ import MeetingFaceStrip from "./MeetingFaceStrip";
 import { weeredToast } from "../../lib/toast";
 import { onActivate } from "@/lib/a11y";
 import { safeUrl } from "@/lib/safeUrl";
+import { isThemeableLobby } from "../../lib/timbosLobby";
+import { hydrateLobbyLang, clearLobbyLang } from "../../lib/lobbyLang";
+import { TIMBOS_LOBBY_ID } from "../../lib/timbosCopy";
 
 // A short "knock-knock" chime for office walk-ins — synthesized (no asset to
 // ship/cache). Best-effort: silently no-ops if WebAudio is unavailable or the
@@ -267,11 +270,17 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
   }, [lobbyContext?.moduleType, currentLobbyId, isOfficeRoom, w?.me?.id, w?.globalRole, w?.meta?.ownerId, w?.meta?.mods]);
 
   useEffect(() => {
-    const THEMEABLE = new Set<string>(["windrose", "destiny2", "dnd", "helldivers2"]);
     const id = lobbyContext?.id;
-    if (id && THEMEABLE.has(id)) {
+    if (id && isThemeableLobby(id)) {
       document.documentElement.setAttribute("data-weered-lobby", id);
-      return () => { document.documentElement.removeAttribute("data-weered-lobby"); };
+      // A bilingual lobby stays bilingual inside its rooms — walking from the
+      // lobby into a room used to drop the member back to English.
+      const bilingual = id === TIMBOS_LOBBY_ID;
+      if (bilingual) hydrateLobbyLang();
+      return () => {
+        document.documentElement.removeAttribute("data-weered-lobby");
+        if (bilingual) clearLobbyLang();
+      };
     }
   }, [lobbyContext?.id]);
 

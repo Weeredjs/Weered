@@ -3839,3 +3839,153 @@ html[data-weered-lang="fr"] .weered-left-link {
     color: #ded8ff;
   }
 }
+
+/* ─────────────────────────────────────────────────────────────────────
+   TIMBO'S — ROOM CHROME
+   Scope: html[data-weered-lobby="timbos"] inside /room/*
+
+   Room chrome had never been themed for ANY lobby. Walking from a themed
+   lobby into one of its rooms dropped you back to flagship purple, which
+   is the moment a branded room stops feeling like the community's own.
+
+   WHAT THIS CAN AND CANNOT REACH. RoomHeader and RoomStage are built from
+   inline style objects (168 of them between the two) and CSS cannot touch
+   those. RightRailRoom and DockShell put a class on the OUTER shell and
+   inline-style everything within. VoiceDock is the one that is fully
+   class-driven.
+
+   So this themes the SURFACES — the grounds, borders and edges the room
+   sits on — and lets the interiors ride on top. That works because the
+   inline colours are overwhelmingly low-alpha whites, which are neutral
+   over any dark ground. The saturated inline colours are semantic (green
+   = live, red = muted, amber = warning) and are deliberately NOT themed:
+   a "live" dot must mean the same thing in every room on the platform.
+
+   The honest limit: RoomHeader and RoomStage stay platform-styled until
+   their inline styles are moved onto the --weered-* tokens the rest of
+   the app already uses. That is a real piece of work and it would light
+   up Windrose, Destiny, D&D and Helldivers at the same time.
+   ───────────────────────────────────────────────────────────────────── */
+
+/* ── Right rail inside a room ─────────────────────────────────────── */
+html[data-weered-lobby="timbos"] .weered-rrr {
+  background: linear-gradient(
+    180deg,
+    rgba(31, 26, 56, 0.9) 0%,
+    rgba(20, 17, 36, 0.95) 100%
+  ) !important;
+  border-color: rgba(123, 92, 255, 0.24) !important;
+  color: var(--tb-paper) !important;
+}
+html[data-weered-lobby="timbos"] .weered-rrr-title,
+html[data-weered-lobby="timbos"] .weered-rrr-section-label {
+  font-family: var(--font-saira-stencil), var(--font-rajdhani), sans-serif !important;
+  letter-spacing: 0.12em !important;
+  text-transform: uppercase;
+  color: var(--tb-paper-dim) !important;
+}
+html[data-weered-lobby="timbos"] .weered-rrr-account {
+  border-color: rgba(123, 92, 255, 0.26) !important;
+}
+
+/* ── Room-list rail widgets ───────────────────────────────────────── */
+html[data-weered-lobby="timbos"] .weered-rr-create-panel {
+  background: rgba(6, 5, 13, 0.5) !important;
+  border-color: rgba(123, 92, 255, 0.24) !important;
+}
+html[data-weered-lobby="timbos"] .weered-rr-create-title {
+  font-family: var(--font-saira-stencil), var(--font-rajdhani), sans-serif !important;
+  letter-spacing: 0.1em !important;
+  color: var(--tb-paper) !important;
+}
+html[data-weered-lobby="timbos"] .weered-rr-crew-row:hover,
+html[data-weered-lobby="timbos"] .weered-rr-friend-row:hover {
+  background: rgba(123, 92, 255, 0.12) !important;
+}
+html[data-weered-lobby="timbos"] .weered-rr-id-chip {
+  background: rgba(123, 92, 255, 0.16) !important;
+  border-color: rgba(123, 92, 255, 0.3) !important;
+  color: var(--tb-paper) !important;
+}
+html[data-weered-lobby="timbos"] .weered-rr-join {
+  background: linear-gradient(135deg, rgba(123, 92, 255, 0.9), rgba(74, 55, 160, 0.9)) !important;
+  border-color: rgba(185, 140, 255, 0.42) !important;
+  color: #fff !important;
+}
+
+/* ── The dock (DMs / chat) ────────────────────────────────────────── */
+html[data-weered-lobby="timbos"] .weered-dock {
+  background: linear-gradient(
+    180deg,
+    rgba(31, 26, 56, 0.94) 0%,
+    rgba(17, 14, 31, 0.96) 100%
+  ) !important;
+  border-color: rgba(123, 92, 255, 0.26) !important;
+}
+html[data-weered-lobby="timbos"] .weered-dock-header,
+html[data-weered-lobby="timbos"] .weered-dock-conv-header {
+  background: rgba(6, 5, 13, 0.42) !important;
+  border-bottom: 1px solid rgba(123, 92, 255, 0.22) !important;
+}
+html[data-weered-lobby="timbos"] .weered-dock-title {
+  font-family: var(--font-saira-stencil), var(--font-rajdhani), sans-serif !important;
+  letter-spacing: 0.1em !important;
+  text-transform: uppercase;
+  color: var(--tb-paper) !important;
+}
+html[data-weered-lobby="timbos"] .weered-dock-tab {
+  color: var(--tb-paper-dim) !important;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+html[data-weered-lobby="timbos"] .weered-dock-tab-active {
+  color: #fff !important;
+  border-bottom-color: var(--tb-ember) !important;
+}
+/* Their message vs yours: yours carries the lobby accent, theirs stays a
+   neutral slate so the two are told apart by hue, not just by side. */
+html[data-weered-lobby="timbos"] .weered-dock-bubble {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid rgba(123, 92, 255, 0.14) !important;
+}
+html[data-weered-lobby="timbos"] .weered-dock-bubble-me {
+  background: linear-gradient(135deg, rgba(123, 92, 255, 0.26), rgba(74, 55, 160, 0.22)) !important;
+  border: 1px solid rgba(185, 140, 255, 0.3) !important;
+}
+html[data-weered-lobby="timbos"] .weered-dock-compose {
+  background: rgba(6, 5, 13, 0.55) !important;
+  border-top: 1px solid rgba(123, 92, 255, 0.22) !important;
+}
+html[data-weered-lobby="timbos"] .weered-dock-send {
+  background: linear-gradient(135deg, #7b5cff, #b98cff) !important;
+  color: #fff !important;
+}
+html[data-weered-lobby="timbos"] .weered-dock-close:hover {
+  color: var(--tb-ember) !important;
+}
+
+/* ── Voice dock. Fully class-driven, so it themes completely. ─────── */
+html[data-weered-lobby="timbos"] .weered-voicedock {
+  background: linear-gradient(180deg, rgba(31, 26, 56, 0.92), rgba(17, 14, 31, 0.95)) !important;
+  border-color: rgba(123, 92, 255, 0.26) !important;
+  color: var(--tb-paper) !important;
+}
+html[data-weered-lobby="timbos"] .wvd-head {
+  font-family: var(--font-saira-stencil), var(--font-rajdhani), sans-serif !important;
+  letter-spacing: 0.12em !important;
+  text-transform: uppercase;
+  color: var(--tb-paper-dim) !important;
+}
+/* The connected dot keeps phosphor green on purpose — "live" must read the
+   same in every room on the platform, themed or not. */
+html[data-weered-lobby="timbos"] .wvd-dot.on {
+  background: var(--tb-phosphor) !important;
+  box-shadow: 0 0 8px var(--tb-phosphor) !important;
+}
+
+/* ── Chat panel edge ──────────────────────────────────────────────── */
+html[data-weered-lobby="timbos"] .weered-chat-fullscreen-cta {
+  background: rgba(123, 92, 255, 0.16) !important;
+  border-color: rgba(123, 92, 255, 0.3) !important;
+  color: var(--tb-paper) !important;
+}

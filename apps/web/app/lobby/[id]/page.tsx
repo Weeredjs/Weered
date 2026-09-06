@@ -13,7 +13,12 @@ import TournamentLiveStrip from "../../../components/TournamentLiveStrip";
 import FlairContestStrip from "../../../components/FlairContestStrip";
 import TimbosPanel from "../../../components/TimbosPanel";
 import { TIMBOS_LOBBY_ID } from "../../../lib/timbosCopy";
-import { isForcedThemeLobby, useBilingualLobby, useLobbyView } from "../../../lib/timbosLobby";
+import {
+  isForcedThemeLobby,
+  isThemeableLobby,
+  useBilingualLobby,
+  useLobbyView,
+} from "../../../lib/timbosLobby";
 import LobbySplash, {
   WINDROSE_SPLASH_PALETTE,
   DESTINY_SPLASH_PALETTE,
@@ -711,7 +716,6 @@ export default function LobbyIdPage() {
     loadLobby();
   }, [lobbyId]);
 
-  const THEMEABLE_LOBBIES = ["windrose", "destiny2", "dnd", "helldivers2", TIMBOS_LOBBY_ID];
   const [keepDefaultTheme, setKeepDefaultTheme] = useState<boolean>(() => {
     if (typeof window === "undefined") return true;
     try {
@@ -737,7 +741,7 @@ export default function LobbyIdPage() {
 
   const wantLobbyTheme =
     isForcedThemeLobby(lobbyId) ||
-    (THEMEABLE_LOBBIES.includes(lobbyId) && memberChecked && isMember && !keepDefaultTheme);
+    (isThemeableLobby(lobbyId) && memberChecked && isMember && !keepDefaultTheme);
 
   useEffect(() => {
     if (!lobbyId) return;
@@ -756,7 +760,7 @@ export default function LobbyIdPage() {
     const params = new URLSearchParams(window.location.search);
     const forceMin = params.get("chrome") === "min";
     const forceFull = params.get("chrome") === "full";
-    const known = !THEMEABLE_LOBBIES.includes(lobbyId) || (!!lobbyInfo && memberChecked);
+    const known = !isThemeableLobby(lobbyId) || (!!lobbyInfo && memberChecked);
     if (!known && !forceMin && !forceFull) return;
     const DENSE_CHROME = new Set<string>([
       "BUNGIE",
@@ -850,7 +854,7 @@ export default function LobbyIdPage() {
         <JoinLobbyOverlay
           lobbyId={lobbyId}
           lobbyName={lobbyInfo.name || lobbyId}
-          themeable={THEMEABLE_LOBBIES.includes(lobbyId)}
+          themeable={isThemeableLobby(lobbyId)}
           memberPerks={Array.isArray(lobbyInfo.memberPerks) ? lobbyInfo.memberPerks : []}
           accentColor={lobbyInfo.accentColor || undefined}
           joinMode={lobbyInfo.joinMode || "OPEN"}

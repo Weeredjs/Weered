@@ -44,6 +44,26 @@ export function isScopedRailLobby(lobbyId: string): boolean {
   return SCOPED_RAIL_LOBBIES.includes(lobbyId);
 }
 
+/**
+ * Every lobby that has a reskin, in one place.
+ *
+ * This list existed in three copies — the lobby page's gate, that page's
+ * `themeable` prop, and RoomCanvas — and they had already drifted: RoomCanvas
+ * did not know about Timbo's, so walking from the lobby into one of its rooms
+ * silently dropped the theme. Import this rather than retyping it.
+ */
+export const THEMEABLE_LOBBY_IDS: string[] = [
+  "windrose",
+  "destiny2",
+  "dnd",
+  "helldivers2",
+  TIMBOS_LOBBY_ID,
+];
+
+export function isThemeableLobby(lobbyId: string): boolean {
+  return THEMEABLE_LOBBY_IDS.includes(lobbyId);
+}
+
 /** Views the lobby page understands, as used by ?view= on scoped rail links. */
 const VIEWS = ["rooms", "feed", "modules", "events", "lfg", "reddit"] as const;
 export type LobbyView = (typeof VIEWS)[number];
