@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { hydrateLobbyLang, clearLobbyLang } from "./lobbyLang";
 import { TIMBOS_LOBBY_ID } from "./timbosCopy";
+import { lobbyViews } from "./lobbySections";
 
 /**
  * Everything the lobby page needs to know about Timbo's, kept out of
@@ -38,10 +39,9 @@ export const FORCED_THEME_LOBBIES: string[] = [TIMBOS_LOBBY_ID];
  * Note this is NOT the same as hiding the rail. The rail is how the room is
  * navigated; the question was only ever whose destinations it lists.
  */
-export const SCOPED_RAIL_LOBBIES: string[] = [TIMBOS_LOBBY_ID];
-
 export function isScopedRailLobby(lobbyId: string): boolean {
-  return SCOPED_RAIL_LOBBIES.includes(lobbyId);
+  // EVERY lobby, not a list. Being inside a community's room is the condition.
+  return !!lobbyId && lobbyId !== "lobby";
 }
 
 /**
@@ -139,4 +139,21 @@ export function useBilingualLobby(lobbyId: string): void {
     hydrateLobbyLang();
     return () => clearLobbyLang();
   }, [lobbyId]);
+}
+
+/**
+ * Publish which sections this lobby actually has, for the scoped rail.
+ *
+ * Not every lobby has modules, an LFG board or a Reddit tab, and the rail must
+ * not offer a section that renders empty. The lobby page knows the real answer
+ * because it decides the same thing for its own tab bar, so it publishes the
+ * list and the rail reads it — the same attribute pattern the theme, language
+ * and current view already use.
+ */
+export function usePublishLobbyViews(lobbyId: string, hasModules: boolean): void {
+  const joined = lobbyViews(lobbyId, hasModules).join(",");
+  useEffect(() => {
+    document.documentElement.setAttribute("data-weered-views", joined);
+    return () => document.documentElement.removeAttribute("data-weered-views");
+  }, [joined]);
 }

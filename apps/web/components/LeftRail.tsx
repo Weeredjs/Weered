@@ -12,17 +12,9 @@ import PresenceRow from "./PresenceRow";
 import { useOfficeSkin } from "./useOfficeSkin";
 import AdvisorCredentialCard from "./AdvisorCredentialCard";
 import { useLobbyLang, pick } from "../lib/lobbyLang";
-import {
-  TIMBOS_NAV,
-  TIMBOS_NAV_ICONS,
-  TIMBOS_LOBBY_ID,
-  TIMBOS_SECTIONS,
-  TIMBOS_SECTION_ICONS,
-} from "../lib/timbosCopy";
+import { TIMBOS_NAV, TIMBOS_NAV_ICONS, TIMBOS_LOBBY_ID } from "../lib/timbosCopy";
 import { isScopedRailLobby } from "../lib/timbosLobby";
-
-/** Order of sections in a scoped rail. */
-const SCOPED_SECTION_KEYS = ["rooms", "modules", "feed", "events"];
+import { SECTION_ORDER, sectionLabel, sectionIcon, HOME_LINK } from "../lib/lobbySections";
 
 function pickFirstString(...vals: any[]): string {
   for (const v of vals) if (typeof v === "string" && v.trim()) return v.trim();
@@ -220,6 +212,22 @@ export default function LeftRail() {
     return () => obs.disconnect();
   }, []);
 
+  // Which sections this lobby actually has. Published by the lobby page so the
+  // rail never offers a tab that would render empty.
+  useEffect(() => {
+    const read = () => {
+      const raw = document.documentElement.getAttribute("data-weered-views") || "";
+      setAvailableViews(raw ? raw.split(",").filter(Boolean) : []);
+    };
+    read();
+    const obs = new MutationObserver(read);
+    obs.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["data-weered-views"],
+    });
+    return () => obs.disconnect();
+  }, []);
+
   const isWindrose = lobbyTheme === "windrose";
   const isDestiny = lobbyTheme === "destiny2";
   const isDnd = lobbyTheme === "dnd";
@@ -231,9 +239,10 @@ export default function LeftRail() {
   // Scoped rail: inside a branded lobby the rail lists that lobby's sections
   // instead of platform navigation. See lib/timbosLobby.ts for why.
   // pathname, not isLobbyActive — that is declared further down.
-  const scopedRail =
-    isScopedRailLobby(String(currentLobbyId || "")) && pathname.startsWith("/lobby");
+  const scopedLobbyId = String(currentLobbyId || "");
+  const scopedRail = isScopedRailLobby(scopedLobbyId) && pathname.startsWith("/lobby");
   const [searchView, setSearchView] = useState<string | null>(null);
+  const [availableViews, setAvailableViews] = useState<string[]>([]);
   const tb = (key: string, fallback: string) =>
     isTimbos && TIMBOS_NAV[key] ? pick(TIMBOS_NAV[key], lang) : fallback;
 
@@ -705,14 +714,32 @@ export default function LeftRail() {
           ? // A branded lobby's rail lists THIS lobby's sections. Real links
             // carrying ?view= rather than click handlers, so a member can
             // bookmark or share a section. See lib/timbosLobby.ts.
-            SCOPED_SECTION_KEYS.map((k) => ({
-              href: `${lobbyHrefMain}?view=${k}`,
-              label: TIMBOS_SECTIONS[k] ? pick(TIMBOS_SECTIONS[k], lang) : k,
-              icon: TIMBOS_SECTION_ICONS[k] || "•",
-              active: isLobbyActive && (searchView || "modules") === k,
-              onClick: undefined as any,
-              key: k,
-            }))
+            [
+              ...SECTION_ORDER.filter((k) => availableViews.includes(k)).map((k) => ({
+                href: `${lobbyHrefMain}?view=${k}`,
+                label: pick(sectionLabel(scopedLobbyId, k), lang),
+                icon: sectionIcon(scopedLobbyId, k),
+                active: searchView === k,
+                onClick: undefined as any,
+                key: k,
+              })),
+              // The single way out. Browse and search stay in the top bar for
+              // anyone who wants to go looking; this is just the door.
+              {
+                href: HOME_LINK.href,
+                label: pick(HOME_LINK.label, lang),
+                icon: HOME_LINK.icon,
+                active: false,
+                onClick: (e: any) => {
+                  e.preventDefault();
+                  try {
+                    leave();
+                  } catch {}
+                  router.push(HOME_LINK.href);
+                },
+                key: "weered-home",
+              },
+            ]
           : office
             ? [
                 {

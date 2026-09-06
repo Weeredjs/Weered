@@ -13,11 +13,13 @@ import TournamentLiveStrip from "../../../components/TournamentLiveStrip";
 import FlairContestStrip from "../../../components/FlairContestStrip";
 import TimbosPanel from "../../../components/TimbosPanel";
 import { TIMBOS_LOBBY_ID } from "../../../lib/timbosCopy";
+import { LFG_BOARD_LOBBIES, REDDIT_TAB_LOBBIES } from "../../../lib/lobbySections";
 import {
   isForcedThemeLobby,
   isThemeableLobby,
   useBilingualLobby,
   useLobbyView,
+  usePublishLobbyViews,
 } from "../../../lib/timbosLobby";
 import LobbySplash, {
   WINDROSE_SPLASH_PALETTE,
@@ -28,8 +30,6 @@ import LobbyTierCards from "../../../components/LobbyTierCards";
 import LobbyEvents from "../../../components/LobbyEvents";
 import GuestLaunchBar from "../../../components/GuestLaunchBar";
 
-const LFG_BOARD_LOBBIES = new Set(["gta6"]);
-const REDDIT_TAB_LOBBIES: Record<string, string> = { gta6: "gta6" };
 import BungieLinkPill from "../../../components/BungieLinkPill";
 import { useWatchHere, clearPendingStream } from "../../../lib/useWatchHere";
 
@@ -833,6 +833,7 @@ export default function LobbyIdPage() {
     lobbyInfo?.moduleType === "HLL" ||
     lobbyInfo?.moduleType === "COWORK";
   const hasLfgBoard = LFG_BOARD_LOBBIES.has(lobbyId);
+  usePublishLobbyViews(lobbyId, hasModules); // feeds the scoped rail
   const redditSub = REDDIT_TAB_LOBBIES[lobbyId];
   const KNOWN_ACCENTS: Record<string, string> = { gta6: "#e84393" };
   const accent = lobbyInfo?.accentColor || KNOWN_ACCENTS[lobbyId] || undefined;
