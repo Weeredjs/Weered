@@ -700,7 +700,9 @@ export default function LobbyIdPage() {
           });
           // Mplayer Mode: every lobby lands on the Lobby (rooms) view — people
           // first. Modules stay one tab away; the hall's pulse rail links there.
-          setView("rooms");
+          // Preview lobbies are the exception: they have no rooms and no people
+          // yet, so "people first" shows a prospect an empty hall.
+          setView(isForcedThemeLobby(lobbyId) ? "modules" : "rooms");
           setMembership(j.membership || null);
           setJoinRequest(j.joinRequest || null);
           setMemberChecked(true);
