@@ -20,7 +20,7 @@ import {
   useBilingualLobby,
   useLobbyView,
   usePublishLobbyViews,
-} from "../../../lib/timbosLobby";
+} from "../../../lib/lobbyChrome";
 import LobbySplash, {
   WINDROSE_SPLASH_PALETTE,
   DESTINY_SPLASH_PALETTE,
@@ -612,7 +612,7 @@ export default function LobbyIdPage() {
   const [membership, setMembership] = useState<Membership>(null);
   const [joinRequest, setJoinRequest] = useState<JoinRequestStatus>(null);
   const [memberChecked, setMemberChecked] = useState(false);
-  // Modules for preview lobbies, ?view= overrides — lib/timbosLobby.ts.
+  // Modules for preview lobbies, ?view= overrides — lib/lobbyChrome.ts.
   const [view, setView] = useLobbyView(lobbyId);
 
   useWatchHere(
@@ -850,7 +850,7 @@ export default function LobbyIdPage() {
         lobbyName={lobbyInfo?.name || "this lobby"}
         loggedIn={!!me?.id}
       />
-      {/* No join wall on preview lobbies — see lib/timbosLobby.ts. */}
+      {/* No join wall on preview lobbies — see lib/lobbyChrome.ts. */}
       {memberChecked && !isMember && lobbyInfo && !isForcedThemeLobby(lobbyId) && (
         <JoinLobbyOverlay
           lobbyId={lobbyId}
@@ -1182,7 +1182,7 @@ export default function LobbyIdPage() {
                 }}
               >
                 {view === "modules" && hasModules ? (
-                  // Keyed on the lobby, not a ModuleType — lib/timbosLobby.ts.
+                  // Keyed on the lobby, not a ModuleType — lib/lobbyChrome.ts.
                   lobbyId === TIMBOS_LOBBY_ID ? (
                     <TimbosPanel accent={accent} />
                   ) : lobbyInfo?.moduleType === "MARATHON" ? (

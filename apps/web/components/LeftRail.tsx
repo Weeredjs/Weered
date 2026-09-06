@@ -13,7 +13,7 @@ import { useOfficeSkin } from "./useOfficeSkin";
 import AdvisorCredentialCard from "./AdvisorCredentialCard";
 import { useLobbyLang, pick } from "../lib/lobbyLang";
 import { TIMBOS_NAV, TIMBOS_NAV_ICONS, TIMBOS_LOBBY_ID } from "../lib/timbosCopy";
-import { isScopedRailLobby } from "../lib/timbosLobby";
+import { isScopedRailLobby } from "../lib/lobbyChrome";
 import { SECTION_ORDER, sectionLabel, sectionIcon, HOME_LINK } from "../lib/lobbySections";
 
 function pickFirstString(...vals: any[]): string {
@@ -200,7 +200,7 @@ export default function LeftRail() {
   }, []);
 
   // The active section of a scoped rail. Published by useLobbyView as an
-  // attribute, not read from the query string — see lib/timbosLobby.ts.
+  // attribute, not read from the query string — see lib/lobbyChrome.ts.
   useEffect(() => {
     const read = () => setSearchView(document.documentElement.getAttribute("data-weered-view"));
     read();
@@ -237,7 +237,7 @@ export default function LeftRail() {
   const isTimbos = lobbyTheme === TIMBOS_LOBBY_ID;
   const lang = useLobbyLang();
   // Scoped rail: inside a branded lobby the rail lists that lobby's sections
-  // instead of platform navigation. See lib/timbosLobby.ts for why.
+  // instead of platform navigation. See lib/lobbyChrome.ts for why.
   // pathname, not isLobbyActive — that is declared further down.
   const scopedLobbyId = String(currentLobbyId || "");
   const scopedRail = isScopedRailLobby(scopedLobbyId) && pathname.startsWith("/lobby");
@@ -713,7 +713,7 @@ export default function LeftRail() {
         {(scopedRail
           ? // A branded lobby's rail lists THIS lobby's sections. Real links
             // carrying ?view= rather than click handlers, so a member can
-            // bookmark or share a section. See lib/timbosLobby.ts.
+            // bookmark or share a section. See lib/lobbyChrome.ts.
             [
               ...SECTION_ORDER.filter((k) => availableViews.includes(k)).map((k) => ({
                 href: `${lobbyHrefMain}?view=${k}`,

@@ -15,9 +15,8 @@ import MeetingFaceStrip from "./MeetingFaceStrip";
 import { weeredToast } from "../../lib/toast";
 import { onActivate } from "@/lib/a11y";
 import { safeUrl } from "@/lib/safeUrl";
-import { isThemeableLobby } from "../../lib/timbosLobby";
+import { isThemeableLobby, isBilingualLobby } from "../../lib/lobbyChrome";
 import { hydrateLobbyLang, clearLobbyLang } from "../../lib/lobbyLang";
-import { TIMBOS_LOBBY_ID } from "../../lib/timbosCopy";
 
 // A short "knock-knock" chime for office walk-ins — synthesized (no asset to
 // ship/cache). Best-effort: silently no-ops if WebAudio is unavailable or the
@@ -290,7 +289,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
       if (hadMin) d.removeAttribute("data-weered-chrome");
       // A bilingual lobby stays bilingual inside its rooms — walking from the
       // lobby into a room used to drop the member back to English.
-      const bilingual = id === TIMBOS_LOBBY_ID;
+      const bilingual = isBilingualLobby(id);
       if (bilingual) hydrateLobbyLang();
       return () => {
         d.removeAttribute("data-weered-lobby");
