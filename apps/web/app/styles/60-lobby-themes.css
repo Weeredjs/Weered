@@ -4156,12 +4156,17 @@ html[data-weered-lobby="timbos"] .weered-room-card.weered-room-card-event {
    decoration (and any per-user pill tint) reappears and every user gets a box.
    Flatten it here and keep just the hover, so the panel reads as one surface. */
 html[data-weered-lobby="timbos"] .weered-left .weered-presence-row,
+html[data-weered-lobby="timbos"] .weered-left .weered-presence-row-link,
 html[data-weered-lobby="timbos"] .weered-left .weered-presence-row-inner {
   background: transparent !important;
   border: none !important;
   box-shadow: none !important;
   border-radius: 6px !important;
 }
-html[data-weered-lobby="timbos"] .weered-left .weered-presence-row-inner:hover {
+html[data-weered-lobby="timbos"] .weered-left .weered-presence-row-link:hover,
+html[data-weered-lobby="timbos"]
+  .weered-left
+  .weered-presence-row-link:hover
+  .weered-presence-row-inner {
   background: rgba(123, 92, 255, 0.12) !important;
 }
