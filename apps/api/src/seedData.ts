@@ -547,7 +547,7 @@ export const SEED_LOBBIES = [
     unlisted: true,
     moduleType: ModuleType.FEED,
     moduleConfig: null,
-    accentColor: "#e2384f",
+    accentColor: "#7b5cff",
     logoUrl: null,
     bannerUrl: null,
     websiteUrl: null,
