@@ -1,4 +1,5 @@
 import { Metadata } from "next";
+import { Suspense } from "react";
 import ForumPage from "../../components/forum/ForumPage";
 
 export const metadata: Metadata = {
@@ -13,5 +14,14 @@ export const metadata: Metadata = {
 };
 
 export default function Forum() {
-  return <ForumPage />;
+  // ForumPage reads `?post=` so a thread can open inside a lobby instead of
+  // navigating out of it. useSearchParams opts a component out of prerendering,
+  // and this page is statically exported, so it needs a boundary or the build
+  // fails on /forum. The lobby embeds it inside an already-dynamic route and
+  // needs none.
+  return (
+    <Suspense fallback={null}>
+      <ForumPage />
+    </Suspense>
+  );
 }
