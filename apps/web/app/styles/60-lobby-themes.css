@@ -3764,6 +3764,9 @@ html[data-weered-lobby="timbos"] .weered-lobby-tab-active {
   justify-content: space-between;
   gap: 16px;
   flex-wrap: wrap; /* French headings wrap rather than clip */
+  /* Line the title and date up with the card text below instead of letting them
+     sit hard against the panel edge. 16px matches .weered-timbos-card's inset. */
+  padding: 2px 16px 0;
 }
 .weered-timbos-title {
   margin: 0;
