@@ -908,43 +908,47 @@ export default async function forumRoutes(app: FastifyInstance, opts: Opts) {
     return reply.send({ ok: true, posts: out });
   });
 
-  app.post("/forum/uploads", async (req, reply) => {
-    const u = authFromHeader((req as any).headers?.authorization);
-    if (!u) return reply.code(401).send({ error: "Unauthorized" });
-    const dataUrl = String((req as any).body?.dataUrl || "");
-    const raw = decodeForumDataUrl(dataUrl);
-    if (!raw) return reply.code(400).send({ error: "Invalid image data" });
-    if (raw.length > 12 * 1024 * 1024) return reply.code(400).send({ error: "File too large" });
+  app.post(
+    "/forum/uploads",
+    { config: { rateLimit: { max: 20, timeWindow: "1 minute" } } },
+    async (req, reply) => {
+      const u = authFromHeader((req as any).headers?.authorization);
+      if (!u) return reply.code(401).send({ error: "Unauthorized" });
+      const dataUrl = String((req as any).body?.dataUrl || "");
+      const raw = decodeForumDataUrl(dataUrl);
+      if (!raw) return reply.code(400).send({ error: "Invalid image data" });
+      if (raw.length > 12 * 1024 * 1024) return reply.code(400).send({ error: "File too large" });
 
-    try {
-      let pipeline = sharp(raw, { failOn: "none" }).rotate();
-      pipeline = pipeline.resize({
-        width: FORUM_MAX_DIM,
-        height: FORUM_MAX_DIM,
-        fit: "inside",
-        withoutEnlargement: true,
-      });
-      let out = await pipeline.webp({ quality: 80 }).toBuffer();
-      if (out.length > 1_000_000) {
-        out = await sharp(raw, { failOn: "none" })
-          .rotate()
-          .resize({
-            width: FORUM_MAX_DIM,
-            height: FORUM_MAX_DIM,
-            fit: "inside",
-            withoutEnlargement: true,
-          })
-          .webp({ quality: 65 })
-          .toBuffer();
+      try {
+        let pipeline = sharp(raw, { failOn: "none" }).rotate();
+        pipeline = pipeline.resize({
+          width: FORUM_MAX_DIM,
+          height: FORUM_MAX_DIM,
+          fit: "inside",
+          withoutEnlargement: true,
+        });
+        let out = await pipeline.webp({ quality: 80 }).toBuffer();
+        if (out.length > 1_000_000) {
+          out = await sharp(raw, { failOn: "none" })
+            .rotate()
+            .resize({
+              width: FORUM_MAX_DIM,
+              height: FORUM_MAX_DIM,
+              fit: "inside",
+              withoutEnlargement: true,
+            })
+            .webp({ quality: 65 })
+            .toBuffer();
+        }
+        const hash = createHash("sha256").update(out).digest("hex").slice(0, 16);
+        const filename = `${u.id.slice(0, 8)}-${Date.now()}-${hash}.webp`;
+        writeFileSync(join(FORUM_UPLOAD_DIR, filename), out);
+        return reply.send({ ok: true, url: `${SITE_BASE}/forum-img/${filename}`, filename });
+      } catch (e: any) {
+        return reply.code(500).send({ error: "Upload failed", detail: String(e?.message || e) });
       }
-      const hash = createHash("sha256").update(out).digest("hex").slice(0, 16);
-      const filename = `${u.id.slice(0, 8)}-${Date.now()}-${hash}.webp`;
-      writeFileSync(join(FORUM_UPLOAD_DIR, filename), out);
-      return reply.send({ ok: true, url: `${SITE_BASE}/forum-img/${filename}`, filename });
-    } catch (e: any) {
-      return reply.code(500).send({ error: "Upload failed", detail: String(e?.message || e) });
-    }
-  });
+    },
+  );
 
   app.get("/forum-img/:filename", async (req, reply) => {
     const fn = String((req as any).params?.filename || "").replaceAll(/[^a-zA-Z0-9._-]/g, "");
@@ -953,6 +957,7 @@ export default async function forumRoutes(app: FastifyInstance, opts: Opts) {
     if (!existsSync(fp)) return reply.code(404).send("not found");
     const data = readFileSync(fp);
     reply.header("Content-Type", "image/webp");
+    reply.header("X-Content-Type-Options", "nosniff");
     reply.header("Cache-Control", "public, max-age=31536000, immutable");
     return reply.send(data);
   });

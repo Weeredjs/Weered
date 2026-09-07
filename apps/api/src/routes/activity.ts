@@ -1,5 +1,6 @@
 import { swallow } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
+import { fetchPublic } from "../lib/publicFetch";
 import { fetchWithTimeout } from "../lib/fetchWithTimeout";
 import { prisma } from "../lib/prisma";
 
@@ -132,6 +133,16 @@ export default async function activityRoutes(app: FastifyInstance, opts: Opts) {
   });
 
   const unfurlCache = new Map<string, { data: any; expiresAt: number }>();
+  const UNFURL_CACHE_MAX = 500;
+  function cacheUnfurl(key: string, data: any) {
+    if (unfurlCache.size >= UNFURL_CACHE_MAX) {
+      // Keys are attacker-supplied, so the map cannot be allowed to grow with
+      // them. Oldest insertion first, which is the Map iteration order.
+      const oldest = unfurlCache.keys().next().value;
+      if (oldest !== undefined) unfurlCache.delete(oldest);
+    }
+    unfurlCache.set(key, { data, expiresAt: Date.now() + 30 * 60 * 1000 });
+  }
 
   app.get("/unfurl", async (req, reply) => {
     const url = String((req as any).query?.url || "");
@@ -159,7 +170,7 @@ export default async function activityRoutes(app: FastifyInstance, opts: Opts) {
             url,
           };
           if (result.title) {
-            unfurlCache.set(url, { data: result, expiresAt: Date.now() + 30 * 60 * 1000 });
+            cacheUnfurl(url, result);
           }
           return reply.send(result);
         }
@@ -169,18 +180,22 @@ export default async function activityRoutes(app: FastifyInstance, opts: Opts) {
     }
 
     try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 4000);
-      const res = await fetchWithTimeout(url, {
-        headers: {
-          "User-Agent": "Mozilla/5.0 (compatible; Twitterbot/1.0)",
-          Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-          "Accept-Language": "en-US,en;q=0.9",
+      // The URL came from a forum post or a chat message, so it is a stranger's
+      // choice of where this server makes a request. fetchPublic refuses
+      // loopback, private and cloud-metadata addresses, and re-checks every
+      // redirect — "follow" would otherwise let a public URL bounce the
+      // droplet into its own network.
+      const res = await fetchPublic(
+        url,
+        {
+          headers: {
+            "User-Agent": "Mozilla/5.0 (compatible; Twitterbot/1.0)",
+            Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "en-US,en;q=0.9",
+          },
         },
-        signal: controller.signal,
-        redirect: "follow",
-      });
-      clearTimeout(timeout);
+        4000,
+      );
 
       if (!res.ok) return reply.send({ ok: false });
       const contentType = res.headers.get("content-type") || "";
@@ -222,7 +237,7 @@ export default async function activityRoutes(app: FastifyInstance, opts: Opts) {
       };
 
       if (result.title || result.description) {
-        unfurlCache.set(url, { data: result, expiresAt: Date.now() + 30 * 60 * 1000 });
+        cacheUnfurl(url, result);
       }
 
       return reply.send(result);
