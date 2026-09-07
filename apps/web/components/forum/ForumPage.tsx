@@ -193,7 +193,7 @@ export default function ForumPage({ lobbyId, lobbyName }: { lobbyId?: string; lo
         >
           &larr; {lobbyName || "Back"}
         </button>
-        <PostDetail postId={openPostId} />
+        <PostDetail postId={openPostId} embedded />
       </div>
     ) : (
     <div style={{

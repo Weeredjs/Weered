@@ -105,7 +105,20 @@ function AuthorBadge({
   );
 }
 
-export default function PostDetail({ postId }: { postId: string }) {
+export default function PostDetail({
+  postId,
+  embedded = false,
+}: {
+  postId: string;
+  embedded?: boolean;
+}) {
+  // Inside a lobby the thread is the whole centre column, so it gets the column.
+  // 780px is a reading measure for the standalone /forum/[postId] page, where
+  // nothing else is on screen; in a lobby it just leaves two dead gutters either
+  // side of the part people actually type in.
+  const shell: React.CSSProperties = embedded
+    ? { maxWidth: "none", margin: 0, padding: "0 0 24px" }
+    : { maxWidth: 780, margin: "0 auto" };
   const router = useRouter();
   const w: any = useWeered();
   const me = w?.me;
@@ -253,7 +266,7 @@ export default function PostDetail({ postId }: { postId: string }) {
 
   if (loading)
     return (
-      <div style={{ maxWidth: 780, margin: "0 auto", padding: "20px 16px", fontFamily: FONT }}>
+      <div style={{ ...shell, padding: shell.padding ?? "20px 16px", fontFamily: FONT }}>
         {[90, 40, 100, 100, 80, 100].map((w, i) => (
           <div
             key={i}
@@ -275,9 +288,8 @@ export default function PostDetail({ postId }: { postId: string }) {
     return (
       <div
         style={{
-          maxWidth: 780,
-          margin: "0 auto",
-          padding: "40px 16px",
+          ...shell,
+          padding: embedded ? "24px 0" : "40px 16px",
           textAlign: "center",
           fontFamily: FONT,
         }}
@@ -307,29 +319,30 @@ export default function PostDetail({ postId }: { postId: string }) {
   return (
     <div
       style={{
-        maxWidth: 780,
-        margin: "0 auto",
-        padding: "20px 16px 60px",
+        ...shell,
+        padding: embedded ? "0 0 24px" : "20px 16px 60px",
         fontFamily: FONT,
-        height: "100%",
-        overflow: "auto",
+        height: embedded ? undefined : "100%",
+        overflow: embedded ? undefined : "auto",
       }}
     >
-      <button
-        onClick={() => router.push("/forum")}
-        style={{
-          background: "none",
-          border: "none",
-          color: "rgba(167,139,250,.6)",
-          fontSize: 12,
-          cursor: "pointer",
-          fontFamily: "inherit",
-          padding: 0,
-          marginBottom: 16,
-        }}
-      >
-        &larr; Back to Forum
-      </button>
+      {!embedded && (
+        <button
+          onClick={() => router.push("/forum")}
+          style={{
+            background: "none",
+            border: "none",
+            color: "rgba(167,139,250,.6)",
+            fontSize: 12,
+            cursor: "pointer",
+            fontFamily: "inherit",
+            padding: 0,
+            marginBottom: 16,
+          }}
+        >
+          &larr; Back to Forum
+        </button>
+      )}
 
       <div
         style={{
