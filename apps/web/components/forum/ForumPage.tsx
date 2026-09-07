@@ -204,11 +204,7 @@ export default function ForumPage({ lobbyId, lobbyName }: { lobbyId?: string; lo
       height: "100%",
       overflow: "hidden",
     }}>
-      {/* The sections sidebar costs 200px of the centre column and, until a lobby
-          has created any sections, shows nothing but "All 0" and a manage
-          button. Hide it when there is nothing in it and let the feed have the
-          width; admins still reach section management from the header. */}
-      {embedded && sections.length > 0 && (
+      {embedded && (
         <SectionSidebar
           sections={sections}
           activeId={sectionId}
@@ -266,31 +262,6 @@ export default function ForumPage({ lobbyId, lobbyName }: { lobbyId?: string; lo
               fontFamily: "inherit", flexShrink: 0,
             }}>
               + New Post
-            </button>
-          )}
-          {/* Reachable even with the sidebar hidden, which is how a lobby with
-              no sections yet creates its first one. */}
-          {embedded && canManageSections && sections.length === 0 && (
-            <button
-              onClick={() => {
-                setEditingSection(null);
-                setSectionModalOpen(true);
-              }}
-              style={{
-                padding: "8px 14px",
-                borderRadius: 8,
-                background: "rgba(255,255,255,.04)",
-                border: "1px solid rgba(255,255,255,.10)",
-                color: "inherit",
-                fontSize: 12,
-                fontWeight: 600,
-                cursor: "pointer",
-                fontFamily: "inherit",
-                flexShrink: 0,
-                opacity: 0.8,
-              }}
-            >
-              + Sections
             </button>
           )}
         </div>
