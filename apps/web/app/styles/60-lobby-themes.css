@@ -4224,17 +4224,22 @@ html[data-weered-lobby="hll"] {
 /* ── Ground. A faint map grid over mud, so the lobby reads as a briefing
    surface rather than a dark panel. Kept very low contrast: it must never
    compete with a server list. */
+/* !important throughout, like every other lobby body rule in this file:
+   60-lobby-themes.css is imported BEFORE 80-chrome-min.css and
+   90-desktop-chrome.css, so an equal-specificity rule without it loses the
+   cascade and the ground stays grey. Found by walking the live stylesheet —
+   the rule was present and simply not winning. */
 html[data-weered-lobby="hll"] body {
-  background-color: var(--hll-night);
+  background-color: var(--hll-night) !important;
   background-image:
     linear-gradient(var(--hll-grid) 1px, transparent 1px),
     linear-gradient(90deg, var(--hll-grid) 1px, transparent 1px),
-    radial-gradient(120% 80% at 50% 0%, rgba(111, 143, 63, 0.07) 0%, transparent 60%);
+    radial-gradient(120% 80% at 50% 0%, rgba(111, 143, 63, 0.07) 0%, transparent 60%) !important;
   background-size:
     48px 48px,
     48px 48px,
-    100% 100%;
-  color: var(--hll-paper);
+    100% 100% !important;
+  color: var(--hll-paper) !important;
 }
 
 /* ── Rails. Stencil headings, olive webbing edges. */
