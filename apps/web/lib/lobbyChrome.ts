@@ -54,7 +54,11 @@ export function isThemeableLobby(lobbyId: string): boolean {
  * rather than Rooms, because a preview room has no rooms yet and "No rooms open
  * here" reads as an empty product.
  */
-export const FORCED_THEME_LOBBIES: string[] = [TIMBOS_LOBBY_ID];
+// Forced: the theme applies to everyone, member or not, ignoring the personal
+// "keep the default theme" setting. Reserved for lobbies whose URL goes to a
+// prospect who has not joined anything — an unthemed lobby is the entire pitch
+// failing to land at the only moment it gets to.
+export const FORCED_THEME_LOBBIES: string[] = [TIMBOS_LOBBY_ID, "hll"];
 
 export function isForcedThemeLobby(lobbyId: string): boolean {
   return FORCED_THEME_LOBBIES.includes(lobbyId);
