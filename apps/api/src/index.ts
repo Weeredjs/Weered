@@ -90,6 +90,7 @@ import redditRoutes from "./routes/reddit";
 import helldiversMoRoutes from "./routes/helldivers-mo";
 import { runHelldiversWorker } from "./helldiversWorker";
 import { runDivision2Worker } from "./division2Worker";
+import { runStartggWorker } from "./startggWorker";
 import paperRoutes from "./routes/paper";
 import invitesRoutes from "./routes/invites";
 import chessRoutes from "./routes/chess";
@@ -978,6 +979,10 @@ async function main() {
 
   runFeedWorker();
   setInterval(runFeedWorker, 20 * 60 * 1000);
+  // start.gg announcements. 10 min is well inside the route cache's 5 min at
+  // rest / 45 s live, so the worker never costs an extra start.gg request.
+  setInterval(() => void runStartggWorker(), 10 * 60 * 1000);
+  setTimeout(() => void runStartggWorker(), 45_000);
   setInterval(
     () => {
       void runHelldiversWorker({ getAI, broadcastToLobby, countLobbyActiveUsers });

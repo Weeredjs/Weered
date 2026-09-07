@@ -280,7 +280,7 @@ async function fetchPayload(ref: Ref): Promise<any | null> {
 }
 
 /** Cached, single-flight, stale-on-error. Returns null when the ref resolves to nothing. */
-async function getPayload(
+export async function getPayload(
   ref: Ref,
   force = false,
 ): Promise<{ payload: any | null; stale: boolean; error: string | null }> {
@@ -377,33 +377,27 @@ export default async function startggRoutes(app: FastifyInstance, opts: Opts) {
 
     const ref = parseStartggRef(raw);
     if (!ref)
-      return reply
-        .code(400)
-        .send({
-          ok: false,
-          error: "bad_ref",
-          message: "Paste a start.gg link: a tournament, an organizer profile, or a league.",
-        });
+      return reply.code(400).send({
+        ok: false,
+        error: "bad_ref",
+        message: "Paste a start.gg link: a tournament, an organizer profile, or a league.",
+      });
 
     const { payload, error } = await getPayload(ref, true);
     if (!payload) {
       if (error && error !== "startgg_not_configured") {
-        return reply
-          .code(502)
-          .send({
-            ok: false,
-            error: "startgg_unavailable",
-            message: "start.gg did not answer. Try again in a minute.",
-          });
+        return reply.code(502).send({
+          ok: false,
+          error: "startgg_unavailable",
+          message: "start.gg did not answer. Try again in a minute.",
+        });
       }
       if (error === "startgg_not_configured") {
-        return reply
-          .code(503)
-          .send({
-            ok: false,
-            error: "startgg_not_configured",
-            message: "The server has no start.gg token.",
-          });
+        return reply.code(503).send({
+          ok: false,
+          error: "startgg_not_configured",
+          message: "The server has no start.gg token.",
+        });
       }
       return reply
         .code(404)
