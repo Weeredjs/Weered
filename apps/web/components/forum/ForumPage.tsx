@@ -9,6 +9,7 @@ import { avatarBg } from "../../lib/avatarColor";
 import { weeredForumReport } from "../../lib/forumReport";
 import { onActivate } from "@/lib/a11y";
 import PostDetail from "./PostDetail";
+import StartggCard from "../StartggCard";
 
 type Post = {
   id: string; title: string; body: string; category: string;
@@ -223,6 +224,9 @@ export default function ForumPage({ lobbyId, lobbyName }: { lobbyId?: string; lo
         scrollbarWidth: "thin",
         scrollbarColor: "rgba(255,255,255,.08) transparent",
       }}>
+        {/* start.gg: next tournament, live stream queue and recent results.
+            Renders nothing until a lobby admin links a reference. */}
+        {embedded && lobbyId && <StartggCard lobbyId={lobbyId} />}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: embedded ? 12 : 20, gap: 8 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
             {embedded && (

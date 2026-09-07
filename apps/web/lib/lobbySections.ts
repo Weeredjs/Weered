@@ -26,6 +26,7 @@ const GENERIC: Record<string, Bi> = {
   modules: { en: "Modules", fr: "Modules" },
   feed: { en: "Feed", fr: "Fil" },
   events: { en: "Events", fr: "Événements" },
+  brackets: { en: "Brackets", fr: "Tableaux" },
   lfg: { en: "Looking for Group", fr: "Recherche de groupe" },
   reddit: { en: "Reddit", fr: "Reddit" },
 };
@@ -35,6 +36,7 @@ const GENERIC_ICONS: Record<string, string> = {
   modules: "🧩",
   feed: "📰",
   events: "🗓",
+  brackets: "🏆",
   lfg: "🎯",
   reddit: "👽",
 };
@@ -51,10 +53,13 @@ export const LFG_BOARD_LOBBIES = new Set(["gta6"]);
 export const REDDIT_TAB_LOBBIES: Record<string, string> = { gta6: "gta6" };
 
 /** Every section this lobby has, in rail order. */
-export function lobbyViews(lobbyId: string, hasModules: boolean): string[] {
+export function lobbyViews(lobbyId: string, hasModules: boolean, hasStartgg = false): string[] {
   return [
     "rooms",
     hasModules && "modules",
+    // Only when a TO has actually linked a reference — an empty Brackets tab
+    // reads as a broken feature rather than an unused one.
+    hasStartgg && "brackets",
     "feed",
     "events",
     LFG_BOARD_LOBBIES.has(lobbyId) && "lfg",
@@ -63,7 +68,7 @@ export function lobbyViews(lobbyId: string, hasModules: boolean): string[] {
 }
 
 /** The order sections appear in, when present. */
-export const SECTION_ORDER = ["rooms", "modules", "feed", "events", "lfg", "reddit"];
+export const SECTION_ORDER = ["rooms", "modules", "brackets", "feed", "events", "lfg", "reddit"];
 
 export function sectionLabel(lobbyId: string, key: string): Bi {
   return PER_LOBBY[lobbyId]?.labels?.[key] ?? GENERIC[key] ?? { en: key, fr: key };

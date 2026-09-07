@@ -119,7 +119,7 @@ export function lobbyHasModules(lobbyId: string, moduleType?: string | null): bo
 }
 
 // ── Which section the lobby is showing ───────────────────────────────────
-const VIEWS = ["rooms", "feed", "modules", "events", "lfg", "reddit"] as const;
+const VIEWS = ["rooms", "feed", "modules", "events", "lfg", "reddit", "brackets"] as const;
 export type LobbyView = (typeof VIEWS)[number];
 
 export function initialLobbyView(lobbyId: string, view?: string | null): LobbyView {
@@ -154,10 +154,14 @@ export function useLobbyView(lobbyId: string): [LobbyView, (v: LobbyView) => voi
  * Publish which sections this lobby actually has, so the scoped rail never
  * offers a tab that would render empty.
  */
-export function usePublishLobbyViews(lobbyId: string, hasModules: boolean): void {
+export function usePublishLobbyViews(
+  lobbyId: string,
+  hasModules: boolean,
+  hasStartgg = false,
+): void {
   // Empty when there is no lobby — a standalone room must not advertise
   // sections that belong to nobody.
-  const joined = lobbyId ? lobbyViews(lobbyId, hasModules).join(",") : "";
+  const joined = lobbyId ? lobbyViews(lobbyId, hasModules, hasStartgg).join(",") : "";
   useEffect(() => {
     const d = document.documentElement;
     if (!joined) {

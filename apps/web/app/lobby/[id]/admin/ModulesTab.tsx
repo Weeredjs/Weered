@@ -3,6 +3,7 @@ import React, { useState } from "react";
 import { LobbyData, S, apiFetch } from "./shared";
 import { onActivate } from "@/lib/a11y";
 import { AcServersEditor } from "./AcServersEditor";
+import { StartggEditor } from "./StartggEditor";
 
 export const ALL_MODULES = [
   { key: "voice", label: "Voice (LiveKit)", desc: "Real-time voice chat in rooms" },
@@ -113,6 +114,10 @@ export function ModulesTab({ lobby, onRefresh }: { lobby: LobbyData; onRefresh: 
       {lobby.moduleType === "ASSETTOCORSA" && (
         <AcServersEditor lobby={lobby} onRefresh={onRefresh} />
       )}
+
+      {/* start.gg is game-agnostic: any lobby that runs brackets can follow a
+          tournament, an organizer or a league, whatever its moduleType. */}
+      <StartggEditor lobby={lobby} onRefresh={onRefresh} />
     </div>
   );
 }

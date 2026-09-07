@@ -93,6 +93,7 @@ import { runDivision2Worker } from "./division2Worker";
 import paperRoutes from "./routes/paper";
 import invitesRoutes from "./routes/invites";
 import chessRoutes from "./routes/chess";
+import startggRoutes from "./routes/startgg";
 import { startChessWorker } from "./chessWorker";
 import { startChessChallengeWorker } from "./chessChallengeWorker";
 import newsRoutes from "./routes/news";
@@ -955,6 +956,7 @@ async function main() {
     WEB_URL,
   } as any);
   await app.register(chessRoutes, { authFromHeader });
+  await app.register(startggRoutes, { authFromHeader, lobbyAdminAccess });
 
   await app.register(dmRoutes, {
     authFromHeader,

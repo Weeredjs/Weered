@@ -221,7 +221,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
     return () => { cancelled = true; };
   }, [roomId]);
 
-  const [lobbyContext, setLobbyContext] = useState<{ id: string; name: string; logoUrl?: string; moduleType?: string; enabledModules?: string[] } | null>(null);
+  const [lobbyContext, setLobbyContext] = useState<{ id: string; name: string; logoUrl?: string; moduleType?: string; enabledModules?: string[]; hasStartgg?: boolean } | null>(null);
   const currentLobbyId = w?.currentLobbyId || null;
   useEffect(() => {
     if (!currentLobbyId || currentLobbyId === "lobby") { setLobbyContext(null); return; }
@@ -235,6 +235,9 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
             logoUrl: j.lobby.logoUrl || undefined,
             moduleType: j.lobby.moduleType || undefined,
             enabledModules: j.lobby.enabledModules || undefined,
+            // The scoped rail in a room must offer the same sections as the
+            // lobby, Brackets included, or navigation changes at the door.
+            hasStartgg: !!j.lobby.moduleConfig?.startgg?.ref,
           });
         }
       })
@@ -278,6 +281,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
   usePublishLobbyViews(
     lobbyContext?.id || "",
     lobbyHasModules(lobbyContext?.id || "", lobbyContext?.moduleType),
+    !!lobbyContext?.hasStartgg,
   );
 
   useEffect(() => {

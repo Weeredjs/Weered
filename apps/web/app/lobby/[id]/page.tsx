@@ -12,6 +12,7 @@ import LobbyHeroBar from "../../../components/LobbyHeroBar";
 import TournamentLiveStrip from "../../../components/TournamentLiveStrip";
 import FlairContestStrip from "../../../components/FlairContestStrip";
 import TimbosPanel from "../../../components/TimbosPanel";
+import StartggPanel from "../../../components/StartggPanel";
 import { TIMBOS_LOBBY_ID } from "../../../lib/timbosCopy";
 import { LFG_BOARD_LOBBIES, REDDIT_TAB_LOBBIES } from "../../../lib/lobbySections";
 import {
@@ -806,7 +807,8 @@ export default function LobbyIdPage() {
 
   const hasModules = lobbyHasModules(lobbyId, lobbyInfo?.moduleType);
   const hasLfgBoard = LFG_BOARD_LOBBIES.has(lobbyId);
-  usePublishLobbyViews(lobbyId, hasModules); // feeds the scoped rail
+  const hasStartgg = !!(lobbyInfo?.moduleConfig as any)?.startgg?.ref;
+  usePublishLobbyViews(lobbyId, hasModules, hasStartgg); // feeds the scoped rail
   const redditSub = REDDIT_TAB_LOBBIES[lobbyId];
   const KNOWN_ACCENTS: Record<string, string> = { gta6: "#e84393" };
   const accent = lobbyInfo?.accentColor || KNOWN_ACCENTS[lobbyId] || undefined;
@@ -1154,7 +1156,11 @@ export default function LobbyIdPage() {
                   flexDirection: "column",
                 }}
               >
-                {view === "modules" && hasModules ? (
+                {view === "brackets" && hasStartgg ? (
+                  <div style={{ flex: 1, minHeight: 0, overflow: "auto", padding: "4px 2px" }}>
+                    <StartggPanel lobbyId={lobbyId} accent={accent} />
+                  </div>
+                ) : view === "modules" && hasModules ? (
                   // Keyed on the lobby, not a ModuleType — lib/lobbyChrome.ts.
                   lobbyId === TIMBOS_LOBBY_ID ? (
                     <TimbosPanel accent={accent} />
