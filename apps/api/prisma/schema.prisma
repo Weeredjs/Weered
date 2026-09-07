@@ -3086,3 +3086,24 @@ model BlockedImageHash {
   reason    String   @default("")
   createdAt DateTime @default(now())
 }
+
+/// start.gg OAuth grant for a lobby (tier 5).
+///
+/// A DELIBERATELY SEPARATE TABLE with no relation to Lobby. The obvious home
+/// would have been Lobby.moduleConfig beside the reference it authorises — but
+/// moduleConfig is serialised by the PUBLIC GET /lobbies/:id, so putting tokens
+/// there would publish an organiser's credentials to anyone who opened the
+/// lobby. No relation is declared so the grant cannot be dragged into a
+/// response by an `include` either.
+model StartggAuth {
+  id           String    @id @default(cuid())
+  lobbyId      String    @unique
+  userSlug     String?
+  scope        String    @default("")
+  accessToken  String
+  refreshToken String?
+  expiresAt    DateTime?
+  grantedById  String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
