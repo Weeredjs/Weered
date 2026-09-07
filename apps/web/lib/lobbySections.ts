@@ -1,5 +1,6 @@
 import type { Bi } from "./lobbyLang";
 import { TIMBOS_LOBBY_ID, TIMBOS_SECTIONS, TIMBOS_SECTION_ICONS } from "./timbosCopy";
+import { HLL_LOBBY_ID, HLL_SECTIONS, HLL_SECTION_ICONS } from "./hllCopy";
 
 /**
  * The left rail inside a lobby lists THAT LOBBY's sections, not the platform's.
@@ -45,6 +46,7 @@ const GENERIC_ICONS: Record<string, string> = {
  *  its own language; leave it out and it gets the generic names above. */
 const PER_LOBBY: Record<string, { labels: Record<string, Bi>; icons: Record<string, string> }> = {
   [TIMBOS_LOBBY_ID]: { labels: TIMBOS_SECTIONS, icons: TIMBOS_SECTION_ICONS },
+  [HLL_LOBBY_ID]: { labels: HLL_SECTIONS, icons: HLL_SECTION_ICONS },
 };
 
 /** Lobbies carrying an LFG board / a Reddit tab. Navigation config, so it lives

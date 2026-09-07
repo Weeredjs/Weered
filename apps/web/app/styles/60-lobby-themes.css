@@ -4170,3 +4170,225 @@ html[data-weered-lobby="timbos"]
   .weered-presence-row-inner {
   background: rgba(123, 92, 255, 0.12) !important;
 }
+
+/* =====================================================================
+   Scope: html[data-weered-lobby="hll"]
+
+   Hell Let Loose. A 50v50 WWII shooter whose community runs on server
+   seeding — getting a box from empty to the 40 players where the game
+   becomes itself. The lobby is built for that job, so it should look
+   like the thing a platoon actually uses: a field manual, not a game
+   box. Stencil, olive webbing, map grid, brass.
+
+   PALETTE NOTE. The stored accent was #BFA46F, which measures 5 deg from
+   Windrose at the same saturation and luminance — themed on that, this
+   lobby read as a Windrose reskin. Field green sits at hue 84, a clear
+   33 deg off the nearest theme (Helldivers gold) and 150+ from Weered's
+   own purple. Check any future accent against the others before changing
+   it; the warm 28-51 band is full.
+   ===================================================================== */
+
+html[data-weered-lobby="hll"] {
+  --weered-bg: #0d100a;
+  --weered-panel: rgba(24, 29, 18, 0.88);
+  --weered-panel2: rgba(18, 22, 14, 0.94);
+  --weered-border: rgba(111, 143, 63, 0.24);
+  --weered-border2: rgba(163, 191, 104, 0.46);
+  --weered-text: #e6e9dc;
+  --weered-muted: rgba(170, 178, 148, 0.84);
+  --weered-accent-1: #6f8f3f;
+  --weered-accent-2: #a3bf68;
+  --weered-accent-bg: rgba(111, 143, 63, 0.16);
+  --weered-accent-ring: rgba(163, 191, 104, 0.5);
+  --weered-accent-grad: linear-gradient(135deg, #6f8f3f 0%, #a3bf68 100%);
+  --weered-scrollbar-track: rgba(8, 10, 6, 0.65);
+  --weered-scrollbar-thumb: rgba(111, 143, 63, 0.34);
+  --weered-scrollbar-thumb-hover: rgba(163, 191, 104, 0.56);
+
+  /* field kit */
+  --hll-olive: #6f8f3f;
+  --hll-olive-hi: #a3bf68;
+  --hll-olive-low: #3f5222;
+  --hll-rust: #b4472e; /* the hot accent: casualties, low pop, alarms */
+  --hll-rust-dim: #7d3220;
+  --hll-brass: #c2a25a; /* buckles, shell casings, rank pips */
+  --hll-ink: #070903;
+  --hll-night: #0d100a;
+  --hll-canvas: #151a10;
+  --hll-canvas-hi: #1f2617;
+  --hll-paper: #e6e9dc;
+  --hll-paper-dim: #aab294;
+  --hll-grid: rgba(163, 191, 104, 0.05);
+}
+
+/* ── Ground. A faint map grid over mud, so the lobby reads as a briefing
+   surface rather than a dark panel. Kept very low contrast: it must never
+   compete with a server list. */
+html[data-weered-lobby="hll"] body {
+  background-color: var(--hll-night);
+  background-image:
+    linear-gradient(var(--hll-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--hll-grid) 1px, transparent 1px),
+    radial-gradient(120% 80% at 50% 0%, rgba(111, 143, 63, 0.07) 0%, transparent 60%);
+  background-size:
+    48px 48px,
+    48px 48px,
+    100% 100%;
+  color: var(--hll-paper);
+}
+
+/* ── Rails. Stencil headings, olive webbing edges. */
+html[data-weered-lobby="hll"] .weered-left::before,
+html[data-weered-lobby="hll"] .weered-right::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 10%;
+  right: 10%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--hll-olive-hi), transparent);
+  opacity: 0.5;
+}
+html[data-weered-lobby="hll"] .weered-left-section,
+html[data-weered-lobby="hll"] .weered-left-title {
+  font-family: var(--font-saira-stencil), var(--font-rajdhani), sans-serif !important;
+  letter-spacing: 0.16em !important;
+  text-transform: uppercase;
+  color: var(--hll-paper-dim) !important;
+}
+html[data-weered-lobby="hll"] .weered-left-link {
+  color: var(--hll-paper-dim) !important;
+  border-radius: 4px;
+  border-left: 2px solid transparent;
+}
+html[data-weered-lobby="hll"] .weered-left-link:hover {
+  background: rgba(111, 143, 63, 0.13) !important;
+  color: var(--hll-paper) !important;
+  border-left-color: var(--hll-olive) !important;
+}
+html[data-weered-lobby="hll"] .weered-left-link-active {
+  background: rgba(111, 143, 63, 0.2) !important;
+  color: var(--hll-paper) !important;
+  border-left-color: var(--hll-olive-hi) !important;
+}
+
+/* ── Tabs read as a stencilled sign board. */
+html[data-weered-lobby="hll"] .weered-lobby-tab {
+  font-family: var(--font-saira-stencil), var(--font-rajdhani), sans-serif !important;
+  letter-spacing: 0.1em !important;
+  text-transform: uppercase;
+  color: var(--hll-paper-dim) !important;
+}
+html[data-weered-lobby="hll"] .weered-lobby-tab:hover {
+  color: var(--hll-paper) !important;
+}
+html[data-weered-lobby="hll"] .weered-lobby-tab-active {
+  color: var(--hll-olive-hi) !important;
+  border-bottom-color: var(--hll-olive-hi) !important;
+}
+
+/* ── Controls. Brass on olive, never glossy. */
+html[data-weered-lobby="hll"] .weered-btn {
+  background: rgba(111, 143, 63, 0.14) !important;
+  border: 1px solid rgba(111, 143, 63, 0.4) !important;
+  color: var(--hll-paper) !important;
+  border-radius: 4px !important;
+  letter-spacing: 0.04em;
+}
+html[data-weered-lobby="hll"] .weered-btn:hover {
+  background: rgba(111, 143, 63, 0.24) !important;
+  border-color: var(--hll-olive-hi) !important;
+}
+html[data-weered-lobby="hll"] .weered-input,
+html[data-weered-lobby="hll"] .weered-presence-search {
+  background: rgba(7, 9, 3, 0.6) !important;
+  border: 1px solid rgba(111, 143, 63, 0.28) !important;
+  color: var(--hll-paper) !important;
+  border-radius: 4px !important;
+}
+html[data-weered-lobby="hll"] .weered-input::placeholder,
+html[data-weered-lobby="hll"] .weered-presence-search::placeholder {
+  color: rgba(170, 178, 148, 0.55) !important;
+}
+html[data-weered-lobby="hll"] .weered-input:focus {
+  border-color: var(--hll-olive-hi) !important;
+  box-shadow: 0 0 0 2px rgba(163, 191, 104, 0.2) !important;
+}
+
+/* ── Containers. Rooms drop the min chrome, so these have to be restated
+   here or the rail inside a room renders unthemed — the bug that cost four
+   guesses on the Timbo build. */
+html[data-weered-lobby="hll"] .weered-left-section,
+html[data-weered-lobby="hll"] .weered-presence,
+html[data-weered-lobby="hll"] .weered-usercorner,
+html[data-weered-lobby="hll"] .weered-rr-section {
+  background: linear-gradient(
+    180deg,
+    rgba(31, 38, 23, 0.92) 0%,
+    rgba(21, 26, 16, 0.96) 100%
+  ) !important;
+  border: 1px solid rgba(111, 143, 63, 0.2) !important;
+  border-radius: 5px !important;
+}
+
+/* ── Presence rows are flat. The box lives on -row-link, not -row or
+   -row-inner; all three are named so a future refactor cannot reintroduce it. */
+html[data-weered-lobby="hll"] .weered-left .weered-presence-row,
+html[data-weered-lobby="hll"] .weered-left .weered-presence-row-link,
+html[data-weered-lobby="hll"] .weered-left .weered-presence-row-inner {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 4px !important;
+}
+html[data-weered-lobby="hll"] .weered-left .weered-presence-row-link:hover {
+  background: rgba(111, 143, 63, 0.14) !important;
+}
+
+/* ── Dock. */
+html[data-weered-lobby="hll"] .weered-dock,
+html[data-weered-lobby="hll"] .weered-overlay-panel {
+  background: rgba(18, 22, 14, 0.97) !important;
+  border-color: rgba(111, 143, 63, 0.28) !important;
+}
+html[data-weered-lobby="hll"] .weered-dock-header,
+html[data-weered-lobby="hll"] .weered-dock-title {
+  font-family: var(--font-saira-stencil), var(--font-rajdhani), sans-serif !important;
+  letter-spacing: 0.1em !important;
+  color: var(--hll-paper-dim) !important;
+}
+html[data-weered-lobby="hll"] .weered-dock-bubble-me {
+  background: rgba(111, 143, 63, 0.22) !important;
+}
+html[data-weered-lobby="hll"] .weered-dock-send {
+  background: var(--hll-olive) !important;
+  color: var(--hll-ink) !important;
+}
+
+/* ── The one loud colour. Rust is reserved for a server that needs bodies
+   and for anything failing; if it starts appearing decoratively it stops
+   meaning "act now", which is the only job it has in this lobby. */
+html[data-weered-lobby="hll"] .weered-event-badge,
+html[data-weered-lobby="hll"] .weered-burner-hot {
+  background: rgba(180, 71, 46, 0.18) !important;
+  border-color: rgba(180, 71, 46, 0.5) !important;
+  color: #e8a08c !important;
+}
+
+/* ── Decoration is optional. Anyone who asked the OS for less motion or
+   more contrast loses the grid, not the content. */
+@media (prefers-reduced-motion: reduce) {
+  html[data-weered-lobby="hll"] * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+@media (prefers-contrast: more) {
+  html[data-weered-lobby="hll"] body {
+    background-image: none;
+  }
+  html[data-weered-lobby="hll"] {
+    --weered-text: #ffffff;
+    --weered-muted: #ccd2be;
+  }
+}

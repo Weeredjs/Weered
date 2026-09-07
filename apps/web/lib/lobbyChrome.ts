@@ -32,6 +32,7 @@ export const THEMEABLE_LOBBY_IDS: string[] = [
   "windrose",
   "destiny2",
   "dnd",
+  "hll",
   "helldivers2",
   TIMBOS_LOBBY_ID,
 ];
