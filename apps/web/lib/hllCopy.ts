@@ -32,3 +32,59 @@ export const HLL_SECTION_ICONS: Record<string, string> = {
   lfg: "🪖",
   reddit: "👽",
 };
+
+/* ── Prospect preview lobbies ────────────────────────────────────────────
+   Unlisted lobbies handed to one unit. The rail uses THEIR words, lifted
+   from their own site navigation, so the first thing they recognise is
+   themselves rather than our product. */
+
+export const IR16_LOBBY_ID = "16thir";
+
+/** 16th Infantry Regiment — 16thir.org. Their nav: Home, About Us, Roster,
+ *  Enlist, News, Ban Logs. They run weekly squad drills plus a full platoon
+ *  meet, which is what "Drills" is doing in the events slot. */
+export const IR16_SECTIONS: Record<string, Bi> = {
+  rooms: en("The Regiment"),
+  modules: en("Operations"),
+  feed: en("News"),
+  events: en("Drills"),
+  brackets: en("Ladder"),
+  lfg: en("Enlist"),
+  reddit: en("Reddit"),
+};
+
+export const IR16_SECTION_ICONS: Record<string, string> = {
+  rooms: "🎖",
+  modules: "🗺",
+  feed: "📰",
+  events: "🎯",
+  brackets: "🏅",
+  lfg: "🪖",
+  reddit: "👽",
+};
+
+export const BOB_LOBBY_ID = "bandofbrothers";
+
+/** Band of Brothers — bandofbrothers.gg, the 5th Brigade Combat Team. Their
+ *  nav: About, Servers, Events, Games, Discord. They run their own live EU
+ *  public server, so "Servers" is the module slot rather than "Operations",
+ *  and Operations is where their ops/bootcamps/R&R calendar goes. */
+export const BOB_SECTIONS: Record<string, Bi> = {
+  rooms: en("5th Brigade"),
+  modules: en("Servers"),
+  feed: en("Dispatches"),
+  events: en("Operations"),
+  brackets: en("Ladder"),
+  lfg: en("Reinforcements"),
+  reddit: en("Reddit"),
+};
+
+export const BOB_SECTION_ICONS: Record<string, string> = {
+  rooms: "🎖",
+  modules: "🖥",
+  feed: "📻",
+  events: "🗓",
+  brackets: "🏅",
+  lfg: "🪖",
+  reddit: "👽",
+};

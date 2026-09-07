@@ -33,6 +33,8 @@ export const THEMEABLE_LOBBY_IDS: string[] = [
   "destiny2",
   "dnd",
   "hll",
+  "16thir",
+  "bandofbrothers",
   "helldivers2",
   TIMBOS_LOBBY_ID,
 ];
@@ -58,7 +60,13 @@ export function isThemeableLobby(lobbyId: string): boolean {
 // "keep the default theme" setting. Reserved for lobbies whose URL goes to a
 // prospect who has not joined anything — an unthemed lobby is the entire pitch
 // failing to land at the only moment it gets to.
-export const FORCED_THEME_LOBBIES: string[] = [TIMBOS_LOBBY_ID, "hll"];
+export const FORCED_THEME_LOBBIES: string[] = [
+  TIMBOS_LOBBY_ID,
+  "hll",
+  // Prospect previews: the unit opening the link has joined nothing.
+  "16thir",
+  "bandofbrothers",
+];
 
 export function isForcedThemeLobby(lobbyId: string): boolean {
   return FORCED_THEME_LOBBIES.includes(lobbyId);

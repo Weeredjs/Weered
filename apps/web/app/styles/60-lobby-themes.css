@@ -4172,7 +4172,7 @@ html[data-weered-lobby="timbos"]
 }
 
 /* =====================================================================
-   Scope: html[data-weered-lobby="hll"]
+   Scope: html:is([data-weered-lobby="hll"], [data-weered-lobby="16thir"], [data-weered-lobby="bandofbrothers"])
 
    Hell Let Loose. A 50v50 WWII shooter whose community runs on server
    seeding — getting a box from empty to the 40 players where the game
@@ -4229,7 +4229,12 @@ html[data-weered-lobby="hll"] {
    90-desktop-chrome.css, so an equal-specificity rule without it loses the
    cascade and the ground stays grey. Found by walking the live stylesheet —
    the rule was present and simply not winning. */
-html[data-weered-lobby="hll"] body {
+html:is(
+    [data-weered-lobby="hll"],
+    [data-weered-lobby="16thir"],
+    [data-weered-lobby="bandofbrothers"]
+  )
+  body {
   background-color: var(--hll-night) !important;
   background-image:
     linear-gradient(var(--hll-grid) 1px, transparent 1px),
@@ -4243,8 +4248,18 @@ html[data-weered-lobby="hll"] body {
 }
 
 /* ── Rails. Stencil headings, olive webbing edges. */
-html[data-weered-lobby="hll"] .weered-left::before,
-html[data-weered-lobby="hll"] .weered-right::before {
+html:is(
+    [data-weered-lobby="hll"],
+    [data-weered-lobby="16thir"],
+    [data-weered-lobby="bandofbrothers"]
+  )
+  .weered-left::before,
+html:is(
+    [data-weered-lobby="hll"],
+    [data-weered-lobby="16thir"],
+    [data-weered-lobby="bandofbrothers"]
+  )
+  .weered-right::before {
   content: "";
   position: absolute;
   top: 0;
@@ -4254,68 +4269,143 @@ html[data-weered-lobby="hll"] .weered-right::before {
   background: linear-gradient(90deg, transparent, var(--hll-olive-hi), transparent);
   opacity: 0.5;
 }
-html[data-weered-lobby="hll"] .weered-left-section,
-html[data-weered-lobby="hll"] .weered-left-title {
+html:is(
+    [data-weered-lobby="hll"],
+    [data-weered-lobby="16thir"],
+    [data-weered-lobby="bandofbrothers"]
+  )
+  .weered-left-section,
+html:is(
+    [data-weered-lobby="hll"],
+    [data-weered-lobby="16thir"],
+    [data-weered-lobby="bandofbrothers"]
+  )
+  .weered-left-title {
   font-family: var(--font-saira-stencil), var(--font-rajdhani), sans-serif !important;
   letter-spacing: 0.16em !important;
   text-transform: uppercase;
   color: var(--hll-paper-dim) !important;
 }
-html[data-weered-lobby="hll"] .weered-left-link {
+html:is(
+    [data-weered-lobby="hll"],
+    [data-weered-lobby="16thir"],
+    [data-weered-lobby="bandofbrothers"]
+  )
+  .weered-left-link {
   color: var(--hll-paper-dim) !important;
   border-radius: 4px;
   border-left: 2px solid transparent;
 }
-html[data-weered-lobby="hll"] .weered-left-link:hover {
+html:is(
+    [data-weered-lobby="hll"],
+    [data-weered-lobby="16thir"],
+    [data-weered-lobby="bandofbrothers"]
+  )
+  .weered-left-link:hover {
   background: rgba(111, 143, 63, 0.13) !important;
   color: var(--hll-paper) !important;
   border-left-color: var(--hll-olive) !important;
 }
-html[data-weered-lobby="hll"] .weered-left-link-active {
+html:is(
+    [data-weered-lobby="hll"],
+    [data-weered-lobby="16thir"],
+    [data-weered-lobby="bandofbrothers"]
+  )
+  .weered-left-link-active {
   background: rgba(111, 143, 63, 0.2) !important;
   color: var(--hll-paper) !important;
   border-left-color: var(--hll-olive-hi) !important;
 }
 
 /* ── Tabs read as a stencilled sign board. */
-html[data-weered-lobby="hll"] .weered-lobby-tab {
+html:is(
+    [data-weered-lobby="hll"],
+    [data-weered-lobby="16thir"],
+    [data-weered-lobby="bandofbrothers"]
+  )
+  .weered-lobby-tab {
   font-family: var(--font-saira-stencil), var(--font-rajdhani), sans-serif !important;
   letter-spacing: 0.1em !important;
   text-transform: uppercase;
   color: var(--hll-paper-dim) !important;
 }
-html[data-weered-lobby="hll"] .weered-lobby-tab:hover {
+html:is(
+    [data-weered-lobby="hll"],
+    [data-weered-lobby="16thir"],
+    [data-weered-lobby="bandofbrothers"]
+  )
+  .weered-lobby-tab:hover {
   color: var(--hll-paper) !important;
 }
-html[data-weered-lobby="hll"] .weered-lobby-tab-active {
+html:is(
+    [data-weered-lobby="hll"],
+    [data-weered-lobby="16thir"],
+    [data-weered-lobby="bandofbrothers"]
+  )
+  .weered-lobby-tab-active {
   color: var(--hll-olive-hi) !important;
   border-bottom-color: var(--hll-olive-hi) !important;
 }
 
 /* ── Controls. Brass on olive, never glossy. */
-html[data-weered-lobby="hll"] .weered-btn {
+html:is(
+    [data-weered-lobby="hll"],
+    [data-weered-lobby="16thir"],
+    [data-weered-lobby="bandofbrothers"]
+  )
+  .weered-btn {
   background: rgba(111, 143, 63, 0.14) !important;
   border: 1px solid rgba(111, 143, 63, 0.4) !important;
   color: var(--hll-paper) !important;
   border-radius: 4px !important;
   letter-spacing: 0.04em;
 }
-html[data-weered-lobby="hll"] .weered-btn:hover {
+html:is(
+    [data-weered-lobby="hll"],
+    [data-weered-lobby="16thir"],
+    [data-weered-lobby="bandofbrothers"]
+  )
+  .weered-btn:hover {
   background: rgba(111, 143, 63, 0.24) !important;
   border-color: var(--hll-olive-hi) !important;
 }
-html[data-weered-lobby="hll"] .weered-input,
-html[data-weered-lobby="hll"] .weered-presence-search {
+html:is(
+    [data-weered-lobby="hll"],
+    [data-weered-lobby="16thir"],
+    [data-weered-lobby="bandofbrothers"]
+  )
+  .weered-input,
+html:is(
+    [data-weered-lobby="hll"],
+    [data-weered-lobby="16thir"],
+    [data-weered-lobby="bandofbrothers"]
+  )
+  .weered-presence-search {
   background: rgba(7, 9, 3, 0.6) !important;
   border: 1px solid rgba(111, 143, 63, 0.28) !important;
   color: var(--hll-paper) !important;
   border-radius: 4px !important;
 }
-html[data-weered-lobby="hll"] .weered-input::placeholder,
-html[data-weered-lobby="hll"] .weered-presence-search::placeholder {
+html:is(
+    [data-weered-lobby="hll"],
+    [data-weered-lobby="16thir"],
+    [data-weered-lobby="bandofbrothers"]
+  )
+  .weered-input::placeholder,
+html:is(
+    [data-weered-lobby="hll"],
+    [data-weered-lobby="16thir"],
+    [data-weered-lobby="bandofbrothers"]
+  )
+  .weered-presence-search::placeholder {
   color: rgba(170, 178, 148, 0.55) !important;
 }
-html[data-weered-lobby="hll"] .weered-input:focus {
+html:is(
+    [data-weered-lobby="hll"],
+    [data-weered-lobby="16thir"],
+    [data-weered-lobby="bandofbrothers"]
+  )
+  .weered-input:focus {
   border-color: var(--hll-olive-hi) !important;
   box-shadow: 0 0 0 2px rgba(163, 191, 104, 0.2) !important;
 }
@@ -4323,10 +4413,30 @@ html[data-weered-lobby="hll"] .weered-input:focus {
 /* ── Containers. Rooms drop the min chrome, so these have to be restated
    here or the rail inside a room renders unthemed — the bug that cost four
    guesses on the Timbo build. */
-html[data-weered-lobby="hll"] .weered-left-section,
-html[data-weered-lobby="hll"] .weered-presence,
-html[data-weered-lobby="hll"] .weered-usercorner,
-html[data-weered-lobby="hll"] .weered-rr-section {
+html:is(
+    [data-weered-lobby="hll"],
+    [data-weered-lobby="16thir"],
+    [data-weered-lobby="bandofbrothers"]
+  )
+  .weered-left-section,
+html:is(
+    [data-weered-lobby="hll"],
+    [data-weered-lobby="16thir"],
+    [data-weered-lobby="bandofbrothers"]
+  )
+  .weered-presence,
+html:is(
+    [data-weered-lobby="hll"],
+    [data-weered-lobby="16thir"],
+    [data-weered-lobby="bandofbrothers"]
+  )
+  .weered-usercorner,
+html:is(
+    [data-weered-lobby="hll"],
+    [data-weered-lobby="16thir"],
+    [data-weered-lobby="bandofbrothers"]
+  )
+  .weered-rr-section {
   background: linear-gradient(
     180deg,
     rgba(31, 38, 23, 0.92) 0%,
@@ -4338,34 +4448,88 @@ html[data-weered-lobby="hll"] .weered-rr-section {
 
 /* ── Presence rows are flat. The box lives on -row-link, not -row or
    -row-inner; all three are named so a future refactor cannot reintroduce it. */
-html[data-weered-lobby="hll"] .weered-left .weered-presence-row,
-html[data-weered-lobby="hll"] .weered-left .weered-presence-row-link,
-html[data-weered-lobby="hll"] .weered-left .weered-presence-row-inner {
+html:is(
+    [data-weered-lobby="hll"],
+    [data-weered-lobby="16thir"],
+    [data-weered-lobby="bandofbrothers"]
+  )
+  .weered-left
+  .weered-presence-row,
+html:is(
+    [data-weered-lobby="hll"],
+    [data-weered-lobby="16thir"],
+    [data-weered-lobby="bandofbrothers"]
+  )
+  .weered-left
+  .weered-presence-row-link,
+html:is(
+    [data-weered-lobby="hll"],
+    [data-weered-lobby="16thir"],
+    [data-weered-lobby="bandofbrothers"]
+  )
+  .weered-left
+  .weered-presence-row-inner {
   background: transparent !important;
   border: none !important;
   box-shadow: none !important;
   border-radius: 4px !important;
 }
-html[data-weered-lobby="hll"] .weered-left .weered-presence-row-link:hover {
+html:is(
+    [data-weered-lobby="hll"],
+    [data-weered-lobby="16thir"],
+    [data-weered-lobby="bandofbrothers"]
+  )
+  .weered-left
+  .weered-presence-row-link:hover {
   background: rgba(111, 143, 63, 0.14) !important;
 }
 
 /* ── Dock. */
-html[data-weered-lobby="hll"] .weered-dock,
-html[data-weered-lobby="hll"] .weered-overlay-panel {
+html:is(
+    [data-weered-lobby="hll"],
+    [data-weered-lobby="16thir"],
+    [data-weered-lobby="bandofbrothers"]
+  )
+  .weered-dock,
+html:is(
+    [data-weered-lobby="hll"],
+    [data-weered-lobby="16thir"],
+    [data-weered-lobby="bandofbrothers"]
+  )
+  .weered-overlay-panel {
   background: rgba(18, 22, 14, 0.97) !important;
   border-color: rgba(111, 143, 63, 0.28) !important;
 }
-html[data-weered-lobby="hll"] .weered-dock-header,
-html[data-weered-lobby="hll"] .weered-dock-title {
+html:is(
+    [data-weered-lobby="hll"],
+    [data-weered-lobby="16thir"],
+    [data-weered-lobby="bandofbrothers"]
+  )
+  .weered-dock-header,
+html:is(
+    [data-weered-lobby="hll"],
+    [data-weered-lobby="16thir"],
+    [data-weered-lobby="bandofbrothers"]
+  )
+  .weered-dock-title {
   font-family: var(--font-saira-stencil), var(--font-rajdhani), sans-serif !important;
   letter-spacing: 0.1em !important;
   color: var(--hll-paper-dim) !important;
 }
-html[data-weered-lobby="hll"] .weered-dock-bubble-me {
+html:is(
+    [data-weered-lobby="hll"],
+    [data-weered-lobby="16thir"],
+    [data-weered-lobby="bandofbrothers"]
+  )
+  .weered-dock-bubble-me {
   background: rgba(111, 143, 63, 0.22) !important;
 }
-html[data-weered-lobby="hll"] .weered-dock-send {
+html:is(
+    [data-weered-lobby="hll"],
+    [data-weered-lobby="16thir"],
+    [data-weered-lobby="bandofbrothers"]
+  )
+  .weered-dock-send {
   background: var(--hll-olive) !important;
   color: var(--hll-ink) !important;
 }
@@ -4373,8 +4537,18 @@ html[data-weered-lobby="hll"] .weered-dock-send {
 /* ── The one loud colour. Rust is reserved for a server that needs bodies
    and for anything failing; if it starts appearing decoratively it stops
    meaning "act now", which is the only job it has in this lobby. */
-html[data-weered-lobby="hll"] .weered-event-badge,
-html[data-weered-lobby="hll"] .weered-burner-hot {
+html:is(
+    [data-weered-lobby="hll"],
+    [data-weered-lobby="16thir"],
+    [data-weered-lobby="bandofbrothers"]
+  )
+  .weered-event-badge,
+html:is(
+    [data-weered-lobby="hll"],
+    [data-weered-lobby="16thir"],
+    [data-weered-lobby="bandofbrothers"]
+  )
+  .weered-burner-hot {
   background: rgba(180, 71, 46, 0.18) !important;
   border-color: rgba(180, 71, 46, 0.5) !important;
   color: #e8a08c !important;
@@ -4383,17 +4557,116 @@ html[data-weered-lobby="hll"] .weered-burner-hot {
 /* ── Decoration is optional. Anyone who asked the OS for less motion or
    more contrast loses the grid, not the content. */
 @media (prefers-reduced-motion: reduce) {
-  html[data-weered-lobby="hll"] * {
+  html:is(
+      [data-weered-lobby="hll"],
+      [data-weered-lobby="16thir"],
+      [data-weered-lobby="bandofbrothers"]
+    )
+    * {
     animation: none !important;
     transition: none !important;
   }
 }
 @media (prefers-contrast: more) {
-  html[data-weered-lobby="hll"] body {
+  html:is(
+      [data-weered-lobby="hll"],
+      [data-weered-lobby="16thir"],
+      [data-weered-lobby="bandofbrothers"]
+    )
+    body {
     background-image: none;
   }
   html[data-weered-lobby="hll"] {
     --weered-text: #ffffff;
     --weered-muted: #ccd2be;
   }
+}
+
+/* =====================================================================
+   PROSPECT PREVIEW LOBBIES — milsim kit
+   ---------------------------------------------------------------------
+   These are unlisted lobbies handed to one specific unit as a preview, the
+   same pattern as fastfox and timbos. They share every structural rule with
+   the hll kit above (the :is() list) and override only tokens.
+
+   DELIBERATE EXCEPTION to the hue-distinctness rule written into the hll
+   block. That rule exists because public lobbies sit beside each other in
+   browse, so two golds read as one theme. A prospect preview is never seen
+   next to another lobby — the unit opens their own link and nothing else.
+   Here, matching THEIR brand beats being distinct from Windrose, because
+   the pitch is "this is your community, not our product with your name on".
+   Colours below are sampled from each unit's live site.
+
+   Logo and banner are set per lobby in the DB (logoUrl / bannerUrl), not
+   here, so new artwork needs no deploy.
+   ===================================================================== */
+
+/* ── 16th Infantry Regiment · 16thir.org
+   HLL: Vietnam and Arma Reforger. Ranks, squads, weekly drills.
+   Sampled: navy #0a151c ground, bronze #917151, sand #f8daac. */
+html[data-weered-lobby="16thir"] {
+  --weered-bg: #0a151c;
+  --weered-panel: rgba(18, 33, 42, 0.88);
+  --weered-panel2: rgba(13, 25, 32, 0.94);
+  --weered-border: rgba(145, 113, 81, 0.3);
+  --weered-border2: rgba(248, 218, 172, 0.44);
+  --weered-text: #f1e7d6;
+  --weered-muted: rgba(196, 178, 150, 0.84);
+  --weered-accent-1: #917151;
+  --weered-accent-2: #f8daac;
+  --weered-accent-bg: rgba(145, 113, 81, 0.18);
+  --weered-accent-ring: rgba(248, 218, 172, 0.5);
+  --weered-accent-grad: linear-gradient(135deg, #917151 0%, #f8daac 100%);
+  --weered-scrollbar-track: rgba(6, 13, 18, 0.65);
+  --weered-scrollbar-thumb: rgba(145, 113, 81, 0.38);
+  --weered-scrollbar-thumb-hover: rgba(248, 218, 172, 0.55);
+
+  --hll-olive: #917151;
+  --hll-olive-hi: #f8daac;
+  --hll-olive-low: #5b452f;
+  --hll-rust: #b4472e;
+  --hll-rust-dim: #7d3220;
+  --hll-brass: #c2a25a;
+  --hll-ink: #050c11;
+  --hll-night: #0a151c;
+  --hll-canvas: #12212a;
+  --hll-canvas-hi: #1b2f3a;
+  --hll-paper: #f1e7d6;
+  --hll-paper-dim: #c4b296;
+  --hll-grid: rgba(248, 218, 172, 0.045);
+}
+
+/* ── Band of Brothers · bandofbrothers.gg
+   5th Brigade Combat Team. Runs its own live EU public server.
+   Sampled: slate #111827 ground, amber #eab308. */
+html[data-weered-lobby="bandofbrothers"] {
+  --weered-bg: #0b0f18;
+  --weered-panel: rgba(17, 24, 39, 0.9);
+  --weered-panel2: rgba(12, 17, 28, 0.95);
+  --weered-border: rgba(234, 179, 8, 0.24);
+  --weered-border2: rgba(250, 214, 96, 0.46);
+  --weered-text: #e5e7eb;
+  --weered-muted: rgba(156, 163, 175, 0.86);
+  --weered-accent-1: #eab308;
+  --weered-accent-2: #fad660;
+  --weered-accent-bg: rgba(234, 179, 8, 0.15);
+  --weered-accent-ring: rgba(250, 214, 96, 0.5);
+  --weered-accent-grad: linear-gradient(135deg, #eab308 0%, #fad660 100%);
+  --weered-scrollbar-track: rgba(7, 10, 17, 0.65);
+  --weered-scrollbar-thumb: rgba(234, 179, 8, 0.32);
+  --weered-scrollbar-thumb-hover: rgba(250, 214, 96, 0.55);
+
+  --hll-olive: #eab308;
+  --hll-olive-hi: #fad660;
+  --hll-olive-low: #6b5205;
+  --hll-rust: #b4472e;
+  --hll-rust-dim: #7d3220;
+  --hll-brass: #eab308;
+  --hll-ink: #070a11;
+  --hll-night: #0b0f18;
+  --hll-canvas: #111827;
+  --hll-canvas-hi: #1c2637;
+  --hll-paper: #e5e7eb;
+  --hll-paper-dim: #9ca3af;
+  --hll-grid: rgba(250, 214, 96, 0.04);
 }
