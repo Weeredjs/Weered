@@ -523,6 +523,11 @@ export default async function forumRoutes(app: FastifyInstance, opts: Opts) {
         where: { id: postId },
         data: { commentCount: { increment: 1 } },
       });
+      try {
+        await prisma.forumSubscription.create({ data: { userId: u.id, postId } });
+      } catch (e) {
+        swallow(e); // already subscribed
+      }
       if (automod.action === "REPORT") {
         fileAutoModReport(
           { kind: "COMMENT", id: comment.id },
@@ -544,6 +549,28 @@ export default async function forumRoutes(app: FastifyInstance, opts: Opts) {
             replierId: u.id,
             replierName,
           };
+          // Deep link to the comment, and stay inside the lobby: sending a
+          // member to /forum drops them out of the community they were in.
+          const anchor = `#c-${comment.id}`;
+          const actionUrl = post.lobbyId
+            ? `/lobby/${post.lobbyId}?view=feed&post=${postId}${anchor}`
+            : `/forum/${postId}${anchor}`;
+
+          // Whoever was replied to hears about it first and by name, before the
+          // vaguer "someone replied to a thread you follow" goes out.
+          if (parent && parent.authorId && parent.authorId !== u.id) {
+            notifiedIds.add(parent.authorId);
+            createNotification({
+              userId: parent.authorId,
+              type: "FORUM_REPLY",
+              title: `${replierName} replied to you`,
+              body: bodyTrim,
+              actorId: u.id,
+              actorName: replierName,
+              actionUrl,
+              meta,
+            }).catch(swallow);
+          }
 
           const subs = await prisma.forumSubscription.findMany({
             where: { postId },
@@ -560,7 +587,7 @@ export default async function forumRoutes(app: FastifyInstance, opts: Opts) {
               body: bodyTrim,
               actorId: u.id,
               actorName: replierName,
-              actionUrl: `/forum/${postId}`,
+              actionUrl,
               meta,
             }).catch(swallow);
           }
@@ -576,7 +603,7 @@ export default async function forumRoutes(app: FastifyInstance, opts: Opts) {
               body: bodyTrim,
               actorId: u.id,
               actorName: replierName,
-              actionUrl: `/forum/${postId}`,
+              actionUrl,
             }).catch(swallow);
           }
         } catch (e) {

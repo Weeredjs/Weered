@@ -548,3 +548,27 @@ a[href^="/room/"]:hover {
 .weered-trademark-footer a:hover {
   color: rgba(148, 163, 184, 0.45);
 }
+
+/* ── Forum comment tree ──────────────────────────────────────────────────────
+   The rail is the vertical line beside a nested conversation. It is a real
+   button, not a border, because clicking it collapses the thread — the gesture
+   people already have in their fingers from Reddit. Kept here rather than in
+   ForumPage's inline <style> because the tree also renders on the standalone
+   /forum/[postId] page, where ForumPage never mounts. */
+.weered-thread-rail {
+  display: flex;
+  justify-content: center;
+  appearance: none;
+  -webkit-appearance: none;
+}
+.weered-thread-rail > span {
+  width: 2px;
+  align-self: stretch;
+  border-radius: 1px;
+  background: rgba(148, 163, 184, 0.16);
+  transition: background 0.15s ease;
+}
+.weered-thread-rail:hover > span,
+.weered-thread-rail:focus-visible > span {
+  background: var(--weered-accent, #a78bfa);
+}

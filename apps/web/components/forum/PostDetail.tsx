@@ -3,21 +3,17 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useWeered } from "../WeeredProvider";
-import { forumFetch, timeAgo, CATEGORY_CONFIG, TIER_COLORS, FONT } from "./ForumHelpers";
+import { forumFetch, timeAgo, CATEGORY_CONFIG, FONT } from "./ForumHelpers";
 import Markdown from "./Markdown";
 import { avatarBg } from "../../lib/avatarColor";
 import { useUserHover } from "../UserHoverCard";
 import { useOverlay } from "../overlays/OverlayProvider";
 import { weeredConfirm } from "../../lib/confirm";
 import { weeredForumReport } from "../../lib/forumReport";
+import AuthorBadge, { type Author } from "./AuthorBadge";
+import CommentNode, { type CommentT, type NodeCtx } from "./CommentNode";
+import { treeInsert, treeMap, treeRemove } from "../../lib/commentTree";
 
-type Author = {
-  name: string;
-  avatar?: string;
-  avatarColor?: string;
-  tier?: string;
-  globalRole?: string;
-} | null;
 type Post = {
   id: string;
   title: string;
@@ -33,77 +29,6 @@ type Post = {
   author: Author;
   myVote: number;
 };
-type Comment = {
-  id: string;
-  postId: string;
-  authorId: string;
-  authorName: string;
-  body: string;
-  score: number;
-  createdAt: string;
-  author: Author;
-  myVote: number;
-};
-
-function AuthorBadge({
-  name,
-  author,
-  size = 20,
-  authorId: _authorId,
-  onHoverEnter,
-  onHoverLeave,
-}: {
-  name: string;
-  author: Author;
-  size?: number;
-  authorId?: string;
-  onHoverEnter?: (e: React.MouseEvent) => void;
-  onHoverLeave?: () => void;
-}) {
-  const aColor = author?.avatarColor || avatarBg(name);
-  const tierColor = TIER_COLORS[author?.tier || "INNOCENT"] || "#94a3b8";
-  return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 6,
-        cursor: onHoverEnter ? "pointer" : "default",
-      }}
-      onMouseEnter={onHoverEnter}
-      onMouseLeave={onHoverLeave}
-    >
-      <div
-        style={{
-          width: size,
-          height: size,
-          borderRadius: "50%",
-          flexShrink: 0,
-          background: author?.avatar ? "transparent" : aColor,
-          overflow: "hidden",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          fontSize: size * 0.45,
-          fontWeight: 900,
-          color: "#fff",
-        }}
-      >
-        {author?.avatar ? (
-          <img
-            src={author.avatar}
-            alt={name + " avatar"}
-            style={{ width: "100%", height: "100%", objectFit: "cover" }}
-          />
-        ) : (
-          name[0]?.toUpperCase()
-        )}
-      </div>
-      <span style={{ fontWeight: 700, fontSize: 12 }}>{name}</span>
-      <span style={{ fontSize: 9, fontWeight: 700, color: tierColor }}>{author?.tier}</span>
-    </div>
-  );
-}
 
 export default function PostDetail({
   postId,
@@ -140,11 +65,12 @@ export default function PostDetail({
   });
 
   const [post, setPost] = useState<Post | null>(null);
-  const [comments, setComments] = useState<Comment[]>([]);
+  const [comments, setComments] = useState<CommentT[]>([]);
   const [isMod, setIsMod] = useState(false);
   const [loading, setLoading] = useState(true);
   const [commentBody, setCommentBody] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [highlightId, setHighlightId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -160,6 +86,22 @@ export default function PostDetail({
   useEffect(() => {
     load();
   }, [load]);
+
+  // A permalink to a comment is what lets someone carry a point out of the
+  // thread and back into it. Runs once the tree is on screen, or there is
+  // nothing to scroll to yet.
+  useEffect(() => {
+    if (loading) return;
+    const hash = typeof window === "undefined" ? "" : window.location.hash;
+    if (!hash.startsWith("#c-")) return;
+    const id = hash.slice(3);
+    const el = document.getElementById("c-" + id);
+    if (!el) return;
+    el.scrollIntoView({ block: "center", behavior: "smooth" });
+    setHighlightId(id);
+    const t = window.setTimeout(() => setHighlightId(null), 2600);
+    return () => window.clearTimeout(t);
+  }, [loading, comments]);
 
   async function handlePostVote(value: number) {
     if (!post) return;
@@ -177,9 +119,22 @@ export default function PostDetail({
     });
     if (data?.ok) {
       setComments((prev) =>
-        prev.map((c) => (c.id === commentId ? { ...c, score: data.score, myVote: value } : c)),
+        treeMap(prev, commentId, (c) => ({ ...c, score: data.score, myVote: value })),
       );
     }
+  }
+
+  /** A reply to a specific comment. Returns whether it landed, so the node can
+   *  keep the draft on screen when the API says no rather than eating it. */
+  async function handleReply(parentId: string, body: string): Promise<boolean> {
+    const data = await forumFetch(`/forum/posts/${postId}/comments`, {
+      method: "POST",
+      body: JSON.stringify({ body, parentId }),
+    });
+    if (!data?.ok) return false;
+    setComments((prev) => treeInsert(prev, parentId, { ...data.comment, children: [] }));
+    setPost((prev) => (prev ? { ...prev, commentCount: prev.commentCount + 1 } : prev));
+    return true;
   }
 
   async function handleComment() {
@@ -190,7 +145,7 @@ export default function PostDetail({
       body: JSON.stringify({ body: commentBody.trim() }),
     });
     if (data?.ok) {
-      setComments((prev) => [...prev, data.comment]);
+      setComments((prev) => treeInsert(prev, null, { ...data.comment, children: [] }));
       setCommentBody("");
       setPost((prev) => (prev ? { ...prev, commentCount: prev.commentCount + 1 } : prev));
     }
@@ -260,9 +215,32 @@ export default function PostDetail({
     });
     if (!ok) return;
     await forumFetch(`/forum/comments/${commentId}`, { method: "DELETE" });
-    setComments((prev) => prev.filter((c) => c.id !== commentId));
-    setPost((prev) => (prev ? { ...prev, commentCount: prev.commentCount - 1 } : prev));
+    let gone = 1;
+    setComments((prev) => {
+      const r = treeRemove(prev, commentId);
+      gone = r.removed || 1;
+      return r.nodes;
+    });
+    setPost((prev) =>
+      prev ? { ...prev, commentCount: Math.max(0, prev.commentCount - gone) } : prev,
+    );
   }
+
+  const nodeCtx: NodeCtx = {
+    meId: me?.id || null,
+    isMod,
+    locked: !!post?.locked,
+    canReply: !!me,
+    highlightId,
+    onVote: handleCommentVote,
+    onReply: handleReply,
+    onReport: handleReportComment,
+    onRemove: handleRemoveComment,
+    onRestore: handleRestoreComment,
+    onDelete: handleDeleteComment,
+    openHover,
+    hoverClose,
+  };
 
   if (loading)
     return (
@@ -650,154 +628,7 @@ export default function PostDetail({
 
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         {comments.map((c) => (
-          <div
-            key={c.id}
-            style={{
-              display: "flex",
-              gap: 10,
-              padding: "10px 12px",
-              borderRadius: 10,
-              background: "rgba(255,255,255,.02)",
-              border: "1px solid rgba(255,255,255,.04)",
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                gap: 1,
-                flexShrink: 0,
-                width: 28,
-              }}
-            >
-              <button
-                onClick={() => handleCommentVote(c.id, c.myVote === 1 ? 0 : 1)}
-                style={{
-                  background: "none",
-                  border: "none",
-                  cursor: "pointer",
-                  padding: 2,
-                  color: c.myVote === 1 ? "#a78bfa" : "rgba(255,255,255,.2)",
-                  fontSize: 11,
-                }}
-              >
-                &#9650;
-              </button>
-              <span
-                style={{
-                  fontSize: 10,
-                  fontWeight: 800,
-                  color: c.score > 0 ? "#a78bfa" : c.score < 0 ? "#ef4444" : "rgba(255,255,255,.3)",
-                }}
-              >
-                {c.score}
-              </span>
-              <button
-                onClick={() => handleCommentVote(c.id, c.myVote === -1 ? 0 : -1)}
-                style={{
-                  background: "none",
-                  border: "none",
-                  cursor: "pointer",
-                  padding: 2,
-                  color: c.myVote === -1 ? "#ef4444" : "rgba(255,255,255,.2)",
-                  fontSize: 11,
-                }}
-              >
-                &#9660;
-              </button>
-            </div>
-
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
-                <AuthorBadge
-                  name={c.authorName}
-                  author={c.author}
-                  size={18}
-                  authorId={c.authorId}
-                  onHoverEnter={(e) =>
-                    openHover(c.authorId, c.authorName, e.currentTarget as HTMLElement)
-                  }
-                  onHoverLeave={() => hoverClose(160)}
-                />
-                <span style={{ fontSize: 10, opacity: 0.3 }}>&middot; {timeAgo(c.createdAt)}</span>
-                <div style={{ marginLeft: "auto", display: "flex", gap: 6, alignItems: "center" }}>
-                  {me && me.id !== c.authorId && (
-                    <button
-                      onClick={() => handleReportComment(c.id)}
-                      title="Report"
-                      style={{
-                        background: "none",
-                        border: "none",
-                        color: "rgba(148,163,184,.5)",
-                        fontSize: 11,
-                        cursor: "pointer",
-                        fontFamily: "inherit",
-                        padding: 0,
-                      }}
-                    >
-                      &#9873;
-                    </button>
-                  )}
-                  {isMod &&
-                    ((c as any).removedAt ? (
-                      <button
-                        onClick={() => handleRestoreComment(c.id)}
-                        style={{
-                          background: "none",
-                          border: "none",
-                          color: "rgba(34,197,94,.6)",
-                          fontSize: 10,
-                          cursor: "pointer",
-                          fontFamily: "inherit",
-                        }}
-                      >
-                        restore
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() => handleRemoveComment(c.id)}
-                        style={{
-                          background: "none",
-                          border: "none",
-                          color: "rgba(239,68,68,.6)",
-                          fontSize: 10,
-                          cursor: "pointer",
-                          fontFamily: "inherit",
-                        }}
-                      >
-                        remove
-                      </button>
-                    ))}
-                  {(isMod || c.authorId === me?.id) && (
-                    <button
-                      onClick={() => handleDeleteComment(c.id)}
-                      style={{
-                        background: "none",
-                        border: "none",
-                        color: "rgba(239,68,68,.4)",
-                        fontSize: 10,
-                        cursor: "pointer",
-                        fontFamily: "inherit",
-                      }}
-                    >
-                      delete
-                    </button>
-                  )}
-                </div>
-              </div>
-              <Markdown
-                text={(c as any).removedAt && isMod ? `[removed] ${c.body}` : c.body}
-                style={{
-                  fontSize: 13,
-                  lineHeight: 1.65,
-                  color: (c as any).removedAt ? "rgba(239,68,68,.6)" : "rgba(229,231,235,.75)",
-                  wordBreak: "break-word",
-                  fontStyle: (c as any).removedAt ? "italic" : "normal",
-                }}
-              />
-            </div>
-          </div>
+          <CommentNode key={c.id} c={c} ctx={nodeCtx} />
         ))}
 
         {comments.length === 0 && (
