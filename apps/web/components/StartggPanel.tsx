@@ -13,6 +13,8 @@
 import React from "react";
 import { useStartgg } from "./StartggCard";
 
+const API = process.env.NEXT_PUBLIC_API_BASE || "https://api.weered.ca";
+
 const when = (ms: number | null) =>
   ms === null
     ? ""
@@ -179,6 +181,61 @@ function Result({ t }: { t: any }) {
   );
 }
 
+type Entered = {
+  ok: boolean;
+  configured?: boolean;
+  tournament?: { name: string; url: string | null; startAt: number | null } | null;
+  members?: { id: string; name: string; avatar?: string | null; avatarColor?: string | null }[];
+  linked?: number;
+};
+
+/** Who from THIS lobby is entered in the next tournament (tier 4).
+ *
+ *  Renders nothing unless at least one member has linked a start.gg account —
+ *  an empty "nobody is entered" block on a lobby where nobody has connected an
+ *  account says the wrong thing entirely. */
+function EnteredFromHere({ lobbyId, accent }: { lobbyId: string; accent: string }) {
+  const [d, setD] = React.useState<Entered | null>(null);
+  React.useEffect(() => {
+    let alive = true;
+    fetch(`${API}/lobbies/${encodeURIComponent(lobbyId)}/startgg/entrants`, { cache: "no-store" })
+      .then((r) => r.json())
+      .then((j) => alive && setD(j))
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, [lobbyId]);
+
+  if (!d?.ok || !d.linked || !d.members?.length) return null;
+  return (
+    <section style={CARD}>
+      <div style={{ fontSize: 10, letterSpacing: ".08em", opacity: 0.55, marginBottom: 8 }}>
+        ENTERED FROM THIS LOBBY
+      </div>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+        {d.members.map((m) => (
+          <span
+            key={m.id}
+            style={{
+              fontSize: 12,
+              padding: "4px 10px",
+              borderRadius: 999,
+              border: `1px solid ${accent}55`,
+              background: `${accent}18`,
+            }}
+          >
+            {m.name}
+          </span>
+        ))}
+      </div>
+      <div style={{ fontSize: 11, opacity: 0.55, marginTop: 8 }}>
+        {d.members.length} of {d.linked} members who linked a start.gg account
+      </div>
+    </section>
+  );
+}
+
 export default function StartggPanel({
   lobbyId,
   accent = "#7c3aed",
@@ -207,6 +264,7 @@ export default function StartggPanel({
 
       {data.upcoming && data.upcoming.length > 0 && (
         <>
+          <EnteredFromHere lobbyId={lobbyId} accent={accent} />
           <h2 style={{ fontSize: 12, letterSpacing: ".1em", opacity: 0.6, margin: "0 0 10px" }}>
             UPCOMING
           </h2>

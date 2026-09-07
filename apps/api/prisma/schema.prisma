@@ -474,6 +474,10 @@ model User {
   steamId     String?   // SteamID64, e.g. "76561198000000000"
   twitchLogin String?   // Twitch login (lowercase username)
   xboxGamertag String?  // Xbox gamertag (display)
+  // start.gg identity, stored as the canonical "user/xxxxxxxx" slug rather than
+  // a gamer tag: tags are not unique and change, slugs do neither. Lets a lobby
+  // show which of ITS members are entered in the next event.
+  startggSlug String?
   xboxXuid    String?   // Xbox user id (numeric) resolved from gamertag
   psnAccountId String?  // PSN online ID (manual, no live integration; identity-only chip)
   lichessUsername String?  // Lichess.org username — drives chess activity polling

@@ -10,8 +10,9 @@ export default function PresenceSection() {
   const [psnAccountId, setPsnAccountId] = React.useState("");
   const [lichessUsername, setLichessUsername] = React.useState("");
   const [chessComUsername, setChessComUsername] = React.useState("");
+  const [startggSlug, setStartggSlug] = React.useState("");
   const [saving, setSaving] = React.useState<
-    "" | "steam" | "twitch" | "xbox" | "psn" | "lichess" | "chesscom" | "overlay"
+    "" | "steam" | "twitch" | "xbox" | "psn" | "lichess" | "chesscom" | "overlay" | "startgg"
   >("");
   const [msg, setMsg] = React.useState<{ ok: boolean; text: string } | null>(null);
   const [linkedSteam, setLinkedSteam] = React.useState<string | null>(null);
@@ -20,6 +21,7 @@ export default function PresenceSection() {
   const [linkedPsn, setLinkedPsn] = React.useState<string | null>(null);
   const [linkedLichess, setLinkedLichess] = React.useState<string | null>(null);
   const [linkedChessCom, setLinkedChessCom] = React.useState<string | null>(null);
+  const [linkedStartgg, setLinkedStartgg] = React.useState<string | null>(null);
   const [overlayToken, setOverlayToken] = React.useState<string | null>(null);
   const [overlayCopied, setOverlayCopied] = React.useState(false);
   const [livePresence, setLivePresence] = React.useState<any>(null);
@@ -46,6 +48,7 @@ export default function PresenceSection() {
         setLinkedXbox(j.xboxGamertag ?? null);
         setLinkedPsn(j.psnAccountId ?? null);
         setLinkedLichess(j.lichessUsername ?? null);
+        setLinkedStartgg(j.startggSlug ?? null);
         setLinkedChessCom(j.chessComUsername ?? null);
         setLivePresence(j.livePresence ?? null);
         setPresenceCheckedAt(j.presenceCheckedAt ?? null);
@@ -221,6 +224,34 @@ export default function PresenceSection() {
         if (clear) setPsnAccountId("");
         await loadPresence();
       } else setMsg({ ok: false, text: j?.message || j?.error || "Failed." });
+    } catch {
+      setMsg({ ok: false, text: "Network error." });
+    }
+    setSaving("");
+  }
+
+  async function saveStartgg(clear: boolean) {
+    setSaving("startgg");
+    setMsg(null);
+    try {
+      const r = await fetch(`${apiBase}/profile/startgg`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token()}` },
+        body: JSON.stringify({ slug: clear ? "" : startggSlug.trim() }),
+      });
+      const j = await r.json();
+      if (j?.ok) {
+        setLinkedStartgg(j.startgg?.slug ?? null);
+        if (clear) setStartggSlug("");
+        setMsg({
+          ok: true,
+          text: clear
+            ? "start.gg unlinked."
+            : `start.gg linked as ${j.startgg?.tag || j.startgg?.slug}.`,
+        });
+      } else {
+        setMsg({ ok: false, text: j?.message || "Could not link that profile." });
+      }
     } catch {
       setMsg({ ok: false, text: "Network error." });
     }
@@ -594,6 +625,52 @@ export default function PresenceSection() {
             style={{ ...btnStyle, padding: "8px 12px", fontSize: 12, opacity: 0.7 }}
             onClick={() => savePsn(true)}
             disabled={saving === "psn"}
+          >
+            Clear
+          </button>
+        </div>
+      </div>
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 6, padding: "8px 0" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ fontSize: 12, fontWeight: 700 }}>start.gg</span>
+          {linkedStartgg && (
+            <span style={{ fontSize: 11, opacity: 0.6 }}>linked &middot; {linkedStartgg}</span>
+          )}
+        </div>
+        <div
+          style={{
+            fontSize: 11,
+            opacity: 0.6,
+            color: "var(--weered-muted, rgba(148,163,184,.75))",
+            lineHeight: 1.4,
+          }}
+        >
+          Your start.gg profile link. Lobbies that follow a tournament can then show which of their
+          members are entered. We store the profile slug, not your tag &mdash; tags change, slugs do
+          not. Validated against start.gg on save.
+        </div>
+        <div style={{ display: "flex", gap: 6, marginTop: 4 }}>
+          <input
+            type="text"
+            value={startggSlug}
+            onChange={(e) => setStartggSlug(e.target.value.slice(0, 120))}
+            placeholder={linkedStartgg || "start.gg/user/a1b2c3d4"}
+            style={stackedInputStyle}
+          />
+          <button
+            type="button"
+            style={{ ...btnStyle, padding: "8px 14px", fontSize: 12 }}
+            onClick={() => saveStartgg(false)}
+            disabled={saving === "startgg" || startggSlug.trim().length < 2}
+          >
+            {saving === "startgg" ? "Saving…" : "Link"}
+          </button>
+          <button
+            type="button"
+            style={{ ...btnStyle, padding: "8px 12px", fontSize: 12, opacity: 0.7 }}
+            onClick={() => saveStartgg(true)}
+            disabled={saving === "startgg"}
           >
             Clear
           </button>

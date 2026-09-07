@@ -569,9 +569,10 @@ export default async function profileRoutes(app: FastifyInstance, opts: Opts) {
         psnAccountId: true,
         lichessUsername: true,
         chessComUsername: true,
+        startggSlug: true,
         livePresence: true,
         presenceCheckedAt: true,
-      },
+      } as any,
     });
     return reply.send({
       ok: true,
@@ -581,6 +582,7 @@ export default async function profileRoutes(app: FastifyInstance, opts: Opts) {
       psnAccountId: row?.psnAccountId ?? null,
       lichessUsername: row?.lichessUsername ?? null,
       chessComUsername: row?.chessComUsername ?? null,
+      startggSlug: (row as any)?.startggSlug ?? null,
       livePresence: row?.livePresence ?? null,
       presenceCheckedAt: row?.presenceCheckedAt ?? null,
     });

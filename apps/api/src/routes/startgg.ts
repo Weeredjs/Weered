@@ -322,6 +322,75 @@ export async function getPayload(
   }
 }
 
+// ------------------------------------------------------- tier 4: who is entered
+
+/** Resolve a start.gg user slug to a display identity, or null if it is not a
+ *  real profile. Used when a member links their account. */
+export async function resolveStartggUser(
+  slug: string,
+): Promise<{ slug: string; tag: string; image: string | null } | null> {
+  const data = await gql(`{ user(slug: "user/${slug}") {
+    slug player { gamerTag } name images { url type }
+  } }`);
+  const u = data?.user;
+  if (!u) return null;
+  return {
+    slug: String(u.slug || `user/${slug}`).replace(/^user\//, ""),
+    tag: u.player?.gamerTag || u.name || slug,
+    image: pickImage(u.images, "profile"),
+  };
+}
+
+/** Entrant user-slugs for a tournament, across its events.
+ *
+ *  Matching is on the user SLUG, not the gamer tag: tags are neither unique nor
+ *  stable, and putting the wrong member's name beside an entry is worse than
+ *  showing nothing. Capped because a major can carry thousands of entrants and
+ *  this runs behind a lobby page view. */
+const ENTRANT_PAGES = 4;
+const ENTRANT_PER_PAGE = 64;
+
+export async function entrantSlugs(tournamentSlug: string): Promise<Set<string>> {
+  const out = new Set<string>();
+  for (let page = 1; page <= ENTRANT_PAGES; page++) {
+    const data = await gql(`{ tournament(slug: "tournament/${tournamentSlug}") {
+      events(limit: 6) {
+        entrants(query: { page: ${page}, perPage: ${ENTRANT_PER_PAGE} }) {
+          nodes { participants { user { slug } } }
+        }
+      }
+    } }`);
+    const events = data?.tournament?.events || [];
+    let got = 0;
+    for (const e of events) {
+      for (const n of e?.entrants?.nodes || []) {
+        for (const p of n?.participants || []) {
+          const sl = p?.user?.slug;
+          if (sl) {
+            out.add(String(sl).replace(/^user\//, ""));
+            got++;
+          }
+        }
+      }
+    }
+    if (!got) break;
+  }
+  return out;
+}
+
+/** Entrant sets get their own cache: the walk costs up to 4 GraphQL calls, and
+ *  an entrant list changes far more slowly than a stream queue. */
+const entrantCache = new Map<string, { at: number; slugs: Set<string> }>();
+const ENTRANT_TTL_MS = 10 * 60_000;
+
+async function entrantsCached(tournamentSlug: string): Promise<Set<string>> {
+  const hit = entrantCache.get(tournamentSlug);
+  if (hit && Date.now() - hit.at < ENTRANT_TTL_MS) return hit.slugs;
+  const slugs = await entrantSlugs(tournamentSlug);
+  entrantCache.set(tournamentSlug, { at: Date.now(), slugs });
+  return slugs;
+}
+
 // ---------------------------------------------------------------- routes
 
 export default async function startggRoutes(app: FastifyInstance, opts: Opts) {
@@ -415,4 +484,99 @@ export default async function startggRoutes(app: FastifyInstance, opts: Opts) {
     await prisma.lobby.update({ where: { id: ctx.lobby.id }, data: { moduleConfig: cfg } });
     return reply.send({ ok: true, configured: true, ref: keyOf(ref), ...payload });
   });
+  // Tier 4: link the signed-in member's start.gg account, or clear it.
+  app.patch("/profile/startgg", { schema: { tags: ["startgg"] } }, async (req, reply) => {
+    const u = opts.authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const raw = typeof (req as any).body?.slug === "string" ? (req as any).body.slug.trim() : "";
+
+    if (!raw) {
+      await prisma.user.update({ where: { id: u.id }, data: { startggSlug: null } as any });
+      return reply.send({ ok: true, startgg: null });
+    }
+    // Accept a profile URL, "user/xxxx", or the bare id.
+    const ref = parseStartggRef(raw.includes("/") ? raw : `user/${raw}`);
+    if (!ref || ref.kind !== "user") {
+      return reply.code(400).send({
+        ok: false,
+        error: "bad_slug",
+        message: "Paste your start.gg profile link, e.g. start.gg/user/a1b2c3d4.",
+      });
+    }
+    let found: { slug: string; tag: string; image: string | null } | null = null;
+    try {
+      found = await resolveStartggUser(ref.slug);
+    } catch (e: any) {
+      const m = String(e?.message || e);
+      if (m === "startgg_not_configured")
+        return reply.code(503).send({ ok: false, error: "startgg_not_configured" });
+      return reply.code(502).send({ ok: false, error: "startgg_unavailable" });
+    }
+    if (!found)
+      return reply
+        .code(404)
+        .send({ ok: false, error: "not_found", message: "No start.gg profile there." });
+
+    await prisma.user.update({ where: { id: u.id }, data: { startggSlug: found.slug } as any });
+    return reply.send({ ok: true, startgg: found });
+  });
+
+  // Tier 4: which members of THIS lobby are entered in the next tournament.
+  app.get(
+    "/lobbies/:id/startgg/entrants",
+    { schema: { tags: ["startgg"] } },
+    async (req, reply) => {
+      const id = String((req.params as any)?.id || "");
+      const lobby = await prisma.lobby.findUnique({
+        where: { id },
+        select: { id: true, moduleConfig: true },
+      });
+      if (!lobby) return reply.code(404).send({ ok: false, error: "lobby_not_found" });
+      const ref = parseStartggRef((lobby.moduleConfig as any)?.startgg?.ref);
+      if (!ref) return reply.send({ ok: true, configured: false });
+
+      const { payload } = await getPayload(ref);
+      const next = payload?.upcoming?.[0];
+      if (!next) return reply.send({ ok: true, configured: true, tournament: null, members: [] });
+
+      // Only members who linked an account can possibly match, so read them first
+      // and skip the expensive entrant walk when nobody has.
+      const members = await prisma.lobbyMember.findMany({
+        where: { lobbyId: id },
+        select: { userId: true },
+      });
+      const users = await prisma.user.findMany({
+        where: { id: { in: members.map((m) => m.userId) }, NOT: { startggSlug: null } } as any,
+        select: { id: true, name: true, avatar: true, avatarColor: true, startggSlug: true } as any,
+      });
+      if (!users.length)
+        return reply.send({
+          ok: true,
+          configured: true,
+          tournament: { name: next.name, url: next.url, startAt: next.startAt },
+          members: [],
+        });
+
+      let slugs: Set<string>;
+      try {
+        slugs = await entrantsCached(next.slug);
+      } catch {
+        return reply.code(502).send({ ok: false, error: "startgg_unavailable" });
+      }
+      const matched = (users as any[]).filter((x) => x.startggSlug && slugs.has(x.startggSlug));
+      reply.header("Cache-Control", "public, max-age=120");
+      return reply.send({
+        ok: true,
+        configured: true,
+        tournament: { name: next.name, url: next.url, startAt: next.startAt },
+        members: matched.map((x) => ({
+          id: x.id,
+          name: x.name,
+          avatar: x.avatar,
+          avatarColor: x.avatarColor,
+        })),
+        linked: users.length,
+      });
+    },
+  );
 }
