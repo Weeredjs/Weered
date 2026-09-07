@@ -132,6 +132,21 @@ export default async function activityRoutes(app: FastifyInstance, opts: Opts) {
     return reply.send({ ok: true, feed: feed.slice(0, 20) });
   });
 
+  const NAMED_ENTITIES: Record<string, string> = {
+    amp: "&",
+    lt: "<",
+    gt: ">",
+    quot: '"',
+    apos: "'",
+    nbsp: " ",
+  };
+  function decodeEntities(s: string): string {
+    return String(s || "")
+      .replace(/&#x([0-9a-f]+);/gi, (_m, h) => String.fromCodePoint(parseInt(h, 16)))
+      .replace(/&#(\d+);/g, (_m, d) => String.fromCodePoint(parseInt(d, 10)))
+      .replace(/&([a-z]+);/gi, (m, name) => NAMED_ENTITIES[String(name).toLowerCase()] ?? m);
+  }
+
   const unfurlCache = new Map<string, { data: any; expiresAt: number }>();
   const UNFURL_CACHE_MAX = 500;
   function cacheUnfurl(key: string, data: any) {
@@ -229,10 +244,10 @@ export default async function activityRoutes(app: FastifyInstance, opts: Opts) {
 
       const result = {
         ok: true,
-        title: og("title") || meta("title") || titleTag || "",
-        description: og("description") || meta("description") || "",
+        title: decodeEntities(og("title") || meta("title") || titleTag || ""),
+        description: decodeEntities(og("description") || meta("description") || ""),
         image: og("image") || "",
-        siteName: og("site_name") || "",
+        siteName: decodeEntities(og("site_name") || ""),
         url: og("url") || url,
       };
 

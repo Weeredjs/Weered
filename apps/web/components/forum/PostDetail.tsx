@@ -13,6 +13,9 @@ import { weeredForumReport } from "../../lib/forumReport";
 import AuthorBadge, { type Author } from "./AuthorBadge";
 import CommentNode, { type CommentT, type NodeCtx } from "./CommentNode";
 import { treeInsert, treeMap, treeRemove } from "../../lib/commentTree";
+import MarkdownComposer from "./MarkdownComposer";
+import LinkPreviewCard from "../LinkPreviewCard";
+import { previewUrls } from "../../lib/forumLinks";
 
 type Post = {
   id: string;
@@ -449,6 +452,9 @@ export default function PostDetail({
               wordBreak: "break-word",
             }}
           />
+          {previewUrls(post.body).map((u) => (
+            <LinkPreviewCard key={u} url={u} />
+          ))}
 
           {(isMod || post.authorId === me?.id || me) && (
             <div
@@ -567,26 +573,13 @@ export default function PostDetail({
             )}
           </div>
           <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 8 }}>
-            <textarea
+            <MarkdownComposer
               value={commentBody}
-              onChange={(e) => setCommentBody(e.target.value)}
-              placeholder="Write a comment..."
+              onChange={setCommentBody}
+              placeholder="Write a comment... drag or paste an image"
               maxLength={5000}
               rows={3}
-              style={{
-                width: "100%",
-                padding: "8px 10px",
-                borderRadius: 8,
-                border: "1px solid rgba(255,255,255,.08)",
-                background: "rgba(0,0,0,.25)",
-                color: "rgba(243,244,246,.9)",
-                fontSize: 13,
-                lineHeight: 1.5,
-                outline: "none",
-                boxSizing: "border-box",
-                fontFamily: "inherit",
-                resize: "vertical",
-              }}
+              minimal
             />
             <div style={{ display: "flex", justifyContent: "flex-end" }}>
               <button

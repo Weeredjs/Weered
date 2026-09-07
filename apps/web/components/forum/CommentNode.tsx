@@ -9,6 +9,9 @@ import Markdown from "./Markdown";
 import AuthorBadge, { type Author } from "./AuthorBadge";
 import { timeAgo } from "./ForumHelpers";
 import { treeCount, MAX_DEPTH, INDENT_CAP } from "../../lib/commentTree";
+import MarkdownComposer from "./MarkdownComposer";
+import LinkPreviewCard from "../LinkPreviewCard";
+import { previewUrls } from "../../lib/forumLinks";
 
 export type CommentT = {
   id: string;
@@ -248,6 +251,7 @@ export default function CommentNode({ c, ctx }: { c: CommentT; ctx: NodeCtx }) {
               fontStyle: removed ? "italic" : "normal",
             }}
           />
+          {!removed && previewUrls(c.body, 1).map((u) => <LinkPreviewCard key={u} url={u} />)}
 
           <div style={{ display: "flex", gap: 12, marginTop: 8, alignItems: "center" }}>
             {repliable && !replying && (
@@ -267,27 +271,17 @@ export default function CommentNode({ c, ctx }: { c: CommentT; ctx: NodeCtx }) {
 
           {replying && (
             <div style={{ marginTop: 10 }}>
-              <textarea
+              <MarkdownComposer
                 value={draft}
-                onChange={(e) => setDraft(e.target.value)}
+                onChange={setDraft}
                 autoFocus
-                placeholder={"Reply to " + c.authorName + "..."}
+                minimal
                 rows={3}
+                maxLength={5000}
+                placeholder={"Reply to " + c.authorName + "..."}
                 onKeyDown={(e) => {
                   if (e.key === "Escape") setReplying(false);
                   if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) send();
-                }}
-                style={{
-                  width: "100%",
-                  background: "rgba(0,0,0,.25)",
-                  border: "1px solid rgba(255,255,255,.1)",
-                  borderRadius: 8,
-                  color: "rgba(229,231,235,.9)",
-                  fontFamily: "inherit",
-                  fontSize: 13,
-                  lineHeight: 1.6,
-                  padding: "8px 10px",
-                  resize: "vertical",
                 }}
               />
               <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 6 }}>
