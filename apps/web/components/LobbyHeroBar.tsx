@@ -172,6 +172,14 @@ export default function LobbyHeroBar({
         flexShrink: 0,
         overflow: "hidden",
         minHeight: hasFeatured ? 196 : 78,
+        // A banner gets a FIXED aspect so the box stops moving. Height used to
+        // be pinned at 196px with a fluid width, which made the hero 5.13:1 at a
+        // 1200px window and 7.13:1 at 1900 — no artwork aspect could ever be
+        // right, and any fixed size cropped differently at every screen. With a
+        // ratio, one banner size (1920x350) is correct everywhere.
+        // minHeight remains the floor for narrow windows; maxHeight stops an
+        // ultrawide monitor turning the hero into a billboard.
+        ...(effectiveBanner ? { aspectRatio: "1920 / 350", maxHeight: 300 } : {}),
       }}
     >
       {effectiveBanner ? (
