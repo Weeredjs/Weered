@@ -91,6 +91,8 @@ import helldiversMoRoutes from "./routes/helldivers-mo";
 import { runHelldiversWorker } from "./helldiversWorker";
 import { runDivision2Worker } from "./division2Worker";
 import { runStartggWorker } from "./startggWorker";
+import { runGameServerWorker } from "./gameServerWorker";
+import gameServerRoutes from "./routes/gameServers";
 import paperRoutes from "./routes/paper";
 import invitesRoutes from "./routes/invites";
 import chessRoutes from "./routes/chess";
@@ -958,6 +960,7 @@ async function main() {
     WEB_URL,
   } as any);
   await app.register(chessRoutes, { authFromHeader });
+  await app.register(gameServerRoutes);
   await app.register(startggRoutes, { authFromHeader, lobbyAdminAccess });
   await app.register(startggOauthRoutes, { lobbyAdminAccess, jwtSecret: JWT_SECRET });
 
@@ -985,6 +988,11 @@ async function main() {
   // rest / 45 s live, so the worker never costs an extra start.gg request.
   setInterval(() => void runStartggWorker(), 10 * 60 * 1000);
   setTimeout(() => void runStartggWorker(), 45_000);
+  // Server aggregate: ~300 HLL servers every 10 min is ~43k samples/day, which
+  // the 21-day prune keeps bounded. Offset from the other workers so they do
+  // not all wake at once.
+  setInterval(() => void runGameServerWorker(), 10 * 60 * 1000);
+  setTimeout(() => void runGameServerWorker(), 90_000);
   setInterval(
     () => {
       void runHelldiversWorker({ getAI, broadcastToLobby, countLobbyActiveUsers });
