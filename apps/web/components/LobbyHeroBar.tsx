@@ -183,7 +183,16 @@ export default function LobbyHeroBar({
               inset: 0,
               backgroundImage: `url(${effectiveBanner})`,
               backgroundSize: "cover",
-              backgroundPosition: "center top",
+              // Centre, not "center top". The hero is a FIXED 196px tall with a
+              // FLUID width, so its aspect runs ~5.1:1 to ~5.6:1+ depending on
+              // the window — no banner aspect is ever exactly right and `cover`
+              // always overflows on one axis. Anchoring to the top threw the
+              // whole bottom of the image away, which is why banners kept
+              // appearing cropped into a corner and why authors were resizing
+              // artwork to chase it. Centred, the overflow is split evenly and
+              // the middle of the image — where the subject is — always survives.
+              backgroundPosition: "center",
+              backgroundRepeat: "no-repeat",
               opacity: 0.55,
               transition: "background-image 1s ease",
             }}
