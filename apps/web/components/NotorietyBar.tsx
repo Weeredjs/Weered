@@ -90,6 +90,15 @@ export default function NotorietyBar({ score: propScore, compact = false, onClic
           gap: 6,
           cursor: onClick ? "pointer" : "default",
           padding: "4px 0",
+          // role="button" is here for keyboard access, and the global
+          // `[role="button"], button` base style paints every one of those as a
+          // pill — rgba(255,255,255,.08) on a 1px border at 12px radius. That
+          // is what appeared as an opaque capsule around this bar. The role has
+          // to stay; the chrome does not.
+          background: "transparent",
+          border: "none",
+          borderRadius: 0,
+          fontWeight: "inherit",
         }}
         title={`${score} XP — ${rank.title}${rank.next ? ` (${rank.next.min - score} to ${rank.next.title})` : ""}`}
       >
