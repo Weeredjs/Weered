@@ -33,9 +33,15 @@ const DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 export default function ServerRhythm({
   serverId,
   accent = "#6f8f3f",
+  livePlayers,
 }: {
   serverId: string;
   accent?: string;
+  /** The card's own live count. The aggregate polls every 10 minutes, so its
+   *  snapshot can trail the browser's 60s one — and a card showing 95/100 in
+   *  the header and 87 in the panel just below it reads as broken. The live
+   *  number wins for "now"; the aggregate is only ever used for "normally". */
+  livePlayers?: number;
 }) {
   const [d, setD] = React.useState<Rhythm | null>(null);
   const [err, setErr] = React.useState(false);
@@ -56,6 +62,7 @@ export default function ServerRhythm({
   if (err) return <Note>No history for this server yet.</Note>;
   if (!d) return <Note>Reading the history…</Note>;
 
+  const players = livePlayers ?? d.now.players;
   const today = new Date().getUTCDay();
   const nowHour = new Date().getUTCHours();
   const todays = d.buckets.filter((b) => b.dow === today);
@@ -72,13 +79,13 @@ export default function ServerRhythm({
       }}
     >
       {d.now.confident ? (
-        <Verdict now={d.now} accent={accent} />
+        <Verdict now={d.now} players={players} accent={accent} />
       ) : (
         // The honest state, and the common one in the first fortnight. Saying
         // "not yet" is better than averaging two samples and calling it normal.
         <div style={{ fontSize: 12, color: "rgba(226,232,240,.72)", lineHeight: 1.5 }}>
           <strong style={{ color: "rgba(236,242,250,.95)" }}>
-            {d.now.players}/{d.server.maxPlayers}
+            {players}/{d.server.maxPlayers}
           </strong>{" "}
           right now. Still building this server&rsquo;s pattern &mdash;{" "}
           {d.now.samples === 0 ? "no" : d.now.samples} reading
@@ -151,15 +158,25 @@ export default function ServerRhythm({
   );
 }
 
-function Verdict({ now, accent }: { now: Rhythm["now"]; accent: string }) {
-  const d = now.delta ?? 0;
+function Verdict({
+  now,
+  players,
+  accent,
+}: {
+  now: Rhythm["now"];
+  players: number;
+  accent: string;
+}) {
+  // Recomputed against the live count rather than trusting the server's delta,
+  // which was calculated from the aggregate's older snapshot.
+  const d = now.typical == null ? 0 : players - now.typical;
   const hot = d > 4;
   const cold = d < -4;
   return (
     <div style={{ fontSize: 12.5, lineHeight: 1.55, color: "rgba(226,232,240,.85)" }}>
-      <strong style={{ fontSize: 15, color: "rgba(236,242,250,.98)" }}>{now.players}</strong> on
-      now, and it is normally{" "}
-      <strong style={{ color: "rgba(236,242,250,.95)" }}>{now.typical}</strong> at this hour.
+      <strong style={{ fontSize: 15, color: "rgba(236,242,250,.98)" }}>{players}</strong> on now,
+      and it is normally <strong style={{ color: "rgba(236,242,250,.95)" }}>{now.typical}</strong>{" "}
+      at this hour.
       <div
         style={{
           marginTop: 4,

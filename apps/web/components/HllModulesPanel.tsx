@@ -577,7 +577,9 @@ function FrontLines({ accent, onGo }: { accent: string; onGo?: (tab: string) => 
               {copied === s.id ? "Copied. Search it in-game" : "Copy name"}
             </button>
           </div>
-          {openRhythm === s.id && <ServerRhythm serverId={s.id} accent={accent} />}
+          {openRhythm === s.id && (
+            <ServerRhythm serverId={s.id} accent={accent} livePlayers={s.players} />
+          )}
         </div>
       ))}
       <div style={{ ...S.muted, marginTop: 6 }}>
