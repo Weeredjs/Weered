@@ -1,6 +1,6 @@
 import { swallow } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
-import { fetchPublic } from "../lib/publicFetch";
+import { fetchSafe } from "../lib/ssrfGuard";
 import { fetchWithTimeout } from "../lib/fetchWithTimeout";
 import { prisma } from "../lib/prisma";
 
@@ -200,7 +200,7 @@ export default async function activityRoutes(app: FastifyInstance, opts: Opts) {
       // loopback, private and cloud-metadata addresses, and re-checks every
       // redirect — "follow" would otherwise let a public URL bounce the
       // droplet into its own network.
-      const res = await fetchPublic(
+      const res = await fetchSafe(
         url,
         {
           headers: {
@@ -210,6 +210,10 @@ export default async function activityRoutes(app: FastifyInstance, opts: Opts) {
           },
         },
         4000,
+        // A link preview has no business on port 22 or 6379; restricting to the
+        // web ports also removes most of this endpoint's value as a port
+        // scanner. Not the default in the guard, because CRCON links need it off.
+        { webPortsOnly: true },
       );
 
       if (!res.ok) return reply.send({ ok: false });
