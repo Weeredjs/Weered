@@ -3,6 +3,8 @@
 import React, { useEffect, useMemo, useState } from "react";
 import ModuleTabBar from "./ModuleTabBar";
 
+import ServerRhythm from "./hll/ServerRhythm";
+
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 const ACCENT = "#BFA46F"; // brass over field-grey — HLL's palette
 
@@ -378,6 +380,7 @@ function ServerPicker({
 // ---- Front Lines (server browser) ------------------------------------------
 
 function FrontLines({ accent, onGo }: { accent: string; onGo?: (tab: string) => void }) {
+  const [openRhythm, setOpenRhythm] = React.useState<string | null>(null);
   const [servers, setServers] = useState<BmServer[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [region, setRegion] = useState<string>("ALL");
@@ -562,18 +565,19 @@ function FrontLines({ accent, onGo }: { accent: string; onGo?: (tab: string) => 
             <FillBar players={s.players} max={s.maxPlayers} accent={accent} />
           </div>
           <div style={{ ...S.row, justifyContent: "flex-end", gap: 8 }}>
-            <a
-              href={`https://www.battlemetrics.com/servers/hll?q=${encodeURIComponent(s.name.slice(0, 60))}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{ ...S.btnQuiet, textDecoration: "none" }}
+            {/* Was an outbound BattleMetrics link — we were sending our own
+                members to a tracker for data we now hold ourselves. */}
+            <button
+              style={S.btnQuiet}
+              onClick={() => setOpenRhythm(openRhythm === s.id ? null : s.id)}
             >
-              BattleMetrics
-            </a>
+              {openRhythm === s.id ? "Hide rhythm" : "Rhythm"}
+            </button>
             <button style={S.btnQuiet} onClick={() => copyName(s)}>
               {copied === s.id ? "Copied. Search it in-game" : "Copy name"}
             </button>
           </div>
+          {openRhythm === s.id && <ServerRhythm serverId={s.id} accent={accent} />}
         </div>
       ))}
       <div style={{ ...S.muted, marginTop: 6 }}>
