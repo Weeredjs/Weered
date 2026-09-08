@@ -148,7 +148,7 @@ export default async function gameServerRoutes(app: FastifyInstance) {
     return reply.send({
       ok: true,
       aliveAt: ALIVE_AT,
-      servers: rows.map((s) => ({ ...s, needs: ALIVE_AT - s.players })),
+      servers: rows.map((s: (typeof rows)[number]) => ({ ...s, needs: ALIVE_AT - s.players })),
     });
   });
 }
