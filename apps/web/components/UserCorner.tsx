@@ -536,7 +536,12 @@ export default function UserCorner() {
           style={{
             position: "absolute",
             inset: 0,
-            background: "linear-gradient(180deg, rgba(0,0,0,0) 30%, rgba(0,0,0,.55) 100%)",
+            background:
+              // Bottom third goes nearly solid: the tier SVG carries a glow
+              // rect that sat behind the notoriety bar and read as an opaque
+              // pill. Darkening the band the bar occupies kills it without
+              // moving the bar out of the header or masking it with a panel.
+              "linear-gradient(180deg, rgba(0,0,0,0) 28%, rgba(0,0,0,.55) 62%, rgba(10,10,16,.92) 100%)",
             pointerEvents: "none",
           }}
         />
@@ -604,26 +609,26 @@ export default function UserCorner() {
             the crew line below, and it sat on top of the ID strip — the dark
             fill and 4px backdrop blur were hiding that overlap rather than
             avoiding it. Once the fill came off, the collision was visible. */}
-      </div>
-
-      <div
-        className="weered-uc-notoriety"
-        style={{
-          padding: "0 12px 6px",
-          paddingLeft: 78,
-          // Flat, and — more importantly — the bar no longer sits ON the tier
-          // banner. That banner's background is /brand/tiers/<tier>.svg, a
-          // 600x150 artwork carrying its own glow rect; scaled to cover a
-          // 64px strip, that glow read as an opaque pill sitting behind the
-          // progress bar. Nothing was drawing a pill — the artwork was.
-          background: "transparent",
-          border: "none",
-          boxShadow: "none",
-          // Sits below the banner now, on the flat card body.
-          marginTop: -2,
-        }}
-      >
-        <NotorietyBar compact />
+        <div
+          className="weered-uc-notoriety"
+          style={{
+            position: "absolute",
+            left: 0,
+            right: 0,
+            bottom: 0,
+            padding: "0 12px 6px",
+            paddingLeft: 78,
+            // Stays in the header. The tier SVG behind it carries a glow rect
+            // that read as an opaque pill; the banner scrim above is now nearly
+            // solid across this band, which kills it without moving the bar or
+            // masking it with a panel of its own.
+            background: "transparent",
+            border: "none",
+            boxShadow: "none",
+          }}
+        >
+          <NotorietyBar compact />
+        </div>
       </div>
 
       <div

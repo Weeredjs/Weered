@@ -1322,8 +1322,11 @@ html[data-weered-chrome="min"] .weered-usercorner .weered-uc-action {
 /* =====================================================================
    HQ USER CORNER — remove the avatar 'depth bar' (notoriety strip)
    ===================================================================== */
+/* The notoriety strip is shown on every chrome now. It was hidden here because
+   it sat on the tier banner artwork and read as a panel; the banner scrim was
+   deepened instead, so there is nothing left to hide from. */
 html[data-weered-chrome="min"] .weered-usercorner .weered-uc-notoriety {
-  display: none !important;
+  display: flex !important;
 }
 /* Reclaim the left gutter that was reserved for the notoriety strip */
 html[data-weered-chrome="min"] .weered-usercorner > div:nth-of-type(2) {
