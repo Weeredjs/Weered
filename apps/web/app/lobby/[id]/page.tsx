@@ -1130,23 +1130,34 @@ export default function LobbyIdPage() {
                       marginLeft: "auto",
                       padding: "5px 12px",
                       borderRadius: 7,
-                      border: "1px solid rgba(255,255,255,.08)",
-                      background: "rgba(255,255,255,.04)",
+                      // Was 60%-opacity slate on a 4% white fill — it read as
+                      // disabled text rather than the way into running the
+                      // place. Now it takes the accent-outline treatment the
+                      // forum uses, so it carries each lobby's own colour and
+                      // is legible without shouting over the tabs beside it.
+                      border: "1px solid var(--weered-accent-1, #7c3aed)",
+                      background: "var(--weered-accent-bg, rgba(124,58,237,.14))",
                       fontSize: 11,
-                      color: "rgba(148,163,184,.6)",
+                      fontWeight: 700,
+                      letterSpacing: ".04em",
+                      color: "var(--weered-accent-2, #a78bfa)",
                       textDecoration: "none",
                       display: "flex",
                       alignItems: "center",
                       gap: 5,
-                      transition: "background .15s, border-color .15s",
+                      transition: "background .15s, border-color .15s, box-shadow .15s",
                     }}
                     onMouseEnter={(e) => {
-                      (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.08)";
-                      (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,.14)";
+                      const el = e.currentTarget as HTMLElement;
+                      el.style.background = "var(--weered-accent-1, #7c3aed)";
+                      el.style.color = "#0b0b0f";
+                      el.style.boxShadow = "0 0 0 3px var(--weered-accent-bg, rgba(124,58,237,.2))";
                     }}
                     onMouseLeave={(e) => {
-                      (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.04)";
-                      (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,.08)";
+                      const el = e.currentTarget as HTMLElement;
+                      el.style.background = "var(--weered-accent-bg, rgba(124,58,237,.14))";
+                      el.style.color = "var(--weered-accent-2, #a78bfa)";
+                      el.style.boxShadow = "none";
                     }}
                   >
                     ⚙ Admin
