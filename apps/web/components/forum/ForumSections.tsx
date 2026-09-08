@@ -81,8 +81,8 @@ export default function SectionSidebar({
             marginTop: 8,
             padding: "8px 10px",
             borderRadius: 6,
-            background: "rgba(124,58,237,.12)",
-            border: "1px dashed rgba(124,58,237,.4)",
+            background: "var(--weered-accent-bg, rgba(124,58,237,.12))",
+            border: "1px dashed var(--weered-border2, rgba(124,58,237,.4))",
             color: "rgba(167,139,250,.85)",
             fontSize: 11,
             fontWeight: 700,
@@ -178,7 +178,9 @@ function SectionRow({
         padding: "8px 10px",
         borderRadius: 6,
         background: active ? "rgba(124,58,237,.18)" : "transparent",
-        border: active ? "1px solid rgba(124,58,237,.35)" : "1px solid transparent",
+        border: active
+          ? "1px solid var(--weered-border2, rgba(124,58,237,.35))"
+          : "1px solid transparent",
         color: active ? "#fff" : "rgba(255,255,255,.65)",
         cursor: "pointer",
         fontFamily: "inherit",
@@ -503,7 +505,7 @@ export function SectionManageModal({
               style={{
                 padding: "7px 18px",
                 borderRadius: 8,
-                border: "1px solid rgba(124,58,237,.4)",
+                border: "1px solid var(--weered-border2, rgba(124,58,237,.4))",
                 background: "rgba(124,58,237,.3)",
                 color: "#fff",
                 fontSize: 12,

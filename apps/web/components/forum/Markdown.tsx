@@ -27,7 +27,7 @@ function renderInline(s: string): string {
   out = out.replace(
     /\[([^\]]+)\]\(([^)\s]+)\)/g,
     (_m, text: string, url: string) =>
-      `<a href="${safeUrl(url)}" target="_blank" rel="noopener noreferrer" style="color:#a78bfa;text-decoration:underline;">${text}</a>`,
+      `<a href="${safeUrl(url)}" target="_blank" rel="noopener noreferrer" style="color:var(--weered-accent-2, #a78bfa);text-decoration:underline;">${text}</a>`,
   );
   out = out.replaceAll(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
   out = out.replaceAll(/__([^_]+)__/g, "<strong>$1</strong>");
@@ -103,7 +103,7 @@ export function renderMarkdown(md: string): string {
       flushList();
       const text = ln.replace(/^>\s?/, "");
       out.push(
-        `<blockquote style="border-left:3px solid rgba(167,139,250,.4);padding:4px 12px;margin:6px 0;color:rgba(229,231,235,.7);">${renderInline(text)}</blockquote>`,
+        `<blockquote style="border-left:3px solid var(--weered-border2, rgba(167,139,250,.4));padding:4px 12px;margin:6px 0;color:rgba(229,231,235,.7);">${renderInline(text)}</blockquote>`,
       );
       i++;
       continue;

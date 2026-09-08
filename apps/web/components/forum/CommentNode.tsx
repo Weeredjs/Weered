@@ -46,7 +46,7 @@ export type NodeCtx = {
   hoverClose: (ms: number) => void;
 };
 
-const ACCENT = "#a78bfa";
+const ACCENT = "var(--weered-accent-2, #a78bfa)";
 const META: React.CSSProperties = {
   background: "none",
   border: "none",
@@ -134,8 +134,10 @@ export default function CommentNode({ c, ctx }: { c: CommentT; ctx: NodeCtx }) {
           gap: 10,
           padding: "10px 12px",
           borderRadius: 10,
-          background: highlighted ? "rgba(167,139,250,.09)" : "rgba(255,255,255,.02)",
-          border: `1px solid ${highlighted ? "rgba(167,139,250,.35)" : "rgba(255,255,255,.04)"}`,
+          background: highlighted
+            ? "var(--weered-accent-bg, rgba(167,139,250,.09))"
+            : "rgba(255,255,255,.02)",
+          border: `1px solid ${highlighted ? "var(--weered-border2, rgba(167,139,250,.35))" : "rgba(255,255,255,.04)"}`,
           transition: "background .4s, border-color .4s",
         }}
       >
@@ -298,8 +300,10 @@ export default function CommentNode({ c, ctx }: { c: CommentT; ctx: NodeCtx }) {
                   onClick={send}
                   disabled={!draft.trim() || sending}
                   style={{
-                    background: draft.trim() ? "rgba(167,139,250,.18)" : "rgba(255,255,255,.05)",
-                    border: "1px solid rgba(167,139,250,.3)",
+                    background: draft.trim()
+                      ? "var(--weered-border2, rgba(167,139,250,.18))"
+                      : "rgba(255,255,255,.05)",
+                    border: "1px solid var(--weered-border2, rgba(167,139,250,.3))",
                     borderRadius: 8,
                     color: draft.trim() ? ACCENT : "rgba(255,255,255,.25)",
                     fontFamily: "inherit",

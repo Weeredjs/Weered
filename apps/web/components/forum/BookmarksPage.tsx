@@ -72,7 +72,7 @@ export default function BookmarksPage() {
         style={{
           background: "none",
           border: "none",
-          color: "rgba(167,139,250,.6)",
+          color: "var(--weered-accent-2, #a78bfa)",
           fontSize: 12,
           cursor: "pointer",
           fontFamily: "inherit",

@@ -616,39 +616,10 @@ export default function UserCorner() {
           )}
         </div>
 
-        {primaryCrew?.tag &&
-          (() => {
-            const ca =
-              primaryCrew.accentColor && /^#[0-9a-f]{6}$/i.test(primaryCrew.accentColor)
-                ? primaryCrew.accentColor
-                : cardAccent;
-            return (
-              <a
-                href={`/crew/${encodeURIComponent(primaryCrew.id)}`}
-                title={primaryCrew.name || ""}
-                style={{
-                  position: "absolute",
-                  top: 8,
-                  right: lobbyLogo ? 40 : 10,
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 5,
-                  padding: "3px 8px",
-                  fontFamily: "ui-monospace, 'JetBrains Mono', monospace",
-                  fontSize: 10,
-                  fontWeight: 900,
-                  letterSpacing: "1.2px",
-                  color: ca,
-                  // No box: the tag is type, not a chip. The blurred pill read
-                  // as a smudge once a pale accent was in play.
-                  textDecoration: "none",
-                }}
-              >
-                [{primaryCrew.tag}]
-              </a>
-            );
-          })()}
-
+        {/* The top-right crew badge is gone. It duplicated the [TAG] already in
+            the crew line below, and it sat on top of the ID strip — the dark
+            fill and 4px backdrop blur were hiding that overlap rather than
+            avoiding it. Once the fill came off, the collision was visible. */}
         <div
           className="weered-uc-notoriety"
           style={{
@@ -844,6 +815,14 @@ export default function UserCorner() {
           {primaryCrew?.name && (
             <div
               className="weered-uc-crew-line"
+              onFocus={(e) => {
+                e.currentTarget.style.outline = "none";
+                e.currentTarget.style.textDecoration = "underline";
+                e.currentTarget.style.textUnderlineOffset = "3px";
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.textDecoration = "none";
+              }}
               onClick={(e) => {
                 e.stopPropagation();
                 try {

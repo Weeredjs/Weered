@@ -284,7 +284,7 @@ export default function PostDetail({
             borderRadius: 8,
             background: "rgba(255,255,255,.06)",
             border: "1px solid rgba(255,255,255,.1)",
-            color: "rgba(167,139,250,.8)",
+            color: "var(--weered-accent-2, #a78bfa)",
             fontSize: 12,
             cursor: "pointer",
             fontFamily: "inherit",
@@ -313,7 +313,7 @@ export default function PostDetail({
           style={{
             background: "none",
             border: "none",
-            color: "rgba(167,139,250,.6)",
+            color: "var(--weered-accent-2, #a78bfa)",
             fontSize: 12,
             cursor: "pointer",
             fontFamily: "inherit",
@@ -353,7 +353,8 @@ export default function PostDetail({
               border: "none",
               cursor: "pointer",
               padding: 4,
-              color: post.myVote === 1 ? "#a78bfa" : "rgba(255,255,255,.25)",
+              color:
+                post.myVote === 1 ? "var(--weered-accent-2, #a78bfa)" : "rgba(255,255,255,.25)",
               fontSize: 16,
             }}
           >
@@ -364,7 +365,11 @@ export default function PostDetail({
               fontSize: 14,
               fontWeight: 900,
               color:
-                post.score > 0 ? "#a78bfa" : post.score < 0 ? "#ef4444" : "rgba(255,255,255,.4)",
+                post.score > 0
+                  ? "var(--weered-accent-2, #a78bfa)"
+                  : post.score < 0
+                    ? "#ef4444"
+                    : "rgba(255,255,255,.4)",
             }}
           >
             {post.score}
@@ -588,8 +593,8 @@ export default function PostDetail({
                 style={{
                   padding: "6px 14px",
                   borderRadius: 8,
-                  border: "1px solid rgba(124,58,237,.35)",
-                  background: "rgba(124,58,237,.25)",
+                  border: "1px solid var(--weered-border2, rgba(124,58,237,.35))",
+                  background: "var(--weered-accent-bg, rgba(124,58,237,.25))",
                   color: "#fff",
                   fontSize: 12,
                   fontWeight: 700,

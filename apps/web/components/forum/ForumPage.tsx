@@ -337,8 +337,8 @@ export default function ForumPage({
               style={{
                 padding: "8px 16px",
                 borderRadius: 8,
-                background: "linear-gradient(135deg, rgba(124,58,237,.7), rgba(167,139,250,.5))",
-                border: "1px solid rgba(124,58,237,.4)",
+                background: "linear-gradient(135deg, var(--weered-accent-1, #7c3aed), var(--weered-accent-2, #a78bfa))",
+                border: "1px solid var(--weered-border2, rgba(124,58,237,.4))",
                 color: "#fff",
                 fontSize: 12,
                 fontWeight: 700,
@@ -398,7 +398,7 @@ export default function ForumPage({
             style={{
               padding: "0 14px",
               borderRadius: 8,
-              border: "1px solid rgba(124,58,237,.4)",
+              border: "1px solid var(--weered-border2, rgba(124,58,237,.4))",
               background: "rgba(124,58,237,.3)",
               color: "#fff",
               fontSize: 11,
@@ -443,7 +443,7 @@ export default function ForumPage({
                   fontFamily: "inherit",
                   background:
                     sort === s.id
-                      ? "linear-gradient(135deg, rgba(124,58,237,.7), rgba(167,139,250,.45))"
+                      ? "linear-gradient(135deg, var(--weered-accent-1, #7c3aed), var(--weered-accent-2, #a78bfa))"
                       : "transparent",
                   color: sort === s.id ? "#fff" : "rgba(255,255,255,.45)",
                   transition: "all 0.15s",
@@ -621,7 +621,7 @@ export default function ForumPage({
                   style={{
                     padding: "7px 18px",
                     borderRadius: 8,
-                    border: "1px solid rgba(124,58,237,.4)",
+                    border: "1px solid var(--weered-border2, rgba(124,58,237,.4))",
                     background: "rgba(124,58,237,.3)",
                     color: "#fff",
                     fontSize: 12,
@@ -758,7 +758,7 @@ export default function ForumPage({
                         border: "none",
                         cursor: "pointer",
                         padding: 2,
-                        color: post.myVote === 1 ? "#a78bfa" : "rgba(255,255,255,.25)",
+                        color: post.myVote === 1 ? "var(--weered-accent-2, #a78bfa)" : "rgba(255,255,255,.25)",
                         fontSize: 14,
                         lineHeight: 1,
                       }}
@@ -771,7 +771,7 @@ export default function ForumPage({
                         fontWeight: 800,
                         color:
                           post.score > 0
-                            ? "#a78bfa"
+                            ? "var(--weered-accent-2, #a78bfa)"
                             : post.score < 0
                               ? "#ef4444"
                               : "rgba(255,255,255,.4)",
@@ -836,7 +836,7 @@ export default function ForumPage({
                                 ? `${post.lobby.accentColor}1f`
                                 : "rgba(124,58,237,.16)",
                               color: post.lobby.accentColor || "rgba(196,181,253,.95)",
-                              border: `1px solid ${post.lobby.accentColor ? post.lobby.accentColor + "55" : "rgba(124,58,237,.4)"}`,
+                              border: `1px solid ${post.lobby.accentColor ? post.lobby.accentColor + "55" : "var(--weered-border2, rgba(124,58,237,.4))"}`,
                             }}
                           >
                             {post.lobby.logoUrl && (
@@ -865,7 +865,7 @@ export default function ForumPage({
                               whiteSpace: "nowrap",
                               background: "rgba(124,58,237,.16)",
                               color: "rgba(196,181,253,.95)",
-                              border: "1px solid rgba(124,58,237,.4)",
+                              border: "1px solid var(--weered-border2, rgba(124,58,237,.4))",
                             }}
                           >
                             Weered
@@ -921,8 +921,8 @@ export default function ForumPage({
                             padding: "1px 6px",
                             borderRadius: 4,
                             background: "rgba(255,255,255,.04)",
-                            color: "rgba(167,139,250,.75)",
-                            border: "1px solid rgba(167,139,250,.18)",
+                            color: "var(--weered-accent-2, #a78bfa)",
+                            border: "1px solid var(--weered-border2, rgba(167,139,250,.18))",
                           }}
                         >
                           #{t}

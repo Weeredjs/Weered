@@ -325,7 +325,7 @@ export default function MarkdownComposer({
       )}
 
       {(error || uploading) && (
-        <div style={{ fontSize: 11, color: error ? "#f87171" : "rgba(167,139,250,.8)" }}>
+        <div style={{ fontSize: 11, color: error ? "#f87171" : "var(--weered-accent-2, #a78bfa)" }}>
           {error || "Uploading image..."}
         </div>
       )}
