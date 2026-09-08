@@ -87,7 +87,11 @@ export default async function hllRoutes(app: FastifyInstance, opts: Opts = {}) {
     cache.set(key, { data, expiresAt: Date.now() + ttlMs });
   }
 
-  async function jget(url: string, headers: Record<string, string> = {}): Promise<any | null> {
+  async function jget(
+    url: string,
+    headers: Record<string, string> = {},
+    timeoutMs = 8000,
+  ): Promise<any | null> {
     try {
       // Bounded upstream call; expected failures (rate-limit / 5xx / network)
       // degrade to null and the route serves stale/empty cache.
@@ -97,7 +101,7 @@ export default async function hllRoutes(app: FastifyInstance, opts: Opts = {}) {
           "User-Agent": "Weered/1.0 (https://weered.ca)",
           ...headers,
         },
-        signal: AbortSignal.timeout(8000),
+        signal: AbortSignal.timeout(timeoutMs),
       });
       if (res.status === 429) {
         log.warn("[hll] rate limited", url.split("?")[0]);
@@ -137,8 +141,13 @@ export default async function hllRoutes(app: FastifyInstance, opts: Opts = {}) {
   async function fetchSteamServers(): Promise<BmServer[]> {
     const key = process.env.STEAM_API_KEY || "";
     if (!key) return [];
+    // 25s, not the default 8s: the full list is a slow call and an 8s abort was
+    // silently emptying the browser (observed 2026-09-08 — every request logged
+    // "fetch failed: aborted due to timeout" and the lobby showed 0 servers).
     const j = await jget(
       `https://api.steampowered.com/IGameServersService/GetServerList/v1/?key=${key}&filter=%5Cappid%5C${STEAM_APP_ID}&limit=1000`,
+      {},
+      25_000,
     );
     const rows: any[] = Array.isArray(j?.response?.servers) ? j.response.servers : [];
     return rows
@@ -168,10 +177,39 @@ export default async function hllRoutes(app: FastifyInstance, opts: Opts = {}) {
     if (hit) return hit;
     let rows = await fetchSteamServers();
     if (!rows.length) {
-      const j = await jget(
-        `${BM_BASE}/servers?filter[game]=hll&filter[status]=online&sort=-players&page[size]=100`,
-      );
-      rows = Array.isArray(j?.data) ? j.data.map(mapBmServer).filter(Boolean) : [];
+      // Fall back to OUR OWN history rather than BattleMetrics, which now 403s
+      // every route behind a subscription and was a fallback in name only. The
+      // aggregate is at most one poll (10 min) behind and never refuses us.
+      try {
+        const own = await prisma.gameServer.findMany({
+          where: { appId: STEAM_APP_ID, online: true },
+          orderBy: { players: "desc" },
+          take: 120,
+          select: {
+            id: true,
+            name: true,
+            players: true,
+            maxPlayers: true,
+            map: true,
+            region: true,
+            country: true,
+          },
+        });
+        rows = own.map((s) => ({
+          id: s.id,
+          name: s.name,
+          players: s.players,
+          maxPlayers: s.maxPlayers,
+          map: s.map,
+          country: s.country,
+          region: s.region as any,
+          rank: null,
+          status: "online",
+        })) as BmServer[];
+        if (rows.length) log.info(`[hll] steam empty — served ${rows.length} from the aggregate`);
+      } catch (e) {
+        swallow(e);
+      }
     }
     if (rows.length) cacheSet("servers", rows, 60_000);
     return rows.length ? rows : cacheGet("servers-stale") || [];
