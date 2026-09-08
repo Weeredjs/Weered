@@ -92,13 +92,14 @@ export default async function gameServerRoutes(app: FastifyInstance) {
       if (!server) return reply.code(404).send({ ok: false, error: "unknown_server" });
 
       const rows = await prisma.$queryRaw<
-        { dow: number; hour: number; avg: number; peak: number; n: number }[]
+        { dow: number; hour: number; avg: number; peak: number; n: number; days: number }[]
       >`
-        SELECT EXTRACT(DOW  FROM "at")::int AS dow,
-               EXTRACT(HOUR FROM "at")::int AS hour,
-               ROUND(AVG("players"))::int   AS avg,
-               MAX("players")::int          AS peak,
-               COUNT(*)::int                AS n
+        SELECT EXTRACT(DOW  FROM "at")::int        AS dow,
+               EXTRACT(HOUR FROM "at")::int        AS hour,
+               ROUND(AVG("players"))::int          AS avg,
+               MAX("players")::int                 AS peak,
+               COUNT(*)::int                       AS n,
+               COUNT(DISTINCT ("at")::date)::int   AS days
         FROM "GameServerSample"
         WHERE "serverId" = ${id}
         GROUP BY 1, 2
@@ -108,9 +109,17 @@ export default async function gameServerRoutes(app: FastifyInstance) {
       const now = new Date();
       const bucket = rows.find((r) => r.dow === now.getUTCDay() && r.hour === now.getUTCHours());
 
-      // Enough history to say anything? Two observations of one hour is not a
-      // pattern, and presenting it as one would be worse than saying nothing.
-      const confident = !!bucket && bucket.n >= 6;
+      // Confidence counts DISTINCT DAYS, not samples. Polling every ten
+      // minutes puts 6 samples in a bucket after a single hour on a single
+      // day, so a sample-count threshold declares a pattern from one Tuesday —
+      // exactly what this guard exists to prevent.
+      //
+      // A (weekday, hour) bucket only gains a day per WEEK, so three days is
+      // three weeks of watching. Below that the average is still real, it just
+      // is not "normally" — the caller gets `days` and says "so far" instead.
+      const days = bucket?.days ?? 0;
+      const confident = !!bucket && days >= 3;
+      const provisional = !!bucket && days > 0 && days < 3;
 
       return reply.send({
         ok: true,
@@ -121,7 +130,11 @@ export default async function gameServerRoutes(app: FastifyInstance) {
           typical: confident ? bucket!.avg : null,
           peakSeen: confident ? bucket!.peak : null,
           samples: bucket?.n ?? 0,
+          days,
           confident,
+          // One or two days of readings: real, but not yet "typical".
+          provisional,
+          observed: provisional ? bucket!.avg : null,
           // Signed, so a caller can say "busier than usual" without recomputing.
           delta: confident ? server.players - bucket!.avg : null,
         },

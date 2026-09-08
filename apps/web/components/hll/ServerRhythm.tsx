@@ -23,7 +23,10 @@ type Rhythm = {
     typical: number | null;
     peakSeen: number | null;
     samples: number;
+    days: number;
     confident: boolean;
+    provisional: boolean;
+    observed: number | null;
     delta: number | null;
   };
 };
@@ -80,6 +83,19 @@ export default function ServerRhythm({
     >
       {d.now.confident ? (
         <Verdict now={d.now} players={players} accent={accent} />
+      ) : d.now.provisional ? (
+        // One or two days of readings for this hour. Real, and worth showing —
+        // but a (weekday, hour) bucket only gains a day per week, so calling it
+        // "normally" off a single Tuesday would be a lie with a number on it.
+        <div style={{ fontSize: 12.5, lineHeight: 1.55, color: "rgba(226,232,240,.8)" }}>
+          <strong style={{ fontSize: 15, color: "rgba(236,242,250,.98)" }}>{players}</strong> on
+          now. On the {d.now.days === 1 ? "one day" : `${d.now.days} days`} we have watched this
+          hour it averaged <strong>{d.now.observed}</strong>.
+          <div style={{ marginTop: 4, fontSize: 11, opacity: 0.6 }}>
+            Not a pattern yet — this hour needs a few weeks before &ldquo;normally&rdquo; means
+            anything.
+          </div>
+        </div>
       ) : (
         // The honest state, and the common one in the first fortnight. Saying
         // "not yet" is better than averaging two samples and calling it normal.
