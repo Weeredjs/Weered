@@ -1,12 +1,13 @@
 // Weered Service Worker — caching + push notifications
 //
+// v11: never cache non-200 responses (see fetch handler).
 // v8: HTML is no longer cached. Only fingerprinted static assets from
 // /_next/static/ (immutable by design) and /brand/ images get cached.
 // Navigation requests always hit the network so a fresh build's chunk
 // hashes arrive together with the HTML that references them. Earlier
 // versions pre-cached /home and /lobby and used cache-fallback navigation
 // — that caused soft-refresh to serve stale HTML pointing at dead chunks.
-const CACHE = "weered-v10";
+const CACHE = "weered-v11";
 
 // ── Install: take over immediately; nothing to pre-cache.
 self.addEventListener("install", () => {
@@ -40,8 +41,16 @@ self.addEventListener("fetch", (event) => {
         (cached) =>
           cached ||
           fetch(event.request).then((res) => {
-            const clone = res.clone();
-            caches.open(CACHE).then((c) => c.put(event.request, clone));
+            // v11: only cache real 200s. A 502 during a deploy restart (or a 400/404
+            // for a chunk that no longer exists) used to be stored under the chunk
+            // URL and served forever on every soft refresh: an HTML error body
+            // evaluated as JavaScript, "Application error: a client-side exception",
+            // until the cache was cleared. Hard refresh bypasses the worker, which
+            // is why it always looked like a fix.
+            if (res.ok && res.type === "basic") {
+              const clone = res.clone();
+              caches.open(CACHE).then((c) => c.put(event.request, clone));
+            }
             return res;
           }),
       ),
