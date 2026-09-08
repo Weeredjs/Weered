@@ -60,7 +60,6 @@ export default function SteamLobbyHeader({
             return "";
           }
         })();
-        if (!tok) return;
         const r = await fetch(`${API}/steam/owned/${encodeURIComponent(appId)}`, {
           cache: "no-store",
           headers: { Authorization: `Bearer ${tok}` },

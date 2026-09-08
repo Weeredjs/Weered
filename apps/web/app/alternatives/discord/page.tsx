@@ -36,7 +36,7 @@ const faqLd = {
       name: "Is Weered free like Discord?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "Yes. Weered is free to use. Premium tiers exist for extras like custom flair and storage, starting at $4/month, but the core platform (lobbies, rooms, voice, presence, integrations) is free.",
+        text: "Yes. Joining Weered and using it is free: lobbies, rooms, voice, video, presence and the game integrations. Running your own lobby is a paid tier at $6 a month. A fully custom lobby, with your bots rebuilt as native features and your own branding, is quoted separately by community size.",
       },
     },
     {
@@ -222,8 +222,9 @@ export default function AlternativesDiscordPage() {
             <h2 className="mkt-h2">Common questions</h2>
             <h3 className="mkt-h3">Is Weered free like Discord?</h3>
             <p className="mkt-p">
-              Yes. Premium tiers exist for cosmetics + storage starting at $4 / month, but the core
-              platform (lobbies, rooms, voice, presence, game integrations) is free.
+              Yes. Joining and using Weered is free. Running your own lobby is a paid tier at $6 a
+              month, and a fully custom build is quoted separately. The core platform (lobbies,
+              rooms, voice, presence, game integrations) is free.
             </p>
             <h3 className="mkt-h3">Do I have to host a server?</h3>
             <p className="mkt-p">
@@ -241,6 +242,29 @@ export default function AlternativesDiscordPage() {
               Yes. Group voice in every room. Push-to-talk, voice activity, listen-only modes,
               ducking, the works.
             </p>
+          </div>
+        </section>
+
+        <section className="mkt-section">
+          <div className="mkt-wrap">
+            <h2 className="mkt-h2">If you got here for a more specific reason</h2>
+            <ul className="mkt-bullet-list">
+              <li>
+                <strong>
+                  <Link href="/alternatives/guilded">You came from Guilded.</Link>
+                </strong>{" "}
+                Roblox shut it down on December 19, 2025. What replaced each thing you had.
+              </li>
+              <li>
+                <strong>
+                  <Link href="/alternativas/discord-brasil" hrefLang="pt-BR">
+                    Você está no Brasil e o vídeo do Discord parou.
+                  </Link>
+                </strong>{" "}
+                Câmera, tela e Go Live estão suspensos desde 17 de agosto de 2026 por determinação
+                da ANPD. O que foi bloqueado e o que fazer.
+              </li>
+            </ul>
           </div>
         </section>
 

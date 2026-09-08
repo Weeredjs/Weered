@@ -389,3 +389,51 @@ html[data-weered-theme="ishimura"] .weered-rr-mod-panel button.weered-rr-destroy
   filter: none !important;
   box-shadow: none !important;
 }
+
+/* Comparison table. Real markup rather than an image, because the whole point
+   of a page like this is that a search engine can read the mapping.
+   The two columns are deliberately not equal weight: what you LOST is set in
+   the muted body colour, what you GET is set in full-strength ink, so the
+   argument is legible before a word of it is read. */
+.mkt-table-wrap {
+  overflow-x: auto;
+  margin: 20px 0 6px;
+  -webkit-overflow-scrolling: touch;
+}
+.mkt-table {
+  width: 100%;
+  min-width: 540px;
+  border-collapse: collapse;
+  font-size: 15px;
+}
+.mkt-table th {
+  text-align: left;
+  padding: 10px 14px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(203, 213, 225, 0.6);
+  border-bottom: 1px solid rgba(124, 58, 237, 0.35);
+  white-space: nowrap;
+}
+.mkt-table td {
+  padding: 12px 14px;
+  vertical-align: top;
+  line-height: 1.5;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.055);
+}
+.mkt-table tr:last-child td {
+  border-bottom: 0;
+}
+.mkt-table td:first-child {
+  color: rgba(203, 213, 225, 0.58);
+  width: 42%;
+}
+.mkt-table td:last-child {
+  color: rgba(245, 245, 250, 0.93);
+}
+.mkt-table strong {
+  color: rgba(245, 245, 250, 0.96);
+  font-weight: 600;
+}

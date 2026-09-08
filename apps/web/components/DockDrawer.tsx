@@ -146,7 +146,7 @@ export default function DockDrawer() {
           isMobile
             ? {
                 position: "fixed",
-                top: 0,
+                top: "var(--wtb-h, 0px)",
                 right: 0,
                 bottom: 0,
                 left: 0,
@@ -164,7 +164,8 @@ export default function DockDrawer() {
               }
             : {
                 position: "fixed" as const,
-                top: 12,
+                // Under the desktop title bar (--wtb-h, 0px in a browser).
+                top: "calc(12px + var(--wtb-h, 0px))",
                 right: 12,
                 bottom: 12,
                 width: 420,

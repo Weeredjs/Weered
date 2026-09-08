@@ -162,6 +162,12 @@ try {
   else if (location.pathname.indexOf('/lobby/') === 0
       && location.search.indexOf('chrome=full') < 0) {
     d.setAttribute('data-weered-chrome', 'min');
+    // Windrose is forced for every viewer (see the lobby page), so paint its
+    // skin before hydration too -- otherwise the demo lobby flashes min -> pirate
+    // on every hard load, which is the flash the min pre-paint exists to prevent.
+    if (location.pathname.indexOf('/lobby/windrose') === 0) {
+      d.setAttribute('data-weered-lobby', 'windrose');
+    }
   }
 } catch(e) {}
 `;

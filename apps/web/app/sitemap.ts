@@ -11,6 +11,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${BASE}/home`, lastModified: now, changeFrequency: "hourly", priority: 0.9 },
     { url: `${BASE}/about`, lastModified: now, changeFrequency: "monthly", priority: 0.7 },
     { url: `${BASE}/premium`, lastModified: now, changeFrequency: "monthly", priority: 0.7 },
+    { url: `${BASE}/pricing`, lastModified: now, changeFrequency: "monthly", priority: 0.8 },
     { url: `${BASE}/contact`, lastModified: now, changeFrequency: "monthly", priority: 0.5 },
     { url: `${BASE}/lobby`, lastModified: now, changeFrequency: "hourly", priority: 0.8 },
     { url: `${BASE}/explore`, lastModified: now, changeFrequency: "daily", priority: 0.6 },
@@ -41,6 +42,20 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       lastModified: now,
       changeFrequency: "weekly",
       priority: 0.8,
+    },
+    {
+      url: `${BASE}/alternatives/guilded`,
+      lastModified: now,
+      changeFrequency: "weekly",
+      priority: 0.8,
+    },
+    {
+      // Live regulatory situation with no announced end date, so it is worth
+      // recrawling more often than the evergreen comparison pages.
+      url: `${BASE}/alternativas/discord-brasil`,
+      lastModified: now,
+      changeFrequency: "daily",
+      priority: 0.9,
     },
     {
       url: `${BASE}/tournaments/destiny-2`,

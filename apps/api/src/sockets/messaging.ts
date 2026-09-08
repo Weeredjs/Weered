@@ -232,7 +232,7 @@ export async function handleChat(ws: any, msg: any, opts: Opts): Promise<void> {
     };
     room.msgs.push(m);
     if (room.msgs.length > 200) room.msgs.splice(0, room.msgs.length - 200);
-    if (room.roomId !== "lobby") {
+    {
       void prisma.roomMessage
         .create({
           data: {
@@ -304,6 +304,21 @@ export async function handleChat(ws: any, msg: any, opts: Opts): Promise<void> {
               };
               room.msgs.push(botMsg);
               if (room.msgs.length > 200) room.msgs.splice(0, room.msgs.length - 200);
+              // Persisted like any other message. userId "operator" has no User
+              // row behind it and RoomMessage.userId carries no foreign key, so
+              // this is safe; the hydrate path in roomState rebuilds the shape.
+              void prisma.roomMessage
+                .create({
+                  data: {
+                    id: botMsg.id,
+                    roomId: room.roomId,
+                    userId: "operator",
+                    userName: "The Operator",
+                    body: botMsg.body,
+                    ts: new Date(botMsg.ts),
+                  } as any,
+                })
+                .catch(swallow);
               broadcast(room, { type: "chat:new", roomId, msg: botMsg });
             }
           } catch (e) {
@@ -331,7 +346,7 @@ export async function handleChat(ws: any, msg: any, opts: Opts): Promise<void> {
     target.body = newBody;
     const editedAt = Date.now();
     target.editedAt = editedAt;
-    if (room.roomId !== "lobby") {
+    {
       void prisma.roomMessage
         .update({
           where: { id: msgId },
@@ -357,7 +372,7 @@ export async function handleChat(ws: any, msg: any, opts: Opts): Promise<void> {
     const deletedAt = Date.now();
     target.deletedAt = deletedAt;
     target.body = "";
-    if (room.roomId !== "lobby") {
+    {
       void prisma.roomMessage
         .update({
           where: { id: msgId },
@@ -916,7 +931,7 @@ export async function handleReactionToggle(
     const target = room.msgs.find((m: any) => m.id === msgId);
     if (!target || target.deletedAt) return;
 
-    if (room.roomId !== "lobby") {
+    {
       try {
         const existing = await prisma.reaction.findUnique({
           where: {
@@ -968,37 +983,6 @@ export async function handleReactionToggle(
       } catch (e) {
         log.error("[reaction:toggle]", e);
       }
-    } else {
-      target.reactions = target.reactions || [];
-      const existing = target.reactions.find((r: any) => r.emoji === emoji);
-      if (existing) {
-        if (existing.users.includes(ws.user!.id)) {
-          existing.users = existing.users.filter((u: any) => u !== ws.user!.id);
-          existing.count = Math.max(0, existing.count - 1);
-          if (existing.count === 0)
-            target.reactions = target.reactions.filter((r: any) => r.emoji !== emoji);
-        } else {
-          existing.users.push(ws.user!.id);
-          existing.count++;
-        }
-      } else {
-        if (target.reactions.length >= 20) {
-          send(ws, {
-            type: "reaction:rejected",
-            roomId: rId,
-            msgId,
-            reason: "Too many different reactions on this message.",
-          });
-          return;
-        }
-        target.reactions.push({ emoji, count: 1, users: [ws.user.id] });
-      }
-      broadcast(room, {
-        type: "reaction:changed",
-        roomId: rId,
-        msgId,
-        reactions: target.reactions,
-      });
     }
     return;
   }

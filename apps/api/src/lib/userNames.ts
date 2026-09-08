@@ -48,3 +48,38 @@ export function displayName(
 ): string {
   return (userId ? resolved.get(userId) : undefined) || storedName || "?";
 }
+
+/** Live name + avatar + avatarColor per user id, one query. Used to rebuild
+ *  message authors from the DB so a reload shows the same avatars the live
+ *  broadcast did; without it the backlog renders as letter circles. */
+export type UserProfileLite = { name: string; avatar: string | null; avatarColor: string | null };
+export async function resolveUserProfiles(
+  ids: Iterable<string>,
+): Promise<Map<string, UserProfileLite>> {
+  const unique = Array.from(new Set(Array.from(ids).filter(Boolean)));
+  const out = new Map<string, UserProfileLite>();
+  if (unique.length === 0) return out;
+  try {
+    const rows = await prisma.user.findMany({
+      where: { id: { in: unique } },
+      select: { id: true, name: true, avatar: true, avatarColor: true },
+    });
+    for (const r of rows) {
+      out.set(r.id, {
+        name: r.name || "",
+        avatar: r.avatar ?? null,
+        avatarColor: r.avatarColor ?? null,
+      });
+    }
+  } catch {
+    // Same contract as resolveUserNames: a lookup failure must not cost the messages.
+  }
+  return out;
+}
+
+/** Names-only view of resolveUserProfiles, for displayName(). */
+export function namesOf(profiles: Map<string, UserProfileLite>): Map<string, string> {
+  const m = new Map<string, string>();
+  for (const [id, p] of profiles) if (p.name) m.set(id, p.name);
+  return m;
+}

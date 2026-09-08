@@ -54,6 +54,11 @@ const NO_SHELL_ROUTES = [
   "/desktop",
   "/why-not-discord",
   "/alternatives",
+  // Portuguese sibling of /alternatives. Same page shape, same reason to be
+  // bare: a marketing page inside the app shell is clipped to the shell's
+  // height and does not scroll.
+  "/alternativas",
+  "/pricing",
   "/tournaments",
   "/play",
   "/compare",

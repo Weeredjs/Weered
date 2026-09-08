@@ -10,11 +10,15 @@ const tiers = [
     color: "#94a3b8",
     glow: "rgba(148,163,184,0.15)",
     border: "rgba(148,163,184,0.2)",
+    // These describe what the code actually allows. Voice, video and screen
+    // share carry no tier check anywhere in the API, and neither do username
+    // effects or avatar frames — so they are listed here, where they belong,
+    // rather than being sold a tier up.
     features: [
       "Full access to all public lobbies",
       "Join and create rooms",
-      "Lobby chat and presence",
-      "Standard username styling",
+      "Voice, video, and screen share",
+      "Username effects and avatar frames",
       "The feed. All of it.",
     ],
     cta: "You\u2019re already here.",
@@ -30,13 +34,15 @@ const tiers = [
     glow: "rgba(88,0,229,0.2)",
     border: "rgba(88,0,229,0.35)",
     badge: "most popular",
+    // The one thing this tier actually unlocks is creating a lobby at all:
+    // routes/lobbies.ts refuses lobby creation for INNOCENT with tier_required.
+    // Everything else here follows from owning that lobby.
     features: [
       "Everything in Innocent",
-      "Own 1 branded lobby",
+      "Run your own lobby — free accounts can't",
+      "Your own rooms, roles, and role icons",
+      "Branding: name, banner, logo, accent colour",
       "Forum moderation for your lobby",
-      "Colored username + custom icon",
-      "Custom fonts & text color in chat",
-      "Unlimited video streaming",
       "Early access to new features",
     ],
     cta: "Get Indicted",

@@ -110,7 +110,9 @@ export function ModulesTab({ lobby, onRefresh }: { lobby: LobbyData; onRefresh: 
         {msg && <span style={{ fontSize: 12, opacity: 0.7 }}>{msg}</span>}
       </div>
 
-      {/* Module-specific configuration, shown only for the lobby's own game. */}
+      {/* start.gg link: any lobby can follow a tournament, organizer or league. */}
+      <StartggEditor lobby={lobby} onRefresh={onRefresh} />
+
       {lobby.moduleType === "ASSETTOCORSA" && (
         <AcServersEditor lobby={lobby} onRefresh={onRefresh} />
       )}

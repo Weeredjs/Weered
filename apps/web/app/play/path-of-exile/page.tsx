@@ -48,7 +48,7 @@ const faqLd = {
       name: "Is it free?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "Yes. The PoE lobby, voice rooms, ladder, economy, and crew tools are all free. Premium tiers exist for cosmetics across the platform starting at $4 / month but the PoE-specific tools are free.",
+        text: "Yes. The PoE lobby, voice rooms, ladder, economy and crew tools are all free to use. Running your own lobby is a paid tier at $6 a month, but nothing PoE-specific sits behind it.",
       },
     },
   ],

@@ -741,6 +741,10 @@ export default function LobbyIdPage() {
     return () => window.removeEventListener("weered:settings", read);
   }, []);
 
+  // Windrose is a demo lobby and is FORCED: every viewer, member or not,
+  // whatever their keep-default setting. The other themeable lobbies keep the
+  // opt-in + member-only rule. If Windrose ever stops being a demo, replace
+  // this id check with a per-lobby takeover flag.
   const wantLobbyTheme =
     isForcedThemeLobby(lobbyId) ||
     (isThemeableLobby(lobbyId) && memberChecked && isMember && !keepDefaultTheme);
@@ -884,7 +888,10 @@ export default function LobbyIdPage() {
             display: "flex",
             flexDirection: "column",
             gap: 8,
-            height: "calc(100vh - 16px)",
+            // 16px is the shell's top padding. --wtb-h is the desktop title bar and
+            // --shell-footer-h the SiteFooter strip (both 0px in a plain browser);
+            // ignoring them pushed the chat composer's button row under the footer.
+            height: "calc(100vh - 16px - var(--wtb-h, 0px) - var(--shell-footer-h, 0px))",
             minHeight: 0,
             "--lobby-accent": accent || "#5800E5",
             "--lobby-accent-dim": accent ? `${accent}22` : "rgba(88,0,229,0.13)",
