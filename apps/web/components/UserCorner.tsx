@@ -595,25 +595,9 @@ export default function UserCorner() {
               </span>
             );
           })()}
-          {notorietyScore != null && (
-            <span
-              className="weered-uc-noto"
-              data-tooltip="Notoriety — your reputation XP. Climbs through Innocent, Indicted, Felon, Made Man, Kingpin as you contribute."
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 3,
-                color: "#D4A017",
-                letterSpacing: "0.06em",
-                pointerEvents: "auto",
-                cursor: "help",
-                position: "relative",
-              }}
-            >
-              <span style={{ fontSize: 11 }}>★</span>
-              {notorietyScore.toLocaleString()}
-            </span>
-          )}
+          {/* Notoriety score removed from this strip — it is repeated two rows
+              down on the progress bar itself, and the rank word beside it here
+              already carries the meaning. */}
         </div>
 
         {/* The top-right crew badge is gone. It duplicated the [TAG] already in
@@ -629,6 +613,11 @@ export default function UserCorner() {
             bottom: 0,
             padding: "0 12px 6px",
             paddingLeft: 78,
+            // Stated flat so no ancestor or theme can put a panel behind the
+            // bar. The track inside NotorietyBar is the only fill wanted here.
+            background: "transparent",
+            border: "none",
+            boxShadow: "none",
           }}
         >
           <NotorietyBar compact />
@@ -846,6 +835,11 @@ export default function UserCorner() {
                 cursor: "pointer",
                 overflow: "hidden",
                 whiteSpace: "nowrap",
+                background: "transparent",
+                border: "none",
+                boxShadow: "none",
+                outline: "none",
+                padding: 0,
               }}
             >
               {primaryCrew.tag && (
