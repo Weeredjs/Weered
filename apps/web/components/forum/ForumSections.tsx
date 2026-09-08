@@ -177,11 +177,9 @@ function SectionRow({
         gap: 8,
         padding: "8px 10px",
         borderRadius: 6,
-        background: active ? "rgba(124,58,237,.18)" : "transparent",
-        border: active
-          ? "1px solid var(--weered-border2, rgba(124,58,237,.35))"
-          : "1px solid transparent",
-        color: active ? "#fff" : "rgba(255,255,255,.65)",
+        background: active ? "var(--weered-accent-bg, rgba(124,58,237,.18))" : "transparent",
+        border: active ? "1px solid var(--weered-accent-1, #7c3aed)" : "1px solid transparent",
+        color: active ? "var(--weered-text, #fff)" : "rgba(255,255,255,.65)",
         cursor: "pointer",
         fontFamily: "inherit",
         fontSize: 12,

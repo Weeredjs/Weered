@@ -337,9 +337,13 @@ export default function ForumPage({
               style={{
                 padding: "8px 16px",
                 borderRadius: 8,
-                background: "linear-gradient(135deg, var(--weered-accent-1, #7c3aed), var(--weered-accent-2, #a78bfa))",
-                border: "1px solid var(--weered-border2, rgba(124,58,237,.4))",
-                color: "#fff",
+                // Outline, not a fill. A solid accent gradient was fine in
+                // purple and unreadable the moment a lobby's accent was gold —
+                // the label disappeared into the button. The accent now draws
+                // the edge and the interior matches the left rail.
+                background: "var(--weered-accent-bg, rgba(124,58,237,.14))",
+                border: "1px solid var(--weered-accent-1, #7c3aed)",
+                color: "var(--weered-text, rgba(243,244,246,.92))",
                 fontSize: 12,
                 fontWeight: 700,
                 cursor: "pointer",
@@ -398,9 +402,9 @@ export default function ForumPage({
             style={{
               padding: "0 14px",
               borderRadius: 8,
-              border: "1px solid var(--weered-border2, rgba(124,58,237,.4))",
-              background: "rgba(124,58,237,.3)",
-              color: "#fff",
+              border: "1px solid var(--weered-accent-1, #7c3aed)",
+              background: "var(--weered-accent-bg, rgba(124,58,237,.3))",
+              color: "var(--weered-text, #fff)",
               fontSize: 11,
               fontWeight: 700,
               cursor: "pointer",
@@ -436,16 +440,22 @@ export default function ForumPage({
                 style={{
                   padding: "6px 14px",
                   borderRadius: 999,
-                  border: "none",
                   fontSize: 11,
                   fontWeight: 800,
                   cursor: "pointer",
                   fontFamily: "inherit",
                   background:
                     sort === s.id
-                      ? "linear-gradient(135deg, var(--weered-accent-1, #7c3aed), var(--weered-accent-2, #a78bfa))"
+                      ? "var(--weered-accent-bg, rgba(124,58,237,.14))"
                       : "transparent",
-                  color: sort === s.id ? "#fff" : "rgba(255,255,255,.45)",
+                  border:
+                    sort === s.id
+                      ? "1px solid var(--weered-accent-1, #7c3aed)"
+                      : "1px solid transparent",
+                  color:
+                    sort === s.id
+                      ? "var(--weered-text, rgba(243,244,246,.92))"
+                      : "rgba(255,255,255,.45)",
                   transition: "all 0.15s",
                   boxShadow: sort === s.id ? "0 1px 0 rgba(255,255,255,.05) inset" : "none",
                 }}
