@@ -716,7 +716,7 @@ export default function ProfileSheet({ userId }: { userId: string }) {
         )}
         {(profile as any).primaryCrew?.name && (
           <a href={`/crew/${encodeURIComponent((profile as any).primaryCrew.id)}`} style={{ display: "inline-flex", alignItems: "center", gap: 7, textDecoration: "none", width: "fit-content" }}>
-            <span style={{ fontFamily: "ui-monospace, monospace", fontSize: 11, fontWeight: 900, letterSpacing: "1px", color: ((profile as any).primaryCrew.accentColor || "#a78bfa"), border: `1px solid ${((profile as any).primaryCrew.accentColor || "#a78bfa")}55`, padding: "1px 7px" }}>[{(profile as any).primaryCrew.tag}]</span>
+            <span style={{ fontFamily: "ui-monospace, monospace", fontSize: 11, fontWeight: 900, letterSpacing: "1px", color: ((profile as any).primaryCrew.accentColor || "#a78bfa") }}>[{(profile as any).primaryCrew.tag}]</span>
             <span style={{ fontSize: 13, fontStyle: "italic", color: "rgba(240,232,214,.78)", paddingRight: 3 }}>{(profile as any).primaryCrew.name}</span>
           </a>
         )}
