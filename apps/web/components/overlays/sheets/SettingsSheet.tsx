@@ -662,7 +662,7 @@ function ProfileCustomizationSection() {
 
       <ColorPickerRow
         label="Accent color"
-        hint="The purple used on every header bar, banner, ID bracket, and avatar ring in calm-mode lobbies. This is the platform accent — change it and the whole theme follows."
+        hint="Your accent on the ID card and rail — the crew tag, brackets and avatar ring. Applies inside themed lobbies, where it sits against that community's own skin; the default theme keeps the platform accent."
         value={panelAccentColor}
         onChange={(v) => { setPanelAccentColor(v); scheduleSave("panelAccentColor", v); }}
         onClear={() => clearField("panelAccentColor", setPanelAccentColor)}

@@ -354,19 +354,38 @@ export default function UserCorner() {
     primaryCrew?.accentColor && /^#[0-9a-f]{6}$/i.test(primaryCrew.accentColor)
       ? primaryCrew.accentColor
       : null;
-  const cardAccent = userPanelAccent || roleAccentHex || crewAccentHex || "#7C3AED";
+  // A personal accent is chosen to sit against a LOBBY's skin — near-white reads
+  // beautifully on Band of Brothers' gold-on-slate and wrong on the platform's
+  // own purple. So it applies inside themed lobbies and is ignored on the
+  // default theme, where the platform accent takes over. Tracked as an
+  // attribute rather than a route check because RoomCanvas sets it too.
+  const [inThemedLobby, setInThemedLobby] = useState(false);
+  useEffect(() => {
+    const read = () =>
+      setInThemedLobby(!!document.documentElement.getAttribute("data-weered-lobby"));
+    read();
+    const mo = new MutationObserver(read);
+    mo.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["data-weered-lobby"],
+    });
+    return () => mo.disconnect();
+  }, []);
+  const effectiveUserAccent = inThemedLobby ? userPanelAccent : null;
+
+  const cardAccent = effectiveUserAccent || roleAccentHex || crewAccentHex || "#7C3AED";
 
   useEffect(() => {
     const r = document.documentElement.style;
     if (userPanelBg) r.setProperty("--weered-user-panel-bg", userPanelBg);
     else r.removeProperty("--weered-user-panel-bg");
-    if (userPanelAccent) r.setProperty("--weered-user-panel-accent", cardAccent);
+    if (effectiveUserAccent) r.setProperty("--weered-user-panel-accent", cardAccent);
     else r.removeProperty("--weered-user-panel-accent");
     return () => {
       r.removeProperty("--weered-user-panel-bg");
       r.removeProperty("--weered-user-panel-accent");
     };
-  }, [userPanelBg, userPanelAccent, cardAccent]);
+  }, [userPanelBg, effectiveUserAccent, cardAccent]);
 
   const saveStatus = React.useCallback(
     async (text: string, emoji: string) => {
@@ -399,12 +418,12 @@ export default function UserCorner() {
     <div
       className="weered-usercorner"
       data-custom-bg={userPanelBg ? "1" : undefined}
-      data-custom-accent={userPanelAccent ? "1" : undefined}
+      data-custom-accent={effectiveUserAccent ? "1" : undefined}
       style={{
         position: "relative",
         borderRadius: 16,
         ...(userPanelBg && { ["--weered-uc-bg" as any]: userPanelBg }),
-        ...(userPanelAccent && { ["--weered-uc-accent" as any]: cardAccent }),
+        ...(effectiveUserAccent && { ["--weered-uc-accent" as any]: cardAccent }),
         border: `2px solid ${userPanelAccent ? `${cardAccent}aa` : `${cardAccent}30`}`,
         background: userPanelBg
           ? `${userPanelBg}`
@@ -620,13 +639,9 @@ export default function UserCorner() {
                   fontWeight: 900,
                   letterSpacing: "1.2px",
                   color: ca,
-                  background: "rgba(10,10,18,.55)",
-                  border: `1px solid ${ca}80`,
-                  borderRadius: 4,
+                  // No box: the tag is type, not a chip. The blurred pill read
+                  // as a smudge once a pale accent was in play.
                   textDecoration: "none",
-                  boxShadow: "0 2px 6px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.08)",
-                  backdropFilter: "blur(4px)",
-                  WebkitBackdropFilter: "blur(4px)",
                 }}
               >
                 [{primaryCrew.tag}]
@@ -862,8 +877,6 @@ export default function UserCorner() {
                     fontWeight: 900,
                     letterSpacing: "1px",
                     color: cardAccent,
-                    border: `1px solid ${cardAccent}55`,
-                    padding: "1px 5px",
                     flexShrink: 0,
                   }}
                 >
