@@ -3583,7 +3583,7 @@ html[data-weered-lobby="timbos"] .weered-left-section {
   color: var(--tb-paper-dim) !important;
 }
 html[data-weered-lobby="timbos"] .weered-left-title {
-  font-family: var(--font-saira-stencil), var(--font-rajdhani), sans-serif !important;
+  font-family: var(--font-barlow), var(--font-rajdhani), sans-serif !important;
   letter-spacing: 0.14em !important;
   text-transform: uppercase;
   color: var(--tb-paper-dim) !important;
@@ -3609,7 +3609,7 @@ html[data-weered-lobby="timbos"] .weered-left-link-active {
 /* ── Presence: "At the setups / Aux bornes". A live dot uses phosphor green,
    the one place the CRT colour is allowed to be loud. */
 html[data-weered-lobby="timbos"] .weered-presence-title {
-  font-family: var(--font-saira-stencil), var(--font-rajdhani), sans-serif !important;
+  font-family: var(--font-barlow), var(--font-rajdhani), sans-serif !important;
   letter-spacing: 0.12em !important;
   text-transform: uppercase;
   color: var(--tb-paper) !important;
@@ -3889,7 +3889,7 @@ html[data-weered-lobby="timbos"] .weered-rrr {
 }
 html[data-weered-lobby="timbos"] .weered-rrr-title,
 html[data-weered-lobby="timbos"] .weered-rrr-section-label {
-  font-family: var(--font-saira-stencil), var(--font-rajdhani), sans-serif !important;
+  font-family: var(--font-barlow), var(--font-rajdhani), sans-serif !important;
   letter-spacing: 0.12em !important;
   text-transform: uppercase;
   color: var(--tb-paper-dim) !important;
@@ -3904,7 +3904,7 @@ html[data-weered-lobby="timbos"] .weered-rr-create-panel {
   border-color: rgba(123, 92, 255, 0.24) !important;
 }
 html[data-weered-lobby="timbos"] .weered-rr-create-title {
-  font-family: var(--font-saira-stencil), var(--font-rajdhani), sans-serif !important;
+  font-family: var(--font-barlow), var(--font-rajdhani), sans-serif !important;
   letter-spacing: 0.1em !important;
   color: var(--tb-paper) !important;
 }
@@ -3938,7 +3938,7 @@ html[data-weered-lobby="timbos"] .weered-dock-conv-header {
   border-bottom: 1px solid rgba(123, 92, 255, 0.22) !important;
 }
 html[data-weered-lobby="timbos"] .weered-dock-title {
-  font-family: var(--font-saira-stencil), var(--font-rajdhani), sans-serif !important;
+  font-family: var(--font-barlow), var(--font-rajdhani), sans-serif !important;
   letter-spacing: 0.1em !important;
   text-transform: uppercase;
   color: var(--tb-paper) !important;
@@ -3981,7 +3981,7 @@ html[data-weered-lobby="timbos"] .weered-voicedock {
   color: var(--tb-paper) !important;
 }
 html[data-weered-lobby="timbos"] .wvd-head {
-  font-family: var(--font-saira-stencil), var(--font-rajdhani), sans-serif !important;
+  font-family: var(--font-barlow), var(--font-rajdhani), sans-serif !important;
   letter-spacing: 0.12em !important;
   text-transform: uppercase;
   color: var(--tb-paper-dim) !important;
@@ -4083,7 +4083,7 @@ html[data-weered-lobby="timbos"] .weered-rr-section-title {
   background: linear-gradient(90deg, rgba(123, 92, 255, 0.22), rgba(123, 92, 255, 0.04)) !important;
   border-bottom: 1px solid rgba(123, 92, 255, 0.24) !important;
   color: var(--tb-paper) !important;
-  font-family: var(--font-saira-stencil), var(--font-rajdhani), sans-serif !important;
+  font-family: var(--font-barlow), var(--font-rajdhani), sans-serif !important;
   letter-spacing: 0.12em !important;
 }
 
@@ -4296,7 +4296,7 @@ html:is(
     [data-weered-lobby="bandofbrothers"]
   )
   .weered-left-title {
-  font-family: var(--font-saira-stencil), var(--font-rajdhani), sans-serif !important;
+  font-family: var(--font-barlow), var(--font-rajdhani), sans-serif !important;
   letter-spacing: 0.16em !important;
   text-transform: uppercase;
   color: var(--hll-paper-dim) !important;
@@ -4339,7 +4339,7 @@ html:is(
     [data-weered-lobby="bandofbrothers"]
   )
   .weered-lobby-tab {
-  font-family: var(--font-saira-stencil), var(--font-rajdhani), sans-serif !important;
+  font-family: var(--font-barlow), var(--font-rajdhani), sans-serif !important;
   letter-spacing: 0.1em !important;
   text-transform: uppercase;
   color: var(--hll-paper-dim) !important;
@@ -4527,7 +4527,7 @@ html:is(
     [data-weered-lobby="bandofbrothers"]
   )
   .weered-dock-title {
-  font-family: var(--font-saira-stencil), var(--font-rajdhani), sans-serif !important;
+  font-family: var(--font-barlow), var(--font-rajdhani), sans-serif !important;
   letter-spacing: 0.1em !important;
   color: var(--hll-paper-dim) !important;
 }
