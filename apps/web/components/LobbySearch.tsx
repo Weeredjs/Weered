@@ -10,6 +10,7 @@ type LobbyResult = {
   name: string;
   description?: string;
   verified?: boolean;
+  unlisted?: boolean;
   moduleType?: string;
   accentColor?: string | null;
   logoUrl?: string | null;
@@ -262,11 +263,13 @@ export default function LobbySearch({
               accent={l.accentColor}
               name={l.name}
               sub={
-                l.verified
-                  ? "✓ verified"
-                  : l.moduleType && l.moduleType !== "NONE"
-                    ? String(l.moduleType).toLowerCase()
-                    : "community"
+                l.unlisted
+                  ? "unlisted · by link only"
+                  : l.verified
+                    ? "✓ verified"
+                    : l.moduleType && l.moduleType !== "NONE"
+                      ? String(l.moduleType).toLowerCase()
+                      : "community"
               }
             />
           ))}
