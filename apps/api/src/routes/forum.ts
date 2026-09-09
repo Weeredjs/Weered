@@ -5,6 +5,7 @@ import { join } from "path";
 import { createHash } from "crypto";
 import sharp from "sharp";
 import { prisma } from "../lib/prisma";
+import { canManageLobby } from "../lib/lobbyAccess";
 import { z } from "zod";
 import { LobbyRole } from "@prisma/client";
 import { applyAutoModSideEffects, fileAutoModReport } from "./forum-mod";
@@ -247,7 +248,10 @@ export default async function forumRoutes(app: FastifyInstance, opts: Opts) {
         let canAnnounce = canAccessStaff(globalRole);
         if (!canAnnounce && lobbyId) {
           const lr = await getLobbyRole(u.id, String(lobbyId).trim());
-          canAnnounce = lr === LobbyRole.OWNER;
+          // The owner, or anyone the owner made a moderator: a unit's
+          // officers post the dispatches, not only whoever created the lobby.
+          canAnnounce =
+            lr === LobbyRole.OWNER || (await canManageLobby(u.id, String(lobbyId).trim()));
         }
         if (!canAnnounce) cat = "DISCUSSION";
       }
@@ -294,6 +298,52 @@ export default async function forumRoutes(app: FastifyInstance, opts: Opts) {
         await prisma.forumSubscription.create({ data: { userId: u.id, postId: post.id } });
       } catch (e) {
         swallow(e);
+      }
+      // An announcement in a lobby reaches every member, on the phone if
+      // they are not looking at the screen — the one thing a community
+      // running on Discord assumes a post can do. Capped fan-out, off the
+      // request path; a mention on top of it is not sent twice.
+      if (cat === "ANNOUNCEMENT" && validLobbyId) {
+        void (async () => {
+          try {
+            const lobby = await prisma.lobby.findUnique({
+              where: { id: validLobbyId },
+              select: { name: true },
+            });
+            const members = await prisma.lobbyMember.findMany({
+              where: { lobbyId: validLobbyId, userId: { not: u.id } },
+              select: { userId: true },
+              take: 500,
+            });
+            const mentionedIds = new Set(
+              (await resolveMentions(String(body || ""), u.id).catch(() => [])).map(
+                (m: any) => m.id,
+              ),
+            );
+            await Promise.allSettled(
+              members
+                .filter((m) => !mentionedIds.has(m.userId))
+                .map((m) =>
+                  createNotification({
+                    userId: m.userId,
+                    type: "LOBBY_EVENT",
+                    title: `${(lobby?.name || "Your lobby").slice(0, 50)}: ${String(title).slice(0, 80)}`,
+                    body: String(body || "")
+                      .replace(/[#*_>`\[\]()!-]+/g, " ")
+                      .replace(/\s+/g, " ")
+                      .trim()
+                      .slice(0, 140),
+                    actorId: u.id,
+                    actorName: user?.name || u.name,
+                    actionUrl: `/forum/${post.id}`,
+                    meta: { kind: "lobby_announcement", lobbyId: validLobbyId, postId: post.id },
+                  }),
+                ),
+            );
+          } catch (e) {
+            swallow(e);
+          }
+        })();
       }
       (async () => {
         try {
