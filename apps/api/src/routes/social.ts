@@ -344,11 +344,18 @@ export default async function socialRoutes(app: FastifyInstance, opts: Opts) {
     const user = authFromHeader((req as any).headers?.authorization);
     if (!user) return reply.code(401).send({ error: "unauthorized" });
 
-    const visits = await prisma.recentVisit.findMany({
-      where: { userId: user.id },
-      orderBy: { visitedAt: "desc" },
-      take: 10,
-    });
+    const visits = (
+      await prisma.recentVisit.findMany({
+        where: { userId: user.id },
+        orderBy: { visitedAt: "desc" },
+        take: 14,
+      })
+    )
+      // Rows written before the write side validated: admin paths, socket
+      // rooms, and lobbies filed as rooms. Rooms are auto-created for
+      // whatever a socket joins, so "exists as a Room" is not enough.
+      .filter((v) => !v.roomId || !(v.roomId.includes("/") || v.roomId.startsWith("@")))
+      .slice(0, 10);
 
     const lobbyIds = visits.filter((v) => v.lobbyId).map((v) => v.lobbyId!);
     const lobbies = lobbyIds.length
@@ -367,7 +374,7 @@ export default async function socialRoutes(app: FastifyInstance, opts: Opts) {
       : [];
     const lobbyMap = new Map(lobbies.map((l) => [l.id, l]));
 
-    const roomIds = visits.filter((v) => v.roomId && !v.lobbyId).map((v) => v.roomId!);
+    const roomIds = visits.filter((v) => v.roomId).map((v) => v.roomId!);
     const roomRows = roomIds.length
       ? await prisma.room.findMany({
           where: { id: { in: roomIds } },
@@ -383,8 +390,9 @@ export default async function socialRoutes(app: FastifyInstance, opts: Opts) {
 
     const recents = visits
       .map((v) => {
-        if (v.lobbyId) {
+        if (v.lobbyId && !v.roomId) {
           const lobby = lobbyMap.get(v.lobbyId);
+          if (!lobby) return null; // deleted lobby, or a row from before the write side validated
           return {
             lobbyId: v.lobbyId,
             roomId: null,
@@ -398,6 +406,7 @@ export default async function socialRoutes(app: FastifyInstance, opts: Opts) {
         }
         if (v.roomId) {
           const room = roomMap.get(v.roomId);
+          if (!room) return null;
           return {
             lobbyId: room?.lobbyId || null,
             lobbyName: room?.lobby?.name || null,
@@ -416,6 +425,13 @@ export default async function socialRoutes(app: FastifyInstance, opts: Opts) {
     return reply.send({ ok: true, recents });
   });
 
+  // Record a visit. The client sends an id; THIS side decides what it is.
+  // It used to trust the client's guess (a slug regex), which filed rooms as
+  // lobbies, lobbies as rooms, and admin pages and socket rooms as both —
+  // half the table was rows pointing at nothing. Now: a real lobby, a real
+  // room, or ignored. Room visits carry no lobbyId of their own (the read
+  // side resolves it), because (userId, lobbyId) is unique and a room visit
+  // must never collide with the visit to its lobby.
   app.post(
     "/recents",
     {
@@ -423,7 +439,11 @@ export default async function socialRoutes(app: FastifyInstance, opts: Opts) {
         tags: ["social"],
         summary: "Record a recent visit",
         body: z
-          .object({ roomId: z.string().optional(), lobbyId: z.string().optional() })
+          .object({
+            id: z.string().optional(),
+            roomId: z.string().optional(),
+            lobbyId: z.string().optional(),
+          })
           .passthrough(),
       },
     },
@@ -431,53 +451,56 @@ export default async function socialRoutes(app: FastifyInstance, opts: Opts) {
       const user = authFromHeader((req as any).headers?.authorization);
       if (!user) return reply.code(401).send({ error: "unauthorized" });
 
-      const { roomId, lobbyId } = req.body as any;
-      if (!roomId && !lobbyId) return reply.code(400).send({ error: "roomId or lobbyId required" });
+      const body = req.body as any;
+      const id = String(body.id || body.lobbyId || body.roomId || "").trim();
+      if (!id) return reply.code(400).send({ error: "id required" });
+      // Paths and socket rooms are not destinations.
+      if (
+        id.length > 80 ||
+        id.includes("/") ||
+        id.startsWith("@") ||
+        id === "lobby" ||
+        id === "home"
+      )
+        return reply.send({ ok: true, ignored: true });
 
       try {
-        if (lobbyId) {
-          const lobby = await prisma.lobby.findUnique({
-            where: { id: lobbyId },
-            select: { name: true },
-          });
+        const lobby = await prisma.lobby.findUnique({ where: { id }, select: { name: true } });
+        if (lobby) {
           const existing = await prisma.recentVisit.findFirst({
-            where: { userId: user.id, lobbyId },
+            where: { userId: user.id, lobbyId: id },
           });
           if (existing) {
             await prisma.recentVisit.update({
               where: { id: existing.id },
-              data: { visitedAt: new Date(), name: lobby?.name || lobbyId },
+              data: { visitedAt: new Date(), name: lobby.name || id },
             });
           } else {
             await prisma.recentVisit.create({
-              data: { userId: user.id, lobbyId, name: lobby?.name || lobbyId },
+              data: { userId: user.id, lobbyId: id, name: lobby.name || id },
             });
           }
-        } else if (roomId) {
-          const room = await prisma.room.findUnique({
-            where: { id: roomId },
-            select: { name: true, lobbyId: true },
-          });
-          const existing = await prisma.recentVisit.findFirst({
-            where: { userId: user.id, roomId },
-          });
-          if (existing) {
-            await prisma.recentVisit.update({
-              where: { id: existing.id },
-              data: { visitedAt: new Date(), name: room?.name || roomId },
-            });
-          } else {
-            await prisma.recentVisit.create({
-              data: {
-                userId: user.id,
-                roomId,
-                lobbyId: room?.lobbyId || null,
-                name: room?.name || roomId,
-              },
-            });
-          }
+          return reply.send({ ok: true, kind: "lobby" });
         }
-        return reply.send({ ok: true });
+        const room = await prisma.room.findUnique({
+          where: { id },
+          select: { name: true },
+        });
+        if (!room) return reply.send({ ok: true, ignored: true });
+        const existing = await prisma.recentVisit.findFirst({
+          where: { userId: user.id, roomId: id },
+        });
+        if (existing) {
+          await prisma.recentVisit.update({
+            where: { id: existing.id },
+            data: { visitedAt: new Date(), name: room.name || id, lobbyId: null },
+          });
+        } else {
+          await prisma.recentVisit.create({
+            data: { userId: user.id, roomId: id, name: room.name || id },
+          });
+        }
+        return reply.send({ ok: true, kind: "room" });
       } catch (e: any) {
         log.error("[recents POST]", e.message);
         return reply.code(500).send({ error: e.message });

@@ -3573,9 +3573,16 @@ html[data-weered-lobby="timbos"] .weered-right::before {
   pointer-events: none;
 }
 
-/* ── Left rail: stencilled section titles, ember active state. */
-html[data-weered-lobby="timbos"] .weered-left-title,
+/* ── Left rail: stencilled section titles, ember active state. The stencil
+   is a heading face — at 12px its cuts smear — so the rows beneath get
+   Barlow, same uppercase, same colour. */
 html[data-weered-lobby="timbos"] .weered-left-section {
+  font-family: var(--font-barlow), var(--font-rajdhani), sans-serif !important;
+  letter-spacing: 0.04em !important;
+  text-transform: uppercase;
+  color: var(--tb-paper-dim) !important;
+}
+html[data-weered-lobby="timbos"] .weered-left-title {
   font-family: var(--font-saira-stencil), var(--font-rajdhani), sans-serif !important;
   letter-spacing: 0.14em !important;
   text-transform: uppercase;

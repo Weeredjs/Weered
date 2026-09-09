@@ -457,13 +457,14 @@ export default function LeftRail() {
     const room = raw.startsWith("room:") ? raw.slice(5) : raw;
     if (!me?.id) return;
 
-    const isLobbySlug = /^[a-z][a-z0-9._/-]*$/.test(room) && room.length > 2;
-    const body = isLobbySlug ? { lobbyId: room } : { roomId: room };
+    // Sub-pages (16thir/admin) and socket rooms (@admin-16thir) are not
+    // destinations; the API decides lobby-vs-room from the id itself.
+    if (room.includes("/") || room.startsWith("@")) return;
 
     fetch(`${API_BASE}/recents`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
+      body: JSON.stringify({ id: room }),
     })
       .then((r) => r.json())
       .then(() => {
@@ -477,16 +478,26 @@ export default function LeftRail() {
       .catch(() => {});
   }, [joinedRoomId, activeRoomId, me?.id]);
 
-  const recents = useMemo(
-    () => serverRecents.map((r) => r.lobbyId || r.roomId).filter(Boolean),
-    [serverRecents],
-  );
+  // A room visit is keyed by its ROOM id. Keying it by its lobby made the
+  // room and the lobby the same row, so a lobby showed twice with two names.
+  const recentKey = (r: any): string => String(r?.roomId || r?.lobbyId || "");
+  const recents = useMemo(() => {
+    const seen = new Set<string>();
+    const out: string[] = [];
+    for (const r of serverRecents) {
+      const id = recentKey(r);
+      if (!id || id.includes("/") || id.startsWith("@") || seen.has(id)) continue;
+      seen.add(id);
+      out.push(id);
+    }
+    return out;
+  }, [serverRecents]);
 
   const serverRecentMap = useMemo(() => {
     const m = new Map<string, any>();
     for (const r of serverRecents) {
-      const id = r.lobbyId || r.roomId;
-      if (id) m.set(id, r);
+      const id = recentKey(r);
+      if (id && !m.has(id)) m.set(id, r);
     }
     return m;
   }, [serverRecents]);
