@@ -4269,12 +4269,20 @@ html:is(
   background: linear-gradient(90deg, transparent, var(--hll-olive-hi), transparent);
   opacity: 0.5;
 }
+/* The stencil is a heading face. At 12px its cuts anti-alias into a smear,
+   so it stays on the section titles (FAVORITES, RECENT) and the rows beneath
+   get Barlow: same uppercase, same webbing colour, legible at small sizes. */
 html:is(
     [data-weered-lobby="hll"],
     [data-weered-lobby="16thir"],
     [data-weered-lobby="bandofbrothers"]
   )
-  .weered-left-section,
+  .weered-left-section {
+  font-family: var(--font-barlow), var(--font-rajdhani), sans-serif !important;
+  letter-spacing: 0.04em !important;
+  text-transform: uppercase;
+  color: var(--hll-paper-dim) !important;
+}
 html:is(
     [data-weered-lobby="hll"],
     [data-weered-lobby="16thir"],

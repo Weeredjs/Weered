@@ -547,6 +547,42 @@ export default function LeftRail() {
 
   const recentRooms = recents.filter((r) => !favs.includes(r));
 
+  // Favourites the public index cannot name. /lobbies lists public lobbies
+  // only, and the recents map only knows rooms the user has actually sat in,
+  // so an UNLISTED lobby favourited from its front page (a prospect preview,
+  // a private community) rendered as its bare id with no logo and no
+  // sublabel. One /lobbies/:id per unresolved favourite, once, fixes that;
+  // room ids simply 404 and are ignored.
+  const [favMeta, setFavMeta] = useState<Record<string, { name: string; logoUrl: string | null }>>(
+    {},
+  );
+  useEffect(() => {
+    const missing = favs.filter((id) => !favMeta[id] && !serverRecentMap.get(id)?.name);
+    if (!missing.length) return;
+    let alive = true;
+    Promise.all(
+      missing.map((id) =>
+        fetch(`${API_BASE}/lobbies/${encodeURIComponent(id)}`)
+          .then((r) => (r.ok ? r.json() : null))
+          .then((j) => (j?.ok && j.lobby?.id ? [id, j.lobby] : null))
+          .catch(() => null),
+      ),
+    ).then((rows) => {
+      if (!alive) return;
+      const add: Record<string, { name: string; logoUrl: string | null }> = {};
+      for (const row of rows) {
+        if (!row) continue;
+        const [id, l] = row as [string, any];
+        add[id] = { name: String(l.name || id), logoUrl: l.logoUrl ? String(l.logoUrl) : null };
+      }
+      if (Object.keys(add).length) setFavMeta((m) => ({ ...m, ...add }));
+    });
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [favs, serverRecentMap]);
+
   const [lobbyLogos, setLobbyLogos] = useState<Record<string, string>>({});
   useEffect(() => {
     fetch(`${API_BASE}/lobbies`)
@@ -581,6 +617,7 @@ export default function LeftRail() {
   const getRoomName = (id: string) => {
     const sr = serverRecentMap.get(id);
     if (sr?.name && sr.name !== id) return sr.name;
+    if (favMeta[id]?.name) return favMeta[id].name;
     const v = roomNameCache[id];
     if (!v) return id;
     if (typeof v === "string") return v;
@@ -598,17 +635,20 @@ export default function LeftRail() {
   const getRoomSublabel = (id: string): string => {
     const sr = serverRecentMap.get(id);
     if (sr?.lobbyId === id) return id;
+    if (favMeta[id]) return id; // resolved as a lobby: its own slug, like the others
     if (sr?.lobbyName) return sr.lobbyName;
     if (sr?.lobbyId) return sr.lobbyId;
     const lobby = getRoomLobby(id);
     if (lobby) return lobby;
-    const isLobbySlug = /^[a-z][a-z0-9._-]*$/.test(id) && id.length > 2;
+    // Slugs may start with a digit — "16thir" is a lobby, not a room.
+    const isLobbySlug = /^[a-z0-9][a-z0-9._-]*$/.test(id) && id.length > 2;
     if (isLobbySlug) return "lobby";
     return "";
   };
   const getLobbyLogo = (id: string): string | null => {
     const sr = serverRecentMap.get(id);
     if (sr?.logoUrl) return sr.logoUrl;
+    if (favMeta[id]?.logoUrl) return favMeta[id].logoUrl;
     if (lobbyLogos[id]) return lobbyLogos[id];
     const lobby = getRoomLobby(id);
     if (lobby && lobbyLogos[lobby]) return lobbyLogos[lobby];
