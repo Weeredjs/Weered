@@ -1,9 +1,12 @@
-// Shared bits for the Vietnam module: API base, auth, the style sheet, and the
-// wire types the tabs read. Kept here so the tab files stay small enough to
-// read in one sitting (and under the deploy tripwire).
+// Shared bits for the RCON-linked server module (Hell Let Loose, both wars):
+// API base, auth, the style sheet, and the wire types the tabs read. Kept
+// here so the tab files stay small enough to read in one sitting (and under
+// the deploy tripwire).
 import type React from "react";
 
 export const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
+
+export type Game = "hll" | "hllv";
 
 export function authHeaders(): Record<string, string> {
   try {
@@ -13,6 +16,8 @@ export function authHeaders(): Record<string, string> {
     return {};
   }
 }
+
+export type Faction = { short: string; name: string } | null;
 
 export type Session = {
   serverName: string;
@@ -26,15 +31,17 @@ export type Session = {
   matchTime: number;
   players: number;
   maxPlayers: number;
-  us: number;
-  nva: number;
-  usScore: number;
-  nvaScore: number;
+  allied: number;
+  axis: number;
+  alliedScore: number;
+  axisScore: number;
+  alliedFaction: Faction;
+  axisFaction: Faction;
   queue: number;
   maxQueue: number;
   vipQueue: number;
-  usMorale: number;
-  nvaMorale: number;
+  alliedMorale: number;
+  axisMorale: number;
   initialMorale: number;
 };
 
@@ -49,6 +56,7 @@ export type RotationEntry = {
 
 export type LinkedServer = {
   id: string;
+  game: Game;
   name: string;
   note: string;
   status: string;
@@ -57,13 +65,15 @@ export type LinkedServer = {
   live: Session | null;
   rotation: { current: number; maps: RotationEntry[] } | null;
   rhythmId: string;
+  /** Rhythm comes from Steam's list, which has been sampling the box for weeks. */
+  aggregate: boolean;
 };
 
 export type RosterPlayer = {
   name: string;
   clan: string | null;
   level: number;
-  team: "us" | "nva" | "none";
+  team: "allied" | "axis" | "none";
   roleId: number;
   role: string;
   roleType: string;
@@ -78,17 +88,34 @@ export type RosterPlayer = {
 
 export type RosterSquad = { name: string; index: number; type: string; players: RosterPlayer[] };
 export type RosterTeam = {
+  faction: Faction;
   count: number;
   commander: RosterPlayer | null;
   squads: RosterSquad[];
   unassigned: RosterPlayer[];
 };
-export type Roster = { total: number; us: RosterTeam; nva: RosterTeam; unassigned: RosterPlayer[] };
+export type Roster = {
+  total: number;
+  allied: RosterTeam;
+  axis: RosterTeam;
+  unassigned: RosterPlayer[];
+};
+
+/** Side label: the faction the server reports, else the generic side. */
+export function sideName(f: Faction, side: "allied" | "axis"): string {
+  return f?.short || (side === "allied" ? "Allies" : "Axis");
+}
+
+/** What a live session is called on a card: "Carentan · Warfare · Night". */
+export function matchTitle(s: Session): string {
+  const bits = [s.map, s.mode, s.attacker ? `${s.attacker} attack` : null].filter(Boolean);
+  return bits.length ? bits.join(" · ") : s.mapName || s.mapId || "—";
+}
 
 /** Olive over canvas. The lobby's own accent overrides this at the panel. */
 export const ACCENT = "#8FA35A";
-export const US = "#9CC3E6";
-export const NVA = "#E08A7A";
+export const ALLIED = "#9CC3E6";
+export const AXIS = "#E08A7A";
 
 export const S: Record<string, React.CSSProperties> = {
   wrap: { display: "flex", flexDirection: "column", overflow: "hidden" },

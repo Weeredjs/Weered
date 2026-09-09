@@ -10,6 +10,7 @@ import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { HllvRcon, HllvRconError } from "../src/lib/hllvRcon";
+import { parseLayer } from "../src/lib/hllVocab";
 
 const PORT = 27299;
 const SERVER = fileURLToPath(new URL("./hllv-fake-server.mjs", import.meta.url));
@@ -27,7 +28,36 @@ function startServer(): Promise<ReturnType<typeof spawn>> {
   });
 }
 
+function vocabChecks() {
+  const cases: [
+    "hll" | "hllv",
+    string,
+    string | null,
+    string | null,
+    string | null,
+    string | null,
+  ][] = [
+    ["hll", "carentan_warfare_night", "Carentan", "Warfare", null, "Night"],
+    ["hll", "elsenbornridge_offensiveUS_day", "Elsenborn Ridge", "Offensive", "US", "Day"],
+    ["hll", "REM_L_1945_OffensiveGER", "Remagen", "Offensive", "GER", "Day"],
+    ["hll", "SME_S_1944_Day_P_Skirmish", "Ste. Mère Église", "Skirmish", null, "Day"],
+    ["hll", "PHL_L_1944_Warfare_Night", "Purple Heart Lane", "Warfare", null, "Night"],
+    ["hll", "STA_L_1942_OffensiveRUS", "Stalingrad", "Offensive", "SOV", "Day"],
+    ["hll", "elalamein_offensive_CW", "El Alamein", "Offensive", "CW", "Day"],
+    ["hll", "REM_L_1945_WarfareNight", "Remagen", "Warfare", null, "Night"],
+    ["hllv", "wdeva_offensivenva_day", "Vạn Tường", "Offensive", "NVA", "Day"],
+    ["hllv", "/Game/Maps/wdevc_warfare_day", "Huế Outskirts", "Warfare", null, "Day"],
+    ["hll", "totally_new_map_warfare", null, "Warfare", null, null],
+  ];
+  for (const [game, id, map, mode, attacker, tod] of cases) {
+    const l = parseLayer(game, id);
+    assert.deepEqual([l.map, l.mode, l.attacker, l.timeOfDay], [map, mode, attacker, tod], id);
+  }
+  console.log(`ok  ${cases.length} layer ids parsed across both grammars and both games`);
+}
+
 async function main() {
+  vocabChecks();
   const server = await startServer();
   try {
     // 1. wrong password → bad_password, socket closed

@@ -49,9 +49,14 @@ export default function HllvModulesPanel({
       />
       <div style={S.body}>
         {tab === "frontline" && (
-          <FrontLines lobbyId={lobbyId} accent={accent} onGo={(t) => setTab(t as TabId)} />
+          <FrontLines
+            lobbyId={lobbyId}
+            game="hllv"
+            accent={accent}
+            onGo={(t) => setTab(t as TabId)}
+          />
         )}
-        {tab === "roster" && <RosterTab lobbyId={lobbyId} accent={accent} />}
+        {tab === "roster" && <RosterTab lobbyId={lobbyId} game="hllv" accent={accent} />}
         {tab === "fire" && <FireDirection accent={accent} />}
         {tab === "manual" && <FieldManual accent={accent} />}
       </div>

@@ -1,20 +1,37 @@
 "use client";
-// Front Line — the unit's own server, live, plus what Steam still tells us
-// about Vietnam as a whole.
+// Front Line — the unit's own server, live over RCON.
 //
-// There is no public Vietnam server list, so this tab is not a browser. It is
-// the box (or boxes) the unit has linked over RCON: map and mode, US against
-// NVA by the numbers, the score, the clock, the queue, what is coming next in
-// rotation, and — the part a live browser never has — what this box normally
-// looks like at this hour, from our own polling.
-import React, { useEffect, useMemo, useState } from "react";
+// For Vietnam this IS the server tab: there is no public list, so the linked
+// box is all there is, plus what Steam still tells us about the game as a
+// whole. For WWII the same card sits inside the Garrisons tab beneath the
+// Steam-list browser, adding what the list cannot see: score, clock, morale,
+// queue, next map, and (via the Roster tab) who is on it.
+//
+// Either way the card shows the box the unit has linked: map and mode, the
+// two sides by the numbers, and — the part a live browser never has — what
+// this box normally looks like at this hour, from our own polling.
+import React, { useEffect, useState } from "react";
 import ServerRhythm from "../hll/ServerRhythm";
-import { API, authHeaders, S, US, NVA, linkError, type LinkedServer, type Session } from "./shared";
+import {
+  API,
+  authHeaders,
+  S,
+  ALLIED,
+  AXIS,
+  linkError,
+  sideName,
+  matchTitle,
+  type Game,
+  type LinkedServer,
+  type Session,
+} from "./shared";
 import { fmtClock, prettyLayer } from "../../lib/hllv/data";
 
 type Intel = { playingNow: number | null; news: any[] };
 
-function Bar({ us, nva, max }: { us: number; nva: number; max: number }) {
+const GAME_NAME: Record<Game, string> = { hll: "Hell Let Loose", hllv: "Vietnam" };
+
+function Bar({ a, b, max }: { a: number; b: number; max: number }) {
   const w = (n: number) => `${Math.min(50, Math.round((n / Math.max(1, max)) * 100))}%`;
   return (
     <div
@@ -26,17 +43,16 @@ function Bar({ us, nva, max }: { us: number; nva: number; max: number }) {
         overflow: "hidden",
       }}
     >
-      <div style={{ width: w(us), background: US, transition: "width 600ms" }} />
+      <div style={{ width: w(a), background: ALLIED, transition: "width 600ms" }} />
       <div style={{ flex: 1 }} />
-      <div style={{ width: w(nva), background: NVA, transition: "width 600ms" }} />
+      <div style={{ width: w(b), background: AXIS, transition: "width 600ms" }} />
     </div>
   );
 }
 
 function Live({ s, accent }: { s: Session; accent: string }) {
-  const title = s.map
-    ? `${s.map} · ${s.mode}${s.attacker ? ` · ${s.attacker} attack` : ""}`
-    : prettyLayer(s.mapId) || s.mapName;
+  const al = sideName(s.alliedFaction, "allied");
+  const ax = sideName(s.axisFaction, "axis");
   return (
     <>
       <div style={{ display: "flex", alignItems: "baseline", gap: 10, flexWrap: "wrap" }}>
@@ -45,7 +61,7 @@ function Live({ s, accent }: { s: Session; accent: string }) {
           <span style={{ fontSize: 14, opacity: 0.55 }}>/{s.maxPlayers}</span>
         </div>
         <div style={{ fontSize: 13.5, fontWeight: 700, color: "rgba(236,242,250,.92)" }}>
-          {title}
+          {matchTitle(s)}
         </div>
         {s.timeOfDay && s.timeOfDay !== "Day" && (
           <span style={{ ...S.badge, color: accent, border: `1px solid ${accent}55` }}>
@@ -62,14 +78,14 @@ function Live({ s, accent }: { s: Session; accent: string }) {
             marginBottom: 4,
           }}
         >
-          <span style={{ color: US, fontWeight: 800 }}>
-            US {s.us} · {s.usScore}
+          <span style={{ color: ALLIED, fontWeight: 800 }}>
+            {al} {s.allied} · {s.alliedScore}
           </span>
-          <span style={{ color: NVA, fontWeight: 800 }}>
-            {s.nvaScore} · {s.nva} NVA
+          <span style={{ color: AXIS, fontWeight: 800 }}>
+            {s.axisScore} · {s.axis} {ax}
           </span>
         </div>
-        <Bar us={s.us} nva={s.nva} max={s.maxPlayers} />
+        <Bar a={s.allied} b={s.axis} max={s.maxPlayers} />
       </div>
       <div
         style={{
@@ -91,8 +107,8 @@ function Live({ s, accent }: { s: Session; accent: string }) {
         )}
         {s.initialMorale > 0 && (
           <span>
-            morale <b style={{ color: US }}>{s.usMorale}</b> ·{" "}
-            <b style={{ color: NVA }}>{s.nvaMorale}</b>
+            morale <b style={{ color: ALLIED }}>{s.alliedMorale}</b> ·{" "}
+            <b style={{ color: AXIS }}>{s.axisMorale}</b>
           </span>
         )}
       </div>
@@ -102,12 +118,18 @@ function Live({ s, accent }: { s: Session; accent: string }) {
 
 export default function FrontLines({
   lobbyId,
+  game = "hllv",
   accent,
   onGo,
+  showIntel = true,
 }: {
   lobbyId: string;
+  game?: Game;
   accent: string;
   onGo?: (tab: string) => void;
+  /** The Steam strip (playing now + news). Vietnam has nowhere else to put
+   *  it; the WWII panel already carries its own on Front Lines. */
+  showIntel?: boolean;
 }) {
   const [servers, setServers] = useState<LinkedServer[]>([]);
   const [canManage, setCanManage] = useState(false);
@@ -120,9 +142,11 @@ export default function FrontLines({
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
 
+  const base = `${API}/hllv/${encodeURIComponent(lobbyId)}`;
+
   const load = async () => {
     try {
-      const r = await fetch(`${API}/hllv/${encodeURIComponent(lobbyId)}/servers`, {
+      const r = await fetch(`${base}/servers?game=${game}`, {
         headers: authHeaders(),
         cache: "no-store",
       });
@@ -139,24 +163,25 @@ export default function FrontLines({
   useEffect(() => {
     void load();
     const iv = setInterval(load, 45_000);
-    fetch(`${API}/hllv/intel`)
-      .then((r) => r.json())
-      .then(
-        (j) => j?.ok && setIntel({ playingNow: j.playingNow, news: (j.news || []).slice(0, 3) }),
-      )
-      .catch(() => {});
+    if (showIntel)
+      fetch(`${API}/hllv/intel?game=${game}`)
+        .then((r) => r.json())
+        .then(
+          (j) => j?.ok && setIntel({ playingNow: j.playingNow, news: (j.news || []).slice(0, 3) }),
+        )
+        .catch(() => {});
     return () => clearInterval(iv);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lobbyId]);
+  }, [lobbyId, game]);
 
   const link = async () => {
     setBusy(true);
     setErr("");
     try {
-      const r = await fetch(`${API}/hllv/${encodeURIComponent(lobbyId)}/server/link`, {
+      const r = await fetch(`${base}/server/link`, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...authHeaders() },
-        body: JSON.stringify({ ...f, port: Number(f.port) }),
+        body: JSON.stringify({ ...f, port: Number(f.port), game }),
       });
       const j = await r.json();
       if (!j?.ok) setErr(linkError(j?.error));
@@ -175,10 +200,7 @@ export default function FrontLines({
     if (!confirm("Unlink this server? Its history is kept.")) return;
     setBusy(true);
     try {
-      await fetch(`${API}/hllv/${encodeURIComponent(lobbyId)}/servers/${id}/unlink`, {
-        method: "POST",
-        headers: authHeaders(),
-      });
+      await fetch(`${base}/servers/${id}/unlink`, { method: "POST", headers: authHeaders() });
       await load();
     } catch {}
     setBusy(false);
@@ -187,8 +209,7 @@ export default function FrontLines({
   const nextUp = (s: LinkedServer) => {
     const rot = s.rotation;
     if (!rot?.maps?.length) return null;
-    const n = rot.maps.length;
-    return rot.maps[(rot.current + 1) % n];
+    return rot.maps[(rot.current + 1) % rot.maps.length];
   };
 
   const form = (
@@ -202,7 +223,7 @@ export default function FrontLines({
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         <input
           style={S.input}
-          placeholder="Name: 16th IR | Realism"
+          placeholder={game === "hll" ? "Name: 5th BCT | EU Public" : "Name: 16th IR | Realism"}
           value={f.name}
           onChange={(e) => setF({ ...f, name: e.target.value })}
         />
@@ -258,7 +279,7 @@ export default function FrontLines({
         <div style={S.big}>
           {intel.playingNow == null ? "—" : intel.playingNow.toLocaleString()}
         </div>
-        <div style={{ ...S.muted, fontSize: 11 }}>playing Vietnam on Steam right now</div>
+        <div style={{ ...S.muted, fontSize: 11 }}>playing {GAME_NAME[game]} on Steam right now</div>
       </div>
       <div style={{ flex: 1, minWidth: 220 }}>
         {intel.news.length ? (
@@ -286,13 +307,42 @@ export default function FrontLines({
     </div>
   );
 
+  const emptyState =
+    game === "hll" ? (
+      <>
+        <div style={{ fontWeight: 800, fontSize: 14, color: "rgba(236,242,250,.95)" }}>
+          Steam lists your server. RCON tells the rest.
+        </div>
+        <div style={{ ...S.muted, marginTop: 6 }}>
+          Front Lines already shows your box&rsquo;s population and map off Steam&rsquo;s list. Link
+          its RCON and this card adds the score, the match clock, morale, the queue and the next
+          map, and the Roster tab shows who is on it by squad. No CRCON, nothing to install: the
+          three fields from your host&rsquo;s panel. If Steam already tracks the box, its rhythm is
+          confident from day one.
+        </div>
+      </>
+    ) : (
+      <>
+        <div style={{ fontWeight: 800, fontSize: 14, color: "rgba(236,242,250,.95)" }}>
+          Vietnam has no public server list. Your server does not need one.
+        </div>
+        <div style={{ ...S.muted, marginTop: 6 }}>
+          Every Vietnam server has an RCON port. Link yours and this card becomes the live match:
+          map, US against NVA, score, clock, queue, next map — and after a couple of weeks, what the
+          box normally does on a Thursday at 20:00, so a drill night is planned against a pattern
+          rather than a guess. The Roster tab shows who is on it, by squad.
+        </div>
+      </>
+    );
+
   return (
     <div>
-      <div style={{ marginTop: 12 }}>{intelStrip}</div>
+      {showIntel && <div style={{ marginTop: 12 }}>{intelStrip}</div>}
 
       <div style={{ ...S.row, justifyContent: "space-between" }}>
         <div style={S.kick}>
-          {servers.length ? `Our server${servers.length > 1 ? "s" : ""}` : "Our server"}
+          {servers.length > 1 ? "Our servers" : "Our server"}
+          {game === "hll" ? " · RCON" : ""}
         </div>
         {canManage && !formOpen && servers.length < max && (
           <button style={S.btnQuiet} onClick={() => setFormOpen(true)}>
@@ -307,15 +357,7 @@ export default function FrontLines({
         <div style={S.muted}>Raising the server…</div>
       ) : servers.length === 0 && !formOpen ? (
         <div style={S.card}>
-          <div style={{ fontWeight: 800, fontSize: 14, color: "rgba(236,242,250,.95)" }}>
-            Vietnam has no public server list. Your server does not need one.
-          </div>
-          <div style={{ ...S.muted, marginTop: 6 }}>
-            Every Vietnam server has an RCON port. Link yours and this card becomes the live match:
-            map, US against NVA, score, clock, queue, next map — and after a couple of weeks, what
-            the box normally does on a Thursday at 20:00, so a drill night is planned against a
-            pattern rather than a guess. The Roster tab shows who is on it, by squad.
-          </div>
+          {emptyState}
           {canManage ? (
             <button style={{ ...S.btn, marginTop: 10 }} onClick={() => setFormOpen(true)}>
               Link the server
@@ -363,7 +405,9 @@ export default function FrontLines({
                   Next up:{" "}
                   <b style={{ color: "rgba(236,242,250,.85)" }}>
                     {next.map
-                      ? `${next.map} · ${next.mode}${next.attacker ? ` · ${next.attacker} attack` : ""}`
+                      ? [next.map, next.mode, next.attacker ? `${next.attacker} attack` : null]
+                          .filter(Boolean)
+                          .join(" · ")
                       : next.name || prettyLayer(next.id)}
                   </b>
                   {s.rotation && s.rotation.maps.length > 2 && (
@@ -400,16 +444,12 @@ export default function FrontLines({
         })
       )}
 
-      {useMemo(
-        () => (
-          <div style={{ ...S.muted, marginTop: 6, fontSize: 11.5 }}>
-            Live state refreshes every 45 seconds. The rhythm is our own polling of this box every
-            ten minutes; it takes about three weeks before &ldquo;normally&rdquo; means anything and
-            the card says so until then.
-          </div>
-        ),
-        [],
-      )}
+      <div style={{ ...S.muted, marginTop: 6, fontSize: 11.5 }}>
+        Live state refreshes every 45 seconds. The rhythm is our own polling of this box every ten
+        minutes; it takes about three weeks before &ldquo;normally&rdquo; means anything and the
+        card says so until then.
+        {game === "hll" && " A box Steam already lists carries its history in from the start."}
+      </div>
     </div>
   );
 }

@@ -2,21 +2,25 @@
 // Roster — who is on the unit's server right now, by team and squad.
 //
 // This is the thing a unit officer opens before a drill: is the platoon
-// actually on, which squads formed, who took the mortar, is anyone in
-// Command. The server tells us all of it over RCON; we show names, roles
-// and scores and nothing that identifies an account.
+// actually on, which squads formed, who took the mortar (or the arty), is
+// anyone in Command. The server tells us all of it over RCON; we show names,
+// roles and scores and nothing that identifies an account.
 import React, { useEffect, useState } from "react";
 import {
   API,
   authHeaders,
   S,
-  US,
-  NVA,
+  ALLIED,
+  AXIS,
   linkError,
+  sideName,
+  matchTitle,
+  type Game,
   type LinkedServer,
   type Roster,
   type RosterPlayer,
   type RosterSquad,
+  type RosterTeam,
   type Session,
 } from "./shared";
 
@@ -25,6 +29,7 @@ const TYPE_ICON: Record<string, string> = {
   Recon: "🔭",
   Armor: "🛡",
   Mortar: "💥",
+  Artillery: "💥",
   Helicopter: "🚁",
   Command: "⭐",
 };
@@ -99,11 +104,18 @@ function Squad({ sq, color }: { sq: RosterSquad; color: string }) {
   );
 }
 
-function Team({ label, color, t }: { label: string; color: string; t: Roster["us"] }) {
+function Team({ side, color, t }: { side: "allied" | "axis"; color: string; t: RosterTeam }) {
+  const label = sideName(t.faction, side);
   return (
     <div style={{ flex: 1, minWidth: 260 }}>
       <div style={{ ...S.kick, color, marginTop: 4 }}>
         {label} · {t.count}
+        {t.faction?.name && t.faction.name !== label && (
+          <span style={{ opacity: 0.55, fontWeight: 500, letterSpacing: ".04em" }}>
+            {" "}
+            · {t.faction.name}
+          </span>
+        )}
       </div>
       {t.commander && (
         <div
@@ -146,7 +158,15 @@ function Team({ label, color, t }: { label: string; color: string; t: Roster["us
   );
 }
 
-export default function RosterTab({ lobbyId, accent }: { lobbyId: string; accent: string }) {
+export default function RosterTab({
+  lobbyId,
+  game = "hllv",
+  accent,
+}: {
+  lobbyId: string;
+  game?: Game;
+  accent: string;
+}) {
   const [servers, setServers] = useState<LinkedServer[]>([]);
   const [pick, setPick] = useState<string>("");
   const [data, setData] = useState<{ session: Session; roster: Roster; fetchedAt: number } | null>(
@@ -155,8 +175,10 @@ export default function RosterTab({ lobbyId, accent }: { lobbyId: string; accent
   const [err, setErr] = useState<string>("");
   const [loaded, setLoaded] = useState(false);
 
+  const base = `${API}/hllv/${encodeURIComponent(lobbyId)}`;
+
   useEffect(() => {
-    fetch(`${API}/hllv/${encodeURIComponent(lobbyId)}/servers`, { headers: authHeaders() })
+    fetch(`${base}/servers?game=${game}`, { headers: authHeaders() })
       .then((r) => r.json())
       .then((j) => {
         if (j?.ok) {
@@ -167,16 +189,14 @@ export default function RosterTab({ lobbyId, accent }: { lobbyId: string; accent
       .catch(() => {})
       .finally(() => setLoaded(true));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lobbyId]);
+  }, [lobbyId, game]);
 
   useEffect(() => {
     if (!pick) return;
     let stop = false;
     const load = async () => {
       try {
-        const r = await fetch(`${API}/hllv/${encodeURIComponent(lobbyId)}/servers/${pick}/roster`, {
-          cache: "no-store",
-        });
+        const r = await fetch(`${base}/servers/${pick}/roster`, { cache: "no-store" });
         const j = await r.json();
         if (stop) return;
         if (j?.ok) {
@@ -193,6 +213,7 @@ export default function RosterTab({ lobbyId, accent }: { lobbyId: string; accent
       stop = true;
       clearInterval(iv);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lobbyId, pick]);
 
   if (!loaded) return <div style={{ ...S.muted, marginTop: 12 }}>Raising the server…</div>;
@@ -200,8 +221,9 @@ export default function RosterTab({ lobbyId, accent }: { lobbyId: string; accent
     return (
       <div style={{ ...S.card, marginTop: 12 }}>
         <div style={S.muted}>
-          The roster reads off a linked server. Link one on the Front Line tab and this becomes the
-          live platoon list, by squad.
+          The roster reads off a linked server. Link one on the{" "}
+          {game === "hll" ? "Garrisons" : "Front Line"} tab and this becomes the live platoon list,
+          by squad.
         </div>
       </div>
     );
@@ -245,9 +267,7 @@ export default function RosterTab({ lobbyId, accent }: { lobbyId: string; accent
               on {data.session.serverName || "the server"}
             </div>
             <div style={{ ...S.muted, fontSize: 11.5 }}>
-              {data.session.map
-                ? `${data.session.map} · ${data.session.mode}`
-                : data.session.mapName}
+              {matchTitle(data.session)}
               {err && (
                 <span style={{ color: "#e8a08c" }}>
                   {" "}
@@ -258,8 +278,8 @@ export default function RosterTab({ lobbyId, accent }: { lobbyId: string; accent
           </div>
 
           <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
-            <Team label="US" color={US} t={data.roster.us} />
-            <Team label="NVA" color={NVA} t={data.roster.nva} />
+            <Team side="allied" color={ALLIED} t={data.roster.allied} />
+            <Team side="axis" color={AXIS} t={data.roster.axis} />
           </div>
 
           {data.roster.unassigned.length > 0 && (

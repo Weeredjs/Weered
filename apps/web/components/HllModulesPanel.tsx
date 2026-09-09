@@ -4,6 +4,10 @@ import React, { useEffect, useMemo, useState } from "react";
 import ModuleTabBar from "./ModuleTabBar";
 
 import ServerRhythm from "./hll/ServerRhythm";
+// The RCON-linked server card and the live roster are shared with the
+// Vietnam panel: same protocol, same components, WWII vocabulary via game="hll".
+import LinkedServers from "./hllv/FrontLines";
+import RosterTab from "./hllv/Roster";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 const ACCENT = "#BFA46F"; // brass over field-grey — HLL's palette
@@ -21,6 +25,7 @@ const TABS = [
   { id: "frontlines" as const, label: "Front Lines" },
   { id: "seeding" as const, label: "Seeding Ops" },
   { id: "garrison" as const, label: "Garrisons" },
+  { id: "roster" as const, label: "Roster" },
   { id: "artillery" as const, label: "Artillery School" },
 ];
 type TabId = (typeof TABS)[number]["id"];
@@ -891,7 +896,15 @@ function fmtClock(secs: number): string {
     : `${m}:${String(s).padStart(2, "0")}`;
 }
 
-function Garrison({ accent }: { accent: string }) {
+function Garrison({
+  accent,
+  lobbyId,
+  onGo,
+}: {
+  accent: string;
+  lobbyId: string;
+  onGo?: (tab: string) => void;
+}) {
   const [loadedOnce, setLoadedOnce] = useState(false);
   const [canManage, setCanManage] = useState(false);
   const [garrisons, setGarrisons] = useState<GarrisonServer[]>([]);
@@ -1047,6 +1060,12 @@ function Garrison({ accent }: { accent: string }) {
 
   return (
     <div>
+      {/* The unit's own box over RCON: score, clock, morale, queue, next map,
+          and the Roster tab. Needs nothing installed — the CRCON path below
+          stays for communities that already run one. */}
+      <LinkedServers lobbyId={lobbyId} game="hll" accent={accent} showIntel={false} onGo={onGo} />
+
+      <div style={{ ...S.kick, marginTop: 18 }}>Community RCON panels</div>
       {!loadedOnce && <div style={{ ...S.muted, marginTop: 14 }}>Raising the garrisons…</div>}
 
       {loadedOnce && garrisons.length === 0 && (
@@ -1602,7 +1621,7 @@ function ArtillerySchool({ accent, currentUserId }: { accent: string; currentUse
 // ---- shell -----------------------------------------------------------------
 
 export default function HllModulesPanel({
-  lobbyId: _lobbyId,
+  lobbyId,
   accentColor,
   currentUserId,
   style,
@@ -1626,7 +1645,10 @@ export default function HllModulesPanel({
       <div style={S.body}>
         {tab === "frontlines" && <FrontLines accent={accent} onGo={(t) => setTab(t as TabId)} />}
         {tab === "seeding" && <SeedingOps accent={accent} currentUserId={currentUserId} />}
-        {tab === "garrison" && <Garrison accent={accent} />}
+        {tab === "garrison" && (
+          <Garrison accent={accent} lobbyId={lobbyId} onGo={(t) => setTab(t as TabId)} />
+        )}
+        {tab === "roster" && <RosterTab lobbyId={lobbyId} game="hll" accent={accent} />}
         {tab === "artillery" && <ArtillerySchool accent={accent} currentUserId={currentUserId} />}
       </div>
     </div>

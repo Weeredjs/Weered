@@ -5,7 +5,7 @@
 // the seventeen roles grouped the way the game groups them; and the vehicle
 // park, side by side. All static, all readable with nothing linked.
 import React, { useState } from "react";
-import { S, US, NVA } from "./shared";
+import { S, ALLIED as US, AXIS as NVA } from "./shared";
 import {
   HLLV_MAPS,
   HLLV_MODES,

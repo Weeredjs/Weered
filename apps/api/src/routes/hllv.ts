@@ -3,108 +3,48 @@ import { log, swallow } from "../lib/logger";
 import { prisma } from "../lib/prisma";
 import { isStaffUser } from "../lib/isStaffUser";
 import { rconRead, HllvRconError } from "../lib/hllvRcon";
+import {
+  type Game,
+  STEAM_APP_ID,
+  COMMANDER_ROLE,
+  roleOf,
+  factionOf,
+  sideOf,
+  parseLayer,
+} from "../lib/hllVocab";
 
-// Hell Let Loose: Vietnam.
+// Hell Let Loose, linked over RCON — both games.
 //
 // Vietnam is cross-platform and lives behind Team17's own backend, so unlike
 // base HLL there is no public master list to build a browser from. What every
-// Vietnam server DOES have is an RCON port, and the protocol is open. So the
-// Vietnam data plane is bottom-up: a unit links its own server (or the public
-// server it plays on, with the owner's RCON details) and gets, for that box:
+// Hell Let Loose server DOES have — WWII or Vietnam, the protocol is the same —
+// is an RCON port. So a unit links its own box (or the public server it plays
+// on, with the owner's RCON details) and gets, for that box:
 //
-//   live match     map, mode, US v NVA count, score, clock, queue
+//   live match     map, mode, the two sides by the numbers, score, clock, queue
 //   live roster    who is on, by team and squad, with role and score
 //   rhythm         what the box normally does at this hour — polled into the
-//                  same GameServer aggregate the WWII lobby reads, so the
-//                  history component works unchanged
+//                  same GameServer aggregate the WWII browser reads, so the
+//                  history component works unchanged. A WWII box that Steam's
+//                  list already knows is matched to its existing row, so its
+//                  rhythm is confident from day one.
 //
-// Plus the two things Steam still gives Vietnam: global player count and the
-// game's own news feed.
-//
-// The RCON password is stored in CommunityServer.apiKey, which no route has
-// ever serialised. host:port lives in `host`. Both stay on the server.
+// The routes keep the /hllv prefix they were born with; `game` on each link
+// says which vocabulary applies. The RCON password is stored in
+// CommunityServer.apiKey, which no route has ever serialised. host:port lives
+// in `host`. Both stay on the server.
 
 type Opts = {
   authFromHeader?: (h?: string) => { id: string; name?: string } | null;
 };
 
-export const HLLV_APP_ID = 3079210;
-const FRAMEWORK = "hllv-rcon";
+const FRAMEWORKS: Record<Game, string> = { hll: "hll-rcon", hllv: "hllv-rcon" };
+const GAME_OF_FRAMEWORK: Record<string, Game> = { "hll-rcon": "hll", "hllv-rcon": "hllv" };
 const MAX_LINKED = 6;
 const SESSION_TTL = 45_000;
 const ROSTER_TTL = 20_000;
 const POLL_MS = 10 * 60_000;
 const RCON_TIMEOUT = 8000;
-
-// ---- game vocabulary ---------------------------------------------------------
-
-/** Layer ids are `<mapcode>_<mode>_<time>`; the codes are the dev's own. */
-const MAPS: Record<string, { name: string; year: number }> = {
-  wdeva: { name: "Vạn Tường", year: 1965 },
-  wdevb: { name: "Quảng Ngãi", year: 1965 },
-  wdevc: { name: "Huế Outskirts", year: 1968 },
-  wdevd: { name: "Đăk Tô Airfield", year: 1967 },
-  wdeve: { name: "Cam Ranh Port", year: 1969 },
-  wdevf: { name: "Thanh Hòa Bridge", year: 1965 },
-};
-
-const MODES: Record<string, { mode: string; attacker: string | null }> = {
-  warfare: { mode: "Warfare", attacker: null },
-  offensivenva: { mode: "Offensive", attacker: "NVA" },
-  offensiveus: { mode: "Offensive", attacker: "US" },
-  domination: { mode: "Domination", attacker: null },
-  conquest: { mode: "Conquest", attacker: null },
-};
-
-export function parseLayer(id: string): {
-  map: string | null;
-  mode: string | null;
-  attacker: string | null;
-  timeOfDay: string | null;
-} {
-  const m = /^([a-z]+)_([a-z]+)_([a-z]+)$/i.exec(
-    String(id || "")
-      .trim()
-      .toLowerCase(),
-  );
-  if (!m) return { map: null, mode: null, attacker: null, timeOfDay: null };
-  const map = MAPS[m[1]]?.name ?? null;
-  const mode = MODES[m[2]];
-  const t = m[3];
-  return {
-    map,
-    mode: mode?.mode ?? null,
-    attacker: mode?.attacker ?? null,
-    timeOfDay: t ? t.charAt(0).toUpperCase() + t.slice(1) : null,
-  };
-}
-
-/** Role ids as the server reports them (GetServerInformation players.role). */
-const ROLES: Record<number, { name: string; type: string; lead?: boolean }> = {
-  0: { name: "Rifleman", type: "Infantry" },
-  3: { name: "Medic", type: "Infantry" },
-  4: { name: "Spotter", type: "Recon", lead: true },
-  5: { name: "Specialist", type: "Infantry" },
-  6: { name: "Machine Gunner", type: "Infantry" },
-  7: { name: "Grenadier", type: "Infantry" },
-  8: { name: "Engineer", type: "Infantry" },
-  9: { name: "Squad Leader", type: "Infantry", lead: true },
-  10: { name: "Sniper", type: "Recon" },
-  11: { name: "Crewman", type: "Armor" },
-  12: { name: "Tank Commander", type: "Armor", lead: true },
-  13: { name: "Support", type: "Mortar" },
-  14: { name: "Observer", type: "Mortar", lead: true },
-  15: { name: "Gunner", type: "Mortar" },
-  16: { name: "Pilot", type: "Helicopter", lead: true },
-  17: { name: "Logistics Officer", type: "Helicopter" },
-  20: { name: "Commander", type: "Command", lead: true },
-};
-
-function teamOf(id: number): "us" | "nva" | "none" {
-  if (id === 1) return "us";
-  if (id === 6) return "nva";
-  return "none";
-}
 
 // ---- normalisers -------------------------------------------------------------
 
@@ -120,22 +60,28 @@ export type Session = {
   matchTime: number;
   players: number;
   maxPlayers: number;
-  us: number;
-  nva: number;
-  usScore: number;
-  nvaScore: number;
+  allied: number;
+  axis: number;
+  alliedScore: number;
+  axisScore: number;
+  alliedFaction: { short: string; name: string } | null;
+  axisFaction: { short: string; name: string } | null;
   queue: number;
   maxQueue: number;
   vipQueue: number;
-  usMorale: number;
-  nvaMorale: number;
+  alliedMorale: number;
+  axisMorale: number;
   initialMorale: number;
 };
 
-function normSession(s: any): Session {
+function normSession(game: Game, s: any): Session {
   const mapId = String(s?.mapId || "").slice(0, 60);
-  const layer = parseLayer(mapId);
+  const layer = parseLayer(game, mapId);
   const n = (v: any) => (Number.isFinite(Number(v)) ? Number(v) : 0);
+  const fac = (v: any) => {
+    const f = factionOf(game, Number(v));
+    return f ? { short: f.short, name: f.name } : null;
+  };
   return {
     serverName: String(s?.serverName || "").slice(0, 120),
     mapId,
@@ -145,20 +91,22 @@ function normSession(s: any): Session {
     matchTime: n(s?.matchTime),
     players: n(s?.playerCount),
     maxPlayers: n(s?.maxPlayerCount) || 100,
-    us: n(s?.alliedPlayerCount),
-    nva: n(s?.axisPlayerCount),
-    usScore: n(s?.alliedScore),
-    nvaScore: n(s?.axisScore),
+    allied: n(s?.alliedPlayerCount),
+    axis: n(s?.axisPlayerCount),
+    alliedScore: n(s?.alliedScore),
+    axisScore: n(s?.axisScore),
+    alliedFaction: fac(s?.alliedFaction),
+    axisFaction: fac(s?.axisFaction),
     queue: n(s?.queueCount),
     maxQueue: n(s?.maxQueueCount),
     vipQueue: n(s?.vipQueueCount),
-    usMorale: n(s?.alliedMorale),
-    nvaMorale: n(s?.axisMorale),
+    alliedMorale: n(s?.alliedMorale),
+    axisMorale: n(s?.axisMorale),
     initialMorale: n(s?.initialMorale),
   };
 }
 
-function normRotation(r: any): { current: number; maps: any[] } {
+function normRotation(game: Game, r: any): { current: number; maps: any[] } {
   const rows: any[] = Array.isArray(r?.mAPS) ? r.mAPS : Array.isArray(r?.maps) ? r.maps : [];
   return {
     current: Number(r?.currentIndex) || 0,
@@ -171,7 +119,7 @@ function normRotation(r: any): { current: number; maps: any[] } {
         id,
         name: String(m?.name || "").slice(0, 80),
         position: Number(m?.position) || 0,
-        ...parseLayer(id),
+        ...parseLayer(game, id),
       };
     }),
   };
@@ -181,7 +129,7 @@ type RosterPlayer = {
   name: string;
   clan: string | null;
   level: number;
-  team: "us" | "nva" | "none";
+  team: "allied" | "axis" | "none";
   roleId: number;
   role: string;
   roleType: string;
@@ -196,18 +144,19 @@ type RosterPlayer = {
 
 /** Names, roles and scores only. Player ids (EOS / Steam) never leave here —
  *  a roster board does not need them and a public page must not carry them. */
-function normRoster(r: any) {
+function normRoster(game: Game, r: any, session: Session | null) {
   const rows: any[] = Array.isArray(r?.players) ? r.players : [];
+  const commanderId = COMMANDER_ROLE[game];
   const players: RosterPlayer[] = rows.map((p: any) => {
     const roleId = Number(p?.role);
-    const role = ROLES[roleId] || { name: "Unassigned", type: "None" };
+    const role = roleOf(game, roleId);
     const sd = p?.scoreData || {};
     const st = p?.stats || {};
     return {
       name: String(p?.name || "").slice(0, 40),
       clan: p?.clanTag ? String(p.clanTag).slice(0, 12) : null,
       level: Number(p?.level) || 0,
-      team: teamOf(Number(p?.team)),
+      team: sideOf(game, Number(p?.team)),
       roleId,
       role: role.name,
       roleType: role.type,
@@ -226,21 +175,18 @@ function normRoster(r: any) {
     };
   });
 
+  const total = (p: RosterPlayer) =>
+    p.score.combat + p.score.offense + p.score.defense + p.score.support;
   const byLead = (a: RosterPlayer, b: RosterPlayer) =>
-    Number(b.lead) - Number(a.lead) ||
-    b.score.combat +
-      b.score.offense +
-      b.score.defense +
-      b.score.support -
-      (a.score.combat + a.score.offense + a.score.defense + a.score.support);
+    Number(b.lead) - Number(a.lead) || total(b) - total(a);
 
-  function team(t: "us" | "nva") {
-    const mine = players.filter((p) => p.team === t);
-    const commander = mine.filter((p) => p.roleId === 20);
+  function team(side: "allied" | "axis") {
+    const mine = players.filter((p) => p.team === side);
+    const commander = mine.filter((p) => p.roleId === commanderId);
     const squadsMap = new Map<string, RosterPlayer[]>();
     const loose: RosterPlayer[] = [];
     for (const p of mine) {
-      if (p.roleId === 20) continue;
+      if (p.roleId === commanderId) continue;
       if (!p.squad) {
         loose.push(p);
         continue;
@@ -249,11 +195,11 @@ function normRoster(r: any) {
       if (!squadsMap.has(k)) squadsMap.set(k, []);
       squadsMap.get(k)!.push(p);
     }
-    const squads = Array.from(squadsMap.entries())
-      .map(([, ps]) => {
+    const squads = Array.from(squadsMap.values())
+      .map((ps) => {
         ps.sort(byLead);
-        // A squad's type is what most of it is doing; armour and mortar and
-        // air crews are all-of-a-kind so the majority is the whole squad.
+        // A squad's type is what most of it is doing; armour, recon and
+        // mortar crews are all-of-a-kind so the majority is the whole squad.
         const counts = new Map<string, number>();
         for (const p of ps) counts.set(p.roleType, (counts.get(p.roleType) || 0) + 1);
         const type = Array.from(counts.entries()).sort((a, b) => b[1] - a[1])[0]?.[0] || "Infantry";
@@ -261,13 +207,20 @@ function normRoster(r: any) {
       })
       .sort((a, b) => a.index - b.index || a.name.localeCompare(b.name));
     loose.sort(byLead);
-    return { count: mine.length, commander: commander[0] || null, squads, unassigned: loose };
+    const faction = side === "allied" ? session?.alliedFaction : session?.axisFaction;
+    return {
+      faction: faction || null,
+      count: mine.length,
+      commander: commander[0] || null,
+      squads,
+      unassigned: loose,
+    };
   }
 
   return {
     total: players.length,
-    us: team("us"),
-    nva: team("nva"),
+    allied: team("allied"),
+    axis: team("axis"),
     unassigned: players.filter((p) => p.team === "none").sort(byLead),
   };
 }
@@ -277,6 +230,7 @@ function normRoster(r: any) {
 type Linked = {
   id: string;
   lobbyId: string;
+  game: Game;
   name: string;
   host: string;
   port: number;
@@ -284,6 +238,9 @@ type Linked = {
   note: string;
   status: string;
   lastSeenAt: Date | null;
+  /** For a WWII box Steam's list already tracks: the aggregate row's id, so
+   *  the rhythm reads weeks of existing history instead of starting over. */
+  aggregateId: string | null;
 };
 
 function splitHost(stored: string): { host: string; port: number } {
@@ -343,6 +300,7 @@ export default async function hllvRoutes(app: FastifyInstance, opts: Opts = {}) 
     return {
       id: row.id,
       lobbyId: row.lobbyId,
+      game: GAME_OF_FRAMEWORK[String(row.framework)] || "hllv",
       name: row.name,
       host,
       port,
@@ -350,15 +308,19 @@ export default async function hllvRoutes(app: FastifyInstance, opts: Opts = {}) 
       note: row.description || "",
       status: row.status,
       lastSeenAt: row.lastSeenAt,
+      aggregateId: row.bmServerId ? String(row.bmServerId) : null,
     };
   }
 
-  async function loadLinked(lobbyId?: string): Promise<Linked[]> {
+  async function loadLinked(lobbyId?: string, game?: Game): Promise<Linked[]> {
     try {
       const rows = await prisma.communityServer.findMany({
-        where: { framework: FRAMEWORK, ...(lobbyId ? { lobbyId } : {}) },
+        where: {
+          framework: game ? FRAMEWORKS[game] : { in: Object.values(FRAMEWORKS) },
+          ...(lobbyId ? { lobbyId } : {}),
+        },
         orderBy: { createdAt: "asc" },
-        take: lobbyId ? MAX_LINKED : 200,
+        take: lobbyId ? MAX_LINKED * 2 : 400,
       });
       return rows.map(toLinked);
     } catch (e) {
@@ -382,10 +344,10 @@ export default async function hllvRoutes(app: FastifyInstance, opts: Opts = {}) 
         l.port,
         l.password,
         async (c) => {
-          const session = normSession(await c.info("session"));
+          const session = normSession(l.game, await c.info("session"));
           let rotation: any = null;
           try {
-            rotation = normRotation(await c.info("maprotation"));
+            rotation = normRotation(l.game, await c.info("maprotation"));
           } catch (e) {
             swallow(e);
           }
@@ -411,18 +373,39 @@ export default async function hllvRoutes(app: FastifyInstance, opts: Opts = {}) 
   }
 
   // ---- the rhythm feed --------------------------------------------------------
-  // Same tables the WWII worker fills from Steam's list, filled here from the
-  // unit's own box. /gs/servers/hllv:<id>/rhythm then answers "what does our
-  // server normally do on a Thursday at 20:00" with no Vietnam-specific code.
+  // Same tables the WWII worker fills from Steam's list. A Vietnam box (or a
+  // WWII box Steam does not list) is sampled here under `<game>:<id>`; a WWII
+  // box Steam already tracks is matched by name to its existing row and left
+  // to the worker, which has been sampling it for weeks.
 
-  const rhythmId = (id: string) => `hllv:${id}`;
+  const ownRhythmId = (l: Linked) => `${l.game}:${l.id}`;
+  const rhythmIdOf = (l: Linked) => l.aggregateId || ownRhythmId(l);
+
+  async function matchAggregate(l: Linked, s: Session): Promise<string | null> {
+    if (l.game !== "hll" || !s.serverName) return null;
+    try {
+      const row = await prisma.gameServer.findFirst({
+        where: { appId: STEAM_APP_ID.hll, name: s.serverName, NOT: { id: { startsWith: "hll:" } } },
+        orderBy: { lastSeenAt: "desc" },
+        select: { id: true },
+      });
+      if (!row) return null;
+      await prisma.communityServer.update({ where: { id: l.id }, data: { bmServerId: row.id } });
+      l.aggregateId = row.id;
+      return row.id;
+    } catch (e) {
+      swallow(e);
+      return null;
+    }
+  }
 
   async function recordSample(l: Linked, s: Session | null) {
-    const id = rhythmId(l.id);
+    if (l.aggregateId) return; // Steam's list is sampling it already
+    const id = ownRhythmId(l);
     try {
       if (s) {
         const data = {
-          appId: HLLV_APP_ID,
+          appId: STEAM_APP_ID[l.game],
           name: (s.serverName || l.name).slice(0, 200),
           addr: "",
           map: s.mapId || null,
@@ -454,6 +437,9 @@ export default async function hllvRoutes(app: FastifyInstance, opts: Opts = {}) 
       for (const l of all) {
         cacheDrop(`live:${l.id}`);
         const live = await liveOf(l);
+        // A WWII box that was offline (or renamed) at link time gets another
+        // chance to find its Steam row every poll.
+        if (live.session && !l.aggregateId) await matchAggregate(l, live.session);
         await recordSample(l, live.session);
       }
       if (all.length) log.info(`[hllv] polled ${all.length} linked server(s)`);
@@ -468,17 +454,25 @@ export default async function hllvRoutes(app: FastifyInstance, opts: Opts = {}) 
 
   // ---- routes -------------------------------------------------------------
 
+  function gameParam(q: any): Game | undefined {
+    const g = String(q?.game || "");
+    return g === "hll" || g === "hllv" ? g : undefined;
+  }
+
   // Steam still knows two things about Vietnam: how many are playing and
   // what the studio said last. Both come straight off the game's own appid.
-  app.get("/hllv/intel", { schema: { tags: ["hllv"] } }, async (_req, reply) => {
-    const hit = cacheGet("intel");
+  app.get("/hllv/intel", { schema: { tags: ["hllv"] } }, async (req, reply) => {
+    const game = gameParam((req as any).query) || "hllv";
+    const appId = STEAM_APP_ID[game];
+    const key = `intel:${game}`;
+    const hit = cacheGet(key);
     if (hit) return reply.send(hit);
     const [playersJ, newsJ] = await Promise.all([
       jget(
-        `https://api.steampowered.com/ISteamUserStats/GetNumberOfCurrentPlayers/v1/?appid=${HLLV_APP_ID}`,
+        `https://api.steampowered.com/ISteamUserStats/GetNumberOfCurrentPlayers/v1/?appid=${appId}`,
       ),
       jget(
-        `https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=${HLLV_APP_ID}&count=8&maxlength=400&format=json`,
+        `https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=${appId}&count=8&maxlength=400&format=json`,
       ),
     ]);
     const playingNow =
@@ -498,8 +492,8 @@ export default async function hllvRoutes(app: FastifyInstance, opts: Opts = {}) 
             .slice(0, 220),
         }))
       : [];
-    const out = { ok: true, playingNow, news };
-    if (playingNow != null || news.length) cacheSet("intel", out, 10 * 60_000);
+    const out = { ok: true, game, playingNow, news };
+    if (playingNow != null || news.length) cacheSet(key, out, 10 * 60_000);
     return reply.send(out);
   });
 
@@ -508,14 +502,17 @@ export default async function hllvRoutes(app: FastifyInstance, opts: Opts = {}) 
     { schema: { tags: ["hllv"] }, config: { rateLimit: { max: 60, timeWindow: "1 minute" } } },
     async (req, reply) => {
       const lobbyId = String((req as any).params?.lobbyId || "").slice(0, 64);
+      const game = gameParam((req as any).query);
       const u = authFromHeader?.((req as any).headers?.authorization);
       const manage = u ? await canManage(u.id, lobbyId) : false;
-      const linked = await loadLinked(lobbyId);
+      const linked = await loadLinked(lobbyId, game);
       const servers = await Promise.all(
         linked.map(async (l) => {
           const live = await liveOf(l);
+          if (live.session && !l.aggregateId) await matchAggregate(l, live.session);
           return {
             id: l.id,
+            game: l.game,
             name: l.name,
             note: l.note,
             status: live.session ? "connected" : l.status,
@@ -523,7 +520,8 @@ export default async function hllvRoutes(app: FastifyInstance, opts: Opts = {}) 
             lastSeenAt: l.lastSeenAt,
             live: live.session,
             rotation: live.rotation,
-            rhythmId: rhythmId(l.id),
+            rhythmId: rhythmIdOf(l),
+            aggregate: !!l.aggregateId,
           };
         }),
       );
@@ -554,11 +552,13 @@ export default async function hllvRoutes(app: FastifyInstance, opts: Opts = {}) 
           l.port,
           l.password,
           async (c) => {
-            const [session, players] = await Promise.all([c.info("session"), c.info("players")]);
+            const [sessionRaw, players] = await Promise.all([c.info("session"), c.info("players")]);
+            const session = normSession(l.game, sessionRaw);
             return {
               ok: true,
-              session: normSession(session),
-              roster: normRoster(players),
+              game: l.game,
+              session,
+              roster: normRoster(l.game, players, session),
               fetchedAt: Date.now(),
             };
           },
@@ -584,6 +584,7 @@ export default async function hllvRoutes(app: FastifyInstance, opts: Opts = {}) 
         return reply.code(403).send({ ok: false, error: "mods_only" });
 
       const body: any = (req as any).body || {};
+      const game: Game = body.game === "hll" ? "hll" : "hllv";
       const name = String(body.name || "")
         .trim()
         .slice(0, 80);
@@ -600,7 +601,7 @@ export default async function hllvRoutes(app: FastifyInstance, opts: Opts = {}) 
         return reply.code(400).send({ ok: false, error: "missing_fields" });
 
       // The probe IS the validation: if the box answers session and config
-      // with this password, it is a Vietnam (or HLL) server and the link is real.
+      // with this password, it is a Hell Let Loose server and the link is real.
       let probe: { session: Session; config: any };
       try {
         probe = await rconRead(
@@ -612,7 +613,7 @@ export default async function hllvRoutes(app: FastifyInstance, opts: Opts = {}) 
               c.info("session"),
               c.info("serverconfig"),
             ]);
-            return { session: normSession(session), config };
+            return { session: normSession(game, session), config };
           },
           RCON_TIMEOUT,
         );
@@ -626,7 +627,7 @@ export default async function hllvRoutes(app: FastifyInstance, opts: Opts = {}) 
         : [];
       const build = Number(probe.config?.buildNumber) || null;
 
-      const all = await loadLinked(lobbyId);
+      const all = await loadLinked(lobbyId, game);
       const existing = all.find((l) => l.host === host && l.port === port);
       if (!existing && all.length >= MAX_LINKED)
         return reply.code(409).send({ ok: false, error: "full" });
@@ -638,29 +639,34 @@ export default async function hllvRoutes(app: FastifyInstance, opts: Opts = {}) 
         host: `${host}:${port}`,
         queryUrl: null,
         description: note,
-        framework: FRAMEWORK,
+        framework: FRAMEWORKS[game],
         status: "connected",
         lastSeenAt: new Date(),
         lastState: { session: probe.session, platforms, build },
         apiKey: password,
-        bmServerId: null,
+        bmServerId: existing?.aggregateId ?? null,
       };
       const row = existing
         ? await prisma.communityServer.update({ where: { id: existing.id }, data })
         : await prisma.communityServer.create({ data });
       cacheDrop(`live:${row.id}`);
       cacheDrop(`roster:${row.id}`);
-      // First reading now, so the rhythm route answers "still building"
-      // rather than 404 the moment the card renders.
-      await recordSample(toLinked(row), probe.session);
+      const linked = toLinked(row);
+      // A WWII box Steam already lists inherits its history on the spot;
+      // otherwise take a first reading now, so the rhythm route answers
+      // "still building" rather than 404 the moment the card renders.
+      const matched = await matchAggregate(linked, probe.session);
+      if (!matched) await recordSample(linked, probe.session);
 
       return reply.send({
         ok: true,
         id: row.id,
+        game,
         live: probe.session,
         platforms,
         build,
-        rhythmId: rhythmId(row.id),
+        rhythmId: rhythmIdOf(linked),
+        aggregate: !!matched,
       });
     },
   );
@@ -676,7 +682,7 @@ export default async function hllvRoutes(app: FastifyInstance, opts: Opts = {}) 
       if (!(await canManage(u.id, lobbyId)))
         return reply.code(403).send({ ok: false, error: "mods_only" });
       await prisma.communityServer
-        .deleteMany({ where: { id, lobbyId, framework: FRAMEWORK } })
+        .deleteMany({ where: { id, lobbyId, framework: { in: Object.values(FRAMEWORKS) } } })
         .catch(swallow);
       // The history stays. A unit that re-links the same box next month
       // should not start its pattern from zero.
