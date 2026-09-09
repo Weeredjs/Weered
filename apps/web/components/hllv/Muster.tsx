@@ -119,9 +119,11 @@ export default function Muster({
     setBusy(true);
     setErr("");
     try {
+      // No content-type without a body: Fastify refuses an empty JSON body,
+      // which is exactly what a DELETE looks like.
       const j = await fetch(`${base}${path}`, {
         method,
-        headers: { "Content-Type": "application/json", ...authHeaders() },
+        headers: { ...(body ? { "Content-Type": "application/json" } : {}), ...authHeaders() },
         body: body ? JSON.stringify(body) : undefined,
       }).then((r) => r.json());
       if (!j?.ok) setErr(j?.error === "mods_only" ? "Officers only." : j?.error || "Failed.");
