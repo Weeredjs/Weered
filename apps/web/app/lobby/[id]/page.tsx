@@ -772,38 +772,6 @@ export default function LobbyIdPage() {
     const forceFull = params.get("chrome") === "full";
     const known = !isThemeableLobby(lobbyId) || (!!lobbyInfo && memberChecked);
     if (!known && !forceMin && !forceFull) return;
-    const DENSE_CHROME = new Set<string>([
-      "BUNGIE",
-      "TWITCH",
-      "MARATHON",
-      "MLB",
-      "PGA",
-      "NEWS",
-      "RIOT",
-      "FORTNITE",
-      "TRADING",
-      "POKER",
-      "CS2",
-      "DOTA2",
-      "STUDY",
-      "PUBG",
-      "DND",
-      "POE",
-      "POE2",
-      "DIVISION2",
-      "ASSETTOCORSA",
-      "WINDROSE",
-      "HELLDIVERS2",
-      "CHESS",
-      "EVE",
-      "MTG",
-      "HLL",
-      "HLLV",
-      "COWORK",
-    ]);
-    const mt = lobbyInfo?.moduleType || "";
-    void DENSE_CHROME;
-    void mt;
     const wantMin = forceMin || (!forceFull && !wantLobbyTheme);
     const d = document.documentElement;
     if (wantMin) d.setAttribute("data-weered-chrome", "min");
