@@ -8,6 +8,7 @@ import ServerRhythm from "./hll/ServerRhythm";
 // Vietnam panel: same protocol, same components, WWII vocabulary via game="hll".
 import LinkedServers from "./hllv/FrontLines";
 import RosterTab from "./hllv/Roster";
+import Muster from "./hllv/Muster";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 const ACCENT = "#BFA46F"; // brass over field-grey — HLL's palette
@@ -26,6 +27,7 @@ const TABS = [
   { id: "seeding" as const, label: "Seeding Ops" },
   { id: "garrison" as const, label: "Garrisons" },
   { id: "roster" as const, label: "Roster" },
+  { id: "muster" as const, label: "Muster" },
   { id: "artillery" as const, label: "Artillery School" },
 ];
 type TabId = (typeof TABS)[number]["id"];
@@ -1649,6 +1651,7 @@ export default function HllModulesPanel({
           <Garrison accent={accent} lobbyId={lobbyId} onGo={(t) => setTab(t as TabId)} />
         )}
         {tab === "roster" && <RosterTab lobbyId={lobbyId} game="hll" accent={accent} />}
+        {tab === "muster" && <Muster lobbyId={lobbyId} game="hll" accent={accent} />}
         {tab === "artillery" && <ArtillerySchool accent={accent} currentUserId={currentUserId} />}
       </div>
     </div>

@@ -16,11 +16,13 @@ import FrontLines from "./FrontLines";
 import RosterTab from "./Roster";
 import FireDirection from "./FireDirection";
 import FieldManual from "./FieldManual";
+import Muster from "./Muster";
 import { ACCENT, S } from "./shared";
 
 const TABS = [
   { id: "frontline" as const, label: "Front Line" },
   { id: "roster" as const, label: "Roster" },
+  { id: "muster" as const, label: "Muster" },
   { id: "fire" as const, label: "Fire Direction" },
   { id: "manual" as const, label: "Field Manual" },
 ];
@@ -57,6 +59,7 @@ export default function HllvModulesPanel({
           />
         )}
         {tab === "roster" && <RosterTab lobbyId={lobbyId} game="hllv" accent={accent} />}
+        {tab === "muster" && <Muster lobbyId={lobbyId} game="hllv" accent={accent} />}
         {tab === "fire" && <FireDirection accent={accent} />}
         {tab === "manual" && <FieldManual accent={accent} />}
       </div>

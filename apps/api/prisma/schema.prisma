@@ -3164,3 +3164,78 @@ model GameServerSample {
   @@index([serverId, at])
   @@index([at])
 }
+
+// ---- Muster: drill attendance read off a unit's own server ----------------
+// A unit's roll is its in-game names, not Weered accounts: attendance has to
+// work on day one, before half the platoon has signed up. A Drill is a time
+// window over one or more of the lobby's RCON-linked servers; sightings are
+// the names the roster showed during that window; marks are an officer's
+// hand overrides (LOA, ELOA, AWOL, Excused) on top of the automatic read.
+
+model MusterMember {
+  id        String   @id @default(cuid())
+  lobbyId   String
+  name      String
+  nameKey   String // normalised for matching: lower-case, trimmed
+  squad     String   @default("")
+  status    String   @default("ACTIVE") // ACTIVE | RESERVE | INACTIVE
+  userId    String?
+  note      String   @default("")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([lobbyId, nameKey])
+  @@index([lobbyId, status])
+}
+
+model Drill {
+  id          String   @id @default(cuid())
+  lobbyId     String
+  eventId     String?  @unique
+  title       String
+  serverIds   String[] @default([])
+  windowStart DateTime
+  windowEnd   DateTime
+  polls       Int      @default(0)
+  status      String   @default("SCHEDULED") // SCHEDULED | RUNNING | DONE
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  sightings DrillSighting[]
+  marks     DrillMark[]
+
+  @@index([lobbyId, windowStart])
+  @@index([status, windowEnd])
+}
+
+model DrillSighting {
+  id          String   @id @default(cuid())
+  drillId     String
+  nameKey     String
+  name        String
+  clan        String   @default("")
+  seenPolls   Int      @default(0)
+  firstSeenAt DateTime @default(now())
+  lastSeenAt  DateTime @default(now())
+
+  drill Drill @relation(fields: [drillId], references: [id], onDelete: Cascade)
+
+  @@unique([drillId, nameKey])
+}
+
+model DrillMark {
+  id        String   @id @default(cuid())
+  drillId   String
+  nameKey   String
+  status    String // PRESENT | ABSENT | LOA | ELOA | AWOL | EXCUSED
+  note      String   @default("")
+  byUserId  String
+  byName    String   @default("")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  drill Drill @relation(fields: [drillId], references: [id], onDelete: Cascade)
+
+  @@unique([drillId, nameKey])
+}
