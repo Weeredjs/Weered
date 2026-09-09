@@ -61,6 +61,30 @@ export async function assertSafeUrl(raw: string, opts: SafeUrlOpts = {}): Promis
   return u;
 }
 
+/**
+ * Resolve a hostname for a raw TCP connection (game RCON, not HTTP) and hand
+ * back ONE address that is safe to dial.
+ *
+ * Callers connect to the returned address, not the name, which is what closes
+ * the DNS-rebind window that fetchSafe has to leave open: a raw socket has no
+ * SNI, so pinning the verified address costs nothing.
+ */
+export async function resolveSafeHost(host: string): Promise<string> {
+  const h = String(host || "")
+    .trim()
+    .replaceAll(/(^\[)|(\]$)/g, "");
+  if (!h || h.length > 253) throw new Error("invalid_host");
+  if (net.isIP(h)) {
+    if (isPrivateIp(h)) throw new Error("private_host");
+    return h;
+  }
+  if (!/^[a-z0-9.-]+$/i.test(h)) throw new Error("invalid_host");
+  const results = await lookup(h, { all: true });
+  if (!results.length) throw new Error("dns_empty");
+  for (const r of results) if (isPrivateIp(r.address)) throw new Error("private_host");
+  return results[0].address;
+}
+
 const MAX_HOPS = 3;
 
 /**

@@ -68,6 +68,7 @@ enum ModuleType {
   MTG
   HLL
   COWORK
+  HLLV
 }
 
 model NewsArticle {

@@ -170,6 +170,10 @@ const HllModulesPanel = dynamic(() => import("../../../components/HllModulesPane
   loading: panelLoading,
   ssr: false,
 });
+const HllvModulesPanel = dynamic(() => import("../../../components/hllv/HllvModulesPanel"), {
+  loading: panelLoading,
+  ssr: false,
+});
 const CoworkModulesPanel = dynamic(() => import("../../../components/CoworkModulesPanel"), {
   loading: panelLoading,
   ssr: false,
@@ -794,6 +798,7 @@ export default function LobbyIdPage() {
       "EVE",
       "MTG",
       "HLL",
+      "HLLV",
       "COWORK",
     ]);
     const mt = lobbyInfo?.moduleType || "";
@@ -1309,6 +1314,13 @@ export default function LobbyIdPage() {
                     />
                   ) : lobbyInfo?.moduleType === "HLL" ? (
                     <HllModulesPanel
+                      lobbyId={lobbyId}
+                      accentColor={accent}
+                      currentUserId={me?.id}
+                      style={{ flex: 1, minHeight: 0 }}
+                    />
+                  ) : lobbyInfo?.moduleType === "HLLV" ? (
+                    <HllvModulesPanel
                       lobbyId={lobbyId}
                       accentColor={accent}
                       currentUserId={me?.id}

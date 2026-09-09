@@ -122,6 +122,7 @@ const MODULE_TYPES = new Set([
   "EVE",
   "MTG",
   "HLL",
+  "HLLV",
   "COWORK",
 ]);
 

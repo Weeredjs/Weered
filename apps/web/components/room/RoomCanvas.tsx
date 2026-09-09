@@ -111,6 +111,7 @@ const ALL_MODULES: { id: NonNullable<StageMode>; label: string; icon: string; li
   { id: "windrose",icon: "⚓", label: "Windrose", live: true  },
   { id: "helldivers",icon: "💀", label: "Helldivers", live: true  },
   { id: "hll",     icon: "🎖", label: "HLL",       live: true  },
+  { id: "hllv",    icon: "🚁", label: "Vietnam",   live: true  },
   { id: "chess",   icon: "♟",  label: "Chess",    live: true  },
   { id: "gta",     icon: "🌴", label: "GTA",      live: true  },
   { id: "eve",     icon: "🛰", label: "EVE",      live: true  },
@@ -133,6 +134,7 @@ const LOBBY_MODULE_MAP: Record<string, string[]> = {
   WINDROSE:    ["voice", "windrose", "youtube", "twitch", "video", "screen"],
   HELLDIVERS2: ["voice", "helldivers", "youtube", "twitch", "video", "screen"],
   HLL:         ["voice", "hll", "youtube", "twitch", "video", "screen"],
+  HLLV:        ["voice", "hllv", "youtube", "twitch", "video", "screen"],
   CHESS:       ["voice", "chess", "youtube", "twitch", "video", "screen"],
   EVE:         ["voice", "eve", "youtube", "twitch", "video", "screen"],
   // The server board belongs in the room as much as the lobby — a race night

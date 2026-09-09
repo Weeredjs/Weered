@@ -11,7 +11,7 @@ import { safeImgSrc } from "../../lib/safeUrl";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
-export type StageMode = "voice" | "video" | "screen" | "youtube" | "browser" | "twitch" | "article" | "poker" | "fakeout" | "destiny" | "league" | "fortnite" | "pubg" | "hq" | "cs2" | "dota2" | "study" | "dnd" | "windrose" | "helldivers" | "hll" | "chess" | "gta" | "eve" | "assetto" | "office" | null;
+export type StageMode = "voice" | "video" | "screen" | "youtube" | "browser" | "twitch" | "article" | "poker" | "fakeout" | "destiny" | "league" | "fortnite" | "pubg" | "hq" | "cs2" | "dota2" | "study" | "dnd" | "windrose" | "helldivers" | "hll" | "hllv" | "chess" | "gta" | "eve" | "assetto" | "office" | null;
 
 interface Props {
   roomId: string;
@@ -54,6 +54,7 @@ const StudyModulesPanel = dynamic(() => import("../StudyModulesPanel"), { loadin
 const WindroseModulesPanel = dynamic(() => import("../WindroseModulesPanel"), { loading: stageLoading, ssr: false });
 const HelldiversModulesPanel = dynamic(() => import("../HelldiversModulesPanel"), { loading: stageLoading, ssr: false });
 const HllModulesPanel = dynamic(() => import("../HllModulesPanel"), { loading: stageLoading, ssr: false });
+const HllvModulesPanel = dynamic(() => import("../hllv/HllvModulesPanel"), { loading: stageLoading, ssr: false });
 const EveModulesPanel = dynamic(() => import("../EveModulesPanel"), { loading: stageLoading, ssr: false });
 const AssettoCorsaModulesPanel = dynamic(() => import("../AssettoCorsaModulesPanel"), { loading: stageLoading, ssr: false });
 
@@ -1050,6 +1051,7 @@ export default function RoomStage({ roomId, mode, moduleType, roomUsers, onClose
   if (mode === "gta") return <GtaModulePanel lobbyId={ctx?.currentLobbyId || "gta6"} redditSub="gta6" accent="#e84393" currentUserId={ctx?.me?.id} style={{ flex: 1, minHeight: 0 }} />;
   if (mode === "helldivers") return <HelldiversModulesPanel lobbyId={ctx?.currentLobbyId || "helldivers2"} accentColor="#FFD700" currentUserId={ctx?.me?.id} hideSquad style={{ flex: 1, minHeight: 0 }} />;
   if (mode === "hll") return <HllModulesPanel lobbyId={ctx?.currentLobbyId || "hll"} accentColor="#C9A227" currentUserId={ctx?.me?.id} style={{ flex: 1, minHeight: 0 }} />;
+  if (mode === "hllv") return <HllvModulesPanel lobbyId={ctx?.currentLobbyId || "16thir"} accentColor="#8FA35A" currentUserId={ctx?.me?.id} style={{ flex: 1, minHeight: 0 }} />;
   if (mode === "eve") return <EveModulesPanel lobbyId={ctx?.currentLobbyId || "eve"} gameName="EVE Online" accentColor="#d4af37" style={{ flex: 1, minHeight: 0 }} />;
   // No accentColor or demoData passed on purpose: a racing community brands its
   // own lobby, so the panel resolves both from the lobby rather than us pinning
