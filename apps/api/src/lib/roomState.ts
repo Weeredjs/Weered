@@ -237,17 +237,14 @@ export async function ensureRoomLoaded(roomId: string): Promise<RoomState> {
   const r = makeEmptyRoom(roomId);
 
   if (!dbRoom) {
-    // A room id that is really a lobby id (a stale /room/<lobby> link) must not
-    // mint a nameless Room row: it then shadows the lobby everywhere ids are
-    // resolved. The in-memory room still works for the session; it is just not
-    // persisted.
-    const clash = await prisma.lobby.findUnique({ where: { id: roomId }, select: { id: true } });
-    if (!clash) {
-      try {
-        await prisma.room.create({ data: { id: roomId, name: "", locked: false, ownerId: null } });
-      } catch (e: any) {
-        if (e?.code !== "P2002") throw e;
-      }
+    // The Room row is created on first join for ANY id, including a lobby's own
+    // id: that row is the lobby-level chat container (RoomMessage has an FK to
+    // Room), so it must exist before the first message. Do not gate this on
+    // "is this id a lobby" -- it is, by design, for lobby chat.
+    try {
+      await prisma.room.create({ data: { id: roomId, name: "", locked: false, ownerId: null } });
+    } catch (e: any) {
+      if (e?.code !== "P2002") throw e;
     }
   } else {
     r.name = dbRoom.name || "";
