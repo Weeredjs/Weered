@@ -42,7 +42,7 @@ function normRoomKey(x: any): string {
   return String(s || "").trim();
 }
 
-function lobbyHref(id: string): string {
+function lobbyHref(id: string, knownLobby = false): string {
   let clean = id || "";
   if (clean.startsWith("room:")) clean = clean.slice(5);
   try {
@@ -71,8 +71,13 @@ function lobbyHref(id: string): string {
     "marathon-",
   ];
   if (ROOM_PREFIXES.some((p) => clean.startsWith(p))) return `/room/${encodeURIComponent(clean)}`;
+  // A slug the caller has resolved as a lobby is a lobby, whatever it looks like.
+  // Lobby slugs may start with a digit ("16thir"): the old /^[a-z]/ test sent
+  // those to /room/, and the socket then minted a nameless Room row with the
+  // lobby's id, which made the mistake look permanent.
+  if (knownLobby) return `/lobby/${encodeURIComponent(clean)}`;
   const isLobbySlug =
-    /^[a-z][a-z0-9._/-]*$/.test(clean) || clean.includes(".") || clean.includes("/");
+    /^[a-z0-9][a-z0-9._/-]*$/.test(clean) || clean.includes(".") || clean.includes("/");
   if (isLobbySlug) return `/lobby/${encodeURIComponent(clean)}`;
   return `/room/${encodeURIComponent(clean)}`;
 }
@@ -1060,7 +1065,7 @@ export default function LeftRail() {
               <span style={{ fontSize: 10, opacity: 0.4 }}>{favs.length}</span>
             </div>
             {favs.map((room) => {
-              const href = lobbyHref(room);
+              const href = lobbyHref(room, !!favMeta[room] || !!lobbyLogos[room]);
               const isActive = activeRoomNorm === room;
               const label = getRoomName(room);
               const accent = accentForRoom(room);

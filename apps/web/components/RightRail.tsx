@@ -1028,7 +1028,7 @@ function FriendsPanel({ lobbyId }: { lobbyId: string }) {
 
   return (
     <div className="weered-rr-section" style={{ marginBottom: 16 }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: open ? 8 : 0, cursor: "pointer" }} onClick={() => setOpen(o => !o)} onKeyDown={onActivate(() => setOpen(o => !o))} tabIndex={0} role="button">
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: open ? 8 : 0, cursor: "pointer", background: "none", border: "none", borderRadius: 0, boxShadow: "none", padding: 0, filter: "none" }} onClick={() => setOpen(o => !o)} onKeyDown={onActivate(() => setOpen(o => !o))} tabIndex={0} role="button">
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <div className="weered-rr-section-title" style={{ fontSize: 11, fontWeight: 700, opacity: 0.5, letterSpacing: ".7px", textTransform: "uppercase" }}>Friends · {online.length} online</div>
           {friends.some(f => (f.unreadCount ?? 0) > 0 || f.hasUnread || f.hasPendingDm) && (
@@ -1152,7 +1152,7 @@ function CrewPanel({ lobbyId }: { lobbyId: string }) {
 
   return (
     <div className="weered-rr-section" style={{ marginBottom: 16 }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: open ? 8 : 0, cursor: "pointer" }} onClick={() => setOpen(o => !o)} onKeyDown={onActivate(() => setOpen(o => !o))} tabIndex={0} role="button">
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: open ? 8 : 0, cursor: "pointer", background: "none", border: "none", borderRadius: 0, boxShadow: "none", padding: 0, filter: "none" }} onClick={() => setOpen(o => !o)} onKeyDown={onActivate(() => setOpen(o => !o))} tabIndex={0} role="button">
         <div className="weered-rr-section-title" style={{ fontSize: 11, fontWeight: 700, opacity: 0.5, letterSpacing: ".7px", textTransform: "uppercase" }}>Crew · {online.length} online</div>
         <span style={{ fontSize: 10, opacity: 0.4 }}>{open ? "▲" : "▼"}</span>
       </div>

@@ -237,10 +237,17 @@ export async function ensureRoomLoaded(roomId: string): Promise<RoomState> {
   const r = makeEmptyRoom(roomId);
 
   if (!dbRoom) {
-    try {
-      await prisma.room.create({ data: { id: roomId, name: "", locked: false, ownerId: null } });
-    } catch (e: any) {
-      if (e?.code !== "P2002") throw e;
+    // A room id that is really a lobby id (a stale /room/<lobby> link) must not
+    // mint a nameless Room row: it then shadows the lobby everywhere ids are
+    // resolved. The in-memory room still works for the session; it is just not
+    // persisted.
+    const clash = await prisma.lobby.findUnique({ where: { id: roomId }, select: { id: true } });
+    if (!clash) {
+      try {
+        await prisma.room.create({ data: { id: roomId, name: "", locked: false, ownerId: null } });
+      } catch (e: any) {
+        if (e?.code !== "P2002") throw e;
+      }
     }
   } else {
     r.name = dbRoom.name || "";

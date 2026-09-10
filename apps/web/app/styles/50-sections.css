@@ -572,3 +572,21 @@ a[href^="/room/"]:hover {
 .weered-thread-rail:focus-visible > span {
   background: var(--weered-accent, #a78bfa);
 }
+
+/* Right-rail friend / crew rows are flat in every user theme. The press,
+   broadcast and ishimura themes box each row (gradient + shadow, !important).
+   Chrome-min cancels that on plain lobbies, so the box only ever showed in
+   themed (full-chrome) lobbies, which read as a bug. Same specificity, later
+   file, so this wins. A member's own row tint paints the inner element and is
+   unaffected. */
+html[data-weered-theme] .weered-rr-friend-row,
+html[data-weered-theme] .weered-rr-crew-row {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+html[data-weered-theme] .weered-rr-friend-row:hover,
+html[data-weered-theme] .weered-rr-crew-row:hover {
+  background: rgba(255, 255, 255, 0.04) !important;
+  box-shadow: none !important;
+}
