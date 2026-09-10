@@ -1,5 +1,6 @@
 import { describe, it, expect, afterAll } from "vitest";
 import lobbiesRoutes from "../../src/routes/lobbies";
+import lobbySearchRoutes from "../../src/routes/lobbySearch";
 import { buildTestApp } from "../helpers/buildTestApp";
 import { prisma } from "../../src/lib/prisma";
 
@@ -15,8 +16,11 @@ import { prisma } from "../../src/lib/prisma";
  * unlisted lobby leaks through its own room names.
  */
 function makeApp() {
-  return buildTestApp((app: any) =>
-    lobbiesRoutes(app, {
+  // /lobbies/search lives in its own route module since 142c702; the second
+  // test exercises it, so register it alongside the lobby routes.
+  return buildTestApp(async (app: any) => {
+    await lobbySearchRoutes(app, { authFromHeader: () => null });
+    await lobbiesRoutes(app, {
       authFromHeader: () => null,
       verifyToken: () => null,
       getGlobalRole: async () => null,
@@ -29,8 +33,8 @@ function makeApp() {
       isNameReserved: async () => false,
       awardNotoriety: async () => 0,
       send: () => {},
-    } as any),
-  );
+    } as any);
+  });
 }
 
 const OPEN = "itest-unlisted-open";

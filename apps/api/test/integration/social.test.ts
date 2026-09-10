@@ -21,6 +21,7 @@ function registerSocial(a: any) {
 describe("social /recents — Zod schema + round-trip", () => {
   let app: any;
   let userId: string;
+  let lobbyId: string;
 
   beforeEach(async () => {
     const stamp = Date.now() + "_" + Math.floor(performance.now());
@@ -29,6 +30,11 @@ describe("social /recents — Zod schema + round-trip", () => {
       select: { id: true },
     });
     userId = u.id;
+    // /recents only records visits to lobbies that exist (7fbafcc). CI runs on a
+    // bare `prisma db push`, so make the lobby this test visits; unlisted so a
+    // failed cleanup can never surface it anywhere.
+    lobbyId = "itest_soc_lobby_" + stamp;
+    await prisma.lobby.create({ data: { id: lobbyId, name: "itest social lobby", unlisted: true } });
     app = await buildTestApp(registerSocial);
   });
   afterEach(async () => {
@@ -41,6 +47,9 @@ describe("social /recents — Zod schema + round-trip", () => {
     try {
       await prisma.user.deleteMany({ where: { id: userId } });
     } catch {}
+    try {
+      await prisma.lobby.deleteMany({ where: { id: lobbyId } });
+    } catch {}
   });
   afterAll(async () => {
     await prisma.$disconnect();
@@ -52,7 +61,7 @@ describe("social /recents — Zod schema + round-trip", () => {
       method: "POST",
       url: "/recents",
       headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
-      payload: { lobbyId: "destiny2" },
+      payload: { lobbyId },
     });
     expect(post.statusCode).toBe(200);
     expect(post.json()?.ok).toBe(true);
@@ -65,7 +74,7 @@ describe("social /recents — Zod schema + round-trip", () => {
     expect(get.statusCode).toBe(200);
     const recents = get.json()?.recents;
     expect(Array.isArray(recents)).toBe(true);
-    expect(recents.some((r: any) => r.lobbyId === "destiny2")).toBe(true);
+    expect(recents.some((r: any) => r.lobbyId === lobbyId)).toBe(true);
   });
 
   it("rejects a malformed body via Zod (roomId not a string -> 400)", async () => {
