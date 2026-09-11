@@ -87,8 +87,43 @@ export const TIMBOS_UI: Record<string, Bi> = {
   },
   slippiTitle: { en: "Slippi Ranked", fr: "Classement Slippi" },
   slippiBlurb: {
-    en: "Melee netplay ratings for the crew, between locals. Wired to an official Slippi feed once that is in place — nothing here is scraped.",
-    fr: "Cotes de netplay Melee pour l'équipe, entre les locales. Branché à un flux officiel Slippi une fois celui-ci en place — rien ici n'est extrait sans autorisation.",
+    en: "Melee netplay ratings for the crew, between locals. Add your connect code and the board keeps your rating, record and mains, read from your public Slippi profile once an hour.",
+    fr: "Cotes de netplay Melee pour l'équipe, entre les locales. Ajoute ton code de connexion et le tableau garde ta cote, ta fiche et tes persos, lus sur ton profil Slippi public une fois l'heure.",
+  },
+  slippiEmpty: {
+    en: "No connect codes yet. The first one starts the board.",
+    fr: "Aucun code de connexion pour l'instant. Le premier lance le tableau.",
+  },
+  slippiAdd: { en: "Add code", fr: "Ajouter" },
+  slippiCodeHint: { en: "Your code, like MANG#0", fr: "Ton code, genre MANG#0" },
+  slippiSignIn: {
+    en: "Sign in and join the lobby to add your code.",
+    fr: "Connecte-toi et rejoins le lobby pour ajouter ton code.",
+  },
+  slippiUpdated: { en: "Updated", fr: "Mis à jour" },
+  slippiStale: {
+    en: "Slippi has not answered for a while. Showing the last good read.",
+    fr: "Slippi ne répond plus depuis un moment. Voici la dernière lecture réussie.",
+  },
+  slippiMains: { en: "Mains", fr: "Persos" },
+  slippiRemove: { en: "Remove", fr: "Retirer" },
+  slippiRefresh: { en: "Re-read now", fr: "Relire" },
+  slippiErrBad: {
+    en: "That is not a connect code. It looks like MANG#0.",
+    fr: "Ce n'est pas un code de connexion. Ça ressemble à MANG#0.",
+  },
+  slippiErrUnknown: { en: "Slippi does not know that code.", fr: "Slippi ne connaît pas ce code." },
+  slippiErrMembers: {
+    en: "Members only. Join the lobby first.",
+    fr: "Membres seulement. Rejoins le lobby d'abord.",
+  },
+  slippiErrLimit: {
+    en: "You already have three codes on the board.",
+    fr: "Tu as déjà trois codes sur le tableau.",
+  },
+  slippiErrDown: {
+    en: "Slippi is not answering right now. Try again in a minute.",
+    fr: "Slippi ne répond pas pour l'instant. Réessaie dans une minute.",
   },
   setupsTitle: { en: "Setups & CRTs", fr: "Bornes et téléviseurs" },
   setupsBlurb: {
@@ -112,6 +147,7 @@ export const TIMBOS_UI: Record<string, Bi> = {
  * rule applied to FastFox's driver boards.
  */
 export const TIMBOS_SAMPLE_BOARDS = {
+  // Kept for the storybook only; the live board is components/SlippiBoard.tsx.
   slippi: {
     columns: {
       en: ["#", "Connect code", "Rating", "Rank", "W–L"],

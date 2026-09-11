@@ -1154,7 +1154,7 @@ export default function LobbyIdPage() {
                 ) : view === "modules" && hasModules ? (
                   // Keyed on the lobby, not a ModuleType — lib/lobbyChrome.ts.
                   lobbyId === TIMBOS_LOBBY_ID ? (
-                    <TimbosPanel accent={accent} />
+                    <TimbosPanel lobbyId={lobbyId} accent={accent} />
                   ) : lobbyInfo?.moduleType === "MARATHON" ? (
                     <MarathonModulesPanel
                       lobbyId={lobbyId}

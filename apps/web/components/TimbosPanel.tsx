@@ -1,6 +1,7 @@
 "use client";
 import React from "react";
 import { ConfigBoard } from "./ConfigBoards";
+import SlippiBoard from "./SlippiBoard";
 import LangToggle from "./LangToggle";
 import { useLobbyLang, pick } from "../lib/lobbyLang";
 import { TIMBOS_UI, TIMBOS_SAMPLE_BOARDS } from "../lib/timbosCopy";
@@ -19,12 +20,18 @@ import { TIMBOS_UI, TIMBOS_SAMPLE_BOARDS } from "../lib/timbosCopy";
  * 2. Their event is IN PERSON. So the room's job is the weeks between events,
  *    and the stream on the day for everyone not at the venue.
  *
- * The Slippi board is deliberately a shelf, not an integration. Slippi's
- * ranked API is undocumented and unofficial; reading it uninvited — while
- * asking them for a partnership — would be indefensible. So the shape is here,
- * badged SAMPLE, ready to fill from a sanctioned feed.
+ * The Slippi board is live (components/SlippiBoard.tsx): members volunteer
+ * their own connect code and the API keeps that code's public ranked profile,
+ * read once an hour. Nothing is crawled; a code is only read because its
+ * owner put it here. The setups board is still a SAMPLE shelf.
  */
-export default function TimbosPanel({ accent = "#7b5cff" }: { accent?: string }) {
+export default function TimbosPanel({
+  lobbyId,
+  accent = "#7b5cff",
+}: {
+  lobbyId: string;
+  accent?: string;
+}) {
   const lang = useLobbyLang();
   const t = (k: string) => (TIMBOS_UI[k] ? pick(TIMBOS_UI[k], lang) : k);
   const sampleText = t("sampleNotice");
@@ -59,12 +66,7 @@ export default function TimbosPanel({ accent = "#7b5cff" }: { accent?: string })
       <section className="weered-timbos-card">
         <h3 className="weered-timbos-h3">{t("slippiTitle")}</h3>
         <p className="weered-timbos-blurb">{t("slippiBlurb")}</p>
-        <ConfigBoard
-          board={board(TIMBOS_SAMPLE_BOARDS.slippi)}
-          accent={accent}
-          sample
-          sampleText={sampleText}
-        />
+        <SlippiBoard lobbyId={lobbyId} accent={accent} />
       </section>
 
       <section className="weered-timbos-card">

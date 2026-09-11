@@ -3110,6 +3110,37 @@ model StartggAuth {
   updatedAt    DateTime  @updatedAt
 }
 
+// ── SLIPPI RANKED BOARD ───────────────────────────────────────────────────────
+//
+// A Melee lobby's ranked board. Members hand the room their own Slippi
+// connect code; the API reads that code's public ranked profile from Slippi
+// (the same read Slippi's own profile pages and every scene rank bot make),
+// keeps the last good read here, and refreshes it hourly. The board renders
+// from this table, never from Slippi directly, so a Slippi outage shows a
+// dated board rather than an empty one.
+model SlippiEntry {
+  id                String    @id @default(cuid())
+  lobbyId           String
+  code              String // "MANG#0", upper-cased
+  addedById         String?
+  displayName       String    @default("")
+  ordinal           Float?
+  updates           Int       @default(0) // rating updates this season; <5 = placements
+  wins              Int       @default(0)
+  losses            Int       @default(0)
+  globalPlacement   Int?
+  regionalPlacement Int?
+  continent         String?
+  characters        Json? // [{ character, gameCount }]
+  fetchedAt         DateTime? // last successful read
+  lastError         String? // null while the last read succeeded
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@unique([lobbyId, code])
+  @@index([lobbyId])
+}
+
 // ══════════════════════════════════════════════════════════════════════════════
 // ── GAME SERVER AGGREGATE ────────────────────────────────────────────────────
 //
