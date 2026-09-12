@@ -131,6 +131,7 @@ export const TIMBOS_UI: Record<string, Bi> = {
     fr: "Qui apporte quoi. À remplir avant l'événement pour que personne ne transporte du matériel inutilement.",
   },
   ridesTitle: { en: "Rides", fr: "Covoiturage" },
+  dayTitle: { en: "Stream & Rides", fr: "Diffusion et covoiturage" },
   ridesBlurb: {
     en: "Seats to and from the venue.",
     fr: "Places disponibles vers le site et le retour.",

@@ -1142,7 +1142,7 @@ export default function LobbyIdPage() {
                 style={{
                   flex: 1,
                   minHeight: 0,
-                  overflow: view === "modules" ? "visible" : "auto",
+                  overflow: view === "modules" && lobbyId !== TIMBOS_LOBBY_ID ? "visible" : "auto",
                   display: "flex",
                   flexDirection: "column",
                 }}
