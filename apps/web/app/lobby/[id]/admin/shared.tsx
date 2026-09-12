@@ -260,7 +260,11 @@ export type NavId = (typeof NAV_ITEMS)[number]["id"];
  * NavId's literal ids intact instead of widening the whole list.
  */
 export function navAllowedFor(
-  item: { moduleTypes?: readonly string[] },
+  // `id` is here only to give this parameter a property in common with every
+  // NAV_ITEMS entry. A type whose properties are all optional is a "weak type",
+  // and TypeScript rejects a source that shares none of them - which is every
+  // tab that does not declare moduleTypes.
+  item: { readonly id: string; readonly moduleTypes?: readonly string[] },
   moduleType: string,
 ): boolean {
   return !item.moduleTypes || item.moduleTypes.includes(moduleType);
