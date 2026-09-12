@@ -4,6 +4,7 @@ import { ConfigBoard } from "./ConfigBoards";
 import SlippiBoard from "./SlippiBoard";
 import LangToggle from "./LangToggle";
 import ModuleTabBar from "./ModuleTabBar";
+import StationBoard from "./StationBoard";
 import { useLobbyLang, pick } from "../lib/lobbyLang";
 import { TIMBOS_UI, TIMBOS_SAMPLE_BOARDS } from "../lib/timbosCopy";
 
@@ -96,16 +97,21 @@ export default function TimbosPanel({
         )}
 
         {tab === "setups" && (
-          <section className="weered-timbos-card">
-            <h3 className="weered-timbos-h3">{t("setupsTitle")}</h3>
-            <p className="weered-timbos-blurb">{t("setupsBlurb")}</p>
-            <ConfigBoard
-              board={board(TIMBOS_SAMPLE_BOARDS.setups)}
-              accent={accent}
-              sample
-              sampleText={sampleText}
-            />
-          </section>
+          <>
+            {/* Who brought what, and what is playing on it, are the same story:
+                the board goes above the shelf rather than on a tab of its own. */}
+            <StationBoard lobbyId={lobbyId} accent={accent} />
+            <section className="weered-timbos-card">
+              <h3 className="weered-timbos-h3">{t("setupsTitle")}</h3>
+              <p className="weered-timbos-blurb">{t("setupsBlurb")}</p>
+              <ConfigBoard
+                board={board(TIMBOS_SAMPLE_BOARDS.setups)}
+                accent={accent}
+                sample
+                sampleText={sampleText}
+              />
+            </section>
+          </>
         )}
 
         {tab === "day" && (

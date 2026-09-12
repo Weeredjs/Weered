@@ -1841,6 +1841,7 @@ async function main() {
   await app.register((await import("./routes/hll")).default, { authFromHeader });
   await app.register((await import("./routes/hllv")).default, { authFromHeader });
   await app.register((await import("./routes/muster")).default, { authFromHeader });
+  await app.register((await import("./routes/stations")).default, { authFromHeader });
   await app.register((await import("./routes/slippi")).default, { authFromHeader });
   await app.register((await import("./routes/lobbySearch")).default, { authFromHeader });
   await app.register((await import("./routes/cowork")).default, { authFromHeader });

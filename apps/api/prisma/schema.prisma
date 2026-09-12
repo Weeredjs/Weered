@@ -3270,3 +3270,52 @@ model DrillMark {
 
   @@unique([drillId, nameKey])
 }
+
+// ── Station board ─────────────────────────────────────────────────────────
+// The venue floor, not the bracket. start.gg holds the bracket and Weered
+// holds the setups and who is on them, because start.gg's own station feature
+// is defined-and-abandoned in practice: across fifteen events running live on
+// 2026-09-12, TOs had configured 14-16 stations each and not one set was
+// assigned to any of them. Assigning there is tedious and the players never
+// see the result, so the loop is never worth closing. Here the display IS the
+// payoff, so it is.
+model Station {
+  id        String   @id @default(cuid())
+  lobbyId   String
+  number    Int // the number called out on the mic: "set up on 4"
+  label     String   @default("") // "Main stage", "Stream setup" — optional
+  kind      String   @default("") // 'GameCube / 20" CRT' — mirrors the setups board
+  state     String   @default("OPEN") // OPEN | PLAYING | DOWN
+  note      String   @default("") // "controller port 2 is flaky"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  assignments StationAssignment[]
+
+  @@unique([lobbyId, number])
+  @@index([lobbyId, state])
+}
+
+// One set, queued to one station. position 0 is on the setup now; 1 and up are
+// the on-deck queue in order. Player names are snapshotted at assign time so a
+// board still reads correctly when start.gg is slow or unreachable.
+model StationAssignment {
+  id         String    @id @default(cuid())
+  stationId  String
+  lobbyId    String
+  setId      String // start.gg set id, or a free-text label for an unbracketed match
+  identifier String    @default("") // the set letter on the bracket: "A", "BF"
+  roundText  String    @default("") // "Winners Quarter-Final"
+  eventName  String    @default("") // "Melee Singles"
+  players    String[] // entrant names as they read on the bracket
+  position   Int       @default(0) // 0 = playing, 1+ = on deck
+  calledAt   DateTime?
+  startedAt  DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  station Station @relation(fields: [stationId], references: [id], onDelete: Cascade)
+
+  @@unique([lobbyId, setId])
+  @@index([stationId, position])
+}
