@@ -396,16 +396,48 @@ export function PresentationDoc({ data, clientName }: { data: any; clientName?: 
   const carrier = h?.carrier || emp?.carrier || "";
 
   // ---- THE RECONCILIATION inputs -----------------------------------------
-  // The carrier's ask, annualized straight from the renewal letter: monthlyTo
-  // when present, else derived from monthlyFrom and the letter's own pct. This
-  // is the only derivation in the file and it stays inside the carrier's own
-  // stated figures.
-  const askAnnual: number | null =
-    typeof h?.monthlyTo === "number"
+  // Fathom's own reconciliation, computed once in the engine
+  // (review.reconciliation) so this screen and the client deck can never
+  // disagree. THE TILE is the experience-rated scope (`rated`): the ask on the
+  // rated lines beside the premium those lines' claims support. The engine's
+  // whole-plan figures pair the letter's total ask with the same projection
+  // plus the pooled lines carried at ask — the same gap on a bigger base. The
+  // deck prints the tile, so the room prints the tile: showing the whole-plan
+  // percentage here put "+67%" beside the deck's "+108%" for the same group,
+  // both labelled "what your claims support".
+  const engineRecon: any = (data.review as any)?.reconciliation || null;
+  const tile: any =
+    engineRecon?.rated &&
+    typeof engineRecon.rated.askAnnual === "number" &&
+    typeof engineRecon.rated.supportedAnnual === "number"
+      ? engineRecon.rated
+      : null;
+
+  // The carrier's ask: the tile's rated ask when the engine sent one; else
+  // annualized straight from the renewal letter — monthlyTo when present, else
+  // derived from monthlyFrom and the letter's own pct. That derivation stays
+  // inside the carrier's own stated figures.
+  const askAnnual: number | null = tile
+    ? tile.askAnnual
+    : typeof h?.monthlyTo === "number"
       ? h.monthlyTo * 12
       : typeof h?.monthlyFrom === "number" && typeof h?.pct === "number"
         ? h.monthlyFrom * (1 + h.pct / 100) * 12
         : null;
+  const askPct: number | null = tile
+    ? typeof tile.askPct === "number"
+      ? tile.askPct
+      : null
+    : typeof h?.pct === "number"
+      ? h.pct
+      : null;
+  const askMonthly: number | null = tile
+    ? typeof tile.askMonthly === "number"
+      ? tile.askMonthly
+      : null
+    : typeof h?.monthlyTo === "number"
+      ? h.monthlyTo
+      : null;
 
   const paths = proj?.paths || null;
   const cur = typeof paths?.currentAnnual === "number" ? paths.currentAnnual : null;
@@ -413,24 +445,24 @@ export function PresentationDoc({ data, clientName }: { data: any; clientName?: 
   const wl = paths?.withLevers || null;
   const cap = paths?.capped || null;
 
-  // Fathom's modeled figure. PREFERRED SOURCE: the engine's own reconciliation
-  // (review.reconciliation) — whole-plan supported (rated-lines projection plus
-  // the pooled lines at their ask, experience-period annualized), computed once
-  // in the engine so this screen and the client deck can never disagree. The
-  // projection-path derivation below remains only as the fallback for older
-  // payloads; it compares a rated-lines-only figure to a whole-plan ask and
-  // manufactures a gap out of the pooled benefits.
-  const engineRecon: any = (data.review as any)?.reconciliation || null;
-  const supported: number | null =
-    typeof engineRecon?.supportedAnnual === "number"
+  // Fathom's modeled figure: the tile, else the engine's whole-plan figure for
+  // older payloads, else the projection paths as the last fallback (which
+  // compares a rated-lines figure to a whole-plan ask and can manufacture a
+  // gap out of the pooled benefits — kept only so an old room still renders).
+  const supported: number | null = tile
+    ? tile.supportedAnnual
+    : typeof engineRecon?.supportedAnnual === "number"
       ? engineRecon.supportedAnnual
       : typeof sq?.annual === "number"
         ? sq.annual
         : typeof wl?.annual === "number"
           ? wl.annual
           : null;
-  const supportedPct: number | null =
-    typeof engineRecon?.supportedAnnual === "number"
+  const supportedPct: number | null = tile
+    ? typeof tile.supportedPct === "number"
+      ? tile.supportedPct
+      : null
+    : typeof engineRecon?.supportedAnnual === "number"
       ? typeof engineRecon.supportedPct === "number"
         ? engineRecon.supportedPct
         : null
@@ -443,10 +475,23 @@ export function PresentationDoc({ data, clientName }: { data: any; clientName?: 
   const gap: number | null = askAnnual != null && supported != null ? askAnnual - supported : null;
   const gapPctOfAsk: number | null =
     gap != null && askAnnual != null && askAnnual !== 0 ? (gap / askAnnual) * 100 : null;
-  // FAIR verdict: the ask is within 2% of what the claims support, or the
-  // carrier is asking less than the experience would justify.
-  const fair =
-    gap != null && askAnnual != null && (gap <= 0 || Math.abs(gap) <= 0.02 * Math.abs(askAnnual));
+  // FAIR / GENEROUS: the engine's own verdicts when it sent them — judged on
+  // the rated lines with a 2% tolerance, the same rule the deck prints — else
+  // the same rule applied locally. Recomputing "fair" here on the whole-plan
+  // ask gave the room a wider tolerance than the deck on every case.
+  const fair: boolean =
+    typeof engineRecon?.fair === "boolean"
+      ? engineRecon.fair
+      : gap != null &&
+        askAnnual != null &&
+        (gap <= 0 || Math.abs(gap) <= 0.02 * Math.abs(askAnnual));
+  const generous: boolean = engineRecon?.generous === true;
+  const carriedDeficiency: number | null =
+    tile && typeof tile.carriedDeficiencyAnnual === "number"
+      ? tile.carriedDeficiencyAnnual
+      : generous && gap != null
+        ? Math.abs(gap)
+        : null;
   const gapColor = fair
     ? "var(--good)"
     : gapPctOfAsk != null && Math.abs(gapPctOfAsk) <= 10
@@ -560,8 +605,9 @@ export function PresentationDoc({ data, clientName }: { data: any; clientName?: 
                   <div className="cfig ask num">{money0(askShown)}</div>
                   <div className="csub">
                     From your renewal letter
-                    {typeof h?.pct === "number" ? ` · ${pctTxt(h.pct)}` : ""}
-                    {typeof h?.monthlyTo === "number" ? ` · ${money0(h.monthlyTo)} monthly` : ""}
+                    {tile ? ", on the experience-rated lines" : ""}
+                    {askPct != null ? ` · ${pctTxt(askPct)}` : ""}
+                    {askMonthly != null ? ` · ${money0(askMonthly)} monthly` : ""}
                   </div>
                 </div>
               )}
@@ -584,7 +630,30 @@ export function PresentationDoc({ data, clientName }: { data: any; clientName?: 
                 </div>
               )}
               {gap != null &&
-                (fair ? (
+                (generous ? (
+                  // The carrier asking LESS than the experience supports is
+                  // not a discount. It is a correction being phased, and the
+                  // shortfall is priced into the next renewal — the same words
+                  // the deck prints for this case.
+                  <div className="col">
+                    <div className="cverd" style={{ color: "var(--good)" } as CSSProperties}>
+                      Below what your claims support
+                    </div>
+                    <div
+                      className="cfig num"
+                      style={{ color: "var(--good)", fontWeight: 400 } as CSSProperties}
+                    >
+                      {money0(gapShown == null ? null : Math.abs(gapShown))}
+                    </div>
+                    <div className="csub">
+                      The carrier is asking{" "}
+                      {carriedDeficiency != null ? `${money0(carriedDeficiency)} a year ` : ""}
+                      less than your own experience supports. That is not a saving: it is a
+                      shortfall the carrier is carrying into next year, and the following renewal
+                      will look to recover it. The plan changes below are how we get ahead of it.
+                    </div>
+                  </div>
+                ) : fair ? (
                   <div className="col">
                     <div className="cverd" style={{ color: "var(--good)" } as CSSProperties}>
                       Supported
