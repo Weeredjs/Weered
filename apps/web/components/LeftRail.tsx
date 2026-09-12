@@ -1054,8 +1054,12 @@ export default function LeftRail() {
 
       {hoverCard}
 
-      <div className="weered-left-section">
-        {favs.length > 0 && (
+      {/* Favourites and Recent are two groups, so they are two sections. The
+          chrome-min skin paints a 28px banner on .weered-left-section::before,
+          which means one section can only ever wear one hat: sharing a section
+          gave Favourites a purple header and left Recent bare. */}
+      {favs.length > 0 && (
+        <div className="weered-left-section">
           <>
             <div
               className="weered-left-title"
@@ -1222,9 +1226,11 @@ export default function LeftRail() {
               );
             })}
           </>
-        )}
+        </div>
+      )}
 
-        {recentRooms.length > 0 && (
+      {recentRooms.length > 0 && (
+        <div className="weered-left-section">
           <>
             <div
               className="weered-left-title"
@@ -1232,7 +1238,6 @@ export default function LeftRail() {
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
-                marginTop: favs.length ? 10 : 0,
               }}
             >
               <span>{office ? "Recent reviews" : "Recent"}</span>
@@ -1413,14 +1418,14 @@ export default function LeftRail() {
               );
             })}
           </>
-        )}
+        </div>
+      )}
 
-        {favs.length === 0 && recentRooms.length === 0 && (
-          <div style={{ fontSize: 11, opacity: 0.3, padding: "2px 0 4px", fontStyle: "italic" }}>
-            {office ? "Reviews you open will appear here" : "Join a room to build your history"}
-          </div>
-        )}
-      </div>
+      {favs.length === 0 && recentRooms.length === 0 && (
+        <div style={{ fontSize: 11, opacity: 0.3, padding: "2px 14px 4px", fontStyle: "italic" }}>
+          {office ? "Reviews you open will appear here" : "Join a room to build your history"}
+        </div>
+      )}
 
       <div
         style={{
