@@ -231,7 +231,17 @@ export const NAV_ITEMS = [
   { id: "modules", label: "Modules", icon: "🧩", minLevel: 4 },
   { id: "moderation", label: "Moderation", icon: "🛡️", minLevel: 4 },
   { id: "rooms", label: "Rooms", icon: "🚪", minLevel: 3 },
-  { id: "challenges", label: "Challenges", icon: "🎯", minLevel: 4 },
+  // moduleTypes: a tab only some lobbies can use. Challenges is authored per
+  // game (its categories are Destiny's: crucible, raid, dungeon, seasonal) and
+  // only these lobbies have ever had one, so everyone else was being shown an
+  // admin screen for a feature their lobby does not render.
+  {
+    id: "challenges",
+    label: "Challenges",
+    icon: "🎯",
+    minLevel: 4,
+    moduleTypes: ["BUNGIE", "HELLDIVERS2", "CHESS"],
+  },
   { id: "tournaments", label: "Tournaments", icon: "🏆", minLevel: 4 },
   { id: "roles", label: "Roles", icon: "👑", minLevel: 5 },
   { id: "tiers", label: "Paid Tiers", icon: "💎", minLevel: 5 },
@@ -242,3 +252,16 @@ export const NAV_ITEMS = [
 ] as const;
 
 export type NavId = (typeof NAV_ITEMS)[number]["id"];
+
+/**
+ * A tab is shown when the viewer has the level for it AND the lobby runs a
+ * module that uses it. NAV_ITEMS is `as const`, so only the entries that
+ * declare moduleTypes have the property; taking it structurally here keeps
+ * NavId's literal ids intact instead of widening the whole list.
+ */
+export function navAllowedFor(
+  item: { moduleTypes?: readonly string[] },
+  moduleType: string,
+): boolean {
+  return !item.moduleTypes || item.moduleTypes.includes(moduleType);
+}

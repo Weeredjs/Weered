@@ -4,7 +4,16 @@ import { useParams } from "next/navigation";
 import { useWeered } from "../../../../components/WeeredProvider";
 import LobbyChatPanel from "../../../../components/LobbyChatPanel";
 import RoomStage from "../../../../components/room/RoomStage";
-import { DashboardData, LevelBadge, NAV_ITEMS, NavId, OverrideBadge, S, apiFetch } from "./shared";
+import {
+  apiFetch,
+  DashboardData,
+  LevelBadge,
+  NAV_ITEMS,
+  navAllowedFor,
+  NavId,
+  OverrideBadge,
+  S,
+} from "./shared";
 import { AdminPresence } from "./AdminPresence";
 import { AuditTab } from "./AuditTab";
 import { BrandingTab } from "./BrandingTab";
@@ -109,7 +118,9 @@ export default function LobbyAdminPage() {
 
   const { lobby, members, rooms: adminRooms, audit, bans, myLevel, overrideRole, perms } = data;
   const roleNames = lobby.roleNames || DEFAULT_ROLE_NAMES;
-  const visibleNav = NAV_ITEMS.filter((n) => overrideRole || myLevel >= n.minLevel);
+  const visibleNav = NAV_ITEMS.filter(
+    (n) => (overrideRole || myLevel >= n.minLevel) && navAllowedFor(n, lobby.moduleType),
+  );
   const accent = lobby.accentColor || "rgba(124,58,237,1)";
 
   return (
