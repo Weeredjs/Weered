@@ -101,14 +101,18 @@ const LeaveIcon = () => (
   </svg>
 );
 
-export default function VoiceDock() {
+export default function VoiceDock({ roomMeta }: { roomMeta?: Record<string, { name?: string }> }) {
   const { connState, activeRoomId, tiles, muted, deafened, toggleMute, toggleDeafen, disconnect } =
     useVoice();
 
   if (connState !== "connected" && connState !== "connecting") return null;
 
   const live = connState === "connected";
-  const roomName = (activeRoomId || "").replaceAll(/-/g, " ");
+  // The id is a fallback, not a label. A room made in the UI gets a generated
+  // short id ("pWPHak") that reads as noise, and de-hyphenating one only ever
+  // flattered ids that were hand-written to look like names.
+  const roomName =
+    roomMeta?.[activeRoomId || ""]?.name?.trim() || (activeRoomId || "").replaceAll(/-/g, " ");
 
   return (
     <div className="weered-voicedock" role="region" aria-label="Voice connection">

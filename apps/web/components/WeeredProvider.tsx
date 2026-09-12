@@ -1331,7 +1331,7 @@ const renameRoom = (name: string)   => sendAdmin("room:rename",  { name });
       <VoiceProvider>
         <SystemBroadcast />
         {children}
-        <VoiceDock />
+        <VoiceDock roomMeta={metaByRoom} />
         <NotorietyToast />
         <RankUpCelebration />
         {passwordRoomId && (
