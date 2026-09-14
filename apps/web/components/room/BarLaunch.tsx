@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import type { LaunchSnapshot, LaunchTarget } from "../WeeredProvider";
 import { useVoice } from "../VoiceContext";
 import { useBarMaps } from "../bar/useBarMaps";
@@ -215,8 +216,11 @@ export function BarSetupDialog({
     });
   }
 
-  return (
-    <div style={backdrop} onClick={onClose} role="presentation">
+  // Portal to <body>: inside the room the dialog sat in a lower stacking layer,
+  // so the push prompt (z-index 800) drew over its Set game button whatever
+  // z-index the dialog had.
+  return createPortal(
+    <div style={backdrop} role="presentation">
       <div
         style={dialog}
         onClick={(e) => e.stopPropagation()}
@@ -360,14 +364,17 @@ export function BarSetupDialog({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
 const backdrop: React.CSSProperties = {
   position: "fixed",
   inset: 0,
-  zIndex: 9999,
+  // Above every app toast: the push prompt sat on the Set game button, a click
+  // landed on the backdrop, and the dialog closed without sending the target.
+  zIndex: 2147483000,
   background: "rgba(5,5,10,.72)",
   backdropFilter: "blur(6px)",
   display: "flex",
