@@ -1,3 +1,5 @@
+import { parseBarLaunch } from "../lib/barLaunch";
+
 // Room-media WS handlers extracted from the index.ts main message handler.
 // launch:* (the synchronized "launch" mini-game). Void handler: the dispatcher
 // keeps the msg.type check + returns, so every bare `return;` here (incl. the
@@ -24,6 +26,29 @@ export function handleLaunch(ws: any, msg: any, opts: Opts): void {
 
   if (msg.type === "launch:set") {
     if (!userIsOwner) return;
+    // Beyond All Reason: no Steam appid or connect string; the map, mode and
+    // host are validated server-side and the room password is minted here.
+    if (msg.kind === "bar") {
+      const bar = parseBarLaunch(msg.bar, room);
+      if (!bar) return;
+      launch.target = {
+        appid: 0,
+        connect: bar.hostAddress || "local",
+        display: String(msg.display || bar.map)
+          .trim()
+          .slice(0, 80),
+        note: msg.note ? String(msg.note).trim().slice(0, 300) : undefined,
+        kind: "bar",
+        bar,
+        setBy: ws.user.id,
+        setAt: Date.now(),
+      };
+      launch.ready.clear();
+      launch.firedAt = null;
+      launch.firedBy = null;
+      broadcastLaunch(room);
+      return;
+    }
     const appid = Number(msg.appid);
     const connect = String(msg.connect || "")
       .trim()

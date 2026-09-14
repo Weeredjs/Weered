@@ -12,6 +12,8 @@ use tauri::{
 use tauri_plugin_autostart::MacosLauncher;
 use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
 
+mod bar;
+
 const TRAY_ICON_BYTES: &[u8] = include_bytes!("../icons/tray.png");
 const TRAY_ICON_DOT_BYTES: &[u8] = include_bytes!("../icons/tray-dot.png");
 
@@ -53,10 +55,15 @@ pub fn run() {
         builder = builder.plugin(
             tauri_plugin_global_shortcut::Builder::new()
                 .with_handler(|app, shortcut, event| {
-                    if event.state == ShortcutState::Pressed
-                        && shortcut.matches(Modifiers::CONTROL | Modifiers::SHIFT, Code::KeyW)
-                    {
+                    if event.state != ShortcutState::Pressed {
+                        return;
+                    }
+                    if shortcut.matches(Modifiers::CONTROL | Modifiers::SHIFT, Code::KeyW) {
                         toggle_main_window(app);
+                    } else if shortcut.matches(Modifiers::CONTROL | Modifiers::SHIFT, Code::F8) {
+                        // F8, not a letter: a global hotkey steals the chord from
+                        // every other app while Weered runs (Ctrl+Shift+S is Save As).
+                        bar::emit_share_toggle(app);
                     }
                 })
                 .build(),
@@ -73,6 +80,9 @@ pub fn run() {
                 let shortcut =
                     Shortcut::new(Some(Modifiers::CONTROL | Modifiers::SHIFT), Code::KeyW);
                 let _ = app.global_shortcut().register(shortcut);
+                let share =
+                    Shortcut::new(Some(Modifiers::CONTROL | Modifiers::SHIFT), Code::F8);
+                let _ = app.global_shortcut().register(share);
             }
 
             // Register deep-link handler so weered:// URLs route into the app.
@@ -117,6 +127,9 @@ pub fn run() {
             cmd_quit,
             cmd_get_version,
             cmd_set_unread,
+            bar::cmd_bar_status,
+            bar::cmd_bar_set_dir,
+            bar::cmd_bar_launch,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Weered desktop");

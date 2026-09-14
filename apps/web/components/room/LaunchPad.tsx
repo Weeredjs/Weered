@@ -3,6 +3,13 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useWeered, useRoomUsers, type LaunchSnapshot, type LaunchTarget } from "../WeeredProvider";
 import { onActivate } from "@/lib/a11y";
+import {
+  BarSetupDialog,
+  BarTargetSummary,
+  isDesktopApp,
+  launchBarForMe,
+  useShareHotkey,
+} from "./BarLaunch";
 
 const STEAM_LAUNCH_MODULE_TYPES = new Set(["WINDROSE"]);
 
@@ -11,6 +18,7 @@ export default function LaunchPad({ roomId, moduleType }: { roomId: string; modu
   const launch: LaunchSnapshot | null = (ctx?.launchByRoom || {})[roomId] ?? null;
   const steamLaunchable =
     !!moduleType && STEAM_LAUNCH_MODULE_TYPES.has(String(moduleType).toUpperCase());
+  const barLaunchable = String(moduleType || "").toUpperCase() === "BAR";
   const users: any[] = useRoomUsers(roomId);
   const me = ctx?.me;
   const meId = String(me?.id || "");
@@ -22,6 +30,8 @@ export default function LaunchPad({ roomId, moduleType }: { roomId: string; modu
 
   const target: LaunchTarget | null = launch?.target ?? null;
   const [showSetup, setShowSetup] = useState(false);
+  const [barMsg, setBarMsg] = useState<string | null>(null);
+  useShareHotkey(barLaunchable);
 
   const slotByUser = useMemo(() => {
     const m = new Map<string, "player" | "observer">();
@@ -51,7 +61,7 @@ export default function LaunchPad({ roomId, moduleType }: { roomId: string; modu
     return () => clearInterval(t);
   }, [firedAt]);
 
-  if (!steamLaunchable) return null;
+  if (!steamLaunchable && !barLaunchable) return null;
 
   const COUNTDOWN_MS = 3500;
   const countdownLeft = firedAt ? Math.max(0, firedAt + COUNTDOWN_MS - now) : 0;
@@ -68,7 +78,9 @@ export default function LaunchPad({ roomId, moduleType }: { roomId: string; modu
             <div style={{ minWidth: 0 }}>
               <div style={labelStyle}>Launch Pad</div>
               <div style={subStyle}>
-                Set a Steam server target and rally the crew. MPlayer-style fire when ready.
+                {barLaunchable
+                  ? "Pick a map and mode, slot the crew, fire. Players launch through the Weered desktop app."
+                  : "Set a Steam server target and rally the crew. MPlayer-style fire when ready."}
               </div>
             </div>
           </div>
@@ -77,7 +89,9 @@ export default function LaunchPad({ roomId, moduleType }: { roomId: string; modu
           </button>
         </div>
         {showSetup && (
-          <SetupDialog
+          <SetupPicker
+            bar={barLaunchable}
+            members={roomMembers}
             onClose={() => setShowSetup(false)}
             onSubmit={(t) => {
               send({ type: "launch:set", ...t });
@@ -91,20 +105,30 @@ export default function LaunchPad({ roomId, moduleType }: { roomId: string; modu
 
   if (firedAt) {
     return (
-      <CountdownOverlay
-        target={target}
-        sec={countdownSec}
-        done={countdownDone}
-        isPlayer={mySlot === "player"}
-        isOwner={isOwner}
-        onLaunch={() => {
-          const url = `steam://connect/${target.connect}`;
-          try {
-            window.location.href = url;
-          } catch {}
-        }}
-        onAbort={() => send({ type: "launch:abort" })}
-      />
+      <>
+        <CountdownOverlay
+          target={target}
+          sec={countdownSec}
+          done={countdownDone}
+          isPlayer={mySlot === "player" || (target.kind === "bar" && isDesktopApp())}
+          isOwner={isOwner}
+          onLaunch={() => {
+            if (target.kind === "bar" && launch) {
+              setBarMsg("Starting Beyond All Reason…");
+              void launchBarForMe({ launch, target, meId, users: roomMembers }).then((r) =>
+                setBarMsg(r.message),
+              );
+              return;
+            }
+            const url = `steam://connect/${target.connect}`;
+            try {
+              window.location.href = url;
+            } catch {}
+          }}
+          onAbort={() => send({ type: "launch:abort" })}
+        />
+        {barMsg && <div style={barMsgStyle}>{barMsg}</div>}
+      </>
     );
   }
 
@@ -116,7 +140,11 @@ export default function LaunchPad({ roomId, moduleType }: { roomId: string; modu
           <div style={{ minWidth: 0 }}>
             <div style={labelStyle}>Launch Pad · {target.display}</div>
             <div style={subStyle}>
-              <span style={{ fontFamily: "ui-monospace, monospace" }}>{target.connect}</span>
+              {target.kind === "bar" ? (
+                <BarTargetSummary target={target} users={roomMembers} />
+              ) : (
+                <span style={{ fontFamily: "ui-monospace, monospace" }}>{target.connect}</span>
+              )}
               {target.note ? <span style={{ opacity: 0.6 }}> · {target.note}</span> : null}
             </div>
           </div>
@@ -261,7 +289,9 @@ export default function LaunchPad({ roomId, moduleType }: { roomId: string; modu
       )}
 
       {showSetup && (
-        <SetupDialog
+        <SetupPicker
+          bar={barLaunchable}
+          members={roomMembers}
           initial={target}
           onClose={() => setShowSetup(false)}
           onSubmit={(t) => {
@@ -273,6 +303,37 @@ export default function LaunchPad({ roomId, moduleType }: { roomId: string; modu
     </>
   );
 }
+
+// Module-scope so its identity is stable: defining it inside LaunchPad would
+// remount the dialog, and wipe what the owner typed, on every launch:state.
+function SetupPicker({
+  bar,
+  members,
+  initial,
+  onClose,
+  onSubmit,
+}: {
+  bar: boolean;
+  members: { id: string; name?: string }[];
+  initial?: LaunchTarget;
+  onClose: () => void;
+  onSubmit: (t: any) => void;
+}) {
+  return bar ? (
+    <BarSetupDialog initial={initial} members={members} onClose={onClose} onSubmit={onSubmit} />
+  ) : (
+    <SetupDialog initial={initial} onClose={onClose} onSubmit={onSubmit} />
+  );
+}
+
+const barMsgStyle: React.CSSProperties = {
+  padding: "8px 16px",
+  fontSize: 12,
+  color: "rgba(191,219,254,.9)",
+  background: "rgba(79,163,224,.08)",
+  borderBottom: "1px solid rgba(79,163,224,.2)",
+  textAlign: "center",
+};
 
 function CountdownOverlay({
   target,

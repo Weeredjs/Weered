@@ -69,6 +69,7 @@ enum ModuleType {
   HLL
   COWORK
   HLLV
+  BAR
 }
 
 model NewsArticle {
@@ -483,6 +484,8 @@ model User {
   psnAccountId      String? // PSN online ID (manual, no live integration; identity-only chip)
   lichessUsername   String? // Lichess.org username — drives chess activity polling
   chessComUsername  String? // Chess.com username — drives chess activity polling
+  barUsername      String? // Beyond All Reason name, BAR's exact spelling (its replay filter is case-sensitive)
+  barUserId        Int? // BAR account id, stable across in-game renames
   livePresence      Json? // { source, activity, detail?, url?, updatedAt } or null
   presenceCheckedAt DateTime?
 

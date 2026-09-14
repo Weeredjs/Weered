@@ -174,6 +174,10 @@ const HllvModulesPanel = dynamic(() => import("../../../components/hllv/HllvModu
   loading: panelLoading,
   ssr: false,
 });
+const BarModulesPanel = dynamic(() => import("../../../components/bar/BarModulesPanel"), {
+  loading: panelLoading,
+  ssr: false,
+});
 const CoworkModulesPanel = dynamic(() => import("../../../components/CoworkModulesPanel"), {
   loading: panelLoading,
   ssr: false,
@@ -1292,6 +1296,12 @@ export default function LobbyIdPage() {
                       lobbyId={lobbyId}
                       accentColor={accent}
                       currentUserId={me?.id}
+                      style={{ flex: 1, minHeight: 0 }}
+                    />
+                  ) : lobbyInfo?.moduleType === "BAR" ? (
+                    <BarModulesPanel
+                      lobbyId={lobbyId}
+                      accentColor={accent}
                       style={{ flex: 1, minHeight: 0 }}
                     />
                   ) : lobbyInfo?.moduleType === "COWORK" ? (

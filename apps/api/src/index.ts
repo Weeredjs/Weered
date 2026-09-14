@@ -96,6 +96,7 @@ import gameServerRoutes from "./routes/gameServers";
 import paperRoutes from "./routes/paper";
 import invitesRoutes from "./routes/invites";
 import chessRoutes from "./routes/chess";
+import barRoutes from "./routes/bar";
 import startggRoutes from "./routes/startgg";
 import startggOauthRoutes from "./routes/startggOauth";
 import { startChessWorker } from "./chessWorker";
@@ -960,6 +961,7 @@ async function main() {
     WEB_URL,
   } as any);
   await app.register(chessRoutes, { authFromHeader });
+  await app.register(barRoutes, { authFromHeader });
   await app.register(gameServerRoutes);
   await app.register(startggRoutes, { authFromHeader, lobbyAdminAccess });
   await app.register(startggOauthRoutes, { lobbyAdminAccess, jwtSecret: JWT_SECRET });

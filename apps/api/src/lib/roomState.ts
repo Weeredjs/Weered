@@ -109,6 +109,9 @@ export type ModuleState = {
 export type LaunchTarget = {
   appid: number;
   connect: string;
+  /** Absent on targets set before BAR existed; treat as "steam". */
+  kind?: "steam" | "bar";
+  bar?: import("./barLaunch").BarLaunchConfig;
   display: string;
   note?: string;
   setBy: string;

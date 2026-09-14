@@ -1,6 +1,7 @@
 "use client";
 
 import { AVATAR_PALETTE, avatarBg } from "../../../lib/avatarColor";
+import BarProfileCard from "../../bar/BarProfileCard";
 import React, { useEffect, useState, useCallback } from "react";
 import { useWeered } from "../../WeeredProvider";
 import { useOverlay } from "../OverlayProvider";
@@ -1009,6 +1010,8 @@ export default function ProfileSheet({ userId }: { userId: string }) {
           </div>
         </div>
       )}
+
+      <BarProfileCard name={(profile as any).barUsername} section={section} label={sectionLabel} />
 
       {isMe && (
         <div style={{ ...section, marginTop: 10 }}>

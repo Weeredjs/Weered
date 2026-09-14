@@ -59,6 +59,17 @@ type ModuleState = { mode: string; url?: string; channel?: string; setBy?: strin
 export type LaunchTarget = {
   appid: number;
   connect: string;
+  /** Absent on targets set before BAR existed; treat as "steam". */
+  kind?: "steam" | "bar";
+  bar?: {
+    map: string;
+    mode: "team" | "ffa" | "coop-raptors" | "coop-scavengers" | "vs-ai";
+    teams: number;
+    difficulty: "easy" | "normal" | "hard";
+    hostUserId: string;
+    hostAddress: string;
+    password: string;
+  };
   display: string;
   note?: string;
   setBy: string;

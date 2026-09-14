@@ -124,6 +124,7 @@ const MODULE_TYPES = new Set([
   "HLL",
   "HLLV",
   "COWORK",
+  "BAR",
 ]);
 
 /** Timbo's panel is keyed on the lobby id rather than a ModuleType, so it is

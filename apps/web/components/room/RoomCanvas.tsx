@@ -135,6 +135,8 @@ const LOBBY_MODULE_MAP: Record<string, string[]> = {
   HELLDIVERS2: ["voice", "helldivers", "youtube", "twitch", "video", "screen"],
   HLL:         ["voice", "hll", "youtube", "twitch", "video", "screen"],
   HLLV:        ["voice", "hllv", "youtube", "twitch", "video", "screen"],
+  // Screen share is the point: the host's game goes out to the room.
+  BAR:         ["voice", "screen", "video", "youtube", "twitch"],
   CHESS:       ["voice", "chess", "youtube", "twitch", "video", "screen"],
   EVE:         ["voice", "eve", "youtube", "twitch", "video", "screen"],
   // The server board belongs in the room as much as the lobby — a race night

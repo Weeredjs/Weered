@@ -11,8 +11,18 @@ export default function PresenceSection() {
   const [lichessUsername, setLichessUsername] = React.useState("");
   const [chessComUsername, setChessComUsername] = React.useState("");
   const [startggSlug, setStartggSlug] = React.useState("");
+  const [barUsername, setBarUsername] = React.useState("");
   const [saving, setSaving] = React.useState<
-    "" | "steam" | "twitch" | "xbox" | "psn" | "lichess" | "chesscom" | "overlay" | "startgg"
+    | ""
+    | "steam"
+    | "twitch"
+    | "xbox"
+    | "psn"
+    | "lichess"
+    | "chesscom"
+    | "overlay"
+    | "startgg"
+    | "bar"
   >("");
   const [msg, setMsg] = React.useState<{ ok: boolean; text: string } | null>(null);
   const [linkedSteam, setLinkedSteam] = React.useState<string | null>(null);
@@ -22,6 +32,7 @@ export default function PresenceSection() {
   const [linkedLichess, setLinkedLichess] = React.useState<string | null>(null);
   const [linkedChessCom, setLinkedChessCom] = React.useState<string | null>(null);
   const [linkedStartgg, setLinkedStartgg] = React.useState<string | null>(null);
+  const [linkedBar, setLinkedBar] = React.useState<string | null>(null);
   const [overlayToken, setOverlayToken] = React.useState<string | null>(null);
   const [overlayCopied, setOverlayCopied] = React.useState(false);
   const [livePresence, setLivePresence] = React.useState<any>(null);
@@ -50,6 +61,7 @@ export default function PresenceSection() {
         setLinkedLichess(j.lichessUsername ?? null);
         setLinkedStartgg(j.startggSlug ?? null);
         setLinkedChessCom(j.chessComUsername ?? null);
+        setLinkedBar(j.barUsername ?? null);
         setLivePresence(j.livePresence ?? null);
         setPresenceCheckedAt(j.presenceCheckedAt ?? null);
         if (j.steamId) setSteamId((v) => v || String(j.steamId));
@@ -58,6 +70,7 @@ export default function PresenceSection() {
         if (j.psnAccountId) setPsnAccountId((v) => v || String(j.psnAccountId));
         if (j.lichessUsername) setLichessUsername((v) => v || String(j.lichessUsername));
         if (j.chessComUsername) setChessComUsername((v) => v || String(j.chessComUsername));
+        if (j.barUsername) setBarUsername((v) => v || String(j.barUsername));
       }
     } catch {}
   }, [apiBase]);
@@ -302,6 +315,33 @@ export default function PresenceSection() {
             : `Chess.com linked as ${j.chessComUsername}. Polling your games now.`,
         });
         if (clear) setChessComUsername("");
+        await loadPresence();
+      } else setMsg({ ok: false, text: j?.message || j?.error || "Failed." });
+    } catch {
+      setMsg({ ok: false, text: "Network error." });
+    }
+    setSaving("");
+  }
+
+  async function saveBar(clear?: boolean) {
+    setSaving("bar");
+    setMsg(null);
+    try {
+      const r = await fetch(`${apiBase}/profile/me/bar`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token()}` },
+        body: JSON.stringify({ username: clear ? "" : barUsername.trim() }),
+      });
+      const j = await r.json();
+      if (j?.ok) {
+        setMsg({
+          ok: true,
+          text: clear
+            ? "Beyond All Reason unlinked."
+            : `Beyond All Reason linked as ${j.barUsername}.`,
+        });
+        if (clear) setBarUsername("");
+        else if (j.barUsername) setBarUsername(String(j.barUsername));
         await loadPresence();
       } else setMsg({ ok: false, text: j?.message || j?.error || "Failed." });
     } catch {
@@ -803,6 +843,73 @@ export default function PresenceSection() {
             style={{ ...btnStyle, padding: "8px 12px", fontSize: 12, opacity: 0.7 }}
             onClick={() => saveChessCom(true)}
             disabled={saving === "chesscom"}
+          >
+            Clear
+          </button>
+        </div>
+      </div>
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 6, padding: "8px 0" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span
+            style={{
+              fontSize: 13,
+              fontWeight: 700,
+              color: "var(--weered-text, rgba(243,244,246,.95))",
+            }}
+          >
+            Beyond All Reason name
+          </span>
+          {linkedBar && (
+            <span
+              style={{
+                fontSize: 10,
+                padding: "2px 6px",
+                borderRadius: 4,
+                background: "rgba(34,197,94,.14)",
+                border: "1px solid rgba(34,197,94,.40)",
+                color: "rgba(134,239,172,.95)",
+                letterSpacing: ".04em",
+                fontWeight: 700,
+              }}
+            >
+              LINKED
+            </span>
+          )}
+        </div>
+        <div
+          style={{
+            fontSize: 11,
+            opacity: 0.6,
+            color: "var(--weered-muted, rgba(148,163,184,.75))",
+            lineHeight: 1.4,
+          }}
+        >
+          Your in-game name. Puts your recent public matches on your profile and shows your lobbies
+          when you're in a game. Checked against BAR's account list; BAR doesn't offer sign-in to
+          other sites yet.
+        </div>
+        <div style={{ display: "flex", gap: 6, marginTop: 4 }}>
+          <input
+            type="text"
+            value={barUsername}
+            onChange={(e) => setBarUsername(e.target.value.slice(0, 40))}
+            placeholder={linkedBar || "YourBarName"}
+            style={stackedInputStyle}
+          />
+          <button
+            type="button"
+            style={{ ...btnStyle, padding: "8px 14px", fontSize: 12 }}
+            onClick={() => saveBar(false)}
+            disabled={saving === "bar" || barUsername.trim().length < 1}
+          >
+            {saving === "bar" ? "Saving…" : "Link"}
+          </button>
+          <button
+            type="button"
+            style={{ ...btnStyle, padding: "8px 12px", fontSize: 12, opacity: 0.7 }}
+            onClick={() => saveBar(true)}
+            disabled={saving === "bar"}
           >
             Clear
           </button>

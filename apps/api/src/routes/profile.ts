@@ -91,6 +91,7 @@ export default async function profileRoutes(app: FastifyInstance, opts: Opts) {
           steamId: true,
           twitchLogin: true,
           xboxGamertag: true,
+          barUsername: true,
         },
       });
 
@@ -204,6 +205,7 @@ export default async function profileRoutes(app: FastifyInstance, opts: Opts) {
         steamId: u.steamId || null,
         twitchLogin: u.twitchLogin || null,
         xboxGamertag: u.xboxGamertag || null,
+        barUsername: u.barUsername || null,
         gameAccounts: gameAccounts.map((a) => ({
           gameType: a.gameType,
           displayName: a.displayName,
@@ -569,6 +571,7 @@ export default async function profileRoutes(app: FastifyInstance, opts: Opts) {
         psnAccountId: true,
         lichessUsername: true,
         chessComUsername: true,
+        barUsername: true,
         startggSlug: true,
         livePresence: true,
         presenceCheckedAt: true,
@@ -582,6 +585,7 @@ export default async function profileRoutes(app: FastifyInstance, opts: Opts) {
       psnAccountId: row?.psnAccountId ?? null,
       lichessUsername: row?.lichessUsername ?? null,
       chessComUsername: row?.chessComUsername ?? null,
+      barUsername: (row as any)?.barUsername ?? null,
       startggSlug: (row as any)?.startggSlug ?? null,
       livePresence: row?.livePresence ?? null,
       presenceCheckedAt: row?.presenceCheckedAt ?? null,
