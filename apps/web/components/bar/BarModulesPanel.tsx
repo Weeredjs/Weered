@@ -2,7 +2,8 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import ModuleTabBar from "../ModuleTabBar";
-import { barMapThumb, useBarMaps } from "./useBarMaps";
+import { useBarMaps } from "./useBarMaps";
+import MapThumb from "./MapThumb";
 import { useBarDesktopStatus } from "../room/BarLaunch";
 
 // Beyond All Reason lobby module. Data comes from BAR's public live services
@@ -307,7 +308,7 @@ function MatchesTab({ data, error }: { data: MembersResponse | null; error: stri
         return (
           <div key={f.id} style={card}>
             {file ? (
-              <img src={barMapThumb(file)} alt="" loading="lazy" style={thumb} />
+              <MapThumb fileName={file} style={thumb} />
             ) : (
               <div style={{ ...thumb, background: "rgba(255,255,255,.05)" }} />
             )}
@@ -405,14 +406,12 @@ function MapsTab({ accent }: { accent: string }) {
       >
         {filtered.slice(0, shown).map((m) => (
           <div
-            key={m.fileName}
+            key={m.scriptName}
             style={{ ...card, flexDirection: "column", alignItems: "stretch", padding: 8 }}
             title={m.description}
           >
-            <img
-              src={barMapThumb(m.fileName)}
-              alt=""
-              loading="lazy"
+            <MapThumb
+              fileName={m.fileName}
               style={{
                 width: "100%",
                 aspectRatio: "1 / 1",

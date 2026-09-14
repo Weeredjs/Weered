@@ -3,7 +3,8 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import type { LaunchSnapshot, LaunchTarget } from "../WeeredProvider";
 import { useVoice } from "../VoiceContext";
-import { barMapThumb, useBarMaps } from "../bar/useBarMaps";
+import { useBarMaps } from "../bar/useBarMaps";
+import MapThumb from "../bar/MapThumb";
 import {
   BAR_DEFAULT_PORT,
   BAR_MODE_LABEL,
@@ -235,12 +236,12 @@ export function BarSetupDialog({
         <div style={mapList}>
           {filtered.map((m) => (
             <button
-              key={m.fileName}
+              key={m.scriptName}
               type="button"
               onClick={() => setMap(m.scriptName)}
               style={{ ...mapRow, ...(m.scriptName === map ? mapRowActive : null) }}
             >
-              <img src={barMapThumb(m.fileName)} alt="" loading="lazy" style={thumb} />
+              <MapThumb fileName={m.fileName} style={thumb} />
               <span
                 style={{
                   flex: 1,

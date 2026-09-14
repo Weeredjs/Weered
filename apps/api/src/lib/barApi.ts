@@ -70,6 +70,8 @@ export type BarBattle = {
   host: string;
   players: BarBattlePlayer[];
   spectators: BarBattlePlayer[];
+  /** BAR sends spectators as a bare count; kept apart from the list derived here. */
+  spectatorCount: number;
 };
 
 function toPlayer(p: any): BarBattlePlayer | null {
@@ -82,26 +84,44 @@ function toPlayer(p: any): BarBattlePlayer | null {
   };
 }
 
+// A battle's players[] holds EVERYONE in the battle room, spectators included:
+// a 16-slot game listed 29 humans on 2026-09-14. Each entry carries its own
+// gameStatus ("Playing", "Loading", "Waiting", "Spectating", "Disconnected",
+// "Not connected", "Timeouted", or absent), and `spectators` is only a count.
+const SEATED = new Set(["Playing", "Loading"]);
+const GONE = new Set(["Disconnected", "Not connected", "Timeouted"]);
+
 function normalizeBattle(b: any): BarBattle {
-  const humans = (Array.isArray(b?.players) ? b.players : []).filter(
-    (p: any) => !(p?.status && p.status.bot),
-  );
-  const specs = Array.isArray(b?.spectators) ? b.spectators : [];
   const status = String(b?.gameStatus || b?.lobbyStatus || "");
+  const running = status === "running" || !!b?.founder?.status?.ingame;
+  const players: BarBattlePlayer[] = [];
+  const spectators: BarBattlePlayer[] = [];
+  for (const p of Array.isArray(b?.players) ? b.players : []) {
+    if (p?.status?.bot) continue;
+    const row = toPlayer(p);
+    if (!row) continue;
+    const gs = String(p?.gameStatus || "");
+    if (GONE.has(gs)) continue;
+    if (gs === "Spectating") spectators.push(row);
+    // Before a game starts nobody is "Playing" yet, so everyone in the room counts.
+    else if (!running || SEATED.has(gs)) players.push(row);
+    else spectators.push(row);
+  }
   return {
     id: Number(b?.battleId) || 0,
     title: String(b?.title || ""),
     map: String(b?.map || ""),
     gameType: String(b?.gameType || ""),
     preset: String(b?.preset || "").split(" ")[0],
-    running: status === "running" || !!b?.founder?.status?.ingame,
+    running,
     gameTimeSec: Number.isFinite(Number(b?.gameTime)) ? Number(b.gameTime) : null,
     passworded: !!b?.passworded,
     locked: !!b?.locked,
     maxPlayers: Number(b?.maxPlayers) || 0,
     host: String(b?.founder?.username || ""),
-    players: humans.map(toPlayer).filter(Boolean) as BarBattlePlayer[],
-    spectators: specs.map(toPlayer).filter(Boolean) as BarBattlePlayer[],
+    players,
+    spectators,
+    spectatorCount: typeof b?.spectators === "number" ? b.spectators : spectators.length,
   };
 }
 

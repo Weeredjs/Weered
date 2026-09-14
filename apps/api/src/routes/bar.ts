@@ -37,7 +37,7 @@ function battleSummary(b: BarBattle) {
     passworded: b.passworded,
     players: b.players.length,
     maxPlayers: b.maxPlayers,
-    spectators: b.spectators.length,
+    spectators: b.spectatorCount,
   };
 }
 
