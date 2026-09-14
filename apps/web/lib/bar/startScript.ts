@@ -36,10 +36,22 @@ const AI = { raptors: "RaptorsAI", scavengers: "ScavengersAI", skirmish: "BARb" 
 export const BAR_DEFAULT_PORT = 8452;
 
 export function splitAddress(addr: string): { host: string; port: number } {
-  const m = String(addr || "")
-    .trim()
-    .match(/^(.+?)(?::(\d{2,5}))?$/);
-  return { host: m?.[1] || "", port: m?.[2] ? Number(m[2]) : BAR_DEFAULT_PORT };
+  // Parsed by hand rather than with a lazy regex, which backtracks on long input.
+  const text = String(addr || "").trim();
+  const colon = text.lastIndexOf(":");
+  const tail = colon >= 0 ? text.slice(colon + 1) : "";
+  if (colon > 0 && tail.length >= 2 && tail.length <= 5 && /^\d+$/.test(tail)) {
+    return { host: text.slice(0, colon), port: Number(tail) };
+  }
+  return { host: text, port: BAR_DEFAULT_PORT };
+}
+
+function trimUnderscores(s: string): string {
+  let start = 0;
+  let end = s.length;
+  while (start < end && s[start] === "_") start++;
+  while (end > start && s[end - 1] === "_") end--;
+  return s.slice(start, end);
 }
 
 /** Engine player names: unique (case-insensitively), no spaces, at most 20 characters. */
@@ -48,10 +60,8 @@ export function assignNames(entries: RosterEntry[]): Map<string, string> {
   const used = new Set<string>();
   for (const e of entries) {
     const base =
-      String(e.name || "")
-        .replace(/[^A-Za-z0-9_[\]-]+/g, "_")
-        .replace(/^_+|_+$/g, "")
-        .slice(0, 18) || "player";
+      trimUnderscores(String(e.name || "").replace(/[^A-Za-z0-9_[\]-]+/g, "_")).slice(0, 18) ||
+      "player";
     let name = base;
     let n = 2;
     while (used.has(name.toLowerCase())) name = `${base.slice(0, 16)}_${n++}`;

@@ -221,12 +221,7 @@ export function BarSetupDialog({
   // z-index the dialog had.
   return createPortal(
     <div style={backdrop} role="presentation">
-      <div
-        style={dialog}
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-label="Set up a BAR game"
-      >
+      <div style={dialog} role="dialog" aria-label="Set up a BAR game">
         <div style={eyebrow}>Beyond All Reason</div>
         <div style={title}>{initial ? "Change the game" : "Set up a game"}</div>
 
