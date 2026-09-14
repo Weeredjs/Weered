@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-cmd-show-window"
+description = "Enables the cmd_show_window command without any pre-configured scope."
+commands.allow = ["cmd_show_window"]
+
+[[permission]]
+identifier = "deny-cmd-show-window"
+description = "Denies the cmd_show_window command without any pre-configured scope."
+commands.deny = ["cmd_show_window"]

@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-cmd-get-version"
+description = "Enables the cmd_get_version command without any pre-configured scope."
+commands.allow = ["cmd_get_version"]
+
+[[permission]]
+identifier = "deny-cmd-get-version"
+description = "Denies the cmd_get_version command without any pre-configured scope."
+commands.deny = ["cmd_get_version"]

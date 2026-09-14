@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-cmd-bar-launch"
+description = "Enables the cmd_bar_launch command without any pre-configured scope."
+commands.allow = ["cmd_bar_launch"]
+
+[[permission]]
+identifier = "deny-cmd-bar-launch"
+description = "Denies the cmd_bar_launch command without any pre-configured scope."
+commands.deny = ["cmd_bar_launch"]
