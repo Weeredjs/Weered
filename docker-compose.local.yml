@@ -1,0 +1,37 @@
+# Local test stack: Postgres only. The API and web app run natively against it
+# (Docker Desktop on the war machine is too slow to containerise Next.js).
+#
+# Deliberately separate from docker-compose.yml, which is PRODUCTION's stack on
+# the droplet: different project name, container name, port and volume, so the
+# two can never touch each other's data.
+#
+#   docker compose -f docker-compose.local.yml up -d
+#   DATABASE_URL=postgresql://weered:weered@127.0.0.1:55432/weered_local
+#
+# See scripts/local/README.md for the whole loop.
+
+name: weered-local
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: weered_local_pg
+    environment:
+      POSTGRES_USER: weered
+      POSTGRES_PASSWORD: weered
+      POSTGRES_DB: weered_local
+    ports:
+      # Not 55432: Hyper-V/WSL reserve 55389-55488 on the war machine and the bind
+      # fails with "access permissions". Check `netsh interface ipv4 show
+      # excludedportrange protocol=tcp` before changing this.
+      - "127.0.0.1:15432:5432"
+    volumes:
+      - local_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U weered -d weered_local"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  local_pg:
