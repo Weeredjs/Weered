@@ -485,7 +485,7 @@ export default async function hllvRoutes(app: FastifyInstance, opts: Opts = {}) 
           date: Number(n.date) * 1000 || null,
           feed: String(n.feedlabel || ""),
           snippet: String(n.contents || "")
-            .replace(/\[[^\]]*\]/g, " ")
+            .replace(/\[[^[\]]*\]/g, " ")
             .replace(/https?:\/\/\S+/g, " ")
             .replace(/\s+/g, " ")
             .trim()

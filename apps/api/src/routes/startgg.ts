@@ -33,7 +33,8 @@ export function parseStartggRef(raw: unknown): Ref | null {
   let s = String(raw ?? "").trim();
   if (!s) return null;
   s = s.replace(/^https?:\/\/(www\.)?start\.gg\//i, "").replace(/^\/+/, "");
-  s = s.split(/[?#]/)[0].replace(/\/+$/, "");
+  s = s.split(/[?#]/)[0];
+  while (s.endsWith("/")) s = s.slice(0, -1);
   const m = s.match(/^(user|tournament|league)\/([A-Za-z0-9_-]{1,80})/i);
   if (m) return { kind: m[1].toLowerCase() as RefKind, slug: m[2] };
   if (/^[A-Za-z0-9_-]{1,80}$/.test(s)) return { kind: "tournament", slug: s };

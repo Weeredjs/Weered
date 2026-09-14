@@ -27,7 +27,7 @@ const plainPct = (p: any): string => (typeof p === "number" ? `${p.toFixed(2)}%`
 const tidyPct = (s: any): string =>
   typeof s === "string"
     ? s.replace(
-        /(\d+)\.(\d{3,})%/g,
+        /(?<!\d)(\d+)\.(\d{3,})%/g,
         (_m: string, w: string, d: string) =>
           (Math.round(Number.parseFloat(w + "." + d) * 10) / 10).toFixed(1) + "%",
       )

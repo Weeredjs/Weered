@@ -1,3 +1,5 @@
+import { stripTags } from "@/lib/stripTags";
+
 export const runtime = "nodejs";
 
 function xmlText(xml: string, tag: string): string {
@@ -13,13 +15,7 @@ function xmlText(xml: string, tag: string): string {
 }
 
 function stripHtml(html: string): string {
-  let prev: string;
-  let out = html;
-  do {
-    prev = out;
-    out = out.replaceAll(/<(script|style)[\s\S]*?<\/\1>/gi, " ").replaceAll(/<[^>]*>/g, " ");
-  } while (out !== prev);
-  return out
+  return stripTags(html)
     .replaceAll("&#32;", " ")
     .replaceAll("&nbsp;", " ")
     .replaceAll("&lt;", "<")

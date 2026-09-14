@@ -76,7 +76,8 @@ function stripMarkup(s: string): string {
   let prev: string;
   do {
     prev = out;
-    out = out.replace(/<[^>]*>/g, "");
+    // [^<>] so a run of unclosed "<" can't make each one rescan the rest.
+    out = out.replace(/<[^<>]*>/g, "");
   } while (out !== prev);
   return out.replace(/[<>]/g, " ").replace(/\s+/g, " ").trim();
 }

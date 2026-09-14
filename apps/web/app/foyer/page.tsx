@@ -1066,7 +1066,7 @@ function ClientView({
             </div>
             <ul style={S.roster}>
               {roster.map((p) => {
-                const nm = (p.name || "Guest").replace(/\s*\(you\)\s*/i, "");
+                const nm = (p.name || "Guest").replace(/\(you\)/i, "").trim();
                 const isYou = p.id === selfId.current;
                 const initial = nm.trim().charAt(0).toUpperCase() || "·";
                 return (

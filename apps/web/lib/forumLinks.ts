@@ -19,7 +19,7 @@ export function previewUrls(body: string, max = 2): string[] {
     .replace(/```[\s\S]*?```/g, "")
     .replace(/`[^`]*`/g, "")
     .replace(/!\[[^\]]*\]\([^)]*\)/g, "")
-    .replace(/\[[^\]]*\]\([^)]*\)/g, "");
+    .replace(/\[[^[\]]*\]\([^)]*\)/g, "");
 
   const out: string[] = [];
   const seen = new Set<string>();
@@ -27,7 +27,9 @@ export function previewUrls(body: string, max = 2): string[] {
     const t = line.trim();
     if (!/^https?:\/\/\S+$/.test(t)) continue;
     // Trailing punctuation is nearly always sentence punctuation, not path.
-    const url = t.replace(/[).,;!?]+$/, "");
+    let end = t.length;
+    while (end > 0 && ").,;!?".includes(t[end - 1])) end--;
+    const url = t.slice(0, end);
     if (SELF_IMAGE.test(url)) continue;
     if (seen.has(url)) continue;
     seen.add(url);

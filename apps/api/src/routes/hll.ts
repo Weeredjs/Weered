@@ -488,7 +488,7 @@ export default async function hllRoutes(app: FastifyInstance, opts: Opts = {}) {
           date: Number(n.date) * 1000 || null,
           feed: String(n.feedlabel || ""),
           snippet: String(n.contents || "")
-            .replace(/\[[^\]]*\]/g, " ") // strip bbcode
+            .replace(/\[[^[\]]*\]/g, " ") // strip bbcode
             .replace(/https?:\/\/\S+/g, " ")
             .replace(/\s+/g, " ")
             .trim()

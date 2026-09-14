@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import ModuleTabBar from "./ModuleTabBar";
 import { onActivate } from "@/lib/a11y";
+import { stripTags } from "@/lib/stripTags";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
@@ -41,13 +42,7 @@ function timeAgo(iso: string): string {
 }
 
 function stripHtml(s: string): string {
-  let prev: string;
-  let out = s;
-  do {
-    prev = out;
-    out = out.replaceAll(/<(script|style)[\s\S]*?<\/\1>/gi, " ").replaceAll(/<[^>]*>/g, " ");
-  } while (out !== prev);
-  return out
+  return stripTags(s)
     .replaceAll("&lt;", "<")
     .replaceAll("&gt;", ">")
     .replaceAll("&quot;", '"')

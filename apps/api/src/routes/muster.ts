@@ -255,7 +255,7 @@ export default async function musterRoutes(app: FastifyInstance, opts: Opts = {}
       for (const raw of lines.slice(0, 200)) {
         const line = String(raw || "").trim();
         if (!line) continue;
-        const [n, sq] = line.split(/\s*[,\t|]\s*/);
+        const [n, sq] = line.split(/[,\t|]/).map((part) => part.trim());
         const name = String(n || "")
           .replace(/^\[[^\]]{1,12}\]\s*/, "")
           .trim()
