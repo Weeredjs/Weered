@@ -112,7 +112,7 @@ export default function VoiceDock({ roomMeta }: { roomMeta?: Record<string, { na
   // short id ("pWPHak") that reads as noise, and de-hyphenating one only ever
   // flattered ids that were hand-written to look like names.
   const roomName =
-    roomMeta?.[activeRoomId || ""]?.name?.trim() || (activeRoomId || "").replaceAll(/-/g, " ");
+    roomMeta?.[activeRoomId || ""]?.name?.trim() || (activeRoomId || "").replaceAll("-", " ");
 
   return (
     <div className="weered-voicedock" role="region" aria-label="Voice connection">

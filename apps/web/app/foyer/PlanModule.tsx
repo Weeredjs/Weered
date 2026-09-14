@@ -15,7 +15,7 @@ const API = "/api";
 function prettyField(k: string): string {
   return String(k || "")
     .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
-    .replace(/_/g, " ")
+    .replaceAll("_", " ")
     .replace(/\s+/g, " ")
     .trim()
     .replace(/^\w/, (c) => c.toUpperCase());

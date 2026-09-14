@@ -352,8 +352,16 @@ export default function Muster({
             return (
               <div
                 key={d.id}
+                role="button"
+                tabIndex={0}
                 style={{ ...S.card, cursor: "pointer" }}
                 onClick={() => setOpen(d.id)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    setOpen(d.id);
+                  }
+                }}
               >
                 <div style={{ ...S.row, justifyContent: "space-between" }}>
                   <div style={{ fontWeight: 800, fontSize: 13.5, color: "rgba(236,242,250,.95)" }}>

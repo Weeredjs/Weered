@@ -861,8 +861,10 @@ export default async function hllRoutes(app: FastifyInstance, opts: Opts = {}) {
             m?.map_name ||
             m?.name ||
             null;
-          const allied = Number(m?.result?.allied ?? m?.allied_score ?? m?.score?.allied ?? NaN);
-          const axis = Number(m?.result?.axis ?? m?.axis_score ?? m?.score?.axis ?? NaN);
+          const allied = Number(
+            m?.result?.allied ?? m?.allied_score ?? m?.score?.allied ?? Number.NaN,
+          );
+          const axis = Number(m?.result?.axis ?? m?.axis_score ?? m?.score?.axis ?? Number.NaN);
           const start = m?.start ? new Date(m.start).getTime() : null;
           const end = m?.end ? new Date(m.end).getTime() : null;
           if (!mapRaw) return null;

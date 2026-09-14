@@ -87,7 +87,7 @@ type HomeRoom = {
 };
 
 function timeAgo(iso?: string | null): string | null {
-  const t = iso ? Date.parse(iso) : NaN;
+  const t = iso ? Date.parse(iso) : Number.NaN;
   if (!Number.isFinite(t)) return null;
   const s = Math.max(0, (Date.now() - t) / 1000);
   if (s < 90) return "just now";

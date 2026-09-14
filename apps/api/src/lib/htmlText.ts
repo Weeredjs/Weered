@@ -17,14 +17,14 @@ export function stripTags(html: string): string {
 
 export function decodeEntities(s: string): string {
   return s
-    .replaceAll(/&lt;/g, "<")
-    .replaceAll(/&gt;/g, ">")
-    .replaceAll(/&quot;/g, '"')
-    .replaceAll(/&apos;/g, "'")
-    .replaceAll(/&nbsp;/g, " ")
+    .replaceAll("&lt;", "<")
+    .replaceAll("&gt;", ">")
+    .replaceAll("&quot;", '"')
+    .replaceAll("&apos;", "'")
+    .replaceAll("&nbsp;", " ")
     .replaceAll(/&#x([0-9a-fA-F]+);/g, (_, h) => String.fromCodePoint(Number.parseInt(h, 16)))
     .replaceAll(/&#(\d+);/g, (_, n) => String.fromCodePoint(Number(n)))
-    .replaceAll(/&amp;/g, "&"); // must be last
+    .replaceAll("&amp;", "&"); // must be last
 }
 
 export function htmlToText(html: string): string {

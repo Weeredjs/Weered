@@ -12,7 +12,9 @@ import type { ParticipantTile } from "../VoiceContext";
 
 function avColor(s: string): string {
   let h = 0;
-  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+  // Math.imul(x, 1) is the 32-bit wrap `| 0` gave, so every avatar keeps its colour.
+  // (Math.trunc would not wrap, and would recolour everyone.)
+  for (let i = 0; i < s.length; i++) h = Math.imul(h * 31 + s.charCodeAt(i), 1);
   return `hsl(${Math.abs(h) % 360} 42% 40%)`;
 }
 

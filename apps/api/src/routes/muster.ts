@@ -55,7 +55,7 @@ function splitHost(stored: string): { host: string; port: number } {
 
 function csvCell(v: any): string {
   const s = String(v ?? "");
-  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  return /[",\n]/.test(s) ? `"${s.replaceAll('"', '""')}"` : s;
 }
 
 export default async function musterRoutes(app: FastifyInstance, opts: Opts = {}) {

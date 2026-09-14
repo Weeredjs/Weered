@@ -487,7 +487,14 @@ export default function StationBoard({
         <div
           role="dialog"
           aria-modal="true"
-          onClick={() => setPicking(null)}
+          // Backdrop click closes; the panel inside no longer needs its own
+          // stopPropagation because only a click on the backdrop itself counts.
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setPicking(null);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Escape") setPicking(null);
+          }}
           style={{
             position: "fixed",
             inset: 0,
@@ -500,7 +507,6 @@ export default function StationBoard({
           }}
         >
           <div
-            onClick={(e) => e.stopPropagation()}
             style={{
               width: "min(560px, 100%)",
               maxHeight: "70vh",

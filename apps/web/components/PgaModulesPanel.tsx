@@ -407,7 +407,7 @@ function FieldIntel({ accentColor }: { accentColor: string }) {
   if (error) return <div style={{ padding: 20, textAlign: "center", fontSize: 12, color: "rgba(252,165,165,.8)" }}>{error}</div>;
 
   const enriched = field.map(p => {
-    const todayScore = p.today ? Number.parseInt(String(p.today), 10) : NaN;
+    const todayScore = p.today ? Number.parseInt(String(p.today), 10) : Number.NaN;
     const rounds = p.roundScores || p.rounds || [];
     return { ...p, todayNum: todayScore, rounds };
   });

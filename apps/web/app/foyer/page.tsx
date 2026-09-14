@@ -43,7 +43,7 @@ function decodeJwt(jwt: string): any {
   try {
     const seg = jwt.split(".")[1];
     if (!seg) return {};
-    const b64 = seg.replace(/-/g, "+").replace(/_/g, "/");
+    const b64 = seg.replaceAll("-", "+").replaceAll("_", "/");
     const pad = b64 + "=".repeat((4 - (b64.length % 4)) % 4);
     return JSON.parse(atob(pad));
   } catch {

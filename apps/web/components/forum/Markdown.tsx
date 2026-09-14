@@ -4,11 +4,11 @@ import React from "react";
 
 function escapeHtml(s: string): string {
   return s
-    .replaceAll(/&/g, "&amp;")
-    .replaceAll(/</g, "&lt;")
-    .replaceAll(/>/g, "&gt;")
-    .replaceAll(/"/g, "&quot;")
-    .replaceAll(/'/g, "&#39;");
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
 }
 
 function safeUrl(url: string): string {
@@ -42,7 +42,7 @@ function renderInline(s: string): string {
 
 export function renderMarkdown(md: string): string {
   const lines = String(md || "")
-    .replaceAll(/\r\n/g, "\n")
+    .replaceAll("\r\n", "\n")
     .split("\n");
   const out: string[] = [];
   let i = 0;

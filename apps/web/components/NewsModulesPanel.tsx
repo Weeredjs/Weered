@@ -48,13 +48,13 @@ function stripHtml(s: string): string {
     out = out.replaceAll(/<(script|style)[\s\S]*?<\/\1>/gi, " ").replaceAll(/<[^>]*>/g, " ");
   } while (out !== prev);
   return out
-    .replaceAll(/&lt;/g, "<")
-    .replaceAll(/&gt;/g, ">")
-    .replaceAll(/&quot;/g, '"')
-    .replaceAll(/&apos;/g, "'")
+    .replaceAll("&lt;", "<")
+    .replaceAll("&gt;", ">")
+    .replaceAll("&quot;", '"')
+    .replaceAll("&apos;", "'")
     .replaceAll(/&#x([0-9a-fA-F]+);/g, (_, h) => String.fromCodePoint(Number.parseInt(h, 16)))
     .replaceAll(/&#(\d+);/g, (_, n) => String.fromCodePoint(Number(n)))
-    .replaceAll(/&amp;/g, "&")
+    .replaceAll("&amp;", "&")
     .replaceAll(/\s+/g, " ")
     .trim();
 }

@@ -110,7 +110,7 @@ export default async function activityRoutes(app: FastifyInstance, opts: Opts) {
       feed.push({
         type: "notoriety",
         id: ne.id,
-        text: `+${ne.points} XP — ${ne.action.replaceAll(/_/g, " ").toLowerCase()}`,
+        text: `+${ne.points} XP — ${ne.action.replaceAll("_", " ").toLowerCase()}`,
         points: ne.points,
         action: ne.action,
         ts: ne.createdAt,
@@ -142,8 +142,8 @@ export default async function activityRoutes(app: FastifyInstance, opts: Opts) {
   };
   function decodeEntities(s: string): string {
     return String(s || "")
-      .replace(/&#x([0-9a-f]+);/gi, (_m, h) => String.fromCodePoint(parseInt(h, 16)))
-      .replace(/&#(\d+);/g, (_m, d) => String.fromCodePoint(parseInt(d, 10)))
+      .replace(/&#x([0-9a-f]+);/gi, (_m, h) => String.fromCodePoint(Number.parseInt(h, 16)))
+      .replace(/&#(\d+);/g, (_m, d) => String.fromCodePoint(Number.parseInt(d, 10)))
       .replace(/&([a-z]+);/gi, (m, name) => NAMED_ENTITIES[String(name).toLowerCase()] ?? m);
   }
 

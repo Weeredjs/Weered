@@ -22,7 +22,7 @@ export async function generateMetadata(props: {
   const post = await fetchPost(params.postId);
   const title = post?.title || "Post | Weered Forum";
   const description = post?.body
-    ? String(post.body).slice(0, 160).replaceAll(/\n/g, " ")
+    ? String(post.body).slice(0, 160).replaceAll("\n", " ")
     : "A discussion on the Weered community forum.";
   return {
     title,

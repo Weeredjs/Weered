@@ -29,7 +29,7 @@ const tidyPct = (s: any): string =>
     ? s.replace(
         /(\d+)\.(\d{3,})%/g,
         (_m: string, w: string, d: string) =>
-          (Math.round(parseFloat(w + "." + d) * 10) / 10).toFixed(1) + "%",
+          (Math.round(Number.parseFloat(w + "." + d) * 10) / 10).toFixed(1) + "%",
       )
     : s;
 const rangeTxt = (v: any): string => {

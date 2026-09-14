@@ -32,7 +32,7 @@ export function runSlashCommand(
         return true;
       }
       const toUsername = m[1];
-      const amount = Number.parseInt(m[2].replaceAll(/,/g, ""), 10);
+      const amount = Number.parseInt(m[2].replaceAll(",", ""), 10);
       const note = (m[3] || "").trim();
       if (!Number.isFinite(amount) || amount < 1) {
         weeredToast.error("Tip amount must be at least 1 Paper.");

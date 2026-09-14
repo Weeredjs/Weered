@@ -5,10 +5,10 @@ function xmlText(xml: string, tag: string): string {
   if (!m) return "";
   return m[1]
     .replaceAll(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1")
-    .replaceAll(/&lt;/g, "<")
-    .replaceAll(/&gt;/g, ">")
-    .replaceAll(/&quot;/g, '"')
-    .replaceAll(/&amp;/g, "&")
+    .replaceAll("&lt;", "<")
+    .replaceAll("&gt;", ">")
+    .replaceAll("&quot;", '"')
+    .replaceAll("&amp;", "&")
     .trim();
 }
 
@@ -20,13 +20,13 @@ function stripHtml(html: string): string {
     out = out.replaceAll(/<(script|style)[\s\S]*?<\/\1>/gi, " ").replaceAll(/<[^>]*>/g, " ");
   } while (out !== prev);
   return out
-    .replaceAll(/&#32;/g, " ")
-    .replaceAll(/&nbsp;/g, " ")
-    .replaceAll(/&lt;/g, "<")
-    .replaceAll(/&gt;/g, ">")
-    .replaceAll(/&quot;/g, '"')
+    .replaceAll("&#32;", " ")
+    .replaceAll("&nbsp;", " ")
+    .replaceAll("&lt;", "<")
+    .replaceAll("&gt;", ">")
+    .replaceAll("&quot;", '"')
     .replaceAll(/&#(\d+);/g, (_, n) => String.fromCodePoint(Number.parseInt(n, 10)))
-    .replaceAll(/&amp;/g, "&")
+    .replaceAll("&amp;", "&")
     .replaceAll(/\s+/g, " ")
     .trim();
 }

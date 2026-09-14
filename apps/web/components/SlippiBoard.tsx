@@ -50,8 +50,8 @@ const ERR_KEY: Record<string, string> = {
 export function prettyCharacter(c: string): string {
   const s = String(c || "")
     .toLowerCase()
-    .replace(/_and_/g, " & ")
-    .replace(/_/g, " ");
+    .replaceAll("_and_", " & ")
+    .replaceAll("_", " ");
   return s.replace(/\b[a-z]/g, (m) => m.toUpperCase());
 }
 
@@ -207,7 +207,8 @@ export default function SlippiBoard({ lobbyId, accent }: { lobbyId: string; acce
                     </td>
                     <td style={{ ...td, textAlign: "right" }}>{r.rating ?? "—"}</td>
                     <td style={td}>
-                      {r.placement ? (lang === "fr" ? "Placement" : "Placement") : r.tier}
+                      {/* Slippi's placement label is the same word in English and Quebec French. */}
+                      {r.placement ? "Placement" : r.tier}
                       {r.globalPlacement != null && r.globalPlacement <= 1000 && (
                         <span style={{ opacity: 0.55, marginLeft: 6, fontSize: 10 }}>
                           #{r.globalPlacement}

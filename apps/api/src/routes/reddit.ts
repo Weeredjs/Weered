@@ -22,10 +22,10 @@ const TTL = 5 * 60 * 1000;
 
 function decodeOnce(s: string): string {
   return s
-    .replaceAll(/&lt;/g, "<")
-    .replaceAll(/&gt;/g, ">")
-    .replaceAll(/&quot;/g, '"')
-    .replaceAll(/&apos;/g, "'")
+    .replaceAll("&lt;", "<")
+    .replaceAll("&gt;", ">")
+    .replaceAll("&quot;", '"')
+    .replaceAll("&apos;", "'")
     .replaceAll(/&#x([0-9a-f]+);/gi, (_, h) => {
       try {
         return String.fromCodePoint(Number.parseInt(h, 16));
@@ -40,7 +40,7 @@ function decodeOnce(s: string): string {
         return "";
       }
     })
-    .replaceAll(/&amp;/g, "&");
+    .replaceAll("&amp;", "&");
 }
 function decode(s: string): string {
   let prev = s,
@@ -66,10 +66,10 @@ function extractMedia(contentHtml: string): {
       c,
     )?.[0] ||
     null;
-  if (direct) thumbnail = direct.replaceAll(/&amp;/g, "&");
+  if (direct) thumbnail = direct.replaceAll("&amp;", "&");
   const excerpt = c
     .replaceAll(/<[^>]+>/g, " ")
-    .replaceAll(/&nbsp;/g, " ")
+    .replaceAll("&nbsp;", " ")
     .replace(/submitted by.*$/is, "")
     .replaceAll(/\[link\]|\[comments\]/gi, "")
     .replaceAll(/https?:\/\/\S+/g, "")

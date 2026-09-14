@@ -140,7 +140,7 @@ export default async function helldiversRoutes(app: FastifyInstance, _opts: Opts
       tasks.forEach((t: any, i: number) => {
         const vts: any[] = t?.valueTypes || [];
         const gi = vts.indexOf(3);
-        const raw = gi >= 0 ? Number(t?.values?.[gi]) : NaN;
+        const raw = gi >= 0 ? Number(t?.values?.[gi]) : Number.NaN;
         const goal = Number.isFinite(raw) && raw > 0 ? raw : 1;
         const cur = Number(progress[i] || 0);
         pct += Math.min(100, (cur / goal) * 100);

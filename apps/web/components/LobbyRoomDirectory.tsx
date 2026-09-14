@@ -45,7 +45,7 @@ interface RoomData {
 
 // "2m" / "3h" / "2d" — recency chip for quiet rooms.
 function timeAgo(iso?: string | null, epochMs?: number | null): string | null {
-  const t = iso ? Date.parse(iso) : typeof epochMs === "number" ? epochMs : NaN;
+  const t = iso ? Date.parse(iso) : typeof epochMs === "number" ? epochMs : Number.NaN;
   if (!Number.isFinite(t)) return null;
   const s = Math.max(0, (Date.now() - t) / 1000);
   if (s < 90) return "just now";
@@ -344,7 +344,7 @@ export default function LobbyRoomDirectory({
   // headcount; quiet rooms fall back to event > pinned > most recent chatter.
   const sortedRooms = useMemo(() => {
     const recency = (r: RoomData) => {
-      const t = r.lastMessageAt ? Date.parse(r.lastMessageAt) : NaN;
+      const t = r.lastMessageAt ? Date.parse(r.lastMessageAt) : Number.NaN;
       return Number.isFinite(t) ? t : 0;
     };
     const liveOf = (r: RoomData) =>
