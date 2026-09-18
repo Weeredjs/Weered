@@ -46,11 +46,13 @@ export default function LobbyPage() {
         display: "flex",
         flexDirection: "column",
         gap: 8,
-        // Same sizing as /lobby/[id]: 16px is the shell's top padding, --wtb-h the
-        // desktop title bar and --shell-footer-h the SiteFooter strip (both 0px in a
-        // plain browser). A flat 100vh put the chat composer under the footer in the
-        // desktop app.
-        height: "calc(100vh - 16px - var(--wtb-h, 0px) - var(--shell-footer-h, 0px))",
+        // FILL THE SHELL, DON'T COMPUTE FROM 100vh. Measured in the desktop app
+        // against the local stack: .weered-center is 958px tall with 18px top and
+        // 80px bottom padding, so its content box is 860 — every viewport sum
+        // overshoots it and .weered-shell (overflow: hidden) clips the difference,
+        // which is what cut the composer's button row. 100% is exactly that box, on
+        // web and desktop alike, whatever the title bar and footer are doing.
+        height: "100%",
         minHeight: 0,
       }}
     >
