@@ -40,50 +40,50 @@ export default function LobbyPage() {
   const accent = info?.accentColor || undefined;
 
   return (
-    <div style={{ position: "relative", width: "100%", height: "100vh", minHeight: 0 }}>
+    <div
+      className="weered-lobby-page"
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: 8,
+        // Same sizing as /lobby/[id]: 16px is the shell's top padding, --wtb-h the
+        // desktop title bar and --shell-footer-h the SiteFooter strip (both 0px in a
+        // plain browser). A flat 100vh put the chat composer under the footer in the
+        // desktop app.
+        height: "calc(100vh - 16px - var(--wtb-h, 0px) - var(--shell-footer-h, 0px))",
+        minHeight: 0,
+      }}
+    >
+      <LobbyHeaderBar />
+
       <div
+        className="weered-lobby-body"
         style={{
-          position: "absolute",
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 28,
+          flex: 1,
+          minHeight: 0,
+          position: "relative",
           display: "flex",
           flexDirection: "column",
-          gap: 12,
-          minHeight: 0,
         }}
       >
-        <LobbyHeaderBar />
+        <LobbyHall
+          lobbyId={LOBBY_ID}
+          lobbyName={name}
+          accentColor={accent}
+          bannerUrl={info?.bannerUrl || undefined}
+          moduleType={info?.moduleType || undefined}
+          style={{ flex: 1, minHeight: 0 }}
+        />
 
-        <div
-          style={{
-            flex: 1,
-            minHeight: 0,
-            position: "relative",
-            display: "flex",
-            flexDirection: "column",
-          }}
-        >
-          <LobbyHall
-            lobbyId={LOBBY_ID}
-            lobbyName={name}
-            accentColor={accent}
-            bannerUrl={info?.bannerUrl || undefined}
-            moduleType={info?.moduleType || undefined}
-            style={{ flex: 1, minHeight: 0 }}
-          />
-
-          {/* Closed and tab-less: the chat is already inline. It stays mounted
-              so the inline chat's Dial In can take the whole stage. */}
-          <LobbyChatDrawer
-            roomId={LOBBY_ID}
-            title={`${name} · Chat`}
-            accentColor={accent}
-            defaultOpen={false}
-            hideTab
-          />
-        </div>
+        {/* Closed and tab-less: the chat is already inline. It stays mounted
+            so the inline chat's Dial In can take the whole stage. */}
+        <LobbyChatDrawer
+          roomId={LOBBY_ID}
+          title={`${name} · Chat`}
+          accentColor={accent}
+          defaultOpen={false}
+          hideTab
+        />
       </div>
     </div>
   );
