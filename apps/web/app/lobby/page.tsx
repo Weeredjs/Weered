@@ -87,6 +87,23 @@ export default function LobbyPage() {
           hideTab
         />
       </div>
+
+      <style>{`
+        /* RECLAIM THE DEAD BAND UNDER THE FRAME. The global rule in
+           40-core-layout.css is \`main { padding: var(--weered-pad-y) var(--weered-pad-x) 80px }\` —
+           80px of breathing room at the end of a SCROLLING page. /lobby doesn't
+           scroll; it's one full-height frame, so that band is a fixed strip of
+           nothing under the composer that never shrinks, which is what makes the
+           chat look like it isn't tracking the window (it is: measured 839px tall
+           at a 1040 viewport, 699 at 900, 499 at 700).
+           40px, not 0, because the fixed "🐛 feedback" pill lives in that band:
+           measured at y 937-964 with the shell clipping at 972, and it overlaps
+           the centre column at every width from 820 to 1920, so the composer's
+           Send button has to stay clear of it.
+           :has() scopes this to the page without touching any other route; where
+           it isn't supported the band just stays 80px. */
+        main:has(> .weered-lobby-page) { padding-bottom: 40px; }
+      `}</style>
     </div>
   );
 }

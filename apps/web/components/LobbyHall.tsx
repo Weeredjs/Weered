@@ -189,7 +189,23 @@ export default function LobbyHall({
       <style>{`
         @media (max-width: 1100px) {
           .weered-lobby-hall { flex-direction: column !important; }
-          .weered-lobby-chatstage { min-height: 420px; }
+          /* Stacked, the directory's inline "flex: 0 1 420px" basis becomes a
+             HEIGHT, so it takes 420px off the top and the chat only ever gets
+             the remainder — 326px of stage and a 172px message list at
+             1082x871, and worse on a shorter window. Let the directory yield
+             instead: it has its own scroller, so capping it as a share of the
+             container keeps the chat proportional at every height.
+             These have to be !important — the values they override are inline
+             styles on the elements. That is also why the old
+             ".weered-lobby-chatstage { min-height: 420px }" here did nothing:
+             the stage's inline minHeight:0 beat it. It is not replaced with
+             another min-height on purpose — a floor taller than the available
+             box would push the composer back under .weered-shell's overflow
+             clip, which is the bug e68bdcbb/2c75ec17 just fixed. */
+          .weered-lobby-hall > :first-child {
+            flex: 0 1 auto !important;
+            max-height: 38% !important;
+          }
         }
       `}</style>
     </div>
