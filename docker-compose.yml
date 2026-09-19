@@ -20,7 +20,11 @@ services:
       POSTGRES_PASSWORD: REDACTED_DB_PASSWORD
       POSTGRES_DB: weered
     ports:
-      - "5432:5432"
+      # Loopback only. Docker publishes straight past ufw via the DOCKER
+      # iptables chain, so "5432:5432" had the production database (Weered's
+      # =public AND Fathom's ubep) listening to the whole internet. Both apps
+      # connect over 127.0.0.1, so binding here costs nothing.
+      - "127.0.0.1:5432:5432"
     volumes:
       - pg_data:/var/lib/postgresql/data
     networks:
@@ -32,9 +36,19 @@ services:
     restart: unless-stopped
     command: ["redis-server", "--appendonly", "yes"]
     ports:
-      - "6379:6379"
+      # Loopback only -- this was answering unauthenticated PING from the
+      # public internet (no requirepass is set), i.e. arbitrary commands
+      # against the cache from anywhere. Same ufw-bypass reason as postgres.
+      - "127.0.0.1:6379:6379"
     volumes:
       - redis_data:/data
+    healthcheck:
+      # Lets livekit wait for "ready to serve", not merely "container started".
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
     networks:
       - weered_net
 
@@ -44,11 +58,20 @@ services:
     restart: unless-stopped
     command: ["--config", "/etc/livekit.yaml"]
     depends_on:
-      - redis
+      redis:
+        # Was a bare "- redis", which only waits for the container to START.
+        # NOTE: this is hygiene, not a proven root cause for the 2026-09-18
+        # reboot crash-loop -- redis was "Ready to accept connections" in
+        # 0.773s that morning and livekit still died 6 more times after it,
+        # so the real trigger was probably the bridge network, not readiness.
+        condition: service_healthy
     ports:
-      - "7880:7880"
-      - "7881:7881"
-      - "7880:7880/tcp"
+      # 7880 is the HTTP/WS signal port and Caddy reverse-proxies it from
+      # livekit.weered.ca -> 127.0.0.1:7880, so it does not need a public bind.
+      # The RTC media ports DO: clients dial rtc.node_ip (142.93.148.29)
+      # directly, so 7881/tcp and the UDP range stay published. The old list
+      # also bound 7880 and 7881 twice over (bare + /tcp).
+      - "127.0.0.1:7880:7880"
       - "7881:7881/tcp"
       - "50000-50100:50000-50100/udp"
     volumes:
