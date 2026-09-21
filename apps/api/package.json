@@ -29,7 +29,7 @@
     "@types/nodemailer": "^8.0.0",
     "bcryptjs": "^3.0.3",
     "dotenv": "^16.4.5",
-    "fastify": "^5.8.5",
+    "fastify": "^5.12.1",
     "fastify-type-provider-zod": "^4.0.2",
     "google-auth-library": "^10.6.1",
     "h3-js": "^4.2.1",
