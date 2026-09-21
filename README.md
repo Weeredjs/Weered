@@ -6,7 +6,7 @@
 [![CI](https://github.com/Weeredjs/Weered/actions/workflows/ci.yml/badge.svg)](https://github.com/Weeredjs/Weered/actions/workflows/ci.yml)
 [![License: Elastic 2.0](https://img.shields.io/badge/license-Elastic%202.0-2f6df6.svg)](./LICENSE)
 
-> **State of the project (June 2026): public beta, now source-available.**
+> **State of the project (September 2026): public beta, source-available.**
 > The whole platform is on GitHub under the Elastic License 2.0. The Minecraft
 > mod and the shared types package are MIT. Read it, build it, self-host it,
 > send patches. The one thing you cannot do is resell it as a hosted service.
@@ -61,7 +61,24 @@ The game modules further down sit on top of a full community platform. The core 
 **Communities and events**
 
 - Lobbies (each wired to a game module), rooms, crews, and forums with their own moderation
+- Forums with threaded replies, images, emoji and link previews in every composer
 - Scheduled events and API-verified tournaments (for example, Destiny 2 PGCR scoring)
+- **start.gg integration**: a lobby follows an organizer, tournament or league; brackets,
+  entrant lists, venue and the stream queue land in the lobby. Members link their own
+  start.gg accounts so a lobby can see who is entered, and TOs can connect via organiser OAuth
+- **Station board**: which setup a match is on and what is queued next — the venue floor
+  rather than the bracket, because that is the part running events actually lack
+
+**Game servers**
+
+- Our own server aggregate built on Steam's master list and the A2S query protocol, kept with
+  polling history — a live snapshot cannot answer the question a community actually has
+- Hell Let Loose and HLL: Vietnam units link their **own** box over RCON (second-generation
+  wire protocol, implemented from the published spec rather than wrapped) for live match state
+  and a live roster
+- **Muster**: drill attendance read straight off the unit's server — a roll of in-game names,
+  no accounts to create
+- Seeding rally board, for the 0-to-40-players problem that decides whether a server lives
 
 **Economy**
 
@@ -132,19 +149,24 @@ For the deliberate single-node scaling posture (and why horizontal WS scaling is
 
 Each lobby can opt into a module that wires it to a specific game or activity:
 
-| Module                     | What it adds                                                                             |
-| -------------------------- | ---------------------------------------------------------------------------------------- |
-| `BUNGIE` (Destiny 2)       | Bungie OAuth, Guardian/loadout lookup, raid LFG, API-verified tournaments (PGCR scoring) |
-| `RIOT` (League of Legends) | Summoner lookup, ranked leaderboards, rotation tracker                                   |
-| `EVE` (EVE Online)         | Capsuleer sheet, killboard, sovereignty, market, new-pilot tools                         |
-| `POE` (Path of Exile)      | Live Currency Exchange economy, ladder, rendered passive tree, build inspector           |
-| `HELLDIVERS2`              | Galactic-war tracker, Major Orders, war map, stratagem + loadout tools, squad finder     |
-| `CHESS`                    | Lichess + Chess.com account linking, API-credited challenges, co-watch board             |
-| `TRADING` (FakeOut)        | Paper trading on a live Binance feed, TradingView charts, leaderboards                   |
-| `WINDROSE`                 | Bounty board (PvE objectives), hunter dossiers, crew tools                               |
-| `POKER`                    | LiveKit table, Texas Hold'em with paper buy-ins                                          |
-| `MINECRAFT`                | Weered Connect Fabric mod links in-game state to the lobby                               |
-| `FORTNITE`                 | Item shop, stats, news                                                                   |
+| Module                                     | What it adds                                                                                                  |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------- |
+| `BUNGIE` (Destiny 2)                       | Bungie OAuth, Guardian/loadout lookup, raid LFG, API-verified tournaments (PGCR scoring)                      |
+| `RIOT` (League of Legends)                 | Summoner lookup, ranked leaderboards, rotation tracker                                                        |
+| `EVE` (EVE Online)                         | Capsuleer sheet, killboard, sovereignty, market, new-pilot tools                                              |
+| `POE` / `POE2` (Path of Exile)             | Live Currency Exchange economy, ladder, rendered passive tree, build inspector; poe2scout prices for PoE2     |
+| `HELLDIVERS2`                              | Galactic-war tracker, Major Orders, war map, stratagem + loadout tools, squad finder                          |
+| `CHESS`                                    | Lichess + Chess.com account linking, API-credited challenges, co-watch board                                  |
+| `TRADING` (FakeOut)                        | Paper trading on a live Binance feed, TradingView charts, leaderboards                                        |
+| `WINDROSE`                                 | Bounty board (PvE objectives), hunter dossiers, crew tools                                                    |
+| `POKER`                                    | LiveKit table, Texas Hold'em with paper buy-ins                                                               |
+| `MINECRAFT`                                | Weered Connect Fabric mod links in-game state to the lobby                                                    |
+| `FORTNITE`                                 | Item shop, stats, news                                                                                        |
+| `HLL` / `HLLV` (Hell Let Loose, + Vietnam) | A unit links its own server over RCON: live match state, roster, Muster drill attendance, seeding rally board |
+| `BAR` (Beyond All Reason)                  | Linked BAR accounts, live battles board, and a match launcher inside the room                                 |
+| `DIVISION2`                                | Ubisoft server status, Ops Board intel feed, operator sit-reps, field resources                               |
+| `ASSETTOCORSA`                             | Live grid and session board read from each AC server's own public API                                         |
+| `COWORK`                                   | The lobby for solo operators: one worldwide 50/10 focus clock, plus a public day board                        |
 
 Plus lighter topic/content modules: `CS2`, `DOTA2`, `PUBG`, `MLB`, `PGA`, `MTG`, `MARATHON`, `DND`, `STUDY`, `NEWS`, `REDDIT`, `TWITCH`, `YOUTUBE`, `HEADQUARTERS`, and `CUSTOM`.
 
@@ -201,7 +223,7 @@ Security reports: see [`SECURITY.md`](./SECURITY.md). Licensing questions:
 
 ## Status
 
-Public beta, live at [weered.ca](https://weered.ca). In active development, ships most days. Source-available as of June 2026.
+Public beta, live at [weered.ca](https://weered.ca). In active development, ships most days. Source-available since June 2026.
 
 ## Contact
 
