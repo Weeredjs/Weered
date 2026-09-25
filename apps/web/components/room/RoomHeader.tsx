@@ -174,7 +174,7 @@ export default function RoomHeader({
         position: "relative",
         overflow: "hidden",
         borderBottom: "1px solid rgba(255,255,255,0.05)",
-        background: "rgba(26,26,28,0.6)",
+        background: "color-mix(in srgb, var(--weered-room-surface, #1a1a1c) 60%, transparent)",
       }}
     >
       {washUrl && (
@@ -200,7 +200,8 @@ export default function RoomHeader({
           inset: 0,
           zIndex: 0,
           pointerEvents: "none",
-          background: "linear-gradient(180deg, rgba(26,26,28,0.2) 0%, rgba(26,26,28,0.65) 100%)",
+          background:
+            "linear-gradient(180deg, color-mix(in srgb, var(--weered-room-surface, #1a1a1c) 20%, transparent) 0%, color-mix(in srgb, var(--weered-room-surface, #1a1a1c) 65%, transparent) 100%)",
         }}
       />
 

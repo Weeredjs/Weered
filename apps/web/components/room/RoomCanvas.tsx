@@ -694,7 +694,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
 
       {joinStatus === "knocking" && (
         <div style={{ position: "absolute", inset: 0, zIndex: 200, background: "rgba(10,10,18,0.92)", backdropFilter: "blur(12px)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16 }}>
-          <div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(124,58,237,0.2)", border: "2px solid rgba(124,58,237,0.5)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, animation: "weered-pulse 2s ease-in-out infinite" }}>🚪</div>
+          <div style={{ width: 56, height: 56, borderRadius: "50%", background: "color-mix(in srgb, var(--weered-room-accent, #7c3aed) 20%, transparent)", border: "2px solid color-mix(in srgb, var(--weered-room-accent, #7c3aed) 50%, transparent)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, animation: "weered-pulse 2s ease-in-out infinite" }}>🚪</div>
           <div style={{ textAlign: "center" }}>
             <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 6 }}>Waiting for admittance</div>
             <div style={{ fontSize: 13, opacity: 0.5 }}>A moderator will let you in shortly</div>
@@ -746,7 +746,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
       <LaunchPad roomId={roomId} moduleType={lobbyContext?.moduleType} />
 
       {voicePrompt && voice.connState !== "connected" && voice.connState !== "connecting" && (
-        <div style={{ flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 16px", gap: 12, background: "rgba(124,58,237,0.08)", borderBottom: "1px solid rgba(124,58,237,0.18)" }}>
+        <div style={{ flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 16px", gap: 12, background: "color-mix(in srgb, var(--weered-room-accent, #7c3aed) 8%, transparent)", borderBottom: "1px solid color-mix(in srgb, var(--weered-room-accent, #7c3aed) 18%, transparent)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#22c55e", boxShadow: "0 0 8px #22c55e", flexShrink: 0 }} />
             <div>
@@ -756,7 +756,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
           </div>
           <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
             <button onClick={() => setVoicePrompt(false)} style={{ padding: "5px 13px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.05)", color: "rgba(148,163,184,0.7)", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>Not now</button>
-            <button onClick={() => { setVoicePrompt(false); voice.connect(roomId); }} style={{ padding: "5px 16px", borderRadius: 8, border: "none", background: "#7c3aed", color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>Join voice</button>
+            <button onClick={() => { setVoicePrompt(false); voice.connect(roomId); }} style={{ padding: "5px 16px", borderRadius: 8, border: "none", background: "var(--weered-room-accent, #7c3aed)", color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>Join voice</button>
           </div>
         </div>
       )}
@@ -865,7 +865,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
                   <div style={{ fontSize: 40 }}>🚫</div>
                   <div style={{ fontSize: 14, fontWeight: 700, color: "rgba(226,232,240,0.7)" }}>This site blocks embedding</div>
                   <div style={{ fontSize: 12, color: "rgba(148,163,184,0.5)", textAlign: "center", maxWidth: 320 }}>{browserUrl}</div>
-                  <button onClick={() => window.open(safeUrl(browserUrl), "_blank")} style={{ marginTop: 8, padding: "10px 24px", borderRadius: 8, background: "rgba(124,58,237,0.3)", border: "1px solid rgba(124,58,237,0.5)", color: "rgba(167,139,250,0.9)", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+                  <button onClick={() => window.open(safeUrl(browserUrl), "_blank")} style={{ marginTop: 8, padding: "10px 24px", borderRadius: 8, background: "color-mix(in srgb, var(--weered-room-accent, #7c3aed) 30%, transparent)", border: "1px solid color-mix(in srgb, var(--weered-room-accent, #7c3aed) 50%, transparent)", color: "color-mix(in srgb, var(--weered-room-accent-2, #a78bfa) 90%, transparent)", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
                     Open in new tab
                   </button>
                   <div style={{ fontSize: 11, color: "rgba(100,116,139,0.4)", marginTop: 4 }}>
@@ -951,7 +951,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
 
         {stageActive && stageMode === "chess" && (
           <div style={{ position: "relative", height: "100%", display: "flex", flexDirection: "column" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 10px", background: "rgba(124,58,237,0.08)", borderBottom: "1px solid rgba(124,58,237,0.18)", flexShrink: 0, flexWrap: "wrap" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 10px", background: "color-mix(in srgb, var(--weered-room-accent, #7c3aed) 8%, transparent)", borderBottom: "1px solid color-mix(in srgb, var(--weered-room-accent, #7c3aed) 18%, transparent)", flexShrink: 0, flexWrap: "wrap" }}>
               <span style={{ fontSize: 14, color: "rgba(196,181,253,0.85)" }}>♟</span>
               <button
                 onClick={() => {
@@ -960,7 +960,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
                   selfSetRef.current = true;
                   w?.setModuleState?.("chess", { source: url });
                 }}
-                style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid rgba(124,58,237,0.25)", background: chessSource.includes("/tv/") ? "rgba(124,58,237,0.18)" : "rgba(124,58,237,0.06)", color: "rgba(216,180,254,0.9)", fontSize: 11, cursor: "pointer", fontWeight: 600 }}
+                style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid color-mix(in srgb, var(--weered-room-accent, #7c3aed) 25%, transparent)", background: chessSource.includes("/tv/") ? "color-mix(in srgb, var(--weered-room-accent, #7c3aed) 18%, transparent)" : "color-mix(in srgb, var(--weered-room-accent, #7c3aed) 6%, transparent)", color: "rgba(216,180,254,0.9)", fontSize: 11, cursor: "pointer", fontWeight: 600 }}
               >Lichess TV</button>
               <button
                 onClick={() => {
@@ -969,7 +969,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
                   selfSetRef.current = true;
                   w?.setModuleState?.("chess", { source: url });
                 }}
-                style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid rgba(124,58,237,0.25)", background: chessSource.includes("/training/") ? "rgba(124,58,237,0.18)" : "rgba(124,58,237,0.06)", color: "rgba(216,180,254,0.9)", fontSize: 11, cursor: "pointer", fontWeight: 600 }}
+                style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid color-mix(in srgb, var(--weered-room-accent, #7c3aed) 25%, transparent)", background: chessSource.includes("/training/") ? "color-mix(in srgb, var(--weered-room-accent, #7c3aed) 18%, transparent)" : "color-mix(in srgb, var(--weered-room-accent, #7c3aed) 6%, transparent)", color: "rgba(216,180,254,0.9)", fontSize: 11, cursor: "pointer", fontWeight: 600 }}
               >Daily Puzzle</button>
               <input
                 value={chessInput}
@@ -1013,10 +1013,10 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
                   }
                 }}
                 placeholder="Paste a Lichess URL (game / study / broadcast)..."
-                style={{ flex: 1, minWidth: 160, padding: "4px 8px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(124,58,237,0.18)", borderRadius: 6, color: "rgba(203,213,225,0.85)", fontSize: 11, outline: "none", fontFamily: "monospace" }}
+                style={{ flex: 1, minWidth: 160, padding: "4px 8px", background: "rgba(255,255,255,0.05)", border: "1px solid color-mix(in srgb, var(--weered-room-accent, #7c3aed) 18%, transparent)", borderRadius: 6, color: "rgba(203,213,225,0.85)", fontSize: 11, outline: "none", fontFamily: "monospace" }}
               />
               {safeChessUrl(chessSource) && (
-                <a href={safeChessUrl(chessSource).replace("/frame", "").replace("/embed/", "/").split("?")[0]} target="_blank" rel="noopener noreferrer" style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid rgba(124,58,237,0.18)", background: "rgba(124,58,237,0.08)", color: "rgba(216,180,254,0.8)", fontSize: 11, cursor: "pointer", textDecoration: "none" }}>↗ Lichess</a>
+                <a href={safeChessUrl(chessSource).replace("/frame", "").replace("/embed/", "/").split("?")[0]} target="_blank" rel="noopener noreferrer" style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid color-mix(in srgb, var(--weered-room-accent, #7c3aed) 18%, transparent)", background: "color-mix(in srgb, var(--weered-room-accent, #7c3aed) 8%, transparent)", color: "rgba(216,180,254,0.8)", fontSize: 11, cursor: "pointer", textDecoration: "none" }}>↗ Lichess</a>
               )}
               <button onClick={() => { setChessSource(""); setChessInput(""); setStageMode(null); selfSetRef.current = true; w?.setModuleState?.(null); }} style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.04)", color: "rgba(148,163,184,0.6)", fontSize: 11, cursor: "pointer" }}>&times;</button>
             </div>
@@ -1152,11 +1152,11 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
             writingMode: "vertical-rl",
             textOrientation: "mixed",
             padding: "14px 8px",
-            background: chatOpen ? "rgba(124,58,237,0.22)" : "rgba(124,58,237,0.12)",
-            border: "1px solid rgba(124,58,237,0.30)",
+            background: chatOpen ? "color-mix(in srgb, var(--weered-room-accent, #7c3aed) 22%, transparent)" : "color-mix(in srgb, var(--weered-room-accent, #7c3aed) 12%, transparent)",
+            border: "1px solid color-mix(in srgb, var(--weered-room-accent, #7c3aed) 30%, transparent)",
             borderRight: "none",
             borderRadius: "10px 0 0 10px",
-            color: chatOpen ? "rgba(167,139,250,0.95)" : "rgba(167,139,250,0.60)",
+            color: chatOpen ? "color-mix(in srgb, var(--weered-room-accent-2, #a78bfa) 95%, transparent)" : "color-mix(in srgb, var(--weered-room-accent-2, #a78bfa) 60%, transparent)",
             fontSize: 10,
             fontWeight: 800,
             letterSpacing: "0.13em",
@@ -1173,11 +1173,11 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
           }}
         >
           {chatUnread && !chatOpen && (
-            <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#a78bfa", boxShadow: "0 0 7px rgba(167,139,250,0.9)", flexShrink: 0 }} />
+            <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#a78bfa", boxShadow: "0 0 7px color-mix(in srgb, var(--weered-room-accent-2, #a78bfa) 90%, transparent)", flexShrink: 0 }} />
           )}
           {chatUnreadCount > 0 && !chatOpen && (
             <span style={{
-              background: "#7c3aed",
+              background: "var(--weered-room-accent, #7c3aed)",
               color: "#fff",
               fontSize: 9,
               fontWeight: 900,
@@ -1216,10 +1216,10 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
               top: 0, right: 0, bottom: 0,
               width: "auto",
               height: "auto",
-              borderLeft: "1px solid rgba(124,58,237,0.22)",
+              borderLeft: "1px solid color-mix(in srgb, var(--weered-room-accent, #7c3aed) 22%, transparent)",
               borderTop: "none",
               borderRadius: 0,
-              background: "rgba(8,8,20,0.97)",
+              background: "color-mix(in srgb, var(--weered-room-surface-2, #080814) 97%, transparent)",
               backdropFilter: "blur(28px) saturate(1.6)",
               WebkitBackdropFilter: "blur(28px) saturate(1.6)",
               display: "flex",
@@ -1236,10 +1236,10 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
                 : { height: CHAT_HEIGHT_DESKTOP, width: chatOpen ? CHAT_WIDTH : 0 }
               ),
               overflow: "hidden",
-              borderLeft: chatOpen && !isMobile ? "1px solid rgba(124,58,237,0.22)" : "none",
-              borderTop: chatOpen && !isMobile ? "1px solid rgba(124,58,237,0.15)" : "none",
+              borderLeft: chatOpen && !isMobile ? "1px solid color-mix(in srgb, var(--weered-room-accent, #7c3aed) 22%, transparent)" : "none",
+              borderTop: chatOpen && !isMobile ? "1px solid color-mix(in srgb, var(--weered-room-accent, #7c3aed) 15%, transparent)" : "none",
               borderRadius: chatOpen && !isMobile ? "10px 0 0 0" : 0,
-              background: isMobile ? "rgba(8,8,20,0.97)" : "rgba(8,8,20,0.52)",
+              background: isMobile ? "color-mix(in srgb, var(--weered-room-surface-2, #080814) 97%, transparent)" : "color-mix(in srgb, var(--weered-room-surface-2, #080814) 52%, transparent)",
               backdropFilter: "blur(28px) saturate(1.6)",
               WebkitBackdropFilter: "blur(28px) saturate(1.6)",
               display: "flex",
@@ -1263,8 +1263,8 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
                   <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 10, letterSpacing: "0.2em", textTransform: "uppercase", color: "#a78bfa" }}>swipe to close</span>
                 </div>
               )}
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "9px 12px 8px", borderBottom: "1px solid rgba(124,58,237,0.12)", flexShrink: 0, position: "relative", zIndex: 1, gap: 8 }}>
-                <span style={{ fontSize: 10, fontWeight: 800, color: "rgba(167,139,250,0.7)", letterSpacing: "0.10em", textTransform: "uppercase" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "9px 12px 8px", borderBottom: "1px solid color-mix(in srgb, var(--weered-room-accent, #7c3aed) 12%, transparent)", flexShrink: 0, position: "relative", zIndex: 1, gap: 8 }}>
+                <span style={{ fontSize: 10, fontWeight: 800, color: "color-mix(in srgb, var(--weered-room-accent-2, #a78bfa) 70%, transparent)", letterSpacing: "0.10em", textTransform: "uppercase" }}>
                   Chat{chatFullscreen ? " · Fullscreen" : ""}
                 </span>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -1277,10 +1277,10 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
                       display: "inline-flex", alignItems: "center", gap: 6,
                       padding: "5px 12px 5px 10px",
                       borderRadius: 7,
-                      border: `1px solid ${chatFullscreen ? "rgba(124,58,237,0.6)" : "rgba(124,58,237,0.45)"}`,
+                      border: `1px solid ${chatFullscreen ? "color-mix(in srgb, var(--weered-room-accent, #7c3aed) 60%, transparent)" : "color-mix(in srgb, var(--weered-room-accent, #7c3aed) 45%, transparent)"}`,
                       background: chatFullscreen
-                        ? "linear-gradient(135deg, rgba(124,58,237,0.35), rgba(167,139,250,0.22))"
-                        : "linear-gradient(135deg, rgba(124,58,237,0.22), rgba(167,139,250,0.10))",
+                        ? "linear-gradient(135deg, color-mix(in srgb, var(--weered-room-accent, #7c3aed) 35%, transparent), color-mix(in srgb, var(--weered-room-accent-2, #a78bfa) 22%, transparent))"
+                        : "linear-gradient(135deg, color-mix(in srgb, var(--weered-room-accent, #7c3aed) 22%, transparent), color-mix(in srgb, var(--weered-room-accent-2, #a78bfa) 10%, transparent))",
                       color: chatFullscreen ? "rgba(237,223,255,1)" : "rgba(196,181,253,0.95)",
                       fontFamily: "inherit",
                       fontSize: 10,
@@ -1289,8 +1289,8 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
                       textTransform: "uppercase",
                       cursor: "pointer",
                       boxShadow: chatFullscreen
-                        ? "0 0 12px rgba(124,58,237,0.35), inset 0 1px 0 rgba(255,255,255,0.08)"
-                        : "0 0 8px rgba(124,58,237,0.18), inset 0 1px 0 rgba(255,255,255,0.05)",
+                        ? "0 0 12px color-mix(in srgb, var(--weered-room-accent, #7c3aed) 35%, transparent), inset 0 1px 0 rgba(255,255,255,0.08)"
+                        : "0 0 8px color-mix(in srgb, var(--weered-room-accent, #7c3aed) 18%, transparent), inset 0 1px 0 rgba(255,255,255,0.05)",
                       transition: "all .15s",
                     }}
                   >

@@ -4694,27 +4694,34 @@ html[data-weered-lobby="bandofbrothers"] {
    to them; headings here use Barlow Condensed, already loaded by Weered.
    Sunflower is too light for white text, so anything filled with the accent
    carries navy text. */
+/* !important on purpose: Weered writes each member's personal palette as INLINE
+   custom properties on <html> (--weered-bg: rgb(26,26,28), ...), and inline beats
+   any stylesheet. Without it the vOCN palette lost wherever a component reads the
+   variables: the room background, the body, parts of the rails. */
 html[data-weered-lobby="vocn"] {
-  --weered-bg: #000c1d;
-  --weered-panel: rgba(0, 29, 66, 0.86);
-  --weered-panel2: rgba(0, 20, 46, 0.94);
-  --weered-border: rgba(184, 205, 221, 0.14);
-  --weered-border2: rgba(255, 205, 0, 0.45);
-  --weered-text: #eaf2fa;
-  --weered-muted: rgba(142, 165, 190, 0.9);
-  --weered-accent-1: #ffcd00;
-  --weered-accent-2: #ffe680;
-  --weered-accent-bg: rgba(255, 205, 0, 0.13);
-  --weered-accent-ring: rgba(255, 205, 0, 0.5);
-  --weered-accent-grad: linear-gradient(135deg, #ffcd00 0%, #ffe680 100%);
-  --weered-scrollbar-track: rgba(0, 10, 24, 0.65);
-  --weered-scrollbar-thumb: rgba(30, 115, 175, 0.45);
-  --weered-scrollbar-thumb-hover: rgba(255, 205, 0, 0.55);
+  --weered-bg: #000c1d !important;
+  --weered-panel: rgba(0, 29, 66, 0.86) !important;
+  --weered-panel2: rgba(0, 20, 46, 0.94) !important;
+  --weered-border: rgba(184, 205, 221, 0.14) !important;
+  --weered-border2: rgba(255, 205, 0, 0.45) !important;
+  --weered-text: #eaf2fa !important;
+  --weered-muted: rgba(142, 165, 190, 0.9) !important;
+  --weered-accent-1: #ffcd00 !important;
+  --weered-accent-2: #ffe680 !important;
+  --weered-accent-bg: rgba(255, 205, 0, 0.13) !important;
+  --weered-accent-ring: rgba(255, 205, 0, 0.5) !important;
+  --weered-accent-grad: linear-gradient(135deg, #ffcd00 0%, #ffe680 100%) !important;
+  --weered-scrollbar-track: rgba(0, 10, 24, 0.65) !important;
+  --weered-scrollbar-thumb: rgba(30, 115, 175, 0.45) !important;
+  --weered-scrollbar-thumb-hover: rgba(255, 205, 0, 0.55) !important;
 }
+/* !important: the personal "press" theme paints body #1a1a1c !important
+   (40-core-layout.css). Same specificity, and this file loads later, so ours
+   wins the tie. HLL's block does the same. */
 html[data-weered-lobby="vocn"] body {
   background:
     radial-gradient(1400px 700px at 80% -10%, rgba(30, 115, 175, 0.2), transparent 60%),
-    radial-gradient(900px 600px at -10% 110%, rgba(0, 62, 123, 0.35), transparent 60%), #000c1d;
+    radial-gradient(900px 600px at -10% 110%, rgba(0, 62, 123, 0.35), transparent 60%), #000c1d !important;
 }
 html[data-weered-lobby="vocn"] .weered-left,
 html[data-weered-lobby="vocn"] .weered-right {
@@ -4779,4 +4786,75 @@ html[data-weered-lobby="vocn"] .weered-presence-row::after,
 html[data-weered-lobby="vocn"] .weered-presence-row-link::before,
 html[data-weered-lobby="vocn"] .weered-presence-row-link::after {
   content: none !important;
+}
+
+/* Room screens. The room components now read their accent and surfaces from
+   variables that DEFAULT to the colours they always had (pixel-checked: max
+   1/255 rounding difference), so only a lobby that sets them changes. vOCN's
+   room accent is their sky blue rather than sunflower: white button text stays
+   legible on blue and would not on yellow. */
+html[data-weered-lobby="vocn"] {
+  --weered-room-accent: #1e73af;
+  --weered-room-accent-2: #8ec5ea;
+  --weered-room-surface: #002554;
+  --weered-room-surface-2: #001634;
+  --weered-room-stage: #002554;
+}
+
+/* The Lobby tab (room directory + lobby chat). These surfaces come from the
+   base chrome's neutral greys and warm cream text, which the variables above
+   do not reach, so each gets the airline's navy explicitly. */
+html[data-weered-lobby="vocn"] .weered-lobby-tabs {
+  background: linear-gradient(180deg, #001a3d, #00224c) !important;
+  border-color: rgba(184, 205, 221, 0.12) !important;
+}
+html[data-weered-lobby="vocn"] .weered-lobby-tab {
+  color: rgba(184, 205, 221, 0.78) !important;
+  border-color: rgba(184, 205, 221, 0.14) !important;
+}
+html[data-weered-lobby="vocn"] .weered-lobby-tab-active {
+  color: #ffffff !important;
+}
+html[data-weered-lobby="vocn"] .weered-lobby-body {
+  background: rgba(0, 22, 52, 0.96) !important;
+  border-color: rgba(184, 205, 221, 0.14) !important;
+  color: #eaf2fa !important;
+}
+html[data-weered-lobby="vocn"] .weered-hero-scrim {
+  background: linear-gradient(
+    180deg,
+    rgba(0, 12, 29, 0.15) 0%,
+    rgba(0, 12, 29, 0.8) 100%
+  ) !important;
+}
+html[data-weered-lobby="vocn"] .weered-input {
+  background: rgba(0, 12, 29, 0.55) !important;
+  border: 1px solid rgba(184, 205, 221, 0.16) !important;
+  color: #eaf2fa !important;
+}
+html[data-weered-lobby="vocn"] .weered-btn {
+  background: linear-gradient(180deg, #003e7b, #002554) !important;
+  border: 1px solid rgba(184, 205, 221, 0.18) !important;
+  color: #eaf2fa !important;
+}
+html[data-weered-lobby="vocn"] .weered-room-card {
+  background: rgba(0, 37, 84, 0.45) !important;
+  border-color: rgba(184, 205, 221, 0.16) !important;
+}
+html[data-weered-lobby="vocn"] .weered-room-card:hover {
+  border-color: rgba(255, 205, 0, 0.45) !important;
+}
+html[data-weered-lobby="vocn"] .weered-room-join {
+  background: #ffcd00 !important;
+  border-color: #ffcd00 !important;
+  color: #002554 !important;
+}
+html[data-weered-lobby="vocn"] .weered-rooms-create-btn {
+  background: transparent !important;
+  border-color: rgba(255, 205, 0, 0.45) !important;
+  color: #ffcd00 !important;
+}
+html[data-weered-lobby="vocn"] .weered-lobby-chatstage {
+  background: rgba(0, 12, 29, 0.6) !important;
+  border-color: rgba(184, 205, 221, 0.14) !important;
 }

@@ -564,10 +564,10 @@ function VoiceCard({ tile, moduleType, roomUsers, getVideoElement }: { tile: any
 
   const borderColor = tile.isSpeaking
     ? "rgba(34,197,94,.5)"
-    : tile.isLocal ? "rgba(124,58,237,.35)" : "var(--weered-room-line-2)";
+    : tile.isLocal ? "color-mix(in srgb, var(--weered-room-accent, #7c3aed) 35%, transparent)" : "var(--weered-room-line-2)";
   const bgColor = tile.isSpeaking
     ? "rgba(34,197,94,.06)"
-    : tile.isLocal ? "rgba(124,58,237,.06)" : "var(--weered-room-hollow)";
+    : tile.isLocal ? "color-mix(in srgb, var(--weered-room-accent, #7c3aed) 6%, transparent)" : "var(--weered-room-hollow)";
 
   return (
     <div style={{
@@ -734,7 +734,7 @@ function VoiceStage({ roomId, moduleType, roomUsers, onClose, style }: { roomId:
   const live = connState === "connected";
 
   return (
-    <div style={{ background: "rgba(0,0,0,.35)", borderBottom: "1px solid rgba(148,163,184,.12)", padding: "12px 16px", display: "flex", flexDirection: "column", gap: 12, height: "100%", ...style }}>
+    <div style={{ background: "color-mix(in srgb, var(--weered-room-stage, #000000) 35%, transparent)", borderBottom: "1px solid rgba(148,163,184,.12)", padding: "12px 16px", display: "flex", flexDirection: "column", gap: 12, height: "100%", ...style }}>
 
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
         <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase" as const, opacity: 0.5, display: "flex", alignItems: "center", gap: 6 }}>
@@ -750,7 +750,7 @@ function VoiceStage({ roomId, moduleType, roomUsers, onClose, style }: { roomId:
             </button>
           )}
           {connState === "idle" && (
-            <button onClick={connect} style={{ padding: "5px 12px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 700, background: "rgba(124,58,237,.25)", color: "#c4b5fd" }}>🎙 Join voice</button>
+            <button onClick={connect} style={{ padding: "5px 12px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 700, background: "color-mix(in srgb, var(--weered-room-accent, #7c3aed) 25%, transparent)", color: "#c4b5fd" }}>🎙 Join voice</button>
           )}
           {connState !== "connecting" && (
             <>
@@ -855,9 +855,9 @@ function VideoTile({ tile, getVideoElement }: { tile: any; getVideoElement: (sid
       ) : (
         <div style={{
           width: 48, height: 48, borderRadius: "50%",
-          background: "rgba(124,58,237,.2)", border: "1px solid rgba(124,58,237,.3)",
+          background: "color-mix(in srgb, var(--weered-room-accent, #7c3aed) 20%, transparent)", border: "1px solid color-mix(in srgb, var(--weered-room-accent, #7c3aed) 30%, transparent)",
           display: "flex", alignItems: "center", justifyContent: "center",
-          fontSize: 20, fontWeight: 900, color: "rgba(167,139,250,.7)",
+          fontSize: 20, fontWeight: 900, color: "color-mix(in srgb, var(--weered-room-accent-2, #a78bfa) 70%, transparent)",
         }}>
           {tile.name?.[0]?.toUpperCase() || "?"}
         </div>
