@@ -239,6 +239,73 @@ const LINKS = [
   },
 ];
 
+// Crew Notices. Deliberately about vOCN's own operation (its event, its rooms,
+// its published fleet plan), never real-world airport procedures that a sim
+// pilot could fact-check against the AIP and find wrong.
+const NOTICES: {
+  id: string;
+  title: string;
+  body: string;
+  category: "ANNOUNCEMENT" | "DISCUSSION";
+  tags: string[];
+  at: string;
+  pinned?: boolean;
+}[] = [
+  {
+    id: "vocn-notice-welcome",
+    title: "Welcome to the vOCN Crew Hub",
+    category: "ANNOUNCEMENT",
+    pinned: true,
+    tags: ["welcome"],
+    at: "2026-09-22T08:00:00Z",
+    body: [
+      "This is the crew side of vOCN: one place for what is otherwise spread across vAMSYS, the website and Discord.",
+      "",
+      "- **Crew Hub** shows who is flying, what just landed, where you stand and what is coming up.",
+      "- **Departures** is the group-flight board: book one slot, and your callsign is fixed to it.",
+      "- **Crew Rooms**: the Flight Deck for flying together on voice, the Briefing Room for events and training, the Crew Lounge for everything else.",
+      "",
+      "vAMSYS stays where you book, dispatch and file. Nothing here replaces it.",
+    ].join("\n"),
+  },
+  {
+    id: "vocn-notice-bank",
+    title: "Herbstsonne: the Autumn Sun Bank is open for booking",
+    category: "ANNOUNCEMENT",
+    tags: ["event", "group-flight"],
+    at: "2026-09-24T17:30:00Z",
+    body: [
+      "Saturday 10 October, from 18:00 CEST. Five waves out of Frankfurt and Munich on all three Airbus types, with the heavies pushing at 19:15 and Halifax first out.",
+      "",
+      "Book one slot on the Departures board. Your callsign is fixed to the slot; dispatch and file through vAMSYS as normal on the night. The briefing is in the Briefing Room an hour before the first wave.",
+    ].join("\n"),
+  },
+  {
+    id: "vocn-notice-workshop",
+    title: "A330 type rating workshop, Wednesday",
+    category: "ANNOUNCEMENT",
+    tags: ["training"],
+    at: "2026-09-24T21:00:00Z",
+    body: [
+      "For First Officers moving onto the widebody: cold-and-dark to taxi on the A330, the differences from the A320 family, and a practice Frankfurt to Halifax dispatch.",
+      "",
+      "Wednesday 30 September, 20:30 CEST, in the Training Centre. Screen share will be on, so bring questions about the MCDU.",
+    ].join("\n"),
+  },
+  {
+    id: "vocn-notice-winter",
+    title: "Crew meeting 22 October: winter network and the A350 plan",
+    category: "DISCUSSION",
+    tags: ["meeting", "fleet"],
+    at: "2026-09-25T11:00:00Z",
+    body: [
+      "The winter schedule, the routes out of Munich, and what the A350-900 arriving from mid-2027 means for the long-haul side.",
+      "",
+      "Put questions here beforehand and we will work through them in the Briefing Room on the night.",
+    ].join("\n"),
+  },
+];
+
 async function main() {
   const owner = await prisma.user.findUnique({ where: { usernameKey: ownerName } });
   if (!owner) throw new Error(`No user "${ownerName}". Register it first.`);
@@ -280,8 +347,22 @@ async function main() {
     }
   }
 
+  // Dispatch: the airline's voice in its Dispatch room (src/vaDispatchWorker.ts).
+  // A system account with no LocalAuth, so it can never be signed into.
+  const dispatchUser = await prisma.user.upsert({
+    where: { usernameKey: "vocn-dispatch" },
+    update: { name: "vOCN Dispatch", avatar: `${B}/mark.png`, avatarColor: "#FFCD00" },
+    create: {
+      usernameKey: "vocn-dispatch",
+      name: "vOCN Dispatch",
+      avatar: `${B}/mark.png`,
+      avatarColor: "#FFCD00",
+    },
+  });
+
   const moduleConfig = {
     va: {
+      dispatch: { roomId: "vocn-dispatch", userId: dispatchUser.id },
       source: "sample",
       seed: SEED,
       airline: {
@@ -399,12 +480,37 @@ async function main() {
     await prisma.event.upsert({ where: { id: e.id }, update: data, create: { id: e.id, ...data } });
   }
 
+  // Crew Notices (the lobby's Feed is its forum). Posted by the sample Operations
+  // Staff pilot when the demo logins exist, the owner otherwise. Tagged "sample"
+  // and saying so in the body: they are demo content, not vOCN's words.
+  const staffUser = await prisma.user.findUnique({ where: { usernameKey: "vocn-staff" } });
+  const poster = staffUser ?? owner;
+  for (const n of NOTICES) {
+    const data = {
+      title: n.title,
+      body: `${n.body}\n\n_Sample notice for the Crew Hub demo._`,
+      category: n.category,
+      lobbyId: lobby.id,
+      authorId: poster.id,
+      authorName: poster.name || "Operations",
+      pinned: !!n.pinned,
+      tags: ["sample", ...n.tags],
+      createdAt: new Date(n.at),
+    };
+    await prisma.forumPost.upsert({
+      where: { id: n.id },
+      update: data,
+      create: { id: n.id, ...data },
+    });
+  }
+
   console.log(`lobby   /lobby/${LOBBY_ID}   (unlisted, VIRTUAL_AIRLINE, sample data)`);
   console.log(`owner   ${owner.name} (${ownerName}) at level 5`);
   console.log(
     `rooms   ${ROOMS.map((r) => `${r.name}${r.minLevel ? ` [min ${r.minLevel}]` : ""}`).join(", ")}`,
   );
   console.log(`events  ${EVENTS.length}`);
+  console.log(`notices ${NOTICES.length} (posted as ${poster.name})`);
   if (demo.length) for (const d of demo) console.log(`demo    ${d}`);
   else console.log("demo    skipped (set VOCN_DEMO_PASSWORD to create the two demo logins)");
 }

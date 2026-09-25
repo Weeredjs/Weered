@@ -90,6 +90,7 @@ import redditRoutes from "./routes/reddit";
 import helldiversMoRoutes from "./routes/helldivers-mo";
 import { runHelldiversWorker } from "./helldiversWorker";
 import { runDivision2Worker } from "./division2Worker";
+import { runVaDispatchWorker } from "./vaDispatchWorker";
 import { runStartggWorker } from "./startggWorker";
 import { runGameServerWorker } from "./gameServerWorker";
 import gameServerRoutes from "./routes/gameServers";
@@ -1026,6 +1027,9 @@ async function main() {
   setTimeout(() => {
     void runDivision2Worker({ getAI, broadcastToLobby, countLobbyActiveUsers });
   }, 45_000);
+  // Virtual-airline Dispatch: templated landing and booking calls in the
+  // airline's Dispatch room. Every minute; its first pass only primes.
+  setInterval(() => void runVaDispatchWorker({ ensureRoomLoaded, broadcastToRoom }), 60_000);
 
   await app.register(forumRoutes, {
     authFromHeader,
