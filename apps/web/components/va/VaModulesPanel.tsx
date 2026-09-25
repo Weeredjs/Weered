@@ -15,7 +15,6 @@ import {
 import VaHub from "./VaHub";
 import VaJoin from "./VaJoin";
 
-const VaLiveMap = dynamic(() => import("./VaLiveMap"), { ssr: false });
 const VaDepartureBoard = dynamic(() => import("./VaDepartureBoard"), { ssr: false });
 const VaRoster = dynamic(() => import("./VaRoster"), { ssr: false });
 const VaPilotSheet = dynamic(() => import("./VaRoster").then((m) => m.VaPilotSheet), {
@@ -30,10 +29,9 @@ const VaStaffDesk = dynamic(() => import("./VaStaffDesk"), { ssr: false });
  * visitor can see what joining opens up; the server enforces every one.
  */
 
-type TabId = "hub" | "map" | "board" | "roster" | "logbook" | "links" | "staff" | "join";
+type TabId = "hub" | "board" | "roster" | "logbook" | "links" | "staff" | "join";
 const TABS: { id: TabId; label: string; need: 0 | 2 | 4 }[] = [
   { id: "hub", label: "Crew Hub", need: 0 },
-  { id: "map", label: "Live Map", need: 0 },
   { id: "board", label: "Departures", need: CREW_LEVEL },
   { id: "roster", label: "Roster", need: CREW_LEVEL },
   { id: "logbook", label: "Logbook", need: CREW_LEVEL },
@@ -182,7 +180,6 @@ export default function VaModulesPanel({
         {hub && tab === "hub" && (
           <VaHub hub={hub} lobbyId={lobbyId} onGo={go} onOpenPilot={openPilot} />
         )}
-        {hub && tab === "map" && <VaLiveMap hub={hub} height="calc(100vh - 260px)" />}
         {hub && tab === "board" && hub.groupFlight && (
           <VaDepartureBoard
             lobbyId={lobbyId}

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   VA,
   HEAD_FONT,
@@ -302,7 +303,9 @@ export function VaPilotSheet({
     return () => window.removeEventListener("keydown", k);
   }, [onClose]);
 
-  return (
+  // Portalled to <body>: inside the hub panel the sheet is trapped in the panel's
+  // stacking context, and no z-index can lift it above the site's announcement bar.
+  return createPortal(
     <div
       role="dialog"
       aria-modal="true"
@@ -552,7 +555,8 @@ export function VaPilotSheet({
           </>
         )}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 

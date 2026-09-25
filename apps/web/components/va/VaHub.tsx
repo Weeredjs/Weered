@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import dynamic from "next/dynamic";
 import {
   VA,
   HEAD_FONT,
@@ -22,8 +21,6 @@ import {
   type Hub,
   type Pirep,
 } from "./vaShared";
-
-const VaLiveMap = dynamic(() => import("./VaLiveMap"), { ssr: false });
 
 /**
  * The crew hub's front page: one screen for what is otherwise spread across
@@ -84,6 +81,7 @@ export default function VaHub({
   }, [hub.pireps]);
 
   const s = hub.stats;
+  const liveMap = hub.airline.liveMapUrl || null;
   const gf = hub.groupFlight;
   const hour = new Date(now).toLocaleString("en-GB", {
     hour: "numeric",
@@ -150,9 +148,11 @@ export default function VaHub({
               {crew ? "Book the Autumn Sun Bank" : "Join the crew"}
             </button>
           )}
-          <button type="button" className="va-btn ghost" onClick={() => onGo("map")}>
-            Live map
-          </button>
+          {liveMap && (
+            <a href={liveMap} target="_blank" rel="noreferrer" className="va-btn ghost">
+              Live map ↗
+            </a>
+          )}
         </div>
       </div>
 
@@ -178,20 +178,97 @@ export default function VaHub({
         />
       </div>
 
-      {/* Map + departures */}
+      {/* In the air + departures. No map here: vOCN runs its own live map, and a
+          second one would be exactly the duplicate system the hub avoids. */}
       <div className="va-hub-2">
         <Card
-          title="Live traffic"
+          title={`In the air · ${hub.live.length}`}
           right={
-            <button type="button" onClick={() => onGo("map")} style={linkBtn}>
-              Full map →
-            </button>
+            liveMap ? (
+              <a href={liveMap} target="_blank" rel="noreferrer" style={linkBtn}>
+                vOCN live map ↗
+              </a>
+            ) : null
           }
-          pad={10}
         >
-          <VaLiveMap hub={hub} height={340} compact />
+          {!hub.live.length && (
+            <div style={{ color: VA.muted, fontSize: 13 }}>
+              Nobody is airborne right now. Evenings CET are busiest.
+            </div>
+          )}
+          {hub.live.map((f) => (
+            <div
+              key={f.id}
+              style={{
+                display: "grid",
+                gridTemplateColumns: "34px 86px 1fr auto",
+                gap: 10,
+                alignItems: "center",
+                padding: "9px 0",
+                borderTop: `1px solid ${VA.line}`,
+              }}
+            >
+              <img
+                src={
+                  f.fleet === "A320-200"
+                    ? "/brand/vocn/aircraft/aircraft-a320-top.svg"
+                    : "/brand/vocn/aircraft/aircraft-a330-top.svg"
+                }
+                alt={f.fleet}
+                width={28}
+                height={28}
+                style={{ opacity: 0.85 }}
+              />
+              <span style={{ fontFamily: HEAD_FONT, fontSize: 17, letterSpacing: ".04em" }}>
+                {f.callsign}
+              </span>
+              <span style={{ minWidth: 0 }}>
+                <span style={{ color: VA.sun }}>
+                  {f.dep} → {f.arr}
+                </span>
+                <span style={{ color: VA.faint, fontSize: 12 }}> · {f.fleet}</span>
+                {f.pilotName && f.pilotId && (
+                  <>
+                    <br />
+                    <button type="button" onClick={() => onOpenPilot(f.pilotId!)} style={nameBtn}>
+                      {f.pilotName}
+                    </button>
+                  </>
+                )}
+                <div
+                  style={{
+                    height: 3,
+                    borderRadius: 2,
+                    background: "rgba(255,255,255,.08)",
+                    marginTop: 6,
+                    overflow: "hidden",
+                    maxWidth: 260,
+                  }}
+                >
+                  <div
+                    style={{
+                      width: `${Math.round(f.progress * 100)}%`,
+                      height: "100%",
+                      background: VA.sun,
+                    }}
+                  />
+                </div>
+              </span>
+              <span
+                style={{ textAlign: "right", fontSize: 12, color: VA.muted, whiteSpace: "nowrap" }}
+              >
+                {f.phase}
+                <br />
+                <span style={{ color: VA.faint }}>
+                  {f.altitudeFt
+                    ? `FL${String(Math.round(f.altitudeFt / 100)).padStart(3, "0")}`
+                    : "GND"}
+                </span>
+              </span>
+            </div>
+          ))}
         </Card>
-        <Card title={crew ? "Booked departures" : "In the air"}>
+        <Card title={crew ? "Booked departures" : "Coming up next"}>
           {crew ? (
             <>
               {!hub.departures.length && (
@@ -222,15 +299,20 @@ export default function VaHub({
               ))}
             </>
           ) : (
-            hub.live.slice(0, 7).map((f) => (
-              <Row key={f.id}>
-                <span style={{ fontFamily: HEAD_FONT, fontSize: 16, width: 76 }}>{f.callsign}</span>
-                <span style={{ flex: 1, color: VA.sun }}>
-                  {f.dep} → {f.arr}
-                </span>
-                <span style={{ fontSize: 12, color: VA.muted }}>{f.phase}</span>
-              </Row>
-            ))
+            <>
+              <p style={{ margin: 0, color: VA.ice, fontSize: 14, lineHeight: 1.6 }}>
+                Who is booked to fly next, the group-flight board and the crew rooms open once you
+                are aboard.
+              </p>
+              <button
+                type="button"
+                className="va-btn"
+                style={{ marginTop: 14 }}
+                onClick={() => onGo("join")}
+              >
+                How to join
+              </button>
+            </>
           )}
         </Card>
       </div>

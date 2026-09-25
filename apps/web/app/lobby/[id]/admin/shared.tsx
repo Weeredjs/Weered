@@ -1,5 +1,6 @@
 "use client";
 import { API, authHeaders, apiFetch } from "../../../../lib/apiClient";
+import RoleGlyph from "../../../../components/RoleGlyph";
 export { API, authHeaders, apiFetch };
 import React from "react";
 
@@ -195,7 +196,11 @@ export function LevelBadge({
         flexShrink: 0,
       }}
     >
-      {icon ? <span style={{ marginRight: 4 }}>{icon}</span> : null}
+      {icon ? (
+        <span style={{ marginRight: 4 }}>
+          <RoleGlyph icon={icon} size={12} />
+        </span>
+      ) : null}
       {name}
     </span>
   );

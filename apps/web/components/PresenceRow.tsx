@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import RoleGlyph from "./RoleGlyph";
 import RoleIcon, { TierIcon } from "./RoleIcon";
 
 import { avatarBg } from "../lib/avatarColor";
@@ -427,7 +428,7 @@ export default function PresenceRow({
                 userSelect: "none",
               }}
             >
-              {roleIcon}
+              <RoleGlyph icon={roleIcon} size={compact ? 13 : 15} />
             </span>
           ) : null}
           {globalRole && globalRole !== "USER" ? (

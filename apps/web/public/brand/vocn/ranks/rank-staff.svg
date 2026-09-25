@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 64" width="200" height="64" role="img" aria-label="Staff">
+<rect x="4" y="4" width="192" height="56" rx="10" fill="#002554"/>
+<circle cx="24" cy="32.0" r="5" fill="#FFCD00" opacity="0.9"/>
+<path d="M62 18.0 L92 32.0 L62 46.0 L74 46.0 L104 32.0 L74 18.0 Z" fill="#FFCD00"/>
+<path d="M112 18.0 L142 32.0 L112 46.0 L124 46.0 L154 32.0 L124 18.0 Z" fill="#FFCD00"/>
+</svg>

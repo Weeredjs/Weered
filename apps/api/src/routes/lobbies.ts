@@ -6,7 +6,12 @@ import { z } from "zod";
 import { LobbyRole } from "@prisma/client";
 import { isAIAvailable, OPERATOR_PRESENCE } from "../lib/roomState";
 import { lastMessageMap } from "../lib/roomRecency";
-import { DEFAULT_ROLE_NAMES, DEFAULT_ROLE_ICONS, cleanRoleMap } from "../lib/lobbyRoles";
+import {
+  DEFAULT_ROLE_NAMES,
+  DEFAULT_ROLE_ICONS,
+  cleanRoleMap,
+  cleanRoleIcons,
+} from "../lib/lobbyRoles";
 import { LEVEL_PERMS, hasLobbyPerm } from "../lib/lobbyPerms";
 
 import { touchLobbyViewer } from "../lib/lobbyViewers";
@@ -1110,10 +1115,9 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
       const iconsIn = body.roleIcons;
       const cleanIcons =
         iconsIn && typeof iconsIn === "object"
-          ? cleanRoleMap(
+          ? cleanRoleIcons(
               iconsIn,
               (ctx.lobby.roleIcons as Record<string, string> | null) ?? DEFAULT_ROLE_ICONS,
-              8,
             )
           : null;
 

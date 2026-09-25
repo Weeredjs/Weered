@@ -163,6 +163,7 @@ export type Airline = {
   website?: string;
   registerUrl?: string;
   loginUrl?: string;
+  liveMapUrl?: string; // the airline's own live map; the hub links to it rather than drawing one
   disclaimer?: string;
 };
 
@@ -289,12 +290,6 @@ export function countdown(iso: string, now = Date.now()): string {
   return `${m}m`;
 }
 
-export function flagOf(cc: string): string {
-  const c = (cc || "").toUpperCase();
-  if (!/^[A-Z]{2}$/.test(c)) return "";
-  return String.fromCodePoint(...[...c].map((ch) => 0x1f1e6 + ch.charCodeAt(0) - 65));
-}
-
 /**
  * Country as a small code chip. Not a flag emoji: Windows ships no flag glyphs,
  * so on the platform most sim pilots use, a flag renders as two bare letters
@@ -337,65 +332,6 @@ export function rankOf(ranks: Rank[], key?: string | null): Rank | undefined {
   return key ? ranks.find((r) => r.key === key) : undefined;
 }
 
-// ------------------------------------------------------------------ geo
-
-const RAD = Math.PI / 180;
-
-/** Same great-circle maths as the server, so a plane can move between polls. */
-export function greatCircle(
-  a: { lat: number; lon: number },
-  b: { lat: number; lon: number },
-  f: number,
-) {
-  const φ1 = a.lat * RAD,
-    λ1 = a.lon * RAD,
-    φ2 = b.lat * RAD,
-    λ2 = b.lon * RAD;
-  const d =
-    2 *
-    Math.asin(
-      Math.sqrt(
-        Math.sin((φ2 - φ1) / 2) ** 2 + Math.cos(φ1) * Math.cos(φ2) * Math.sin((λ2 - λ1) / 2) ** 2,
-      ),
-    );
-  if (d < 1e-9) return { lat: a.lat, lon: a.lon };
-  const A = Math.sin((1 - f) * d) / Math.sin(d);
-  const B = Math.sin(f * d) / Math.sin(d);
-  const x = A * Math.cos(φ1) * Math.cos(λ1) + B * Math.cos(φ2) * Math.cos(λ2);
-  const y = A * Math.cos(φ1) * Math.sin(λ1) + B * Math.cos(φ2) * Math.sin(λ2);
-  const z = A * Math.sin(φ1) + B * Math.sin(φ2);
-  return { lat: Math.atan2(z, Math.hypot(x, y)) / RAD, lon: Math.atan2(y, x) / RAD };
-}
-
-export function bearing(a: { lat: number; lon: number }, b: { lat: number; lon: number }): number {
-  const φ1 = a.lat * RAD,
-    φ2 = b.lat * RAD,
-    Δλ = (b.lon - a.lon) * RAD;
-  const y = Math.sin(Δλ) * Math.cos(φ2);
-  const x = Math.cos(φ1) * Math.sin(φ2) - Math.sin(φ1) * Math.cos(φ2) * Math.cos(Δλ);
-  return (Math.atan2(y, x) / RAD + 360) % 360;
-}
-
-/** Where a live flight is at `now`, between the server's polls. */
-export function positionAt(
-  f: LiveFlight,
-  dep: Airport | undefined,
-  arr: Airport | undefined,
-  now: number,
-) {
-  const t0 = Date.parse(f.takeoffAt);
-  const t1 = Date.parse(f.landingAt);
-  // No airports or no timings (an older API, a partial payload): stay where the
-  // server last put the aircraft. A NaN here throws inside Leaflet and takes the
-  // whole map down with it.
-  if (!dep || !arr || !Number.isFinite(t0) || !Number.isFinite(t1))
-    return { lat: f.lat, lon: f.lon, heading: f.heading, air: f.progress };
-  const air = Math.min(1, Math.max(0, (now - t0) / Math.max(1, t1 - t0)));
-  const p = greatCircle(dep, arr, air);
-  const ahead = greatCircle(dep, arr, Math.min(1, air + 0.005));
-  return { ...p, heading: air >= 1 ? f.heading : bearing(p, ahead), air };
-}
-
 // ---------------------------------------------------------------- pieces
 
 /**
@@ -405,15 +341,16 @@ export function positionAt(
 export function Epaulette({ rank, height = 18 }: { rank?: Rank; height?: number }) {
   if (!rank) return null;
   const w = Math.round((height * 85) / 36);
+  // A configured image keeps its own shape: vAMSYS's are 85x36, vOCN's lapel
+  // set is 200x64, and forcing one into the other squashes the bars.
   if (rank.image)
     return (
       <img
         src={rank.image}
         alt={rank.name}
         title={rank.name}
-        width={w}
         height={height}
-        style={{ display: "block" }}
+        style={{ display: "block", height, width: "auto", flexShrink: 0 }}
       />
     );
   const bars = Math.max(1, Math.min(4, rank.stripes));

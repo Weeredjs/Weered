@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48" role="img" aria-label="Staff">
+<rect x="2" y="2" width="44" height="44" rx="9" fill="#002554"/>
+<path d="M12 15 L24 24 L12 33 L18 33 L30 24 L18 15 Z" fill="#FFCD00"/>
+<path d="M24 15 L36 24 L24 33 L30 33 L42 24 L30 15 Z" fill="#FFCD00" opacity="0.6"/>
+</svg>

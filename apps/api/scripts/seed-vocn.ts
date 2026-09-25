@@ -55,7 +55,29 @@ const ROLE_NAMES = {
   "4": "Operations Staff",
   "5": "Director",
 };
-const ROLE_ICONS = { "1": "🧳", "2": "✈️", "3": "🎧", "4": "📋", "5": "⭐" };
+// Role icons: vOCN's rank badge set (48x48), one per access level. Served by
+// Weered under /brand/, the only image paths cleanRoleIcons accepts.
+const BADGE = (n: string) => `${B}/badges/badge-${n}.svg`;
+const ROLE_ICONS = {
+  "1": BADGE("cadet"),
+  "2": BADGE("first-officer"),
+  "3": BADGE("captain"),
+  "4": BADGE("staff"),
+  "5": BADGE("senior-captain"),
+};
+
+// Rank insignia: vOCN's lapel set (200x64), keyed by the sample ladder's ranks.
+const RANK = (n: string) => `${B}/ranks/rank-${n}.svg`;
+const RANK_IMAGES = {
+  cdt: RANK("1-cadet"),
+  so: RANK("2-second-officer"),
+  fo: RANK("3-first-officer"),
+  sfo: RANK("3s-senior-first-officer"),
+  cpt: RANK("4-captain"),
+  scp: RANK("4s-senior-captain"),
+  ltc: RANK("4-captain"), // honorary trainer: a captain's lapel
+  ops: RANK("staff"),
+};
 
 // minLevel: 0 = anyone, 2 = verified crew, 4 = staff (see Room.minLevel)
 const ROOMS = [
@@ -271,12 +293,13 @@ async function main() {
         website: "https://virtualocn.de",
         registerUrl: "https://vamsys.io/register/vocn",
         loginUrl: "https://vamsys.io/login/vocn",
+        liveMapUrl: "https://virtualocn.de/live-map",
         disclaimer:
           "vOCN Virtual is an independent, non-commercial flight simulation community, not affiliated with Discover Airlines or the Lufthansa Group.",
       },
       links: LINKS,
       pilotLinks,
-      rankImages: {},
+      rankImages: RANK_IMAGES,
     },
   };
 

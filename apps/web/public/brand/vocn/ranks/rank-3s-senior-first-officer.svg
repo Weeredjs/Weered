@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 64" width="200" height="64" role="img" aria-label="Senior First Officer">
+<rect x="4" y="4" width="192" height="56" rx="10" fill="#002554"/>
+<circle cx="24" cy="32.0" r="5" fill="#FFCD00" opacity="0.9"/>
+<rect x="128.0" y="12" width="8" height="40" rx="1.5" fill="#FFCD00"/>
+<rect x="144.0" y="12" width="8" height="40" rx="1.5" fill="#FFCD00"/>
+<rect x="160.0" y="12" width="8" height="40" rx="1.5" fill="#FFCD00"/>
+<path transform="translate(60 32.0) scale(1.15)" d="M0,-9 L2.6,-2.8 L9,-2.8 L3.8,1.1 L5.6,7.3 L0,3.6 L-5.6,7.3 L-3.8,1.1 L-9,-2.8 L-2.6,-2.8 Z" fill="#FFCD00"/>
+</svg>

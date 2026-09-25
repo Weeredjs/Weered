@@ -56,3 +56,30 @@ export function cleanRoleMap(
   }
   return out;
 }
+
+/**
+ * Role icons: an emoji or short text (8 chars, as before), OR an image path
+ * Weered hosts under /brand/. Only same-origin /brand/ paths are accepted as
+ * images, never URLs: an arbitrary URL here would make every member's browser
+ * fetch from wherever a lobby admin pointed it. Mirrors isRoleIconPath in
+ * apps/web/components/RoleGlyph.tsx.
+ */
+export const ROLE_ICON_PATH = /^\/brand\/[A-Za-z0-9_\-/]+\.(svg|png|webp)$/;
+
+export function cleanRoleIcons(
+  input: unknown,
+  fallback: Record<string, string>,
+): Record<string, string> {
+  const src =
+    input && typeof input === "object" && !Array.isArray(input)
+      ? (input as Record<string, unknown>)
+      : {};
+  const out: Record<string, string> = {};
+  for (const k of ROLE_LEVELS) {
+    const v = src[k];
+    if (typeof v !== "string") out[k] = fallback[k] ?? "";
+    else if (v.length <= 120 && ROLE_ICON_PATH.test(v)) out[k] = v;
+    else out[k] = v.slice(0, 8);
+  }
+  return out;
+}
