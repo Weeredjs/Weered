@@ -178,6 +178,10 @@ const BarModulesPanel = dynamic(() => import("../../../components/bar/BarModules
   loading: panelLoading,
   ssr: false,
 });
+const VaModulesPanel = dynamic(() => import("../../../components/va/VaModulesPanel"), {
+  loading: panelLoading,
+  ssr: false,
+});
 const CoworkModulesPanel = dynamic(() => import("../../../components/CoworkModulesPanel"), {
   loading: panelLoading,
   ssr: false,
@@ -1298,6 +1302,8 @@ export default function LobbyIdPage() {
                       currentUserId={me?.id}
                       style={{ flex: 1, minHeight: 0 }}
                     />
+                  ) : lobbyInfo?.moduleType === "VIRTUAL_AIRLINE" ? (
+                    <VaModulesPanel lobbyId={lobbyId} style={{ flex: 1, minHeight: 0 }} />
                   ) : lobbyInfo?.moduleType === "BAR" ? (
                     <BarModulesPanel
                       lobbyId={lobbyId}
@@ -1449,6 +1455,7 @@ const MODULE_CHIP_LABEL: Record<string, string> = {
   MARATHON: "Marathon",
   WINDROSE: "Windrose",
   HEADQUARTERS: "HQ",
+  VIRTUAL_AIRLINE: "Crew Hub",
 };
 
 function ModulesTab({

@@ -429,6 +429,8 @@ function liveOf(f: Flight, nowMs: number): VaLiveFlight {
     reg: f.reg,
     departedAt: new Date(f.depMs).toISOString(),
     arrivesAt: new Date(f.arrMs).toISOString(),
+    takeoffAt: new Date(f.depMs + taxiOutMin * 60_000).toISOString(),
+    landingAt: new Date(f.depMs + (taxiOutMin + f.airMin) * 60_000).toISOString(),
     progress: Math.min(1, Math.max(0, (nowMs - f.depMs) / (f.arrMs - f.depMs))),
     phase,
     lat: pos.lat,
@@ -584,21 +586,44 @@ function buildGroupFlight(seed: string, pilots: PilotSim[]): VaGroupFlight {
 
 function buildApplications(seed: string, nowMs: number): VaApplication[] {
   const r = rngFrom(hash32(`${seed}:apps`));
-  const notes = [
-    "Flew with a Condor VA for two years, looking for a leisure operation with real events.",
-    "New to online flying. Completed the VATSIM S1 theory, keen on the A320.",
-    "Real-world PPL holder, MSFS 2024, wants the long-haul A330 side.",
-    "Came from the Discord after the last group flight. Mostly evenings CET.",
+  // Each applicant is written as one coherent person. They used to be random
+  // fields beside fixed notes, which produced "404 h elsewhere" next to "new to
+  // online flying": the kind of contradiction airline staff spot instantly.
+  const people: Omit<VaApplication, "id" | "name" | "appliedAt">[] = [
+    {
+      country: "DE",
+      simulator: "MSFS 2024",
+      network: "VATSIM",
+      hoursElsewhere: 340,
+      note: "Flew with a Condor VA for two years, looking for a leisure operation with real events.",
+    },
+    {
+      country: "AT",
+      simulator: "MSFS 2024",
+      network: "VATSIM",
+      hoursElsewhere: 0,
+      note: "New to online flying. Completed the VATSIM S1 theory, keen on the A320.",
+    },
+    {
+      country: "CH",
+      simulator: "MSFS 2024",
+      network: "VATSIM",
+      hoursElsewhere: 60,
+      note: "Real-world PPL holder, wants the long-haul A330 side.",
+    },
+    {
+      country: "NL",
+      simulator: "X-Plane 12",
+      network: "IVAO",
+      hoursElsewhere: 120,
+      note: "Came from the Discord after the last group flight. Mostly evenings CET.",
+    },
   ];
-  return notes.map((note, i) => ({
+  return people.map((p, i) => ({
+    ...p,
     id: `APP-${2600 + i * 7}`,
     name: `${pick(r, FIRST_NAMES)} ${pick(r, LAST_NAMES)}`,
-    country: pick(r, PILOT_COUNTRIES),
-    simulator: pick(r, SIMULATORS),
-    network: (r() < 0.7 ? "VATSIM" : "IVAO") as VaNetwork,
-    hoursElsewhere: Math.round(r() < 0.3 ? 0 : 20 + r() * 400),
     appliedAt: new Date(nowMs - Math.round((0.2 + i * 1.3 + r()) * 86_400_000)).toISOString(),
-    note,
   }));
 }
 

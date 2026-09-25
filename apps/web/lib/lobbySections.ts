@@ -11,6 +11,7 @@ import {
   BOB_SECTIONS,
   BOB_SECTION_ICONS,
 } from "./hllCopy";
+import { VOCN_LOBBY_ID, VOCN_SECTIONS, VOCN_SECTION_ICONS } from "./vocnCopy";
 
 /**
  * The left rail inside a lobby lists THAT LOBBY's sections, not the platform's.
@@ -59,6 +60,7 @@ const PER_LOBBY: Record<string, { labels: Record<string, Bi>; icons: Record<stri
   [HLL_LOBBY_ID]: { labels: HLL_SECTIONS, icons: HLL_SECTION_ICONS },
   [IR16_LOBBY_ID]: { labels: IR16_SECTIONS, icons: IR16_SECTION_ICONS },
   [BOB_LOBBY_ID]: { labels: BOB_SECTIONS, icons: BOB_SECTION_ICONS },
+  [VOCN_LOBBY_ID]: { labels: VOCN_SECTIONS, icons: VOCN_SECTION_ICONS },
 };
 
 /** Lobbies carrying an LFG board / a Reddit tab. Navigation config, so it lives

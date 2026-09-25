@@ -99,6 +99,7 @@ export type Ctx = {
   meta: RoomMeta | null; admin: AdminState | null;
   moduleState: ModuleState;
   role: Role; joinStatus: JoinStatus; statusByRoom: Record<string, JoinStatus>;
+  deniedByRoom: Record<string, { reason?: string; minLevel?: number }>; // why a join was refused
   rooms: any[];
   join: (roomId: string) => void;
   leave: () => void;
@@ -280,6 +281,7 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
   const [metaByRoom,    setMetaByRoom   ] = useState<Record<string, RoomMeta>>({});
   const [adminByRoom,   setAdminByRoom  ] = useState<Record<string, AdminState>>({});
   const [statusByRoom,  setStatusByRoom ] = useState<Record<string, JoinStatus>>({});
+  const [deniedByRoom,  setDeniedByRoom ] = useState<Record<string, { reason?: string; minLevel?: number }>>({});
   const [moduleByRoom,  setModuleByRoom ] = useState<Record<string, ModuleState>>({});
   const [ytStateByRoom, setYtStateByRoom] = useState<Record<string, { videoId: string; playing: boolean; position: number; updatedAt: number }>>({});
   const [launchByRoom,  setLaunchByRoom ] = useState<Record<string, LaunchSnapshot | null>>({});
@@ -907,7 +909,7 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
       if (msg.type === "room:banned")       { setStatusByRoom(prev => ({ ...prev, [String(msg.roomId || "")]: "banned"   })); return; }
       if (msg.type === "room:password:required") { setPasswordRoomId(String(msg.roomId || "")); setPasswordError(""); return; }
       if (msg.type === "room:password:wrong")    { setPasswordError("Wrong password."); return; }
-      if (msg.type === "room:denied")       { setStatusByRoom(prev => ({ ...prev, [String(msg.roomId || "")]: "denied"   })); return; }
+      if (msg.type === "room:denied")       { const rid = String(msg.roomId || ""); setDeniedByRoom(prev => ({ ...prev, [rid]: { reason: msg.reason, minLevel: msg.minLevel } })); setStatusByRoom(prev => ({ ...prev, [rid]: "denied"   })); return; }
       if (msg.type === "staff:kicked") {
         const rid = String(msg.roomId || "");
         if (rid) setStatusByRoom(prev => ({ ...prev, [rid]: "idle" }));
@@ -1305,7 +1307,7 @@ const renameRoom = (name: string)   => sendAdmin("room:rename",  { name });
     token, me, authed, globalRole,
     wsReady, wsState,
     activeRoomId, joinedRoomId, currentLobbyId, setActiveRoomId,
-    meta, admin, role, joinStatus, statusByRoom,
+    meta, admin, role, joinStatus, statusByRoom, deniedByRoom,
     metaByRoom, adminByRoom, moduleByRoom, ytStateByRoom, launchByRoom, voiceByRoom,
     pinnedByRoom,
     moduleState, setModuleState,
@@ -1323,7 +1325,7 @@ const renameRoom = (name: string)   => sendAdmin("room:rename",  { name });
     token, me, authed, globalRole,
     wsReady, wsState,
     activeRoomId, joinedRoomId, currentLobbyId,
-    meta, admin, role, joinStatus, statusByRoom,
+    meta, admin, role, joinStatus, statusByRoom, deniedByRoom,
     metaByRoom, adminByRoom, moduleByRoom, ytStateByRoom, launchByRoom, voiceByRoom,
     pinnedByRoom,
     moduleState,

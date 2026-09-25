@@ -4685,3 +4685,70 @@ html[data-weered-lobby="bandofbrothers"] {
   --hll-paper-dim: #9ca3af;
   --hll-grid: rgba(250, 214, 96, 0.04);
 }
+
+/* ── vOCN Crew Hub · virtualocn.de
+   Virtual Discover Airlines, Frankfurt and Munich. Client preview (FORCED in
+   lib/lobbyChrome, pre-painted in app/layout). Palette sampled from their own
+   stylesheet: navy #002554, blue #003e7b, sunflower #ffcd00, ink #15263c.
+   Set dark, as their night imagery is. Their Lufthansa typefaces are licensed
+   to them; headings here use Barlow Condensed, already loaded by Weered.
+   Sunflower is too light for white text, so anything filled with the accent
+   carries navy text. */
+html[data-weered-lobby="vocn"] {
+  --weered-bg: #000c1d;
+  --weered-panel: rgba(0, 29, 66, 0.86);
+  --weered-panel2: rgba(0, 20, 46, 0.94);
+  --weered-border: rgba(184, 205, 221, 0.14);
+  --weered-border2: rgba(255, 205, 0, 0.45);
+  --weered-text: #eaf2fa;
+  --weered-muted: rgba(142, 165, 190, 0.9);
+  --weered-accent-1: #ffcd00;
+  --weered-accent-2: #ffe680;
+  --weered-accent-bg: rgba(255, 205, 0, 0.13);
+  --weered-accent-ring: rgba(255, 205, 0, 0.5);
+  --weered-accent-grad: linear-gradient(135deg, #ffcd00 0%, #ffe680 100%);
+  --weered-scrollbar-track: rgba(0, 10, 24, 0.65);
+  --weered-scrollbar-thumb: rgba(30, 115, 175, 0.45);
+  --weered-scrollbar-thumb-hover: rgba(255, 205, 0, 0.55);
+}
+html[data-weered-lobby="vocn"] body {
+  background:
+    radial-gradient(1400px 700px at 80% -10%, rgba(30, 115, 175, 0.2), transparent 60%),
+    radial-gradient(900px 600px at -10% 110%, rgba(0, 62, 123, 0.35), transparent 60%), #000c1d;
+}
+html[data-weered-lobby="vocn"] .weered-left,
+html[data-weered-lobby="vocn"] .weered-right {
+  background: linear-gradient(180deg, rgba(0, 29, 66, 0.92), rgba(0, 12, 29, 0.96)) !important;
+  border-color: rgba(184, 205, 221, 0.12) !important;
+}
+html[data-weered-lobby="vocn"] .weered-left-link-active {
+  background: rgba(255, 205, 0, 0.1) !important;
+  box-shadow: inset 3px 0 0 #ffcd00 !important;
+  color: #ffffff !important;
+}
+html[data-weered-lobby="vocn"] .weered-rr-section-title,
+html[data-weered-lobby="vocn"] .weered-presence-title,
+html[data-weered-lobby="vocn"] .weered-lobby-tab {
+  font-family: var(--font-barlow), "Barlow Condensed", sans-serif !important;
+  letter-spacing: 0.14em !important;
+  text-transform: uppercase;
+}
+html[data-weered-lobby="vocn"] .weered-lobby-tab-active {
+  color: #ffffff !important;
+  box-shadow: inset 0 -3px 0 #ffcd00 !important;
+}
+html[data-weered-lobby="vocn"] .weered-rr-primary-solid,
+html[data-weered-lobby="vocn"] .weered-rr-join {
+  background: #ffcd00 !important;
+  border: 1px solid #ffcd00 !important;
+  color: #002554 !important;
+  font-weight: 700;
+}
+html[data-weered-lobby="vocn"] .weered-rr-primary-solid:hover,
+html[data-weered-lobby="vocn"] .weered-rr-join:hover {
+  box-shadow: 0 0 16px rgba(255, 205, 0, 0.45) !important;
+}
+html[data-weered-lobby="vocn"] .weered-rr-room-card-active {
+  border-color: rgba(255, 205, 0, 0.55) !important;
+  box-shadow: 0 0 0 1px rgba(255, 205, 0, 0.25) !important;
+}

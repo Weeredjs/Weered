@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useWeered, useRoomUsers, useRoomMsgs } from "../WeeredProvider";
 import BungieLinkPill from "../BungieLinkPill";
 import RoomHeader from "./RoomHeader";
+import RoomDenied from "./RoomDenied";
 import RoomChatPanel from "../RoomChatPanel";
 import RoomStage, { StageMode } from "./RoomStage";
 import LaunchPad from "./LaunchPad";
@@ -703,16 +704,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
         </div>
       )}
 
-      {joinStatus === "denied" && (
-        <div style={{ position: "absolute", inset: 0, zIndex: 200, background: "rgba(10,10,18,0.92)", backdropFilter: "blur(12px)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16 }}>
-          <div style={{ fontSize: 40 }}>🚫</div>
-          <div style={{ textAlign: "center" }}>
-            <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 6 }}>Entry denied</div>
-            <div style={{ fontSize: 13, opacity: 0.5 }}>A moderator declined your request</div>
-          </div>
-          <button onClick={() => { try { window.history.back(); } catch {} }} style={{ marginTop: 8, padding: "8px 20px", borderRadius: 9, background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", color: "rgba(252,165,165,0.9)", fontSize: 13, cursor: "pointer" }}>Go back</button>
-        </div>
-      )}
+      {joinStatus === "denied" && <RoomDenied roomIds={[activeRid, "room:" + activeRid, roomId]} />}
 
 
       <RoomHeader

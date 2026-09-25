@@ -104,6 +104,10 @@ export type VaLiveFlight = {
   reg: string;
   departedAt: string;
   arrivesAt: string;
+  /** Wheels-up and touchdown. Between them the aircraft is on the great circle
+   *  dep->arr, so a client can move it smoothly with the same maths. */
+  takeoffAt: string;
+  landingAt: string;
   progress: number; // 0..1
   phase: VaFlightPhase;
   lat: number;

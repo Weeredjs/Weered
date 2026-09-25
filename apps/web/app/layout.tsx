@@ -159,6 +159,13 @@ try {
   // James kept hitting on hard load. So pre-paint min for EVERY lobby. The
   // common/default case is now flash-free; an opted-in member gets a single
   // clean min->reskin transition once membership resolves (was two before).
+  // The vOCN crew hub is a forced full-chrome reskin (lib/lobbyChrome), so it
+  // skips the min step: painting min and then the airline skin is exactly the
+  // flash this block exists to prevent. Its CSS covers the rails, so the
+  // lobbyInfo load window shows the airline, not the base theme.
+  else if (location.pathname === '/lobby/vocn' || location.pathname.indexOf('/lobby/vocn/') === 0) {
+    d.setAttribute('data-weered-lobby', 'vocn');
+  }
   else if (location.pathname.indexOf('/lobby/') === 0
       && location.search.indexOf('chrome=full') < 0) {
     d.setAttribute('data-weered-chrome', 'min');

@@ -37,6 +37,7 @@ export const THEMEABLE_LOBBY_IDS: string[] = [
   "bandofbrothers",
   "helldivers2",
   TIMBOS_LOBBY_ID,
+  "vocn",
 ];
 
 export function isThemeableLobby(lobbyId: string): boolean {
@@ -66,6 +67,8 @@ export const FORCED_THEME_LOBBIES: string[] = [
   // Prospect previews: the unit opening the link has joined nothing.
   "16thir",
   "bandofbrothers",
+  // Virtual airline client preview (vOCN): opens on the crew hub, not on rooms.
+  "vocn",
 ];
 
 export function isForcedThemeLobby(lobbyId: string): boolean {
@@ -125,6 +128,7 @@ const MODULE_TYPES = new Set([
   "HLLV",
   "COWORK",
   "BAR",
+  "VIRTUAL_AIRLINE",
 ]);
 
 /** Timbo's panel is keyed on the lobby id rather than a ModuleType, so it is
