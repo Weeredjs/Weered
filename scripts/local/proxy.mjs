@@ -24,7 +24,9 @@ import net from "node:net";
 const PORT = Number(process.env.PROXY_PORT || 8080);
 const API = { host: "127.0.0.1", port: 4000 };
 const WS = { host: "127.0.0.1", port: 4001 };
-const WEB = { host: "127.0.0.1", port: 3000 };
+// WEB_PORT: run a second Next beside one already holding :3000 (an orphaned dev
+// server, another checkout) without having to kill it.
+const WEB = { host: "127.0.0.1", port: Number(process.env.WEB_PORT || 3000) };
 
 function route(url = "/") {
   if (url === "/api" || url.startsWith("/api/")) return { ...API, path: url.slice(4) || "/" };
@@ -72,5 +74,7 @@ server.on("upgrade", (req, socket, head) => {
 });
 
 server.listen(PORT, "127.0.0.1", () => {
-  console.log(`local proxy on http://bar.localhost:${PORT}  (api :4000, ws :4001, web :3000)`);
+  console.log(
+    `local proxy on http://bar.localhost:${PORT}  (api :4000, ws :4001, web :${WEB.port})`,
+  );
 });

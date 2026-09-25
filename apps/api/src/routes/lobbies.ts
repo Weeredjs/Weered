@@ -77,6 +77,7 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
         iconUrl: true,
         bannerUrl: true,
         accentColor: true,
+        minLevel: true,
         _count: { select: { members: true } },
       },
     });
@@ -84,7 +85,9 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
     const out = list.map((r) => {
       const wsRoom = rooms.get(r.id);
       const onlineUsers: { id: string; name: string; avatar?: string }[] = [];
-      if (wsRoom?.users) {
+      // A gated room (Room.minLevel) shows how many are inside, never who: the
+      // occupants of a staff room are part of what the gate protects.
+      if (wsRoom?.users && !(Number((r as any).minLevel) > 0)) {
         for (const [uid, u] of wsRoom.users) {
           if (onlineUsers.length >= 4) break;
           onlineUsers.push({ id: uid, name: u?.name || uid, avatar: u?.avatar || undefined });
@@ -108,6 +111,7 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
         lobbyId,
         ownerId: r.ownerId,
         hasPassword: !!(wsRoom?.passwordHash || (r as any).passwordHash),
+        minLevel: Number((r as any).minLevel) || 0,
         _count: r._count,
       };
     });
@@ -239,6 +243,7 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
             iconUrl: true,
             bannerUrl: true,
             accentColor: true,
+            minLevel: true,
             _count: { select: { members: true } },
           },
           orderBy: [{ isEvent: "desc" }, { name: "asc" }],
@@ -264,7 +269,9 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
     const enrichedRooms = lobby.rooms.map((r: any) => {
       const wsRoom = rooms.get(r.id);
       const onlineUsers: { id: string; name: string; avatar?: string }[] = [];
-      if (wsRoom?.users) {
+      // A gated room (Room.minLevel) shows how many are inside, never who: the
+      // occupants of a staff room are part of what the gate protects.
+      if (wsRoom?.users && !(Number((r as any).minLevel) > 0)) {
         for (const [uid, u] of wsRoom.users) {
           if (onlineUsers.length >= 4) break;
           onlineUsers.push({ id: uid, name: u?.name || uid, avatar: u?.avatar || undefined });

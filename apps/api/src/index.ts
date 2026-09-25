@@ -254,6 +254,7 @@ import { startTournamentAutoDetect } from "./tournamentAutoDetect";
 import { startNexusPoller } from "./nexusPoller";
 
 import { prisma } from "./lib/prisma";
+import { canEnterGatedRoom } from "./lib/lobbyAccess";
 import { readCookieToken } from "./lib/authCookie";
 import { awardPaper } from "./lib/economy";
 
@@ -499,6 +500,18 @@ async function doJoin(ws: Sock, roomId: string) {
         send(ws, { type: "room:denied", roomId, reason: "private_meeting" });
         return false;
       }
+    }
+  }
+
+  // Lobby-level gate (Room.minLevel): the private crew room and the staff room.
+  // Placed BEFORE the first-joiner-becomes-owner block below, or a refused
+  // visitor would still take ownership of an ownerless gated room on the way out.
+  // Every entry path runs through here: presence:join and the knock admit alike.
+  {
+    const minLevel = Number((room as any).minLevel) || 0;
+    if (minLevel > 0 && !(await canEnterGatedRoom(ws.user as any, room.lobbyId, minLevel))) {
+      send(ws, { type: "room:denied", roomId, reason: "level_required", minLevel });
+      return false;
     }
   }
 
@@ -1845,6 +1858,8 @@ async function main() {
   await app.register((await import("./routes/muster")).default, { authFromHeader });
   await app.register((await import("./routes/stations")).default, { authFromHeader });
   await app.register((await import("./routes/slippi")).default, { authFromHeader });
+  // Virtual-airline crew hub (vOCN): roster, PIREPs, group-flight slots, staff desk.
+  await app.register((await import("./routes/va")).default, { authFromHeader });
   await app.register((await import("./routes/lobbySearch")).default, { authFromHeader });
   await app.register((await import("./routes/cowork")).default, { authFromHeader });
   await app.register(helldiversStratagemsRoutes);

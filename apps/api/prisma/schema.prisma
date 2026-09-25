@@ -70,6 +70,7 @@ enum ModuleType {
   COWORK
   HLLV
   BAR
+  VIRTUAL_AIRLINE
 }
 
 model NewsArticle {
@@ -317,6 +318,12 @@ model Room {
   // Voice publish gating. OPEN = anyone can publish; QUEUED = members
   // raise hand and a mod approves; LISTEN_ONLY = only mods/owner publish.
   voiceMode       VoiceRoomMode @default(OPEN)
+  // Entry gating by LOBBY level. 0 = anyone (every room before 2026-09-25);
+  // N > 0 = only lobby members at level N or above, plus global staff. Checked
+  // in doJoin and /voice/token and it fails CLOSED, unlike the role-icon lookup
+  // beside it. This is the private crew / staff-only room: before it existed a
+  // room in a private lobby could be joined by anyone holding its id.
+  minLevel        Int           @default(0)
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 
@@ -484,8 +491,8 @@ model User {
   psnAccountId      String? // PSN online ID (manual, no live integration; identity-only chip)
   lichessUsername   String? // Lichess.org username — drives chess activity polling
   chessComUsername  String? // Chess.com username — drives chess activity polling
-  barUsername      String? // Beyond All Reason name, BAR's exact spelling (its replay filter is case-sensitive)
-  barUserId        Int? // BAR account id, stable across in-game renames
+  barUsername       String? // Beyond All Reason name, BAR's exact spelling (its replay filter is case-sensitive)
+  barUserId         Int? // BAR account id, stable across in-game renames
   livePresence      Json? // { source, activity, detail?, url?, updatedAt } or null
   presenceCheckedAt DateTime?
 
@@ -3321,4 +3328,28 @@ model StationAssignment {
 
   @@unique([lobbyId, setId])
   @@index([stationId, position])
+}
+
+// A member's claim on one slot of a virtual-airline group flight (the vOCN
+// FRA/MUC bank). The flight itself — waves, callsigns, departure times — is
+// DEFINED by the airline's data source (the sample generator today, vAMSYS
+// Slotted Events in stage two); only the human act of claiming lives here.
+//
+// Both uniques are the rules, enforced by the database rather than by a
+// check-then-write in the route: one pilot per slot, and one slot per pilot per
+// flight. Two people pressing "claim" on the last open slot in the same
+// millisecond get one success and one P2002, never a double booking.
+model VaSlotClaim {
+  id        String   @id @default(cuid())
+  lobbyId   String
+  flightKey String // group flight id from the source, e.g. "autumn-sun-bank"
+  slotKey   String // slot id within that flight, e.g. "FRA-W1-03"
+  userId    String
+  userName  String   @default("")
+  pilotId   String? // the airline's pilot id when the member is linked to one
+  claimedAt DateTime @default(now())
+
+  @@unique([lobbyId, flightKey, slotKey])
+  @@unique([lobbyId, flightKey, userId])
+  @@index([lobbyId, flightKey])
 }

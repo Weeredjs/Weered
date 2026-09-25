@@ -1,4 +1,5 @@
 import { prisma } from "../lib/prisma";
+import { canEnterGatedRoom } from "../lib/lobbyAccess";
 import bcrypt from "bcryptjs";
 
 // Presence WS handlers extracted from the index.ts main message handler:
@@ -67,6 +68,7 @@ export async function handlePresence(ws: any, msg: any, opts: Opts): Promise<voi
           accentColor: true,
           pinned: true,
           isEvent: true,
+          minLevel: true,
           _count: { select: { members: true } },
         },
         take: 100,
@@ -98,6 +100,9 @@ export async function handlePresence(ws: any, msg: any, opts: Opts): Promise<voi
         bannerUrl: r.bannerUrl ?? null,
         accentColor: r.accentColor ?? null,
         lobbyId: r.lobbyId ?? null,
+        // Lobby-level gate, so the UI can show a crew/staff lock rather than a
+        // room that bounces people. The name is not a secret; entry is.
+        minLevel: Number(r.minLevel) || 0,
       }));
     send(ws, { type: "rooms", rooms: [...lobbyOut, ...roomOut] });
     return;
@@ -131,6 +136,17 @@ export async function handlePresence(ws: any, msg: any, opts: Opts): Promise<voi
     }
     const uid = ws.user.id;
     const isLobby = String(roomId || "").startsWith("lobby:");
+
+    // Level-gated room: refuse here, before the password and knock branches, so a
+    // non-member is told why instead of being queued for a mod to admit. doJoin
+    // re-checks, so this is UX, not the security boundary.
+    {
+      const minLevel = Number((room as any).minLevel) || 0;
+      if (minLevel > 0 && !(await canEnterGatedRoom(ws.user, room.lobbyId, minLevel))) {
+        send(ws, { type: "room:denied", roomId, reason: "level_required", minLevel });
+        return;
+      }
+    }
 
     if (room.passwordHash && !isLobby && !isModOrOwner(room, uid, ws.user?.globalRole)) {
       const suppliedPassword = typeof msg.password === "string" ? msg.password : "";

@@ -261,6 +261,9 @@ export async function ensureRoomLoaded(roomId: string): Promise<RoomState> {
     r.ownerId = dbRoom.ownerId || undefined;
     r.lobbyId = (dbRoom as any).lobbyId || undefined;
     r.passwordHash = (dbRoom as any).passwordHash || undefined;
+    // Lobby-level entry gate (Room.minLevel). Cached with the room like the
+    // password is; a change takes effect when the room next loads from the DB.
+    (r as any).minLevel = Math.max(0, Number((dbRoom as any).minLevel) || 0);
     (r as any).disabledModules = Array.isArray((dbRoom as any).disabledModules)
       ? (dbRoom as any).disabledModules
       : [];

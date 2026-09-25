@@ -1,6 +1,8 @@
 import { swallow } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 import { AccessToken } from "livekit-server-sdk";
+import { prisma } from "../lib/prisma";
+import { canEnterGatedRoom } from "../lib/lobbyAccess";
 
 // LiveKit voice token minting (extracted from index.ts). The LIVEKIT_* config
 // and the AccessToken SDK are voice-exclusive and live here. Room state + the
@@ -61,6 +63,31 @@ export default async function voiceRoutes(app: FastifyInstance, opts: Opts) {
           if (!(await isOfficeStaff(_u.id))) {
             return reply.code(403).send({ ok: false, error: "private_meeting" });
           }
+        }
+      }
+      // Lobby-level gate (Room.minLevel). Without this a staff room's socket was
+      // guarded but its voice was not: anyone holding the id could mint a token
+      // and listen in. Read from the DB rather than the in-memory room so it is
+      // current, and fail CLOSED — an unreadable gate is a refused token.
+      {
+        let gate: { minLevel: number; lobbyId: string | null } | null;
+        try {
+          gate = await prisma.room.findUnique({
+            where: { id: lookup },
+            select: { minLevel: true, lobbyId: true },
+          });
+        } catch (e) {
+          swallow(e);
+          return reply.code(503).send({ ok: false, error: "gate_unavailable" });
+        }
+        if (
+          gate &&
+          gate.minLevel > 0 &&
+          !(await canEnterGatedRoom(u as any, gate.lobbyId, gate.minLevel))
+        ) {
+          return reply
+            .code(403)
+            .send({ ok: false, error: "level_required", minLevel: gate.minLevel });
         }
       }
       let canPublish = true;
