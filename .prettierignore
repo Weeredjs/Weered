@@ -30,3 +30,8 @@ apps/web/app/styles/40-core-layout.css
 apps/web/components/PgaModulesPanel.tsx
 apps/web/components/forum/ForumPage.tsx
 apps/web/components/FortniteModulesPanel.tsx
+
+# Map geometry for the vOCN crew hub: served minified on purpose. Prettier
+# expands it one coordinate per line and more than doubles what the browser
+# downloads (397 KB -> 864 KB).
+apps/web/public/brand/vocn/*.json
