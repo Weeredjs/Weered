@@ -749,7 +749,8 @@ export function buildSampleSnapshot(nowMs: number, opts: SampleOptions = {}): Va
   const in7 = pireps.filter((x) => Date.parse(x.filedAt) >= d7);
   const routes = new Map<string, number>();
   for (const x of in30) {
-    const k = [x.dep, x.arr].sort().join("-");
+    // An unordered pair as a key: FRA-HER and HER-FRA are the same route.
+    const k = x.dep < x.arr ? `${x.dep}-${x.arr}` : `${x.arr}-${x.dep}`;
     routes.set(k, (routes.get(k) || 0) + 1);
   }
   const top = [...routes.entries()].sort((a, b) => b[1] - a[1])[0];

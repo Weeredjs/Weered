@@ -307,9 +307,14 @@ export function VaPilotSheet({
   // stacking context, and no z-index can lift it above the site's announcement bar.
   return createPortal(
     <div
-      role="dialog"
-      aria-modal="true"
-      onClick={onClose}
+      role="presentation"
+      tabIndex={-1}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+      onKeyDown={(e) => {
+        if (e.key === "Escape") onClose();
+      }}
       style={{
         position: "fixed",
         inset: 0,
@@ -321,7 +326,9 @@ export function VaPilotSheet({
       }}
     >
       <div
-        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Pilot profile"
         style={{
           width: 520,
           maxWidth: "100%",
