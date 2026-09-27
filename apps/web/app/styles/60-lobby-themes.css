@@ -4898,3 +4898,192 @@ html[data-weered-lobby="vocn"] .weered-tab-vocn:focus-visible {
   outline: 2px solid #ffcd00;
   outline-offset: 2px;
 }
+
+/* The collapsed right rail as a flight deck (James, 2026-09-27: "tie it in
+   with aviation"). CREW / FRIENDS / DMS become overhead-panel pushbuttons: a
+   dark recessed face, a white legend and a caution window that stays dark
+   until something needs you. Unread DMs light it amber with the count; group
+   unread adds a blue light. The Panel handle is a PFD altitude tape whose
+   readout box (the yellow frame) carries the label, and the tape rolls a tick
+   on hover. Every selector carries .weered-rail-stack or .weered-shell so it
+   outranks 80-chrome-min.css, which loads later with !important rules. */
+html[data-weered-lobby="vocn"] .weered-shell .weered-rail-stack {
+  gap: 14px !important;
+}
+html[data-weered-lobby="vocn"] .weered-rail-stack .weered-rail-quick {
+  width: 44px !important;
+  height: 64px !important;
+  padding: 21px 0 7px !important;
+  gap: 4px !important;
+  border-radius: 5px !important;
+  border: 1px solid rgba(184, 205, 221, 0.3) !important;
+  background: linear-gradient(180deg, #16212e 0%, #0b131d 100%) !important;
+  box-shadow:
+    0 0 0 3px #0c1622,
+    0 0 0 4px rgba(184, 205, 221, 0.14),
+    inset 0 1px 0 rgba(255, 255, 255, 0.09),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.55) !important;
+  color: #e6eef6 !important;
+  animation: none !important;
+  filter: none !important;
+  transform: none !important;
+  clip-path: none !important;
+}
+html[data-weered-lobby="vocn"] .weered-rail-stack .weered-rail-quick::before {
+  content: "" !important;
+  display: block !important;
+  position: absolute !important;
+  top: 6px !important;
+  left: 7px !important;
+  right: 7px !important;
+  width: auto !important;
+  height: 11px !important;
+  transform: none !important;
+  border-radius: 2px !important;
+  background: #04080d !important;
+  box-shadow:
+    inset 0 1px 2px rgba(0, 0, 0, 0.9),
+    0 0 0 1px rgba(184, 205, 221, 0.14) !important;
+  opacity: 1 !important;
+  animation: none !important;
+  transition:
+    box-shadow 0.18s,
+    background 0.18s !important;
+}
+html[data-weered-lobby="vocn"] .weered-rail-stack .weered-rail-quick:hover {
+  border-color: rgba(142, 197, 234, 0.65) !important;
+  background: linear-gradient(180deg, #1b2939 0%, #0f1926 100%) !important;
+  transform: none !important;
+}
+html[data-weered-lobby="vocn"] .weered-rail-stack .weered-rail-quick:hover::before {
+  background: #0a2440 !important;
+  box-shadow:
+    inset 0 0 6px rgba(58, 160, 255, 0.55),
+    0 0 0 1px rgba(142, 197, 234, 0.35) !important;
+}
+html[data-weered-lobby="vocn"] .weered-rail-stack .weered-rail-quick:active {
+  transform: translateY(1px) !important;
+  box-shadow:
+    0 0 0 3px #0c1622,
+    0 0 0 4px rgba(184, 205, 221, 0.14),
+    inset 0 2px 4px rgba(0, 0, 0, 0.6) !important;
+}
+html[data-weered-lobby="vocn"] .weered-rail-stack .weered-rail-quick .weered-rail-quick-icon {
+  color: #8ec5ea !important;
+  filter: none !important;
+  opacity: 1 !important;
+  padding-left: 0 !important;
+}
+html[data-weered-lobby="vocn"] .weered-rail-stack .weered-rail-quick .weered-rail-quick-label {
+  font-family: var(--font-barlow), "Barlow Condensed", sans-serif !important;
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.1em !important;
+  color: #f4f8fb !important;
+  opacity: 1 !important;
+  text-shadow: none !important;
+  padding-left: 0 !important;
+}
+html[data-weered-lobby="vocn"]
+  .weered-rail-stack
+  .weered-rail-quick:hover
+  .weered-rail-quick-label {
+  color: #8ec5ea !important;
+}
+/* The caution light: the unread count fills the window, lit amber. */
+html[data-weered-lobby="vocn"] .weered-rail-stack .weered-rail-quick .weered-rail-quick-badge {
+  top: 6px !important;
+  left: 7px !important;
+  right: 7px !important;
+  min-width: 0 !important;
+  width: auto !important;
+  height: 11px !important;
+  padding: 0 !important;
+  border: none !important;
+  border-radius: 2px !important;
+  background: #ffb000 !important;
+  color: #1a1200 !important;
+  font-family: "DM Mono", ui-monospace, monospace !important;
+  font-size: 9px !important;
+  font-weight: 500 !important;
+  line-height: 11px !important;
+  box-shadow:
+    0 0 10px rgba(255, 176, 0, 0.55),
+    inset 0 0 3px rgba(255, 255, 255, 0.45) !important;
+  animation: none !important;
+}
+html[data-weered-lobby="vocn"]
+  .weered-rail-stack
+  .weered-rail-quick
+  .weered-rail-quick-badge:has(+ .weered-rail-quick-group-dot) {
+  right: 17px !important;
+}
+html[data-weered-lobby="vocn"] .weered-rail-stack .weered-rail-quick .weered-rail-quick-group-dot {
+  top: 8px !important;
+  right: 9px !important;
+  width: 7px !important;
+  height: 7px !important;
+  border: none !important;
+  border-radius: 1px !important;
+  background: #3aa0ff !important;
+  box-shadow: 0 0 6px rgba(58, 160, 255, 0.85) !important;
+}
+/* The Panel handle: an altitude tape. Minor ticks every 14px, major every 70. */
+html[data-weered-lobby="vocn"] .weered-rail-stack .weered-rail-tab.weered-rail-tab-glow {
+  width: 34px !important;
+  border-radius: 5px !important;
+  border: 1px solid rgba(184, 205, 221, 0.3) !important;
+  background:
+    repeating-linear-gradient(180deg, transparent 0 13px, rgba(230, 238, 246, 0.32) 13px 14px) 100%
+      0 / 6px 100% no-repeat,
+    repeating-linear-gradient(180deg, transparent 0 69px, rgba(230, 238, 246, 0.55) 69px 70px) 100%
+      0 / 11px 100% no-repeat,
+    linear-gradient(180deg, #16212e 0%, #0b131d 100%) !important;
+  box-shadow:
+    0 0 0 3px #0c1622,
+    0 0 0 4px rgba(184, 205, 221, 0.14),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
+  color: #8ec5ea !important;
+  animation: none !important;
+  transition:
+    background-position 0.6s ease,
+    border-color 0.2s !important;
+}
+html[data-weered-lobby="vocn"] .weered-rail-stack .weered-rail-tab.weered-rail-tab-glow:hover {
+  border-color: rgba(142, 197, 234, 0.65) !important;
+  background-position:
+    100% 14px,
+    100% 14px,
+    0 0 !important;
+}
+html[data-weered-lobby="vocn"] .weered-rail-stack .weered-rail-tab.weered-rail-tab-glow svg {
+  color: #8ec5ea !important;
+  opacity: 1 !important;
+}
+html[data-weered-lobby="vocn"]
+  .weered-rail-stack
+  .weered-rail-tab.weered-rail-tab-glow
+  .weered-rail-tab-label {
+  font-family: "DM Mono", ui-monospace, monospace !important;
+  font-size: 10px !important;
+  font-weight: 500 !important;
+  letter-spacing: 2px !important;
+  color: #ffffff !important;
+  opacity: 1 !important;
+  background: #04080d !important;
+  border: 1px solid #ffcd00 !important;
+  border-radius: 2px !important;
+  padding: 8px 2px !important;
+  box-shadow: 0 0 8px rgba(255, 205, 0, 0.22) !important;
+}
+html[data-weered-lobby="vocn"]
+  .weered-rail-stack
+  .weered-rail-tab.weered-rail-tab-glow:hover
+  .weered-rail-tab-label {
+  box-shadow: 0 0 12px rgba(255, 205, 0, 0.45) !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  html[data-weered-lobby="vocn"] .weered-rail-stack .weered-rail-tab.weered-rail-tab-glow {
+    transition: none !important;
+  }
+}
