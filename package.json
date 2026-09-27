@@ -15,18 +15,18 @@
     "prepare": "husky || true"
   },
   "devDependencies": {
-    "@eslint/js": "^9.0.0",
-    "@next/eslint-plugin-next": "^15.5.0",
+    "@eslint/js": "^10.0.1",
+    "@next/eslint-plugin-next": "^16.3.6",
     "@types/jsonwebtoken": "^9.0.10",
-    "@types/node": "25.2.3",
+    "@types/node": "26.6.2",
     "@types/ws": "^8.18.1",
-    "eslint": "^9.0.0",
-    "eslint-plugin-react-hooks": "^5.2.0",
+    "eslint": "^10.11.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-unused-imports": "^4.4.1",
     "husky": "^9.1.7",
-    "lint-staged": "^17.0.7",
-    "prettier": "^3.0.0",
-    "typescript-eslint": "^8.0.0"
+    "lint-staged": "^17.5.1",
+    "prettier": "^3.9.9",
+    "typescript-eslint": "^8.70.1"
   },
   "dependencies": {
     "@expo/ngrok": "^4.1.3"
