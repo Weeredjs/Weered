@@ -34,6 +34,23 @@ function hhmm(min: number): string {
   return `${Math.floor(min / 60)}:${String(Math.round(min % 60)).padStart(2, "0")}`;
 }
 
+/**
+ * The landings to announce this pass, oldest first, remembering them in `seen`.
+ *
+ * A report is PROCESSING for its first two minutes and the worker runs every
+ * minute, so it always first saw a landing while PROCESSING. It used to mark
+ * every report seen on sight and skip the PROCESSING ones, so a landing was
+ * remembered before it could ever be announced: Dispatch posted once in two
+ * days (found 2026-09-27). A report is now remembered only once it settles.
+ */
+export function landingsToAnnounce(pireps: VaPirep[], seen: Set<string>, now: number): VaPirep[] {
+  const settled = pireps.filter((p) => p.status !== "PROCESSING"); // newest first
+  const fresh = settled.filter((p) => !seen.has(p.id) && now - Date.parse(p.filedAt) < FRESH_MS);
+  if (seen.size > 5000) seen.clear();
+  for (const p of settled.slice(0, 400)) seen.add(p.id);
+  return fresh.sort((a, b) => Date.parse(a.filedAt) - Date.parse(b.filedAt));
+}
+
 /** The line for a filed PIREP. Exported for tests. */
 export function landingLine(p: VaPirep, city: string): string {
   const first = (p.pilotName || "").split(" ")[0] || "crew";
@@ -149,11 +166,7 @@ export async function runVaDispatchWorker(deps: Deps): Promise<void> {
       }
 
       // Landings.
-      const fresh = snap.pireps.filter(
-        (p) => !st!.seen.has(p.id) && now - Date.parse(p.filedAt) < FRESH_MS,
-      );
-      for (const p of snap.pireps.slice(0, 400)) st.seen.add(p.id);
-      if (st.seen.size > 5000) st.seen = new Set(snap.pireps.slice(0, 400).map((p) => p.id));
+      const fresh = landingsToAnnounce(snap.pireps, st.seen, now);
 
       // Bookings by members since the last pass.
       const claims = await prisma.vaSlotClaim.findMany({
@@ -170,9 +183,7 @@ export async function runVaDispatchWorker(deps: Deps): Promise<void> {
       }
 
       const lines: string[] = [];
-      for (const p of fresh
-        .filter((p) => p.status !== "PROCESSING")
-        .sort((a, b) => Date.parse(a.filedAt) - Date.parse(b.filedAt))) {
+      for (const p of fresh) {
         const city = snap.airports.find((a) => a.iata === p.arr)?.city || p.arr;
         lines.push(landingLine(p, city));
       }
