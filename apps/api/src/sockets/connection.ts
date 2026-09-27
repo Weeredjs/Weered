@@ -1,6 +1,5 @@
 import { swallow } from "../lib/logger";
 import { prisma } from "../lib/prisma";
-import { issuedBeforeCutoff } from "../lib/sessionCutoff";
 
 // Connection-lifecycle WS handlers extracted from index.ts wss.on("connection"):
 // handleAuthHello -- the auth:hello entry gate, still dispatched FIRST (before the
@@ -18,12 +17,22 @@ export async function handleAuthHello(
     verifyToken: (token?: string) => any;
     hydrateGlobalRole: (user: any) => Promise<any>;
     isGloballyBanned: (userId: string) => Promise<boolean>;
+    /** True when the account is deleted or the token predates its sign-out cut-off. */
+    sessionEnded?: (userId: string, iat: number) => Promise<boolean>;
     send: (ws: any, msg: any) => void;
     awardNotoriety: (userId: string, action: string) => Promise<number | null>;
     wss: any;
   },
 ): Promise<void> {
-  const { verifyToken, hydrateGlobalRole, isGloballyBanned, send, awardNotoriety, wss } = opts;
+  const {
+    verifyToken,
+    hydrateGlobalRole,
+    isGloballyBanned,
+    sessionEnded,
+    send,
+    awardNotoriety,
+    wss,
+  } = opts;
 
   if (msg.type === "auth:hello") {
     const u = verifyToken(msg.token);
@@ -91,26 +100,14 @@ export async function handleAuthHello(
     }
     // A deleted account, or a token older than the account's sign-out-everywhere
     // cut-off (a password reset), may not open a socket (audit 2026-09-27).
-    {
-      const acct = await prisma.user
-        .findUnique({
-          where: { id: ws.user.id },
-          select: { deletedAt: true, tokensValidAfter: true },
-        })
-        .catch(() => undefined);
-      if (
-        acct === null ||
-        acct?.deletedAt ||
-        issuedBeforeCutoff((u as any).iat, acct?.tokensValidAfter)
-      ) {
-        send(ws, { type: "auth:fail", reason: "Session ended. Please sign in again." });
-        try {
-          ws.close(4001, "session_revoked");
-        } catch (e) {
-          swallow(e);
-        }
-        return;
+    if (sessionEnded && (await sessionEnded(ws.user.id, Number((u as any).iat) || 0))) {
+      send(ws, { type: "auth:fail", reason: "Session ended. Please sign in again." });
+      try {
+        ws.close(4001, "session_revoked");
+      } catch (e) {
+        swallow(e);
       }
+      return;
     }
     send(ws, {
       type: "auth:ok",

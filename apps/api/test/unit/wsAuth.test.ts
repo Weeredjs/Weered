@@ -56,4 +56,26 @@ describe("ws handleAuthHello - socket authentication", () => {
     expect(sent.find((m) => m.type === "auth:fail")?.reason).toContain("suspended");
     expect(closed?.code).toBe(4003);
   });
+
+  // A deleted account, or a token from before a password reset (audit 2026-09-27).
+  it("refuses + closes a session that has ended (4001), passing the token's issue time", async () => {
+    const ws = mkWs();
+    let asked: any = null;
+    await handleAuthHello(
+      ws,
+      { type: "auth:hello", token: "good" },
+      mkOpts({
+        verifyToken: (t?: string) =>
+          t === "good" ? { id: "u1", name: "U1", iat: 1_700_000_000 } : null,
+        sessionEnded: async (id: string, iat: number) => {
+          asked = { id, iat };
+          return true;
+        },
+      }),
+    );
+    expect(asked).toEqual({ id: "u1", iat: 1_700_000_000 });
+    expect(sent.find((m) => m.type === "auth:fail")?.reason).toContain("Session ended");
+    expect(sent.find((m) => m.type === "auth:ok")).toBeUndefined();
+    expect(closed?.code).toBe(4001);
+  });
 });

@@ -422,6 +422,19 @@ function authFromHeader(authHeader?: string): AuthedUser | null {
   return verifyToken(raw);
 }
 
+/**
+ * For the socket's auth:hello: is this account deleted, or was the token issued
+ * before its sign-out-everywhere cut-off (a password reset)? A DB error answers
+ * no, as the HTTP hook's does: a blip must not sign everyone out.
+ */
+async function sessionEnded(userId: string, iat: number): Promise<boolean> {
+  const acct = await prisma.user
+    .findUnique({ where: { id: userId }, select: { deletedAt: true, tokensValidAfter: true } })
+    .catch(() => undefined);
+  if (acct === undefined) return false;
+  return acct === null || !!acct.deletedAt || issuedBeforeCutoff(iat, acct.tokensValidAfter);
+}
+
 async function resolveUserId(raw: string): Promise<string> {
   if (raw.length > 20 && !raw.includes(" ")) return raw;
   const found = await prisma.user.findFirst({
@@ -1546,6 +1559,7 @@ async function main() {
             verifyToken,
             hydrateGlobalRole,
             isGloballyBanned,
+            sessionEnded,
             send,
             awardNotoriety,
             wss,

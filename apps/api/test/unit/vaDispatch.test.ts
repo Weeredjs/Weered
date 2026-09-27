@@ -85,9 +85,14 @@ describe("which landings Dispatch announces", () => {
     expect(landingsToAnnounce(old, new Set(), t0)).toEqual([]);
   });
 
-  it("over hours of the real sample airline, announces every landing (the old rule announced none)", () => {
-    const start = Date.parse("2026-09-26T06:00:00Z");
-    const end = start + 6 * 3_600_000;
+  it("minute by minute through the real sample airline, announces every landing (the old rule announced none)", () => {
+    // Landings come in waves, so the window is anchored on a real one: from 90
+    // minutes before the airline's newest report (as of a fixed time) to 20 after.
+    const newest = Date.parse(
+      buildSampleSnapshot(Date.parse("2026-09-26T18:00:00Z")).pireps[0].filedAt,
+    );
+    const start = newest - 90 * 60_000;
+    const end = newest + 20 * 60_000;
     const seen = new Set<string>();
     const oldSeen = new Set<string>();
     const announced = new Set<string>();
@@ -111,5 +116,5 @@ describe("which landings Dispatch announces", () => {
     expect(landed.length).toBeGreaterThan(0);
     for (const p of landed) expect(announced.has(p.id), p.id).toBe(true);
     expect(oldAnnounced).toBe(0);
-  });
+  }, 60_000);
 });
