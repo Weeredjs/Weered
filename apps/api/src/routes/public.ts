@@ -95,8 +95,33 @@ export default async function publicRoutes(app: FastifyInstance, opts: Opts) {
     return reply.send({ ok: true, lobbies: enriched.slice(0, 18) });
   });
 
+  // Unlisted lobbies stay out of activity feeds. Refreshed at most once a minute.
+  let unlisted: { at: number; ids: Set<string> } = { at: 0, ids: new Set() };
+  async function unlistedLobbyIds(): Promise<Set<string>> {
+    if (Date.now() - unlisted.at < 60_000) return unlisted.ids;
+    const rows = await prisma.lobby
+      .findMany({ where: { unlisted: true }, select: { id: true } })
+      .catch(() => null);
+    if (rows) unlisted = { at: Date.now(), ids: new Set(rows.map((r) => r.id)) };
+    return unlisted.ids;
+  }
+
   app.get("/public/activity", async (_req, reply) => {
-    const events = getActivity(30);
+    // Anonymous visitors get the anonymised line ("a wizard rolled a NAT 20")
+    // and nothing else. The events also carry textReal, userId and userName and
+    // were sent whole, so the landing-page ticker named real people to logged-out
+    // visitors; events from unlisted lobbies are dropped too (audit 2026-09-27).
+    const hidden = await unlistedLobbyIds();
+    const events = getActivity(30)
+      .filter((e) => !e.lobbyId || !hidden.has(e.lobbyId))
+      .map((e) => ({
+        id: e.id,
+        ts: e.ts,
+        kind: e.kind,
+        lobbyId: e.lobbyId,
+        text: e.text,
+        accent: e.accent,
+      }));
     reply.header("Cache-Control", "public, max-age=5, s-maxage=5");
     return reply.send({ ok: true, events });
   });
@@ -104,7 +129,8 @@ export default async function publicRoutes(app: FastifyInstance, opts: Opts) {
   app.get("/activity/recent", async (req, reply) => {
     const u = authFromHeader ? authFromHeader((req as any).headers?.authorization) : null;
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
-    const raw = getActivity(30);
+    const hidden = await unlistedLobbyIds();
+    const raw = getActivity(30).filter((e) => !e.lobbyId || !hidden.has(e.lobbyId));
     const lobbyNames = await getLobbyNameMap();
     const events = raw.map((e) => ({
       id: e.id,

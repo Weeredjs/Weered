@@ -1,6 +1,7 @@
 import { Metadata } from "next";
 import LobbySeoSlab from "./LobbySeoSlab";
 import SyncAuthedAttribute from "./SyncAuthedAttribute";
+import { safeJsonLd } from "@/lib/jsonLd";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "https://api.weered.ca";
 const SITE = "https://weered.ca";
@@ -112,7 +113,7 @@ export default async function LobbyIdLayout(props: {
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }}
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(breadcrumbLd) }}
       />
       <script
         dangerouslySetInnerHTML={{

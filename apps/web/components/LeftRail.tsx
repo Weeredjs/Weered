@@ -15,6 +15,7 @@ import { useLobbyLang, pick } from "../lib/lobbyLang";
 import { TIMBOS_NAV, TIMBOS_NAV_ICONS, TIMBOS_LOBBY_ID } from "../lib/timbosCopy";
 import { isScopedRailLobby } from "../lib/lobbyChrome";
 import { SECTION_ORDER, sectionLabel, sectionIcon, HOME_LINK } from "../lib/lobbySections";
+import { isOfficeRoomPath } from "@/lib/officeRooms";
 
 function pickFirstString(...vals: any[]): string {
   for (const v of vals) if (typeof v === "string" && v.trim()) return v.trim();
@@ -188,7 +189,7 @@ export default function LeftRail() {
   const { joinedRoomId, activeRoomId, me, globalRole, currentLobbyId, joinStatus, leave } =
     useWeered() as any;
   const users = useRoomUsers(activeRoomId);
-  // The Review Room gate: true only inside /room/mtg-* or on the office host.
+  // The Review Room gate: true only inside an office room or on the office host.
   // Every office-context divergence below checks this flag and nothing else.
   const office = useOfficeSkin();
 
@@ -806,7 +807,7 @@ export default function LeftRail() {
                   href: "/room/mtg-eceb-office",
                   label: "The Desk",
                   icon: "▤",
-                  active: pathname.startsWith("/room/mtg-"),
+                  active: isOfficeRoomPath(pathname),
                   onClick: undefined as any,
                   key: "lobby",
                 },

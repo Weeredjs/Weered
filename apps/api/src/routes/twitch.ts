@@ -2,6 +2,7 @@ import { log } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 import { fetchWithTimeout } from "../lib/fetchWithTimeout";
 import { prisma } from "../lib/prisma";
+import { isOfficeRoom } from "../lib/officeRooms";
 
 type Opts = {
   rooms?: Map<string, any>;
@@ -241,8 +242,14 @@ export default async function twitchRoutes(app: FastifyInstance, opts: Opts = {}
       userIds: string[];
       activeModule: string | null;
     };
+    // A public, unauthenticated list, so only rooms anyone could walk into, and
+    // only people who are not guests (audit 2026-09-27: it named ECEB clients
+    // sitting in a consult, and who was in the vOCN staff room). The same rooms
+    // GET /rooms and rooms:list already leave out.
     const active: Active[] = [];
     for (const [rid, r] of roomsMap as any) {
+      if (isOfficeRoom(rid)) continue;
+      if ((Number(r.minLevel) || 0) > 0 || r.locked || r.passwordHash) continue;
       const userIds = Array.from(r.users?.keys?.() || []) as string[];
       if (userIds.length === 0) continue;
       active.push({
@@ -262,19 +269,32 @@ export default async function twitchRoutes(app: FastifyInstance, opts: Opts = {}
       lobbyIds.length
         ? prisma.lobby.findMany({
             where: { id: { in: lobbyIds } },
-            select: { id: true, name: true, logoUrl: true, accentColor: true },
+            select: { id: true, name: true, logoUrl: true, accentColor: true, unlisted: true },
           })
         : Promise.resolve([]),
       allUserIds.length
         ? prisma.user.findMany({
             where: { id: { in: allUserIds } },
-            select: { id: true, name: true, avatar: true, avatarColor: true } as any,
+            select: { id: true, name: true, avatar: true, avatarColor: true, isGuest: true } as any,
           })
         : Promise.resolve([]),
     ]);
 
     const lobbyMap = new Map(lobbies.map((l: any) => [l.id, l]));
     const userMap = new Map((users as any[]).map((u: any) => [u.id, u]));
+    for (let i = active.length - 1; i >= 0; i--) {
+      const r = active[i];
+      if (r.lobbyId && (lobbyMap.get(r.lobbyId) as any)?.unlisted) {
+        active.splice(i, 1);
+        continue;
+      }
+      r.userIds = r.userIds.filter((uid) => {
+        const u = userMap.get(uid) as any;
+        return u && !u.isGuest;
+      });
+      if (r.userIds.length === 0) active.splice(i, 1);
+    }
+    if (active.length === 0) return reply.send({ ok: true, rooms: [] });
 
     const allActiveIds = [...new Set(active.map((r) => r.id))];
     const lobbyIdSet = new Set(

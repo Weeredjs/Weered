@@ -680,9 +680,26 @@ export default async function profileRoutes(app: FastifyInstance, opts: Opts) {
               longitude: null,
               locationH3: null,
               locationUpdatedAt: null,
+              // Linked handles, status and banner are served by GET /profile/:id,
+              // so a deleted account kept its Steam, Twitch and Xbox identities
+              // public (audit 2026-09-27).
+              steamId: null,
+              twitchLogin: null,
+              xboxGamertag: null,
+              psnAccountId: null,
+              barUsername: null,
+              statusText: null,
+              statusEmoji: null,
+              bannerUrl: null,
+              lastSeenLocation: null,
               deletedAt: new Date(),
             },
           });
+
+          // The old display name is copied into these rows; replace it too.
+          await tx.lobbyMember.updateMany({ where: { userId }, data: { name: anonName } });
+          await tx.crewMember.updateMany({ where: { userId }, data: { name: anonName } });
+          await tx.vaSlotClaim.updateMany({ where: { userId }, data: { userName: anonName } });
 
           await tx.localAuth.deleteMany({ where: { userId } });
 

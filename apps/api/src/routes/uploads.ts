@@ -212,7 +212,7 @@ export default async function uploadsRoutes(app: FastifyInstance, opts: Opts) {
       if (!u) return reply.code(401).send({ error: "unauthorized" });
       const dbUser = await prisma.user.findUnique({
         where: { id: u.id },
-        select: { tier: true, globalRole: true },
+        select: { tier: true, globalRole: true, mediaBannedUntil: true },
       });
       const tier = String(dbUser?.tier ?? "INNOCENT").toUpperCase();
       const isStaff = canAccessStaff(dbUser?.globalRole as any);
@@ -222,35 +222,37 @@ export default async function uploadsRoutes(app: FastifyInstance, opts: Opts) {
           message: "Lobby branding requires Indicted tier or higher.",
         });
       }
+      if (dbUser?.mediaBannedUntil && new Date(dbUser.mediaBannedUntil).getTime() > Date.now()) {
+        return reply
+          .code(403)
+          .send({ error: "media_banned", message: "Your upload privileges are suspended." });
+      }
       const body: any = (req as any).body || {};
       const dataUrl = body.image;
       if (!dataUrl || typeof dataUrl !== "string")
         return reply.code(400).send({ error: "missing_image" });
-      const match = dataUrl.match(/^data:image\/(png|jpeg|jpg|webp|gif|svg\+xml);base64,(.+)$/);
+      // Same pipeline as the profile banner above (audit 2026-09-27): the upload
+      // used to be written to disk as sent, keeping its metadata, accepting SVG
+      // and skipping the ban-hash and NSFW checks every other public image gets.
+      // It is now re-encoded to WebP by moderateProfileImage and stored as that.
+      const match = dataUrl.match(/^data:image\/(png|jpeg|jpg|webp|gif);base64,(.+)$/);
       if (!match)
         return reply
           .code(400)
-          .send({
-            error: "invalid_format",
-            message: "Image must be PNG, JPEG, WebP, GIF, or SVG.",
-          });
-      const ext =
-        match[1] === "jpeg" || match[1] === "jpg"
-          ? "jpg"
-          : match[1] === "svg+xml"
-            ? "svg"
-            : match[1];
+          .send({ error: "invalid_format", message: "Image must be PNG, JPEG, WebP, or GIF." });
       const buffer = Buffer.from(match[2], "base64");
       if (buffer.length > BANNER_MAX_BYTES)
         return reply.code(400).send({ error: "too_large", message: "Image must be under 4MB." });
+      const mod = await moderateProfileImage(buffer, { userId: u.id, square: false, maxDim: 1600 });
+      if (!mod.ok) return reply.code(mod.code).send({ error: mod.error, message: mod.message });
       try {
         const kind =
           String(body.kind || "img")
             .replaceAll(/[^a-z]/g, "")
             .slice(0, 8) || "img";
-        const filename = `lobby-${kind}-${u.id}-${Date.now()}.${ext}`;
+        const filename = `lobby-${kind}-${u.id}-${Date.now()}.webp`;
         const filepath = join(BANNER_DIR, filename);
-        writeFileSync(filepath, buffer);
+        writeFileSync(filepath, mod.webp);
         const url = `${SITE_BASE}/banners/${filename}`;
         return reply.send({ ok: true, url });
       } catch (e) {

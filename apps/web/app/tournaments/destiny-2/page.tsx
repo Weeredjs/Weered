@@ -1,6 +1,7 @@
 import { Metadata } from "next";
 import Link from "next/link";
 import MarketingHeader from "../../../components/MarketingHeader";
+import { safeJsonLd } from "@/lib/jsonLd";
 
 const TITLE = "Host a Destiny 2 tournament with API-verified scoring | Weered";
 const DESC =
@@ -71,10 +72,7 @@ const faqLd = {
 export default function TournamentsDestiny2Page() {
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLd) }}
-      />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(faqLd) }} />
       <MarketingHeader ctaHref="/lobby/destiny2" ctaLabel="Open Destiny 2 Lobby" />
 
       <main className="mkt">

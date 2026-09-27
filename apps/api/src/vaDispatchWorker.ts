@@ -87,6 +87,34 @@ async function post(deps: Deps, roomId: string, user: { id: string; name: string
   deps.broadcastToRoom(roomId, { type: "chat:new", roomId, msg: m });
 }
 
+/**
+ * The config is lobby-admin data, so the worker does not trust it. It will only
+ * post into a room that belongs to THIS lobby, as THIS lobby's own system
+ * account: usernameKey "<lobbyId>-dispatch" with no LocalAuth row, i.e. an
+ * account nobody can sign into. Without this, whoever could write
+ * moduleConfig.va.dispatch could make the server post persisted, broadcast
+ * chat as any user into any room on the platform (found 2026-09-26).
+ * Exported for tests.
+ */
+export async function dispatchTargetIsSafe(
+  lobbyId: string,
+  roomId: string,
+  userId: string,
+): Promise<boolean> {
+  const [room, user] = await Promise.all([
+    prisma.room.findUnique({ where: { id: roomId }, select: { lobbyId: true } }),
+    prisma.user.findUnique({
+      where: { id: userId },
+      select: { usernameKey: true, globalRole: true, LocalAuth: { select: { id: true } } },
+    }),
+  ]);
+  if (!room || room.lobbyId !== lobbyId) return false;
+  if (!user || user.usernameKey !== `${lobbyId}-dispatch`) return false;
+  if (user.LocalAuth) return false; // a real, sign-in-able account: never speak as it
+  if (String(user.globalRole || "USER") !== "USER") return false;
+  return true;
+}
+
 export async function runVaDispatchWorker(deps: Deps): Promise<void> {
   let lobbies: { id: string; moduleConfig: unknown }[] = [];
   try {
@@ -103,6 +131,10 @@ export async function runVaDispatchWorker(deps: Deps): Promise<void> {
       const cfg = vaConfigOf(lobby.moduleConfig);
       const d = (lobby.moduleConfig as any)?.va?.dispatch;
       if (!cfg || !d?.roomId || !d?.userId) continue;
+      if (!(await dispatchTargetIsSafe(lobby.id, String(d.roomId), String(d.userId)))) {
+        log.warn("[va-dispatch] refused config for", lobby.id);
+        continue;
+      }
       const user = await prisma.user.findUnique({
         where: { id: String(d.userId) },
         select: { id: true, name: true },

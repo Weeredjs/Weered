@@ -292,8 +292,14 @@ export default async function hllRoutes(app: FastifyInstance, opts: Opts = {}) {
       const base = `${parsed.protocol}//${parsed.host}`;
       const headers: Record<string, string> = { Accept: "application/json" };
       if (linked.apiKey) headers.Authorization = `Bearer ${linked.apiKey}`;
+      // redirect: "manual" — a redirect is treated as a failure (a 3xx is not ok).
+      // Following it skipped the check above: a public "CRCON" could 302 this
+      // request to loopback or the metadata address and have fields of the reply
+      // echoed back (found 2026-09-26). A real CRCON API does not redirect, and
+      // the Bearer key must never be carried to a second host.
       const res = await fetch(`${base}/api/${encodeURIComponent(cmd)}`, {
         headers,
+        redirect: "manual",
         signal: AbortSignal.timeout(8000),
       });
       if (!res.ok) return null;

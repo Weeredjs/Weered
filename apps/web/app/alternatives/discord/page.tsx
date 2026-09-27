@@ -1,6 +1,7 @@
 import { Metadata } from "next";
 import Link from "next/link";
 import MarketingHeader from "../../../components/MarketingHeader";
+import { safeJsonLd } from "@/lib/jsonLd";
 
 const TITLE = "A real Discord alternative for gaming communities | Weered";
 const DESC =
@@ -69,10 +70,7 @@ const faqLd = {
 export default function AlternativesDiscordPage() {
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLd) }}
-      />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(faqLd) }} />
       <MarketingHeader ctaHref="/lobby" ctaLabel="Open Weered" />
 
       <main className="mkt">

@@ -27,6 +27,19 @@ export const DEFAULT_SYMBOLS = [
   "linkusdt",
 ];
 
+// The symbols FakeOut trades. routes/trading.ts registers its TRADING_SYMBOLS
+// list here, so that list stays the one source of truth. A socket may subscribe
+// to these and nothing else: every new symbol opens a permanent upstream
+// connection that reconnects itself, and the set used to grow with whatever
+// names a socket sent (audit 2026-09-26, from an unauthenticated socket).
+const tradable = new Set<string>(DEFAULT_SYMBOLS);
+export function setTradableSymbols(symbols: string[]) {
+  for (const s of symbols) tradable.add(String(s).toLowerCase());
+}
+export function isTradableSymbol(symbol: string): boolean {
+  return tradable.has(String(symbol || "").toLowerCase());
+}
+
 export function subscribeBinanceSymbol(symbol: string) {
   const sym = symbol.toLowerCase();
   if (binanceSubs.has(sym)) return;

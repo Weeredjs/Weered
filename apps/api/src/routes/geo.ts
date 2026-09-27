@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
-import { latLngToCell, cellToBoundary, gridDisk } from "h3-js";
+import { latLngToCell, cellToBoundary, cellToLatLng, gridDisk } from "h3-js";
 
 type Opts = {
   authFromHeader: (h?: string) => { id: string; name?: string } | null;
@@ -177,7 +177,8 @@ export default async function geoRoutes(app: FastifyInstance, opts: Opts) {
     const userIds = others.map((u) => u.id);
     const memberships = userIds.length
       ? await prisma.lobbyMember.findMany({
-          where: { userId: { in: userIds } },
+          // Listed lobbies only: an unlisted lobby's membership is not public.
+          where: { userId: { in: userIds }, lobby: { unlisted: false } },
           select: {
             userId: true,
             lobbyId: true,
@@ -200,14 +201,24 @@ export default async function geoRoutes(app: FastifyInstance, opts: Opts) {
   });
 
   app.get("/map/lobbies", async (_req, reply) => {
+    // Pins are built from members' H3 cells (res 7, the ~5 km grid), never from
+    // their stored coordinates. A lobby with one located member used to be
+    // pinned at that member's exact GPS position, while the consent dialog
+    // promises a ~5 km cell and says exact coordinates are never shared with
+    // other users (audit 2026-09-27).
     const locUsers = await prisma.user.findMany({
-      where: { locationOptIn: true, latitude: { not: null }, longitude: { not: null } },
-      select: { id: true, latitude: true, longitude: true },
+      where: { locationOptIn: true, locationH3: { not: null } },
+      select: { id: true, locationH3: true },
     });
     const locMap = new Map<string, { lat: number; lng: number }>();
     for (const u of locUsers) {
-      if (u.latitude != null && u.longitude != null)
-        locMap.set(u.id, { lat: u.latitude, lng: u.longitude });
+      if (!u.locationH3) continue;
+      try {
+        const [lat, lng] = cellToLatLng(u.locationH3);
+        locMap.set(u.id, { lat, lng });
+      } catch {
+        // a malformed stored cell places no pin
+      }
     }
 
     const lobbies = await prisma.lobby.findMany({

@@ -1,6 +1,7 @@
 import { Metadata } from "next";
 import Link from "next/link";
 import MarketingHeader from "../../../components/MarketingHeader";
+import { safeJsonLd } from "@/lib/jsonLd";
 
 const TITLE = "Path of Exile community hub: ladders, builds, crew tools | Weered";
 const DESC =
@@ -57,10 +58,7 @@ const faqLd = {
 export default function PlayPathOfExilePage() {
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLd) }}
-      />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(faqLd) }} />
       <MarketingHeader ctaHref="/lobby/path-of-exile" ctaLabel="Open the PoE Lobby" />
 
       <main className="mkt">

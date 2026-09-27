@@ -309,6 +309,22 @@ export default async function billingRoutes(app: FastifyInstance, opts: Opts) {
       let sub = await prisma.subscription.findUnique({ where: { userId: u.id } });
       let customerId = sub?.stripeCustomerId;
 
+      // Someone already paying goes to the billing portal, not a second
+      // checkout. The subscribe page's upgrade button (Indicted -> Felon) used to
+      // open a new subscription here while the old one kept billing, and the DB
+      // tracked only the newest (audit 2026-09-27). The page follows the url.
+      if (
+        customerId &&
+        sub?.stripeSubId &&
+        ["active", "trialing", "past_due"].includes(String(sub.status))
+      ) {
+        const portal = await stripeReq("POST", "/billing_portal/sessions", {
+          customer: customerId,
+          return_url: `${SITE_URL}/subscribe`,
+        });
+        return reply.send({ ok: true, url: portal.url, portal: true });
+      }
+
       if (!customerId || customerId === "") {
         const dbUser = await prisma.user.findUnique({
           where: { id: u.id },

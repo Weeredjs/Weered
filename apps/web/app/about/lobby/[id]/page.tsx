@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { safeJsonLd } from "@/lib/jsonLd";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "https://api.weered.ca";
 const SITE = "https://weered.ca";
@@ -198,12 +199,9 @@ export default async function LobbyAboutPage(props: { params: Promise<{ id: stri
     >
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }}
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(breadcrumbLd) }}
       />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLd) }}
-      />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(faqLd) }} />
 
       <nav aria-label="Breadcrumb" style={{ fontSize: 13, opacity: 0.7, marginBottom: 16 }}>
         <Link href="/" style={{ color: "#7c9dff" }}>

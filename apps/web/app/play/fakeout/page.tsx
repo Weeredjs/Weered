@@ -1,6 +1,7 @@
 import { Metadata } from "next";
 import Link from "next/link";
 import MarketingHeader from "../../../components/MarketingHeader";
+import { safeJsonLd } from "@/lib/jsonLd";
 
 const TITLE = "FakeOut: paper trading with your crew, free, $100K fake money | Weered";
 const DESC =
@@ -57,10 +58,7 @@ const faqLd = {
 export default function PlayFakeOutPage() {
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLd) }}
-      />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(faqLd) }} />
       <MarketingHeader ctaHref="/lobby/fakeout" ctaLabel="Open FakeOut" />
 
       <main className="mkt">

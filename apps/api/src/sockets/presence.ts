@@ -1,5 +1,6 @@
 import { prisma } from "../lib/prisma";
 import { canEnterGatedRoom } from "../lib/lobbyAccess";
+import { isOfficeRoom, scopeAllows } from "../lib/officeRooms";
 import bcrypt from "bcryptjs";
 
 // Presence WS handlers extracted from the index.ts main message handler:
@@ -15,6 +16,8 @@ type Opts = {
   ensureRoomLoaded: (roomId: string) => Promise<any>;
   isModOrOwner: (room: any, userId?: string, globalRole?: string) => boolean;
   doJoin: (ws: any, roomId: string) => Promise<any>;
+  /** Optional: false when joining would create a room the user may not create. */
+  roomCreationAllowed?: (ws: any, roomId: string) => Promise<boolean>;
   publishState: (room: any) => void;
   leaveRoom: (ws: any) => void;
   // GOD-or-allowlist: lets office staff enter the mtg-* meeting namespace
@@ -30,6 +33,7 @@ export async function handlePresence(ws: any, msg: any, opts: Opts): Promise<voi
     ensureRoomLoaded,
     isModOrOwner,
     doJoin,
+    roomCreationAllowed,
     publishState,
     leaveRoom,
     isOfficeStaff,
@@ -57,6 +61,8 @@ export async function handlePresence(ws: any, msg: any, opts: Opts): Promise<voi
         },
       }),
       prisma.room.findMany({
+        // Unlisted lobbies' rooms stay off global lists (audit 2026-09-27).
+        where: { OR: [{ lobbyId: null }, { lobby: { unlisted: false } }] },
         orderBy: { updatedAt: "desc" },
         select: {
           id: true,
@@ -87,7 +93,7 @@ export async function handlePresence(ws: any, msg: any, opts: Opts): Promise<voi
       locked: false,
     }));
     const roomOut = roomList
-      .filter((r) => !r.id.includes("%") && !lobbyIds.has(r.id) && !r.id.startsWith("mtg-"))
+      .filter((r) => !r.id.includes("%") && !lobbyIds.has(r.id) && !isOfficeRoom(r.id))
       .map((r: any) => ({
         id: r.id,
         roomId: r.id,
@@ -115,12 +121,12 @@ export async function handlePresence(ws: any, msg: any, opts: Opts): Promise<voi
       const _u = ws.user as any;
       if (_u?.guest || _u?.host) {
         const office = String(_u.scope?.office || "");
-        const inScope = office && (roomId === office || roomId.startsWith(office + "-"));
+        const inScope = scopeAllows(office, roomId);
         if (!inScope) {
           send(ws, { type: "room:denied", roomId, reason: "out_of_scope" });
           return;
         }
-      } else if (roomId.startsWith("mtg-")) {
+      } else if (isOfficeRoom(roomId)) {
         // Meeting namespace: office staff (GOD / allowlist) walk in from a
         // normal Weered session; everyone else bounces. Mirrors doJoin's gate.
         if (!(await isOfficeStaff(_u?.id))) {
@@ -128,6 +134,12 @@ export async function handlePresence(ws: any, msg: any, opts: Opts): Promise<voi
           return;
         }
       }
+    }
+    // Loading an unknown id creates the room, so the per-user limit on new
+    // rooms is applied here, before that happens (doJoin applies it too).
+    if (roomCreationAllowed && !(await roomCreationAllowed(ws, roomId))) {
+      send(ws, { type: "room:denied", roomId, reason: "rate_limited" });
+      return;
     }
     const room = await ensureRoomLoaded(roomId);
     if (room.banned.has(ws.user.id)) {

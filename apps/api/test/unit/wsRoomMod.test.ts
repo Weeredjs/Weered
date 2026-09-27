@@ -14,6 +14,7 @@ function mkRoom(roomId = "r1") {
     mods: new Set<string>(),
     banned: new Set<string>(),
     muted: new Set<string>(),
+    sockets: new Set<any>(),
   };
 }
 function mkCtx(room: any, over: any = {}) {
@@ -39,7 +40,10 @@ function mkOpts(over: any = {}) {
     send: (_ws: any, m: any) => sent.push(m),
     getGlobalRole: async () => "USER",
     canAccessStaff: () => false,
-    findSocketsByUser: (_room: any, uid: string) => [{ user: { id: uid } }],
+    // The target's sockets, taken from room.sockets like the real helper, so a
+    // test can prove a kicked or banned socket is actually removed from the room.
+    findSocketsByUser: (room: any, uid: string) =>
+      [...(room.sockets || [])].filter((s: any) => s.user?.id === uid),
     isOwner: (_room: any, uid?: string) => uid === "owner1",
     rooms: new Map(),
     wss: { clients: new Set() },
@@ -67,6 +71,7 @@ describe("ws handleRoomMod - mute/ban gates", () => {
 
   it("a mod mutes a target (added to room.muted + mod:muted sent)", async () => {
     const room = mkRoom();
+    room.sockets.add({ user: { id: "victim" }, roomId: room.roomId });
     await handleRoomMod(ws, { type: "mod:mute", userId: "victim" }, mkCtx(room), mkOpts());
     expect(room.muted.has("victim")).toBe(true);
     expect(sent.find((m) => m.type === "mod:muted")).toBeTruthy();
@@ -88,9 +93,14 @@ describe("ws handleRoomMod - mute/ban gates", () => {
   it("a mod bans a target: banned set, removed from users, presence:leave broadcast", async () => {
     const room = mkRoom();
     room.users.set("victim", { id: "victim" });
+    const victimSocket = { user: { id: "victim" }, roomId: room.roomId };
+    room.sockets.add(victimSocket);
     await handleRoomMod(ws, { type: "mod:ban", userId: "victim" }, mkCtx(room), mkOpts());
     expect(room.banned.has("victim")).toBe(true);
     expect(room.users.has("victim")).toBe(false);
+    // 2026-09-26: the banned socket used to stay in room.sockets and keep
+    // receiving every broadcast in the room.
+    expect(room.sockets.has(victimSocket)).toBe(false);
     expect(
       broadcasts.find((m) => m.type === "presence:leave" && m.userId === "victim"),
     ).toBeTruthy();

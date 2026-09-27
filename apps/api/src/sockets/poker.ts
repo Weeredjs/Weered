@@ -28,6 +28,22 @@ type Opts = {
   send: (ws: any, msg: any) => void;
 };
 
+// Seats being bought into, per table: seat index -> user id. The "already
+// seated" check and the seat fill used to straddle the buy-in await, so two
+// joins at once could take the same seat (one buy-in lost to the overwrite) or
+// seat one user twice (audit 2026-09-27). A join now reserves its seat before
+// it awaits, and other joins skip reserved seats. Kept beside the table rather
+// than inside it, so the hand engine never sees a half-joined seat.
+const seatHolds = new WeakMap<object, Map<number, string>>();
+function holdsFor(table: object): Map<number, string> {
+  let m = seatHolds.get(table);
+  if (!m) {
+    m = new Map();
+    seatHolds.set(table, m);
+  }
+  return m;
+}
+
 export async function handlePoker(ws: any, msg: any, opts: Opts): Promise<void> {
   const {
     getOrCreatePokerTable,
@@ -58,17 +74,24 @@ export async function handlePoker(ws: any, msg: any, opts: Opts): Promise<void> 
       return;
     }
 
-    if (table.seats.some((s: any) => s && s.userId === ws.user!.id)) {
+    const holds = holdsFor(table);
+    if (
+      table.seats.some((s: any) => s && s.userId === ws.user!.id) ||
+      [...holds.values()].includes(ws.user.id)
+    ) {
       send(ws, { type: "poker:error", error: "Already seated at this table" });
       return;
     }
 
-    const emptySeatIndex = table.seats.findIndex((s: any) => s === null);
+    const emptySeatIndex = table.seats.findIndex(
+      (s: any, i: number) => s === null && !holds.has(i),
+    );
     if (emptySeatIndex === -1) {
       send(ws, { type: "poker:error", error: "Table is full" });
       return;
     }
 
+    holds.set(emptySeatIndex, ws.user.id);
     try {
       const res = await awardPaper(
         ws.user.id,
@@ -85,6 +108,8 @@ export async function handlePoker(ws: any, msg: any, opts: Opts): Promise<void> 
       log.error("[poker:join] Paper deduction failed:", e);
       send(ws, { type: "poker:error", error: "Failed to process buy-in" });
       return;
+    } finally {
+      holds.delete(emptySeatIndex);
     }
 
     table.seats[emptySeatIndex] = {

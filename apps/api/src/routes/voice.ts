@@ -3,6 +3,7 @@ import type { FastifyInstance } from "fastify";
 import { AccessToken } from "livekit-server-sdk";
 import { prisma } from "../lib/prisma";
 import { canEnterGatedRoom } from "../lib/lobbyAccess";
+import { isOfficeRoom, scopeAllows } from "../lib/officeRooms";
 
 // LiveKit voice token minting (extracted from index.ts). The LIVEKIT_* config
 // and the AccessToken SDK are voice-exclusive and live here. Room state + the
@@ -15,7 +16,8 @@ const LIVEKIT_API_SECRET = process.env.LIVEKIT_API_SECRET || "";
 type Opts = {
   authFromHeader: (h?: string) => { id: string; name: string; globalRole?: string } | null;
   rooms: Map<string, any>;
-  ensureRoomLoaded: (roomId: string) => Promise<any>;
+  /** Loads a room that exists; never creates one. */
+  loadExistingRoom: (roomId: string) => Promise<any | null>;
   normalizeRoomId: (input: string) => string;
   isModOrOwner: (room: any, userId?: string, globalRole?: string) => boolean;
   awardNotoriety: (userId: string, action: string) => Promise<number | null>;
@@ -27,7 +29,7 @@ export default async function voiceRoutes(app: FastifyInstance, opts: Opts) {
   const {
     authFromHeader,
     rooms,
-    ensureRoomLoaded,
+    loadExistingRoom,
     normalizeRoomId,
     isModOrOwner,
     awardNotoriety,
@@ -56,9 +58,9 @@ export default async function voiceRoutes(app: FastifyInstance, opts: Opts) {
         const _u = u as any;
         if (_u.guest || _u.host) {
           const office = String(_u.scope?.office || "");
-          const inScope = office && (lookup === office || lookup.startsWith(office + "-"));
-          if (!inScope) return reply.code(403).send({ ok: false, error: "out_of_scope" });
-        } else if (lookup.startsWith("mtg-")) {
+          if (!scopeAllows(office, lookup))
+            return reply.code(403).send({ ok: false, error: "out_of_scope" });
+        } else if (isOfficeRoom(lookup)) {
           // office staff (GOD / allowlist) get voice in the meeting namespace
           if (!(await isOfficeStaff(_u.id))) {
             return reply.code(403).send({ ok: false, error: "private_meeting" });
@@ -90,22 +92,38 @@ export default async function voiceRoutes(app: FastifyInstance, opts: Opts) {
             .send({ ok: false, error: "level_required", minLevel: gate.minLevel });
         }
       }
+      // Admission (audit 2026-09-27). Joining a room enforces its password, its
+      // lock/knock and its bans; voice enforced none of them, so a token for the
+      // locked ECEB consult room let an unadmitted guest hear (and publish into)
+      // a live consult. A room that admits people one at a time now requires the
+      // caller to be in it, which means doJoin already let them in. Open rooms
+      // are unchanged. The room is never created here: no token for made-up ids.
+      const room = await loadExistingRoom(lookup).catch(() => null);
+      if (!room) return reply.code(404).send({ ok: false, error: "room_not_found" });
+      if (room.banned?.has(u.id)) return reply.code(403).send({ ok: false, error: "banned" });
+      // Session tokens carry no role, so read it: staff are mods everywhere, and
+      // their voice must not depend on the join landing first (and staff could
+      // not speak in LISTEN_ONLY rooms before this, for the same reason).
+      const globalRole = (u as any).guest
+        ? null
+        : await prisma.user
+            .findUnique({ where: { id: u.id }, select: { globalRole: true } })
+            .then((r) => r?.globalRole ?? null)
+            .catch(() => null);
+      const isOwnerOrMod = isModOrOwner(room, u.id, globalRole ?? undefined);
+      if ((room.locked || room.passwordHash) && !isOwnerOrMod && !room.users?.has(u.id)) {
+        return reply.code(403).send({ ok: false, error: "not_admitted" });
+      }
+
       let canPublish = true;
       try {
-        const room = lookup
-          ? rooms.get(lookup) || (await ensureRoomLoaded(lookup).catch(() => null))
-          : null;
-        if (room) {
-          const isOwnerOrMod = isModOrOwner(room, u.id, (u as any).globalRole);
-          const mode = room.voiceMode || "OPEN";
-          if (mode === "OPEN") {
-            canPublish = true;
-          } else if (mode === "LISTEN_ONLY") {
-            canPublish = isOwnerOrMod;
-          } else {
-            canPublish =
-              isOwnerOrMod || (room.voiceSpeakers ? room.voiceSpeakers.has(u.id) : false);
-          }
+        const mode = room.voiceMode || "OPEN";
+        if (mode === "OPEN") {
+          canPublish = true;
+        } else if (mode === "LISTEN_ONLY") {
+          canPublish = isOwnerOrMod;
+        } else {
+          canPublish = isOwnerOrMod || (room.voiceSpeakers ? room.voiceSpeakers.has(u.id) : false);
         }
       } catch (e) {
         swallow(e);

@@ -3,6 +3,8 @@ import type { FastifyInstance } from "fastify";
 import { fetchWithTimeout } from "../lib/fetchWithTimeout";
 import { prisma } from "../lib/prisma";
 import { isValidRoomModule } from "../lib/roomModules";
+import { isOfficeRoom } from "../lib/officeRooms";
+import { isCampaignDm, managesRoom, mayReadRoom, roomIfEnterable } from "../lib/roomAccess";
 import { z } from "zod";
 import { RoomRole } from "@prisma/client";
 import bcrypt from "bcryptjs";
@@ -62,6 +64,8 @@ export default async function roomsRoutes(app: FastifyInstance, opts: Opts) {
 
     const lobbyIds = new Set(lobbyList.map((l) => l.id));
     const roomList = await prisma.room.findMany({
+      // Unlisted lobbies' rooms stay off global lists (audit 2026-09-27).
+      where: { OR: [{ lobbyId: null }, { lobby: { unlisted: false } }] },
       orderBy: { updatedAt: "desc" },
       select: {
         id: true,
@@ -73,8 +77,8 @@ export default async function roomsRoutes(app: FastifyInstance, opts: Opts) {
       take: 100,
     });
     const roomOut = roomList
-      // mtg-* is the private meeting namespace (client consults): never listed.
-      .filter((r) => !r.id.includes("%") && !lobbyIds.has(r.id) && !r.id.startsWith("mtg-"))
+      // Office rooms are the private meeting namespace (client consults): never listed.
+      .filter((r) => !r.id.includes("%") && !lobbyIds.has(r.id) && !isOfficeRoom(r.id))
       .map((r) => ({
         id: r.id,
         roomId: r.id,
@@ -428,8 +432,31 @@ export default async function roomsRoutes(app: FastifyInstance, opts: Opts) {
     ].join("\n");
   }
 
+  // NPCs (audit 2026-09-26). Create took any roomId, so a stranger could plant
+  // NPCs in a staff-only room or one that does not exist, and edit/delete found
+  // the NPC by id alone, so anyone could rewrite or remove any NPC anywhere. The
+  // tavern stays collaborative: whoever may enter a room may add NPCs to it.
+  // Changing one takes its creator, the room's owner or DM, a lobby moderator,
+  // or staff. The config is the model's system prompt on every reply, so its
+  // size is capped too.
+  const NPC_CONFIG_MAX_CHARS = 8_000;
+  const npcConfigTooBig = (config: unknown) =>
+    JSON.stringify(config ?? {}).length > NPC_CONFIG_MAX_CHARS;
+  async function mayChangeNpc(
+    npc: { createdBy: string; roomId: string },
+    room: Awaited<ReturnType<typeof roomIfEnterable>>,
+    userId: string,
+  ): Promise<boolean> {
+    if (!room) return false;
+    if (npc.createdBy === userId) return true;
+    if (await managesRoom(room, userId)) return true;
+    return isCampaignDm(npc.roomId, userId);
+  }
+
   app.get("/rooms/:roomId/npcs", async (req, reply) => {
     const roomId = String((req as any).params?.roomId || "");
+    if (!(await mayReadRoom(roomId, authFromHeader((req as any).headers?.authorization))))
+      return reply.code(403).send({ ok: false, error: "forbidden" });
     const npcs = await prisma.roomNpc.findMany({
       where: { roomId },
       orderBy: { createdAt: "asc" },
@@ -449,8 +476,12 @@ export default async function roomsRoutes(app: FastifyInstance, opts: Opts) {
       const body: any = (req as any).body || {};
       const name = (typeof body.name === "string" ? body.name : "").trim().slice(0, 64);
       if (!name) return reply.code(400).send({ ok: false, error: "name_required" });
+      if (!(await roomIfEnterable(roomId, u)))
+        return reply.code(403).send({ ok: false, error: "room_forbidden" });
 
-      const config = body.config || {};
+      const config = body.config && typeof body.config === "object" ? body.config : {};
+      if (npcConfigTooBig(config))
+        return reply.code(400).send({ ok: false, error: "config_too_large" });
       const npc = await prisma.roomNpc.create({
         data: {
           roomId,
@@ -463,7 +494,11 @@ export default async function roomsRoutes(app: FastifyInstance, opts: Opts) {
 
       if (config.greeting) {
         await prisma.npcMessage.create({
-          data: { npcId: npc.id, role: "assistant", content: config.greeting },
+          data: {
+            npcId: npc.id,
+            role: "assistant",
+            content: String(config.greeting).slice(0, 2000),
+          },
         });
       }
 
@@ -504,12 +539,21 @@ export default async function roomsRoutes(app: FastifyInstance, opts: Opts) {
     async (req, reply) => {
       const u = authFromHeader((req as any).headers?.authorization);
       if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+      const roomId = String((req as any).params?.roomId || "");
       const npcId = String((req as any).params?.npcId || "");
+      const existing = await prisma.roomNpc.findFirst({ where: { id: npcId, roomId } });
+      if (!existing) return reply.code(404).send({ ok: false, error: "npc_not_found" });
+      if (!(await mayChangeNpc(existing, await roomIfEnterable(roomId, u), u.id)))
+        return reply.code(403).send({ ok: false, error: "forbidden" });
       const body: any = (req as any).body || {};
       const data: any = {};
       if (typeof body.name === "string") data.name = body.name.trim().slice(0, 64);
       if (typeof body.portrait === "string") data.portrait = body.portrait.slice(0, 10);
-      if (body.config) data.config = body.config;
+      if (body.config && typeof body.config === "object") {
+        if (npcConfigTooBig(body.config))
+          return reply.code(400).send({ ok: false, error: "config_too_large" });
+        data.config = body.config;
+      }
       const npc = await prisma.roomNpc.update({ where: { id: npcId }, data });
       return reply.send({ ok: true, npc });
     },
@@ -526,14 +570,27 @@ export default async function roomsRoutes(app: FastifyInstance, opts: Opts) {
     async (req, reply) => {
       const u = authFromHeader((req as any).headers?.authorization);
       if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+      const roomId = String((req as any).params?.roomId || "");
       const npcId = String((req as any).params?.npcId || "");
+      const existing = await prisma.roomNpc.findFirst({ where: { id: npcId, roomId } });
+      if (!existing) return reply.send({ ok: true }); // already gone
+      if (!(await mayChangeNpc(existing, await roomIfEnterable(roomId, u), u.id)))
+        return reply.code(403).send({ ok: false, error: "forbidden" });
       await prisma.roomNpc.delete({ where: { id: npcId } }).catch(swallow);
       return reply.send({ ok: true });
     },
   );
 
   app.get("/rooms/:roomId/npcs/:npcId/messages", async (req, reply) => {
+    const roomId = String((req as any).params?.roomId || "");
     const npcId = String((req as any).params?.npcId || "");
+    if (!(await mayReadRoom(roomId, authFromHeader((req as any).headers?.authorization))))
+      return reply.code(403).send({ ok: false, error: "forbidden" });
+    const owned = await prisma.roomNpc.findFirst({
+      where: { id: npcId, roomId },
+      select: { id: true },
+    });
+    if (!owned) return reply.code(404).send({ ok: false, error: "npc_not_found" });
     const messages = await prisma.npcMessage.findMany({
       where: { npcId },
       orderBy: { createdAt: "asc" },
@@ -580,8 +637,13 @@ export default async function roomsRoutes(app: FastifyInstance, opts: Opts) {
       const content = (typeof body.content === "string" ? body.content : "").trim().slice(0, 1000);
       if (!content) return reply.code(400).send({ ok: false, error: "content_required" });
 
-      const npc = await prisma.roomNpc.findUnique({ where: { id: npcId } });
+      // Talking to an NPC costs a model call, so the room must be one the
+      // caller can be in, and the NPC must belong to it.
+      const roomId = String((req as any).params?.roomId || "");
+      const npc = await prisma.roomNpc.findFirst({ where: { id: npcId, roomId } });
       if (!npc) return reply.code(404).send({ ok: false, error: "npc_not_found" });
+      if (!(await roomIfEnterable(roomId, u)))
+        return reply.code(403).send({ ok: false, error: "room_forbidden" });
 
       const cfg = (npc.config as any) || {};
 

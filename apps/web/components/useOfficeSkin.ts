@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
+import { isOfficeRoomPath } from "@/lib/officeRooms";
 
-// The office gate: true inside ECEB meeting rooms (/room/mtg-*) or when the app
+// The office gate: true inside ECEB meeting rooms (/room/mtg-eceb-*) or when the app
 // is served from the office/meet host. Everything Fathom-skinned checks this and
 // ONLY this; off the gate the platform behaves exactly as stock Weered.
 const OFFICE_HOST_RE = /^(office|meet)\.eastcoastemployeebenefits\.com$/;
@@ -20,7 +21,7 @@ export function useOfficeSkin(): boolean {
       setOfficeHost(false);
     }
   }, []);
-  return pathname.startsWith("/room/mtg-") || officeHost;
+  return isOfficeRoomPath(pathname) || officeHost;
 }
 
 export default useOfficeSkin;

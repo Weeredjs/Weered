@@ -107,9 +107,10 @@ export async function fetchSafe(
   opts: SafeUrlOpts = {},
 ): Promise<Response> {
   let target = (await assertSafeUrl(raw, opts)).toString();
+  const origin = new URL(target).origin;
   for (let hop = 0; hop <= MAX_HOPS; hop++) {
     const res = await fetch(target, {
-      ...init,
+      ...(new URL(target).origin === origin ? init : withoutCredentials(init)),
       redirect: "manual",
       signal: AbortSignal.timeout(timeoutMs),
     });
@@ -119,4 +120,16 @@ export async function fetchSafe(
     target = (await assertSafeUrl(new URL(loc, target).toString(), opts)).toString();
   }
   throw new Error("too_many_redirects");
+}
+
+/**
+ * The same request minus anything that authenticates it. fetch() drops the
+ * Authorization header when a redirect crosses origins; following redirects by
+ * hand loses that, so a caller's key would otherwise ride along to whatever
+ * host the first one pointed at.
+ */
+function withoutCredentials(init: RequestInit): RequestInit {
+  const headers = new Headers(init.headers);
+  for (const h of ["authorization", "cookie", "proxy-authorization"]) headers.delete(h);
+  return { ...init, headers };
 }

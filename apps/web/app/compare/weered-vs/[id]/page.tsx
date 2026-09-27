@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import fs from "fs";
 import path from "path";
+import { safeJsonLd } from "@/lib/jsonLd";
 
 const SITE = "https://weered.ca";
 
@@ -139,16 +140,13 @@ export default async function CompareWeeredVsPage(props: { params: Promise<{ id:
     >
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }}
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(breadcrumbLd) }}
       />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(articleLd) }}
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(articleLd) }}
       />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLd) }}
-      />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(faqLd) }} />
 
       <nav aria-label="Breadcrumb" style={{ fontSize: 13, opacity: 0.7, marginBottom: 16 }}>
         <Link href="/" style={{ color: "#7c9dff" }}>

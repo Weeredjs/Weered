@@ -9,12 +9,21 @@ type Opts = {
   send: (ws: any, msg: any) => void;
   safeJson: (raw: any) => any | null;
   subscribeBinanceSymbol: (symbol: string) => void;
+  /** Only symbols FakeOut trades may open an upstream stream. */
+  isTradableSymbol: (symbol: string) => boolean;
   symbolSubscribers: Map<string, Set<any>>;
   livePrices: Map<string, { price: number; time: number }>;
 };
 
 export default function setupTradingSocket(wss: WebSocketServer, opts: Opts) {
-  const { send, safeJson, subscribeBinanceSymbol, symbolSubscribers, livePrices } = opts;
+  const {
+    send,
+    safeJson,
+    subscribeBinanceSymbol,
+    isTradableSymbol,
+    symbolSubscribers,
+    livePrices,
+  } = opts;
 
   wss.on("connection", (rawWs) => {
     const ws = rawWs as any;
@@ -26,7 +35,7 @@ export default function setupTradingSocket(wss: WebSocketServer, opts: Opts) {
 
       if (msg.type === "trading:subscribe") {
         const sym = String(msg.symbol || "").toLowerCase();
-        if (!sym) return;
+        if (!sym || !isTradableSymbol(sym)) return;
         subscribeBinanceSymbol(sym);
         if (!symbolSubscribers.has(sym)) symbolSubscribers.set(sym, new Set());
         symbolSubscribers.get(sym)!.add(ws);

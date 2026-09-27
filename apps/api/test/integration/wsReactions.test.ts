@@ -19,7 +19,7 @@ function mkOpts(room: any) {
   sent = [];
   return {
     normalizeRoomId: (x: string) => x,
-    ensureRoomLoaded: async () => room,
+    loadExistingRoom: async () => room,
     send: (_ws: any, m: any) => sent.push(m),
     broadcast: (_r: any, m: any) => broadcasts.push(m),
   } as any;

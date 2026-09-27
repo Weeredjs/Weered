@@ -1,6 +1,7 @@
 import { Metadata } from "next";
 import Link from "next/link";
 import MarketingHeader from "../../../components/MarketingHeader";
+import { safeJsonLd } from "@/lib/jsonLd";
 
 const TITLE = "Discord sem vídeo no Brasil: o que aconteceu e o que fazer (2026) | Weered";
 const DESC =
@@ -132,10 +133,7 @@ const WHO: [string, string][] = [
 export default function DiscordBrasilPage() {
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLd) }}
-      />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(faqLd) }} />
       <MarketingHeader ctaHref="/lobby" ctaLabel="Abrir a Weered" />
 
       {/* The root layout declares lang="en". Scoping pt-BR here keeps search

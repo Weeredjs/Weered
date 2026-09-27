@@ -27,7 +27,7 @@ function mkWs(userId: string, roomId: string, globalRole?: string) {
 function baseOpts(over: any = {}) {
   return {
     normalizeRoomId: (x: string) => x,
-    ensureRoomLoaded: async (id: string) => rooms.get(id),
+    loadExistingRoom: async (id: string) => rooms.get(id) ?? null,
     rooms,
     send: (ws: any, payload: any) => sent.push({ ws, payload }),
     broadcast: (_room: any, payload: any) => broadcasts.push(payload),

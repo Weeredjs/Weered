@@ -67,6 +67,23 @@ describe("isPublicHost — the SSRF guard", () => {
   it("rejects octets above 255 rather than treating them as a hostname", () => {
     expect(isPublicHost("999.1.1.1")).toBe(false);
   });
+
+  // Found 2026-09-26: the URL parser reads these as IPv4 (127.0.0.1 and the
+  // 169.254.169.254 metadata address), and all of them used to pass.
+  it("rejects numeric spellings the URL parser turns into loopback or metadata", () => {
+    for (const h of [
+      "2130706433",
+      "0177.0.0.1",
+      "0x7f.1",
+      "0x7f000001",
+      "127.1",
+      "2852039166",
+      "0xa9fea9fe",
+      "localhost.",
+    ]) {
+      expect(isPublicHost(h), h).toBe(false);
+    }
+  });
 });
 
 describe("readConfiguredServers — operator JSON is untrusted too", () => {

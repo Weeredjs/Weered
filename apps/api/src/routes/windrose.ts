@@ -1,8 +1,51 @@
 import { log, swallow } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 import { fetchWithTimeout } from "../lib/fetchWithTimeout";
+import { assertSafeUrl, fetchSafe } from "../lib/ssrfGuard";
 import { z } from "zod";
 import { prisma } from "../lib/prisma";
+
+/**
+ * URLs a server owner types, checked before they are stored.
+ *
+ * queryUrl is fetched by this API every 90s and the reply is published by the
+ * public GET /windrose/servers, so an unchecked one was a full-read SSRF: proven
+ * 2026-09-26 with queryUrl http://127.0.0.1:4000/health coming back verbatim to
+ * an anonymous caller. It must now be a public http(s) address, and the poller
+ * re-checks every redirect hop through fetchSafe. dashboardUrl is only ever a
+ * link, so it just has to be http(s).
+ */
+const URL_MAX = 500;
+const QUERY_URL_REFUSED = {
+  ok: false,
+  error: "unsafe_query_url",
+  message: "The status URL must be a public http(s) address.",
+};
+
+async function checkedQueryUrl(raw: unknown): Promise<string | null> {
+  const v = String(raw ?? "")
+    .trim()
+    .slice(0, URL_MAX);
+  if (!v) return null;
+  await assertSafeUrl(v); // throws for a bad scheme, or a host that resolves inward
+  return v;
+}
+
+function linkUrl(raw: unknown): string | null {
+  const v = String(raw ?? "")
+    .trim()
+    .slice(0, URL_MAX);
+  if (!v) return null;
+  try {
+    const p = new URL(v).protocol;
+    return p === "http:" || p === "https:" ? v : null;
+  } catch {
+    return null;
+  }
+}
+
+/** A status reply is a few hundred bytes; anything past this is not one. */
+const STATE_MAX_CHARS = 64_000;
 
 type Opts = {
   authFromHeader: (h?: string) => { id: string; name?: string; globalRole?: string } | null;
@@ -614,8 +657,13 @@ Rules:
         .slice(0, 120);
       if (!name || !host)
         return reply.code(400).send({ ok: false, error: "name_and_host_required" });
-      const dashboardUrl = body.dashboardUrl ? String(body.dashboardUrl).trim() : null;
-      const queryUrl = body.queryUrl ? String(body.queryUrl).trim() : null;
+      const dashboardUrl = linkUrl(body.dashboardUrl);
+      let queryUrl: string | null;
+      try {
+        queryUrl = await checkedQueryUrl(body.queryUrl);
+      } catch {
+        return reply.code(400).send(QUERY_URL_REFUSED);
+      }
       const region = body.region ? String(body.region).trim().slice(0, 24) : null;
       const description = body.description ? String(body.description).trim().slice(0, 500) : null;
       const framework = body.framework ? String(body.framework).trim().slice(0, 40) : null;
@@ -673,9 +721,14 @@ Rules:
       const data: any = {};
       if (typeof body.name === "string") data.name = body.name.trim().slice(0, 60);
       if (typeof body.host === "string") data.host = body.host.trim().slice(0, 120);
-      if (typeof body.dashboardUrl === "string")
-        data.dashboardUrl = body.dashboardUrl.trim() || null;
-      if (typeof body.queryUrl === "string") data.queryUrl = body.queryUrl.trim() || null;
+      if (typeof body.dashboardUrl === "string") data.dashboardUrl = linkUrl(body.dashboardUrl);
+      if (typeof body.queryUrl === "string") {
+        try {
+          data.queryUrl = await checkedQueryUrl(body.queryUrl);
+        } catch {
+          return reply.code(400).send(QUERY_URL_REFUSED);
+        }
+      }
       if (typeof body.region === "string") data.region = body.region.trim().slice(0, 24) || null;
       if (typeof body.description === "string")
         data.description = body.description.trim().slice(0, 500) || null;
@@ -1236,14 +1289,24 @@ Rules:
       for (const s of servers) {
         if (!s.queryUrl) continue;
         try {
-          const res = await fetchWithTimeout(s.queryUrl, { signal: AbortSignal.timeout(5000) });
+          // fetchSafe, not a plain fetch: rows saved before the write-time check
+          // existed are re-validated here, and so is every redirect hop.
+          const res = await fetchSafe(s.queryUrl, {}, 5000);
           if (!res.ok) {
             await prisma.communityServer
               .update({ where: { id: s.id }, data: { status: "offline" } })
               .catch(swallow);
             continue;
           }
-          const json: any = await res.json().catch(() => null);
+          const text = await res.text().catch(() => "");
+          let json: any = null;
+          if (text.length <= STATE_MAX_CHARS) {
+            try {
+              json = JSON.parse(text);
+            } catch {
+              json = null;
+            }
+          }
           await prisma.communityServer
             .update({
               where: { id: s.id },

@@ -1,6 +1,7 @@
 import { Metadata } from "next";
 import Link from "next/link";
 import MarketingHeader from "../../components/MarketingHeader";
+import { safeJsonLd } from "@/lib/jsonLd";
 
 const TITLE = "What Weered does: a real lobby for every game";
 const DESC =
@@ -29,10 +30,7 @@ const appLd = {
 export default function FeaturesPage() {
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(appLd) }}
-      />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(appLd) }} />
       <MarketingHeader ctaHref="/lobby" ctaLabel="Open Weered" />
 
       <main className="mkt">

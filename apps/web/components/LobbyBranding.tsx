@@ -320,8 +320,8 @@ function ImageUpload({
       setErr("Under 4 MB please.");
       return;
     }
-    if (!/^image\/(png|jpeg|jpg|webp|gif|svg\+xml)$/.test(f.type)) {
-      setErr("PNG, JPEG, WebP, GIF, or SVG.");
+    if (!/^image\/(png|jpeg|jpg|webp|gif)$/.test(f.type)) {
+      setErr("PNG, JPEG, WebP, or GIF.");
       return;
     }
     setBusy(true);
@@ -424,7 +424,7 @@ function ImageUpload({
       <input
         ref={fileRef}
         type="file"
-        accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml"
+        accept="image/png,image/jpeg,image/webp,image/gif"
         onChange={pick}
         style={{ display: "none" }}
       />

@@ -3,6 +3,24 @@ import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { prisma } from "../lib/prisma";
 
+/**
+ * LFG metadata was stored as sent, any shape and any size, and served back in
+ * every listing (audit 2026-09-26: a 500KB blob). The one client that sends it
+ * (the D&D board) sends a handful of short labels, so that is all it may be: a
+ * flat object of short strings, numbers and booleans.
+ */
+export function cleanLfgMetadata(raw: unknown): Record<string, string | number | boolean> | null {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const out: Record<string, string | number | boolean> = {};
+  for (const [k, v] of Object.entries(raw as Record<string, unknown>).slice(0, 12)) {
+    const key = String(k).slice(0, 40);
+    if (typeof v === "string") out[key] = v.slice(0, 100);
+    else if (typeof v === "boolean") out[key] = v;
+    else if (typeof v === "number" && Number.isFinite(v)) out[key] = v;
+  }
+  return Object.keys(out).length ? out : null;
+}
+
 type Opts = {
   authFromHeader: (h?: string) => { id: string; name: string } | null;
   getGlobalRole: (userId: string) => Promise<string | null>;
@@ -108,7 +126,7 @@ export default async function lfgRoutes(app: FastifyInstance, opts: Opts) {
           tags: Array.isArray(body.tags)
             ? body.tags.map((t: any) => String(t).slice(0, 30)).slice(0, 6)
             : [],
-          metadata: body.metadata || null,
+          metadata: cleanLfgMetadata(body.metadata) as any,
           roleSlots,
           roleClaims,
           roleClaimNames,

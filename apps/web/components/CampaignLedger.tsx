@@ -158,7 +158,7 @@ function CampaignBootstrap({ roomId, onCreated, errMsg }: { roomId: string; onCr
       body: JSON.stringify({ name: name.trim(), description: desc.trim() }),
     });
     setBusy(false);
-    if (!r?.ok) { setErr(r?.error || "failed"); return; }
+    if (!r?.ok) { setErr(r?.message || r?.error || "failed"); return; }
     onCreated();
   }
 

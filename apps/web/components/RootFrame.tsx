@@ -26,6 +26,8 @@ import KeyboardShortcuts from "./KeyboardShortcuts";
 import CookieConsent from "./CookieConsent";
 import BugReportButton from "./BugReportButton";
 import { OFFICE_SKIN_CSS } from "./officeSkinCss";
+import { safeJsonLd } from "@/lib/jsonLd";
+import { isOfficeRoomPath } from "@/lib/officeRooms";
 
 const jsonLd = {
   "@context": "https://schema.org",
@@ -128,7 +130,7 @@ export default function RootFrame({ children }: { children: React.ReactNode }) {
   // host (so entering from a weered.ca favourite/desktop still de-purples). This only
   // toggles <html> attributes (no provider remount); the full navy ProfessionalFrame
   // stays host-scoped below. On leave, the operator's own theme is restored.
-  const inOfficeRoom = !!pathname && pathname.startsWith("/room/mtg-");
+  const inOfficeRoom = !!pathname && isOfficeRoomPath(pathname);
   const officeSkin = proHost || inOfficeRoom;
   useLayoutEffect(() => {
     if (typeof document === "undefined" || !officeSkin) return;
@@ -194,17 +196,14 @@ export default function RootFrame({ children }: { children: React.ReactNode }) {
       {OFFICE_LOGO_STYLE}
       <DesktopTitleBar />
       <ThemeRestore />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(jsonLd) }} />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(orgJsonLd) }}
       />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(orgJsonLd) }}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(websiteJsonLd) }}
       />
       <OverlayProvider>
         <WeeredProvider>

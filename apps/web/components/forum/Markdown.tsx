@@ -17,26 +17,46 @@ function safeUrl(url: string): string {
   return "#";
 }
 
-function renderInline(s: string): string {
-  let out = escapeHtml(s);
-  out = out.replace(
-    /!\[([^\]]*)\]\(([^)\s]+)\)/g,
-    (_m, alt: string, url: string) =>
-      `<img src="${safeUrl(url)}" alt="${alt}" style="max-width:100%;border-radius:6px;margin:6px 0;" />`,
-  );
-  out = out.replace(
-    /\[([^\]]+)\]\(([^)\s]+)\)/g,
-    (_m, text: string, url: string) =>
-      `<a href="${safeUrl(url)}" target="_blank" rel="noopener noreferrer" style="color:var(--weered-accent-2, #a78bfa);text-decoration:underline;">${text}</a>`,
-  );
+// Inline formatting. The old version escaped the text, then ran every pattern
+// over the growing HTML string, so a later pass (code spans, emphasis) could
+// rewrite characters inside an href/src attribute that an earlier pass had
+// built (audit 2026-09-27). Now the text is split into code spans, images,
+// links and plain runs first; each piece is escaped for the place it lands, and
+// emphasis only ever runs over escaped plain text, which holds no attributes.
+const INLINE_TOKEN = /`([^`]+)`|!\[([^\]]*)\]\(([^)\s]+)\)|\[([^\]]+)\]\(([^)\s]+)\)/g;
+
+const CODE_STYLE =
+  "background:rgba(0,0,0,.35);padding:1px 5px;border-radius:4px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.92em;";
+const IMG_STYLE = "max-width:100%;border-radius:6px;margin:6px 0;";
+const LINK_STYLE = "color:var(--weered-accent-2, #a78bfa);text-decoration:underline;";
+
+/** Bold and italics, over text that is already escaped. */
+function emphasis(escaped: string): string {
+  let out = escaped;
   out = out.replaceAll(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
   out = out.replaceAll(/__([^_]+)__/g, "<strong>$1</strong>");
   out = out.replaceAll(/(^|[^*])\*([^*\s][^*]*?)\*/g, "$1<em>$2</em>");
   out = out.replaceAll(/(^|[^_])_([^_\s][^_]*?)_/g, "$1<em>$2</em>");
-  out = out.replace(
-    /`([^`]+)`/g,
-    '<code style="background:rgba(0,0,0,.35);padding:1px 5px;border-radius:4px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.92em;">$1</code>',
-  );
+  return out;
+}
+
+function renderInline(s: string): string {
+  const src = String(s || "");
+  let out = "";
+  let last = 0;
+  for (const m of src.matchAll(INLINE_TOKEN)) {
+    const at = m.index ?? 0;
+    out += emphasis(escapeHtml(src.slice(last, at)));
+    last = at + m[0].length;
+    if (m[1] !== undefined) {
+      out += `<code style="${CODE_STYLE}">${escapeHtml(m[1])}</code>`;
+    } else if (m[3] !== undefined) {
+      out += `<img src="${escapeHtml(safeUrl(m[3]))}" alt="${escapeHtml(m[2] || "")}" style="${IMG_STYLE}" />`;
+    } else {
+      out += `<a href="${escapeHtml(safeUrl(m[5]))}" target="_blank" rel="noopener noreferrer" style="${LINK_STYLE}">${emphasis(escapeHtml(m[4]))}</a>`;
+    }
+  }
+  out += emphasis(escapeHtml(src.slice(last)));
   return out;
 }
 

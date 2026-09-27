@@ -76,3 +76,62 @@ describe("ws handlePoker - poker:leave cash-out", () => {
     expect(tables.get("t1").seats[0]).toBeNull();
   });
 });
+
+// Found 2026-09-27: poker:join checked for an empty seat, awaited the buy-in,
+// then filled the seat, so concurrent joins could overwrite each other's seat
+// (a paid buy-in lost) or seat one user twice.
+describe("ws handlePoker - poker:join concurrency", () => {
+  function joinTable() {
+    return {
+      seats: [null, null, null],
+      spectators: new Set<string>(),
+      phase: "waiting",
+      minBuyin: 100,
+      maxBuyin: 1000,
+    };
+  }
+  function slowOpts(tables: Map<string, any>, charged: string[]) {
+    const opts = mkOpts(tables, []);
+    opts.awardPaper = async (uid: string) => {
+      charged.push(uid);
+      await new Promise((r) => setTimeout(r, 20)); // the ledger write takes a moment
+      return { balance: 0 };
+    };
+    return opts;
+  }
+
+  it("two players joining at once get different seats and both keep their buy-in", async () => {
+    const tables = new Map([["t2", joinTable()]]);
+    const charged: string[] = [];
+    const opts = slowOpts(tables, charged);
+    await Promise.all([
+      handlePoker(
+        { user: { id: "bob", name: "Bob" } },
+        { type: "poker:join", tableId: "t2", buyin: 200 },
+        opts,
+      ),
+      handlePoker(
+        { user: { id: "cat", name: "Cat" } },
+        { type: "poker:join", tableId: "t2", buyin: 300 },
+        opts,
+      ),
+    ]);
+    const seated = tables.get("t2").seats.filter(Boolean);
+    expect(charged.sort()).toEqual(["bob", "cat"]);
+    expect(seated.map((s: any) => s.userId).sort()).toEqual(["bob", "cat"]);
+    expect(new Set(seated.map((s: any) => s.seatIndex)).size).toBe(2);
+  });
+
+  it("one player sending join twice at once is seated and charged once", async () => {
+    const tables = new Map([["t3", joinTable()]]);
+    const charged: string[] = [];
+    const opts = slowOpts(tables, charged);
+    const dan = { user: { id: "dan", name: "Dan" } };
+    await Promise.all([
+      handlePoker(dan, { type: "poker:join", tableId: "t3", buyin: 200 }, opts),
+      handlePoker(dan, { type: "poker:join", tableId: "t3", buyin: 200 }, opts),
+    ]);
+    expect(charged).toEqual(["dan"]);
+    expect(tables.get("t3").seats.filter(Boolean).length).toBe(1);
+  });
+});

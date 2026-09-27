@@ -1,5 +1,7 @@
 import { decodeEntities, stripTags } from "./lib/htmlText";
 import { log, logger, swallow } from "./lib/logger";
+// Before anything decodes an image: switches off the vulnerable HEIF/AVIF loader.
+import "./lib/sharpSafety";
 import dotenv from "dotenv";
 dotenv.config({ override: true });
 import * as Sentry from "@sentry/node";
@@ -181,6 +183,7 @@ import {
   _lobbyActivityAt,
   normalizeRoomId,
   ensureRoomLoaded,
+  loadExistingRoom,
   safeJson,
   send,
   broadcast,
@@ -210,6 +213,7 @@ import {
 } from "./lib/notifications";
 import {
   subscribeBinanceSymbol,
+  isTradableSymbol,
   symbolSubscribers,
   livePrices,
   binanceSubs,
@@ -256,6 +260,7 @@ import { startNexusPoller } from "./nexusPoller";
 
 import { prisma } from "./lib/prisma";
 import { canEnterGatedRoom } from "./lib/lobbyAccess";
+import { isOfficeRoom, scopeAllows } from "./lib/officeRooms";
 import { readCookieToken } from "./lib/authCookie";
 import { awardPaper } from "./lib/economy";
 
@@ -479,8 +484,38 @@ async function isOfficeStaff(userId?: string): Promise<boolean> {
   }
 }
 
+// Joining an unused id is how a room (or a lobby's chat container) first comes
+// to exist, so it stays open, but not at socket speed: every new Room row lands
+// at the top of everyone's rooms:list. Per user, per rolling hour.
+const NEW_ROOMS_PER_HOUR = 30;
+const newRoomsByUser = new Map<string, number[]>();
+function mayCreateRoom(userId: string): boolean {
+  const now = Date.now();
+  const recent = (newRoomsByUser.get(userId) || []).filter((t) => now - t < 3_600_000);
+  const ok = recent.length < NEW_ROOMS_PER_HOUR;
+  if (ok) recent.push(now);
+  if (newRoomsByUser.size > 20_000) newRoomsByUser.clear();
+  newRoomsByUser.set(userId, recent);
+  return ok;
+}
+
+/** False only when this join would create a new room and the user is over the
+ *  hourly limit. Called by every path that joins by id, before the room loads. */
+async function roomCreationAllowed(ws: Sock, roomId: string): Promise<boolean> {
+  if (rooms.has(roomId)) return true;
+  const row = await prisma.room
+    .findUnique({ where: { id: roomId }, select: { id: true } })
+    .catch(() => ({ id: roomId })); // a lookup error must not block a join
+  return !!row || mayCreateRoom(String(ws.user?.id || ""));
+}
+
 async function doJoin(ws: Sock, roomId: string) {
   roomId = normalizeRoomId(roomId);
+  if (!roomId) return false;
+  if (!(await roomCreationAllowed(ws, roomId))) {
+    send(ws, { type: "room:denied", roomId, reason: "rate_limited" });
+    return false;
+  }
   const room = await ensureRoomLoaded(roomId);
   if (roomId === "lobby" && !room.name) room.name = "Home Lobby";
 
@@ -488,12 +523,12 @@ async function doJoin(ws: Sock, roomId: string) {
     const _u = ws.user as any;
     if (_u?.guest || _u?.host) {
       const office = String(_u.scope?.office || "");
-      const inScope = office && (roomId === office || roomId.startsWith(office + "-"));
+      const inScope = scopeAllows(office, roomId);
       if (!inScope) {
         send(ws, { type: "room:denied", roomId, reason: "out_of_scope" });
         return false;
       }
-    } else if (roomId.startsWith("mtg-")) {
+    } else if (isOfficeRoom(roomId)) {
       // Meeting namespace: closed to the public. Office staff (GOD or the env
       // allowlist) walk in from a normal Weered session — the wormhole between
       // the platform and the professional office. Everyone else bounces.
@@ -516,16 +551,54 @@ async function doJoin(ws: Sock, roomId: string) {
     }
   }
 
-  if (!room.ownerId && ws.user && !(ws.user as any).guest) {
-    room.ownerId = ws.user.id;
-    if (room.roomId !== "lobby") {
-      await prisma.room.update({ where: { id: room.roomId }, data: { ownerId: room.ownerId } });
+  // A lobby ban holds at the door of every room in that lobby, and its own chat
+  // container. LobbyBan used to be checked nowhere in the socket layer, so a banned
+  // member simply walked back in (found 2026-09-26). Global staff are exempt, as
+  // they are from the level gate. A failed lookup lets the join through: refusing
+  // everyone whenever the database hiccups would be worse than a missed ban.
+  {
+    const u = ws.user as any;
+    const banLobbyId = room.lobbyId || room.roomId;
+    if (u?.id && !u.guest && !["STAFF", "ADMIN", "GOD"].includes(String(u.globalRole || ""))) {
+      const ban = await prisma.lobbyBan
+        .findUnique({
+          where: { lobbyId_userId: { lobbyId: banLobbyId, userId: u.id } },
+          select: { id: true },
+        })
+        .catch(() => null);
+      if (ban) {
+        send(ws, { type: "room:denied", roomId, reason: "lobby_banned" });
+        return false;
+      }
     }
   }
 
+  // Banned first: the ownership claim below used to run BEFORE this check, so a
+  // room-banned user could become the owner of an ownerless room on the way out.
   if (ws.user && room.banned.has(ws.user.id)) {
     send(ws, { type: "room:banned", roomId });
     return false;
+  }
+
+  // First joiner claims ONLY an ad-hoc room: never a pinned/seeded platform room,
+  // never a room inside a lobby (that lobby's admins govern it), never a lobby's
+  // own chat container, never the Home Lobby. It used to claim any ownerless room,
+  // so ordinary users held owner powers (lock, rename, kick/ban anyone, close =
+  // disconnect everyone) over official rooms: seven were already taken in
+  // production when this was found (2026-09-26).
+  if (
+    !room.ownerId &&
+    ws.user &&
+    !(ws.user as any).guest &&
+    room.roomId !== "lobby" &&
+    !room.pinned &&
+    !room.lobbyId &&
+    !(await prisma.lobby
+      .findUnique({ where: { id: room.roomId }, select: { id: true } })
+      .catch(() => ({ id: room.roomId })))
+  ) {
+    room.ownerId = ws.user.id;
+    await prisma.room.update({ where: { id: room.roomId }, data: { ownerId: room.ownerId } });
   }
 
   if (ws.roomId === roomId) {
@@ -608,7 +681,11 @@ async function doJoin(ws: Sock, roomId: string) {
 }
 
 async function main() {
-  const app = Fastify({ loggerInstance: logger, trustProxy: true });
+  // Trust ONLY the local reverse proxy (Caddy, on loopback). `trustProxy: true`
+  // trusted every hop, so req.ip became the leftmost X-Forwarded-For entry,
+  // which the client writes itself. With loopback trusted, req.ip is the address
+  // Caddy saw, whether Caddy appends to or replaces a forged header.
+  const app = Fastify({ loggerInstance: logger, trustProxy: ["127.0.0.1", "::1"] });
 
   // CORS is normally added at the Caddy edge in production. Non-prod stacks
   // with no edge (e.g. the E2E CI job, where the browser calls the API
@@ -665,6 +742,35 @@ async function main() {
     ) {
       return reply.code(401).send({ ok: false, error: "guest_revoked" });
     }
+  });
+
+  // Revocation for ordinary sessions (audit 2026-09-26). A JWT is checked by
+  // signature alone, so a user banned or deleted after signing in kept a working
+  // REST session for the token's full 7 days, while login and the WebSocket
+  // handshake already refused them (proven: a banned account's old token still
+  // edited its profile). The account is re-read here, cached briefly per user so
+  // a busy page does not cost a query per request. A DB error fails open, as the
+  // maintenance gate below does: a blip must not sign everyone out.
+  const ACCOUNT_CHECK_MS = 15_000;
+  const accountOk = new Map<string, { ok: boolean; at: number }>();
+  app.addHook("onRequest", async (req: any, reply: any) => {
+    const au = authFromHeader(req.headers.authorization);
+    if (!au || (au as any).guest || (au as any).host) return;
+    const now = Date.now();
+    let hit = accountOk.get(au.id);
+    if (!hit || now - hit.at > ACCOUNT_CHECK_MS) {
+      const row = await prisma.user
+        .findUnique({ where: { id: au.id }, select: { banned: true, deletedAt: true } })
+        .catch(() => undefined);
+      if (row === undefined) return;
+      // Self-deleted accounts keep their row (deletedAt is set), so check it too.
+      hit = { ok: !!row && !row.banned && !row.deletedAt, at: now };
+      if (accountOk.size > 50_000) accountOk.clear();
+      accountOk.set(au.id, hit);
+    }
+    if (hit.ok) return;
+    if (String(req.url || "").split("?")[0] === "/auth/logout") return; // let the cookie be cleared
+    return reply.code(401).send({ ok: false, error: "session_revoked" });
   });
 
   // Maintenance gate: when on, non-staff get 503. /health, /auth/*, and /staff*
@@ -751,10 +857,11 @@ async function main() {
     global: true,
     max: 600,
     timeWindow: "1 minute",
-    keyGenerator: (req) => {
-      const fwd = (req.headers["x-forwarded-for"] as string | undefined) || "";
-      return fwd.split(",")[0].trim() || req.ip;
-    },
+    // Keyed on req.ip, which trustProxy (above) resolves to the real client. It
+    // used to take the LEFTMOST X-Forwarded-For hop: client-written, so rotating
+    // that header gave every login attempt a fresh bucket and the auth limits
+    // (login 20/15m, register 5/h, reset 10/h) never tripped. Found 2026-09-26.
+    keyGenerator: (req) => req.ip,
     errorResponseBuilder: (_req, ctx) => ({
       statusCode: 429,
       error: "rate_limited",
@@ -815,7 +922,7 @@ async function main() {
   await app.register(voiceRoutes, {
     authFromHeader,
     rooms,
-    ensureRoomLoaded,
+    loadExistingRoom,
     normalizeRoomId,
     isModOrOwner,
     awardNotoriety,
@@ -1477,6 +1584,7 @@ async function main() {
             publishState,
             leaveRoom,
             isOfficeStaff,
+            roomCreationAllowed,
           });
           return;
         }
@@ -1484,7 +1592,7 @@ async function main() {
         if (typeof msg.type === "string" && msg.type.startsWith("chat:")) {
           await handleChat(ws, msg, {
             normalizeRoomId,
-            ensureRoomLoaded,
+            loadExistingRoom,
             rooms,
             send,
             broadcast,
@@ -1546,7 +1654,7 @@ async function main() {
           (ws as any)._rx = rx;
           await handleReactionToggle(ws, msg, {
             normalizeRoomId,
-            ensureRoomLoaded,
+            loadExistingRoom,
             send,
             broadcast,
           });
@@ -1558,7 +1666,12 @@ async function main() {
           (msg.type.startsWith("crew:") || msg.type.startsWith("dm:"));
         const roomId = normalizeRoomId(String(msg.roomId || ws.roomId || ws.pendingRoomId || ""));
         if (!roomId && !isCrewOrDm) return;
-        const room = roomId ? await ensureRoomLoaded(roomId) : (null as unknown as RoomState);
+        // Only a join may create a room. Every message here used to create a Room
+        // row for whatever id it named, before any permission check, and new rows
+        // top everyone's rooms:list (audit 2026-09-26: 25 frames, 25 ghost rooms).
+        const loaded = roomId ? await loadExistingRoom(roomId) : null;
+        if (roomId && !loaded) return;
+        const room = loaded as RoomState; // null only for crew:/dm: frames with no room
 
         const actorId = ws.user.id;
         const actorName = ws.user.name;
@@ -2038,6 +2151,7 @@ async function main() {
     send,
     safeJson,
     subscribeBinanceSymbol,
+    isTradableSymbol,
     symbolSubscribers,
     livePrices,
   });

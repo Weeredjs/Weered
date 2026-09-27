@@ -1,6 +1,7 @@
 import { swallow } from "../lib/logger";
 import { prisma } from "../lib/prisma";
 import { RoomRole } from "@prisma/client";
+import { removeFromVoice } from "../lib/livekitAdmin";
 
 // Room lifecycle + moderation WS handlers extracted from the index.ts main
 // message handler. handleRoomClose (room:close) is dispatched PRE-preamble: it
@@ -131,6 +132,10 @@ export async function handleRoomMod(
   } = opts;
 
   if (msg.type === "room:getAdminState") {
+    // It broadcasts the room's full state to everyone in it, so only someone in
+    // the room (or running it) may ask; a stranger could otherwise make any room
+    // re-broadcast at socket speed.
+    if (!actorIsMod && !room.users.has(actorId)) return;
     publishState(room);
     return;
   }
@@ -305,12 +310,18 @@ export async function handleRoomMod(
     }
     for (const s of findSocketsByUser(room, targetId)) {
       send(s, { type: "mod:kicked", roomId });
+      // Out of room.sockets too: every broadcast iterates that set, so clearing
+      // s.roomId alone left the removed user receiving the room's chat
+      // (found 2026-09-26).
+      room.sockets.delete(s);
       try {
         s.roomId = undefined;
       } catch (e) {
         swallow(e);
       }
     }
+    // And out of the voice call, which the socket never controlled.
+    void removeFromVoice(room.roomId, targetId);
     broadcast(room, { type: "presence:leave", roomId, userId: targetId });
     audit(room, { type: "mod:kick", actorId, actorName, targetId });
     publishState(room);
@@ -335,12 +346,18 @@ export async function handleRoomMod(
     }
     for (const s of findSocketsByUser(room, targetId)) {
       send(s, { type: "mod:banned", roomId });
+      // Out of room.sockets too: every broadcast iterates that set, so clearing
+      // s.roomId alone left the removed user receiving the room's chat
+      // (found 2026-09-26).
+      room.sockets.delete(s);
       try {
         s.roomId = undefined;
       } catch (e) {
         swallow(e);
       }
     }
+    // And out of the voice call, which the socket never controlled.
+    void removeFromVoice(room.roomId, targetId);
     broadcast(room, { type: "presence:leave", roomId, userId: targetId });
     audit(room, { type: "mod:ban", actorId, actorName, targetId });
     publishState(room);

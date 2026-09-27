@@ -23,6 +23,7 @@ import {
   usePublishLobbyViews,
 } from "../../lib/lobbyChrome";
 import { hydrateLobbyLang, clearLobbyLang } from "../../lib/lobbyLang";
+import { isOfficeRoomId } from "@/lib/officeRooms";
 
 // A short "knock-knock" chime for office walk-ins — synthesized (no asset to
 // ship/cache). Best-effort: silently no-ops if WebAudio is unavailable or the
@@ -182,8 +183,8 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
   // (owner/staff only). LOCAL-only toggle — never synced to the room like the
   // game/AV modules, so it can't leak to guests and the server can't clobber it.
   // Staff land on it by default when entering a meeting room.
-  const isOfficeRoom = String(roomId || "").startsWith("mtg-");
-  const [officeStage, setOfficeStage] = useState(() => String(roomId || "").startsWith("mtg-"));
+  const isOfficeRoom = isOfficeRoomId(String(roomId || ""));
+  const [officeStage, setOfficeStage] = useState(() => isOfficeRoomId(String(roomId || "")));
   const [soloViewing, setSoloViewing] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
     try { return localStorage.getItem(SOLO_KEY) === "1"; } catch { return false; }

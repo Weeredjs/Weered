@@ -1,4 +1,5 @@
 import type { FastifyInstance } from "fastify";
+import { publicModuleConfig } from "../lib/publicModuleConfig";
 import { prisma } from "../lib/prisma";
 import { isStaffUser } from "../lib/isStaffUser";
 
@@ -137,10 +138,15 @@ export default async function lobbySearchRoutes(app: FastifyInstance, opts: Opts
       );
     });
 
+    // moduleConfig goes out without its private va block (see publicModuleConfig).
+    const scrub = (x: any) =>
+      x && typeof x === "object" && "moduleConfig" in x
+        ? { ...x, moduleConfig: publicModuleConfig(x.moduleConfig) }
+        : x;
     return reply.send({
       ok: true,
-      pinned: [...unlistedHits, ...pinned],
-      rooms: [...unlistedRooms, ...matchingRooms],
+      pinned: [...unlistedHits, ...pinned].map(scrub),
+      rooms: [...unlistedRooms, ...matchingRooms].map(scrub),
     });
   });
 }

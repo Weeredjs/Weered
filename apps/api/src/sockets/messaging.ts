@@ -1,6 +1,7 @@
 import { log, swallow } from "../lib/logger";
 import { prisma } from "../lib/prisma";
 import { randomUUID } from "crypto";
+import { takeAiBudget } from "../lib/aiBudget";
 
 // Chat WS handlers extracted from the index.ts main message handler:
 // chat:pin/unpin/typing/send/edit/delete. Void async handler (dispatcher
@@ -9,9 +10,17 @@ import { randomUUID } from "crypto";
 // IIFEs (mention notifications + the @operator/ /ask LLM path, model id
 // claude-haiku-4-5-20251001 unchanged). rooms is the live Map (in-memory
 // room.msgs/pinned/modPolicy mutated through it).
+
+// Room chat had no length cap: one 256KB socket frame became a stored message
+// fanned out to every occupant (audit 2026-09-26). Crew and DM messages are cut
+// at 2000; room chat allows more, and says so instead of silently truncating.
+export const CHAT_BODY_MAX = 4000;
+const CHAT_TOO_LONG = `Message too long: ${CHAT_BODY_MAX} characters at most.`;
+
 type Opts = {
   normalizeRoomId: (input: string) => string;
-  ensureRoomLoaded: (roomId: string) => Promise<any>;
+  // Never creates a room: a message to an unknown id is dropped (audit 2026-09-26).
+  loadExistingRoom: (roomId: string) => Promise<any | null>;
   rooms: Map<string, any>;
   send: (ws: any, msg: any) => void;
   broadcast: (room: any, msg: any) => void;
@@ -29,7 +38,7 @@ type Opts = {
 export async function handleChat(ws: any, msg: any, opts: Opts): Promise<void> {
   const {
     normalizeRoomId,
-    ensureRoomLoaded,
+    loadExistingRoom,
     rooms,
     send,
     broadcast,
@@ -86,10 +95,15 @@ export async function handleChat(ws: any, msg: any, opts: Opts): Promise<void> {
     const body = String(msg.body || "").trim();
     const attachmentId = String(msg.attachmentId || "").slice(0, 40);
     if (!roomId || (!body && !attachmentId)) return;
-    const room = await ensureRoomLoaded(roomId);
+    const room = await loadExistingRoom(roomId);
+    if (!room) return;
     if (!room.users.has(ws.user.id)) return;
     if (room.banned.has(ws.user.id)) return;
     if (room.muted.has(ws.user.id)) return;
+    if (body.length > CHAT_BODY_MAX) {
+      send(ws, { type: "chat:rejected", roomId, reason: CHAT_TOO_LONG });
+      return;
+    }
     const urlCheck = checkUrlSpam(body);
     if (!urlCheck.ok) {
       send(ws, { type: "chat:rejected", roomId, reason: urlCheck.reason });
@@ -277,7 +291,19 @@ export async function handleChat(ws: any, msg: any, opts: Opts): Promise<void> {
         .replaceAll(/@operator/gi, "")
         .replace(/^\/ask\s*/i, "")
         .trim();
-      if (question.length > 0) {
+      // Every question is a paid model call: guests never summon the Operator,
+      // and each account has a daily allowance (audit 2026-09-27).
+      const isGuest = !!(ws.user as any)?.guest;
+      const operatorAllowed =
+        question.length > 0 && !isGuest && takeAiBudget(ws.user!.id, "operator");
+      if (question.length > 0 && !isGuest && !operatorAllowed) {
+        send(ws, {
+          type: "chat:rejected",
+          roomId,
+          reason: "The Operator has answered all your questions for today. Try again tomorrow.",
+        });
+      }
+      if (operatorAllowed) {
         (async () => {
           try {
             const ai = await getAI();
@@ -335,7 +361,8 @@ export async function handleChat(ws: any, msg: any, opts: Opts): Promise<void> {
     const msgId = String(msg.msgId || "");
     const newBody = String(msg.body || "").trim();
     if (!rId || !msgId || !newBody) return;
-    const room = await ensureRoomLoaded(rId);
+    const room = await loadExistingRoom(rId);
+    if (!room) return;
     if (room.banned.has(ws.user.id)) return;
     const target = room.msgs.find((m: any) => m.id === msgId);
     if (!target) return;
@@ -343,6 +370,23 @@ export async function handleChat(ws: any, msg: any, opts: Opts): Promise<void> {
     if (target.user.id !== ws.user.id) return;
     if (target.body === newBody) return;
     if (Date.now() - target.ts > 15 * 60 * 1000) return;
+    // An edit is broadcast to the whole room just like a send, so it gets the
+    // same size cap and counts against the same rate limit (audit 2026-09-26:
+    // 40 edits of ~200KB fanned out in 2.5s).
+    if (newBody.length > CHAT_BODY_MAX) {
+      send(ws, { type: "chat:rejected", roomId: rId, reason: CHAT_TOO_LONG });
+      return;
+    }
+    const editRate = checkChatRateLimit(ws.user.id);
+    if (!editRate.ok) {
+      send(ws, {
+        type: "chat:rejected",
+        roomId: rId,
+        reason: editRate.reason,
+        retryInMs: editRate.retryInMs,
+      });
+      return;
+    }
     target.body = newBody;
     const editedAt = Date.now();
     target.editedAt = editedAt;
@@ -362,7 +406,8 @@ export async function handleChat(ws: any, msg: any, opts: Opts): Promise<void> {
     const rId = normalizeRoomId(String(msg.roomId || ""));
     const msgId = String(msg.msgId || "");
     if (!rId || !msgId) return;
-    const room = await ensureRoomLoaded(rId);
+    const room = await loadExistingRoom(rId);
+    if (!room) return;
     const target = room.msgs.find((m: any) => m.id === msgId);
     if (!target) return;
     if (target.deletedAt) return;
@@ -911,12 +956,12 @@ export async function handleReactionToggle(
   msg: any,
   opts: {
     normalizeRoomId: (input: string) => string;
-    ensureRoomLoaded: (roomId: string) => Promise<any>;
+    loadExistingRoom: (roomId: string) => Promise<any | null>;
     send: (ws: any, msg: any) => void;
     broadcast: (room: any, msg: any) => void;
   },
 ): Promise<void> {
-  const { normalizeRoomId, ensureRoomLoaded, send, broadcast } = opts;
+  const { normalizeRoomId, loadExistingRoom, send, broadcast } = opts;
 
   if (msg.type === "reaction:toggle") {
     const rId = normalizeRoomId(String(msg.roomId || ""));
@@ -925,7 +970,8 @@ export async function handleReactionToggle(
       .trim()
       .slice(0, 12);
     if (!rId || !msgId || !emoji) return;
-    const room = await ensureRoomLoaded(rId);
+    const room = await loadExistingRoom(rId);
+    if (!room) return;
     if (room.banned.has(ws.user.id)) return;
     if (!room.users.has(ws.user.id)) return;
     const target = room.msgs.find((m: any) => m.id === msgId);

@@ -22,12 +22,13 @@
  */
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
-import { fetchWithTimeout } from "../lib/fetchWithTimeout";
+import { fetchSafe } from "../lib/ssrfGuard";
 import { swallow } from "../lib/logger";
 import { hasLobbyPerm } from "../lib/lobbyPerms";
 import { logLobbyAudit } from "../lib/lobbyAudit";
 
 const CACHE_MS = 20_000;
+const FETCH_MS = 8_000;
 const MAX_SERVERS = 12; // a community board, not a global scraper
 const UA = "Weered/1.0 (+https://weered.ca; community server board; contact: legal@weered.ca)";
 
@@ -65,13 +66,24 @@ const SESSION_LABELS: Record<number, string> = {
  *  configures these, but an admin should not be able to turn the board into a
  *  probe of the host's own network. */
 export function isPublicHost(host: string): boolean {
-  const h = String(host || "")
+  const raw = String(host || "")
     .trim()
     .toLowerCase();
-  if (!h || h.length > 253) return false;
+  if (!raw || raw.length > 253) return false;
+  if (raw === "::1" || raw.startsWith("[")) return false;
+  if (!/^[a-z0-9.-]+$/.test(raw)) return false;
+  // Judge the host a fetch would really dial. The URL parser reads numeric
+  // spellings as IPv4, so "2130706433", "0177.0.0.1" and "0x7f.1" are all
+  // 127.0.0.1; each passed the old dotted-quad-only screen (found 2026-09-26).
+  // A name that RESOLVES inward is caught at fetch time by fetchSafe.
+  let h: string;
+  try {
+    h = new URL(`http://${raw}/`).hostname;
+  } catch {
+    return false;
+  }
+  if (h.endsWith(".")) h = h.slice(0, -1);
   if (h === "localhost" || h.endsWith(".localhost") || h.endsWith(".local")) return false;
-  if (h === "::1" || h.startsWith("[")) return false;
-  if (!/^[a-z0-9.-]+$/.test(h)) return false;
 
   const v4 = h.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
   if (v4) {
@@ -278,9 +290,14 @@ async function pollServer(s: Configured): Promise<AcServer> {
   };
 
   try {
-    const r = await fetchWithTimeout(`${base}/INFO`, {
-      headers: { "User-Agent": UA, Accept: "application/json" },
-    });
+    // fetchSafe resolves the name and re-checks every redirect hop, so neither a
+    // host that resolves inward nor a public /INFO that answers 302 can walk the
+    // poller into the droplet's own network.
+    const r = await fetchSafe(
+      `${base}/INFO`,
+      { headers: { "User-Agent": UA, Accept: "application/json" } },
+      FETCH_MS,
+    );
     if (!r.ok) return shell;
     const j: any = await r.json();
     shell.online = true;
@@ -304,9 +321,11 @@ async function pollServer(s: Configured): Promise<AcServer> {
   // The grid. Only worth a second request when someone is actually on track.
   if (shell.clients > 0) {
     try {
-      const r2 = await fetchWithTimeout(`${base}/JSON%7C-1`, {
-        headers: { "User-Agent": UA, Accept: "application/json" },
-      });
+      const r2 = await fetchSafe(
+        `${base}/JSON%7C-1`,
+        { headers: { "User-Agent": UA, Accept: "application/json" } },
+        FETCH_MS,
+      );
       if (r2.ok) {
         const j2: any = await r2.json();
         const cars = Array.isArray(j2?.Cars) ? j2.Cars : [];

@@ -1,6 +1,7 @@
 import { Metadata } from "next";
 import Link from "next/link";
 import MarketingHeader from "../../../components/MarketingHeader";
+import { safeJsonLd } from "@/lib/jsonLd";
 
 const TITLE = "Play chess with your crew: Lichess + Chess.com integration on Weered";
 const DESC =
@@ -63,10 +64,7 @@ const faqLd = {
 export default function PlayChessPage() {
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLd) }}
-      />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(faqLd) }} />
       <MarketingHeader ctaHref="/lobby/chess" ctaLabel="Open the Chess Lobby" />
 
       <main className="mkt">

@@ -3,6 +3,7 @@ import { log, swallow } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 import { fetchWithTimeout } from "../lib/fetchWithTimeout";
 import { prisma } from "../lib/prisma";
+import { setTradableSymbols } from "../lib/binanceFeed";
 import { z } from "zod";
 
 type Opts = {
@@ -114,6 +115,7 @@ export default async function tradingRoutes(app: FastifyInstance, opts: Opts) {
     { symbol: "EURGBP", name: "EUR/GBP", icon: "€£", assetClass: "fx", comingSoon: true },
     { symbol: "XAUUSD", name: "Gold", icon: "Au", assetClass: "metal", comingSoon: true },
   ];
+  setTradableSymbols(TRADING_SYMBOLS.filter((s) => !s.comingSoon).map((s) => s.symbol));
 
   app.get("/trading/symbols", async (_req, reply) => {
     const out = TRADING_SYMBOLS.map((s) => ({

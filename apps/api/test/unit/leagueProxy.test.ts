@@ -51,4 +51,32 @@ describe("league (RIOT) proxy - key gate + lookup chain", () => {
     expect(r.json()).toMatchObject({ ok: false, error: "summoner_not_found" });
     await app.close();
   });
+
+  // Found 2026-09-26: ?region= was pasted into the hostname, so
+  // region=attacker.example/x? sent the X-Riot-Token header to attacker.example.
+  it("never sends the key off Riot's hosts, whatever ?region= says", async () => {
+    process.env.RIOT_API_KEY = "RGAPI-test";
+    const hosts = new Set<string>();
+    stub((url) => {
+      hosts.add(new URL(url).host);
+      return { status: 404, ok: false, json: async () => ({}) };
+    });
+    const app = await makeApp();
+    for (const region of [
+      "attacker.example%2Fx%3F",
+      "attacker.example%23",
+      "10.0.0.1%3A8443%2F%3F",
+    ]) {
+      await app.inject({ method: "GET", url: `/league/rotation?region=${region}` });
+      await app.inject({ method: "GET", url: `/league/leaderboard?region=${region}` });
+      await app.inject({ method: "GET", url: `/league/live/p1?region=${region}` });
+    }
+    await app.inject({ method: "GET", url: "/league/rotation?region=euw1" });
+    for (const h of hosts) {
+      expect(h.endsWith(".api.riotgames.com") || h === "ddragon.leagueoflegends.com", h).toBe(true);
+    }
+    expect(hosts.has("na1.api.riotgames.com")).toBe(true); // bad values fall back
+    expect(hosts.has("euw1.api.riotgames.com")).toBe(true); // real ones still work
+    await app.close();
+  });
 });

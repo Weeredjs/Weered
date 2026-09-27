@@ -66,6 +66,25 @@ export function handleCanvas(ws: any, msg: any, opts: Opts): boolean {
   return false;
 }
 
+// The relay forwards a whole frame to everyone else in the room, so it was a
+// traffic amplifier: 40 dnd:roll frames carrying 200KB of junk each reached
+// every occupant in 2.5s (audit 2026-09-26). A real frame (an initiative list,
+// a token move) is a few KB, and people click, they do not stream.
+export const RELAY_MAX_CHARS = 32_768;
+const RELAY_WINDOW_MS = 2_000;
+const RELAY_MAX_PER_WINDOW = 20;
+
+function relayAllowed(ws: any): boolean {
+  const now = Date.now();
+  const w = (ws._relayWindow ||= { start: now, n: 0 });
+  if (now - w.start > RELAY_WINDOW_MS) {
+    w.start = now;
+    w.n = 0;
+  }
+  w.n++;
+  return w.n <= RELAY_MAX_PER_WINDOW;
+}
+
 export function handleCanvasRelay(
   ws: any,
   msg: any,
@@ -83,6 +102,8 @@ export function handleCanvasRelay(
   ) {
     const { room, roomId } = snap;
     if (!room.users.has(ws.user.id)) return true;
+    if (!relayAllowed(ws)) return true;
+    if (JSON.stringify(msg).length > RELAY_MAX_CHARS) return true;
     for (const s of room.sockets) {
       if (s === ws) continue;
       opts.send(s, { ...msg, roomId, _from: ws.user.id });

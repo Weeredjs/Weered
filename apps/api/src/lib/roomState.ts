@@ -2,6 +2,7 @@ import { WebSocket, WebSocketServer } from "ws";
 import { prisma } from "./prisma";
 import { displayName, resolveUserProfiles, namesOf } from "./userNames";
 import { swallow } from "./logger";
+import { isOfficeRoom } from "./officeRooms";
 import { randomUUID } from "node:crypto";
 import { type ReactionAgg } from "./chatHelpers";
 
@@ -191,8 +192,14 @@ export function makeEmptyRoom(roomId: string): RoomState {
   };
 }
 
+/** Real room ids are slugs and cuids, well under this. An id is also a Room row
+ *  and an entry in every rooms:list reply, so an unbounded one (the audit sent
+ *  ~250KB) is refused: callers treat "" as no room. */
+export const ROOM_ID_MAX = 128;
+
 export function normalizeRoomId(input: string): string {
   let s = String(input || "").trim();
+  if (s.length > ROOM_ID_MAX * 3) return ""; // even fully %-encoded, too long
   for (let i = 0; i < 3; i++) {
     if (s.indexOf("%") === -1) break;
     try {
@@ -203,7 +210,23 @@ export function normalizeRoomId(input: string): string {
       break;
     }
   }
-  return s;
+  return s.length > ROOM_ID_MAX ? "" : s;
+}
+
+/**
+ * The room, loaded, if it already exists; null if it does not. Unlike
+ * ensureRoomLoaded this never creates a Room row, so it is what message
+ * handlers use: only a join may bring a new room into being.
+ */
+export async function loadExistingRoom(roomId: string): Promise<RoomState | null> {
+  roomId = normalizeRoomId(roomId);
+  if (!roomId) return null;
+  const cached = rooms.get(roomId);
+  if (cached) return cached;
+  const row = await prisma.room
+    .findUnique({ where: { id: roomId }, select: { id: true } })
+    .catch(() => null);
+  return row ? ensureRoomLoaded(roomId) : null;
 }
 
 export async function ensureRoomLoaded(roomId: string): Promise<RoomState> {
@@ -373,7 +396,7 @@ export async function ensureRoomLoaded(roomId: string): Promise<RoomState> {
   // in — IS the privacy boundary for presented plans; an unlocked office lets a
   // scoped guest walk straight into another client's meeting. The original foyer
   // host flow re-locked per session; the wormhole path must not depend on that.
-  if (roomId.startsWith("mtg-") && !roomId.endsWith("-foyer") && !r.locked) {
+  if (isOfficeRoom(roomId) && !roomId.endsWith("-foyer") && !r.locked) {
     r.locked = true;
     try {
       await prisma.room.update({ where: { id: roomId }, data: { locked: true } });

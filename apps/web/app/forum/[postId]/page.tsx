@@ -1,5 +1,6 @@
 import { Metadata } from "next";
 import PostDetail from "../../../components/forum/PostDetail";
+import { safeJsonLd } from "@/lib/jsonLd";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "https://api.weered.ca";
 const SITE = "https://weered.ca";
@@ -89,12 +90,12 @@ export default async function ForumPostPage(props: { params: Promise<{ postId: s
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumb) }}
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(breadcrumb) }}
       />
       {posting && (
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(posting) }}
+          dangerouslySetInnerHTML={{ __html: safeJsonLd(posting) }}
         />
       )}
       <PostDetail postId={params.postId} />

@@ -127,8 +127,21 @@ export default async function mcRoutes(app: FastifyInstance, opts: Opts) {
         return reply.code(400).send({ ok: false, error: "code_expired" });
       }
 
-      if (!row.consumedAt || !row.token || !row.userId) {
+      if (!row.consumedAt || !row.userId) {
         return reply.send({ ok: true, confirmed: false });
+      }
+
+      // The token goes out once. Polling needs no auth (the mod has no session),
+      // so anyone who saw the code on screen could collect the same token for
+      // the code's whole five minutes (audit 2026-09-27). Clearing it here,
+      // atomically, means only the first poll after confirm (normally the mod's
+      // own) receives it; the credential itself lives on the game account.
+      const taken = await prisma.mcPairingCode.updateMany({
+        where: { code, token: { not: null } },
+        data: { token: null },
+      });
+      if (taken.count !== 1 || !row.token) {
+        return reply.code(410).send({ ok: false, error: "already_delivered" });
       }
 
       const user = await prisma.user.findUnique({

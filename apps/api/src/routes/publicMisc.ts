@@ -1,4 +1,5 @@
 import { log } from "../lib/logger";
+import { publicModuleConfig } from "../lib/publicModuleConfig";
 import type { FastifyInstance } from "fastify";
 import { fetchWithTimeout } from "../lib/fetchWithTimeout";
 import { prisma } from "../lib/prisma";
@@ -39,7 +40,10 @@ export default async function publicMiscRoutes(app: FastifyInstance, opts: Opts)
         },
         orderBy: { name: "asc" },
       });
-      return reply.send({ ok: true, lobby: applyWindroseReel(fallback), source: "fallback" });
+      const shown = fallback
+        ? { ...fallback, moduleConfig: publicModuleConfig(fallback.moduleConfig) as any }
+        : fallback;
+      return reply.send({ ok: true, lobby: applyWindroseReel(shown), source: "fallback" });
     }
 
     const lobby = await prisma.lobby.findUnique({
@@ -65,7 +69,8 @@ export default async function publicMiscRoutes(app: FastifyInstance, opts: Opts)
       return reply.send({ ok: true, lobby: null, source: "missing" });
     }
 
-    return reply.send({ ok: true, lobby: applyWindroseReel(lobby), source: "config" });
+    const shown = { ...lobby, moduleConfig: publicModuleConfig(lobby.moduleConfig) as any };
+    return reply.send({ ok: true, lobby: applyWindroseReel(shown), source: "config" });
   });
 
   app.get("/feed/hot", async (req, reply) => {

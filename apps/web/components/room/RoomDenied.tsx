@@ -20,14 +20,28 @@ export default function RoomDenied({ roomIds }: { roomIds: string[] }) {
   const gated = info.reason === "level_required";
   const staff = gated && Number(info.minLevel) >= 4;
 
-  const title = gated ? (staff ? "Staff only" : "Members only") : "Entry denied";
+  const removed = info.reason === "lobby_banned" || info.reason === "lobby_kicked";
+
+  const title = gated
+    ? staff
+      ? "Staff only"
+      : "Members only"
+    : removed
+      ? "Removed from this community"
+      : "Entry denied";
   const body = gated
     ? staff
       ? `This room is for ${lobby}'s staff.`
       : `This room opens once ${lobby}'s staff give you access.`
-    : info.reason === "private_meeting"
-      ? "This is a private meeting room."
-      : "A moderator declined your request";
+    : info.reason === "lobby_banned"
+      ? `${lobby}'s staff have banned you from its rooms.`
+      : info.reason === "lobby_kicked"
+        ? `${lobby}'s staff removed you from the community.`
+        : info.reason === "private_meeting"
+          ? "This is a private meeting room."
+          : info.reason === "rate_limited"
+            ? "You've opened a lot of new rooms in the last hour. Try again in a little while."
+            : "A moderator declined your request";
 
   return (
     <div

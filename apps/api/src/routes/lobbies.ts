@@ -1,10 +1,10 @@
 import { log, swallow } from "../lib/logger";
+import { publicModuleConfig } from "../lib/publicModuleConfig";
 import { logLobbyAudit } from "../lib/lobbyAudit";
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
 import { z } from "zod";
 import { LobbyRole } from "@prisma/client";
-import { isAIAvailable, OPERATOR_PRESENCE } from "../lib/roomState";
 import { lastMessageMap } from "../lib/roomRecency";
 import {
   DEFAULT_ROLE_NAMES,
@@ -13,6 +13,8 @@ import {
   cleanRoleIcons,
 } from "../lib/lobbyRoles";
 import { LEVEL_PERMS, hasLobbyPerm } from "../lib/lobbyPerms";
+import { evictFromLobbyRooms } from "../lib/lobbyEviction";
+import { registerLobbyPresence } from "./lobbyPresence";
 
 import { touchLobbyViewer } from "../lib/lobbyViewers";
 
@@ -131,22 +133,24 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
     async (req, reply) => {
       const u = authFromHeader((req as any).headers?.authorization);
       if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+      // Staff only (audit 2026-09-27). Any signed-in user could claim any lobby
+      // with no owner (43 of 53 in production) and get level 5 plus a verified
+      // badge: room creation, guest invites, CRCON linking and gated rooms. The
+      // Magic lobby "mtg" was the way into the ECEB consult rooms. No client
+      // calls this; handing a community to its leader is a staff action.
+      if (!canAccessStaff(await getGlobalRole(u.id)))
+        return reply.code(403).send({ ok: false, error: "staff_only" });
       const lobbyId = String((req as any).params?.lobbyId || "");
       const lobby = await prisma.lobby.findUnique({ where: { id: lobbyId } });
       if (!lobby) return reply.code(404).send({ ok: false, error: "lobby_not_found" });
-      if (lobby.ownerId && lobby.ownerId !== u.id) {
-        const actorRole = await getGlobalRole(u.id);
-        if (!canAccessStaff(actorRole))
-          return reply.code(403).send({ ok: false, error: "already_claimed" });
-      }
       await prisma.lobby.update({
         where: { id: lobbyId },
         data: { ownerId: u.id, verified: true },
       });
       await prisma.lobbyMember.upsert({
         where: { lobbyId_userId: { lobbyId, userId: u.id } },
-        update: { role: LobbyRole.OWNER },
-        create: { lobbyId, userId: u.id, name: u.name, role: LobbyRole.OWNER },
+        update: { role: LobbyRole.OWNER, roleLevel: 5 },
+        create: { lobbyId, userId: u.id, name: u.name, role: LobbyRole.OWNER, roleLevel: 5 },
       });
       return reply.send({ ok: true, lobbyId, claimed: true });
     },
@@ -318,6 +322,7 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
       // an unconfigured lobby stays visually exactly as it was.
       lobby: applyWindroseReel({
         ...lobby,
+        moduleConfig: publicModuleConfig(lobby.moduleConfig) as any,
         roleNames: lobby.roleNames || DEFAULT_ROLE_NAMES,
         roleIcons: lobby.roleIcons || DEFAULT_ROLE_ICONS,
         rooms: enrichedRooms,
@@ -685,6 +690,30 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
 
       const shouldPin = isStaff ? Boolean(pinned) : false;
 
+      // POST /lobbies CREATES. It used to be an upsert whose update branch never
+      // checked ownership, so any paid user could rewrite ANY existing lobby's
+      // name, branding, moduleType and moduleConfig by posting its id — and a
+      // one-line body reset a client demo lobby to moduleType NONE. Editing an
+      // existing lobby goes through the admin routes, which check the caller's
+      // level. Staff keep the upsert (seeding and ops tools use it). The only web
+      // caller is app/lobby/create, which checks the slug is free first.
+      if (!isStaff) {
+        const existing = await prisma.lobby.findUnique({
+          where: { id: String(id) },
+          select: { id: true },
+        });
+        if (existing)
+          return reply.code(409).send({
+            ok: false,
+            error: "lobby_exists",
+            message: "A lobby with that id already exists.",
+          });
+      }
+      // moduleConfig drives server-side behaviour (workers, integrations, the
+      // virtual-airline Dispatch voice), so only staff set it through here. The
+      // create page never sends it.
+      const safeModuleConfig = isStaff ? moduleConfig : undefined;
+
       const lobby = await prisma.lobby.upsert({
         where: { id: String(id) },
         update: {
@@ -692,7 +721,7 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
           description: String(description),
           pinned: shouldPin,
           moduleType,
-          moduleConfig: moduleConfig ?? undefined,
+          moduleConfig: safeModuleConfig ?? undefined,
           keywords: Array.isArray(keywords) ? keywords.map(String) : [],
           accentColor: accentColor ?? null,
           logoUrl: logoUrl ?? null,
@@ -707,7 +736,7 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
           verified: true,
           ownerId: u.id,
           moduleType,
-          moduleConfig: moduleConfig ?? undefined,
+          moduleConfig: safeModuleConfig ?? undefined,
           keywords: Array.isArray(keywords) ? keywords.map(String) : [],
           accentColor: accentColor ?? null,
           logoUrl: logoUrl ?? null,
@@ -715,59 +744,30 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
           websiteUrl: websiteUrl ?? null,
         },
       });
+      // The creator is the owner: give them the level-5 membership every admin
+      // route checks. Without this row lobbyAdminAccess() 403'd a non-staff owner
+      // out of their own lobby's admin (it reads LobbyMember.roleLevel only).
+      if (lobby.ownerId === u.id)
+        await prisma.lobbyMember
+          .upsert({
+            where: { lobbyId_userId: { lobbyId: lobby.id, userId: u.id } },
+            update: { roleLevel: 5, role: "OWNER" },
+            create: {
+              lobbyId: lobby.id,
+              userId: u.id,
+              name: u.name || "",
+              roleLevel: 5,
+              role: "OWNER",
+            },
+          })
+          .catch(swallow);
       awardNotoriety(u.id, "LOBBY_CREATED").catch(swallow);
       return reply.send({ ok: true, lobby });
     },
   );
 
-  app.get("/lobbies/:lobbyId/presence", async (req, reply) => {
-    const lobbyId = String((req as any).params?.lobbyId || "");
-    if (!lobbyId) return reply.code(400).send({ ok: false, error: "missing lobbyId" });
-
-    const seen = new Map<string, any>();
-    for (const [, room] of rooms) {
-      if (room.lobbyId !== lobbyId) continue;
-      for (const [uid, u] of room.users) {
-        if (!seen.has(uid)) {
-          seen.set(uid, {
-            id: uid,
-            name: u.name,
-            role: u.role,
-            // Rank in this lobby (1..5) — the client turns it into a title and
-            // icon via the lobby's roleNames/roleIcons.
-            lobbyRoleLevel: u.lobbyRoleLevel ?? null,
-            globalRole: u.globalRole,
-            tier: u.tier,
-            avatarColor: u.avatarColor,
-            avatar: u.avatar,
-            isAway: Boolean(u.isAway),
-            steamId: u.steamId,
-            twitchLogin: u.twitchLogin,
-            xboxGamertag: u.xboxGamertag,
-            livePresence: u.livePresence ?? null,
-            pillBgColor: u.pillBgColor ?? null,
-            pillAccentColor: u.pillAccentColor ?? null,
-            statusText: u.statusText ?? null,
-            statusEmoji: u.statusEmoji ?? null,
-            nameEffect: u.nameEffect ?? null,
-            avatarFrame: u.avatarFrame ?? null,
-            roomId: room.roomId,
-            roomName: room.name || room.roomId,
-          });
-        }
-      }
-    }
-
-    const users = Array.from(seen.values());
-    // The Operator (AI) is an always-on presence — matches the WS presence:state,
-    // so anon viewers see it too and the lobby never reads as fully empty.
-    if (isAIAvailable() && !seen.has("operator")) {
-      users.push({ ...OPERATOR_PRESENCE, isAway: false });
-    }
-    // `count` included for consumers that only need the headline number
-    // (home/page.tsx reads it; omitting it silently zeroed home live counts).
-    return reply.send({ ok: true, count: users.length, users });
-  });
+  // GET /lobbies/:lobbyId/presence lives in routes/lobbyPresence.ts.
+  registerLobbyPresence(app, { authFromHeader, getGlobalRole, canAccessStaff, rooms });
 
   app.get("/lobbies/:lobbyId/presence/:userId/game-card", async (req, reply) => {
     const token = String((req.headers.authorization || "").replace("Bearer ", "").trim());
@@ -849,6 +849,10 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
     const roleNames = lobby.roleNames || DEFAULT_ROLE_NAMES;
     const roleIcons = lobby.roleIcons || DEFAULT_ROLE_ICONS;
     const myLevel = overrideRole ? 5 : (member?.roleLevel ?? 1);
+    // Below Moderator (3) the panel is a read-only roster: members and rooms,
+    // not moderation history, ban reasons, the join password, the word filters
+    // or private module config. At vOCN level 2 is every pilot (audit 2026-09-27).
+    const canModerate = myLevel >= 3;
 
     return reply.send({
       ok: true,
@@ -859,7 +863,7 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
         verified: lobby.verified,
         pinned: lobby.pinned,
         moduleType: lobby.moduleType,
-        moduleConfig: lobby.moduleConfig,
+        moduleConfig: canModerate ? lobby.moduleConfig : publicModuleConfig(lobby.moduleConfig),
         accentColor: lobby.accentColor,
         logoUrl: lobby.logoUrl,
         bannerUrl: lobby.bannerUrl,
@@ -869,9 +873,9 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
         roleNames,
         roleIcons,
         joinMode: lobby.joinMode || "OPEN",
-        joinPassword: lobby.joinPassword || null,
-        blockedWords: lobby.blockedWords || [],
-        blockedDomains: lobby.blockedDomains || [],
+        joinPassword: canModerate ? lobby.joinPassword || null : null,
+        blockedWords: canModerate ? lobby.blockedWords || [] : [],
+        blockedDomains: canModerate ? lobby.blockedDomains || [] : [],
         newAccountChatHours: lobby.newAccountChatHours ?? 0,
       },
       members,
@@ -883,8 +887,8 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
         onlineCount: rooms.get(r.id)?.users.size ?? 0,
         memberCount: r._count?.members ?? 0,
       })),
-      audit: auditList,
-      bans: banList,
+      audit: canModerate ? auditList : [],
+      bans: canModerate ? banList : [],
       myLevel,
       overrideRole,
       globalRole: String(globalRole),
@@ -1188,6 +1192,15 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
         targetId: targetUserId,
         note: `level ${newLevel}`,
       });
+      // A demotion takes effect in rooms they are already in, not just at next join.
+      evictFromLobbyRooms({
+        rooms,
+        send,
+        lobbyId: ctx.lobby.id,
+        userId: targetUserId,
+        allowedLevel: newLevel,
+        reason: "level_required",
+      });
       return reply.send({ ok: true, userId: targetUserId, roleLevel: newLevel });
     },
   );
@@ -1224,6 +1237,15 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
         targetId: targetUserId,
         note: target.name,
       });
+      // Out of the lobby means out of its rooms NOW, including their voice calls.
+      evictFromLobbyRooms({
+        rooms,
+        send,
+        lobbyId: ctx.lobby.id,
+        userId: targetUserId,
+        allowedLevel: null,
+        reason: "lobby_kicked",
+      });
       return reply.send({ ok: true });
     },
   );
@@ -1245,6 +1267,20 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
       const targetUserId = String((req as any).params?.userId || "");
       const body: any = (req as any).body || {};
       const reason = typeof body.reason === "string" ? body.reason.slice(0, 200) : "";
+      // The same peer rule kick has. Ban had none, so a level-3 moderator could
+      // ban the level-5 owner out of their own lobby (found 2026-09-26).
+      if (!ctx.overrideRole) {
+        if (targetUserId === ctx.user.id)
+          return reply.code(403).send({ ok: false, error: "cannot_ban_self" });
+        if (ctx.lobby.ownerId === targetUserId)
+          return reply.code(403).send({ ok: false, error: "cannot_ban_owner" });
+        const target = await prisma.lobbyMember.findUnique({
+          where: { lobbyId_userId: { lobbyId: ctx.lobby.id, userId: targetUserId } },
+          select: { roleLevel: true },
+        });
+        if (target && (target.roleLevel ?? 1) >= myLevel)
+          return reply.code(403).send({ ok: false, error: "cannot_ban_peer_or_above" });
+      }
       await prisma.lobbyMember.deleteMany({
         where: { lobbyId: ctx.lobby.id, userId: targetUserId },
       });
@@ -1260,6 +1296,14 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
         actorName: ctx.user.name,
         targetId: targetUserId,
         note: reason || undefined,
+      });
+      evictFromLobbyRooms({
+        rooms,
+        send,
+        lobbyId: ctx.lobby.id,
+        userId: targetUserId,
+        allowedLevel: null,
+        reason: "lobby_banned",
       });
       return reply.send({ ok: true });
     },

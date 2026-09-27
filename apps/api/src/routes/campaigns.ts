@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
+import { mayStartCampaign, roomIfEnterable } from "../lib/roomAccess";
 
 type Opts = {
   authFromHeader: (h?: string) => { id: string; name: string } | null;
@@ -12,6 +13,22 @@ async function getCampaignByRoom(roomId: string) {
 
 export default async function campaignsRoutes(app: FastifyInstance, opts: Opts) {
   const { authFromHeader, broadcastToLobby } = opts;
+
+  // Every route here acts on a room, and none checked that the caller could be
+  // in it: the 2026-09-26 audit read other rooms' ledgers, notes and threads,
+  // and seized DM in vocn-training, as a stranger. This hook gives every route
+  // the room's own entry rules (gate + lobby ban). It is scoped to this plugin,
+  // which index.ts mounts with app.register.
+  app.addHook("preHandler", async (req, reply) => {
+    const roomId = String((req.params as any)?.roomId || "");
+    if (!roomId) return;
+    const u = authFromHeader((req.headers as any).authorization);
+    if (!u) return; // each route answers 401 itself
+    const exists = await prisma.room.findUnique({ where: { id: roomId }, select: { id: true } });
+    if (!exists) return; // nothing to protect; the routes answer no_campaign
+    if (!(await roomIfEnterable(roomId, u)))
+      return reply.code(403).send({ ok: false, error: "room_forbidden" });
+  });
 
   app.get("/rooms/:roomId/campaign", async (req, reply) => {
     const u = authFromHeader((req.headers as any).authorization);
@@ -35,8 +52,14 @@ export default async function campaignsRoutes(app: FastifyInstance, opts: Opts) 
       .trim()
       .slice(0, 120);
     if (!name) return reply.code(400).send({ ok: false, error: "name_required" });
-    const room = await prisma.room.findUnique({ where: { id: roomId } });
+    const room = await roomIfEnterable(roomId, u);
     if (!room) return reply.code(404).send({ ok: false, error: "room_not_found" });
+    if (!(await mayStartCampaign(room, u.id)))
+      return reply.code(403).send({
+        ok: false,
+        error: "not_allowed",
+        message: "Only this room's owner or its community's moderators can start a campaign here.",
+      });
     const existing = await getCampaignByRoom(roomId);
     if (existing)
       return reply.code(409).send({ ok: false, error: "campaign_exists", campaign: existing });
