@@ -1,6 +1,8 @@
 "use client";
 import { useState } from "react";
 import { LEVEL_COLORS, LobbyData, S, apiFetch } from "./shared";
+import RoleGlyph, { isRoleIconPath } from "@/components/RoleGlyph";
+import { VOCN_BADGE_ICONS, VOCN_LOBBY_ID } from "@/lib/vocnCopy";
 
 export const DEFAULT_ROLE_NAMES: Record<string, string> = {
   "5": "Owner",
@@ -45,6 +47,13 @@ export function RolesTab({ lobby, onRefresh }: { lobby: LobbyData; onRefresh: ()
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState("");
   const [pickerFor, setPickerFor] = useState<string | null>(null);
+  // Image icons one click away: this lobby's own, plus vOCN's full badge set.
+  const imageChoices = Array.from(
+    new Set([
+      ...(lobby.id === VOCN_LOBBY_ID ? VOCN_BADGE_ICONS : []),
+      ...Object.values(lobby.roleIcons || {}).filter(isRoleIconPath),
+    ]),
+  );
 
   async function save() {
     setSaving(true);
@@ -110,7 +119,7 @@ export function RolesTab({ lobby, onRefresh }: { lobby: LobbyData; onRefresh: ()
                     color: "rgba(243,244,246,.9)",
                   }}
                 >
-                  {icons[String(lvl)] || "+"}
+                  {icons[String(lvl)] ? <RoleGlyph icon={icons[String(lvl)]} size={22} /> : "+"}
                 </button>
               </div>
 
@@ -149,9 +158,40 @@ export function RolesTab({ lobby, onRefresh }: { lobby: LobbyData; onRefresh: ()
                       {ic}
                     </button>
                   ))}
+                  {imageChoices.map((ic) => (
+                    <button
+                      key={ic}
+                      type="button"
+                      title={ic
+                        .split("/")
+                        .pop()
+                        ?.replace(/[.](svg|png|webp)$/, "")
+                        .replace(/-/g, " ")}
+                      onClick={() => {
+                        setIcons((prev) => ({ ...prev, [String(lvl)]: ic }));
+                        setPickerFor(null);
+                      }}
+                      style={{
+                        width: 30,
+                        height: 30,
+                        borderRadius: 6,
+                        cursor: "pointer",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        border:
+                          icons[String(lvl)] === ic
+                            ? `1px solid ${c.color}`
+                            : "1px solid rgba(255,255,255,.10)",
+                        background: "rgba(255,255,255,.04)",
+                      }}
+                    >
+                      <RoleGlyph icon={ic} size={20} />
+                    </button>
+                  ))}
                   <input
                     style={{ ...S.input, background: "rgba(0,0,0,.3)", width: 80, fontSize: 13 }}
-                    value={icons[String(lvl)] || ""}
+                    value={isRoleIconPath(icons[String(lvl)]) ? "" : icons[String(lvl)] || ""}
                     onChange={(e) =>
                       setIcons((prev) => ({ ...prev, [String(lvl)]: e.target.value.slice(0, 8) }))
                     }

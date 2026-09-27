@@ -103,7 +103,7 @@ export default function VaHub({
           borderRadius: 18,
           border: `1px solid ${VA.line}`,
           minHeight: 190,
-          background: `linear-gradient(90deg, rgba(0,12,29,.96) 18%, rgba(0,12,29,.2) 70%), url(/brand/vocn/cockpit-gate.webp) 50% 38%/cover`,
+          background: `linear-gradient(90deg, rgba(0,12,29,.96) 18%, rgba(0,12,29,.2) 70%) no-repeat padding-box, url(/brand/vocn/cockpit-gate.webp) 50% 38%/cover no-repeat padding-box`,
           padding: "26px 26px 22px",
           display: "flex",
           flexDirection: "column",

@@ -65,7 +65,7 @@ export default function VaJoin({ hub, publicLinks }: { hub: Hub; publicLinks: Va
           overflow: "hidden",
           minHeight: 300,
           border: `1px solid ${VA.line}`,
-          background: `linear-gradient(90deg, rgba(0,12,29,.97) 20%, rgba(0,12,29,.35) 75%), url(/brand/vocn/rooms/arrivals-banner.webp) center/cover`,
+          background: `linear-gradient(90deg, rgba(0,12,29,.97) 20%, rgba(0,12,29,.35) 75%) no-repeat padding-box, url(/brand/vocn/rooms/arrivals-banner.webp) center/cover no-repeat padding-box`,
           padding: "34px 30px",
           display: "flex",
           flexDirection: "column",

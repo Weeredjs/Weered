@@ -40,6 +40,7 @@ export const VALID_ROOM_MODULES = [
   "gta",
   "eve",
   "assetto",
+  "va",
 ] as const;
 
 export function isValidRoomModule(m: string): boolean {

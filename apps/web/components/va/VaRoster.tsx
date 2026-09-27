@@ -351,7 +351,7 @@ export function VaPilotSheet({
                 position: "relative",
                 padding: "26px 24px 20px",
                 background:
-                  "linear-gradient(180deg, rgba(0,12,29,.35), rgba(0,12,29,.95)), url(/brand/vocn/rooms/flightdeck-banner.webp) center/cover",
+                  "linear-gradient(180deg, rgba(0,12,29,.35), rgba(0,12,29,.95)) no-repeat padding-box, url(/brand/vocn/rooms/flightdeck-banner.webp) center/cover no-repeat padding-box",
                 borderBottom: `1px solid ${VA.line}`,
               }}
             >

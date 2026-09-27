@@ -1,6 +1,7 @@
 "use client";
 
 import { avatarBg } from "../../lib/avatarColor";
+import VocnTabLogo from "./VocnTabLogo";
 
 export type RoomTab = "chat" | "media" | "activity" | "details";
 
@@ -57,6 +58,8 @@ function getAccent(id: string): string {
       // Neutral slate (not blue): the browser tab shouldn't read as a branded
       // color the way twitch/youtube do. Muted grey, of the rails' family.
       return "#94a3b8";
+    case "va":
+      return "#FFCD00";
     default:
       return "#5800E5";
   }
@@ -457,6 +460,9 @@ export default function RoomHeader({
                   type="button"
                   disabled={!m.live}
                   onClick={() => m.live && onPillClick?.(m.id)}
+                  className={m.icon === "__vocn__" ? "weered-tab-vocn" : undefined}
+                  data-on={m.active || undefined}
+                  title={m.icon === "__vocn__" ? "Open the Crew Hub" : undefined}
                   style={{
                     display: "inline-flex",
                     alignItems: "center",
@@ -524,6 +530,8 @@ export default function RoomHeader({
                             : "rgba(255,255,255,0.14)"
                       }
                     />
+                  ) : m.icon === "__vocn__" ? (
+                    <VocnTabLogo />
                   ) : (
                     <span
                       style={{
@@ -538,7 +546,7 @@ export default function RoomHeader({
                       {m.icon}
                     </span>
                   )}
-                  {m.label}
+                  {m.icon !== "__vocn__" && m.label}
                   {m.active && (
                     <span
                       style={{

@@ -179,7 +179,7 @@ export default function VaDepartureBoard({
           overflow: "hidden",
           borderRadius: 16,
           border: `1px solid ${VA.line}`,
-          background: `linear-gradient(100deg, rgba(0,12,29,.96) 30%, rgba(0,12,29,.55)), url(/brand/vocn/rooms/dispatch-banner.webp) center/cover`,
+          background: `linear-gradient(100deg, rgba(0,12,29,.96) 30%, rgba(0,12,29,.55)) no-repeat padding-box, url(/brand/vocn/rooms/dispatch-banner.webp) center/cover no-repeat padding-box`,
           padding: "20px 22px",
         }}
       >

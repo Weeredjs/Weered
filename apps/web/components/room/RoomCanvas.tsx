@@ -5,6 +5,7 @@ import { useWeered, useRoomUsers, useRoomMsgs } from "../WeeredProvider";
 import BungieLinkPill from "../BungieLinkPill";
 import RoomHeader from "./RoomHeader";
 import RoomDenied from "./RoomDenied";
+import VocnTabLogo from "./VocnTabLogo";
 import RoomChatPanel from "../RoomChatPanel";
 import RoomStage, { StageMode } from "./RoomStage";
 import LaunchPad from "./LaunchPad";
@@ -118,6 +119,7 @@ const ALL_MODULES: { id: NonNullable<StageMode>; label: string; icon: string; li
   { id: "gta",     icon: "🌴", label: "GTA",      live: true  },
   { id: "eve",     icon: "🛰", label: "EVE",      live: true  },
   { id: "assetto", icon: "🏁", label: "Assetto",  live: true  },
+  { id: "va",      icon: "✈",  label: "Crew Hub", live: true  },
 ];
 
 const LOBBY_MODULE_MAP: Record<string, string[]> = {
@@ -144,6 +146,8 @@ const LOBBY_MODULE_MAP: Record<string, string[]> = {
   // The server board belongs in the room as much as the lobby — a race night
   // happens in voice with the grid on screen, not on a separate page.
   ASSETTOCORSA:["voice", "assetto", "youtube", "twitch", "video", "screen"],
+  // The airline's Crew Hub opens on the room stage from the last tab.
+  VIRTUAL_AIRLINE:["voice", "youtube", "twitch", "browser", "video", "screen", "va"],
 };
 
 const DEFAULT_ROOM_MODULES = ["voice", "youtube", "twitch", "browser", "video", "screen"];
@@ -261,6 +265,8 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
       const allowed = LOBBY_MODULE_MAP[lobbyContext.moduleType] || DEFAULT_ROOM_MODULES;
       base = ALL_MODULES.filter(m => allowed.includes(m.id));
     }
+    // vOCN's own rooms wear the airline's logo on the Crew Hub tab.
+    if (currentLobbyId === "vocn") base = base.map((m) => (m.id === "va" ? { ...m, icon: "__vocn__" } : m));
     // The Office is a first-class module in meeting rooms, for office staff only.
     const meId = String(w?.me?.id || "");
     const role = String(w?.globalRole || w?.me?.globalRole || "USER").toUpperCase();
@@ -1335,9 +1341,9 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
             const isLive = m.live;
             const isTwitch = m.icon === "__twitch__";
             const isYT = m.icon === "__youtube__";
-            const accent = isTwitch ? "#9146FF" : isYT ? "#FF0000" : m.id === "voice" ? "#22c55e" : m.id === "browser" ? "#94a3b8" : "#7C3AED";
+            const accent = isTwitch ? "#9146FF" : isYT ? "#FF0000" : m.id === "voice" ? "#22c55e" : m.id === "browser" ? "#94a3b8" : m.id === "va" ? "#FFCD00" : "#7C3AED";
             return (
-              <button key={m.id} type="button" disabled={!isLive} onClick={() => isLive && handleModuleClick(m.id)}
+              <button key={m.id} type="button" disabled={!isLive} onClick={() => isLive && handleModuleClick(m.id)} className={m.icon === "__vocn__" ? "weered-tab-vocn" : undefined} data-on={isActive || undefined} title={m.icon === "__vocn__" ? "Open the Crew Hub" : undefined}
                 style={{
                   display: "inline-flex", alignItems: "center", gap: 5,
                   padding: "6px 14px", borderRadius: 999, fontSize: 11, fontWeight: 700,
@@ -1350,8 +1356,9 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
               >
                 {isTwitch ? <TwitchIcon size={13} color={isActive ? "#9146FF" : isLive ? "rgba(145,70,255,0.75)" : "rgba(255,255,255,0.18)"} />
                   : isYT ? <YouTubeIcon size={15} color={isActive ? "#FF0000" : isLive ? "rgba(255,0,0,0.6)" : "rgba(255,255,255,0.18)"} />
+                  : m.icon === "__vocn__" ? <VocnTabLogo />
                   : <span style={{ fontSize: 12, lineHeight: 1, filter: m.id === "browser" ? "grayscale(1)" : undefined }}>{m.icon}</span>}
-                {m.label}
+                {m.icon !== "__vocn__" && m.label}
                 {isActive && <span style={{ fontSize: 8, fontWeight: 800, letterSpacing: "0.1em", padding: "1px 5px", borderRadius: 4, background: `${accent}44`, color: accent, textTransform: "uppercase" }}>ON</span>}
               </button>
             );

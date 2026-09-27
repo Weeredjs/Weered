@@ -11,7 +11,7 @@ import { safeImgSrc } from "../../lib/safeUrl";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
-export type StageMode = "voice" | "video" | "screen" | "youtube" | "browser" | "twitch" | "article" | "poker" | "fakeout" | "destiny" | "league" | "fortnite" | "pubg" | "hq" | "cs2" | "dota2" | "study" | "dnd" | "windrose" | "helldivers" | "hll" | "hllv" | "chess" | "gta" | "eve" | "assetto" | "office" | null;
+export type StageMode = "voice" | "video" | "screen" | "youtube" | "browser" | "twitch" | "article" | "poker" | "fakeout" | "destiny" | "league" | "fortnite" | "pubg" | "hq" | "cs2" | "dota2" | "study" | "dnd" | "windrose" | "helldivers" | "hll" | "hllv" | "chess" | "gta" | "eve" | "assetto" | "office" | "va" | null;
 
 interface Props {
   roomId: string;
@@ -44,6 +44,7 @@ const stageLoading = () => (
 const PokerTable = dynamic(() => import("../PokerTable"), { loading: stageLoading, ssr: false });
 const TradingModulesPanel = dynamic(() => import("../TradingModulesPanel"), { loading: stageLoading, ssr: false });
 const LobbyModulesPanel = dynamic(() => import("../LobbyModulesPanel"), { loading: stageLoading, ssr: false });
+const VaModulesPanel = dynamic(() => import("../va/VaModulesPanel"), { loading: stageLoading, ssr: false });
 const LeagueModulesPanel = dynamic(() => import("../LeagueModulesPanel"), { loading: stageLoading, ssr: false });
 const FortniteModulesPanel = dynamic(() => import("../FortniteModulesPanel"), { loading: stageLoading, ssr: false });
 const PubgModulesPanel = dynamic(() => import("../PubgModulesPanel"), { loading: stageLoading, ssr: false });
@@ -1039,6 +1040,7 @@ export default function RoomStage({ roomId, mode, moduleType, roomUsers, onClose
   const ctx = useWeered() as any;
   if (mode === "poker") return <PokerTable roomId={roomId} myId={ctx?.me?.id || ""} myName={ctx?.me?.name || ""} />;
   if (mode === "fakeout") return <TradingModulesPanel lobbyId={ctx?.currentLobbyId || roomId} accent="#22c55e" />;
+  if (mode === "va") return <VaModulesPanel lobbyId={ctx?.currentLobbyId || "vocn"} style={{ flex: 1, minHeight: 0, overflow: "auto" }} />;
   if (mode === "destiny") return <LobbyModulesPanel lobbyId={ctx?.currentLobbyId || "destiny2"} gameName="Destiny 2" accentColor="#5ca0c6" style={{ flex: 1, minHeight: 0 }} />;
   if (mode === "league") return <LeagueModulesPanel lobbyId={ctx?.currentLobbyId || "league-of-legends"} gameName="League of Legends" accentColor="#C89B3C" style={{ flex: 1, minHeight: 0 }} />;
   if (mode === "fortnite") return <FortniteModulesPanel lobbyId={ctx?.currentLobbyId || "fortnite"} gameName="Fortnite" accentColor="#00D4FF" style={{ flex: 1, minHeight: 0 }} />;
