@@ -9,6 +9,7 @@ import { readFileSync, writeFileSync } from "fs";
 import { sendPush } from "../lib/notifications";
 import { OAuth2Client } from "google-auth-library";
 import { prisma } from "../lib/prisma";
+import { cutoffNow } from "../lib/sessionCutoff";
 import { setAuthCookie, clearAuthCookie, isWebClient } from "../lib/authCookie";
 
 // Web auth lives in the httpOnly cookie (set via setAuthCookie); only non-web
@@ -345,6 +346,12 @@ export default async function authRoutes(app: FastifyInstance, opts: Opts) {
       await prisma.localAuth.update({
         where: { id: la.id },
         data: { passwordHash, passwordResetToken: null, passwordResetTokenExp: null },
+      });
+      // A new password ends every existing session: a stolen token used to
+      // outlive the reset for its full 7 days (audit 2026-09-27).
+      await prisma.user.update({
+        where: { id: la.userId },
+        data: { tokensValidAfter: cutoffNow() },
       });
       return reply.send({ ok: true });
     },

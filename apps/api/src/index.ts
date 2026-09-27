@@ -261,6 +261,7 @@ import { startNexusPoller } from "./nexusPoller";
 import { prisma } from "./lib/prisma";
 import { canEnterGatedRoom } from "./lib/lobbyAccess";
 import { isOfficeRoom, scopeAllows } from "./lib/officeRooms";
+import { issuedBeforeCutoff } from "./lib/sessionCutoff";
 import { readCookieToken } from "./lib/authCookie";
 import { awardPaper } from "./lib/economy";
 
@@ -399,6 +400,8 @@ function verifyToken(token?: string): AuthedUser | null {
     const name = String(decoded?.name || decoded?.username || "");
     if (!id || !name) return null;
     const out: AuthedUser = { id, name };
+    // Issue time, for the account's sign-out-everywhere cut-off (lib/sessionCutoff).
+    (out as any).iat = Number(decoded?.iat) || 0;
     if (decoded?.guest) {
       (out as any).guest = true;
       (out as any).scope = decoded?.scope ?? null;
@@ -751,8 +754,10 @@ async function main() {
   // edited its profile). The account is re-read here, cached briefly per user so
   // a busy page does not cost a query per request. A DB error fails open, as the
   // maintenance gate below does: a blip must not sign everyone out.
+  // Tokens issued before the account's tokensValidAfter cut-off (a password
+  // reset) are refused here too; the cut-off is cached with the account.
   const ACCOUNT_CHECK_MS = 15_000;
-  const accountOk = new Map<string, { ok: boolean; at: number }>();
+  const accountOk = new Map<string, { ok: boolean; validAfter: Date | null; at: number }>();
   app.addHook("onRequest", async (req: any, reply: any) => {
     const au = authFromHeader(req.headers.authorization);
     if (!au || (au as any).guest || (au as any).host) return;
@@ -760,15 +765,22 @@ async function main() {
     let hit = accountOk.get(au.id);
     if (!hit || now - hit.at > ACCOUNT_CHECK_MS) {
       const row = await prisma.user
-        .findUnique({ where: { id: au.id }, select: { banned: true, deletedAt: true } })
+        .findUnique({
+          where: { id: au.id },
+          select: { banned: true, deletedAt: true, tokensValidAfter: true },
+        })
         .catch(() => undefined);
       if (row === undefined) return;
       // Self-deleted accounts keep their row (deletedAt is set), so check it too.
-      hit = { ok: !!row && !row.banned && !row.deletedAt, at: now };
+      hit = {
+        ok: !!row && !row.banned && !row.deletedAt,
+        validAfter: row?.tokensValidAfter ?? null,
+        at: now,
+      };
       if (accountOk.size > 50_000) accountOk.clear();
       accountOk.set(au.id, hit);
     }
-    if (hit.ok) return;
+    if (hit.ok && !issuedBeforeCutoff((au as any).iat, hit.validAfter)) return;
     if (String(req.url || "").split("?")[0] === "/auth/logout") return; // let the cookie be cleared
     return reply.code(401).send({ ok: false, error: "session_revoked" });
   });

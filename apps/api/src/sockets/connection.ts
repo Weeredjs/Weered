@@ -1,5 +1,6 @@
 import { swallow } from "../lib/logger";
 import { prisma } from "../lib/prisma";
+import { issuedBeforeCutoff } from "../lib/sessionCutoff";
 
 // Connection-lifecycle WS handlers extracted from index.ts wss.on("connection"):
 // handleAuthHello -- the auth:hello entry gate, still dispatched FIRST (before the
@@ -87,6 +88,29 @@ export async function handleAuthHello(
         swallow(e);
       }
       return;
+    }
+    // A deleted account, or a token older than the account's sign-out-everywhere
+    // cut-off (a password reset), may not open a socket (audit 2026-09-27).
+    {
+      const acct = await prisma.user
+        .findUnique({
+          where: { id: ws.user.id },
+          select: { deletedAt: true, tokensValidAfter: true },
+        })
+        .catch(() => undefined);
+      if (
+        acct === null ||
+        acct?.deletedAt ||
+        issuedBeforeCutoff((u as any).iat, acct?.tokensValidAfter)
+      ) {
+        send(ws, { type: "auth:fail", reason: "Session ended. Please sign in again." });
+        try {
+          ws.close(4001, "session_revoked");
+        } catch (e) {
+          swallow(e);
+        }
+        return;
+      }
     }
     send(ws, {
       type: "auth:ok",

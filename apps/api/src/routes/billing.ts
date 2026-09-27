@@ -472,6 +472,183 @@ export default async function billingRoutes(app: FastifyInstance, opts: Opts) {
     },
   );
 
+  // ── Paid entitlements ─────────────────────────────────────────────────────
+  // What a subscription grants, and taking it back. Revocation used to happen
+  // only on customer.subscription.deleted, and for a lobby tier only when the
+  // member's level still equalled the tier's CURRENT grantLevel; refunds,
+  // chargebacks and unpaid subscriptions changed nothing (audit 2026-09-27).
+  // past_due keeps access while Stripe retries the card.
+  const ENTITLED_STATUSES = new Set(["active", "trialing", "past_due"]);
+  const ENDED_STATUSES = new Set(["unpaid", "canceled", "incomplete_expired"]);
+
+  const lobbyRoleFor = (level: number) => (level >= 4 ? "OWNER" : level >= 3 ? "MOD" : "MEMBER");
+
+  type TierSubRow = {
+    id: string;
+    lobbyId: string;
+    userId: string;
+    lobbyTierId: string;
+    priorLevel?: number | null;
+    grantedLevel?: number | null;
+  };
+
+  /** Give a lobby-tier subscriber their level, recording exactly what changed. */
+  async function grantLobbyTier(lts: TierSubRow) {
+    const lobbyTier = await prisma.lobbyTier.findUnique({ where: { id: lts.lobbyTierId } });
+    if (!lobbyTier) return null;
+    const where = { lobbyId_userId: { lobbyId: lts.lobbyId, userId: lts.userId } };
+    const member = await prisma.lobbyMember.findUnique({ where });
+    const prior = member ? (member.roleLevel ?? 1) : 0;
+    let granted: number | null = null;
+    if (!member) {
+      await prisma.lobbyMember.create({
+        data: {
+          lobbyId: lts.lobbyId,
+          userId: lts.userId,
+          roleLevel: lobbyTier.grantLevel,
+          role: "MEMBER",
+          name: "",
+        },
+      });
+      granted = lobbyTier.grantLevel;
+    } else if (prior < lobbyTier.grantLevel) {
+      await prisma.lobbyMember.update({
+        where,
+        data: { roleLevel: lobbyTier.grantLevel, role: lobbyRoleFor(lobbyTier.grantLevel) },
+      });
+      granted = lobbyTier.grantLevel;
+    }
+    await prisma.lobbyTierSub.update({
+      where: { id: lts.id },
+      data: { priorLevel: prior, grantedLevel: granted },
+    });
+    return lobbyTier;
+  }
+
+  /**
+   * Take back what a lobby-tier subscription gave, and only that: the member
+   * returns to the level they had before, unless an admin has changed their
+   * level since (that change is the admin's to keep). Safe to repeat.
+   */
+  async function revokeLobbyTier(lts: TierSubRow) {
+    const lobbyTier = await prisma.lobbyTier.findUnique({ where: { id: lts.lobbyTierId } });
+    const where = { lobbyId_userId: { lobbyId: lts.lobbyId, userId: lts.userId } };
+    const member = await prisma.lobbyMember.findUnique({ where });
+    let level = member ? (member.roleLevel ?? 1) : 0;
+    if (member) {
+      if (lts.priorLevel === null || lts.priorLevel === undefined) {
+        // Subscribed before the change was recorded: the old rule.
+        if (lobbyTier && level === lobbyTier.grantLevel) level = 1;
+      } else if (lts.grantedLevel != null && level === lts.grantedLevel) {
+        level = Math.max(1, lts.priorLevel);
+      }
+      if (level !== member.roleLevel) {
+        await prisma.lobbyMember.update({
+          where,
+          data: { roleLevel: level, role: lobbyRoleFor(level) },
+        });
+      }
+    }
+    // Nothing is left to undo, whatever arrives next.
+    await prisma.lobbyTierSub.update({
+      where: { id: lts.id },
+      data: { priorLevel: level, grantedLevel: null },
+    });
+    return lobbyTier;
+  }
+
+  /** The platform tier goes; `final` also marks the subscription row finished. */
+  async function revokePlatformSub(
+    dbSub: { id: string; userId: string },
+    reason: string,
+    final: boolean,
+  ) {
+    if (final) {
+      await prisma.subscription.update({
+        where: { id: dbSub.id },
+        data: { status: "canceled", tier: "FREE" },
+      });
+    }
+    await prisma.user.update({ where: { id: dbSub.userId }, data: { tier: "INNOCENT" } });
+    await globalAudit("system", "Stripe", "subscription_revoked", dbSub.userId, undefined, {
+      reason,
+    });
+  }
+
+  /** Payment recovered (unpaid -> active): the tier comes back. */
+  async function restorePlatformSub(dbSub: { userId: string; tier: string }) {
+    const userTier =
+      dbSub.tier === "FELON" ? "FELON" : dbSub.tier === "INDICTED" ? "INDICTED" : null;
+    if (!userTier) return;
+    await prisma.user.update({ where: { id: dbSub.userId }, data: { tier: userTier } });
+    await globalAudit("system", "Stripe", "subscription_restored", dbSub.userId, undefined, {
+      tier: userTier,
+    });
+  }
+
+  /**
+   * The subscription a charge paid for: through its invoice when the event
+   * carries one (both invoice shapes Stripe has used), otherwise the customer's
+   * one live subscription. Ambiguous or unknown means null: left for a person.
+   */
+  async function subscriptionForCharge(charge: any) {
+    let subId: string | null = null;
+    const invId = typeof charge?.invoice === "string" ? charge.invoice : charge?.invoice?.id;
+    if (invId) {
+      const inv = await stripeReq("GET", `/invoices/${invId}`);
+      const raw = inv?.subscription || inv?.parent?.subscription_details?.subscription || null;
+      subId = typeof raw === "string" ? raw : raw?.id || null;
+    }
+    if (subId) {
+      const platform = await prisma.subscription.findUnique({ where: { stripeSubId: subId } });
+      const lobby = await prisma.lobbyTierSub.findUnique({ where: { stripeSubId: subId } });
+      if (platform || lobby) return { subId, platform, lobby };
+    }
+    const customer = typeof charge?.customer === "string" ? charge.customer : charge?.customer?.id;
+    if (!customer) return null;
+    const live = { in: [...ENTITLED_STATUSES] };
+    const [platforms, lobbies] = await Promise.all([
+      prisma.subscription.findMany({ where: { stripeCustomerId: customer, status: live } }),
+      prisma.lobbyTierSub.findMany({ where: { stripeCustomerId: customer, status: live } }),
+    ]);
+    if (platforms.length + lobbies.length !== 1) return null;
+    const platform = platforms[0] || null;
+    const lobby = lobbies[0] || null;
+    return { subId: (platform || lobby)?.stripeSubId || null, platform, lobby };
+  }
+
+  /** A full refund or a chargeback: stop billing and take the entitlement now. */
+  async function endForReversal(charge: any, why: "refund" | "dispute") {
+    const hit = await subscriptionForCharge(charge);
+    if (!hit) {
+      await globalAudit("system", "Stripe", `payment_${why}_unmatched`, undefined, undefined, {
+        charge: charge?.id || null,
+        customer: typeof charge?.customer === "string" ? charge.customer : null,
+      });
+      return;
+    }
+    // customer.subscription.deleted follows the cancel and finds nothing left to do.
+    if (hit.subId) await stripeReq("DELETE", `/subscriptions/${hit.subId}`);
+    if (hit.platform) await revokePlatformSub(hit.platform, why, true);
+    if (hit.lobby) {
+      await prisma.lobbyTierSub.update({
+        where: { id: hit.lobby.id },
+        data: { status: "canceled" },
+      });
+      const lobbyTier = await revokeLobbyTier(hit.lobby);
+      await prisma.lobbyAudit.create({
+        data: {
+          id: randomUUID(),
+          lobbyId: hit.lobby.lobbyId,
+          type: "tier_canceled",
+          actorId: hit.lobby.userId,
+          actorName: "system",
+          note: `${lobbyTier?.name || ""} (${why})`.trim(),
+        },
+      });
+    }
+  }
+
   app.post("/subscribe/webhook", async (req, reply) => {
     const sigHeader = (req.headers as any)["stripe-signature"] || "";
     const rawBody = (req as any).rawBody as Buffer | undefined;
@@ -548,38 +725,10 @@ export default async function billingRoutes(app: FastifyInstance, opts: Opts) {
                   : null,
               },
             });
-            const lobbyTier = await prisma.lobbyTier.findUnique({
-              where: { id: lobbyTierId },
+            const lts = await prisma.lobbyTierSub.findUnique({
+              where: { lobbyId_userId: { lobbyId, userId } },
             });
-            if (lobbyTier) {
-              const member = await prisma.lobbyMember.findUnique({
-                where: { lobbyId_userId: { lobbyId, userId } },
-              });
-              if (member) {
-                if ((member.roleLevel ?? 1) < lobbyTier.grantLevel) {
-                  const lobbyRole =
-                    lobbyTier.grantLevel >= 4
-                      ? "OWNER"
-                      : lobbyTier.grantLevel >= 3
-                        ? "MOD"
-                        : "MEMBER";
-                  await prisma.lobbyMember.update({
-                    where: { lobbyId_userId: { lobbyId, userId } },
-                    data: { roleLevel: lobbyTier.grantLevel, role: lobbyRole },
-                  });
-                }
-              } else {
-                await prisma.lobbyMember.create({
-                  data: {
-                    lobbyId,
-                    userId,
-                    roleLevel: lobbyTier.grantLevel,
-                    role: "MEMBER",
-                    name: "",
-                  },
-                });
-              }
-            }
+            const lobbyTier = lts ? await grantLobbyTier(lts) : null;
             await prisma.lobbyAudit.create({
               data: {
                 id: randomUUID(),
@@ -635,6 +784,8 @@ export default async function billingRoutes(app: FastifyInstance, opts: Opts) {
           const dbSub = await prisma.subscription.findUnique({
             where: { stripeSubId: subId },
           });
+          const was = (row: { status: string } | null) => String(row?.status || "");
+          const now = String(stripeSub.status || "");
           if (dbSub) {
             await prisma.subscription.update({
               where: { stripeSubId: subId },
@@ -646,6 +797,12 @@ export default async function billingRoutes(app: FastifyInstance, opts: Opts) {
                   : null,
               },
             });
+            // Unpaid (or expired) takes the tier away; paying again brings it back.
+            if (ENDED_STATUSES.has(now) && !ENDED_STATUSES.has(was(dbSub))) {
+              await revokePlatformSub(dbSub, `status_${now}`, false);
+            } else if (ENTITLED_STATUSES.has(now) && ENDED_STATUSES.has(was(dbSub))) {
+              await restorePlatformSub(dbSub);
+            }
           }
           const lobbyTierSub = await prisma.lobbyTierSub.findUnique({
             where: { stripeSubId: subId },
@@ -661,6 +818,11 @@ export default async function billingRoutes(app: FastifyInstance, opts: Opts) {
                   : null,
               },
             });
+            if (ENDED_STATUSES.has(now) && !ENDED_STATUSES.has(was(lobbyTierSub))) {
+              await revokeLobbyTier(lobbyTierSub);
+            } else if (ENTITLED_STATUSES.has(now) && ENDED_STATUSES.has(was(lobbyTierSub))) {
+              await grantLobbyTier(lobbyTierSub);
+            }
           }
         }
       }
@@ -688,24 +850,7 @@ export default async function billingRoutes(app: FastifyInstance, opts: Opts) {
               where: { stripeSubId: subId },
               data: { status: "canceled" },
             });
-            const lobbyTier = await prisma.lobbyTier.findUnique({
-              where: { id: lobbyTierSub.lobbyTierId },
-            });
-            if (lobbyTier) {
-              const member = await prisma.lobbyMember.findUnique({
-                where: {
-                  lobbyId_userId: { lobbyId: lobbyTierSub.lobbyId, userId: lobbyTierSub.userId },
-                },
-              });
-              if (member && member.roleLevel === lobbyTier.grantLevel) {
-                await prisma.lobbyMember.update({
-                  where: {
-                    lobbyId_userId: { lobbyId: lobbyTierSub.lobbyId, userId: lobbyTierSub.userId },
-                  },
-                  data: { roleLevel: 1, role: "MEMBER" },
-                });
-              }
-            }
+            const lobbyTier = await revokeLobbyTier(lobbyTierSub);
             await prisma.lobbyAudit.create({
               data: {
                 id: randomUUID(),
@@ -717,6 +862,23 @@ export default async function billingRoutes(app: FastifyInstance, opts: Opts) {
               },
             });
           }
+        }
+      }
+
+      // Money going back: a full refund or a chargeback ends the subscription
+      // and its entitlement at once. A partial refund is a goodwill credit and
+      // changes nothing.
+      if (event.type === "charge.refunded") {
+        const charge = event.data?.object;
+        if (charge?.refunded === true) await endForReversal(charge, "refund");
+      }
+
+      if (event.type === "charge.dispute.created") {
+        const dispute = event.data?.object;
+        const chargeId = typeof dispute?.charge === "string" ? dispute.charge : dispute?.charge?.id;
+        if (chargeId) {
+          const charge = await stripeReq("GET", `/charges/${chargeId}`);
+          await endForReversal(charge?.id ? charge : { id: chargeId }, "dispute");
         }
       }
     } catch (e) {

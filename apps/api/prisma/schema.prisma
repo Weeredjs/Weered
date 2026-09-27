@@ -479,6 +479,11 @@ model User {
   // Self-initiated account deletion (GDPR right to erasure)
   deletedAt DateTime?
 
+  // Session tokens are stateless JWTs; any issued before this instant are
+  // refused (set on password reset, ban and account deletion). Second precision,
+  // like a JWT's iat. Null = no cut-off.
+  tokensValidAfter DateTime?
+
   // External presence integrations
   steamId           String? // SteamID64, e.g. "76561198000000000"
   twitchLogin       String? // Twitch login (lowercase username)
@@ -1131,6 +1136,11 @@ model LobbyTierSub {
   status            String    @default("inactive") // active, past_due, canceled, inactive
   currentPeriodEnd  DateTime?
   cancelAtPeriodEnd Boolean   @default(false)
+  // What the subscription changed, so ending it undoes exactly that: the
+  // member's level before (0 = no membership) and the level it gave them (null
+  // = it raised nothing). Both null on subscriptions older than 2026-09-27.
+  priorLevel        Int?
+  grantedLevel      Int?
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 

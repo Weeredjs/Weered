@@ -1,6 +1,7 @@
 import { log, swallow } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
+import { cutoffNow } from "../lib/sessionCutoff";
 import { GlobalRole, ReportStatus, SubTier } from "@prisma/client";
 
 type Opts = {
@@ -317,7 +318,14 @@ export default async function staffRoutes(app: FastifyInstance, opts: Opts) {
 
     await prisma.user.update({
       where: { id: targetId },
-      data: { banned: true, banReason: reason || null, bannedAt: new Date(), bannedBy: u.id },
+      // tokensValidAfter: sessions from before the ban stay dead after an unban.
+      data: {
+        banned: true,
+        banReason: reason || null,
+        bannedAt: new Date(),
+        bannedBy: u.id,
+        tokensValidAfter: cutoffNow(),
+      },
     });
 
     for (const room of rooms.values()) {

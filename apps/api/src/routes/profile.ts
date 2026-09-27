@@ -2,6 +2,7 @@ import { log, swallow } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 import { fetchWithTimeout } from "../lib/fetchWithTimeout";
 import { prisma } from "../lib/prisma";
+import { cutoffNow } from "../lib/sessionCutoff";
 import { Prisma } from "@prisma/client";
 
 // Profile routes (extracted from index.ts): public profile view, profile edit,
@@ -693,6 +694,7 @@ export default async function profileRoutes(app: FastifyInstance, opts: Opts) {
               bannerUrl: null,
               lastSeenLocation: null,
               deletedAt: new Date(),
+              tokensValidAfter: cutoffNow(),
             },
           });
 
