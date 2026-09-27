@@ -266,6 +266,30 @@ export default async function billingRoutes(app: FastifyInstance, opts: Opts) {
     return j;
   }
 
+  // The customer portal's settings. With none saved as Stripe's default, Stripe
+  // refuses to open a portal at all, which is how "Manage subscription" never
+  // worked in live mode (found 2026-09-27). A configuration made through the API
+  // is never the default, so sessions name one: the dashboard default if it
+  // exists, else the one tagged metadata.weered=platform. Found ids are cached.
+  let portalConfig: { id: string; at: number } | null = null;
+  async function portalConfiguration(): Promise<string | undefined> {
+    if (portalConfig && Date.now() - portalConfig.at < 10 * 60_000) return portalConfig.id;
+    const list = await stripeReq("GET", "/billing_portal/configurations?active=true&limit=20");
+    const configs: any[] = Array.isArray(list?.data) ? list.data : [];
+    const pick =
+      configs.find((c) => c?.is_default) || configs.find((c) => c?.metadata?.weered === "platform");
+    portalConfig = pick?.id ? { id: String(pick.id), at: Date.now() } : null;
+    return portalConfig?.id;
+  }
+
+  /** The Weered tier a Stripe price sells, if it is one of ours. */
+  function tierForPrice(priceId: string): "INDICTED" | "FELON" | null {
+    if (!priceId) return null;
+    if (priceId === STRIPE_PRICES.FELON) return "FELON";
+    if (priceId === STRIPE_PRICES.INDICTED) return "INDICTED";
+    return null;
+  }
+
   app.get("/subscribe/config", async (_req, reply) => {
     return reply.send({
       ok: true,
@@ -321,6 +345,7 @@ export default async function billingRoutes(app: FastifyInstance, opts: Opts) {
         const portal = await stripeReq("POST", "/billing_portal/sessions", {
           customer: customerId,
           return_url: `${SITE_URL}/subscribe`,
+          configuration: await portalConfiguration(),
         });
         return reply.send({ ok: true, url: portal.url, portal: true });
       }
@@ -373,6 +398,7 @@ export default async function billingRoutes(app: FastifyInstance, opts: Opts) {
       const session = await stripeReq("POST", "/billing_portal/sessions", {
         customer: sub.stripeCustomerId,
         return_url: `${SITE_URL}/subscribe`,
+        configuration: await portalConfiguration(),
       });
       return reply.send({ ok: true, url: session.url });
     },
@@ -467,6 +493,7 @@ export default async function billingRoutes(app: FastifyInstance, opts: Opts) {
       const session = await stripeReq("POST", "/billing_portal/sessions", {
         customer: sub.stripeCustomerId,
         return_url: `${SITE_URL}/lobby/${encodeURIComponent(lobbyId)}`,
+        configuration: await portalConfiguration(),
       });
       return reply.send({ ok: true, url: session.url });
     },
@@ -797,6 +824,29 @@ export default async function billingRoutes(app: FastifyInstance, opts: Opts) {
                   : null,
               },
             });
+            // A plan switch in the billing portal (Indicted <-> Felon) arrives as an
+            // update carrying the new price; the tier follows it.
+            const planTier = tierForPrice(String(stripeSub.items?.data?.[0]?.price?.id || ""));
+            if (planTier && planTier !== dbSub.tier) {
+              await prisma.subscription.update({
+                where: { stripeSubId: subId },
+                data: { tier: planTier, stripePriceId: stripeSub.items.data[0].price.id },
+              });
+              dbSub.tier = planTier;
+              if (ENTITLED_STATUSES.has(now)) {
+                await prisma.user.update({ where: { id: dbSub.userId }, data: { tier: planTier } });
+              }
+              await globalAudit(
+                "system",
+                "Stripe",
+                "subscription_plan_changed",
+                dbSub.userId,
+                undefined,
+                {
+                  tier: planTier,
+                },
+              );
+            }
             // Unpaid (or expired) takes the tier away; paying again brings it back.
             if (ENDED_STATUSES.has(now) && !ENDED_STATUSES.has(was(dbSub))) {
               await revokePlatformSub(dbSub, `status_${now}`, false);

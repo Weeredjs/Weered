@@ -1,7 +1,7 @@
 import { describe, it, expect, afterAll, afterEach, vi } from "vitest";
 import { createHmac } from "crypto";
 import billingRoutes from "../../src/routes/billing";
-import { buildTestApp, testAuthFromHeader } from "../helpers/buildTestApp";
+import { buildTestApp, testAuthFromHeader, testToken } from "../helpers/buildTestApp";
 import { prisma } from "../../src/lib/prisma";
 
 // What a payment grants, and taking it back (audit 2026-09-27): full refunds,
@@ -11,6 +11,8 @@ import { prisma } from "../../src/lib/prisma";
 // against the test database; Stripe's own API is stubbed.
 const SECRET = "whsec_test_" + "b".repeat(24);
 process.env.STRIPE_WEBHOOK_SECRET = SECRET;
+process.env.STRIPE_PRICE_INDICTED = "price_test_indicted";
+process.env.STRIPE_PRICE_FELON = "price_test_felon";
 
 function sign(payload: string) {
   const t = Math.floor(Date.now() / 1000);
@@ -53,6 +55,7 @@ async function send(app: any, type: string, object: any) {
 
 // Stripe API stub: path -> response, and a log of every call.
 let calls: { method: string; path: string }[] = [];
+const bodies: Record<string, string> = {};
 function stubStripe(routes: Record<string, any>) {
   calls = [];
   vi.stubGlobal(
@@ -61,6 +64,7 @@ function stubStripe(routes: Record<string, any>) {
       const path = String(url).replace("https://api.stripe.com/v1", "");
       const method = String(init?.method || "GET");
       calls.push({ method, path });
+      bodies[`${method} ${path}`] = String(init?.body || "");
       const body = routes[`${method} ${path}`] ?? { id: "stub" };
       return new Response(JSON.stringify(body), { status: 200 });
     }),
@@ -293,6 +297,78 @@ describe("lobby tier undoes exactly what it granted", () => {
     });
     await send(app, "customer.subscription.deleted", { id: subId });
     expect(await levelOf(lobbyId, uid)).toBe(1);
+    await app.close();
+  });
+});
+
+describe("the billing portal", () => {
+  const felonUpdate = (id: string, status: string, price: string) => ({
+    id,
+    status,
+    items: { data: [{ price: { id: price } }] },
+  });
+
+  it("a plan switch made in the portal moves the tier, both ways", async () => {
+    const app = await makeApp();
+    const uid = await newUser("INDICTED");
+    const sub = await platformSub(uid, { tier: "INDICTED" });
+    await send(
+      app,
+      "customer.subscription.updated",
+      felonUpdate(sub.stripeSubId!, "active", "price_test_felon"),
+    );
+    expect((await prisma.user.findUnique({ where: { id: uid } }))?.tier).toBe("FELON");
+    expect((await prisma.subscription.findUnique({ where: { id: sub.id } }))?.tier).toBe("FELON");
+    await send(
+      app,
+      "customer.subscription.updated",
+      felonUpdate(sub.stripeSubId!, "active", "price_test_indicted"),
+    );
+    expect((await prisma.user.findUnique({ where: { id: uid } }))?.tier).toBe("INDICTED");
+    await app.close();
+  });
+
+  it("a switch while unpaid grants nothing until payment recovers, then the new tier", async () => {
+    const app = await makeApp();
+    const uid = await newUser("INDICTED");
+    const sub = await platformSub(uid, { tier: "INDICTED" });
+    await send(
+      app,
+      "customer.subscription.updated",
+      felonUpdate(sub.stripeSubId!, "unpaid", "price_test_felon"),
+    );
+    expect((await prisma.user.findUnique({ where: { id: uid } }))?.tier).toBe("INNOCENT");
+    await send(
+      app,
+      "customer.subscription.updated",
+      felonUpdate(sub.stripeSubId!, "active", "price_test_felon"),
+    );
+    expect((await prisma.user.findUnique({ where: { id: uid } }))?.tier).toBe("FELON");
+    await app.close();
+  });
+
+  it("opens the portal with Weered's own configuration", async () => {
+    const app = await makeApp();
+    const uid = await newUser("INDICTED");
+    const sub = await platformSub(uid, { tier: "INDICTED" });
+    stubStripe({
+      "GET /billing_portal/configurations?active=true&limit=20": {
+        data: [
+          { id: "bpc_test_1", active: true, is_default: false, metadata: { weered: "platform" } },
+        ],
+      },
+      "POST /billing_portal/sessions": { id: "bps_1", url: "https://billing.stripe.test/p/1" },
+    });
+    const r = await app.inject({
+      method: "POST",
+      url: "/subscribe/portal",
+      headers: { authorization: "Bearer " + testToken(uid), "content-type": "application/json" },
+      payload: "{}",
+    });
+    expect(r.json()).toMatchObject({ ok: true, url: "https://billing.stripe.test/p/1" });
+    const body = new URLSearchParams(bodies["POST /billing_portal/sessions"]);
+    expect(body.get("configuration")).toBe("bpc_test_1");
+    expect(body.get("customer")).toBe(sub.stripeCustomerId);
     await app.close();
   });
 });
