@@ -45,8 +45,8 @@ export function isThemeableLobby(lobbyId: string): boolean {
 }
 
 /**
- * Lobbies whose reskin is FORCED for every viewer, member or not, ignoring
- * settings.keepDefaultThemeInLobbies.
+ * Lobbies whose reskin is FORCED for every viewer, member or not. Only the
+ * viewer's own "Keep default theme" toggle (keepsDefaultTheme) turns it off.
  *
  * These are the rooms we hand to a prospect. A prospect is a non-member on
  * default settings, which is exactly the viewer the opt-in gate hides the theme
@@ -57,8 +57,8 @@ export function isThemeableLobby(lobbyId: string): boolean {
  * rather than Rooms, because a preview room has no rooms yet and "No rooms open
  * here" reads as an empty product.
  */
-// Forced: the theme applies to everyone, member or not, ignoring the personal
-// "keep the default theme" setting. Reserved for lobbies whose URL goes to a
+// Forced: the theme applies to everyone, member or not, unless they turned on
+// "Keep default theme" themselves. Reserved for lobbies whose URL goes to a
 // prospect who has not joined anything — an unthemed lobby is the entire pitch
 // failing to land at the only moment it gets to.
 export const FORCED_THEME_LOBBIES: string[] = [
@@ -73,6 +73,39 @@ export const FORCED_THEME_LOBBIES: string[] = [
 
 export function isForcedThemeLobby(lobbyId: string): boolean {
   return FORCED_THEME_LOBBIES.includes(lobbyId);
+}
+
+/**
+ * The viewer's "Keep default theme in themed lobbies" setting. ON means the
+ * standard Weered theme in every lobby and room, forced lobbies included; OFF
+ * (the default) shows each lobby's own skin. It lives in a fresh field,
+ * keepDefaultTheme: the old keepDefaultThemeInLobbies defaulted to true and
+ * was saved into nearly everyone's settings, so it could never read as off.
+ */
+export function keepsDefaultTheme(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    const raw = localStorage.getItem("weered:settings:v0");
+    return !!raw && JSON.parse(raw)?.keepDefaultTheme === true;
+  } catch {
+    return false;
+  }
+}
+
+/** keepsDefaultTheme(), kept current when the setting changes (any tab). */
+export function useKeepDefaultTheme(): boolean {
+  const [keep, setKeep] = useState<boolean>(keepsDefaultTheme);
+  useEffect(() => {
+    const read = () => setKeep(keepsDefaultTheme());
+    read();
+    window.addEventListener("weered:settings", read);
+    window.addEventListener("storage", read);
+    return () => {
+      window.removeEventListener("weered:settings", read);
+      window.removeEventListener("storage", read);
+    };
+  }, []);
+  return keep;
 }
 
 /** Lobbies whose chrome is offered in more than one language. */

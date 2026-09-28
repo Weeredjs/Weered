@@ -31,7 +31,7 @@ type Settings = {
   theme: "stone" | "slate" | "zinc" | "gray" | "ishimura" | "broadcast" | "press";
   density: "comfortable" | "compact";
   reduceMotion: boolean;
-  keepDefaultThemeInLobbies: boolean;
+  keepDefaultTheme: boolean;
 
   dockDefaultTab: "room" | "dms";
   enterToSend: boolean;
@@ -54,7 +54,9 @@ const DEFAULTS: Settings = {
   theme: "press",
   density: "comfortable",
   reduceMotion: false,
-  keepDefaultThemeInLobbies: true,
+  // A fresh field: the old keepDefaultThemeInLobbies defaulted to true and sits
+  // in most saved settings (see keepsDefaultTheme in lib/lobbyChrome).
+  keepDefaultTheme: false,
 
   dockDefaultTab: "dms",
   enterToSend: true,
@@ -313,7 +315,7 @@ export default function SettingsSheet({ initialTab }: { initialTab?: string } = 
 
           {tab === "appearance" && (
             <>
-              <Section title="Display" onReset={() => patch({ density: DEFAULTS.density, reduceMotion: DEFAULTS.reduceMotion, keepDefaultThemeInLobbies: DEFAULTS.keepDefaultThemeInLobbies })}>
+              <Section title="Display" onReset={() => patch({ density: DEFAULTS.density, reduceMotion: DEFAULTS.reduceMotion, keepDefaultTheme: DEFAULTS.keepDefaultTheme })}>
                 <Row label="Density" hint="Compact tightens rails and lists.">
                   <select style={selectStyle} value={s.density} onChange={(e) => patch({ density: e.target.value as any })}>
                     <option value="comfortable">Comfortable</option>
@@ -323,8 +325,8 @@ export default function SettingsSheet({ initialTab }: { initialTab?: string } = 
                 <Row label="Reduce motion" hint="Drops animations and transitions.">
                   <Toggle checked={s.reduceMotion} onChange={(v) => patch({ reduceMotion: v })} />
                 </Row>
-                <Row label="Keep default theme in themed lobbies" hint="Themed lobbies (Windrose, Destiny 2, D&D, etc.) show the default minimal theme instead of their custom skin.">
-                  <Toggle checked={s.keepDefaultThemeInLobbies} onChange={(v) => patch({ keepDefaultThemeInLobbies: v })} />
+                <Row label="Keep default theme in themed lobbies" hint="Lobbies with their own look (vOCN, Windrose, Timbo's, D&D and others) show the standard Weered theme instead, rooms included.">
+                  <Toggle checked={s.keepDefaultTheme} onChange={(v) => patch({ keepDefaultTheme: v })} />
                 </Row>
               </Section>
 

@@ -18,6 +18,7 @@ import { LFG_BOARD_LOBBIES, REDDIT_TAB_LOBBIES } from "../../../lib/lobbySection
 import {
   isForcedThemeLobby,
   isThemeableLobby,
+  useKeepDefaultTheme,
   useBilingualLobby,
   useLobbyView,
   lobbyHasModules,
@@ -730,36 +731,14 @@ export default function LobbyIdPage() {
     loadLobby();
   }, [lobbyId]);
 
-  const [keepDefaultTheme, setKeepDefaultTheme] = useState<boolean>(() => {
-    if (typeof window === "undefined") return true;
-    try {
-      const raw = localStorage.getItem("weered:settings:v0");
-      const s = raw ? JSON.parse(raw) : null;
-      return s?.keepDefaultThemeInLobbies !== false;
-    } catch {
-      return true;
-    }
-  });
-  useEffect(() => {
-    const read = () => {
-      try {
-        const raw = localStorage.getItem("weered:settings:v0");
-        const s = raw ? JSON.parse(raw) : null;
-        setKeepDefaultTheme(s?.keepDefaultThemeInLobbies !== false);
-      } catch {}
-    };
-    read();
-    window.addEventListener("weered:settings", read);
-    return () => window.removeEventListener("weered:settings", read);
-  }, []);
+  const keepDefaultTheme = useKeepDefaultTheme();
 
-  // Windrose is a demo lobby and is FORCED: every viewer, member or not,
-  // whatever their keep-default setting. The other themeable lobbies keep the
-  // opt-in + member-only rule. If Windrose ever stops being a demo, replace
-  // this id check with a per-lobby takeover flag.
+  // A lobby's skin shows unless the viewer turned on "Keep default theme".
+  // Forced lobbies (demo and prospect rooms) show it to everyone, members or
+  // not; the other themeable lobbies to members only.
   const wantLobbyTheme =
-    isForcedThemeLobby(lobbyId) ||
-    (isThemeableLobby(lobbyId) && memberChecked && isMember && !keepDefaultTheme);
+    !keepDefaultTheme &&
+    (isForcedThemeLobby(lobbyId) || (isThemeableLobby(lobbyId) && memberChecked && isMember));
 
   useEffect(() => {
     if (!lobbyId) return;

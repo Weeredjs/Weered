@@ -125,6 +125,7 @@ try {
   var v2 = localStorage.getItem('weered_theme_v2');
   var sraw = localStorage.getItem('weered:settings:v0');
   var s = sraw ? JSON.parse(sraw) : null;
+  var keepDefault = !!(s && s.keepDefaultTheme === true);
   var valid = ['slate','zinc','stone','gray','ishimura','broadcast','press'];
   var theme = (v2 && valid.indexOf(v2) >= 0) ? v2
             : (s && s.theme && valid.indexOf(s.theme) >= 0) ? s.theme
@@ -151,7 +152,7 @@ try {
   }
   // Lobbies: flagship purple (min) is the default for ALL lobbies, the 4
   // reskinnable ones (windrose/destiny2/dnd/helldivers2) INCLUDED. The reskin
-  // is opt-in (settings.keepDefaultThemeInLobbies === false) + member-only and
+  // follows settings.keepDefaultTheme (off by default) + member-only and
   // is resolved by the lobby page AFTER hydration. Previously these 4 were left
   // UNSET here to dodge a min->reskin flash, but that left them painting the
   // base/gold theme for the entire lobbyInfo API-load window (the lobby page's
@@ -163,7 +164,7 @@ try {
   // skips the min step: painting min and then the airline skin is exactly the
   // flash this block exists to prevent. Its CSS covers the rails, so the
   // lobbyInfo load window shows the airline, not the base theme.
-  else if (location.pathname === '/lobby/vocn' || location.pathname.indexOf('/lobby/vocn/') === 0) {
+  else if (!keepDefault && (location.pathname === '/lobby/vocn' || location.pathname.indexOf('/lobby/vocn/') === 0)) {
     d.setAttribute('data-weered-lobby', 'vocn');
   }
   else if (location.pathname.indexOf('/lobby/') === 0
@@ -172,7 +173,7 @@ try {
     // Windrose is forced for every viewer (see the lobby page), so paint its
     // skin before hydration too -- otherwise the demo lobby flashes min -> pirate
     // on every hard load, which is the flash the min pre-paint exists to prevent.
-    if (location.pathname.indexOf('/lobby/windrose') === 0) {
+    if (!keepDefault && location.pathname.indexOf('/lobby/windrose') === 0) {
       d.setAttribute('data-weered-lobby', 'windrose');
     }
   }

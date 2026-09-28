@@ -19,6 +19,7 @@ import { onActivate } from "@/lib/a11y";
 import { safeUrl } from "@/lib/safeUrl";
 import {
   isThemeableLobby,
+  useKeepDefaultTheme,
   isBilingualLobby,
   lobbyHasModules,
   usePublishLobbyViews,
@@ -296,11 +297,12 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
     !!lobbyContext?.hasStartgg,
   );
 
+  const keepDefaultTheme = useKeepDefaultTheme();
   useEffect(() => {
     const id = lobbyContext?.id;
     if (id && isThemeableLobby(id)) {
       const d = document.documentElement;
-      d.setAttribute("data-weered-lobby", id);
+      if (!keepDefaultTheme) d.setAttribute("data-weered-lobby", id);
       // Leave min chrome, or the theme is invisible.
       //
       // 80-chrome-min.css strips the rail flat when data-weered-chrome="min":
@@ -313,7 +315,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
       // — but rooms never did, which is why a themed lobby went flat the
       // moment you walked into one of its rooms. Restore on the way out so
       // ordinary rooms keep the stripped-down chrome they are meant to have.
-      const hadMin = d.getAttribute("data-weered-chrome") === "min";
+      const hadMin = !keepDefaultTheme && d.getAttribute("data-weered-chrome") === "min";
       if (hadMin) d.removeAttribute("data-weered-chrome");
       // A bilingual lobby stays bilingual inside its rooms — walking from the
       // lobby into a room used to drop the member back to English.
@@ -325,7 +327,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
         if (bilingual) clearLobbyLang();
       };
     }
-  }, [lobbyContext?.id]);
+  }, [lobbyContext?.id, keepDefaultTheme]);
 
   const [articleUrl, setArticleUrl]     = useState<string>("");
   const [browserUrl, setBrowserUrl]     = useState<string>("");
