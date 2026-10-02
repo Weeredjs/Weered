@@ -1245,7 +1245,13 @@ export default function LeftRail() {
               <span style={{ fontSize: 10, opacity: 0.4 }}>{recentRooms.length}</span>
             </div>
             {recentRooms.map((room) => {
-              const href = lobbyHref(room);
+              // The visit record knows what it was: a room visit carries roomId,
+              // a lobby visit lobbyId. Guessing from the slug sent rooms such as
+              // vocn-crew-lounge to /lobby/vocn-crew-lounge, a dead page.
+              const visit = serverRecentMap.get(room);
+              const href = visit?.roomId
+                ? `/room/${encodeURIComponent(room)}`
+                : lobbyHref(room, !!visit?.lobbyId);
               const isActive = activeRoomNorm === room;
               const label = getRoomName(room);
               const count = roomCounts[room] ?? 0;
