@@ -66,23 +66,22 @@ export async function seedWelcomeDM(toUserId: string): Promise<void> {
   try {
     const fromId = await getOperatorUserId();
     if (fromId === toUserId) return;
-    const body = `Welcome aboard. This is the Burner — your DMs, friends, and crew all dock here. Tap a tab to explore.
+    const body = `Welcome to Weered. This is the Burner: your DMs, friends and crew all dock here.
 
-We're sailing on the Windrose lobby right now (link in the rail). Find a crew, post a bounty on a Kraken tooth, browse mods. Voice rooms work everywhere.
+Find a lobby for your game or community under Browse, then hop into one of its rooms. Voice works in every room.
 
-If you get stuck, just hit me back here. — The Operator 🏴‍☠️`;
+Stuck? Reply here, or type @operator in any chat. — The Operator`;
     const dm = await prisma.directMessage.create({
       data: { fromId, toId: toUserId, body },
     });
     dmDeliver(toUserId, {
-      type: "dm:in",
-      dm: {
+      type: "dm:message",
+      message: {
         id: dm.id,
         fromId,
         toId: toUserId,
         body: dm.body,
-        createdAt: dm.createdAt,
-        fromName: "The Operator",
+        createdAt: dm.createdAt.toISOString(),
       },
     });
   } catch (e) {

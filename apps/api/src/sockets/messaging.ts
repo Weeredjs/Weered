@@ -2,6 +2,7 @@ import { log, swallow } from "../lib/logger";
 import { prisma } from "../lib/prisma";
 import { randomUUID } from "crypto";
 import { takeAiBudget } from "../lib/aiBudget";
+import { answerOperatorDm } from "../lib/operatorDm";
 
 // Chat WS handlers extracted from the index.ts main message handler:
 // chat:pin/unpin/typing/send/edit/delete. Void async handler (dispatcher
@@ -826,6 +827,8 @@ export async function handleCrewDm(
         actionUrl: "/home",
         meta: { fromId },
       }).catch(swallow);
+      // A DM to The Operator gets an answer (a no-op for anyone else).
+      void answerOperatorDm(fromId, toId, !!(ws.user as any)?.guest);
     } catch (e) {
       log.error("[dm:send]", e);
     }

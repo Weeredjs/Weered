@@ -86,6 +86,25 @@ describe("authRoutes - register + login", () => {
     await app.close();
   });
 
+  it("rejects an email or odd characters as a username (400)", async () => {
+    const app = await makeApp();
+    for (const username of ["rayce.eric@example.com", "has-dash", "two words", "x"]) {
+      const r = await app.inject({
+        method: "POST",
+        url: "/auth/register",
+        payload: { username, password: "secret123" },
+      });
+      expect(r.statusCode, username).toBe(400);
+    }
+    const ok = await app.inject({
+      method: "POST",
+      url: "/auth/register",
+      payload: { username: uname("rule_ok"), password: "secret123" },
+    });
+    expect(ok.statusCode).toBe(200);
+    await app.close();
+  });
+
   it("blocks reserved usernames (403) and closed registration (403)", async () => {
     const reservedApp = await makeApp({ reserved: true });
     const r1 = await reservedApp.inject({

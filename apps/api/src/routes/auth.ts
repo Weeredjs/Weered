@@ -176,6 +176,16 @@ export default async function authRoutes(app: FastifyInstance, opts: Opts) {
       const email = (rawE || "").trim().toLowerCase().slice(0, 254) || null;
       if (!username || !password)
         return reply.code(400).send({ error: "Missing username/password" });
+      // Same rule as onboarding. Without it a member registered with their email
+      // as their username (2026-10-03), and it showed as their name in chat.
+      if (username.includes("@"))
+        return reply.code(400).send({
+          error: "Use a username, not your email address. Letters, numbers and underscores.",
+        });
+      if (!/^[a-z0-9_]{2,32}$/.test(username))
+        return reply
+          .code(400)
+          .send({ error: "Usernames use letters, numbers and underscores only (2 to 32)." });
       if (password.length < 6) return reply.code(400).send({ error: "Password too short" });
       if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
         return reply.code(400).send({ error: "Invalid email" });
