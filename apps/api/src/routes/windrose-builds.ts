@@ -4,6 +4,7 @@ import { PrismaClient } from "@prisma/client";
 import { existsSync, mkdirSync, writeFileSync, readFileSync } from "fs";
 import { join } from "path";
 import sharp from "sharp";
+import { isAllowedRaster } from "../lib/sharpSafety";
 
 type Opts = {
   authFromHeader: (h?: string) => { id: string; name?: string } | null;
@@ -87,6 +88,7 @@ async function processBuildImage(
   const fullPath = join(BUILDS_DIR, fullName);
   const thumbPath = join(BUILDS_DIR, thumbName);
 
+  if (!isAllowedRaster(raw)) throw new Error("unsupported_image");
   let pipeline = sharp(raw, { failOn: "none" }).rotate();
   const meta = await pipeline.metadata();
   const inW = meta.width || PRIMARY_MAX_DIM;

@@ -24,6 +24,7 @@ import {
   lobbyHasModules,
   usePublishLobbyViews,
 } from "../../../lib/lobbyChrome";
+import { applyChrome, currentChrome, rememberSkin } from "../../../lib/lobbyThemes";
 import LobbySplash, {
   WINDROSE_SPLASH_PALETTE,
   DESTINY_SPLASH_PALETTE,
@@ -740,15 +741,30 @@ export default function LobbyIdPage() {
     !keepDefaultTheme &&
     (isForcedThemeLobby(lobbyId) || (isThemeableLobby(lobbyId) && memberChecked && isMember));
 
+  // Settle the skin once it is known (a member-only skin waits for the member
+  // check, so a skin painted from the cache is not pulled and re-added), and
+  // remember a member's skin so the next load paints it before hydration.
   useEffect(() => {
     if (!lobbyId) return;
-    if (wantLobbyTheme) {
-      document.documentElement.setAttribute("data-weered-lobby", lobbyId);
-      return () => {
-        document.documentElement.removeAttribute("data-weered-lobby");
-      };
-    }
-  }, [lobbyId, wantLobbyTheme]);
+    const forced = isForcedThemeLobby(lobbyId);
+    const themeable = isThemeableLobby(lobbyId);
+    if (!(keepDefaultTheme || forced || !themeable || memberChecked)) return;
+    const d = document.documentElement;
+    if (wantLobbyTheme) d.setAttribute("data-weered-lobby", lobbyId);
+    else if (d.getAttribute("data-weered-lobby") === lobbyId)
+      d.removeAttribute("data-weered-lobby");
+    if (themeable && !forced && !keepDefaultTheme)
+      rememberSkin("lobby", lobbyId, wantLobbyTheme ? lobbyId : null);
+  }, [lobbyId, wantLobbyTheme, memberChecked, keepDefaultTheme]);
+  // Leaving: settle on what the next page wants instead of wiping the skin,
+  // which flashed the default theme between two themed pages.
+  useEffect(
+    () => () => {
+      const [skin, min] = currentChrome(location.pathname, location.search);
+      applyChrome(skin, min);
+    },
+    [lobbyId],
+  );
 
   useBilingualLobby(lobbyId);
 
@@ -757,13 +773,17 @@ export default function LobbyIdPage() {
     const params = new URLSearchParams(window.location.search);
     const forceMin = params.get("chrome") === "min";
     const forceFull = params.get("chrome") === "full";
-    const known = !isThemeableLobby(lobbyId) || (!!lobbyInfo && memberChecked);
+    const known =
+      !isThemeableLobby(lobbyId) ||
+      isForcedThemeLobby(lobbyId) ||
+      keepDefaultTheme ||
+      (!!lobbyInfo && memberChecked);
     if (!known && !forceMin && !forceFull) return;
     const wantMin = forceMin || (!forceFull && !wantLobbyTheme);
     const d = document.documentElement;
     if (wantMin) d.setAttribute("data-weered-chrome", "min");
     else d.removeAttribute("data-weered-chrome");
-  }, [lobbyId, lobbyInfo?.moduleType, lobbyInfo, wantLobbyTheme, memberChecked]);
+  }, [lobbyId, lobbyInfo?.moduleType, lobbyInfo, wantLobbyTheme, memberChecked, keepDefaultTheme]);
 
   useEffect(() => {
     if (lobbyId && memberChecked && isMember) join(lobbyId);

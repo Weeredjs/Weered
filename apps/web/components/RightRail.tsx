@@ -1298,7 +1298,7 @@ export default function RightRail({ lobbyId }: { lobbyId?: string }) {
 
   const resolvedLobbyId = lobbyId ?? (() => {
     if (pathname === "/lobby" || pathname.startsWith("/lobby/")) {
-      const seg = pathname.replace("/lobby/", "").replace("/lobby", "");
+      const seg = pathname.replace("/lobby/", "").replace("/lobby", "").split("/")[0];
       return seg ? decodeURIComponent(seg) : "lobby";
     }
     return "lobby";

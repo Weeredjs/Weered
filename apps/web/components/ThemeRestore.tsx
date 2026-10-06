@@ -2,6 +2,7 @@
 
 import { useLayoutEffect } from "react";
 import { usePathname } from "next/navigation";
+import { applyChrome, currentChrome } from "../lib/lobbyThemes";
 
 const VALID_THEMES = ["slate", "zinc", "stone", "gray", "ishimura", "broadcast", "press"];
 
@@ -26,12 +27,10 @@ export default function ThemeRestore() {
       if (s && s.density) d.setAttribute("data-weered-density", s.density);
       if (s && s.reduceMotion) d.setAttribute("data-weered-reduce-motion", "1");
       if (localStorage.getItem("weered_user")) d.setAttribute("data-weered-authed", "1");
-      if (
-        location.pathname.indexOf("/lobby/") === 0 &&
-        location.search.indexOf("chrome=full") < 0
-      ) {
-        d.setAttribute("data-weered-chrome", "min");
-      }
+      // Skin + chrome from the same rule as the pre-paint script, so this never
+      // fights it; the lobby page and the room refine it once they know more.
+      const [skin, min] = currentChrome(location.pathname, location.search);
+      applyChrome(skin, min);
     } catch {}
   }, [pathname]);
   return null;

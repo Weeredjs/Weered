@@ -47,6 +47,13 @@ const sairaStencil = Saira_Stencil_One({
   preload: true,
 });
 import RootFrame from "../components/RootFrame";
+import {
+  chromeFor,
+  FORCED_THEME_LOBBIES,
+  NO_SHELL_ROUTES,
+  SKIN_CACHE_KEY,
+  THEMEABLE_LOBBY_IDS,
+} from "../lib/lobbyThemes";
 
 export const metadata = {
   title: {
@@ -141,42 +148,17 @@ try {
   if (location.pathname.indexOf('/overlay/') === 0 || location.pathname === '/overlay') {
     d.setAttribute('data-weered-bare', 'overlay');
   }
-  // chrome=min default baseline (pre-paint, FOUC-safe). ShellGate / lobby
-  // page reconcile per-route after hydration. Skip /lobby/* (lobby page owns
-  // the dense-vs-min decision after moduleType loads), /overlay, and the
-  // ?chrome=full override. Inert on bare pages (no shell DOM to style).
-  if (location.pathname.indexOf('/lobby/') !== 0
-      && location.pathname.indexOf('/overlay') !== 0
-      && location.search.indexOf('chrome=full') < 0) {
-    d.setAttribute('data-weered-chrome', 'min');
-  }
-  // Lobbies: flagship purple (min) is the default for ALL lobbies, the 4
-  // reskinnable ones (windrose/destiny2/dnd/helldivers2) INCLUDED. The reskin
-  // follows settings.keepDefaultTheme (off by default) + member-only and
-  // is resolved by the lobby page AFTER hydration. Previously these 4 were left
-  // UNSET here to dodge a min->reskin flash, but that left them painting the
-  // base/gold theme for the entire lobbyInfo API-load window (the lobby page's
-  // chrome effect bails until lobbyInfo loads), which is the base->theme flash
-  // James kept hitting on hard load. So pre-paint min for EVERY lobby. The
-  // common/default case is now flash-free; an opted-in member gets a single
-  // clean min->reskin transition once membership resolves (was two before).
-  // The vOCN crew hub is a forced full-chrome reskin (lib/lobbyChrome), so it
-  // skips the min step: painting min and then the airline skin is exactly the
-  // flash this block exists to prevent. Its CSS covers the rails, so the
-  // lobbyInfo load window shows the airline, not the base theme.
-  else if (!keepDefault && (location.pathname === '/lobby/vocn' || location.pathname.indexOf('/lobby/vocn/') === 0)) {
-    d.setAttribute('data-weered-lobby', 'vocn');
-  }
-  else if (location.pathname.indexOf('/lobby/') === 0
-      && location.search.indexOf('chrome=full') < 0) {
-    d.setAttribute('data-weered-chrome', 'min');
-    // Windrose is forced for every viewer (see the lobby page), so paint its
-    // skin before hydration too -- otherwise the demo lobby flashes min -> pirate
-    // on every hard load, which is the flash the min pre-paint exists to prevent.
-    if (!keepDefault && location.pathname.indexOf('/lobby/windrose') === 0) {
-      d.setAttribute('data-weered-lobby', 'windrose');
-    }
-  }
+  // Lobby skin + minimal chrome, decided by the SAME function every later
+  // writer uses (lib/lobbyThemes chromeFor), so the first paint already
+  // matches what the page settles on. The skin cache remembers what this
+  // viewer saw last time (a member's skin, which lobby a room belongs to).
+  var cache = null;
+  try { cache = JSON.parse(localStorage.getItem(${JSON.stringify(SKIN_CACHE_KEY)}) || 'null'); } catch(e) {}
+  var chromeFor = ${chromeFor.toString()};
+  var dec = chromeFor(location.pathname, location.search, keepDefault, cache,
+    ${JSON.stringify(THEMEABLE_LOBBY_IDS)}, ${JSON.stringify(FORCED_THEME_LOBBIES)}, ${JSON.stringify(NO_SHELL_ROUTES)});
+  if (dec[0]) d.setAttribute('data-weered-lobby', dec[0]);
+  if (dec[1]) d.setAttribute('data-weered-chrome', 'min');
 } catch(e) {}
 `;
 

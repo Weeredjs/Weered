@@ -1,4 +1,5 @@
 import sharp from "sharp";
+import { isAllowedRaster } from "./sharpSafety";
 import { prisma } from "./prisma";
 import { log, swallow } from "./logger";
 
@@ -83,13 +84,23 @@ export async function moderateProfileImage(
   const maxDim = opts.maxDim ?? 512;
   let webp: Buffer;
   try {
+    if (!isAllowedRaster(buf)) throw new Error("unsupported_image");
     const img = sharp(buf, { animated: false }).rotate(); // bake EXIF orientation, then drop EXIF on re-encode
     const resized = opts.square
-      ? img.resize(maxDim, maxDim, { fit: "cover", position: "attention", withoutEnlargement: true })
+      ? img.resize(maxDim, maxDim, {
+          fit: "cover",
+          position: "attention",
+          withoutEnlargement: true,
+        })
       : img.resize(maxDim, maxDim, { fit: "inside", withoutEnlargement: true });
     webp = await resized.webp({ quality: opts.quality ?? 82 }).toBuffer();
   } catch {
-    return { ok: false, code: 400, error: "bad_image", message: "That image could not be processed." };
+    return {
+      ok: false,
+      code: 400,
+      error: "bad_image",
+      message: "That image could not be processed.",
+    };
   }
 
   const phash = await dHash(webp).catch(() => "");

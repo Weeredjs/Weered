@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useLayoutEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import SiteFooter from "./SiteFooter";
 import { LogoMenu } from "./LogoMenu";
 import { onActivate } from "@/lib/a11y";
+import { NO_SHELL_ROUTES } from "../lib/lobbyThemes";
 
 function LeftRailScroll({ children }: { children: React.ReactNode }) {
   const [hovered, setHovered] = useState(false);
@@ -40,42 +41,7 @@ function LeftRailScroll({ children }: { children: React.ReactNode }) {
   );
 }
 
-const NO_SHELL_ROUTES = [
-  "/",
-  "/foyer",
-  "/login",
-  "/register",
-  "/staff",
-  "/about",
-  "/premium",
-  "/contact",
-  "/mods",
-  "/apply",
-  "/desktop",
-  "/why-not-discord",
-  "/alternatives",
-  // Portuguese sibling of /alternatives. Same page shape, same reason to be
-  // bare: a marketing page inside the app shell is clipped to the shell's
-  // height and does not scroll.
-  "/alternativas",
-  "/pricing",
-  "/tournaments",
-  "/play",
-  "/compare",
-  "/lfg",
-  "/explore",
-  "/overlay",
-  "/terms",
-  "/privacy",
-  "/guidelines",
-  "/forgot-password",
-  "/reset-password",
-  "/verify-email",
-  "/media-policy",
-  "/safety",
-  "/features",
-  "/blog",
-];
+// The bare-route list lives in lib/lobbyThemes, shared with the pre-paint script.
 
 const ICO_NAV = (
   <svg
@@ -443,7 +409,9 @@ export default function ShellGate({
   useEffect(() => {
     const parts = pathname.split("/").filter(Boolean);
     const isLobbyView = parts[0] === "lobby" && parts.length === 2 && parts[1] !== "create";
-    if (isLobbyView) return;
+    // A lobby view and a room settle their own skin and chrome (they know the
+    // member and the room's lobby); setting min here undid that on every load.
+    if (isLobbyView || parts[0] === "room") return;
     const forceFull = new URLSearchParams(window.location.search).get("chrome") === "full";
     const d = document.documentElement;
     if (!bare && !forceFull) d.setAttribute("data-weered-chrome", "min");
@@ -453,13 +421,13 @@ export default function ShellGate({
   const [overlay, setOverlay] = useState<"left" | "right" | null>(null);
   const [rightCollapsed, setRightCollapsed] = useState(true);
 
-  const [dmUnreadOnly, setDmUnreadOnly] = useState<number>(() => {
+  // 0 on both sides, then the stored count before paint (see UserCorner).
+  const [dmUnreadOnly, setDmUnreadOnly] = useState<number>(0);
+  useLayoutEffect(() => {
     try {
-      return Math.max(0, Number(localStorage.getItem("weered:dock:unread")) || 0);
-    } catch {
-      return 0;
-    }
-  });
+      setDmUnreadOnly(Math.max(0, Number(localStorage.getItem("weered:dock:unread")) || 0));
+    } catch {}
+  }, []);
   const [groupUnread, setGroupUnread] = useState<number>(0);
   const dmUnread = dmUnreadOnly + groupUnread;
   useEffect(() => {

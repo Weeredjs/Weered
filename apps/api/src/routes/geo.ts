@@ -151,54 +151,62 @@ export default async function geoRoutes(app: FastifyInstance, opts: Opts) {
     return reply.send({ hexes, games });
   });
 
-  app.get("/map/nearby", async (req, reply) => {
-    const viewer = authFromHeader((req as any).headers?.authorization);
-    if (!viewer) return reply.code(401).send({ error: "Unauthorized" });
-    const q: any = (req as any).query || {};
-    const lat = Number(q.lat);
-    const lng = Number(q.lng);
-    if (!Number.isFinite(Number(lat)) || !Number.isFinite(Number(lng)))
-      return reply.code(400).send({ error: "lat/lng required" });
-    const center = latLngToCell(lat, lng, H3_RES);
-    const ring = gridDisk(center, 1);
-    const nearby = await prisma.user.findMany({
-      where: { locationOptIn: true, locationH3: { in: ring } },
-      select: {
-        id: true,
-        usernameKey: true,
-        name: true,
-        avatar: true,
-        avatarColor: true,
-        tier: true,
-        locationH3: true,
-      },
-    });
-    const others = nearby.filter((u) => u.id !== viewer.id).slice(0, 50);
-    const userIds = others.map((u) => u.id);
-    const memberships = userIds.length
-      ? await prisma.lobbyMember.findMany({
-          // Listed lobbies only: an unlisted lobby's membership is not public.
-          where: { userId: { in: userIds }, lobby: { unlisted: false } },
-          select: {
-            userId: true,
-            lobbyId: true,
-            lobby: { select: { name: true } },
-            updatedAt: true,
-          },
-          orderBy: { updatedAt: "desc" },
-        })
-      : [];
-    const lobbyMap = new Map<string, { lobbyId: string; lobbyName: string }>();
-    for (const m of memberships) {
-      if (!lobbyMap.has(m.userId))
-        lobbyMap.set(m.userId, { lobbyId: m.lobbyId, lobbyName: m.lobby.name });
-    }
-    const enriched = others.map((u) => {
-      const lm = lobbyMap.get(u.id);
-      return { ...u, lobbyId: lm?.lobbyId || null, lobbyName: lm?.lobbyName || null };
-    });
-    return reply.send({ hex: center, nearbyCount: enriched.length, users: enriched });
-  });
+  // Who is near ME: centred on the viewer's own stored cell, for viewers who
+  // share their own location. Taking lat/lng from the query let any signed-in
+  // account sweep any area for opted-in members (review 2026-09-27, 2026-10-06).
+  app.get(
+    "/map/nearby",
+    { config: { rateLimit: { max: 10, timeWindow: "1 minute" } } },
+    async (req, reply) => {
+      const viewer = authFromHeader((req as any).headers?.authorization);
+      if (!viewer) return reply.code(401).send({ error: "Unauthorized" });
+      const me = await prisma.user.findUnique({
+        where: { id: viewer.id },
+        select: { locationOptIn: true, locationH3: true },
+      });
+      if (!me?.locationOptIn || !me.locationH3)
+        return reply.code(403).send({ error: "Share your own location to see who is nearby." });
+      const center = me.locationH3;
+      const ring = gridDisk(center, 1);
+      const nearby = await prisma.user.findMany({
+        where: { locationOptIn: true, locationH3: { in: ring } },
+        select: {
+          id: true,
+          usernameKey: true,
+          name: true,
+          avatar: true,
+          avatarColor: true,
+          tier: true,
+          locationH3: true,
+        },
+      });
+      const others = nearby.filter((u) => u.id !== viewer.id).slice(0, 50);
+      const userIds = others.map((u) => u.id);
+      const memberships = userIds.length
+        ? await prisma.lobbyMember.findMany({
+            // Listed lobbies only: an unlisted lobby's membership is not public.
+            where: { userId: { in: userIds }, lobby: { unlisted: false } },
+            select: {
+              userId: true,
+              lobbyId: true,
+              lobby: { select: { name: true } },
+              updatedAt: true,
+            },
+            orderBy: { updatedAt: "desc" },
+          })
+        : [];
+      const lobbyMap = new Map<string, { lobbyId: string; lobbyName: string }>();
+      for (const m of memberships) {
+        if (!lobbyMap.has(m.userId))
+          lobbyMap.set(m.userId, { lobbyId: m.lobbyId, lobbyName: m.lobby.name });
+      }
+      const enriched = others.map((u) => {
+        const lm = lobbyMap.get(u.id);
+        return { ...u, lobbyId: lm?.lobbyId || null, lobbyName: lm?.lobbyName || null };
+      });
+      return reply.send({ hex: center, nearbyCount: enriched.length, users: enriched });
+    },
+  );
 
   app.get("/map/lobbies", async (_req, reply) => {
     // Pins are built from members' H3 cells (res 7, the ~5 km grid), never from

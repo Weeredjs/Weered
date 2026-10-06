@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useOverlay } from "./overlays/OverlayProvider";
@@ -508,14 +508,15 @@ export default function LeftRail() {
     return m;
   }, [serverRecents]);
 
-  const [favs, setFavs] = useState<string[]>(() => {
+  // Empty on both sides, then the stored list before paint: the rail is server
+  // rendered, so a first render read from localStorage broke hydration.
+  const [favs, setFavs] = useState<string[]>([]);
+  useLayoutEffect(() => {
     try {
       const r = localStorage.getItem(FAVS_KEY);
-      return r ? JSON.parse(r) : [];
-    } catch {
-      return [];
-    }
-  });
+      if (r) setFavs(JSON.parse(r));
+    } catch {}
+  }, []);
 
   const favsSynced = useRef(false);
   useEffect(() => {

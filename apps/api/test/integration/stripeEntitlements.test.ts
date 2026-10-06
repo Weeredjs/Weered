@@ -347,6 +347,25 @@ describe("the billing portal", () => {
     await app.close();
   });
 
+  it("a stale update arriving after the cancellation does not bring the tier back", async () => {
+    const app = await makeApp();
+    const uid = await newUser("INDICTED");
+    const sub = await platformSub(uid, { tier: "INDICTED" });
+    await send(app, "customer.subscription.deleted", { id: sub.stripeSubId!, status: "canceled" });
+    expect((await prisma.user.findUnique({ where: { id: uid } }))?.tier).toBe("INNOCENT");
+    // Stripe retries an older "updated" (active, Felon price) after the delete.
+    await send(
+      app,
+      "customer.subscription.updated",
+      felonUpdate(sub.stripeSubId!, "active", "price_test_felon"),
+    );
+    expect((await prisma.user.findUnique({ where: { id: uid } }))?.tier).toBe("INNOCENT");
+    expect((await prisma.subscription.findUnique({ where: { id: sub.id } }))?.status).toBe(
+      "canceled",
+    );
+    await app.close();
+  });
+
   it("opens the portal with Weered's own configuration", async () => {
     const app = await makeApp();
     const uid = await newUser("INDICTED");

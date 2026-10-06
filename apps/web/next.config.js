@@ -8,6 +8,8 @@ const SENTRY_RELEASE = (() => {
 })();
 
 const nextConfig = {
+  // No X-Powered-By: Next.js header (review 2026-10-06).
+  poweredByHeader: false,
   env: { NEXT_PUBLIC_SENTRY_RELEASE: SENTRY_RELEASE },
   // Lint runs in CI (root eslint flat config); the build is the type-gate only.
   eslint: { ignoreDuringBuilds: true },

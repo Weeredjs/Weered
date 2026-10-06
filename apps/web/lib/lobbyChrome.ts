@@ -4,6 +4,7 @@ import { useSearchParams } from "next/navigation";
 import { hydrateLobbyLang, clearLobbyLang } from "./lobbyLang";
 import { TIMBOS_LOBBY_ID } from "./timbosCopy";
 import { lobbyViews } from "./lobbySections";
+import { THEMEABLE_LOBBY_IDS, FORCED_THEME_LOBBIES } from "./lobbyThemes";
 
 /**
  * How a lobby's chrome behaves: which lobbies are themed, which force their
@@ -28,17 +29,8 @@ import { lobbyViews } from "./lobbySections";
  */
 
 // ── Which lobbies have a reskin ──────────────────────────────────────────
-export const THEMEABLE_LOBBY_IDS: string[] = [
-  "windrose",
-  "destiny2",
-  "dnd",
-  "hll",
-  "16thir",
-  "bandofbrothers",
-  "helldivers2",
-  TIMBOS_LOBBY_ID,
-  "vocn",
-];
+// The lists live in lib/lobbyThemes (a plain module the server layout can import).
+export { THEMEABLE_LOBBY_IDS, FORCED_THEME_LOBBIES } from "./lobbyThemes";
 
 export function isThemeableLobby(lobbyId: string): boolean {
   return THEMEABLE_LOBBY_IDS.includes(lobbyId);
@@ -61,15 +53,6 @@ export function isThemeableLobby(lobbyId: string): boolean {
 // "Keep default theme" themselves. Reserved for lobbies whose URL goes to a
 // prospect who has not joined anything — an unthemed lobby is the entire pitch
 // failing to land at the only moment it gets to.
-export const FORCED_THEME_LOBBIES: string[] = [
-  TIMBOS_LOBBY_ID,
-  "hll",
-  // Prospect previews: the unit opening the link has joined nothing.
-  "16thir",
-  "bandofbrothers",
-  // Virtual airline client preview (vOCN): opens on the crew hub, not on rooms.
-  "vocn",
-];
 
 export function isForcedThemeLobby(lobbyId: string): boolean {
   return FORCED_THEME_LOBBIES.includes(lobbyId);

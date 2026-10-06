@@ -1,6 +1,6 @@
-﻿"use client";
+"use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useLayoutEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 
 const TOKEN_KEY = "weered_user";
@@ -15,17 +15,15 @@ const isPublicPath = (p: string | null): boolean => !!p && PUBLIC_PATHS.some((re
 export default function RequireAuth({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  const [ok, setOk] = useState<boolean | null>(() => {
-    if (typeof window === "undefined") return null;
-    if (isPublicPath(pathname)) return true;
-    try {
-      return !!(localStorage.getItem(TOKEN_KEY) || "");
-    } catch {
-      return null;
-    }
-  });
+  // Starts unresolved on BOTH sides. The server cannot read localStorage, so
+  // it renders the placeholder; a first browser render that already showed the
+  // page made React discard and redraw every page wrapped in this gate (React
+  // #418 on /home, every lobby and every room), and that redraw wiped the
+  // theme attributes on <html>: the flicker James saw (2026-10-06). The layout
+  // effect resolves it before the browser paints the hydrated page.
+  const [ok, setOk] = useState<boolean | null>(null);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (isPublicPath(pathname)) {
       setOk(true);
       return;
@@ -46,7 +44,7 @@ export default function RequireAuth({ children }: { children: React.ReactNode })
   }, [router, pathname]);
 
   if (ok === null) {
-    return <div style={{ padding: 20, opacity: 0.7, fontSize: 13 }}>Checking session...</div>;
+    return <div aria-busy="true" />;
   }
   if (ok === false) return null;
 

@@ -24,6 +24,7 @@ import {
   lobbyHasModules,
   usePublishLobbyViews,
 } from "../../lib/lobbyChrome";
+import { applyChrome, currentChrome, rememberSkin } from "../../lib/lobbyThemes";
 import { hydrateLobbyLang, clearLobbyLang } from "../../lib/lobbyLang";
 import { isOfficeRoomId } from "@/lib/officeRooms";
 
@@ -300,6 +301,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
   const keepDefaultTheme = useKeepDefaultTheme();
   useEffect(() => {
     const id = lobbyContext?.id;
+    if (id) rememberSkin("room", roomId, isThemeableLobby(id) ? id : null);
     if (id && isThemeableLobby(id)) {
       const d = document.documentElement;
       if (!keepDefaultTheme) d.setAttribute("data-weered-lobby", id);
@@ -322,8 +324,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
       const bilingual = isBilingualLobby(id);
       if (bilingual) hydrateLobbyLang();
       return () => {
-        d.removeAttribute("data-weered-lobby");
-        if (hadMin) d.setAttribute("data-weered-chrome", "min");
+        applyChrome(...currentChrome(location.pathname, location.search)); // the next page's skin, not a wipe
         if (bilingual) clearLobbyLang();
       };
     }

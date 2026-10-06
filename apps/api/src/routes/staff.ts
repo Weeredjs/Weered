@@ -344,6 +344,18 @@ export default async function staffRoutes(app: FastifyInstance, opts: Opts) {
         publishState(room);
       }
     }
+    // Every connection, not only those inside a room: a banned member sitting on
+    // /home with the dock open kept a live socket and could still DM.
+    for (const sock of getWss()?.clients ?? []) {
+      if ((sock as any).user?.id !== targetId) continue;
+      (sock as any).user = undefined;
+      try {
+        send(sock, { type: "staff:banned", reason });
+        sock.close(4002, "staff:ban");
+      } catch (e) {
+        swallow(e);
+      }
+    }
 
     await globalAudit(u.id, u.name, "global_ban", targetId, target.name, { reason });
     return reply.send({ ok: true });

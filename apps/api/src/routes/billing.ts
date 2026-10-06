@@ -507,6 +507,10 @@ export default async function billingRoutes(app: FastifyInstance, opts: Opts) {
   // past_due keeps access while Stripe retries the card.
   const ENTITLED_STATUSES = new Set(["active", "trialing", "past_due"]);
   const ENDED_STATUSES = new Set(["unpaid", "canceled", "incomplete_expired"]);
+  // Stripe never revives these: a later "updated" event for one is a stale or
+  // retried delivery, and acting on it handed a cancelled member their paid
+  // tier back (review 2026-10-06). Unpaid can recover by paying, so it is not here.
+  const TERMINAL_STATUSES = new Set(["canceled", "incomplete_expired"]);
 
   const lobbyRoleFor = (level: number) => (level >= 4 ? "OWNER" : level >= 3 ? "MOD" : "MEMBER");
 
@@ -709,8 +713,8 @@ export default async function billingRoutes(app: FastifyInstance, opts: Opts) {
       }
 
       const age = Math.floor(Date.now() / 1000) - Number.parseInt(timestamp, 10);
-      if (age > 300) {
-        log.error("[stripe webhook] timestamp too old:", age, "seconds");
+      if (age > 300 || age < -300) {
+        log.error("[stripe webhook] timestamp out of range:", age, "seconds");
         return reply.code(400).send({ ok: false, error: "timestamp_expired" });
       }
     }
@@ -813,7 +817,7 @@ export default async function billingRoutes(app: FastifyInstance, opts: Opts) {
           });
           const was = (row: { status: string } | null) => String(row?.status || "");
           const now = String(stripeSub.status || "");
-          if (dbSub) {
+          if (dbSub && !TERMINAL_STATUSES.has(was(dbSub))) {
             await prisma.subscription.update({
               where: { stripeSubId: subId },
               data: {
@@ -857,7 +861,7 @@ export default async function billingRoutes(app: FastifyInstance, opts: Opts) {
           const lobbyTierSub = await prisma.lobbyTierSub.findUnique({
             where: { stripeSubId: subId },
           });
-          if (lobbyTierSub) {
+          if (lobbyTierSub && !TERMINAL_STATUSES.has(was(lobbyTierSub))) {
             await prisma.lobbyTierSub.update({
               where: { stripeSubId: subId },
               data: {
@@ -932,7 +936,10 @@ export default async function billingRoutes(app: FastifyInstance, opts: Opts) {
         }
       }
     } catch (e) {
+      // A failed handler must say so: a 200 here told Stripe the refund or
+      // dispute had been applied, so it never retried.
       log.error("[stripe webhook]", e);
+      return reply.code(500).send({ error: "webhook_handler_failed" });
     }
 
     return reply.send({ ok: true });

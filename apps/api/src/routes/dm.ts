@@ -2,6 +2,8 @@ import { log, swallow } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
 import { z } from "zod";
+import { checkChatRateLimit, checkUrlSpam } from "../lib/chatHelpers";
+import { answerOperatorDm } from "../lib/operatorDm";
 
 type Opts = {
   authFromHeader: (h?: string) => { id: string; name: string } | null;
@@ -190,6 +192,31 @@ export default async function dmRoutes(app: FastifyInstance, opts: Opts) {
       const body: any = (req as any).body || {};
       const text = typeof body.body === "string" ? body.body.trim().slice(0, 2000) : "";
       if (!text) return reply.code(400).send({ error: "Empty message" });
+      // The same gates as the socket path (dm:send). This route skipped all
+      // three, so a blocked user could still DM through it (review 2026-10-06).
+      const urlCheck = checkUrlSpam(text);
+      if (!urlCheck.ok)
+        return reply.code(400).send({ error: urlCheck.reason || "Message blocked" });
+      const rate = checkChatRateLimit(viewer.id);
+      if (!rate.ok) return reply.code(429).send({ error: rate.reason, retryInMs: rate.retryInMs });
+      const blocked = await prisma.userBlock
+        .findFirst({
+          where: {
+            OR: [
+              { blockerId: viewer.id, blockedId: peerId },
+              { blockerId: peerId, blockedId: viewer.id },
+            ],
+          },
+          select: { blockerId: true },
+        })
+        .catch(() => null);
+      if (blocked)
+        return reply.code(403).send({
+          error:
+            blocked.blockerId === viewer.id
+              ? "You've blocked this user. Unblock them in Settings to send messages."
+              : "Message not delivered.",
+        });
 
       let replyData: any = {};
       const rawReplyToId = typeof body.replyToId === "string" ? body.replyToId : "";
@@ -246,6 +273,9 @@ export default async function dmRoutes(app: FastifyInstance, opts: Opts) {
             tag: `dm:${viewer.id}`,
           }).catch(swallow);
         }
+        // A DM to The Operator gets an answer here too (the mobile app and the
+        // web fallback send through this route).
+        void answerOperatorDm(viewer.id, peerId, !!(viewer as any).guest);
         return reply.send({
           ok: true,
           message: { ...dm, createdAt: (dm as any).createdAt.toISOString() },

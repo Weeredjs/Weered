@@ -12,6 +12,11 @@ import { dmDeliver, getOperatorUserId } from "./notifications";
  * allowance as the room path (the "operator" bucket); guests never cost a call.
  */
 const HISTORY = 8;
+// One model call per member at a time: six quick DMs used to start six calls
+// over the same history and send six near-identical replies.
+const inFlight = new Set<string>();
+// The "out of questions" note goes once a day, not once per DM.
+const toldOut = new Map<string, string>();
 
 type Turn = { role: "user" | "assistant"; content: string };
 
@@ -51,19 +56,28 @@ export async function answerOperatorDm(
   toId: string,
   isGuest: boolean,
 ): Promise<void> {
+  let mine = false;
   try {
     const operatorId = await getOperatorUserId();
     if (toId !== operatorId || fromId === operatorId || isGuest) return;
-    if (!takeAiBudget(fromId, "operator")) {
-      await deliver(
-        operatorId,
-        fromId,
-        "I've answered all your questions for today. Try me again tomorrow.",
-      );
-      return;
-    }
+    if (inFlight.has(fromId)) return;
+    // AI first: with AI off, a DM must not spend one of the member's 30.
     const ai = await getAI();
     if (!ai) return;
+    if (!takeAiBudget(fromId, "operator")) {
+      const today = new Date().toISOString().slice(0, 10);
+      if (toldOut.get(fromId) !== today) {
+        toldOut.set(fromId, today);
+        await deliver(
+          operatorId,
+          fromId,
+          "I've answered all your questions for today. Try me again tomorrow.",
+        );
+      }
+      return;
+    }
+    inFlight.add(fromId);
+    mine = true;
     const rows = await prisma.directMessage.findMany({
       where: {
         deletedAt: null,
@@ -90,5 +104,7 @@ export async function answerOperatorDm(
     if (reply) await deliver(operatorId, fromId, reply);
   } catch (e) {
     log.error("[operatorDm]", e);
+  } finally {
+    if (mine) inFlight.delete(fromId);
   }
 }

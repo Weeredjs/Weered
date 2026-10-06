@@ -88,8 +88,12 @@ export async function handleAuthHello(
       });
       return;
     }
-    ws.user = await hydrateGlobalRole(u);
-    if (await isGloballyBanned(ws.user.id)) {
+    // The user is attached only after every check passes. Attaching first let
+    // a banned or signed-out session act for up to ~30 s: ws still delivers
+    // messages while a socket closes, and the handlers only check ws.user.
+    const hydrated = await hydrateGlobalRole(u);
+    if (await isGloballyBanned(hydrated.id)) {
+      ws.user = undefined;
       send(ws, { type: "auth:fail", reason: "Your account has been suspended." });
       try {
         ws.close(4003, "banned");
@@ -100,7 +104,8 @@ export async function handleAuthHello(
     }
     // A deleted account, or a token older than the account's sign-out-everywhere
     // cut-off (a password reset), may not open a socket (audit 2026-09-27).
-    if (sessionEnded && (await sessionEnded(ws.user.id, Number((u as any).iat) || 0))) {
+    if (sessionEnded && (await sessionEnded(hydrated.id, Number((u as any).iat) || 0))) {
+      ws.user = undefined;
       send(ws, { type: "auth:fail", reason: "Session ended. Please sign in again." });
       try {
         ws.close(4001, "session_revoked");
@@ -109,6 +114,7 @@ export async function handleAuthHello(
       }
       return;
     }
+    ws.user = hydrated;
     send(ws, {
       type: "auth:ok",
       user: {

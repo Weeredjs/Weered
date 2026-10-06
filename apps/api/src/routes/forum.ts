@@ -4,6 +4,7 @@ import { existsSync, mkdirSync, writeFileSync, readFileSync } from "fs";
 import { join } from "path";
 import { createHash } from "crypto";
 import sharp from "sharp";
+import { isAllowedRaster } from "../lib/sharpSafety";
 import { prisma } from "../lib/prisma";
 import { canManageLobby } from "../lib/lobbyAccess";
 import { z } from "zod";
@@ -968,6 +969,8 @@ export default async function forumRoutes(app: FastifyInstance, opts: Opts) {
       const raw = decodeForumDataUrl(dataUrl);
       if (!raw) return reply.code(400).send({ error: "Invalid image data" });
       if (raw.length > 12 * 1024 * 1024) return reply.code(400).send({ error: "File too large" });
+      if (!isAllowedRaster(raw))
+        return reply.code(400).send({ error: "Use a PNG, JPEG, GIF or WebP image" });
 
       try {
         let pipeline = sharp(raw, { failOn: "none" }).rotate();

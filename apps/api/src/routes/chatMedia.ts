@@ -3,6 +3,7 @@ import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { prisma } from "../lib/prisma";
 import sharp, { type Metadata } from "sharp";
+import { isAllowedRaster } from "../lib/sharpSafety";
 import * as fs from "fs";
 import * as path from "path";
 import crypto from "crypto";
@@ -105,6 +106,7 @@ export default async function chatMediaRoutes(app: FastifyInstance, opts: Opts) 
       }
       if (buf.length > MAX_BYTES)
         return reply.code(413).send({ ok: false, error: "too_large", maxBytes: MAX_BYTES });
+      if (!isAllowedRaster(buf)) return reply.code(400).send({ ok: false, error: "bad_image" });
 
       let full: Buffer, thumb: Buffer, meta: Metadata;
       try {

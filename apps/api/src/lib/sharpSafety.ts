@@ -33,3 +33,20 @@ export function hardenSharp(): boolean {
 }
 
 hardenSharp();
+
+/**
+ * Uploads reach sharp only as PNG, JPEG, GIF or WebP, judged by their leading
+ * bytes. sharp picks a decoder from those bytes whatever the declared type, so
+ * an SVG labelled image/png reached librsvg (GHSA-wq5f-xc86-pv6w in the bundled
+ * 2.62.90) on every upload route (review 2026-10-06). Checking the signature
+ * closes that and any other loader at once. Do not block the SVG loader
+ * process-wide instead: the Windrose watermark composites an SVG we build.
+ */
+export function isAllowedRaster(buf: Buffer): boolean {
+  if (!buf || buf.length < 12) return false;
+  const png = buf[0] === 0x89 && buf.toString("latin1", 1, 4) === "PNG";
+  const jpeg = buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff;
+  const gif = buf.toString("latin1", 0, 4) === "GIF8";
+  const webp = buf.toString("latin1", 0, 4) === "RIFF" && buf.toString("latin1", 8, 12) === "WEBP";
+  return png || jpeg || gif || webp;
+}

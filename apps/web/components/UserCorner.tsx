@@ -177,13 +177,14 @@ export default function UserCorner() {
     return () => window.removeEventListener("weered:profileColors", onColors);
   }, []);
 
-  const [dockUnread, setDockUnread] = React.useState(() => {
+  // 0 on both sides, then the stored count before paint (a first render that
+  // read localStorage did not match the server and broke hydration).
+  const [dockUnread, setDockUnread] = React.useState(0);
+  useLayoutEffect(() => {
     try {
-      return Math.max(0, Number(localStorage.getItem("weered:dock:unread")) || 0);
-    } catch {
-      return 0;
-    }
-  });
+      setDockUnread(Math.max(0, Number(localStorage.getItem("weered:dock:unread")) || 0));
+    } catch {}
+  }, []);
 
   React.useEffect(() => {
     const onUnread = (e: Event) => {

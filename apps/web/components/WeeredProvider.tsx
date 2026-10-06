@@ -8,7 +8,7 @@ import RankUpCelebration from "./RankUpCelebration";
 import SystemBroadcast from "./SystemBroadcast";
 import { weeredToast } from "../lib/toast";
 import { onActivate } from "@/lib/a11y";
-import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
+import React, { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 const API    = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 const WS_URL = process.env.NEXT_PUBLIC_WS_URL   || "ws://127.0.0.1:4001";
@@ -251,14 +251,18 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
   const router   = useRouter();
   const pathname = usePathname();
 
-  const [token, setToken] = useState<string>(() => {
-    if (typeof window === "undefined") return "";
-    try { return localStorage.getItem("weered_user") ? "authed" : ""; } catch { return ""; }
-  });
-  const [me,    setMe   ] = useState<any>(() => {
-    if (typeof window === "undefined") return null;
-    try { const u = localStorage.getItem("weered_user"); return u ? JSON.parse(u) : null; } catch { return null; }
-  });
+  // Signed-out on the first render, on both sides: the server cannot read
+  // localStorage, and a client that started signed-in rendered a different
+  // shell, so React discarded every page for every member (#418). The layout
+  // effect below signs the member in before the hydrated page is painted.
+  const [token, setToken] = useState<string>("");
+  const [me,    setMe   ] = useState<any>(null);
+  useLayoutEffect(() => {
+    try {
+      const u = localStorage.getItem("weered_user");
+      if (u) { setToken("authed"); setMe(JSON.parse(u)); }
+    } catch {}
+  }, []);
   const [globalRole, setGlobalRole] = useState("");
 
   const [wsState, setWsState] = useState<number>(WebSocket.CLOSED);
@@ -352,7 +356,9 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
         if (rid && rid !== "@me") { activeRoomIdRef.current = rid; setActiveRoomId(rid); return; }
       }
     if (pathname.startsWith("/lobby")) {
-      const seg = pathname.replace("/lobby/", "").replace("/lobby", "").trim();
+      // The lobby id is the first segment only: /lobby/vocn/admin is lobby
+      // "vocn", not "vocn/admin" (which 404ed and joined a bogus room).
+      const seg = pathname.replace("/lobby/", "").replace("/lobby", "").trim().split("/")[0];
       const staticRoutes = ["create", "admin", "settings"];
       if (seg && staticRoutes.includes(seg.split("/")[0])) return;
       const rid = seg ? decodeURIComponent(seg) : "lobby";
