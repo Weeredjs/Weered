@@ -69,6 +69,11 @@ export const NO_SHELL_ROUTES: string[] = [
   "/guidelines",
   "/forgot-password",
   "/reset-password",
+  "/verify-email",
+  "/media-policy",
+  "/safety",
+  "/features",
+  "/blog",
 ];
 
 /**

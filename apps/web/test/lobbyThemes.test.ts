@@ -35,6 +35,20 @@ describe("one rule for skin and chrome", () => {
     expect(decide("/lobby/vocn", false, null, "?chrome=full")).toEqual([null, false]);
     expect(decide("/lobby/vocn/admin")).toEqual([null, true]);
   });
+  it("keeps every bare marketing and legal page out of the shell", () => {
+    for (const r of [
+      "/verify-email",
+      "/media-policy",
+      "/safety",
+      "/features",
+      "/blog",
+      "/terms",
+      "/reset-password",
+    ]) {
+      expect(NO_SHELL_ROUTES, r).toContain(r);
+      expect(decide(r), r).toEqual([null, false]);
+    }
+  });
   it("its source runs on its own, as the pre-paint script inlines it", () => {
     const standalone = new Function(`return (${chromeFor.toString()});`)();
     expect(
