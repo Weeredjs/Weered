@@ -224,7 +224,7 @@ export function ChallengeLeaderboard({
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    apiFetch(`/challenges/${instanceId}/leaderboard`).then((res) => {
+    void apiFetch(`/challenges/${instanceId}/leaderboard`).then((res) => {
       if (res?.leaderboard) setRows(res.leaderboard);
       setLoading(false);
     });
@@ -326,7 +326,7 @@ export function ChallengeBuilder({
   const [error, setError] = useState("");
 
   useEffect(() => {
-    apiFetch("/challenges/modifiers/catalog").then((j: any) => {
+    void apiFetch("/challenges/modifiers/catalog").then((j: any) => {
       if (j?.modifiers)
         setCatalog(
           j.modifiers.filter(
@@ -710,7 +710,7 @@ export function ChallengeBoard({ lobbyId }: { lobbyId: string }) {
   }, [lobbyId]);
 
   useEffect(() => {
-    fetchAll();
+    void fetchAll();
   }, [fetchAll]);
 
   useEffect(() => {
@@ -749,14 +749,14 @@ export function ChallengeBoard({ lobbyId }: { lobbyId: string }) {
       method: "POST",
       body: JSON.stringify({}),
     });
-    fetchAll();
+    void fetchAll();
   };
   const abandon = async (instanceId: string) => {
     await apiFetch(`/challenges/${instanceId}/enroll`, {
       method: "DELETE",
       body: JSON.stringify({}),
     });
-    fetchAll();
+    void fetchAll();
   };
 
   const enrollMap = new Map<string, any>();

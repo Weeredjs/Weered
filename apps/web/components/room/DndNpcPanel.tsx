@@ -548,7 +548,7 @@ export default function DndNpcPanel({ roomId }: { roomId: string }) {
                         confirmLabel: "Dismiss",
                         destructive: true,
                       });
-                      if (ok) handleDelete(npc.id);
+                      if (ok) void handleDelete(npc.id);
                     }}
                     style={{
                       ...S.btn,
@@ -750,7 +750,7 @@ export default function DndNpcPanel({ roomId }: { roomId: string }) {
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
-                sendMessage();
+                void sendMessage();
               }
             }}
             placeholder={`Speak to ${activeNpc.name}...`}

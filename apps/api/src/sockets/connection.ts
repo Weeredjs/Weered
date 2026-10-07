@@ -131,7 +131,7 @@ export async function handleAuthHello(
       },
     });
     awardNotoriety(ws.user.id, "DAILY_ACTIVE").catch(swallow);
-    (async () => {
+    void (async () => {
       try {
         const memberships = await prisma.crewMember.findMany({
           where: { userId: ws.user!.id },
@@ -187,7 +187,7 @@ export function handleClose(
     const closingUserName = ws.user.name;
     setTimeout(() => {
       if (!isUserOnline(closingUserId)) {
-        (async () => {
+        void (async () => {
           try {
             const memberships = await prisma.crewMember.findMany({
               where: { userId: closingUserId },

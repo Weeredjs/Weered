@@ -148,7 +148,7 @@ export default function MtgModulesPanel({
   }, []);
 
   useEffect(() => {
-    loadFeatured();
+    void loadFeatured();
   }, [loadFeatured]);
 
   const search = useCallback(async () => {
@@ -208,7 +208,7 @@ export default function MtgModulesPanel({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter") search();
+              if (e.key === "Enter") void search();
             }}
             placeholder="e.g. Doubling Season"
             style={{

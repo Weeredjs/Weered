@@ -628,7 +628,7 @@ function ClassBrowser() {
       {CLASS_DATA.map(c => {
         const cc = CLASS_COLORS[c.name] || ACCENT;
         return (
-          <div key={c.name} onClick={() => { setSelected(c); loadClass(c.name.toLowerCase()); }} onKeyDown={onActivate(() => { setSelected(c); loadClass(c.name.toLowerCase()); })} tabIndex={0} role="button" style={{ ...S.card, cursor: "pointer", transition: "border-color .12s", display: "flex", gap: 10, alignItems: "flex-start" }}
+          <div key={c.name} onClick={() => { setSelected(c); void (loadClass(c.name.toLowerCase())); }} onKeyDown={onActivate(() => { setSelected(c); void (loadClass(c.name.toLowerCase())); })} tabIndex={0} role="button" style={{ ...S.card, cursor: "pointer", transition: "border-color .12s", display: "flex", gap: 10, alignItems: "flex-start" }}
             onMouseEnter={e => (e.currentTarget.style.borderColor = `${cc}44`)}
             onMouseLeave={e => (e.currentTarget.style.borderColor = "rgba(255,255,255,.08)")}
           >
@@ -851,7 +851,7 @@ function DiceTower({ lobbyId }: { lobbyId: string }) {
   }
 
   const advRoll = (adv: boolean) => {
-    doRoll(adv ? "d20adv" : "d20dis");
+    void (doRoll(adv ? "d20adv" : "d20dis"));
   };
 
   return (
@@ -966,12 +966,12 @@ function DiceTower({ lobbyId }: { lobbyId: string }) {
             placeholder="2d8+5, d20adv, 4d6, d100..."
             value={customExpr}
             onChange={e => setCustomExpr(e.target.value)}
-            onKeyDown={e => { if (e.key === "Enter" && customExpr) { doRoll(customExpr); setCustomExpr(""); } }}
+            onKeyDown={e => { if (e.key === "Enter" && customExpr) { void (doRoll(customExpr)); setCustomExpr(""); } }}
           />
           <button
             className="dnd-stone-tile"
             style={{ flex: "0 0 auto", minWidth: 80 }}
-            onClick={() => { if (customExpr) { doRoll(customExpr); setCustomExpr(""); } }}
+            onClick={() => { if (customExpr) { void (doRoll(customExpr)); setCustomExpr(""); } }}
             disabled={busy}
           >Cast</button>
         </div>
@@ -1275,7 +1275,7 @@ function TwitchStreams({ lobbyId }: { lobbyId: string }) {
     setLoading(false);
   }, []);
 
-  useEffect(() => { load(); const i = setInterval(load, 30000); return () => clearInterval(i); }, [load]);
+  useEffect(() => { void (load()); const i = setInterval(load, 30000); return () => clearInterval(i); }, [load]);
 
   const parentHost = typeof window !== "undefined" ? window.location.hostname : "weered.ca";
 

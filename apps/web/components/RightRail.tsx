@@ -97,7 +97,7 @@ function useLobbyCrews(lobbyId: string, enabled: boolean) {
         if (j?.ok && Array.isArray(j.crews)) setCrews(j.crews);
       } catch {}
     };
-    load();
+    void (load());
     const t = setInterval(load, 60000);
     return () => { alive = false; clearInterval(t); };
   }, [lobbyId, enabled]);
@@ -143,7 +143,7 @@ function WhosHerePanel({ lobbyId }: { lobbyId: string }) {
   const [eligible, setEligible] = React.useState(false);
   React.useEffect(() => {
     let alive = true;
-    Promise.all([
+    void (Promise.all([
       apiFetch("/friends").catch(() => ({} as any)),
       apiFetch("/crews/mine").catch(() => ({} as any)),
     ]).then(([f, c]) => {
@@ -151,7 +151,7 @@ function WhosHerePanel({ lobbyId }: { lobbyId: string }) {
       const friends = Array.isArray(f?.friends) ? f.friends : [];
       const crews = Array.isArray(c?.crews) ? c.crews : [];
       if (!friends.length && !crews.length) setEligible(true);
-    });
+    }));
     return () => { alive = false; };
   }, []);
   if (!eligible) return null;
@@ -1210,7 +1210,7 @@ function DiscoverLobbiesPanel({ currentLobbyId }: { currentLobbyId: string }) {
 
   React.useEffect(() => {
     let alive = true;
-    Promise.all([
+    void (Promise.all([
       apiFetch("/friends").catch(() => ({} as any)),
       apiFetch("/crews/mine").catch(() => ({} as any)),
     ]).then(([f, c]) => {
@@ -1218,7 +1218,7 @@ function DiscoverLobbiesPanel({ currentLobbyId }: { currentLobbyId: string }) {
       const friends = Array.isArray(f?.friends) ? f.friends : [];
       const crews = Array.isArray(c?.crews) ? c.crews : [];
       if (!friends.length && !crews.length) setEligible(true);
-    });
+    }));
     return () => { alive = false; };
   }, []);
 

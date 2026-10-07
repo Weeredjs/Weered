@@ -18,7 +18,7 @@ export default function MicSettings() {
 
   useEffect(() => {
     if (!open) return;
-    refreshMics();
+    void refreshMics();
     place();
     function onDoc(e: MouseEvent) {
       const t = e.target as Node;

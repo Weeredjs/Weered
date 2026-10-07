@@ -218,7 +218,7 @@ export default function AnalyticsTab() {
   }, []);
 
   useEffect(() => {
-    fetchData();
+    void fetchData();
     timerRef.current = setInterval(() => fetchData(true), 30_000);
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);

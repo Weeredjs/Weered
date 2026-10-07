@@ -52,7 +52,7 @@ export default function HelldiversMajorOrderPanel({ style }: { style?: React.CSS
         if (alive) setLoading(false);
       }
     }
-    load();
+    void load();
     const t = setInterval(load, 60_000);
     return () => {
       alive = false;
@@ -72,7 +72,7 @@ export default function HelldiversMajorOrderPanel({ style }: { style?: React.CSS
       return;
     }
     let alive = true;
-    (async () => {
+    void (async () => {
       try {
         const r = await fetch(`${API}/helldivers/dispatches?limit=30`);
         const j = await r.json();

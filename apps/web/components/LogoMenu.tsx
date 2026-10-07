@@ -41,7 +41,7 @@ export function LogoMenu() {
   }, []);
 
   useEffect(() => {
-    fetchUnread();
+    void fetchUnread();
     const iv = setInterval(fetchUnread, 30000);
     return () => clearInterval(iv);
   }, [fetchUnread]);

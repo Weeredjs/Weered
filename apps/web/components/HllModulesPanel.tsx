@@ -1356,7 +1356,7 @@ function FireMission({ accent, currentUserId }: { accent: string; currentUserId?
 
   useEffect(() => {
     if (phase !== "over" || !currentUserId || hot.current.score <= 0) return;
-    (async () => {
+    void (async () => {
       try {
         const r = await fetch(`${API}/hll/fire-mission/score`, {
           method: "POST",

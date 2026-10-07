@@ -90,7 +90,7 @@ function PriceChart({ symbol, accent: _accent, timeframe = "1m" }: { symbol: str
     let volumeSeries: any = null;
     let cleanup = false;
 
-    (async () => {
+    void ((async () => {
       const lc = await import("lightweight-charts");
       if (cleanup) return;
 
@@ -201,7 +201,7 @@ function PriceChart({ symbol, accent: _accent, timeframe = "1m" }: { symbol: str
         ro.disconnect();
         chart.remove();
       };
-    })();
+    })());
 
     return () => {
       cleanup = true;
@@ -989,15 +989,15 @@ export default function TradingModulesPanel({ lobbyId, accent }: { lobbyId: stri
   }, []);
 
   useEffect(() => {
-    apiFetch("/trading/symbols").then(j => {
+    void (apiFetch("/trading/symbols").then(j => {
       if (j.ok && j.symbols?.length) setSymbols(j.symbols);
-    });
+    }));
   }, []);
 
   const loadAccount = useCallback(() => {
-    apiFetch(`/trading/account/${lobbyId}?mode=${mode}`).then(j => {
+    void (apiFetch(`/trading/account/${lobbyId}?mode=${mode}`).then(j => {
       if (j.ok) setAccount(j.account);
-    });
+    }));
   }, [lobbyId, mode]);
 
   useEffect(() => {
@@ -1026,9 +1026,9 @@ export default function TradingModulesPanel({ lobbyId, accent }: { lobbyId: stri
 
   useEffect(() => {
     if (tab === "history" && !history) {
-      apiFetch(`/trading/history/${lobbyId}?mode=${mode}`).then(j => {
+      void (apiFetch(`/trading/history/${lobbyId}?mode=${mode}`).then(j => {
         if (j.ok) setHistory({ orders: j.orders || [], closedPositions: j.closedPositions || [] });
-      });
+      }));
     }
   }, [tab, lobbyId, history, mode]);
 

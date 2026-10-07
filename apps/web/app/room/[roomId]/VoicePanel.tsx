@@ -110,7 +110,7 @@ export default function VoicePanel({ roomId }: { roomId: string }) {
       setErr(String(e?.message || e || "voice_error"));
       setConn("error");
       try {
-        roomRef.current?.disconnect();
+        void roomRef.current?.disconnect();
       } catch {}
       roomRef.current = null;
       clearAudio();
@@ -120,7 +120,7 @@ export default function VoicePanel({ roomId }: { roomId: string }) {
   async function disconnect() {
     setErr("");
     try {
-      roomRef.current?.disconnect();
+      void roomRef.current?.disconnect();
     } catch {}
     roomRef.current = null;
     clearAudio();
@@ -140,7 +140,7 @@ export default function VoicePanel({ roomId }: { roomId: string }) {
   useEffect(() => {
     return () => {
       try {
-        roomRef.current?.disconnect();
+        void roomRef.current?.disconnect();
       } catch {}
       roomRef.current = null;
       clearAudio();

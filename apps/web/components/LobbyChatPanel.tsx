@@ -188,7 +188,7 @@ export default function LobbyChatPanel(
   useEffect(() => {
     if (!damagePicker || !effectiveRoomId) return;
     let alive = true;
-    (async () => {
+    void (async () => {
       try {
         const tok = (ctx as any)?.token;
         const r = await fetch(`${API}/maps/${encodeURIComponent(effectiveRoomId)}`, {

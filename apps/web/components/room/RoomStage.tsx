@@ -727,7 +727,7 @@ function VoiceStage({ roomId, moduleType, roomUsers, onClose, style }: { roomId:
     if (!prompted) return;
     const alreadyHere = voice.connState === "connected" && voice.activeRoomId === roomId;
     const inProgress  = voice.connState === "connecting";
-    if (!alreadyHere && !inProgress) { connect(); }
+    if (!alreadyHere && !inProgress) { void (connect()); }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [prompted, roomId]);
 
@@ -884,7 +884,7 @@ function VideoStage({ roomId, onClose, style }: { roomId: string; onClose?: () =
 
   useEffect(() => {
     if (connState === "idle" || connState === "error") {
-      connect(roomId, { mic: false });
+      void (connect(roomId, { mic: false }));
     }
   }, [roomId]); // eslint-disable-line react-hooks/exhaustive-deps
 

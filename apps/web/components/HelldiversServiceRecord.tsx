@@ -59,7 +59,7 @@ export default function HelldiversServiceRecord({
       setLoaded(true);
       return;
     }
-    Promise.all([
+    void Promise.all([
       fetch(`${API}/steam/owned/${HD2_APP}`, { headers: authHeaders() })
         .then((r) => r.json())
         .catch(() => null),

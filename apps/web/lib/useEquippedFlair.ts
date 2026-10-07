@@ -76,7 +76,7 @@ export function useEquippedFlair(
     if (e && Date.now() - e.at < TTL_MS) {
       setFlair(e.flair);
     } else if (e?.promise) {
-      e.promise.then((f) => {
+      void e.promise.then((f) => {
         if (alive) setFlair(f);
       });
     } else {
@@ -86,7 +86,7 @@ export function useEquippedFlair(
         return f;
       });
       cache.set(userId, { at: Date.now(), flair: null, promise: p });
-      p.then((f) => {
+      void p.then((f) => {
         if (alive) setFlair(f);
       });
     }

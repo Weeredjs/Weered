@@ -61,7 +61,7 @@ export default function VaHub({
   const [events, setEvents] = useState<LobbyEvent[]>([]);
 
   useEffect(() => {
-    vaFetch<{ events: LobbyEvent[] }>(
+    void vaFetch<{ events: LobbyEvent[] }>(
       `/lobbies/${encodeURIComponent(lobbyId)}/events?limit=12`,
     ).then((r) => {
       if (r.status === 200 && r.data)

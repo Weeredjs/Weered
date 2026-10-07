@@ -86,7 +86,7 @@ export function useNotifications() {
   }, []);
 
   useEffect(() => {
-    fetchUnreadCount();
+    void fetchUnreadCount();
     const iv = setInterval(fetchUnreadCount, 30000);
     return () => clearInterval(iv);
   }, [fetchUnreadCount]);
@@ -184,7 +184,7 @@ export function NotificationsView({ onBack }: { onBack: () => void }) {
   } = useNotifications();
 
   useEffect(() => {
-    fetchNotifications();
+    void fetchNotifications();
   }, [fetchNotifications]);
 
   const ACTIONABLE_TYPES = new Set([
@@ -198,7 +198,7 @@ export function NotificationsView({ onBack }: { onBack: () => void }) {
     (!!n.actionUrl && n.actionUrl !== "/home" && n.actionUrl !== "/");
 
   const handleClick = (notif: Notif) => {
-    if (!notif.read) markOneRead(notif.id);
+    if (!notif.read) void markOneRead(notif.id);
 
     const dispatch = (detail: any) => {
       try {
@@ -422,7 +422,7 @@ export function NotificationsView({ onBack }: { onBack: () => void }) {
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  deleteNotif(n.id);
+                  void deleteNotif(n.id);
                 }}
                 style={{
                   background: "none",

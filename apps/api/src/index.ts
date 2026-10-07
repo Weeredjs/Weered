@@ -1130,7 +1130,7 @@ async function main() {
     createNotification,
   });
 
-  runFeedWorker();
+  void runFeedWorker();
   setInterval(runFeedWorker, 20 * 60 * 1000);
   // start.gg announcements. 10 min is well inside the route cache's 5 min at
   // rest / 45 s live, so the worker never costs an extra start.gg request.
@@ -1420,7 +1420,7 @@ async function main() {
 
   const annDb = prisma as any;
 
-  (async () => {
+  void (async () => {
     try {
       const count = await annDb.announcement.count();
       if (count === 0) {
@@ -1447,7 +1447,7 @@ async function main() {
 
   await app.register(aiRoutes, { authFromHeader, isAIAvailable, getAI, rooms });
 
-  runNewsWorker();
+  void runNewsWorker();
   setInterval(runNewsWorker, 15 * 60 * 1000);
 
   // Ephemeral guest cleanup: drop expired guest users (and their room memberships) hourly.

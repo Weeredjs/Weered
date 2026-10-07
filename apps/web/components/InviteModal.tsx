@@ -89,7 +89,7 @@ export default function InviteModal({ type, targetId, targetName, onClose }: Pro
   }
 
   function copy() {
-    navigator.clipboard.writeText(link).then(() => {
+    void navigator.clipboard.writeText(link).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     });

@@ -116,7 +116,7 @@ export default function TacticalMap({ roomId }: Props) {
   }, [roomId]);
 
   useEffect(() => {
-    reload();
+    void reload();
   }, [reload]);
 
   useEffect(() => {
@@ -143,7 +143,7 @@ export default function TacticalMap({ roomId }: Props) {
     function onCreated(ev: any) {
       const d = ev?.detail;
       if (!d || d.roomId !== roomId) return;
-      reload();
+      void reload();
     }
     function onUpdated(ev: any) {
       const d = ev?.detail;
@@ -688,7 +688,7 @@ export default function TacticalMap({ roomId }: Props) {
   }, [map?.id, imgLoaded]);
 
   const onUploaded = useCallback(() => {
-    reload();
+    void reload();
   }, [reload]);
 
   return (

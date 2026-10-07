@@ -37,7 +37,7 @@ export function TiersTab({
   }, [lobbyId]);
 
   useEffect(() => {
-    load();
+    void load();
   }, [load]);
 
   async function createTier() {
@@ -74,7 +74,7 @@ export function TiersTab({
         color: "",
         sortOrder: "0",
       });
-      load();
+      void load();
       onRefresh();
     } else setMsg(j.error || "Failed to create tier.");
   }
@@ -86,7 +86,7 @@ export function TiersTab({
     });
     if (j.ok) {
       setMsg(`${tier.name} ${tier.active ? "deactivated" : "activated"}.`);
-      load();
+      void load();
     } else setMsg(j.error || "Failed.");
   }
 

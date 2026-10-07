@@ -50,7 +50,7 @@ function useLiveFeed(category: Category, sort: "hot" | "new", domain?: string) {
 
   useEffect(() => {
     setLoading(true);
-    load();
+    void load();
     const timer = setInterval(load, 60_000);
     return () => clearInterval(timer);
   }, [category, sort]);

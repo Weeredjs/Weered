@@ -380,7 +380,7 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginTop: 10 }}>
-        <button style={s.btn} onClick={() => { const base = typeof window !== "undefined" ? window.location.origin : ""; copyText("link", `${base}/room/${encodeURIComponent(roomId)}`); }}>Copy link</button>
+        <button style={s.btn} onClick={() => { const base = typeof window !== "undefined" ? window.location.origin : ""; void (copyText("link", `${base}/room/${encodeURIComponent(roomId)}`)); }}>Copy link</button>
         <button style={s.btn} onClick={() => copyText("id", roomId)}>Copy id</button>
         <button style={{ ...s.btn, gridColumn: "span 2", borderColor: "rgba(124,58,237,.30)", color: "var(--weered-room-accent-2)", background: "rgba(124,58,237,.08)" }} onClick={() => setShowInvite(true)}>Invite</button>
       </div>

@@ -589,7 +589,7 @@ function AnnouncementsTab({ lobbyId, accent }: { lobbyId: string; accent: string
   }, [lobbyId]);
 
   useEffect(() => {
-    load();
+    void load();
   }, [load]);
 
   async function handlePost() {
@@ -609,7 +609,7 @@ function AnnouncementsTab({ lobbyId, accent }: { lobbyId: string; accent: string
         setComposing(false);
         setTitle("");
         setBody("");
-        load();
+        void load();
       }
     } catch {}
     setSubmitting(false);
@@ -790,9 +790,9 @@ export default function HeadquartersModulesPanel({ lobbyId, accentColor, style }
   }, [lobbyId]);
 
   useEffect(() => {
-    fetchRooms();
-    fetchPresence();
-    fetchMembers();
+    void fetchRooms();
+    void fetchPresence();
+    void fetchMembers();
   }, [fetchRooms, fetchPresence, fetchMembers]);
 
   useEffect(() => {

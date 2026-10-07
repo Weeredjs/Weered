@@ -77,7 +77,7 @@ export default function TournamentMatchModal({
   }, [tournamentId, matchId]);
 
   React.useEffect(() => {
-    fetchMatch();
+    void fetchMatch();
     const t = setInterval(fetchMatch, 8000);
     return () => clearInterval(t);
   }, [fetchMatch]);
@@ -525,7 +525,7 @@ export default function TournamentMatchModal({
                   onBlur={(e) => {
                     const v = e.target.value.trim().slice(0, 30);
                     if (v !== (match.twitchLogin || ""))
-                      call(
+                      void call(
                         `/tournaments/${tournamentId}/matches/${matchId}`,
                         { twitchLogin: v },
                         "PATCH",
@@ -541,7 +541,7 @@ export default function TournamentMatchModal({
                   onBlur={(e) => {
                     const v = e.target.value.trim().slice(0, 500);
                     if (v !== (match.notes || ""))
-                      call(
+                      void call(
                         `/tournaments/${tournamentId}/matches/${matchId}`,
                         { notes: v },
                         "PATCH",

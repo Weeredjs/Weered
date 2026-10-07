@@ -46,7 +46,7 @@ export default function FlairContestStrip({ lobbyId }: { lobbyId: string }) {
   }, [lobbyId]);
 
   React.useEffect(() => {
-    fetchActive();
+    void fetchActive();
     const t = setInterval(fetchActive, 30_000);
     return () => clearInterval(t);
   }, [fetchActive]);

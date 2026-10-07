@@ -235,7 +235,7 @@ export default function WindroseBuildBuilder({
               multiple
               style={{ display: "none" }}
               onChange={(e) => {
-                if (e.target.files) handleFiles(e.target.files);
+                if (e.target.files) void handleFiles(e.target.files);
                 e.target.value = "";
               }}
             />

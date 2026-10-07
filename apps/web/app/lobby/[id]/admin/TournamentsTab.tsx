@@ -36,7 +36,7 @@ export function TournamentsTab({ lobbyId }: { lobbyId: string }) {
   }, [lobbyId]);
 
   useEffect(() => {
-    loadAll();
+    void loadAll();
   }, [loadAll]);
 
   function currentFlairId(t: TournamentRow): string {
@@ -57,7 +57,7 @@ export function TournamentsTab({ lobbyId }: { lobbyId: string }) {
     if (j.ok) {
       setMsg(`Updated "${t.title}".`);
       setTimeout(() => setMsg(""), 2500);
-      loadAll();
+      void loadAll();
     } else {
       setMsg(j.error || "Failed.");
     }

@@ -94,7 +94,7 @@ export function MtgDeckChip({ url }: { url: string }) {
   React.useEffect(() => {
     if (deck !== null) return;
     let cancel = false;
-    fetchMtgDeck(url).then((d) => {
+    void fetchMtgDeck(url).then((d) => {
       if (!cancel) setDeck(d);
     });
     return () => {
@@ -256,7 +256,7 @@ export function MtgCardChip({ name }: { name: string }) {
   React.useEffect(() => {
     if (card !== null) return;
     let cancel = false;
-    fetchMtgCard(name).then((c) => {
+    void fetchMtgCard(name).then((c) => {
       if (!cancel) setCard(c);
     });
     return () => {

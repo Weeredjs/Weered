@@ -60,7 +60,7 @@ export default function LobbyEvents({
   }, [lobbyId]);
 
   useEffect(() => {
-    load();
+    void load();
   }, [load]);
 
   const create = async () => {

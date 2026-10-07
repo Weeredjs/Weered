@@ -61,7 +61,7 @@ export default function WindroseBuildDetail({
         return "";
       }
     })();
-    fetch(`${API}/windrose/builds/${encodeURIComponent(slug)}`, {
+    void fetch(`${API}/windrose/builds/${encodeURIComponent(slug)}`, {
       cache: "no-store",
       headers: tok ? { Authorization: `Bearer ${tok}` } : {},
     })
@@ -73,7 +73,7 @@ export default function WindroseBuildDetail({
           setMySave(!!j.mySave);
         }
       });
-    fetch(`${API}/windrose/builds/${encodeURIComponent(slug)}/comments`)
+    void fetch(`${API}/windrose/builds/${encodeURIComponent(slug)}/comments`)
       .then((r) => r.json())
       .then((j) => {
         if (alive && j?.ok) setComments(j.comments || []);
@@ -566,7 +566,7 @@ export default function WindroseBuildDetail({
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && !e.shiftKey) {
                     e.preventDefault();
-                    postComment();
+                    void postComment();
                   }
                 }}
                 placeholder="Add a comment…"

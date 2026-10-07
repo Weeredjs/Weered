@@ -511,7 +511,7 @@ export default function LobbyRoomDirectory({
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter") handleCreate();
+                  if (e.key === "Enter") void handleCreate();
                 }}
                 placeholder={labels.placeholder}
                 maxLength={64}
@@ -813,7 +813,7 @@ export default function LobbyRoomDirectory({
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter") handleCreate();
+                  if (e.key === "Enter") void handleCreate();
                 }}
                 placeholder={labels.placeholder}
                 maxLength={64}

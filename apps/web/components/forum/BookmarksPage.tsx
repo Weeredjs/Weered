@@ -43,7 +43,7 @@ export default function BookmarksPage() {
       router.push("/forum");
       return;
     }
-    (async () => {
+    void (async () => {
       setLoading(true);
       const data = await forumFetch("/forum/me/bookmarks?limit=50");
       if (data?.ok) setPosts(data.posts || []);
@@ -168,7 +168,7 @@ export default function BookmarksPage() {
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleUnbookmark(post.id);
+                        void handleUnbookmark(post.id);
                       }}
                       title="Unsave"
                       style={{

@@ -10,7 +10,7 @@ export function SubsTab() {
 
   useEffect(() => {
     setLoading(true);
-    apiFetch("/staff/subscriptions").then((j) => {
+    void apiFetch("/staff/subscriptions").then((j) => {
       setUsers(j.users || []);
       setLoading(false);
     });

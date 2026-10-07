@@ -22,7 +22,7 @@ export default function LandingLobbyPreviewModal({
 
   useEffect(() => {
     let alive = true;
-    (async () => {
+    void (async () => {
       try {
         const r = await fetch(`${API}/public/activity`, { cache: "no-store" });
         const j = await r.json();

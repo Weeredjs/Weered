@@ -14,7 +14,7 @@ export function JoinRequestsTab({ lobbyId }: { lobbyId: string }) {
   }
 
   useEffect(() => {
-    load();
+    void load();
   }, [lobbyId]);
 
   async function act(reqId: string, action: "approve" | "deny", reason?: string) {
@@ -29,7 +29,7 @@ export function JoinRequestsTab({ lobbyId }: { lobbyId: string }) {
       },
     );
     setActing(null);
-    load();
+    void load();
   }
 
   const pending = requests.filter((r) => r.status === "PENDING");
@@ -90,7 +90,7 @@ export function JoinRequestsTab({ lobbyId }: { lobbyId: string }) {
               }}
               onClick={() => {
                 const reason = prompt("Deny reason (optional):");
-                act(r.id, "deny", reason || undefined);
+                void act(r.id, "deny", reason || undefined);
               }}
               disabled={acting === r.id}
             >

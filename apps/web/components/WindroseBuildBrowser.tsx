@@ -107,7 +107,7 @@ export default function WindroseBuildBrowser({ lobbyAccent = ACCENT }: { lobbyAc
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(
       () => {
-        fetchList(true);
+        void fetchList(true);
       },
       q ? 250 : 0,
     );
@@ -127,7 +127,7 @@ export default function WindroseBuildBrowser({ lobbyAccent = ACCENT }: { lobbyAc
           !loadingMore &&
           builds.length < total
         ) {
-          fetchList(false);
+          void fetchList(false);
         }
       },
       { rootMargin: "200px" },
@@ -400,7 +400,7 @@ export default function WindroseBuildBrowser({ lobbyAccent = ACCENT }: { lobbyAc
           onClose={() => setOpenSlug(null)}
           onDeleted={() => {
             setOpenSlug(null);
-            fetchList(true);
+            void fetchList(true);
           }}
         />
       )}

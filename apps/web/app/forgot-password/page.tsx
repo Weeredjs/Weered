@@ -117,7 +117,7 @@ export default function ForgotPasswordPage() {
               autoFocus
               autoComplete="username"
               onKeyDown={(e) => {
-                if (e.key === "Enter") submit();
+                if (e.key === "Enter") void submit();
               }}
               placeholder="your_handle or you@example.com"
               style={{

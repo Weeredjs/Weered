@@ -43,7 +43,7 @@ function usePublicViewers(lobbyId: string, enabled: boolean): number {
         if (alive && typeof j?.count === "number") setCount(j.count);
       } catch {}
     };
-    ping();
+    void ping();
     const iv = setInterval(ping, 20_000);
     return () => {
       alive = false;

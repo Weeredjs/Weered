@@ -58,7 +58,7 @@ export default function LobbyTierCards({ lobbyId }: { lobbyId: string }) {
   }, [lobbyId]);
 
   useEffect(() => {
-    load();
+    void load();
   }, [load]);
 
   async function checkout(tierId: string) {

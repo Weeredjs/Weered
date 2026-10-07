@@ -132,7 +132,7 @@ function EconomyTab({ league, accent, filterCat, game }: { league: string; accen
     setLoading(false);
   }, [league, game]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { void (load()); }, [load]);
 
   const asOfLabel = (() => {
     if (!data.asOf) return "";
@@ -479,7 +479,7 @@ function TwitchStreams({ lobbyId, accent, twitch }: { lobbyId: string; accent: s
     setLoading(false);
   }, []);
 
-  useEffect(() => { load(); const i = setInterval(load, 30000); return () => clearInterval(i); }, [load]);
+  useEffect(() => { void (load()); const i = setInterval(load, 30000); return () => clearInterval(i); }, [load]);
 
   function handleCardClick(s: any) {
     setInterceptStream({
@@ -620,7 +620,7 @@ function PoeAccountTab({ accent, game }: { accent: string; game: PoeGame }) {
     }
     setLoading(false);
   }, []);
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { void (load()); }, [load]);
 
   useEffect(() => {
     try {
@@ -715,11 +715,11 @@ function LadderTab({ league, accent, game }: { league: string; accent: string; g
   useEffect(() => {
     let alive = true;
     setLoading(true);
-    apiFetch(`/poe/ladder?league=${encodeURIComponent(league)}&game=${game}`).then((j: any) => {
+    void (apiFetch(`/poe/ladder?league=${encodeURIComponent(league)}&game=${game}`).then((j: any) => {
       if (!alive) return;
       setData({ total: j?.total || 0, entries: j?.entries || [] });
       setLoading(false);
-    });
+    }));
     return () => { alive = false; };
   }, [league, game]);
 
@@ -772,7 +772,7 @@ export default function PoeModulesPanel({
   const [league, setLeague] = useState(cfg.defaultLeague);
   const [leagues, setLeagues] = useState<{ id: string; current?: boolean }[]>([]);
   useEffect(() => {
-    apiFetch(`/poe/leagues?game=${game}`).then((j: any) => { const ls = j?.leagues || []; if (ls.length) setLeagues(ls); });
+    void (apiFetch(`/poe/leagues?game=${game}`).then((j: any) => { const ls = j?.leagues || []; if (ls.length) setLeagues(ls); }));
   }, [game]);
 
   return (

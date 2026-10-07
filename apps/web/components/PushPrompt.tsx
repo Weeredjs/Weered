@@ -33,7 +33,7 @@ export default function PushPrompt() {
     })();
     if (!loggedIn) return;
 
-    (async () => {
+    void (async () => {
       try {
         const reg = await navigator.serviceWorker.ready;
         let sub = await reg.pushManager.getSubscription();

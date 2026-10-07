@@ -346,7 +346,7 @@ export default async function forumRoutes(app: FastifyInstance, opts: Opts) {
           }
         })();
       }
-      (async () => {
+      void (async () => {
         try {
           const mentioned = await resolveMentions(String(body || ""), u.id);
           for (const m of mentioned) {
@@ -587,7 +587,7 @@ export default async function forumRoutes(app: FastifyInstance, opts: Opts) {
         ).catch(swallow);
       }
 
-      (async () => {
+      void (async () => {
         try {
           const notifiedIds = new Set<string>();
           const replierName = user?.name || u.name;

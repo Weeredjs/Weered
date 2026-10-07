@@ -109,7 +109,7 @@ export default function VaDepartureBoard({
   }, [lobbyId, flightKey]);
 
   useEffect(() => {
-    load();
+    void load();
     const t = setInterval(load, 20_000);
     return () => clearInterval(t);
   }, [load]);
@@ -132,7 +132,7 @@ export default function VaDepartureBoard({
       tone: "bad",
       text: ERRORS[(r.data as any)?.error] || "That did not go through. Try again.",
     });
-    load();
+    void load();
     return false;
   }
 

@@ -52,7 +52,7 @@ function useWishlist() {
     setLoaded(true);
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { void (load()); }, [load]);
 
   async function toggle(cosmeticId: string, meta?: { name?: string; type?: string; rarity?: string; image?: string }) {
     if (items.has(cosmeticId)) {
@@ -122,7 +122,7 @@ function TwitchStreams({ gameName, lobbyId, accentColor }: { gameName: string; l
     setLoading(false);
   }, [gameName]);
 
-  useEffect(() => { load(); const i = setInterval(load, 30000); return () => clearInterval(i); }, [load]);
+  useEffect(() => { void (load()); const i = setInterval(load, 30000); return () => clearInterval(i); }, [load]);
 
   const parentHost = typeof window !== "undefined" ? window.location.hostname : "weered.ca";
 
@@ -341,7 +341,7 @@ function StatsLookup({ accent }: { accent: string }) {
   useEffect(() => {
     const pick = FEATURED_PLAYERS[Math.floor(Math.random() * FEATURED_PLAYERS.length)];
     setPreloaded(true);
-    lookup(pick);
+    void (lookup(pick));
   }, []);
 
   function StatBox({ label, value }: { label: string; value: string | number }) {
@@ -424,7 +424,7 @@ function RankedTab({ accent }: { accent: string }) {
 
   useEffect(() => {
     const pick = FEATURED_PLAYERS[Math.floor(Math.random() * FEATURED_PLAYERS.length)];
-    lookup(pick);
+    void (lookup(pick));
   }, []);
 
   function CompareRow({ label, lifetime, season }: { label: string; lifetime: any; season: any }) {

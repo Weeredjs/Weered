@@ -283,7 +283,7 @@ export function startTournamentAutoDetect(
   }
 
   setTimeout(() => {
-    cycle();
+    void cycle();
     setInterval(cycle, POLL_INTERVAL_MS);
   }, 30_000);
 

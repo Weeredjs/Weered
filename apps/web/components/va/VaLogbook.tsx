@@ -58,7 +58,7 @@ export default function VaLogbook({
           setTotal(r.data.total);
         }
       });
-    load();
+    void load();
     const t = setInterval(load, 45_000);
     return () => clearInterval(t);
   }, [lobbyId, status, fleet]);

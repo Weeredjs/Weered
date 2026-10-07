@@ -103,7 +103,7 @@ export default function Muster({
     } catch {}
   };
   useEffect(() => {
-    Promise.all([loadRoll(), loadDrills()]).finally(() => setLoaded(true));
+    void Promise.all([loadRoll(), loadDrills()]).finally(() => setLoaded(true));
     const iv = setInterval(loadDrills, 60_000);
     return () => clearInterval(iv);
     // eslint-disable-next-line react-hooks/exhaustive-deps

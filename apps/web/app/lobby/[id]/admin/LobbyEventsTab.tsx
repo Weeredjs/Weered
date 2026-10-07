@@ -37,7 +37,7 @@ export function LobbyEventsTab({
   }, [lobbyId]);
 
   useEffect(() => {
-    load();
+    void load();
   }, [load]);
 
   async function createEvent() {
@@ -69,7 +69,7 @@ export function LobbyEventsTab({
         endsAt: "",
         status: "DRAFT",
       });
-      load();
+      void load();
       onRefresh();
     } else setMsg(j.error || "Failed.");
   }
@@ -81,7 +81,7 @@ export function LobbyEventsTab({
     });
     if (j.ok) {
       setMsg("Updated.");
-      load();
+      void load();
     } else setMsg(j.error || "Failed.");
   }
 
@@ -91,7 +91,7 @@ export function LobbyEventsTab({
     });
     if (j.ok) {
       setMsg("Deleted.");
-      load();
+      void load();
     } else setMsg(j.error || "Failed.");
   }
 
@@ -104,7 +104,7 @@ export function LobbyEventsTab({
       setMsg("Promotion requested.");
       setPromoEventId(null);
       setPromoNote("");
-      load();
+      void load();
     } else setMsg(j.error || "Failed.");
   }
 

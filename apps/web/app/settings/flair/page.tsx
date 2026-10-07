@@ -61,7 +61,7 @@ export default function FlairSettingsPage() {
     }
   }
   useEffect(() => {
-    loadInventory();
+    void loadInventory();
   }, [token, apiBase]);
 
   async function equip(id: string | null) {

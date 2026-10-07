@@ -41,7 +41,7 @@ export default function SteamLobbyHeader({
       }
       if (alive) timer = setTimeout(tick, 60_000);
     };
-    tick();
+    void tick();
     return () => {
       alive = false;
       if (timer) clearTimeout(timer);
@@ -51,7 +51,7 @@ export default function SteamLobbyHeader({
   React.useEffect(() => {
     if (!appId) return;
     let alive = true;
-    (async () => {
+    void (async () => {
       try {
         const tok = (() => {
           try {

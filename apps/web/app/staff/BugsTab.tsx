@@ -24,7 +24,7 @@ export function BugsTab() {
   }
 
   useEffect(() => {
-    load();
+    void load();
   }, [filter]);
 
   async function close(id: string) {
@@ -40,7 +40,7 @@ export function BugsTab() {
         delete next[id];
         return next;
       });
-      load();
+      void load();
     } else setMsg(j.message || j.error || "Failed.");
   }
 

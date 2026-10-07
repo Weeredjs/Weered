@@ -147,7 +147,7 @@ function ResetInner() {
               onChange={(e) => setPw2(e.target.value)}
               autoComplete="new-password"
               onKeyDown={(e) => {
-                if (e.key === "Enter") submit();
+                if (e.key === "Enter") void submit();
               }}
               style={{
                 width: "100%",

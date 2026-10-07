@@ -70,7 +70,7 @@ export default function TournamentLiveStrip({
   }, [lobbyId]);
 
   React.useEffect(() => {
-    fetchFeatured();
+    void fetchFeatured();
     const t = setInterval(fetchFeatured, 12_000);
     return () => clearInterval(t);
   }, [fetchFeatured]);
@@ -219,7 +219,7 @@ export default function TournamentLiveStrip({
           isStaff={false}
           onClose={() => {
             setOpenMatchId(null);
-            fetchFeatured();
+            void fetchFeatured();
           }}
           onChanged={fetchFeatured}
         />

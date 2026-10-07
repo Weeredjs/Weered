@@ -56,8 +56,8 @@ export default function InstallPrompt() {
 
   function handleInstall() {
     if (deferredPrompt.current) {
-      deferredPrompt.current.prompt();
-      deferredPrompt.current.userChoice.then((choice) => {
+      void deferredPrompt.current.prompt();
+      void deferredPrompt.current.userChoice.then((choice) => {
         if (choice.outcome === "accepted") {
           localStorage.setItem("weered:install:done", "1");
         }

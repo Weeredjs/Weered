@@ -9,7 +9,7 @@ export default async function leagueRoutes(app: FastifyInstance) {
   const DDRAGON_VER_URL = "https://ddragon.leagueoflegends.com/api/versions.json";
 
   let ddragonVersion = "14.24.1";
-  (async () => {
+  void (async () => {
     try {
       const res = await fetchWithTimeout(DDRAGON_VER_URL);
       const versions: string[] = (await res.json()) as string[];

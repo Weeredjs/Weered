@@ -76,11 +76,11 @@ export default function PresenceSection() {
   }, [apiBase]);
 
   React.useEffect(() => {
-    loadPresence();
+    void loadPresence();
   }, [loadPresence]);
 
   React.useEffect(() => {
-    (async () => {
+    void (async () => {
       try {
         const r = await fetch(`${apiBase}/me/overlay`, {
           headers: { Authorization: `Bearer ${token()}` },

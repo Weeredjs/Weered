@@ -238,14 +238,14 @@ export default function StorePage() {
 
   useEffect(() => {
     if (!authed) return;
-    fetchWallet();
-    fetchStore();
+    void fetchWallet();
+    void fetchStore();
   }, [authed, fetchWallet, fetchStore]);
 
   useEffect(() => {
     if (!authed) return;
-    if (tab === "inventory") fetchInventory();
-    if (tab === "market") fetchMarket();
+    if (tab === "inventory") void fetchInventory();
+    if (tab === "market") void fetchMarket();
   }, [tab, authed, fetchInventory, fetchMarket]);
 
   async function claimDaily() {
@@ -284,8 +284,8 @@ export default function StorePage() {
     const d = await post(`/store/buy/${itemId}`);
     if (d.ok) {
       setBalance(d.balance ?? balance);
-      fetchStore();
-      fetchInventory();
+      void fetchStore();
+      void fetchInventory();
     } else {
       weeredToast.error(
         d.error === "insufficient_paper"
@@ -301,7 +301,7 @@ export default function StorePage() {
   async function equipItem(userItemId: string) {
     setBusy(userItemId);
     const d = await post(`/inventory/equip/${userItemId}`);
-    if (d.ok) fetchInventory();
+    if (d.ok) void fetchInventory();
     setBusy(null);
   }
 
@@ -309,8 +309,8 @@ export default function StorePage() {
     setBusy(userItemId);
     const d = await post(`/inventory/consume/${userItemId}`);
     if (d.ok) {
-      fetchInventory();
-      fetchWallet();
+      void fetchInventory();
+      void fetchWallet();
     }
     setBusy(null);
   }
@@ -325,8 +325,8 @@ export default function StorePage() {
     if (d.ok) {
       setListingItem(null);
       setListingPrice("");
-      fetchInventory();
-      fetchMarket();
+      void fetchInventory();
+      void fetchMarket();
     } else {
       weeredToast.error(d.error || "Failed to list.");
     }
@@ -338,8 +338,8 @@ export default function StorePage() {
     const d = await post(`/market/buy/${listingId}`);
     if (d.ok) {
       setBalance(d.balance ?? balance);
-      fetchMarket();
-      fetchInventory();
+      void fetchMarket();
+      void fetchInventory();
     } else {
       weeredToast.error(
         d.error === "insufficient_paper" ? "Not enough Paper." : d.error || "Purchase failed.",
@@ -352,8 +352,8 @@ export default function StorePage() {
     setBusy(listingId);
     const d = await post(`/market/cancel/${listingId}`);
     if (d.ok) {
-      fetchMarket();
-      fetchInventory();
+      void fetchMarket();
+      void fetchInventory();
     }
     setBusy(null);
   }

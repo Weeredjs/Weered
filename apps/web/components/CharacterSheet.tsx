@@ -141,7 +141,7 @@ export default function CharacterSheet({ roomId, lobbyId }: { roomId: string; lo
   }, [apiBase, token, roomId, selectedId]);
 
   useEffect(() => {
-    reload();
+    void reload();
   }, [reload]);
 
   const selected = useMemo(
@@ -203,7 +203,7 @@ export default function CharacterSheet({ roomId, lobbyId }: { roomId: string; lo
     const j = await r.json();
     if (j?.ok) {
       setSelectedId(null);
-      reload();
+      void reload();
     }
   }
 

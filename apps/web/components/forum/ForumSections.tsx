@@ -297,7 +297,8 @@ export function SectionManageModal({
       return;
     }
     if (data?.error?.includes("force")) {
-      if (window.confirm(`Section has ${data.postCount} post(s). Delete anyway?`)) remove(s, true);
+      if (window.confirm(`Section has ${data.postCount} post(s). Delete anyway?`))
+        void remove(s, true);
     }
   }
 

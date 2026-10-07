@@ -17,7 +17,7 @@ export function LogTab() {
 
   useEffect(() => {
     setLoading(true);
-    apiFetch("/windrose/news").then((j) => {
+    void apiFetch("/windrose/news").then((j) => {
       if (j?.ok && Array.isArray(j.news)) setItems(j.news);
       else setItems([]);
       setLoading(false);

@@ -118,14 +118,14 @@ export default function SubredditBrowser({
 
   useEffect(() => {
     loadedFor.current = "";
-    loadFeed();
+    void loadFeed();
   }, [sub, sort]);
 
   function handleSort(s: "hot" | "new" | "top" | "rising") {
     setSharedSort(s);
     setSort(s);
     loadedFor.current = "";
-    loadFeed(s);
+    void loadFeed(s);
   }
 
   if (view === "list")

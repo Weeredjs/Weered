@@ -10,7 +10,7 @@ export function ConfigTab() {
   const [lobbies, setLobbies] = useState<{ id: string; name: string }[]>([]);
 
   useEffect(() => {
-    Promise.all([apiFetch("/staff/config"), apiFetch("/staff/lobbies")]).then(
+    void Promise.all([apiFetch("/staff/config"), apiFetch("/staff/lobbies")]).then(
       ([configData, lobbyData]) => {
         if (configData.ok) setConfig(configData.config);
         setLobbies((lobbyData.lobbies || []).map((l: any) => ({ id: l.id, name: l.name })));

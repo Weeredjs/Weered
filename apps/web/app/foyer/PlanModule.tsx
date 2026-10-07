@@ -375,7 +375,7 @@ export function PresentedPlanViewer({
         }
       } catch {}
     };
-    tick();
+    void tick();
     const iv = setInterval(tick, 2000);
     return () => {
       stop = true;

@@ -84,7 +84,7 @@ function ModQueuePage() {
   }, [status, lobbyId]);
 
   useEffect(() => {
-    load();
+    void load();
   }, [load]);
 
   async function transition(reportId: string, newStatus: string, actionTaken?: string) {
@@ -94,7 +94,7 @@ function ModQueuePage() {
     });
     if (data?.ok) {
       weeredToast.success(`Report ${newStatus.toLowerCase()}`);
-      load();
+      void load();
     }
   }
 

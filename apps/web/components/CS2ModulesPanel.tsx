@@ -591,7 +591,7 @@ function TwitchStreams({
   }, [gameName]);
 
   useEffect(() => {
-    load();
+    void load();
     const i = setInterval(load, 30000);
     return () => clearInterval(i);
   }, [load]);

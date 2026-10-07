@@ -139,7 +139,7 @@ export function CrewTab({ lobbyId }: { lobbyId: string }) {
   }, [lobbyId]);
 
   useEffect(() => {
-    reload();
+    void reload();
   }, [reload]);
 
   async function post() {
@@ -160,7 +160,7 @@ export function CrewTab({ lobbyId }: { lobbyId: string }) {
     if (j?.ok) {
       setNote("");
       setTags(new Set());
-      reload();
+      void reload();
     }
   }
 
@@ -350,7 +350,7 @@ export function CrewTab({ lobbyId }: { lobbyId: string }) {
           onClose={() => setEditingCrew(null)}
           onSaved={() => {
             setEditingCrew(null);
-            reload();
+            void reload();
           }}
         />
       )}

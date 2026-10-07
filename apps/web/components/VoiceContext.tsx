@@ -86,7 +86,7 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
       meterRafRef.current = null;
     }
     try {
-      audioCtxRef.current?.close();
+      void audioCtxRef.current?.close();
     } catch {}
     audioCtxRef.current = null;
     setInputLevel(0);
@@ -192,7 +192,7 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
       const enableMic = opts?.mic !== false;
       if (connState === "connected" && activeRoomId === roomId) return;
       if (roomRef.current) {
-        roomRef.current.disconnect();
+        void roomRef.current.disconnect();
         roomRef.current = null;
         audioRefs.current.forEach((el) => el.remove());
         audioRefs.current.clear();
@@ -330,7 +330,7 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
                 setMicId(pref);
               } catch {}
             }
-            refreshMics();
+            void refreshMics();
             startLevelMeter(room);
           } catch (e: any) {
             console.warn("Mic unavailable:", e?.message);
@@ -351,7 +351,7 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
   );
 
   const disconnect = useCallback(() => {
-    roomRef.current?.disconnect();
+    void roomRef.current?.disconnect();
     roomRef.current = null;
     stopLevelMeter();
     audioRefs.current.forEach((el) => el.remove());
@@ -374,7 +374,7 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
       if (!activeRoomId || activeRoomId !== rid) return;
       const wasMic = !muted;
       try {
-        roomRef.current?.disconnect();
+        void roomRef.current?.disconnect();
       } catch {}
       roomRef.current = null;
       setTimeout(() => {
@@ -389,7 +389,7 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
     const room = roomRef.current;
     if (!room) return;
     const next = !muted;
-    room.localParticipant.setMicrophoneEnabled(!next);
+    void room.localParticipant.setMicrophoneEnabled(!next);
     setMuted(next);
     rebuildTiles(room);
     if (next) stopLevelMeter();
@@ -418,13 +418,13 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
       // Deafening also mutes your mic; remember the prior state to restore it.
       mutedBeforeDeafenRef.current = muted;
       if (room && !muted) {
-        room.localParticipant.setMicrophoneEnabled(false);
+        void room.localParticipant.setMicrophoneEnabled(false);
         setMuted(true);
         stopLevelMeter();
         rebuildTiles(room);
       }
     } else if (room && !mutedBeforeDeafenRef.current && muted) {
-      room.localParticipant.setMicrophoneEnabled(true);
+      void room.localParticipant.setMicrophoneEnabled(true);
       setMuted(false);
       setTimeout(() => startLevelMeter(room), 200);
       rebuildTiles(room);
@@ -482,7 +482,7 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(
     () => () => {
-      roomRef.current?.disconnect();
+      void roomRef.current?.disconnect();
       stopLevelMeter();
       audioRefs.current.forEach((el) => el.remove());
       videoRefs.current.forEach((el) => el.remove());

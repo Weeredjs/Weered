@@ -77,7 +77,7 @@ export default function HelldiversDispatchesPanel({
         if (alive) setLoading(false);
       }
     }
-    load();
+    void load();
     const t = setInterval(load, 60_000);
     return () => {
       alive = false;

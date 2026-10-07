@@ -119,8 +119,8 @@ export function EventsTab() {
   }, []);
 
   useEffect(() => {
-    loadEvents();
-    loadPromos();
+    void loadEvents();
+    void loadPromos();
   }, [loadEvents, loadPromos]);
 
   async function createEvent() {
@@ -156,7 +156,7 @@ export function EventsTab() {
         broadcastOnPublish: false,
       });
       setView("all");
-      loadEvents();
+      void loadEvents();
     } else setMsg(j.error || "Failed.");
   }
 
@@ -167,7 +167,7 @@ export function EventsTab() {
     });
     if (j.ok) {
       setMsg("Updated.");
-      loadEvents();
+      void loadEvents();
     } else setMsg(j.error || "Failed.");
   }
 
@@ -176,7 +176,7 @@ export function EventsTab() {
     if (j.ok) {
       setMsg("Deleted.");
       setSelected(null);
-      loadEvents();
+      void loadEvents();
     } else setMsg(j.error || "Failed.");
   }
 
@@ -187,8 +187,8 @@ export function EventsTab() {
     });
     if (j.ok) {
       setMsg(`${decision}.`);
-      loadPromos();
-      loadEvents();
+      void loadPromos();
+      void loadEvents();
     } else setMsg(j.error || "Failed.");
   }
 
@@ -409,7 +409,7 @@ export function EventsTab() {
                           style={S.success}
                           onClick={(e) => {
                             e.stopPropagation();
-                            updateEvent(ev.id, { status: "PUBLISHED" });
+                            void updateEvent(ev.id, { status: "PUBLISHED" });
                           }}
                         >
                           Publish
@@ -420,7 +420,7 @@ export function EventsTab() {
                           style={S.btn}
                           onClick={(e) => {
                             e.stopPropagation();
-                            updateEvent(ev.id, { status: "COMPLETED" });
+                            void updateEvent(ev.id, { status: "COMPLETED" });
                           }}
                         >
                           Complete
@@ -431,7 +431,7 @@ export function EventsTab() {
                           style={S.warn}
                           onClick={(e) => {
                             e.stopPropagation();
-                            updateEvent(ev.id, { status: "CANCELED" });
+                            void updateEvent(ev.id, { status: "CANCELED" });
                           }}
                         >
                           Cancel
@@ -441,7 +441,7 @@ export function EventsTab() {
                         style={S.danger}
                         onClick={(e) => {
                           e.stopPropagation();
-                          deleteEvent(ev.id);
+                          void deleteEvent(ev.id);
                         }}
                       >
                         Delete
@@ -508,7 +508,7 @@ export function EventsTab() {
                     style={S.danger}
                     onClick={() => {
                       const r = prompt("Deny reason (optional):");
-                      reviewPromo(ev.id, "DENIED", r || undefined);
+                      void reviewPromo(ev.id, "DENIED", r || undefined);
                     }}
                   >
                     Deny

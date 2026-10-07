@@ -28,7 +28,7 @@ export function CrewFlair({ userId, size = 13 }: { userId: string; size?: number
     if (!userId) return;
     const existing = crewFlairInflight.get(userId);
     if (existing) {
-      existing.then(() => setFlair(crewFlairCache.get(userId) ?? null));
+      void existing.then(() => setFlair(crewFlairCache.get(userId) ?? null));
       return;
     }
     const token = (typeof window !== "undefined" ? localStorage.getItem("weered_token") : "") || "";

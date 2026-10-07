@@ -268,7 +268,7 @@ export async function handleChat(ws: any, msg: any, opts: Opts): Promise<void> {
     broadcast(room, { type: "chat:new", roomId, msg: m });
     room.lastActiveAt = Date.now();
     awardNotoriety(ws.user.id, "CHAT_MESSAGE").catch(swallow);
-    (async () => {
+    void (async () => {
       try {
         const mentioned = await resolveMentions(body, ws.user!.id);
         const roomPath = room.lobbyId ? `/lobby/${room.lobbyId}` : `/room/${room.roomId}`;
@@ -305,7 +305,7 @@ export async function handleChat(ws: any, msg: any, opts: Opts): Promise<void> {
         });
       }
       if (operatorAllowed) {
-        (async () => {
+        void (async () => {
           try {
             const ai = await getAI();
             if (!ai) return;
@@ -565,7 +565,7 @@ export async function handleCrewDm(
 
       awardNotoriety(fromId, "CHAT_MESSAGE").catch(swallow);
 
-      (async () => {
+      void (async () => {
         try {
           const mentioned = await resolveMentions(body, fromId);
           if (mentioned.length === 0) return;

@@ -521,7 +521,7 @@ function LiveTicker({ rooms: _rooms, onJoin, apiBase }: { rooms: any[]; onJoin: 
         if (!cancelled && j?.ok) setLiveRooms(Array.isArray(j.rooms) ? j.rooms : []);
       } catch {}
     };
-    fetchStream(); fetchRooms();
+    void (fetchStream()); void (fetchRooms());
     const t1 = setInterval(fetchStream, 90000);
     const t2 = setInterval(fetchRooms, 12000);
     return () => { cancelled = true; clearInterval(t1); clearInterval(t2); };
@@ -777,7 +777,7 @@ export default function HomePage() {
     const token = localStorage.getItem("weered_token") ?? "";
     const loggedIn = !!localStorage.getItem("weered_user");
     const headers: any = token ? { Authorization: `Bearer ${token}` } : {};
-    Promise.all([
+    void (Promise.all([
       fetch(`${base}/lobbies`, { headers }).then(r => r.json()).catch(() => ({})),
       fetch(`${base}/rooms`, { headers }).then(r => r.json()).catch(() => ({})),
       fetch(`${base}/featured`, { headers }).then(r => r.json()).catch(() => ({})),
@@ -808,7 +808,7 @@ export default function HomePage() {
 
       const lobbyIds = lobbies.map((l: any) => l.id).filter(Boolean);
       if (lobbyIds.length) {
-        Promise.all(
+        void (Promise.all(
           lobbyIds.map((id: string) =>
             fetch(`${base}/lobbies/${encodeURIComponent(id)}/presence`, { headers })
               .then(r => r.json())
@@ -819,9 +819,9 @@ export default function HomePage() {
           const counts: Record<string, number> = {};
           for (const r of results) counts[r.id] = r.count;
           setLobbyPresenceCounts(counts);
-        });
+        }));
       }
-    });
+    }));
   }, []);
 
   const myName = pickFirst(me?.name, me?.username, "there");

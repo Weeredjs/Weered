@@ -92,7 +92,7 @@ export default function FlairContestDetail({
   }, [contestId]);
 
   React.useEffect(() => {
-    fetchContest();
+    void fetchContest();
   }, [fetchContest]);
 
   if (loading)
@@ -125,7 +125,7 @@ export default function FlairContestDetail({
       alert(j?.error || "Failed to vote");
       return;
     }
-    fetchContest();
+    void fetchContest();
   }
 
   async function clearVote() {
@@ -138,7 +138,7 @@ export default function FlairContestDetail({
       alert(j?.error || "Failed to clear vote");
       return;
     }
-    fetchContest();
+    void fetchContest();
   }
 
   async function deleteSubmission(s: Submission) {
@@ -155,7 +155,7 @@ export default function FlairContestDetail({
       alert(j?.error || "Failed to delete submission");
       return;
     }
-    fetchContest();
+    void fetchContest();
     onChanged();
   }
 
@@ -174,7 +174,7 @@ export default function FlairContestDetail({
       alert(j?.error || "Failed to finalize");
       return;
     }
-    fetchContest();
+    void fetchContest();
     onChanged();
   }
 
@@ -350,11 +350,11 @@ export default function FlairContestDetail({
               <div
                 key={s.id}
                 onClick={() => {
-                  if (canVote) castVote(s.id);
+                  if (canVote) void castVote(s.id);
                   else setLightbox(s);
                 }}
                 onKeyDown={onActivate(() => {
-                  if (canVote) castVote(s.id);
+                  if (canVote) void castVote(s.id);
                   else setLightbox(s);
                 })}
                 tabIndex={0}
@@ -537,7 +537,7 @@ export default function FlairContestDetail({
           onClose={() => setShowSubmit(false)}
           onSaved={() => {
             setShowSubmit(false);
-            fetchContest();
+            void fetchContest();
             onChanged();
           }}
         />

@@ -326,7 +326,7 @@ export default function TacticalMapToolbar({
               defaultValue={map.gridSize}
               onBlur={(e) => {
                 const v = Number.parseInt(e.target.value, 10);
-                if (Number.isFinite(v)) patchMap({ gridSize: v });
+                if (Number.isFinite(v)) void patchMap({ gridSize: v });
               }}
               style={{
                 width: 60,

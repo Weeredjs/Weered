@@ -74,7 +74,7 @@ export default function AutoModAdminPage() {
   }, [lobbyId]);
 
   useEffect(() => {
-    if (lobbyId) load();
+    if (lobbyId) void load();
   }, [lobbyId, load]);
 
   async function toggleEnabled(rule: Rule) {
@@ -82,7 +82,7 @@ export default function AutoModAdminPage() {
       method: "PATCH",
       body: JSON.stringify({ enabled: !rule.enabled }),
     });
-    if (data?.ok) load();
+    if (data?.ok) void load();
   }
 
   async function deleteRule(rule: Rule) {
@@ -96,7 +96,7 @@ export default function AutoModAdminPage() {
     const data = await apiFetch(`/forum/automod/${rule.id}`, { method: "DELETE" });
     if (data?.ok) {
       weeredToast.success("Rule deleted");
-      load();
+      void load();
     }
   }
 
@@ -264,7 +264,7 @@ export default function AutoModAdminPage() {
           onSaved={() => {
             setCreating(false);
             setEditing(null);
-            load();
+            void load();
           }}
         />
       )}

@@ -361,7 +361,7 @@ export default async function groupRoutes(app: FastifyInstance, opts: Opts) {
         Promise.all(offlinePushes).catch(swallow);
 
         if (resolveMentions && createNotification) {
-          (async () => {
+          void (async () => {
             try {
               const mentioned = await resolveMentions(text, viewer.id);
               if (!mentioned.length) return;

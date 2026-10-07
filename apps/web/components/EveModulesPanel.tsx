@@ -100,9 +100,9 @@ function CharacterTab() {
     if (j?.ok && j.linked) {
       setLinked(true);
       setCard(j.character);
-      apiFetch("/eve/me/live").then(r => {
+      void (apiFetch("/eve/me/live").then(r => {
         if (r?.ok && r.linked && r.live) setLive(r.live);
-      });
+      }));
     } else {
       setLinked(false);
       setCard(null);
@@ -111,7 +111,7 @@ function CharacterTab() {
   }, []);
 
   useEffect(() => {
-    load();
+    void (load());
     const t = setInterval(load, 60_000);
     return () => clearInterval(t);
   }, [load]);
@@ -216,7 +216,7 @@ function KillboardTab() {
   }, []);
 
   useEffect(() => {
-    load();
+    void (load());
     const t = setInterval(load, 60_000);
     return () => clearInterval(t);
   }, [load]);
@@ -330,12 +330,12 @@ function LiveTab() {
   const [fw, setFw] = useState<any | null>(null);
 
   const load = useCallback(async () => {
-    apiFetch("/eve/live/pulse").then(j => { if (j?.ok) setPulse(j); });
-    apiFetch("/eve/fw/leaderboard").then(j => { if (j?.ok) setFw(j); });
+    void (apiFetch("/eve/live/pulse").then(j => { if (j?.ok) setPulse(j); }));
+    void (apiFetch("/eve/fw/leaderboard").then(j => { if (j?.ok) setFw(j); }));
   }, []);
 
   useEffect(() => {
-    load();
+    void (load());
     const t = setInterval(load, 120_000);
     return () => clearInterval(t);
   }, [load]);
@@ -412,7 +412,7 @@ function NewsTab() {
   }, []);
 
   useEffect(() => {
-    load();
+    void (load());
     const t = setInterval(load, 600_000);
     return () => clearInterval(t);
   }, [load]);
@@ -460,7 +460,7 @@ function SovTab() {
   }, []);
 
   useEffect(() => {
-    load();
+    void (load());
     const t = setInterval(load, 120_000);
     return () => clearInterval(t);
   }, [load]);
@@ -527,7 +527,7 @@ function MarketTab() {
   }, []);
 
   useEffect(() => {
-    load();
+    void (load());
     const t = setInterval(load, 300_000);
     return () => clearInterval(t);
   }, [load]);
@@ -699,8 +699,8 @@ function LookupTab() {
         <form
           onSubmit={e => {
             e.preventDefault();
-            if (mode === "character") lookupCharacter(q.trim());
-            else lookupCorp(q.trim());
+            if (mode === "character") void (lookupCharacter(q.trim()));
+            else void (lookupCorp(q.trim()));
           }}
           style={{ display: "flex", gap: 6 }}
         >

@@ -766,7 +766,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
           </div>
           <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
             <button onClick={() => setVoicePrompt(false)} style={{ padding: "5px 13px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.05)", color: "rgba(148,163,184,0.7)", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>Not now</button>
-            <button onClick={() => { setVoicePrompt(false); voice.connect(roomId); }} style={{ padding: "5px 16px", borderRadius: 8, border: "none", background: "var(--weered-room-accent, #7c3aed)", color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>Join voice</button>
+            <button onClick={() => { setVoicePrompt(false); void (voice.connect(roomId)); }} style={{ padding: "5px 16px", borderRadius: 8, border: "none", background: "var(--weered-room-accent, #7c3aed)", color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>Join voice</button>
           </div>
         </div>
       )}

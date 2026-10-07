@@ -1359,7 +1359,7 @@ function HostView({ jwt, title, accent }: { jwt: string; title: string; accent: 
   }, [foyerRoom, officeRoom]);
 
   useEffect(() => {
-    start();
+    void start();
     return () => {
       leaving.current = true;
       started.current = false; // re-arm so a StrictMode remount can re-run start()
@@ -1438,7 +1438,7 @@ function HostView({ jwt, title, accent }: { jwt: string; title: string; accent: 
                 onClick={() => {
                   started.current = false;
                   leaving.current = false;
-                  start();
+                  void start();
                 }}
               >
                 Try again

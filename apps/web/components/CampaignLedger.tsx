@@ -88,7 +88,7 @@ export default function CampaignLedger({ roomId }: { roomId: string }) {
     setLoading(false);
   }, [roomId]);
 
-  useEffect(() => { refresh(); }, [refresh]);
+  useEffect(() => { void (refresh()); }, [refresh]);
 
   if (loading) {
     return <div className="dnd-serif" style={{ padding: 24, textAlign: "center", opacity: .55 }}>Unrolling the chronicle…</div>;
@@ -226,7 +226,7 @@ function LedgerSection({
     }
     setLoading(false);
   }, [roomId, onPartyGoldChange]);
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { void (load()); }, [load]);
 
   async function add() {
     const n = Math.trunc(Number(delta));
@@ -388,7 +388,7 @@ function SessionsSection({ roomId, isDM }: { roomId: string; isDM: boolean }) {
     if (r?.ok) setSessions(r.sessions || []);
     setLoading(false);
   }, [roomId]);
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { void (load()); }, [load]);
 
   async function add() {
     if (!draft.trim()) return;
@@ -510,7 +510,7 @@ function NpcsSection({ roomId, isDM }: { roomId: string; isDM: boolean }) {
     if (r?.ok) setNpcs(r.npcs || []);
     setLoading(false);
   }, [roomId]);
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { void (load()); }, [load]);
 
   async function add() {
     if (!name.trim()) return;
@@ -634,7 +634,7 @@ function ThreadsSection({ roomId, isDM }: { roomId: string; isDM: boolean }) {
     if (r?.ok) setThreads(r.threads || []);
     setLoading(false);
   }, [roomId]);
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { void (load()); }, [load]);
 
   async function add() {
     if (!title.trim()) return;
@@ -754,7 +754,7 @@ function NotesSection({ roomId, isDM }: { roomId: string; isDM: boolean }) {
     if (r?.ok) setNotes(r.notes || []);
     setLoading(false);
   }, [roomId]);
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { void (load()); }, [load]);
 
   const tree = useMemo(() => {
     const byParent = new Map<string | null, WorldNote[]>();
@@ -910,7 +910,7 @@ function PartySection({ roomId }: { roomId: string }) {
     if (r?.ok) setParty(r.party || []);
     setLoading(false);
   }, [roomId]);
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { void (load()); }, [load]);
 
   if (loading) return <div className="dnd-serif" style={{ opacity: .55, padding: 16 }}>Mustering the party…</div>;
   if (!party.length) {

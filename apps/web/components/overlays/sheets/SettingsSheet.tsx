@@ -171,14 +171,14 @@ function JoinPolicyRow({ field = "joinPolicy", label = "Who can join your sessio
   const apiBase = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
   React.useEffect(() => {
     let alive = true;
-    (async () => {
+    void ((async () => {
       try {
         const me = JSON.parse(localStorage.getItem("weered_user") || "null");
         if (!me?.id) return;
         const j = await settingsFetch(`${apiBase}/profile/${me.id}`, {}).then(r => r.json());
         if (alive && j?.[field]) setPolicy(String(j[field]));
       } catch {} finally { if (alive) setLoaded(true); }
-    })();
+    })());
     return () => { alive = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

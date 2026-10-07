@@ -58,7 +58,7 @@ export function PortsOfCallTab() {
   }, []);
 
   useEffect(() => {
-    reload();
+    void reload();
     const t = setInterval(reload, 60_000);
     return () => clearInterval(t);
   }, [reload]);
@@ -236,7 +236,7 @@ export function PortsOfCallTab() {
         <LinkServerForm
           onClose={() => {
             setShowForm(false);
-            reload();
+            void reload();
           }}
         />
       )}

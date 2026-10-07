@@ -129,7 +129,7 @@ export default function PassiveTree({ accent = "#AF6025" }: { accent?: string })
   // ── load tree + characters ──
   useEffect(() => {
     let alive = true;
-    (async () => {
+    void (async () => {
       if (!_tree) {
         try {
           const j = await api("/poe/tree?v=3");
@@ -143,7 +143,7 @@ export default function PassiveTree({ accent = "#AF6025" }: { accent?: string })
         setLoading(false);
       }
     })();
-    (async () => {
+    void (async () => {
       try {
         const j = await api("/poe/me/characters");
         if (alive && j?.ok) {
@@ -166,7 +166,7 @@ export default function PassiveTree({ accent = "#AF6025" }: { accent?: string })
     const c = chars.find((x) => x.name === sel);
     const realm = c?.realm || "pc";
     let alive = true;
-    (async () => {
+    void (async () => {
       try {
         const j = await api(
           `/poe/tree/character?name=${encodeURIComponent(sel)}&realm=${encodeURIComponent(realm)}`,

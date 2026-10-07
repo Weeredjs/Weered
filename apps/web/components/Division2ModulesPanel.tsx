@@ -180,7 +180,7 @@ function OpsBoard({ accent }: { accent: string }) {
   }, []);
 
   useEffect(() => {
-    load();
+    void load();
     const i = setInterval(load, 5 * 60_000);
     return () => clearInterval(i);
   }, [load]);
@@ -753,7 +753,7 @@ function TwitchStreams({ lobbyId, accent }: { lobbyId: string; accent: string })
   }, []);
 
   useEffect(() => {
-    load();
+    void load();
     const i = setInterval(load, 30000);
     return () => clearInterval(i);
   }, [load]);

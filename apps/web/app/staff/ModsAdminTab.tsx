@@ -21,7 +21,7 @@ export function ModsAdminTab() {
   }, [showExcluded, search]);
 
   useEffect(() => {
-    reload();
+    void reload();
   }, [reload]);
 
   async function toggle(mod: any, next: boolean) {
@@ -46,7 +46,7 @@ export function ModsAdminTab() {
     setBusy(null);
     if (j?.ok) {
       setMsg(next ? `Hid "${mod.name}".` : `Restored "${mod.name}".`);
-      reload();
+      void reload();
     } else {
       setMsg(j?.error || "Failed.");
     }

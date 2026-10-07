@@ -43,7 +43,7 @@ export function useBarMaps(): BarMapRow[] | null {
   useEffect(() => {
     if (cache) return;
     let alive = true;
-    loadBarMaps().then((m) => {
+    void loadBarMaps().then((m) => {
       if (alive) setMaps(m);
     });
     return () => {

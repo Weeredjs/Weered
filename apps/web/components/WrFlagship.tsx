@@ -25,7 +25,7 @@ export function LivePlayers() {
   }, []);
 
   useEffect(() => {
-    load();
+    void load();
     const t = setInterval(load, 60_000);
     return () => clearInterval(t);
   }, [load]);
@@ -92,7 +92,7 @@ export function LivePlayers() {
 export function LaunchStats() {
   const [data, setData] = useState<any | null>(null);
   useEffect(() => {
-    apiFetch("/windrose/launch").then((j) => {
+    void apiFetch("/windrose/launch").then((j) => {
       if (j?.ok) setData(j);
     });
   }, []);
@@ -268,7 +268,7 @@ export function ActivityTicker() {
   }, []);
 
   useEffect(() => {
-    load();
+    void load();
     const t = setInterval(load, 60_000);
     return () => clearInterval(t);
   }, [load]);

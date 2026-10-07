@@ -90,7 +90,7 @@ export default function CommentNode({ c, ctx }: { c: CommentT; ctx: NodeCtx }) {
   function permalink() {
     const url = window.location.href.split("#")[0] + "#c-" + c.id;
     try {
-      navigator.clipboard.writeText(url);
+      void navigator.clipboard.writeText(url);
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1400);
     } catch {
@@ -283,7 +283,7 @@ export default function CommentNode({ c, ctx }: { c: CommentT; ctx: NodeCtx }) {
                 placeholder={"Reply to " + c.authorName + "..."}
                 onKeyDown={(e) => {
                   if (e.key === "Escape") setReplying(false);
-                  if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) send();
+                  if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) void send();
                 }}
               />
               <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 6 }}>

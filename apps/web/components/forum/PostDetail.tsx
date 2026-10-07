@@ -87,7 +87,7 @@ export default function PostDetail({
   }, [postId]);
 
   useEffect(() => {
-    load();
+    void load();
   }, [load]);
 
   // A permalink to a comment is what lets someone carry a point out of the
@@ -161,13 +161,13 @@ export default function PostDetail({
       method: "POST",
       body: JSON.stringify({ pinned: !post.pinned }),
     });
-    load();
+    void load();
   }
   async function handleLock() {
     if (!post) return;
     const path = post.locked ? `/forum/posts/${postId}/unlock` : `/forum/posts/${postId}/lock`;
     await forumFetch(path, { method: "POST", body: JSON.stringify({}) });
-    load();
+    void load();
   }
   async function handleRemovePost() {
     const reason = window.prompt("Removal reason (visible in audit log):", "") || "";
@@ -175,11 +175,11 @@ export default function PostDetail({
       method: "POST",
       body: JSON.stringify({ reason }),
     });
-    load();
+    void load();
   }
   async function handleRestorePost() {
     await forumFetch(`/forum/posts/${postId}/restore`, { method: "POST" });
-    load();
+    void load();
   }
   async function handleReportPost() {
     await weeredForumReport({ postId });
@@ -193,11 +193,11 @@ export default function PostDetail({
       method: "POST",
       body: JSON.stringify({ reason }),
     });
-    load();
+    void load();
   }
   async function handleRestoreComment(commentId: string) {
     await forumFetch(`/forum/comments/${commentId}/restore`, { method: "POST" });
-    load();
+    void load();
   }
   async function handleDeletePost() {
     const ok = await weeredConfirm({

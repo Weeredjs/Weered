@@ -582,7 +582,7 @@ export default async function tradingRoutes(app: FastifyInstance, opts: Opts) {
       broadcastToLobby(lobbyId, tradeEvent);
 
       if (operatorCommentateOnTrade) {
-        (async () => {
+        void (async () => {
           try {
             const recentClose = await prisma.paperPosition.findFirst({
               where: {

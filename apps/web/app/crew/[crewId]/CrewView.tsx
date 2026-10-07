@@ -151,12 +151,12 @@ export default function CrewView({ crewId, initial }: { crewId: string; initial:
   }, [crewId]);
 
   useEffect(() => {
-    if (isOfficer) refreshRequests();
+    if (isOfficer) void refreshRequests();
   }, [isOfficer, crewId]);
 
   function copyLink() {
     try {
-      navigator.clipboard.writeText(typeof window !== "undefined" ? window.location.href : "");
+      void navigator.clipboard.writeText(typeof window !== "undefined" ? window.location.href : "");
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {}

@@ -78,7 +78,7 @@ export default function HomeActivityTicker() {
       }
       if (aliveRef.current) timer = setTimeout(load, 15_000);
     }
-    load();
+    void load();
 
     return () => {
       aliveRef.current = false;

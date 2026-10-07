@@ -426,7 +426,7 @@ export default async function fortniteRoutes(app: FastifyInstance, opts: Opts) {
     const now = Date.now();
     if (now - lastShopCheck < SHOP_CHECK_INTERVAL) return;
     lastShopCheck = now;
-    checkFortniteShopWishlist();
+    void checkFortniteShopWishlist();
   }, 60_000);
 
   app.get("/fortnite/stats/:name/ranked", async (req, reply) => {

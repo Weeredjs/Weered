@@ -230,7 +230,7 @@ export function TournamentLeaderboardView({
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    apiFetch(`/tournaments/${tournamentId}/leaderboard`).then((res) => {
+    void apiFetch(`/tournaments/${tournamentId}/leaderboard`).then((res) => {
       if (res?.leaderboard) setRows(res.leaderboard);
       setLoading(false);
     });
@@ -307,16 +307,16 @@ export function TournamentBoard({ lobbyId }: { lobbyId: string }) {
   }, [lobbyId]);
 
   useEffect(() => {
-    fetchAll();
+    void fetchAll();
   }, [fetchAll]);
 
   const register = async (id: string) => {
     await apiFetch(`/tournaments/${id}/register`, { method: "POST", body: JSON.stringify({}) });
-    fetchAll();
+    void fetchAll();
   };
   const withdraw = async (id: string) => {
     await apiFetch(`/tournaments/${id}/register`, { method: "DELETE", body: JSON.stringify({}) });
-    fetchAll();
+    void fetchAll();
   };
 
   if (loading)

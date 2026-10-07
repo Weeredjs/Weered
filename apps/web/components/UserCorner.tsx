@@ -130,7 +130,7 @@ export default function UserCorner() {
       return;
     }
     let cancelled = false;
-    (async () => {
+    void (async () => {
       try {
         const r = await fetch(`${API_BASE}/lobbies/${encodeURIComponent(lid)}`);
         const j = await r.json();
@@ -902,7 +902,7 @@ export default function UserCorner() {
               value={draftStatus.text}
               onChange={(e) => setDraftStatus((v) => ({ ...v, text: e.target.value }))}
               onKeyDown={(e) => {
-                if (e.key === "Enter") saveStatus(draftStatus.text, draftStatus.emoji);
+                if (e.key === "Enter") void saveStatus(draftStatus.text, draftStatus.emoji);
                 if (e.key === "Escape") setEditingStatus(false);
               }}
               placeholder="What's the vibe?"

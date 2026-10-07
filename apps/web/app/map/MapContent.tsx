@@ -128,7 +128,7 @@ export default function MapContent() {
     if (!mapRef.current || leafletMap.current) return;
     let cancelled = false;
 
-    import("leaflet").then((L) => {
+    void import("leaflet").then((L) => {
       if (cancelled || !mapRef.current) return;
 
       const map = L.map(mapRef.current, {
@@ -173,7 +173,7 @@ export default function MapContent() {
 
   useEffect(() => {
     if (!mapReady || !hexLayer.current) return;
-    import("leaflet").then((L) => {
+    void import("leaflet").then((L) => {
       hexLayer.current.clearLayers();
       const maxCount = Math.max(1, ...hexes.map((h) => h.count));
 
@@ -222,7 +222,7 @@ export default function MapContent() {
 
   useEffect(() => {
     if (!mapReady || !lobbyLayer.current) return;
-    import("leaflet").then((L) => {
+    void import("leaflet").then((L) => {
       lobbyLayer.current.clearLayers();
       if (!showLobbyPins) return;
 
@@ -335,7 +335,7 @@ export default function MapContent() {
     else container.classList.remove("click-to-place");
     const handler = (e: any) => {
       if (!clickToPlace) return;
-      saveManualLocation(e.latlng.lat, e.latlng.lng);
+      void saveManualLocation(e.latlng.lat, e.latlng.lng);
     };
     map.on("click", handler);
     return () => {

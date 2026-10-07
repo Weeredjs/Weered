@@ -642,16 +642,16 @@ export default function NewsModulesPanel({
   }, []);
 
   useEffect(() => {
-    loadFeed(category);
+    void loadFeed(category);
   }, [category, loadFeed]);
   useEffect(() => {
-    loadTrending();
+    void loadTrending();
   }, [loadTrending]);
 
   useEffect(() => {
     const iv = setInterval(() => {
-      loadFeed(category);
-      loadTrending();
+      void loadFeed(category);
+      void loadTrending();
     }, 60_000);
     return () => clearInterval(iv);
   }, [category, loadFeed, loadTrending]);

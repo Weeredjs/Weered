@@ -83,7 +83,7 @@ export default function LobbyPlayingNowPanel({
       }
       if (alive) timer = setTimeout(tick, 60_000);
     };
-    tick();
+    void tick();
     return () => {
       alive = false;
       if (timer) clearTimeout(timer);

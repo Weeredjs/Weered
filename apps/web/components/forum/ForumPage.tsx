@@ -137,10 +137,10 @@ export default function ForumPage({
   }, [sort, category, sectionId, lobbyId, lobbyFilter]);
 
   useEffect(() => {
-    loadSections();
+    void (loadSections());
   }, [loadSections]);
   useEffect(() => {
-    if (!searchActive) load();
+    if (!searchActive) void (load());
   }, [load, searchActive]);
 
   async function runSearch(q: string) {
@@ -202,8 +202,8 @@ export default function ForumPage({
       setPostCat("DISCUSSION");
       setPostSection("");
       setTagsInput("");
-      load();
-      loadSections();
+      void (load());
+      void (loadSections());
     }
     setSubmitting(false);
   }
@@ -359,7 +359,7 @@ export default function ForumPage({
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            runSearch(searchQ);
+            void (runSearch(searchQ));
           }}
           style={{ display: "flex", gap: 6, marginBottom: 12 }}
         >
@@ -993,7 +993,7 @@ export default function ForumPage({
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            weeredForumReport({ postId: post.id });
+                            void (weeredForumReport({ postId: post.id }));
                           }}
                           title="Report"
                           style={{
@@ -1029,7 +1029,7 @@ export default function ForumPage({
             setEditingSection(null);
           }}
           onSaved={() => {
-            loadSections();
+            void (loadSections());
           }}
           onEdit={(s) => setEditingSection(s)}
         />

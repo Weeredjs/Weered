@@ -194,7 +194,7 @@ export default function HelldiversStratagemHero({
     if (phase !== "over") return;
     const s = st.current.score;
     if (!currentUserId || s <= 0) return;
-    (async () => {
+    void (async () => {
       try {
         const r = await fetch(`${API}/helldivers/strat-hero/score`, {
           method: "POST",

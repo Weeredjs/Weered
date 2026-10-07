@@ -349,7 +349,7 @@ export default function LeftRail() {
         if (!cancelled && j.ok && Array.isArray(j.users)) setLobbyPresence(j.users);
       } catch {}
     };
-    fetchPresence();
+    void fetchPresence();
     const t = setInterval(fetchPresence, 20000);
     return () => {
       cancelled = true;
@@ -523,7 +523,7 @@ export default function LeftRail() {
     const token = typeof window !== "undefined" ? localStorage.getItem("weered_token") : null;
     if (!token || !me?.id || favsSynced.current) return;
     favsSynced.current = true;
-    (async () => {
+    void (async () => {
       try {
         let local: string[] = [];
         try {
@@ -578,7 +578,7 @@ export default function LeftRail() {
     const missing = favs.filter((id) => !favMeta[id] && !serverRecentMap.get(id)?.name);
     if (!missing.length) return;
     let alive = true;
-    Promise.all(
+    void Promise.all(
       missing.map((id) =>
         fetch(`${API_BASE}/lobbies/${encodeURIComponent(id)}`)
           .then((r) => (r.ok ? r.json() : null))
@@ -690,7 +690,7 @@ export default function LeftRail() {
         setRoomCounts(counts);
       } catch {}
     };
-    fetchCounts();
+    void fetchCounts();
     const t = setInterval(fetchCounts, 20000);
     return () => clearInterval(t);
   }, [favs.length, recentRooms.length]);

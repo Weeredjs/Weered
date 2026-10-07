@@ -603,7 +603,7 @@ export function OutreachTab() {
                     <button
                       style={{ ...S.danger, fontSize: 10, padding: "4px 10px" }}
                       onClick={() => {
-                        remove(c.id);
+                        void remove(c.id);
                         setExpandedContact(null);
                       }}
                     >

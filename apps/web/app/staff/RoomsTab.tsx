@@ -12,7 +12,7 @@ export function RoomsTab({ myRole }: { myRole: GlobalRole }) {
 
   useEffect(() => {
     setLoading(true);
-    apiFetch("/staff/rooms").then((j) => {
+    void apiFetch("/staff/rooms").then((j) => {
       setRooms(j.rooms || []);
       setLoading(false);
     });

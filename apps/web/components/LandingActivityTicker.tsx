@@ -35,7 +35,7 @@ export default function LandingActivityTicker() {
       }
       if (aliveRef.current) timer = setTimeout(tick, 10_000);
     }
-    tick();
+    void tick();
 
     return () => {
       aliveRef.current = false;

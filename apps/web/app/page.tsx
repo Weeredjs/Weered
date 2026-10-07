@@ -936,7 +936,7 @@ function LobbyWall({ loginHref }: { loginHref: string }) {
 
   useEffect(() => {
     let alive = true;
-    (async () => {
+    void (async () => {
       try {
         const r = await fetch(`${LP_API}/public/lobbies/featured`, { cache: "no-store" });
         const j = await r.json();

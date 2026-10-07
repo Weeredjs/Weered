@@ -85,7 +85,7 @@ export default function BountyView({ id, initial }: { id: string; initial: Bount
 
   function copyLink() {
     try {
-      navigator.clipboard.writeText(typeof window !== "undefined" ? window.location.href : "");
+      void navigator.clipboard.writeText(typeof window !== "undefined" ? window.location.href : "");
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {}

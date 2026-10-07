@@ -74,7 +74,7 @@ export default function VaModulesPanel({
   }, [lobbyId]);
 
   useEffect(() => {
-    load();
+    void load();
     const t = setInterval(load, 30_000);
     return () => clearInterval(t);
   }, [load]);

@@ -287,7 +287,7 @@ function ChessProfile() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch(`${API}/chess/me/profile`, { headers: tokenHeader() })
+    void fetch(`${API}/chess/me/profile`, { headers: tokenHeader() })
       .then((r) => r.json())
       .then((j) => setData(j))
       .finally(() => setLoading(false));
@@ -480,7 +480,7 @@ function ChessAudit() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch(`${API}/chess/me/activities?limit=25`, { headers: tokenHeader() })
+    void fetch(`${API}/chess/me/activities?limit=25`, { headers: tokenHeader() })
       .then((r) => r.json())
       .then((j) => {
         if (j?.ok && Array.isArray(j.activities)) setGames(j.activities);

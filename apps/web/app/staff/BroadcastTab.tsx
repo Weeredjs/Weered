@@ -73,7 +73,7 @@ export function BroadcastTab() {
     if (j?.ok) setItems(j.announcements || []);
   }, []);
   useEffect(() => {
-    load();
+    void load();
   }, [load]);
 
   function applyPreset(p: (typeof ANN_PRESETS)[number]) {

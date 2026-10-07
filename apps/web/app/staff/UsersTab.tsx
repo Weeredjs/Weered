@@ -57,7 +57,7 @@ export function UsersTab({ myRole }: { myRole: GlobalRole }) {
     if (j.ok) {
       setNewNote("");
       setMsg("Note saved.");
-      loadNotes(selected);
+      void loadNotes(selected);
     } else setMsg(j.error || "Failed.");
   }
 
@@ -68,7 +68,7 @@ export function UsersTab({ myRole }: { myRole: GlobalRole }) {
     });
     if (j.ok) {
       setMsg(`Role → ${role}`);
-      search();
+      void search();
       if (selected?.id === userId)
         setSelected((s) => (s ? { ...s, globalRole: role as GlobalRole } : s));
     } else setMsg(j.error || "Failed.");
@@ -89,7 +89,7 @@ export function UsersTab({ myRole }: { myRole: GlobalRole }) {
     if (j.ok) {
       setMsg(`Banned ${name}`);
       setBanReason("");
-      search();
+      void search();
       if (selected?.id === userId)
         setSelected((s) => (s ? { ...s, banned: true, banReason: banReason.trim() } : s));
     } else setMsg(j.error || "Failed.");
@@ -100,7 +100,7 @@ export function UsersTab({ myRole }: { myRole: GlobalRole }) {
     const j = await apiFetch(`/staff/users/${userId}/ban`, { method: "DELETE" });
     if (j.ok) {
       setMsg(`Unbanned ${name}`);
-      search();
+      void search();
       if (selected?.id === userId)
         setSelected((s) => (s ? { ...s, banned: false, banReason: undefined } : s));
     } else setMsg(j.error || "Failed.");

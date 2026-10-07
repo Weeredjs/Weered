@@ -118,11 +118,11 @@ export function MoreMenu({
     }
   };
   const handleForward = () => {
-    copy(`↪ ${userName}: ${body}`, "Forward text copied — paste in any chat.");
+    void copy(`↪ ${userName}: ${body}`, "Forward text copied — paste in any chat.");
     onClose();
   };
   const handleCopyText = () => {
-    copy(body, "Message copied.");
+    void copy(body, "Message copied.");
     onClose();
   };
   const handleCopyLink = () => {
@@ -131,7 +131,7 @@ export function MoreMenu({
         ? window.location.pathname
         : `/room/${encodeURIComponent(roomId)}`;
     const origin = typeof window !== "undefined" ? window.location.origin : "https://weered.ca";
-    copy(`${origin}${path}?msg=${encodeURIComponent(msgId)}`, "Message link copied.");
+    void copy(`${origin}${path}?msg=${encodeURIComponent(msgId)}`, "Message link copied.");
     onClose();
   };
   const handleMarkUnread = () => {

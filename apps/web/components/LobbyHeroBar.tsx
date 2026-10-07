@@ -72,7 +72,7 @@ export default function LobbyHeroBar({
           if (!stop) setInGame(typeof j?.count === "number" ? j.count : null);
         })
         .catch(() => {});
-    load();
+    void load();
     const iv = setInterval(load, 60_000);
     return () => {
       stop = true;

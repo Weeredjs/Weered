@@ -37,7 +37,7 @@ export function StreamsTab({ gameName, lobbyId }: { gameName: string; lobbyId: s
 
   useEffect(() => {
     const game = encodeURIComponent(gameName || "Windrose");
-    apiFetch(`/twitch/streams?game=${game}&first=20`).then((j) => {
+    void apiFetch(`/twitch/streams?game=${game}&first=20`).then((j) => {
       if (j?.ok && Array.isArray(j.streams)) setStreams(j.streams);
       setLoading(false);
     });

@@ -411,7 +411,7 @@ function PlayerLookup({ accent, heroMap }: { accent: string; heroMap: Record<num
           placeholder="Search player name..."
           value={query}
           onChange={e => setQuery(e.target.value)}
-          onKeyDown={e => { if (e.key === "Enter") search(); }}
+          onKeyDown={e => { if (e.key === "Enter") void (search()); }}
         />
         <button
           style={{ ...S.btnPri, padding: "8px 18px", border: `1px solid ${accent}55`, background: `${accent}18`, color: accent }}
@@ -662,7 +662,7 @@ function LiveMatches({ accent }: { accent: string }) {
     setLoading(false);
   }, []);
 
-  useEffect(() => { load(); const i = setInterval(load, 30000); return () => clearInterval(i); }, [load]);
+  useEffect(() => { void (load()); const i = setInterval(load, 30000); return () => clearInterval(i); }, [load]);
 
   if (loading) return <div style={{ padding: 20, textAlign: "center", opacity: 0.4, fontSize: 13 }}>Loading live matches...</div>;
   if (error) return <div style={{ padding: 20, textAlign: "center", opacity: 0.4, fontSize: 13 }}>Failed to load live matches</div>;
@@ -926,7 +926,7 @@ function TwitchStreams({ lobbyId, accentColor }: { lobbyId: string; accentColor:
     setLoading(false);
   }, []);
 
-  useEffect(() => { load(); const i = setInterval(load, 30000); return () => clearInterval(i); }, [load]);
+  useEffect(() => { void (load()); const i = setInterval(load, 30000); return () => clearInterval(i); }, [load]);
 
   function handleCardClick(s: any) {
     setInterceptStream({

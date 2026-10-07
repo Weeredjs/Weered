@@ -46,7 +46,7 @@ export function AppealsTab() {
   }
 
   useEffect(() => {
-    load();
+    void load();
   }, [filter]);
 
   async function review(id: string, decision: "APPROVED" | "DENIED") {
@@ -62,7 +62,7 @@ export function AppealsTab() {
         delete next[id];
         return next;
       });
-      load();
+      void load();
     } else {
       setMsg(j.message || j.error || "Failed.");
     }

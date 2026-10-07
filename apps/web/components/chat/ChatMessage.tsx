@@ -1054,7 +1054,7 @@ export function ChatMessage(props: ChatMessageProps) {
                   setMoreMenuMsgId("");
                 }}
                 onDelete={() => {
-                  handleDelete();
+                  void handleDelete();
                   setMoreMenuMsgId("");
                 }}
                 onTogglePin={() => {

@@ -149,7 +149,7 @@ export default function MarkdownComposer({
         setDragging(false);
         if (!imgs.length) return;
         e.preventDefault();
-        handleFile(imgs[0]);
+        void handleFile(imgs[0]);
       }}
     >
       <div
@@ -269,7 +269,7 @@ export default function MarkdownComposer({
           style={{ display: "none" }}
           onChange={(e) => {
             const f = e.target.files?.[0];
-            if (f) handleFile(f);
+            if (f) void handleFile(f);
           }}
         />
       </div>
@@ -285,7 +285,7 @@ export default function MarkdownComposer({
             const imgs = filesFrom(e.clipboardData?.files);
             if (!imgs.length) return;
             e.preventDefault();
-            handleFile(imgs[0]);
+            void handleFile(imgs[0]);
           }}
           placeholder={placeholder}
           maxLength={maxLength}

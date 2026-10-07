@@ -11,7 +11,7 @@ export function LobbiesTab({ myRole }: { myRole: GlobalRole }) {
 
   useEffect(() => {
     setLoading(true);
-    Promise.all([apiFetch("/staff/lobbies"), apiFetch("/staff/featured")]).then(
+    void Promise.all([apiFetch("/staff/lobbies"), apiFetch("/staff/featured")]).then(
       ([lobbyData, featData]) => {
         setLobbies(lobbyData.lobbies || []);
         setFeaturedId(featData.featuredLobbyId || "");

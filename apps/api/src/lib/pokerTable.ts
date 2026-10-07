@@ -321,7 +321,7 @@ export function advancePokerGame(table: PokerTable) {
     while (table.communityCards.length < 5) {
       dealCommunityCards(table, 1);
     }
-    resolveShowdown(table);
+    void resolveShowdown(table);
     return;
   }
 
@@ -338,7 +338,7 @@ export function advancePokerGame(table: PokerTable) {
       table.phase = "river";
       dealCommunityCards(table, 1);
     } else if (table.phase === "river") {
-      resolveShowdown(table);
+      void resolveShowdown(table);
       return;
     }
 
@@ -465,7 +465,7 @@ export function startPokerHand(table: PokerTable) {
   if (table.turnIndex === -1) {
     collectBetsIntoPot(table);
     while (table.communityCards.length < 5) dealCommunityCards(table, 1);
-    resolveShowdown(table);
+    void resolveShowdown(table);
     return;
   }
   broadcastPokerState(table.tableId);

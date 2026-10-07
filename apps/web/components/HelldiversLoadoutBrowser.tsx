@@ -94,7 +94,7 @@ export default function HelldiversLoadoutBrowser({ lobbyAccent = "#FFD700", onCr
   }
 
   useEffect(() => {
-    fetchList(); /* eslint-disable-next-line react-hooks/exhaustive-deps */
+    void fetchList(); /* eslint-disable-next-line react-hooks/exhaustive-deps */
   }, [faction, role, sort, search]);
 
   function submitSearch(e: React.FormEvent) {
@@ -108,7 +108,7 @@ export default function HelldiversLoadoutBrowser({ lobbyAccent = "#FFD700", onCr
         onSaved={(slug) => {
           setShowBuilder(false);
           setSelectedSlug(slug);
-          fetchList();
+          void fetchList();
         }}
         onCancel={() => setShowBuilder(false)}
       />
@@ -272,7 +272,7 @@ export default function HelldiversLoadoutBrowser({ lobbyAccent = "#FFD700", onCr
           onClose={() => setSelectedSlug(null)}
           onDeleted={() => {
             setSelectedSlug(null);
-            fetchList();
+            void fetchList();
           }}
         />
       )}
@@ -505,7 +505,7 @@ function LoadoutDetail({
   }
 
   useEffect(() => {
-    load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */
+    void load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */
   }, [slug]);
 
   async function castVote(value: 1 | -1) {

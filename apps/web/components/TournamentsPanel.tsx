@@ -70,7 +70,7 @@ export default function TournamentsPanel({
     if (j.ok === false) return;
     weeredToast.success(j.mode === "canceled" ? "Tournament canceled." : "Tournament deleted.");
     if (openId === t.id) setOpenId(null);
-    fetchList();
+    void (fetchList());
   }
 
   const fetchList = React.useCallback(async () => {
@@ -82,7 +82,7 @@ export default function TournamentsPanel({
     }
   }, [lobbyId]);
 
-  React.useEffect(() => { fetchList(); }, [fetchList]);
+  React.useEffect(() => { void (fetchList()); }, [fetchList]);
 
   const q = query.trim().toLowerCase();
   const matchesQuery = (t: Tournament) => !q || (t.title || "").toLowerCase().includes(q);
@@ -195,7 +195,7 @@ export default function TournamentsPanel({
         <TournamentFormModal
           lobbyId={lobbyId}
           onClose={() => setShowCreate(false)}
-          onSaved={(id) => { setShowCreate(false); fetchList(); setOpenId(id); }}
+          onSaved={(id) => { setShowCreate(false); void (fetchList()); setOpenId(id); }}
         />
       )}
       {editId && (() => {
@@ -206,7 +206,7 @@ export default function TournamentsPanel({
             lobbyId={lobbyId}
             existing={t}
             onClose={() => setEditId(null)}
-            onSaved={() => { setEditId(null); fetchList(); }}
+            onSaved={() => { setEditId(null); void (fetchList()); }}
           />
         );
       })()}
@@ -299,7 +299,7 @@ function BracketView({ tournament, currentUserId, isStaff, onClose, onChanged }:
     if (j?.ok) setMatches(j.matches || []);
   }, [tournament.id]);
 
-  React.useEffect(() => { fetchMatches(); }, [fetchMatches]);
+  React.useEffect(() => { void (fetchMatches()); }, [fetchMatches]);
 
   const [seeding, setSeeding] = React.useState<"random" | "rank">("random");
   async function startBracket() {
@@ -517,9 +517,9 @@ function RunAuditModal({ onClose }: { onClose: () => void }) {
   const [loading, setLoading] = React.useState(true);
 
   React.useEffect(() => {
-    apiFetch<{ activities: Activity[] }>("/bungie/my-activities?limit=10", { silent: true })
+    void (apiFetch<{ activities: Activity[] }>("/bungie/my-activities?limit=10", { silent: true })
       .then(j => { if (j?.ok && Array.isArray(j.activities)) setActivities(j.activities); })
-      .finally(() => setLoading(false));
+      .finally(() => setLoading(false)));
   }, []);
 
   return (
@@ -623,7 +623,7 @@ function RaceLeaderboardView({ tournamentId, currentUserId }: { tournamentId: st
   }, [tournamentId]);
 
   React.useEffect(() => {
-    fetchBoard();
+    void (fetchBoard());
     const t = setInterval(fetchBoard, 8000);
     return () => clearInterval(t);
   }, [fetchBoard]);

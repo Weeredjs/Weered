@@ -83,7 +83,7 @@ export default function HelldiversWarMapPanel({ style }: { style?: React.CSSProp
         if (alive) setLoading(false);
       }
     }
-    load();
+    void load();
     const t = setInterval(load, 60_000);
     return () => {
       alive = false;
@@ -98,7 +98,7 @@ export default function HelldiversWarMapPanel({ style }: { style?: React.CSSProp
     }
     let alive = true;
     setDetailLoading(true);
-    (async () => {
+    void (async () => {
       try {
         const r = await fetch(`${API}/helldivers/planets/${selected}`);
         const j = await r.json();

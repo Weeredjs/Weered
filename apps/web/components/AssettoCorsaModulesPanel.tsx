@@ -211,7 +211,7 @@ function ServerBoard({ lobbyId, accent }: { lobbyId: string; accent: string }) {
   }, [lobbyId]);
 
   useEffect(() => {
-    load();
+    void load();
     const i = setInterval(load, 30_000);
     return () => clearInterval(i);
   }, [load]);
@@ -690,7 +690,7 @@ function TwitchStreams({ lobbyId, accent }: { lobbyId: string; accent: string })
     setLoading(false);
   }, []);
   useEffect(() => {
-    load();
+    void load();
     const i = setInterval(load, 30000);
     return () => clearInterval(i);
   }, [load]);

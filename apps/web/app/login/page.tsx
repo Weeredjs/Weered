@@ -41,7 +41,7 @@ function LoginForm() {
         s.onload = () => resolve();
         document.head.appendChild(s);
       });
-    ensureScript().then(() => {
+    void ensureScript().then(() => {
       if (cancelled || !captchaRef.current || !(window as any).turnstile) return;
       captchaWidgetIdRef.current = (window as any).turnstile.render(captchaRef.current, {
         sitekey: TURNSTILE_SITE_KEY,
@@ -499,7 +499,7 @@ function LoginForm() {
                 placeholder="••••••••••"
                 autoComplete={mode === "login" ? "current-password" : "new-password"}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter") submit();
+                  if (e.key === "Enter") void submit();
                 }}
               />
 

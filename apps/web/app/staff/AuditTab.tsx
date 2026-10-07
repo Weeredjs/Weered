@@ -9,7 +9,7 @@ export function AuditTab() {
 
   useEffect(() => {
     setLoading(true);
-    apiFetch("/staff/audit").then((j) => {
+    void apiFetch("/staff/audit").then((j) => {
       setLogs(j.logs || []);
       setLoading(false);
     });

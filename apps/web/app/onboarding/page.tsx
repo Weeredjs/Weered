@@ -293,7 +293,7 @@ function OnboardingForm() {
               maxLength={24}
               autoFocus
               onKeyDown={(e) => {
-                if (e.key === "Enter") submit();
+                if (e.key === "Enter") void submit();
               }}
             />
           </div>

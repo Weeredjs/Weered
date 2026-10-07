@@ -665,7 +665,7 @@ export function CrewTab({
                           fontSize: 11,
                         }}
                         onKeyDown={(e: any) => {
-                          if (e.key === "Enter") inviteMember(crew.id);
+                          if (e.key === "Enter") void inviteMember(crew.id);
                         }}
                       />
                       <button

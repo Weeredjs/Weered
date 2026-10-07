@@ -11,7 +11,7 @@ export default function SpaceRooms(props: any) {
   useEffect(() => {
     const api = process.env.NEXT_PUBLIC_API_BASE!;
     const token = localStorage.getItem("token");
-    fetch(`${api}/spaces/${spaceId}/rooms`, { headers: { Authorization: `Bearer ${token}` } })
+    void fetch(`${api}/spaces/${spaceId}/rooms`, { headers: { Authorization: `Bearer ${token}` } })
       .then((r) => r.json())
       .then(setRooms);
   }, [spaceId]);

@@ -270,7 +270,7 @@ export function BountiesTab() {
   }, [filter, targetFilter]);
 
   useEffect(() => {
-    reload();
+    void reload();
   }, [reload]);
 
   async function refreshWallet() {
@@ -300,7 +300,7 @@ export function BountiesTab() {
       setReason("");
       setAmount(1000);
       if (typeof j.balance === "number") setBalance(j.balance);
-      reload();
+      void reload();
     } else {
       setErr(j?.message || j?.error || "Failed to post bounty.");
     }
@@ -309,15 +309,15 @@ export function BountiesTab() {
   async function settleBounty(id: string) {
     const j = await apiFetch(`/windrose/bounties/${id}/settle`, { method: "POST", body: "{}" });
     if (j?.ok) {
-      reload();
-      refreshWallet();
+      void reload();
+      void refreshWallet();
       loadDossier();
     }
   }
   async function rejectBounty(id: string) {
     const j = await apiFetch(`/windrose/bounties/${id}/reject`, { method: "POST", body: "{}" });
     if (j?.ok) {
-      reload();
+      void reload();
       loadDossier();
     }
   }
@@ -325,8 +325,8 @@ export function BountiesTab() {
     if (!window.confirm("Cancel and refund this bounty?")) return;
     const j = await apiFetch(`/windrose/bounties/${id}/cancel`, { method: "POST", body: "{}" });
     if (j?.ok) {
-      reload();
-      refreshWallet();
+      void reload();
+      void refreshWallet();
       loadDossier();
     }
   }
@@ -730,7 +730,7 @@ export function BountiesTab() {
           onClose={() => setClaiming(null)}
           onSubmitted={() => {
             setClaiming(null);
-            reload();
+            void reload();
             loadDossier();
           }}
         />

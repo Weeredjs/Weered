@@ -48,12 +48,12 @@ export default function VaRoster({
   const [sort, setSort] = useState<Sort>("hours");
 
   useEffect(() => {
-    vaFetch<{ pilots: Pilot[]; ranks: Rank[] }>(`/va/${encodeURIComponent(lobbyId)}/pilots`).then(
-      (r) => {
-        setStatus(r.status);
-        if (r.status === 200 && r.data) setData(r.data);
-      },
-    );
+    void vaFetch<{ pilots: Pilot[]; ranks: Rank[] }>(
+      `/va/${encodeURIComponent(lobbyId)}/pilots`,
+    ).then((r) => {
+      setStatus(r.status);
+      if (r.status === 200 && r.data) setData(r.data);
+    });
   }, [lobbyId]);
 
   const list = useMemo(() => {
@@ -290,7 +290,7 @@ export function VaPilotSheet({
   const [err, setErr] = useState(false);
   useEffect(() => {
     setP(null);
-    vaFetch<Profile>(
+    void vaFetch<Profile>(
       `/va/${encodeURIComponent(lobbyId)}/pilots/${encodeURIComponent(pilotId)}`,
     ).then((r) => {
       if (r.status === 200 && r.data) setP(r.data);

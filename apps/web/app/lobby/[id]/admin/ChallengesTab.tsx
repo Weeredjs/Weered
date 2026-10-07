@@ -111,7 +111,7 @@ export function ChallengesTab({ lobbyId }: { lobbyId: string }) {
   }, [lobbyId]);
 
   useEffect(() => {
-    load();
+    void load();
   }, [load]);
 
   function addObjective() {
@@ -241,7 +241,7 @@ export function ChallengesTab({ lobbyId }: { lobbyId: string }) {
           minKd: 0,
         },
       ]);
-      load();
+      void load();
     } else setMsg(j.error || "Failed to create.");
   }
 
@@ -252,7 +252,7 @@ export function ChallengesTab({ lobbyId }: { lobbyId: string }) {
     });
     if (j.ok) {
       setMsg("Challenge activated!");
-      load();
+      void load();
     } else setMsg(j.error || "Failed.");
   }
 

@@ -41,7 +41,7 @@ export default function SteamAchievementsPanel({
 
   React.useEffect(() => {
     let alive = true;
-    (async () => {
+    void (async () => {
       try {
         const tok = (() => {
           try {

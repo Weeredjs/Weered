@@ -78,7 +78,7 @@ export default function VaStaffDesk({
         setHttp(r.status);
         if (r.status === 200 && r.data) setD(r.data);
       });
-    load();
+    void load();
     const t = setInterval(load, 60_000);
     return () => clearInterval(t);
   }, [lobbyId]);

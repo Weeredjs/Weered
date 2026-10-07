@@ -69,7 +69,7 @@ export default function LobbyAdminPage() {
   }, [lobbyId]);
 
   useEffect(() => {
-    load();
+    void load();
   }, [load]);
 
   if (loading)

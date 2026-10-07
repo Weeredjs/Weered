@@ -29,7 +29,7 @@ export default function HelldiversPlayerCountPill({ accentColor }: { accentColor
       }
       if (alive) timer = setTimeout(fetchOnce, 60_000);
     };
-    fetchOnce();
+    void fetchOnce();
 
     return () => {
       alive = false;

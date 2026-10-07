@@ -415,7 +415,7 @@ export default function LobbyBrowser() {
     const onBrowse = () => {
       setOpen(true);
       requestAnimationFrame(() => setVisible(true));
-      load();
+      void load();
     };
     window.addEventListener("weered:lobby:browse", onBrowse);
     return () => window.removeEventListener("weered:lobby:browse", onBrowse);
@@ -423,7 +423,7 @@ export default function LobbyBrowser() {
 
   useEffect(() => {
     if (open) {
-      load();
+      void load();
       intervalRef.current = setInterval(load, 8000);
     } else {
       if (intervalRef.current) clearInterval(intervalRef.current);
