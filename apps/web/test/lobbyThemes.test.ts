@@ -13,6 +13,7 @@ describe("one rule for skin and chrome", () => {
   it("forced lobbies wear their skin for everyone, without minimal chrome", () => {
     expect(decide("/lobby/vocn")).toEqual(["vocn", false]);
     expect(decide("/lobby/timbos")).toEqual(["timbos", false]);
+    expect(decide("/lobby/windrose")).toEqual(["windrose", false]);
   });
   it("member-only skins need the member's cached skin; otherwise minimal chrome", () => {
     expect(decide("/lobby/dnd")).toEqual([null, true]);

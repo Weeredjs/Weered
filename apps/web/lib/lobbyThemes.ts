@@ -39,6 +39,8 @@ export const FORCED_THEME_LOBBIES: string[] = [
   "16thir",
   "bandofbrothers",
   "vocn",
+  // James, 2026-10-09: Windrose is a demo lobby; the pirate theme shows to everyone.
+  "windrose",
 ];
 
 /** Marketing and legal pages that render without the app shell. */
