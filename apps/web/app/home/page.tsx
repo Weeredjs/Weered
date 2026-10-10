@@ -137,7 +137,9 @@ function HeroBanner({ lobby, onJoin }: { lobby: any; onJoin: (id: string, pinned
           src={banner}
           alt={`${roomName(lobby)} lobby banner`}
           fill
-          sizes="(max-width: 1024px) 100vw, 720px"
+          // The featured card spans the centre column (~1,430 px on a desktop):
+          // at "720px" the optimizer sent a half-width image, stretched and soft.
+          sizes="(max-width: 1024px) 100vw, 1500px"
           priority
           style={{ objectFit: "cover", opacity: 0.55, pointerEvents: "none" }}
           unoptimized={banner.startsWith("/")}
