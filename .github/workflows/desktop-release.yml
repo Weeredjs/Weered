@@ -83,7 +83,7 @@ jobs:
       # moved off the separate Weered-releases repo once the source repo
       # went public, 2026-06-17.)
       - name: Build, sign + publish Tauri app
-        uses: tauri-apps/tauri-action@v0
+        uses: tauri-apps/tauri-action@v1
         env:
           # Default token is fine — this step doesn't create a release.
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
