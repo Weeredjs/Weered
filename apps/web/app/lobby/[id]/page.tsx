@@ -714,6 +714,7 @@ export default function LobbyIdPage() {
             name: j.lobby.name,
             ownerId: j.lobby.ownerId || null,
             joinMode: j.lobby.joinMode || "OPEN",
+            memberPerks: Array.isArray(j.lobby.memberPerks) ? j.lobby.memberPerks : [],
             _count: j.lobby._count,
             tiers: j.lobby.tiers || [],
           });
