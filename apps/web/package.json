@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "@fontsource/dm-mono": "^5.2.7",
-    "@sentry/nextjs": "^10.49.0",
+    "@sentry/nextjs": "^10.75.2",
     "@weered/shared": "workspace:*",
     "leaflet": "^1.9.4",
     "lightweight-charts": "^5.1.0",
