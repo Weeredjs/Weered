@@ -132,7 +132,15 @@ export default function SetupFlow({
   const C =
     look === "nebula"
       ? PALETTES[palette]
-      : { a: "#7c3aed", b: "#5b21b6", c: "#1e1b2e", hi: "#c4b5fd", bg: "#0c0b12" };
+      : {
+          a: "#7c3aed",
+          b: "#5b21b6",
+          c: "#1e1b2e",
+          hi: "#c4b5fd",
+          bg: "#0c0b12",
+          ink: "#0d0b1c",
+          on: "#ffffff",
+        };
 
   // Directory tiles: matching interests first (all when none picked),
   // verified/pinned first, then by who's around.
@@ -345,7 +353,7 @@ export default function SetupFlow({
     border: `1px solid ${alpha(C.hi, 0.55)}`,
     background: `linear-gradient(135deg, ${C.a}, ${C.b})`,
     boxShadow: `0 18px 50px ${alpha(C.a, 0.45)}, inset 0 1px 0 rgba(255,255,255,.25)`,
-    color: "#fff",
+    color: C.on,
     fontFamily: "var(--font-rajdhani), 'Rajdhani', system-ui, sans-serif",
     fontWeight: 700,
     fontSize: 20,
@@ -358,6 +366,7 @@ export default function SetupFlow({
     border: "1px solid rgba(255,255,255,.2)",
     background: "rgba(255,255,255,.05)",
     boxShadow: "none",
+    color: "#fff",
   };
 
   return createPortal(
@@ -376,7 +385,7 @@ export default function SetupFlow({
         transition: "background .6s",
         // The composer's Section reads these; set here so setup looks the
         // same whichever site theme is behind it.
-        ["--weered-panel2" as any]: "rgba(13,11,28,.62)",
+        ["--weered-panel2" as any]: alpha(C.ink, 0.62),
         ["--weered-border" as any]: alpha(C.a, 0.2),
       }}
     >
@@ -471,6 +480,7 @@ export default function SetupFlow({
                       placeItems: "center",
                       fontSize: 10.5,
                       background: active === s.id ? C.a : "rgba(255,255,255,.1)",
+                      color: active === s.id ? C.on : "#fff",
                     }}
                   >
                     {i + 1}
@@ -687,6 +697,7 @@ export default function SetupFlow({
                               fontSize: 12,
                               fontWeight: 900,
                               background: C.a,
+                              color: C.on,
                               animation: "cz-pop .3s",
                             }}
                           >
@@ -778,7 +789,7 @@ export default function SetupFlow({
                                 fontSize: 14,
                                 background: on ? C.a : "rgba(0,0,0,.55)",
                                 border: `1px solid ${on ? alpha(C.hi, 0.8) : "rgba(255,255,255,.2)"}`,
-                                color: on ? "#fff" : "rgba(255,255,255,.7)",
+                                color: on ? C.on : "rgba(255,255,255,.7)",
                                 transition: "background .2s",
                               }}
                             >
@@ -1070,8 +1081,8 @@ export default function SetupFlow({
                                 width: 18,
                                 height: 18,
                                 borderRadius: 99,
-                                background: "#fff",
-                                transition: "left .18s",
+                                background: off ? "#fff" : C.on,
+                                transition: "left .18s, background .2s",
                               }}
                             />
                           </button>

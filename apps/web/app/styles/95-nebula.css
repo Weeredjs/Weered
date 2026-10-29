@@ -1,10 +1,12 @@
 /* =====================================================================
    NEBULA — Weered's glass-and-starfield site theme
    =====================================================================
-   One layout, four colourways (data-weered-palette: violet, ocean, ember,
-   aurora). Every colour derives from three channels written as
-   space-separated RGB so `rgb(var(--nb-a) / .3)` tints work:
-     --nb-a  accent            --nb-b  deep accent        --nb-c  second glow
+   One layout, six colourways (data-weered-palette: violet, ocean, ember,
+   aurora, and the colourless graphite and void). Every colour derives from
+   channels written as space-separated RGB so `rgb(var(--nb-a) / .3)` works:
+     --nb-a    accent          --nb-b     deep accent     --nb-c  second glow
+     --nb-ink  card glass      --nb-ink-2 columns, sheets
+     --nb-on   text on an accent fill     --nb-mute muted text
    lib/uiPrefs.ts PALETTES carries the same values for the setup preview.
 
    The sky itself is components/NebulaSky.tsx (clouds, aurora, parallax
@@ -14,8 +16,11 @@
    top, small-caps labels, pill buttons, accent glow on what is active.
 
    Scope: html[data-weered-theme="nebula"] minus themed lobbies
-   (data-weered-lobby), which keep their own skin. The :not() also lifts
-   these rules above the minimal-chrome stylesheet (80-chrome-min.css). */
+   (data-weered-lobby), which keep their own skin. The trailing :not(#nb)
+   matches every <html> and adds an id's weight, so each rule here outranks
+   the minimal-chrome stylesheet (80-chrome-min.css), whose slanted banners,
+   textures and squared corners Nebula replaces wholesale. Without it any
+   chrome-min selector one notch more specific (its :has() banners) won. */
 
 /* ── Tokens ───────────────────────────────────────────────────────────── */
 html[data-weered-theme="nebula"] {
@@ -24,6 +29,10 @@ html[data-weered-theme="nebula"] {
   --nb-c: 49 46 129;
   --nb-hi: #c4b5fd;
   --nb-bg: #07060f;
+  --nb-ink: 13 11 28;
+  --nb-ink-2: 9 7 20;
+  --nb-on: #fff;
+  --nb-mute: 203 200 230;
 }
 html[data-weered-theme="nebula"][data-weered-palette="ocean"] {
   --nb-a: 56 189 248;
@@ -31,6 +40,9 @@ html[data-weered-theme="nebula"][data-weered-palette="ocean"] {
   --nb-c: 30 58 138;
   --nb-hi: #bae6fd;
   --nb-bg: #040a12;
+  --nb-ink: 8 15 28;
+  --nb-ink-2: 5 10 20;
+  --nb-mute: 190 210 230;
 }
 html[data-weered-theme="nebula"][data-weered-palette="ember"] {
   --nb-a: 251 146 60;
@@ -38,6 +50,9 @@ html[data-weered-theme="nebula"][data-weered-palette="ember"] {
   --nb-c: 127 29 29;
   --nb-hi: #fed7aa;
   --nb-bg: #0d0705;
+  --nb-ink: 24 13 10;
+  --nb-ink-2: 16 9 7;
+  --nb-mute: 232 208 196;
 }
 html[data-weered-theme="nebula"][data-weered-palette="aurora"] {
   --nb-a: 52 211 153;
@@ -45,32 +60,63 @@ html[data-weered-theme="nebula"][data-weered-palette="aurora"] {
   --nb-c: 76 29 149;
   --nb-hi: #a7f3d0;
   --nb-bg: #040d0b;
+  --nb-ink: 8 21 19;
+  --nb-ink-2: 5 14 13;
+  --nb-mute: 196 226 214;
+}
+/* The colourless pair. Graphite is a mid grey; Void is near black. Their
+   accent is silver, so text on an accent fill turns dark (--nb-on). */
+html[data-weered-theme="nebula"][data-weered-palette="graphite"] {
+  --nb-a: 214 218 226;
+  --nb-b: 138 144 156;
+  --nb-c: 96 101 114;
+  --nb-hi: #f1f3f6;
+  --nb-bg: #2c2e34;
+  --nb-ink: 66 69 78;
+  --nb-ink-2: 52 55 62;
+  --nb-on: #15161a;
+  --nb-mute: 206 209 216;
+}
+html[data-weered-theme="nebula"][data-weered-palette="void"] {
+  --nb-a: 226 228 233;
+  --nb-b: 120 124 134;
+  --nb-c: 44 46 54;
+  --nb-hi: #f4f5f7;
+  --nb-bg: #040405;
+  --nb-ink: 17 17 20;
+  --nb-ink-2: 9 9 11;
+  --nb-on: #0b0b0d;
+  --nb-mute: 196 198 204;
 }
 
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) {
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) {
   --weered-bg: var(--nb-bg);
-  --weered-panel: rgb(14 12 28 / 0.78);
-  --weered-panel2: rgb(10 9 22 / 0.86);
+  --weered-panel: rgb(var(--nb-ink) / 0.78);
+  --weered-panel2: rgb(var(--nb-ink-2) / 0.86);
   --weered-border: rgb(var(--nb-a) / 0.18);
   --weered-border2: rgb(var(--nb-a) / 0.32);
   --weered-bd: rgb(var(--nb-a) / 0.18);
   --weered-bd2: rgb(var(--nb-a) / 0.32);
   --weered-text: rgb(248 247 255 / 0.96);
-  --weered-muted: rgb(203 200 230 / 0.66);
+  --weered-muted: rgb(var(--nb-mute) / 0.66);
+  /* !important: chrome-min pins these to purple with !important at the root
+     (and again on the Burner), which leaked violet into every colourway. */
+  --weered-accent: rgb(var(--nb-a)) !important;
   --weered-accent-1: rgb(var(--nb-a));
   --weered-accent-2: rgb(var(--nb-b));
-  --weered-accent-bg: rgb(var(--nb-a) / 0.16);
-  --weered-accent-ring: rgb(var(--nb-a) / 0.38);
-  --weered-accent-text: var(--nb-hi);
+  --weered-accent-bg: rgb(var(--nb-a) / 0.16) !important;
+  --weered-accent-ring: rgb(var(--nb-a) / 0.38) !important;
+  --weered-accent-text: var(--nb-hi) !important;
   --weered-accent-grad: linear-gradient(135deg, rgb(var(--nb-a)), rgb(var(--nb-b)));
   --weered-user-panel-accent: rgb(var(--nb-b) / 0.45);
-  --weered-user-panel-bg: rgb(12 10 26 / 0.7);
+  --weered-user-panel-bg: rgb(var(--nb-ink) / 0.7);
   --weered-scrollbar-track: transparent;
   --weered-scrollbar-thumb: rgb(var(--nb-a) / 0.22);
   --weered-scrollbar-thumb-hover: rgb(var(--nb-a) / 0.4);
   /* Shared surfaces */
   --nb-glass:
-    linear-gradient(180deg, rgb(255 255 255 / 0.055), rgb(255 255 255 / 0.012)), rgb(13 11 28 / 0.6);
+    linear-gradient(180deg, rgb(255 255 255 / 0.055), rgb(255 255 255 / 0.012)),
+    rgb(var(--nb-ink) / 0.6);
   --nb-line: rgb(var(--nb-a) / 0.2);
   --nb-font: var(--font-rajdhani), "Rajdhani", system-ui, sans-serif;
   --nb-shadow: 0 18px 44px -26px rgb(var(--nb-b) / 0.8), inset 0 1px 0 rgb(255 255 255 / 0.05);
@@ -86,13 +132,13 @@ html[data-weered-theme="nebula"]:not([data-weered-lobby]) {
 .nb-sky {
   display: none;
 }
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) {
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) {
   background: var(--nb-bg) !important;
 }
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) body {
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) body {
   background: transparent !important;
 }
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .nb-sky {
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .nb-sky {
   display: block;
   position: fixed;
   inset: 0;
@@ -373,17 +419,18 @@ html[data-weered-reduce-motion="1"] .nb-sky *::after {
 }
 
 /* ── Frame: three glass columns over the sky ──────────────────────────── */
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-shell {
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-shell {
   background: transparent !important;
 }
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-shell::before,
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-shell::after {
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-shell::before,
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-shell::after {
   display: none !important;
 }
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-left,
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-right {
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-left,
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-right {
   background:
-    linear-gradient(180deg, rgb(255 255 255 / 0.04), rgb(255 255 255 / 0.008)), rgb(9 7 20 / 0.52) !important;
+    linear-gradient(180deg, rgb(255 255 255 / 0.04), rgb(255 255 255 / 0.008)),
+    rgb(var(--nb-ink-2) / 0.52) !important;
   -webkit-backdrop-filter: blur(18px) saturate(1.3);
   backdrop-filter: blur(18px) saturate(1.3);
   border: 1px solid rgb(var(--nb-a) / 0.16) !important;
@@ -394,41 +441,47 @@ html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-right {
   scrollbar-width: thin;
   scrollbar-color: rgb(var(--nb-a) / 0.28) transparent;
 }
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-left::-webkit-scrollbar,
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-right::-webkit-scrollbar {
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-left::-webkit-scrollbar,
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb)
+  .weered-right::-webkit-scrollbar {
   width: 5px;
 }
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-left::-webkit-scrollbar-track,
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-right::-webkit-scrollbar-track {
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb)
+  .weered-left::-webkit-scrollbar-track,
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb)
+  .weered-right::-webkit-scrollbar-track {
   background: transparent;
 }
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-left::-webkit-scrollbar-thumb,
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-right::-webkit-scrollbar-thumb {
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb)
+  .weered-left::-webkit-scrollbar-thumb,
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb)
+  .weered-right::-webkit-scrollbar-thumb {
   background: rgb(var(--nb-a) / 0.28);
   border-radius: 99px;
 }
 /* The centre canvas: same glass, no blur (it is the big one), a lit edge. */
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) main.weered-center {
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) main.weered-center {
   background:
     radial-gradient(120% 60% at 50% 0%, rgb(var(--nb-b) / 0.12), transparent 60%),
-    linear-gradient(180deg, rgb(255 255 255 / 0.03), rgb(255 255 255 / 0.006)), rgb(7 5 18 / 0.36) !important;
+    linear-gradient(180deg, rgb(255 255 255 / 0.03), rgb(255 255 255 / 0.006)),
+    rgb(var(--nb-ink-2) / 0.36) !important;
   border: 1px solid rgb(var(--nb-a) / 0.14) !important;
   border-radius: 22px !important;
   box-shadow:
     0 30px 90px -40px rgb(0 0 0 / 0.95),
     inset 0 1px 0 rgb(255 255 255 / 0.05) !important;
 }
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) main.weered-center > div {
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) main.weered-center > div {
   background: transparent !important;
 }
 
 /* ── Shared pieces ────────────────────────────────────────────────────── */
 /* A card: glass, lit hairline along the top. */
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-left-section,
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-presence,
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-rr-section,
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-settings-section,
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .home-pulse {
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-left-section,
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-presence,
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-rr-section,
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-settings-section,
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .home-pulse {
   position: relative !important;
   background: var(--nb-glass) !important;
   border: 1px solid var(--nb-line) !important;
@@ -437,11 +490,11 @@ html[data-weered-theme="nebula"]:not([data-weered-lobby]) .home-pulse {
   overflow: hidden !important;
   clip-path: none !important;
 }
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-left-section::before,
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-presence::before,
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-rr-section::before,
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-settings-section::before,
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .home-pulse::before {
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-left-section::before,
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-presence::before,
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-rr-section::before,
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-settings-section::before,
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .home-pulse::before {
   content: "" !important;
   display: block !important;
   position: absolute !important;
@@ -458,18 +511,24 @@ html[data-weered-theme="nebula"]:not([data-weered-lobby]) .home-pulse::before {
   z-index: 0 !important;
   pointer-events: none !important;
 }
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-left-section::after,
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-presence::after,
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-rr-section::after {
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-left-section::after,
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-presence::after,
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-rr-section::after {
   display: none !important;
   content: none !important;
 }
 
 /* Small-caps labels: every section title in both rails. */
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-left-section > .weered-left-title,
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-presence > .weered-presence-head,
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-rr-section > div:first-child,
-html[data-weered-theme="nebula"]:not([data-weered-lobby])
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb)
+  .weered-left-section
+  > .weered-left-title,
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb)
+  .weered-presence
+  > .weered-presence-head,
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb)
+  .weered-rr-section
+  > div:first-child,
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb)
   .weered-rr-section
   .weered-rr-section-title {
   height: auto !important;
@@ -490,27 +549,33 @@ html[data-weered-theme="nebula"]:not([data-weered-lobby])
   letter-spacing: 0.16em !important;
   text-transform: uppercase !important;
 }
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-left-section > .weered-left-title,
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-presence > .weered-presence-head {
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb)
+  .weered-left-section
+  > .weered-left-title,
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb)
+  .weered-presence
+  > .weered-presence-head {
   padding: 13px 14px 6px !important;
 }
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-rr-section > div:first-child {
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb)
+  .weered-rr-section
+  > div:first-child {
   padding: 0 2px !important;
   margin-bottom: 10px !important;
   justify-content: space-between !important;
 }
-html[data-weered-theme="nebula"]:not([data-weered-lobby])
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb)
   .weered-rr-section
   .weered-rr-section-title {
   padding: 0 !important;
 }
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-presence-title {
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-presence-title {
   font: inherit !important;
   color: inherit !important;
   letter-spacing: inherit !important;
   text-transform: inherit !important;
 }
-html[data-weered-theme="nebula"]:not([data-weered-lobby])
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb)
   .weered-presence-head
   .weered-presence-sub {
   margin-left: auto;
@@ -521,8 +586,10 @@ html[data-weered-theme="nebula"]:not([data-weered-lobby])
 }
 
 /* Fields */
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-left .weered-presence-search,
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-right .weered-rr-search {
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb)
+  .weered-left
+  .weered-presence-search,
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-right .weered-rr-search {
   width: calc(100% - 20px) !important;
   margin: 4px 10px 6px !important;
   padding: 9px 12px !important;
@@ -535,36 +602,38 @@ html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-right .weered-
   letter-spacing: 0.02em !important;
   text-transform: none !important;
 }
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-right .weered-rr-search {
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-right .weered-rr-search {
   width: 100% !important;
   margin: 0 0 8px !important;
 }
-html[data-weered-theme="nebula"]:not([data-weered-lobby])
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb)
   .weered-left
   .weered-presence-search::placeholder,
-html[data-weered-theme="nebula"]:not([data-weered-lobby])
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb)
   .weered-right
   .weered-rr-search::placeholder {
   color: rgb(255 255 255 / 0.38) !important;
   text-transform: none !important;
   letter-spacing: 0.02em !important;
 }
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-shell input:focus,
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-shell textarea:focus,
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-sheet input:focus,
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-sheet select:focus {
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-shell input:focus,
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-shell textarea:focus,
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-sheet input:focus,
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-sheet select:focus {
   outline: none !important;
   border-color: rgb(var(--nb-a) / 0.6) !important;
   box-shadow: 0 0 0 3px rgb(var(--nb-a) / 0.18) !important;
 }
 
 /* Pill buttons: primary (accent gradient) and ghost (glass). */
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .home-btn,
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-rr-primary,
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-rr-join,
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-rail-close,
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-chat-fullscreen-cta,
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-sheet-btn {
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .home-btn,
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-rr-primary,
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-rr-join,
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-rr-invite,
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-rail-close,
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-chat-fullscreen-cta,
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-sheet-btn,
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-btn {
   clip-path: none !important;
   border-radius: 999px !important;
   font-family: var(--nb-font) !important;
@@ -577,44 +646,64 @@ html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-sheet-btn {
     box-shadow 0.18s,
     transform 0.18s !important;
 }
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .home-btn {
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .home-btn {
   padding: 8px 18px !important;
   font-size: 13px !important;
   height: auto !important;
 }
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .home-btn-primary,
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-rr-join,
-html[data-weered-theme="nebula"]:not([data-weered-lobby])
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .home-btn-primary,
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-rr-join,
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb)
   .weered-rr-section
   > div:first-child
   .weered-rr-primary {
   border: 1px solid rgb(255 255 255 / 0.22) !important;
   background: linear-gradient(135deg, rgb(var(--nb-a)), rgb(var(--nb-b))) !important;
-  color: #fff !important;
+  color: var(--nb-on) !important;
   box-shadow:
     0 8px 22px -8px rgb(var(--nb-a) / 0.85),
     inset 0 1px 0 rgb(255 255 255 / 0.22) !important;
 }
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .home-btn-ghost,
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-rail-close,
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-chat-fullscreen-cta,
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-sheet-btn {
+/* Invite rides next to Join on friend rows: a glass pill, green for "come here". */
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-rr-invite {
+  border: 1px solid rgb(34 197 94 / 0.4) !important;
+  background: rgb(34 197 94 / 0.12) !important;
+  color: rgb(167 243 208) !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb)
+  .weered-rr-invite:hover:not(:disabled) {
+  border-color: rgb(34 197 94 / 0.75) !important;
+  box-shadow: 0 0 18px -4px rgb(34 197 94 / 0.7) !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-rr-join,
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-rr-invite {
+  padding: 3px 10px !important;
+  font-size: 11px !important;
+  line-height: 1.45 !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .home-btn-ghost,
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-rail-close,
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-chat-fullscreen-cta,
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-sheet-btn,
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-btn {
   border: 1px solid rgb(var(--nb-a) / 0.4) !important;
   background: rgb(var(--nb-a) / 0.1) !important;
   color: #fff !important;
   box-shadow: none !important;
 }
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .home-btn:hover,
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-rr-primary:hover,
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-rr-join:hover,
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-rail-close:hover,
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-chat-fullscreen-cta:hover,
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-sheet-btn:hover {
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .home-btn:hover,
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-rr-primary:hover,
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-rr-join:hover,
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-rail-close:hover,
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb)
+  .weered-chat-fullscreen-cta:hover,
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-sheet-btn:hover,
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-btn:hover {
   transform: translateY(-1px);
   border-color: rgb(var(--nb-a) / 0.8) !important;
   box-shadow: 0 0 22px -4px rgb(var(--nb-a) / 0.75) !important;
 }
-html[data-weered-theme="nebula"]:not([data-weered-lobby])
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb)
   .weered-rr-section
   > div:first-child
   .weered-rr-primary {
@@ -630,19 +719,19 @@ html[data-weered-theme="nebula"]:not([data-weered-lobby])
 }
 
 /* ── Left rail ────────────────────────────────────────────────────────── */
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-left-inner {
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-left-inner {
   padding: 12px 10px 12px 12px !important;
   gap: 12px !important;
 }
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-left-section,
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-presence {
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-left-section,
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-presence {
   margin: 0 !important;
   padding: 0 0 8px !important;
 }
-html[data-weered-theme="nebula"]:not([data-weered-lobby])
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb)
   .weered-left-section
   > *:not(.weered-left-title),
-html[data-weered-theme="nebula"]:not([data-weered-lobby])
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb)
   .weered-presence
   > *:not(.weered-presence-head) {
   margin-right: 0 !important;
@@ -651,25 +740,25 @@ html[data-weered-theme="nebula"]:not([data-weered-lobby])
   padding-right: 6px !important;
 }
 /* The ID card, with a slow light running round its edge. */
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-usercorner {
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-usercorner {
   margin: 0 !important;
   border-radius: 18px !important;
   overflow: hidden !important;
   background:
     radial-gradient(120% 90% at 0% 0%, rgb(var(--nb-b) / 0.58), transparent 60%),
     radial-gradient(90% 90% at 100% 100%, rgb(var(--nb-c) / 0.6), transparent 65%),
-    rgb(13 11 28 / 0.72) !important;
+    rgb(var(--nb-ink) / 0.72) !important;
   border: 1px solid rgb(var(--nb-a) / 0.3) !important;
   box-shadow:
     0 18px 44px -20px rgb(var(--nb-b) / 0.9),
     inset 0 1px 0 rgb(255 255 255 / 0.1) !important;
 }
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-usercorner::before,
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-usercorner > span {
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-usercorner::before,
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-usercorner > span {
   display: none !important;
   content: none !important;
 }
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-usercorner::after {
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-usercorner::after {
   content: "" !important;
   display: block !important;
   position: absolute !important;
@@ -705,14 +794,16 @@ html[data-weered-reduce-motion="1"] .weered-usercorner::after {
     animation: none !important;
   }
 }
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-usercorner .weered-avatar {
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb)
+  .weered-usercorner
+  .weered-avatar {
   box-shadow:
-    0 0 0 3px rgb(13 11 28 / 0.9),
+    0 0 0 3px rgb(var(--nb-ink) / 0.9),
     0 0 0 5px rgb(var(--nb-a) / 0.55),
     0 10px 26px rgb(var(--nb-a) / 0.45) !important;
 }
 /* Nav rows: quiet until hovered; the current page glows. */
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-left .weered-left-link {
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-left .weered-left-link {
   margin: 2px 8px !important;
   padding: 9px 12px !important;
   border-radius: 12px !important;
@@ -730,17 +821,24 @@ html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-left .weered-l
     color 0.18s,
     box-shadow 0.18s !important;
 }
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-left .weered-left-link * {
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb)
+  .weered-left
+  .weered-left-link
+  * {
   font-family: inherit !important;
   letter-spacing: inherit !important;
   text-transform: none !important;
 }
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-left .weered-left-link:hover {
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb)
+  .weered-left
+  .weered-left-link:hover {
   background: rgb(255 255 255 / 0.055) !important;
   color: #fff !important;
 }
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-left .weered-left-link-active,
-html[data-weered-theme="nebula"]:not([data-weered-lobby])
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb)
+  .weered-left
+  .weered-left-link-active,
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb)
   .weered-left
   .weered-left-link-active:hover {
   background: linear-gradient(90deg, rgb(var(--nb-a) / 0.36), rgb(var(--nb-a) / 0.07)) !important;
@@ -751,53 +849,137 @@ html[data-weered-theme="nebula"]:not([data-weered-lobby])
     inset 3px 0 0 rgb(var(--nb-a)),
     inset 0 1px 0 rgb(255 255 255 / 0.1) !important;
 }
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-left a:hover,
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-presence-row:hover {
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-left a:hover {
   background: rgb(255 255 255 / 0.05) !important;
   border-radius: 12px !important;
 }
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-left .weered-avatar {
+/* People rows. Presence (left), Friends and Crew (right) are all one
+   PresenceRow and look the same wherever they sit: no box at rest, the whole
+   row lights on hover, and no rank stripe, avatar ring, frame, status dot or
+   row tint (the Presence list never showed them; the second line says where
+   someone is). Offline friends and crew dim. */
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-presence-row,
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-rr-friend-row,
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-rr-crew-row {
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 12px !important;
+  box-shadow: none !important;
+  transition: background 0.18s !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-rr-friend-row,
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-rr-crew-row {
+  background: transparent !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-presence-row:hover,
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-rr-friend-row:hover,
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-rr-crew-row:hover {
+  background: rgb(255 255 255 / 0.05) !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb)
+  .weered-presence-row
+  .weered-presence-row-inner,
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb)
+  .weered-rr-friend-row
+  .weered-presence-row-inner,
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb)
+  .weered-rr-crew-row
+  .weered-presence-row-inner {
+  padding: 6px 10px 6px 12px !important;
+  gap: 10px !important;
+  border: 0 !important;
+  border-radius: 12px !important;
+  box-shadow: none !important;
+}
+/* The clickable wrapper is a role=button div, which the global button style
+   (40-core-layout.css) boxes and bolds; the left rail's strip-down hid that,
+   the right rail's rows wore it. */
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-presence-row-link {
+  border: 0 !important;
+  border-radius: 12px !important;
+  background: transparent !important;
+  font-weight: inherit !important;
+  filter: none !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb)
+  :is(.weered-presence-row, .weered-rr-friend-row, .weered-rr-crew-row)
+  .weered-presence-row-inner {
+  background: transparent !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb)
+  :is(.weered-presence-row, .weered-rr-friend-row, .weered-rr-crew-row)
+  .weered-presence-row-inner
+  > span[style*="position: absolute"],
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb)
+  :is(.weered-presence-row, .weered-rr-friend-row, .weered-rr-crew-row)
+  .weered-avatar
+  + span {
+  display: none !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb)
+  :is(.weered-presence-row, .weered-rr-friend-row, .weered-rr-crew-row)
+  .weered-avatar {
+  border-radius: 50% !important;
+  box-shadow: none !important;
+  animation: none !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb)
+  :is(.weered-rr-friend-row, .weered-rr-crew-row)[data-offline]
+  .weered-presence-row-inner {
+  opacity: 0.55;
+  transition: opacity 0.18s;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb)
+  :is(.weered-rr-friend-row, .weered-rr-crew-row)[data-offline]:hover
+  .weered-presence-row-inner {
+  opacity: 0.9;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb)
+  .weered-rr-section
+  div:has(> .weered-rr-friend-row),
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb)
+  .weered-rr-section
+  div:has(> .weered-rr-crew-row) {
+  gap: 0 !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-left .weered-avatar {
   border-radius: 50% !important;
 }
 
 /* ── Right rail: the Control Panel ────────────────────────────────────── */
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-rr-section {
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-rr-section {
   margin: 0 0 12px !important;
   padding: 13px 12px 12px !important;
 }
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-rr-mod-panel,
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-rr-create-panel {
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-rr-mod-panel,
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-rr-create-panel {
   background: rgb(0 0 0 / 0.26) !important;
   border: 1px solid rgb(255 255 255 / 0.06) !important;
   border-radius: 12px !important;
   box-shadow: none !important;
   padding: 12px !important;
 }
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-rr-chatlock {
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-rr-chatlock {
   background: rgb(0 0 0 / 0.35) !important;
   border-radius: 999px !important;
   padding: 3px !important;
 }
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-rr-chatlock button {
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-rr-chatlock button {
   border-radius: 999px !important;
   font-family: var(--nb-font) !important;
   letter-spacing: 0.08em !important;
 }
-/* Rows: friends, crew, rooms, discover */
-html[data-weered-theme="nebula"]:not([data-weered-lobby])
+/* Card rows: rooms, discover, the empty-state suggestions. (People rows are
+   unboxed; see "People rows" above.) */
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb)
   .weered-rr-section
   > div:not(:first-child)
   > div[style*="border-radius"],
-html[data-weered-theme="nebula"]:not([data-weered-lobby])
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb)
   .weered-rr-section
   > div:not(:first-child)
-  > button,
-html[data-weered-theme="nebula"]:not([data-weered-lobby])
-  .weered-rr-friend-row
-  .weered-presence-row-inner,
-html[data-weered-theme="nebula"]:not([data-weered-lobby])
-  .weered-rr-crew-row
-  .weered-presence-row-inner {
+  > button {
   border-radius: 12px !important;
   border: 1px solid rgb(255 255 255 / 0.06) !important;
   background: rgb(255 255 255 / 0.025) !important;
@@ -807,37 +989,35 @@ html[data-weered-theme="nebula"]:not([data-weered-lobby])
     border-color 0.18s,
     box-shadow 0.18s !important;
 }
-html[data-weered-theme="nebula"]:not([data-weered-lobby])
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb)
   .weered-rr-section
   > div:not(:first-child)
   > div[style*="border-radius"]:hover,
-html[data-weered-theme="nebula"]:not([data-weered-lobby])
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb)
   .weered-rr-section
   > div:not(:first-child)
-  > button:hover,
-html[data-weered-theme="nebula"]:not([data-weered-lobby])
-  .weered-rr-friend-row
-  .weered-presence-row-inner:hover,
-html[data-weered-theme="nebula"]:not([data-weered-lobby])
-  .weered-rr-crew-row
-  .weered-presence-row-inner:hover {
+  > button:hover {
   background: rgb(var(--nb-a) / 0.1) !important;
   border-color: rgb(var(--nb-a) / 0.4) !important;
   box-shadow: 0 0 20px -8px rgb(var(--nb-a) / 0.8) !important;
 }
-html[data-weered-theme="nebula"]:not([data-weered-lobby])
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb)
   .weered-right
   [class*="weered-rr-room-card"] {
   border-radius: 12px !important;
   clip-path: none !important;
 }
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-rail-close {
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-rail-close {
   padding: 5px 12px !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-btn {
+  padding: 6px 14px !important;
+  font-size: 12.5px !important;
 }
 
 /* Icon strip (Crew, Friends, DMs, Panel) */
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-rail-quick,
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-rail-tab {
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-rail-quick,
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-rail-tab {
   background: var(--nb-glass) !important;
   border: 1px solid var(--nb-line) !important;
   border-radius: 14px !important;
@@ -849,33 +1029,36 @@ html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-rail-tab {
     border-color 0.18s,
     box-shadow 0.18s !important;
 }
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-rail-quick:hover,
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-rail-tab:hover,
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-rail-quick.is-hot {
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-rail-quick:hover,
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-rail-tab:hover,
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-rail-quick.is-hot {
   border-color: rgb(var(--nb-a) / 0.55) !important;
   box-shadow: 0 0 22px -6px rgb(var(--nb-a) / 0.7) !important;
 }
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-rail-quick-label,
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-rail-tab-label {
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-rail-quick-label,
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-rail-tab-label {
   color: rgb(255 255 255 / 0.72) !important;
 }
 
 /* ── Chat drawer ──────────────────────────────────────────────────────── */
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .lobby-chat-drawer {
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .lobby-chat-drawer {
   background:
-    linear-gradient(180deg, rgb(var(--nb-b) / 0.12), transparent 22%), rgb(9 7 20 / 0.8) !important;
+    linear-gradient(180deg, rgb(var(--nb-b) / 0.12), transparent 22%), rgb(var(--nb-ink-2) / 0.8) !important;
   -webkit-backdrop-filter: blur(20px) saturate(1.2);
   backdrop-filter: blur(20px) saturate(1.2);
   border-left: 1px solid rgb(var(--nb-a) / 0.2) !important;
   box-shadow: -24px 0 60px -30px rgb(0 0 0 / 0.9) !important;
 }
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .lobby-drawer-header {
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .lobby-chat-drawer::before {
+  display: none !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .lobby-drawer-header {
   background: transparent !important;
   border-bottom: 1px solid rgb(var(--nb-a) / 0.16) !important;
   box-shadow: none !important;
   clip-path: none !important;
 }
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .lobby-drawer-title {
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .lobby-drawer-title {
   color: var(--nb-hi) !important;
   font-family: var(--nb-font) !important;
   font-size: 12px !important;
@@ -883,28 +1066,28 @@ html[data-weered-theme="nebula"]:not([data-weered-lobby]) .lobby-drawer-title {
   letter-spacing: 0.18em !important;
   text-transform: uppercase !important;
 }
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-chat-fullscreen-cta {
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-chat-fullscreen-cta {
   padding: 5px 13px !important;
 }
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .lobby-drawer-close {
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .lobby-drawer-close {
   border-radius: 999px !important;
   background: rgb(255 255 255 / 0.06) !important;
   border: 1px solid rgb(255 255 255 / 0.12) !important;
   color: rgb(255 255 255 / 0.8) !important;
 }
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .lobby-drawer-close:hover {
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .lobby-drawer-close:hover {
   border-color: rgb(var(--nb-a) / 0.6) !important;
   color: #fff !important;
 }
-html[data-weered-theme="nebula"]:not([data-weered-lobby])
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb)
   .lobby-chat-drawer
   input:not([type="file"]) {
   border-radius: 14px !important;
   background: rgb(0 0 0 / 0.32) !important;
   border: 1px solid rgb(255 255 255 / 0.1) !important;
 }
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .lobby-chat-tab {
-  background: rgb(13 11 28 / 0.85) !important;
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .lobby-chat-tab {
+  background: rgb(var(--nb-ink) / 0.85) !important;
   border: 1px solid var(--nb-line) !important;
   border-right: 0 !important;
   border-radius: 12px 0 0 12px !important;
@@ -913,224 +1096,4 @@ html[data-weered-theme="nebula"]:not([data-weered-lobby]) .lobby-chat-tab {
   backdrop-filter: blur(12px);
 }
 
-/* ── Home ─────────────────────────────────────────────────────────────── */
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .home-topbar {
-  border-bottom: 1px solid rgb(var(--nb-a) / 0.12) !important;
-}
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .home-topbar-greet span {
-  color: var(--nb-hi) !important;
-  text-shadow: 0 0 28px rgb(var(--nb-a) / 0.6);
-}
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .home-search-hero input {
-  background: rgb(10 8 22 / 0.62) !important;
-  border: 1px solid rgb(var(--nb-a) / 0.36) !important;
-  border-radius: 16px !important;
-  color: #fff !important;
-  -webkit-backdrop-filter: blur(14px);
-  backdrop-filter: blur(14px);
-  box-shadow:
-    0 0 0 4px rgb(var(--nb-a) / 0.07),
-    0 22px 50px -22px rgb(var(--nb-b) / 0.9) !important;
-}
-html[data-weered-theme="nebula"]:not([data-weered-lobby])
-  .home-search-hero
-  span[style*="position: relative"]
-  > span[style*="position: absolute"] {
-  display: none !important;
-}
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .home-search-hero button {
-  clip-path: none !important;
-  border-radius: 999px !important;
-  background: rgb(255 255 255 / 0.05) !important;
-  border: 1px solid rgb(var(--nb-a) / 0.3) !important;
-  box-shadow: none !important;
-}
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .home-search-hero button:hover {
-  background: rgb(var(--nb-a) / 0.16) !important;
-  border-color: rgb(var(--nb-a) / 0.6) !important;
-}
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .home-topbar-secondary {
-  background: rgb(var(--nb-a) / 0.12) !important;
-  border: 1px solid rgb(var(--nb-a) / 0.4) !important;
-  border-radius: 999px !important;
-  color: #fff !important;
-  clip-path: none !important;
-}
-/* Section heads get a rule running out to the edge: the page's structure. */
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .home-section-head,
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .home-live-head {
-  gap: 12px !important;
-}
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .home-section-title {
-  flex: 1 1 auto;
-}
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .home-section-title::after {
-  content: "";
-  flex: 1 1 auto;
-  height: 1px;
-  margin-left: 6px;
-  background: linear-gradient(90deg, rgb(var(--nb-a) / 0.55), transparent);
-}
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .home-section-label,
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .home-live-head > span {
-  font-family: var(--nb-font) !important;
-  font-size: 12px !important;
-  font-weight: 700 !important;
-  letter-spacing: 0.18em !important;
-  text-transform: uppercase !important;
-  color: rgb(255 255 255 / 0.72) !important;
-}
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .home-section-icon {
-  color: rgb(var(--nb-a)) !important;
-  text-shadow: 0 0 12px rgb(var(--nb-a) / 0.8);
-}
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .home-rule {
-  background: linear-gradient(90deg, rgb(var(--nb-a) / 0.55), transparent) !important;
-}
-/* Cards */
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-featured-card {
-  border-radius: 22px !important;
-  border: 1px solid rgb(var(--nb-a) / 0.32) !important;
-  box-shadow: 0 34px 80px -34px rgb(var(--nb-b) / 0.85) !important;
-}
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .home-hero-join {
-  border-radius: 999px !important;
-  clip-path: none !important;
-  box-shadow: 0 10px 30px -10px rgb(0 0 0 / 0.8) !important;
-}
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .home-stream,
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .home-lobby-card,
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .home-live-room,
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .home-recent-row,
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-home-pinnews > * {
-  border-radius: 16px !important;
-  overflow: hidden !important;
-  border: 1px solid rgb(255 255 255 / 0.08) !important;
-  background: var(--nb-glass) !important;
-  clip-path: none !important;
-  transition:
-    border-color 0.18s,
-    transform 0.18s,
-    box-shadow 0.18s !important;
-}
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .home-stream {
-  border-color: rgb(var(--nb-a) / 0.28) !important;
-  box-shadow: 0 24px 60px -32px rgb(var(--nb-b) / 0.9) !important;
-}
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .home-lobby-card:hover,
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .home-live-room:hover,
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .home-recent-row:hover {
-  border-color: rgb(var(--nb-a) / 0.55) !important;
-  transform: translateY(-2px);
-  box-shadow: 0 18px 40px -22px rgb(var(--nb-a) / 0.85) !important;
-}
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .home-live-room > div:first-child,
-html[data-weered-theme="nebula"]:not([data-weered-lobby])
-  .home-lobby-card
-  [style*="border-radius: 0px"],
-html[data-weered-theme="nebula"]:not([data-weered-lobby])
-  .home-lobby-card
-  [style*="border-radius: 2px"] {
-  border-radius: 9px !important;
-}
-/* Each lobby card keeps its game colour on a soft top strip. */
-html[data-weered-theme="nebula"]:not([data-weered-lobby])
-  .weered-lobby-grid
-  > *
-  > div[style*="height: 3px"] {
-  height: 2px !important;
-  opacity: 0.6;
-}
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .home-chip {
-  border-radius: 999px !important;
-  background: rgb(var(--nb-a) / 0.14) !important;
-  border: 1px solid rgb(var(--nb-a) / 0.4) !important;
-  color: var(--nb-hi) !important;
-  font-family: var(--nb-font) !important;
-  letter-spacing: 0.1em !important;
-}
-/* The welcome nudge for people who skipped setup */
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .ftp-card {
-  border-radius: 20px !important;
-  border: 1px solid rgb(var(--nb-a) / 0.36) !important;
-  background:
-    radial-gradient(120% 140% at 0% 0%, rgb(var(--nb-b) / 0.32), transparent 55%), var(--nb-glass) !important;
-  box-shadow: var(--nb-shadow) !important;
-}
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .home-pulse {
-  padding: 12px !important;
-}
-
-/* ── Sheets (Settings and friends) ────────────────────────────────────── */
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-sheet-scrim {
-  background: rgb(3 2 10 / 0.5) !important;
-  -webkit-backdrop-filter: blur(6px);
-  backdrop-filter: blur(6px);
-}
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-sheet {
-  background:
-    radial-gradient(90% 40% at 100% 0%, rgb(var(--nb-b) / 0.22), transparent 60%),
-    linear-gradient(180deg, rgb(255 255 255 / 0.035), rgb(255 255 255 / 0.008)), rgb(9 7 20 / 0.86) !important;
-  -webkit-backdrop-filter: blur(24px) saturate(1.3);
-  backdrop-filter: blur(24px) saturate(1.3);
-  border-left: 1px solid rgb(var(--nb-a) / 0.3) !important;
-  box-shadow: -30px 0 80px -30px rgb(var(--nb-b) / 0.55) !important;
-}
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-sheet-head {
-  border-bottom: 1px solid rgb(var(--nb-a) / 0.16) !important;
-}
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-sheet-title {
-  color: var(--nb-hi) !important;
-  opacity: 1 !important;
-  font-family: var(--nb-font) !important;
-  letter-spacing: 0.18em !important;
-  text-transform: uppercase !important;
-  font-size: 12px !important;
-}
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-sheet-btn {
-  padding: 5px 14px !important;
-  font-size: 12.5px !important;
-}
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-settings-nav button {
-  border-radius: 12px !important;
-  font-family: var(--nb-font) !important;
-  font-size: 14.5px !important;
-}
-html[data-weered-theme="nebula"]:not([data-weered-lobby])
-  .weered-settings-nav
-  button[style*="--weered-accent-bg"] {
-  background: linear-gradient(90deg, rgb(var(--nb-a) / 0.36), rgb(var(--nb-a) / 0.07)) !important;
-  border-color: rgb(var(--nb-a) / 0.55) !important;
-  box-shadow:
-    0 0 24px -8px rgb(var(--nb-a) / 0.8),
-    inset 3px 0 0 rgb(var(--nb-a)) !important;
-}
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-settings-section {
-  padding: 16px !important;
-}
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-theme-option {
-  border-radius: 10px !important;
-}
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-settings-section-title {
-  font-family: var(--nb-font) !important;
-  letter-spacing: 0.18em !important;
-  color: var(--nb-hi) !important;
-}
-
-/* ── Edges ────────────────────────────────────────────────────────────── */
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .site-footer {
-  background: rgb(7 6 15 / 0.55) !important;
-  -webkit-backdrop-filter: blur(12px);
-  backdrop-filter: blur(12px);
-  border-top: 1px solid rgb(var(--nb-a) / 0.12) !important;
-}
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-mobile-nav {
-  background: rgb(9 7 20 / 0.82) !important;
-  -webkit-backdrop-filter: blur(16px);
-  backdrop-filter: blur(16px);
-  border-top: 1px solid rgb(var(--nb-a) / 0.18) !important;
-}
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) ::-webkit-scrollbar-thumb {
-  background: rgb(var(--nb-a) / 0.22);
-  border-radius: 99px;
-}
+/* Burner, Home, sheets and edges continue in 96-nebula-panels.css. */

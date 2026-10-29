@@ -1,0 +1,404 @@
+/* =====================================================================
+   NEBULA, part two — the panels that float over the shell
+   =====================================================================
+   The Burner, Home, the sheets (Settings and friends) and the page edges.
+   Tokens, the sky, the three columns, both rails and the chat drawer live in
+   95-nebula.css, which loads first; this file uses its tokens (--nb-*), its
+   scope and its :not(#nb) lift (see that file's header). Split 2026-10-29 to
+   stay under the 1500-line tripwire. */
+
+/* ── The Burner (DockShell: messages, friends, crew) ───────────────────── */
+/* chrome-min gives it a textured purple banner, Barlow caps and square
+   corners on every control; here it is one more glass panel. */
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-dock,
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-dock-tabs {
+  --weered-accent-bg: rgb(var(--nb-a) / 0.16) !important;
+  --weered-accent-ring: rgb(var(--nb-a) / 0.4) !important;
+  --weered-accent-text: var(--nb-hi) !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-dock {
+  background:
+    radial-gradient(120% 45% at 100% 0%, rgb(var(--nb-b) / 0.2), transparent 60%),
+    linear-gradient(180deg, rgb(255 255 255 / 0.035), rgb(255 255 255 / 0.008)),
+    rgb(var(--nb-ink-2) / 0.9) !important;
+  -webkit-backdrop-filter: blur(22px) saturate(1.3);
+  backdrop-filter: blur(22px) saturate(1.3);
+  border: 1px solid rgb(var(--nb-a) / 0.26) !important;
+  border-radius: 20px !important;
+  box-shadow:
+    0 30px 80px -30px rgb(0 0 0 / 0.9),
+    0 0 40px -18px rgb(var(--nb-b) / 0.6),
+    inset 0 1px 0 rgb(255 255 255 / 0.06) !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-dock-header {
+  padding: 14px 14px 12px !important;
+  border-bottom: 1px solid rgb(var(--nb-a) / 0.14) !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb)
+  .weered-dock-header
+  > div:first-child {
+  background: none !important;
+  margin: 0 0 12px !important;
+  padding: 0 !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-dock-title {
+  font-family: var(--nb-font) !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.22em !important;
+  text-transform: uppercase !important;
+  color: var(--nb-hi) !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-dock-close {
+  border-radius: 999px !important;
+  background: rgb(255 255 255 / 0.06) !important;
+  border: 1px solid rgb(255 255 255 / 0.12) !important;
+  color: rgb(255 255 255 / 0.8) !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-dock-close:hover {
+  border-color: rgb(var(--nb-a) / 0.6) !important;
+  color: #fff !important;
+}
+/* Messages / Friends / Crew: a pill switch like the chat lock. */
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-dock-tabs {
+  background: rgb(0 0 0 / 0.32) !important;
+  border: 1px solid rgb(255 255 255 / 0.06) !important;
+  border-radius: 999px !important;
+  padding: 3px !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-dock-tab {
+  border-radius: 999px !important;
+  font-family: var(--nb-font) !important;
+  font-size: 13px !important;
+  letter-spacing: 0.04em !important;
+  transition:
+    background 0.18s,
+    color 0.18s,
+    box-shadow 0.18s !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb)
+  .weered-dock-tab:not(.weered-dock-tab-active):hover {
+  background: rgb(255 255 255 / 0.05) !important;
+  color: #fff !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-dock-tab-active {
+  background: linear-gradient(135deg, rgb(var(--nb-a) / 0.34), rgb(var(--nb-b) / 0.2)) !important;
+  box-shadow:
+    inset 0 0 0 1px rgb(var(--nb-a) / 0.5),
+    0 0 18px -6px rgb(var(--nb-a) / 0.8) !important;
+  color: #fff !important;
+}
+/* Corners back: chrome-min squares every control and any 8/10/12px box in
+   the dock, so restore the radius each one was drawn with. */
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-dock button,
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-dock input,
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-dock textarea,
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb)
+  .weered-dock
+  [style*="border-radius: 12px"] {
+  border-radius: 12px !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb)
+  .weered-dock
+  [style*="border-radius: 10px"] {
+  border-radius: 10px !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb)
+  .weered-dock
+  [style*="border-radius: 8px"] {
+  border-radius: 8px !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb)
+  .weered-dock
+  [style*="border-radius: 999px"],
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb)
+  .weered-dock
+  [style*="border-radius: 22px"] {
+  border-radius: 999px !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-dock input,
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-dock textarea {
+  background: rgb(0 0 0 / 0.32) !important;
+  border: 1px solid rgb(255 255 255 / 0.1) !important;
+  color: #fff !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-dock input:focus,
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-dock textarea:focus {
+  outline: none !important;
+  border-color: rgb(var(--nb-a) / 0.6) !important;
+  box-shadow: 0 0 0 3px rgb(var(--nb-a) / 0.18) !important;
+}
+/* Conversation list: rounded rows that light on hover, like the nav. */
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-dock-thread {
+  width: calc(100% - 16px) !important;
+  margin: 2px 8px !important;
+  border-bottom: 0 !important;
+  border-radius: 14px !important;
+  transition: background 0.18s !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-dock-thread:hover {
+  background: rgb(255 255 255 / 0.05) !important;
+}
+
+/* ── Home ─────────────────────────────────────────────────────────────── */
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .home-topbar {
+  border-bottom: 1px solid rgb(var(--nb-a) / 0.12) !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .home-topbar-greet span {
+  color: var(--nb-hi) !important;
+  text-shadow: 0 0 28px rgb(var(--nb-a) / 0.6);
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .home-search-hero input {
+  background: rgb(var(--nb-ink-2) / 0.62) !important;
+  border: 1px solid rgb(var(--nb-a) / 0.36) !important;
+  border-radius: 16px !important;
+  color: #fff !important;
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  box-shadow:
+    0 0 0 4px rgb(var(--nb-a) / 0.07),
+    0 22px 50px -22px rgb(var(--nb-b) / 0.9) !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb)
+  .home-search-hero
+  span[style*="position: relative"]
+  > span[style*="position: absolute"] {
+  display: none !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .home-search-hero button {
+  clip-path: none !important;
+  border-radius: 999px !important;
+  background: rgb(255 255 255 / 0.05) !important;
+  border: 1px solid rgb(var(--nb-a) / 0.3) !important;
+  box-shadow: none !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .home-search-hero button:hover {
+  background: rgb(var(--nb-a) / 0.16) !important;
+  border-color: rgb(var(--nb-a) / 0.6) !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .home-topbar-secondary {
+  background: rgb(var(--nb-a) / 0.12) !important;
+  border: 1px solid rgb(var(--nb-a) / 0.4) !important;
+  border-radius: 999px !important;
+  color: #fff !important;
+  clip-path: none !important;
+}
+/* Section heads get a rule running out to the edge: the page's structure. */
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .home-section-head,
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .home-live-head {
+  gap: 12px !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .home-section-title {
+  flex: 1 1 auto;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .home-section-title::after {
+  content: "";
+  flex: 1 1 auto;
+  height: 1px;
+  margin-left: 6px;
+  background: linear-gradient(90deg, rgb(var(--nb-a) / 0.55), transparent);
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .home-section-label,
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .home-live-head > span {
+  font-family: var(--nb-font) !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.18em !important;
+  text-transform: uppercase !important;
+  color: rgb(255 255 255 / 0.72) !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .home-section-icon {
+  color: rgb(var(--nb-a)) !important;
+  text-shadow: 0 0 12px rgb(var(--nb-a) / 0.8);
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .home-rule {
+  background: linear-gradient(90deg, rgb(var(--nb-a) / 0.55), transparent) !important;
+}
+/* Cards */
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-featured-card {
+  border-radius: 22px !important;
+  border: 1px solid rgb(var(--nb-a) / 0.32) !important;
+  box-shadow: 0 34px 80px -34px rgb(var(--nb-b) / 0.85) !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .home-hero-join {
+  border-radius: 999px !important;
+  clip-path: none !important;
+  box-shadow: 0 10px 30px -10px rgb(0 0 0 / 0.8) !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .home-stream,
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .home-lobby-card,
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .home-live-room,
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .home-recent-row,
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-home-pinnews > * {
+  border-radius: 16px !important;
+  overflow: hidden !important;
+  border: 1px solid rgb(255 255 255 / 0.08) !important;
+  background: var(--nb-glass) !important;
+  clip-path: none !important;
+  transition:
+    border-color 0.18s,
+    transform 0.18s,
+    box-shadow 0.18s !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .home-stream {
+  border-color: rgb(var(--nb-a) / 0.28) !important;
+  box-shadow: 0 24px 60px -32px rgb(var(--nb-b) / 0.9) !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .home-lobby-card:hover,
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .home-live-room:hover,
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .home-recent-row:hover {
+  border-color: rgb(var(--nb-a) / 0.55) !important;
+  transform: translateY(-2px);
+  box-shadow: 0 18px 40px -22px rgb(var(--nb-a) / 0.85) !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb)
+  .home-live-room
+  > div:first-child,
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb)
+  .home-lobby-card
+  [style*="border-radius: 0px"],
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb)
+  .home-lobby-card
+  [style*="border-radius: 2px"] {
+  border-radius: 9px !important;
+}
+/* Each lobby card keeps its game colour on a soft top strip. */
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb)
+  .weered-lobby-grid
+  > *
+  > div[style*="height: 3px"] {
+  height: 2px !important;
+  opacity: 0.6;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .home-chip {
+  border-radius: 999px !important;
+  background: rgb(var(--nb-a) / 0.14) !important;
+  border: 1px solid rgb(var(--nb-a) / 0.4) !important;
+  color: var(--nb-hi) !important;
+  font-family: var(--nb-font) !important;
+  letter-spacing: 0.1em !important;
+}
+/* The welcome nudge for people who skipped setup */
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .ftp-card {
+  border-radius: 20px !important;
+  border: 1px solid rgb(var(--nb-a) / 0.36) !important;
+  background:
+    radial-gradient(120% 140% at 0% 0%, rgb(var(--nb-b) / 0.32), transparent 55%), var(--nb-glass) !important;
+  box-shadow: var(--nb-shadow) !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .home-pulse {
+  padding: 12px !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .home-pulse-label {
+  font-family: var(--nb-font) !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.16em !important;
+  color: rgb(255 255 255 / 0.5) !important;
+}
+/* Home rooms and online friends: rounded glass, lit on hover. */
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .home-pulse-room,
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .home-pulse-person {
+  border-radius: 12px !important;
+  background: rgb(255 255 255 / 0.03) !important;
+  border-color: rgb(255 255 255 / 0.08) !important;
+  transition:
+    background 0.18s,
+    border-color 0.18s !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .home-pulse-person {
+  border-radius: 999px !important;
+  padding: 5px 6px 5px 6px !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .home-pulse-room:hover,
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .home-pulse-person:hover {
+  background: rgb(var(--nb-a) / 0.1) !important;
+  border-color: rgb(var(--nb-a) / 0.4) !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .home-pulse-join {
+  border-radius: 999px !important;
+  border: 1px solid rgb(255 255 255 / 0.22) !important;
+  background: linear-gradient(135deg, rgb(var(--nb-a)), rgb(var(--nb-b))) !important;
+  color: var(--nb-on) !important;
+  font-family: var(--nb-font) !important;
+  font-size: 11px !important;
+  letter-spacing: 0.04em !important;
+  text-transform: lowercase !important;
+  padding: 3px 11px !important;
+  box-shadow: 0 6px 16px -6px rgb(var(--nb-a) / 0.85) !important;
+}
+
+/* ── Sheets (Settings and friends) ────────────────────────────────────── */
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-sheet-scrim {
+  background: rgb(0 0 0 / 0.5) !important;
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-sheet {
+  background:
+    radial-gradient(90% 40% at 100% 0%, rgb(var(--nb-b) / 0.22), transparent 60%),
+    linear-gradient(180deg, rgb(255 255 255 / 0.035), rgb(255 255 255 / 0.008)),
+    rgb(var(--nb-ink-2) / 0.86) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(1.3);
+  backdrop-filter: blur(24px) saturate(1.3);
+  border-left: 1px solid rgb(var(--nb-a) / 0.3) !important;
+  box-shadow: -30px 0 80px -30px rgb(var(--nb-b) / 0.55) !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-sheet-head {
+  border-bottom: 1px solid rgb(var(--nb-a) / 0.16) !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-sheet-title {
+  color: var(--nb-hi) !important;
+  opacity: 1 !important;
+  font-family: var(--nb-font) !important;
+  letter-spacing: 0.18em !important;
+  text-transform: uppercase !important;
+  font-size: 12px !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-sheet-btn {
+  padding: 5px 14px !important;
+  font-size: 12.5px !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-settings-nav button {
+  border-radius: 12px !important;
+  font-family: var(--nb-font) !important;
+  font-size: 14.5px !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb)
+  .weered-settings-nav
+  button[style*="--weered-accent-bg"] {
+  background: linear-gradient(90deg, rgb(var(--nb-a) / 0.36), rgb(var(--nb-a) / 0.07)) !important;
+  border-color: rgb(var(--nb-a) / 0.55) !important;
+  box-shadow:
+    0 0 24px -8px rgb(var(--nb-a) / 0.8),
+    inset 3px 0 0 rgb(var(--nb-a)) !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-settings-section {
+  padding: 16px !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-theme-option {
+  border-radius: 10px !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-settings-section-title {
+  font-family: var(--nb-font) !important;
+  letter-spacing: 0.18em !important;
+  color: var(--nb-hi) !important;
+}
+
+/* ── Edges ────────────────────────────────────────────────────────────── */
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .site-footer {
+  background: rgb(var(--nb-ink-2) / 0.55) !important;
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  border-top: 1px solid rgb(var(--nb-a) / 0.12) !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-mobile-nav {
+  background: rgb(var(--nb-ink-2) / 0.82) !important;
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+  border-top: 1px solid rgb(var(--nb-a) / 0.18) !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) ::-webkit-scrollbar-thumb {
+  background: rgb(var(--nb-a) / 0.22);
+  border-radius: 99px;
+}

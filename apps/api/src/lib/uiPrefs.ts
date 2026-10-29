@@ -13,7 +13,7 @@ export const UI_THEMES = [
   "stone",
   "gray",
 ] as const;
-export const UI_PALETTES = ["violet", "ocean", "ember", "aurora"] as const;
+export const UI_PALETTES = ["violet", "ocean", "ember", "aurora", "graphite", "void"] as const;
 export const RAIL_SECTIONS = ["card", "nav", "presence", "favs", "recent"] as const;
 export const UI_INTERESTS = ["work", "community", "games", "place"] as const;
 

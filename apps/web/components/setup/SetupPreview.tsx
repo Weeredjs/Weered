@@ -30,7 +30,15 @@ type Props = {
   pulseKey: number;
 };
 
-const CLASSIC = { a: "#7c3aed", b: "#5b21b6", c: "#1e1b2e", hi: "#c4b5fd", bg: "#141416" };
+const CLASSIC = {
+  a: "#7c3aed",
+  b: "#5b21b6",
+  c: "#1e1b2e",
+  hi: "#c4b5fd",
+  bg: "#141416",
+  ink: "#0d0b1c",
+  on: "#ffffff",
+};
 
 // The same star tiles the real shell drifts behind everything.
 const STARS_NEAR =
@@ -66,7 +74,7 @@ export default function SetupPreview(p: Props) {
           position: "relative",
           borderRadius: 13,
           border: `1px solid ${alpha(C.a, 0.22)}`,
-          background: `linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.012)), rgba(13,11,28,.62)`,
+          background: `linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.012)), ${alpha(C.ink, 0.62)}`,
           boxShadow: `inset 0 1px 0 rgba(255,255,255,.05), 0 10px 26px -18px ${alpha(C.b, 0.8)}`,
           overflow: "hidden",
           transition: "border-color .35s, box-shadow .35s, background .35s",
@@ -154,7 +162,7 @@ export default function SetupPreview(p: Props) {
         color: "#fff",
         background: p.avatar ? `url("${p.avatar}") center/cover` : p.avatarColor,
         boxShadow: neb
-          ? `0 0 0 2px rgba(13,11,28,.9), 0 0 0 3.5px ${alpha(C.a, 0.6)}, 0 6px 18px ${alpha(C.a, 0.45)}`
+          ? `0 0 0 2px ${alpha(C.ink, 0.9)}, 0 0 0 3.5px ${alpha(C.a, 0.6)}, 0 6px 18px ${alpha(C.a, 0.45)}`
           : "0 0 0 2px #0e1014",
         transition: "box-shadow .35s",
       }}
@@ -172,7 +180,7 @@ export default function SetupPreview(p: Props) {
             ? {
                 borderRadius: 15,
                 border: `1px solid ${alpha(C.a, 0.34)}`,
-                background: `radial-gradient(120% 90% at 0% 0%, ${alpha(C.b, 0.6)}, transparent 60%), radial-gradient(90% 90% at 100% 100%, ${alpha(C.c, 0.6)}, transparent 65%), rgba(13,11,28,.7)`,
+                background: `radial-gradient(120% 90% at 0% 0%, ${alpha(C.b, 0.6)}, transparent 60%), radial-gradient(90% 90% at 100% 100%, ${alpha(C.c, 0.6)}, transparent 65%), ${alpha(C.ink, 0.7)}`,
                 boxShadow: `0 14px 34px -18px ${alpha(C.b, 0.9)}, inset 0 1px 0 rgba(255,255,255,.1)`,
               }
             : {},
@@ -590,7 +598,7 @@ export default function SetupPreview(p: Props) {
                 <div
                   style={{
                     height: 128,
-                    background: `radial-gradient(90% 120% at 10% 0%, ${alpha(C.a, 0.55)}, transparent 60%), radial-gradient(80% 90% at 100% 100%, ${alpha(C.c, 0.8)}, transparent 60%), #0b0b14`,
+                    background: `radial-gradient(90% 120% at 10% 0%, ${alpha(C.a, 0.55)}, transparent 60%), radial-gradient(80% 90% at 100% 100%, ${alpha(C.c, 0.8)}, transparent 60%), ${C.ink}`,
                   }}
                 />
               )}
@@ -631,7 +639,7 @@ export default function SetupPreview(p: Props) {
                     fontWeight: 800,
                     padding: "5px 11px",
                     borderRadius: neb ? 99 : 0,
-                    color: "#fff",
+                    color: neb ? C.on : "#fff",
                     background: neb ? `linear-gradient(135deg, ${C.a}, ${C.b})` : "#e8452f",
                     boxShadow: neb ? `0 6px 18px ${alpha(C.a, 0.5)}` : "none",
                   }}
@@ -656,7 +664,7 @@ export default function SetupPreview(p: Props) {
                     overflow: "hidden",
                     border: `1px solid ${neb ? "rgba(255,255,255,.08)" : "rgba(217,169,66,.35)"}`,
                     background: neb
-                      ? "linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.012)), rgba(13,11,28,.62)"
+                      ? `linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.012)), ${alpha(C.ink, 0.62)}`
                       : "#1b1b1f",
                   }}
                 >

@@ -2581,3 +2581,16 @@ html[data-weered-chrome="min"] .weered-modules-chip {
   border-color: rgba(167, 139, 250, 0.3);
   color: rgba(196, 181, 253, 0.85);
 }
+
+/* === HQ RAIL INVITE (2026-10-29) ===
+   Invite sits beside JOIN on friend rows: same square caps, green for
+   "come here". Nebula restyles both as pills (95-nebula.css). */
+html[data-weered-chrome="min"] .weered-rr-invite {
+  border-radius: 0 !important;
+  font-family: var(--font-barlow), "Barlow Condensed", "Oswald", sans-serif !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.08em !important;
+  font-weight: 700 !important;
+  font-size: 10px !important;
+  padding: 4px 10px !important;
+}

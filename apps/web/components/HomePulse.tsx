@@ -192,7 +192,9 @@ export default function HomePulse({
     >
       {sortedRooms.length > 0 && (
         <div style={{ minWidth: 210, maxWidth: 320 }}>
-          <div style={label}>Home rooms · {sortedRooms.length}</div>
+          <div className="home-pulse-label" style={label}>
+            Home rooms · {sortedRooms.length}
+          </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
             {sortedRooms.slice(0, 4).map((r) => {
               const live = r.onlineCount ?? 0;
@@ -202,6 +204,7 @@ export default function HomePulse({
                 <Link
                   key={r.id}
                   href={`/room/${encodeURIComponent(r.id)}`}
+                  className="home-pulse-room"
                   style={{
                     display: "flex",
                     alignItems: "center",
@@ -289,7 +292,9 @@ export default function HomePulse({
 
       {online.length > 0 && (
         <div style={{ flex: 1, minWidth: 260 }}>
-          <div style={label}>Friends & crew · {online.length} online</div>
+          <div className="home-pulse-label" style={label}>
+            Friends & crew · {online.length} online
+          </div>
           <div
             style={{
               display: "flex",
@@ -306,6 +311,7 @@ export default function HomePulse({
               return (
                 <div
                   key={u?.id || i}
+                  className="home-pulse-person"
                   style={{
                     flexShrink: 0,
                     display: "flex",
@@ -359,6 +365,7 @@ export default function HomePulse({
                   {href && (
                     <Link
                       href={href}
+                      className="home-pulse-join"
                       style={{
                         fontSize: 10,
                         fontWeight: 800,

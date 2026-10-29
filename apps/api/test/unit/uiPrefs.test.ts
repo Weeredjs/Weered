@@ -23,6 +23,14 @@ describe("UI prefs", () => {
     });
   });
 
+  it("keeps every Nebula colourway the web offers", () => {
+    // apps/web/lib/uiPrefs.ts PALETTES; a colourway missing here is saved
+    // in the browser but silently dropped from the account.
+    for (const palette of ["violet", "ocean", "ember", "aurora", "graphite", "void"]) {
+      expect(sanitizeUiPrefs({ palette }).palette).toBe(palette);
+    }
+  });
+
   it("rejects bad values without throwing", () => {
     expect(sanitizeUiPrefs(null)).toEqual({});
     expect(sanitizeUiPrefs("nebula")).toEqual({});

@@ -347,12 +347,12 @@ export default function SettingsSheet({ initialTab }: { initialTab?: string } = 
                           display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", cursor: "pointer",
                           borderRadius: 3, fontFamily: "inherit", fontSize: 12, fontWeight: 700, textAlign: "left",
                           color: active ? "#fff" : "rgba(226,232,240,.72)",
-                          background: active ? "rgba(124,58,237,.16)" : "rgba(255,255,255,.03)",
-                          border: active ? "1px solid rgba(167,139,250,.7)" : "1px solid rgba(255,255,255,.08)",
+                          background: active ? "var(--weered-accent-bg, rgba(124,58,237,.16))" : "rgba(255,255,255,.03)",
+                          border: active ? "1px solid var(--weered-accent-ring, rgba(167,139,250,.7))" : "1px solid rgba(255,255,255,.08)",
                           transition: "background .12s, border-color .12s, color .12s",
                         }}
                       >
-                        <span style={{ width: 14, height: 14, borderRadius: "50%", background: t.sw, boxShadow: `0 0 8px ${t.sw}99`, flexShrink: 0 }} />
+                        <span style={{ width: 14, height: 14, borderRadius: "50%", flexShrink: 0, ...(t.id === "nebula" ? { background: "rgb(var(--nb-a, 139 92 246))", boxShadow: "0 0 8px rgb(var(--nb-a, 139 92 246) / .6)" } : { background: t.sw, boxShadow: `0 0 8px ${t.sw}99` }) }} />
                         {t.name}
                       </button>
                     );
@@ -363,7 +363,7 @@ export default function SettingsSheet({ initialTab }: { initialTab?: string } = 
                   href="/setup"
                   style={{
                     display: "inline-flex", alignItems: "center", gap: 8, marginTop: 12, padding: "9px 14px",
-                    borderRadius: 10, border: "1px solid #a78bfa66", background: "#7c3aed26",
+                    borderRadius: 10, border: "1px solid var(--weered-accent-ring, #a78bfa66)", background: "var(--weered-accent-bg, #7c3aed26)",
                     color: "#fff", fontSize: 12.5, fontWeight: 800, textDecoration: "none",
                   }}
                 >
@@ -500,7 +500,7 @@ function NebulaOptions() {
   return (
     <div className="weered-settings-nebula" style={{ marginTop: 14 }}>
       <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 8, color: "var(--weered-text, rgba(243,244,246,.95))" }}>Colourway</div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: 8 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 8 }}>
         {PALETTE_IDS.map((id) => {
           const pl = PALETTES[id];
           const on = palette === id;

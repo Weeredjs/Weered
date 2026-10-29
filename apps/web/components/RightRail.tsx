@@ -8,6 +8,7 @@ import { useOverlay } from "./overlays/OverlayProvider";
 import { avatarBg } from "../lib/avatarColor";
 import EmptyState from "./EmptyState";
 import { weeredConfirm } from "../lib/confirm";
+import { weeredToast } from "../lib/toast";
 import PresenceRow from "./PresenceRow";
 import { LogoMenu } from "./LogoMenu";
 import { onActivate } from "@/lib/a11y";
@@ -48,6 +49,42 @@ function presenceHref(roomId: string, roomIsLobby: boolean): string {
   if (!clean) return "/lobby";
   return roomIsLobby ? `/lobby/${encodeURIComponent(clean)}` : `/room/${encodeURIComponent(clean)}`;
 }
+
+// Same key the provider compares rooms by: no "room:" prefix, URI-decoded.
+function roomKey(s: string): string {
+  let x = s || "";
+  if (x.startsWith("room:")) x = x.slice(5);
+  try { x = decodeURIComponent(x); } catch {}
+  return x.trim();
+}
+
+// The second line of a friend or crew row: where they are.
+function whereLine(p: { online?: boolean; isAway?: boolean; roomName?: string | null }): React.ReactNode {
+  const place = String(p.roomName || "").trim();
+  if (!p.online) return <span style={{ opacity: 0.4, fontStyle: "italic" }}>offline</span>;
+  if (p.isAway) {
+    return <span style={{ color: "#facc15", fontStyle: "italic", opacity: 0.85 }}>lying low{place ? ` in ${place}` : ""}</span>;
+  }
+  if (!place) return null;
+  return (
+    <span style={{ color: "rgba(203,213,225,.82)" }}>
+      Online <span style={{ opacity: 0.55 }}>in</span>{" "}
+      <span style={{ fontWeight: 600, color: "rgba(243,244,246,.92)" }}>{place}</span>
+    </span>
+  );
+}
+
+const INVITE_ERRORS: Record<string, string> = {
+  not_in_room: "Join a room first, then invite.",
+  invites_off: "They've turned invites off.",
+  friends_only: "They only take invites from friends.",
+};
+
+// The row's buttons: keep their clicks and keys off the row, which opens the profile.
+const stopRow = {
+  onClick: (e: React.SyntheticEvent) => e.stopPropagation(),
+  onKeyDown: (e: React.SyntheticEvent) => e.stopPropagation(),
+};
 
 // Refresh on pushed WS events instead of waiting for the next poll tick.
 // The provider re-dispatches every socket message as a weered:<type> CustomEvent.
@@ -910,9 +947,12 @@ function FriendsEmptyDiscovery({ lobbyId }: { lobbyId: string }) {
 
 function FriendsPanel({ lobbyId }: { lobbyId: string }) {
   const { openSheet } = useOverlay();
+  const ctx: any = useWeered();
+  const myRoom = roomKey(String(ctx?.joinedRoomId || ""));
   const [friends, setFriends] = React.useState<any[]>([]);
   const [open, setOpen]       = React.useState(true);
   const [mounted, setMounted] = React.useState(false);
+  const [invited, setInvited] = React.useState<Record<string, boolean>>({});
 
   React.useEffect(() => { setMounted(true); }, []);
 
@@ -922,6 +962,17 @@ function FriendsPanel({ lobbyId }: { lobbyId: string }) {
   React.useEffect(() => { if (mounted) void load(); }, [mounted]);
   React.useEffect(() => { if (!mounted) return; const t = setInterval(load, 60000); return () => clearInterval(t); }, [mounted]);
 
+  // "Come hang where I am": a notification that links them to your room.
+  async function invite(userId: string) {
+    const j = await apiFetch(`/friends/${encodeURIComponent(userId)}/invite`, { method: "POST", body: "{}" }).catch(() => null);
+    if (j?.ok) {
+      setInvited(p => ({ ...p, [userId]: true }));
+      weeredToast.success("Invite sent.");
+    } else {
+      weeredToast.error(INVITE_ERRORS[String(j?.error || "")] || "Couldn't send that invite.");
+    }
+  }
+
   if (!mounted) return null;
 
   if (!friends.length) {
@@ -930,6 +981,8 @@ function FriendsPanel({ lobbyId }: { lobbyId: string }) {
   const online  = friends.filter(f => f.online);
   const offline = friends.filter(f => !f.online);
 
+  // Drawn with the Presence list's row, plus where they are, Join (go to
+  // them) and Invite (bring them to you).
   const renderFriend = (f: any) => {
     const hasUnread   = (f.unreadCount ?? 0) > 0 || Boolean(f.hasUnread ?? f.hasPendingDm);
     const unreadCount = f.unreadCount ?? (hasUnread ? 1 : 0);
@@ -937,6 +990,9 @@ function FriendsPanel({ lobbyId }: { lobbyId: string }) {
     const rawRoomId   = String(f.roomId || "").replace(/^room:/, "");
     const isLobby     = f.roomIsLobby === true || rawRoomId === "lobby";
     const joinHref    = rawRoomId ? presenceHref(rawRoomId, isLobby) : null;
+    const withYou     = !!myRoom && roomKey(rawRoomId) === myRoom;
+    const canJoin     = !!(f.online && joinHref && !withYou);
+    const canInvite   = !!(f.online && myRoom && !withYou && userId);
 
     const platforms = {
       steam:  !!f.steamId,
@@ -945,48 +1001,37 @@ function FriendsPanel({ lobbyId }: { lobbyId: string }) {
       psn:    !!f.psnAccountId,
     };
 
-    const locationLabel = (f.roomName || "").trim();
-    const friendSecondary: React.ReactNode = (() => {
-      if (!f.online) return <span style={{ opacity: 0.4, fontStyle: "italic" }}>offline</span>;
-      if (f.isAway) {
-        return (
-          <span style={{ color: "#facc15", fontStyle: "italic", opacity: 0.85 }}>
-            lying low{locationLabel ? ` in ${locationLabel}` : ""}
-          </span>
-        );
-      }
-      if (locationLabel) {
-        return (
-          <span style={{ color: "rgba(203,213,225,.82)" }}>
-            Online <span style={{ opacity: 0.55 }}>in</span>{" "}
-            <span style={{ fontWeight: 600, color: "rgba(243,244,246,.92)" }}>{locationLabel}</span>
-          </span>
-        );
-      }
-      if (f.statusText || f.statusEmoji) {
-        return (
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 5, minWidth: 0, opacity: 0.85 }}>
-            {f.statusEmoji && <span style={{ flexShrink: 0 }}>{f.statusEmoji}</span>}
-            {f.statusText && <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontStyle: "italic" }}>{f.statusText}</span>}
-          </span>
-        );
-      }
-      return <span style={{ opacity: 0.55, fontStyle: "italic" }}>online</span>;
-    })();
-
-    const joinLink = f.online && joinHref ? (
-      <Link
-        href={joinHref}
-        className="weered-rr-join"
-        onClick={e => e.stopPropagation()}
-        style={{ fontSize: 10, padding: "3px 8px", borderRadius: 999, border: "1px solid rgba(88,0,229,.30)", background: "rgba(88,0,229,.10)", color: "rgba(243,244,246,.85)", textDecoration: "none", flexShrink: 0 }}
-      >
-        join
-      </Link>
+    const actions = canJoin || canInvite ? (
+      <span style={{ display: "inline-flex", gap: 4 }}>
+        {canInvite && (
+          <button
+            type="button"
+            className={`weered-rr-invite${canJoin ? " is-extra" : ""}`}
+            disabled={!!invited[userId]}
+            title={`Invite ${f.name} to your room`}
+            onClick={e => { e.stopPropagation(); void invite(userId); }}
+            onKeyDown={stopRow.onKeyDown}
+            style={{ fontSize: 10, padding: "3px 8px", borderRadius: 999, border: "1px solid rgba(34,197,94,.35)", background: "rgba(34,197,94,.10)", color: "rgba(134,239,172,.95)", cursor: invited[userId] ? "default" : "pointer", flexShrink: 0 }}
+          >
+            {invited[userId] ? "Invited ✓" : "Invite"}
+          </button>
+        )}
+        {canJoin && (
+          <Link
+            href={joinHref!}
+            className="weered-rr-join"
+            title={`Join ${f.name}`}
+            {...stopRow}
+            style={{ fontSize: 10, padding: "3px 8px", borderRadius: 999, border: "1px solid rgba(88,0,229,.30)", background: "rgba(88,0,229,.10)", color: "rgba(243,244,246,.85)", textDecoration: "none", flexShrink: 0 }}
+          >
+            join
+          </Link>
+        )}
+      </span>
     ) : undefined;
 
     return (
-      <div key={f.id} className="weered-rr-friend-row" style={{ position: "relative" }}>
+      <div key={f.id} className="weered-rr-friend-row" data-offline={f.online ? undefined : ""} style={{ position: "relative" }}>
         <PresenceRow
           name={f.name}
           userId={f.id}
@@ -997,16 +1042,17 @@ function FriendsPanel({ lobbyId }: { lobbyId: string }) {
           online={f.online}
           isAway={!!f.isAway}
           roomName={f.roomName}
+          livePresence={f.livePresence}
           statusText={f.statusText}
           statusEmoji={f.statusEmoji}
           nameEffect={f.nameEffect}
           avatarFrame={f.avatarFrame}
-          secondaryText={friendSecondary}
+          secondaryText={whereLine(f) ?? undefined}
           platforms={platforms}
           pillBgColor={f.pillBgColor}
           pillAccentColor={f.pillAccentColor}
           onClick={() => userId && openSheet("profile", { userId })}
-          action={joinLink}
+          action={actions}
           compact
         />
         {hasUnread && (
@@ -1133,6 +1179,8 @@ function CrewEmptyDiscovery({ lobbyId }: { lobbyId: string }) {
 
 function CrewPanel({ lobbyId }: { lobbyId: string }) {
   const { openSheet } = useOverlay();
+  const ctx: any = useWeered();
+  const myRoom = roomKey(String(ctx?.joinedRoomId || ""));
   const [crews, setCrews] = React.useState<any[]>([]);
   const [open, setOpen]   = React.useState(true);
   const [mounted, setMounted] = React.useState(false);
@@ -1164,36 +1212,33 @@ function CrewPanel({ lobbyId }: { lobbyId: string }) {
             const rawRoomId  = String(m.roomId || "").replace(/^room:/, "");
             const isLobby    = m.roomIsLobby === true || rawRoomId === "lobby";
             const joinHref   = rawRoomId ? presenceHref(rawRoomId, isLobby) : null;
+            const withYou    = !!myRoom && roomKey(rawRoomId) === myRoom;
+            const where      = whereLine(m) ?? <span style={{ opacity: 0.55, fontStyle: "italic" }}>online</span>;
+            // Same row as Presence and Friends; the crew tag leads the second line.
             return (
-              <div key={m.userId}
-                className="weered-rr-crew-row"
-                style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 10px", borderRadius: 10, border: "1px solid rgba(255,255,255,.07)", background: "rgba(255,255,255,.02)", cursor: "pointer", transition: "background 0.12s" }}
-                onClick={() => userId && openSheet("profile", { userId })}
-                onKeyDown={onActivate(() => { userId && openSheet("profile", { userId }); })}
-                tabIndex={0}
-                role="button"
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.05)"; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.02)"; }}
-              >
-                <div style={{ position: "relative", flexShrink: 0 }}>
-                  <div style={{ width: 26, height: 26, borderRadius: 999, background: m.avatar ? "rgba(255,255,255,.08)" : "rgba(245,158,11,.25)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: "rgb(251,191,36)", overflow: "hidden" }}>
-                    {m.avatar ? <img src={m.avatar} alt={(m.name || "User") + " avatar"} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : (m.name || "?").slice(0, 1).toUpperCase()}
-                  </div>
-                  <span style={{ position: "absolute", bottom: -1, right: -1, width: 8, height: 8, borderRadius: 999, background: m.online ? "#22c55e" : "rgba(255,255,255,.15)", border: "2px solid rgba(10,10,15,1)" }} />
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: "rgba(243,244,246,.95)", display: "flex", alignItems: "center", gap: 5, overflow: "hidden" }}>
-                    <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.name}</span>
-                    {m.crewTag && <span style={{ fontSize: 9, opacity: 0.5, fontFamily: "monospace", flexShrink: 0 }}>[{m.crewTag}]</span>}
-                    {m.role === "LEADER" && <span style={{ fontSize: 9, padding: "1px 5px", borderRadius: 5, background: "rgba(245,158,11,.15)", color: "rgb(251,191,36)", border: "1px solid rgba(245,158,11,.3)", flexShrink: 0 }}>★</span>}
-                  </div>
-                  {m.online && m.roomName && <div style={{ fontSize: 10, opacity: 0.45, marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.roomName}</div>}
-                </div>
-                {m.online && joinHref && (
-                  <Link href={joinHref} className="weered-rr-join" onClick={e => e.stopPropagation()} style={{ fontSize: 10, padding: "3px 8px", borderRadius: 999, border: "1px solid rgba(245,158,11,.30)", background: "rgba(245,158,11,.10)", color: "rgb(251,191,36)", textDecoration: "none", flexShrink: 0 }}>
-                    join
-                  </Link>
-                )}
+              <div key={m.userId} className="weered-rr-crew-row" data-offline={m.online ? undefined : ""} style={{ position: "relative" }}>
+                <PresenceRow
+                  name={m.name}
+                  userId={userId}
+                  avatar={m.avatar}
+                  avatarColor={m.avatarColor}
+                  online={!!m.online}
+                  roleIcon={m.role === "LEADER" ? "★" : undefined}
+                  roleTitle={m.role === "LEADER" ? "Crew leader" : undefined}
+                  secondaryText={
+                    <span style={{ display: "inline-flex", gap: 5, minWidth: 0 }}>
+                      {m.crewTag && <span style={{ fontWeight: 700, letterSpacing: ".06em", opacity: 0.55, flexShrink: 0 }}>[{m.crewTag}]</span>}
+                      <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{where}</span>
+                    </span>
+                  }
+                  onClick={() => userId && openSheet("profile", { userId })}
+                  action={m.online && joinHref && !withYou ? (
+                    <Link href={joinHref} className="weered-rr-join" title={`Join ${m.name}`} {...stopRow} style={{ fontSize: 10, padding: "3px 8px", borderRadius: 999, border: "1px solid rgba(245,158,11,.30)", background: "rgba(245,158,11,.10)", color: "rgb(251,191,36)", textDecoration: "none", flexShrink: 0 }}>
+                      join
+                    </Link>
+                  ) : undefined}
+                  compact
+                />
               </div>
             );
           })}

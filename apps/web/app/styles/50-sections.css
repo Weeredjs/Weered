@@ -590,3 +590,13 @@ html[data-weered-theme] .weered-rr-crew-row:hover {
   background: rgba(255, 255, 255, 0.04) !important;
   box-shadow: none !important;
 }
+
+/* A friend row with Join showing keeps Invite for hover and keyboard focus,
+   so where they are stays readable at rest. Every theme. */
+.weered-rr-friend-row .weered-rr-invite.is-extra {
+  display: none;
+}
+.weered-rr-friend-row:hover .weered-rr-invite.is-extra,
+.weered-rr-friend-row:focus-within .weered-rr-invite.is-extra {
+  display: inline-flex;
+}

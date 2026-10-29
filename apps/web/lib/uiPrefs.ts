@@ -20,7 +20,7 @@ export type SiteThemeId = (typeof SITE_THEME_IDS)[number];
 export const isSiteTheme = (v: unknown): v is SiteThemeId =>
   typeof v === "string" && (SITE_THEME_IDS as readonly string[]).includes(v);
 
-export type Palette = "violet" | "ocean" | "ember" | "aurora";
+export type Palette = "violet" | "ocean" | "ember" | "aurora" | "graphite" | "void";
 export type RailSection = "card" | "nav" | "presence" | "favs" | "recent";
 export type Interest = "work" | "community" | "games" | "place";
 
@@ -58,11 +58,20 @@ export const RAIL_BLURB: Record<RailSection, string> = {
 };
 
 /** The Nebula colourways. `a` is the accent, `b` the deep accent, `c` the
- *  second glow; the stylesheet (styles/95-nebula.css) carries the same values. */
-export const PALETTES: Record<
-  Palette,
-  { name: string; tagline: string; a: string; b: string; c: string; hi: string; bg: string }
-> = {
+ *  second glow, `ink` the glass cards sit on, `on` the text on an accent fill;
+ *  the stylesheet (styles/95-nebula.css) carries the same values. */
+export type PaletteColours = {
+  name: string;
+  tagline: string;
+  a: string;
+  b: string;
+  c: string;
+  hi: string;
+  bg: string;
+  ink: string;
+  on: string;
+};
+export const PALETTES: Record<Palette, PaletteColours> = {
   violet: {
     name: "Violet",
     tagline: "Weered's own. Deep space purple.",
@@ -71,6 +80,8 @@ export const PALETTES: Record<
     c: "#312e81",
     hi: "#c4b5fd",
     bg: "#07060f",
+    ink: "#0d0b1c",
+    on: "#ffffff",
   },
   ocean: {
     name: "Ocean",
@@ -80,6 +91,8 @@ export const PALETTES: Record<
     c: "#1e3a8a",
     hi: "#bae6fd",
     bg: "#040a12",
+    ink: "#080f1c",
+    on: "#ffffff",
   },
   ember: {
     name: "Ember",
@@ -89,6 +102,8 @@ export const PALETTES: Record<
     c: "#7f1d1d",
     hi: "#fed7aa",
     bg: "#0d0705",
+    ink: "#180d0a",
+    on: "#ffffff",
   },
   aurora: {
     name: "Aurora",
@@ -98,6 +113,30 @@ export const PALETTES: Record<
     c: "#4c1d95",
     hi: "#a7f3d0",
     bg: "#040d0b",
+    ink: "#081513",
+    on: "#ffffff",
+  },
+  graphite: {
+    name: "Graphite",
+    tagline: "Mid grey, no colour.",
+    a: "#d6dae2",
+    b: "#8a909c",
+    c: "#606572",
+    hi: "#f1f3f6",
+    bg: "#2c2e34",
+    ink: "#42454e",
+    on: "#15161a",
+  },
+  void: {
+    name: "Void",
+    tagline: "Near black. Lights low.",
+    a: "#e2e4e9",
+    b: "#787c86",
+    c: "#2c2e36",
+    hi: "#f4f5f7",
+    bg: "#040405",
+    ink: "#111114",
+    on: "#0b0b0d",
   },
 };
 export const PALETTE_IDS = Object.keys(PALETTES) as Palette[];
