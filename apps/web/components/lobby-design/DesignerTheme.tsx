@@ -73,7 +73,17 @@ export function ThemeDock({
             </button>
           </div>
         </div>
-        <div style={{ display: "flex", gap: 10, overflowX: "auto", paddingBottom: 6, flex: 1 }}>
+        {/* Padding keeps the selected card's ring inside the scroller's clip box. */}
+        <div
+          style={{
+            display: "flex",
+            gap: 12,
+            overflowX: "auto",
+            padding: "5px 5px 8px",
+            margin: "-5px -5px 0",
+            flex: 1,
+          }}
+        >
           <button
             onClick={() => setTheme({ preset: undefined, effect: undefined, font: undefined })}
             style={presetCard(
@@ -220,8 +230,7 @@ const presetCard = (on: boolean, accent: string, art: string): React.CSSProperti
   background: art,
   cursor: "pointer",
   overflow: "hidden",
-  transform: on ? "translateY(-2px)" : "none",
-  transition: "transform .15s, box-shadow .15s",
+  transition: "box-shadow .15s, border-color .15s",
 });
 const presetName: React.CSSProperties = {
   position: "absolute",

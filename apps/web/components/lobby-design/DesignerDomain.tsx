@@ -21,6 +21,7 @@ export function DomainModal({
   const [value, setValue] = useState(domain.host || "");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const [removeArmed, setRemoveArmed] = useState(false);
   const [dnsRec, setDnsRec] = useState<{ type: string; name: string; value: string } | null>(null);
   const base = `${API}/lobbies/${encodeURIComponent(lobbyId)}/admin/domain`;
 
@@ -55,6 +56,12 @@ export function DomainModal({
       );
     }
   }, [domain.host, dnsRec]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
 
   return (
     <div
@@ -200,7 +207,9 @@ export function DomainModal({
               <button
                 disabled={busy}
                 onClick={async () => {
-                  if (!window.confirm(`Release ${domain.host}?`)) return;
+                  // Two clicks, not window.confirm (the desktop webview can swallow it).
+                  if (!removeArmed) return setRemoveArmed(true);
+                  setRemoveArmed(false);
                   const j = await call("DELETE", base);
                   if (j) {
                     onChange({ host: null, status: null });
@@ -208,9 +217,16 @@ export function DomainModal({
                     setValue("");
                   }
                 }}
-                style={{ ...chip(false, accent), marginLeft: "auto", color: "#fca5a5" }}
+                onBlur={() => setRemoveArmed(false)}
+                style={{
+                  ...chip(false, accent),
+                  marginLeft: "auto",
+                  ...(removeArmed
+                    ? { background: "#dc2626", borderColor: "#dc2626", color: "#fff" }
+                    : { color: "#fca5a5" }),
+                }}
               >
-                Remove
+                {removeArmed ? `Release ${domain.host}?` : "Remove"}
               </button>
             </div>
           </div>

@@ -51,6 +51,13 @@ export default function LobbyDesigner(p: DesignerProps) {
   const [desc, setDesc] = useState(p.description);
   const [confetti, setConfetti] = useState(0);
   const selected = d.blocks.find((b) => b.id === p.selectedId) || null;
+  const [armed, setArmed] = useState(false);
+  const canDiscard = design.dirty || name.trim() !== p.lobbyName || desc !== p.description;
+  useEffect(() => {
+    if (!armed) return;
+    const t = setTimeout(() => setArmed(false), 4000);
+    return () => clearTimeout(t);
+  }, [armed]);
 
   useEffect(() => setName(p.lobbyName), [p.lobbyName]);
   useEffect(() => setDesc(p.description), [p.description]);
@@ -192,14 +199,29 @@ export default function LobbyDesigner(p: DesignerProps) {
                   ? "Unpublished"
                   : "Up to date"}
         </span>
+        {/* Two-click confirm in place: the desktop app's webview can swallow
+            window.confirm, which left Discard doing nothing there. */}
         <button
-          style={{ ...chip(false, accent), color: "rgba(243,244,246,.7)" }}
+          disabled={!canDiscard}
+          title={canDiscard ? "Throw away unpublished changes" : "Nothing to discard"}
+          style={{
+            ...chip(false, accent),
+            ...(armed
+              ? { background: "#dc2626", borderColor: "#dc2626", color: "#fff" }
+              : { color: "rgba(243,244,246,.7)" }),
+            opacity: canDiscard ? 1 : 0.4,
+            cursor: canDiscard ? "pointer" : "default",
+          }}
           onClick={() => {
-            if (design.dirty && !window.confirm("Throw away the unpublished changes?")) return;
+            if (!armed) return setArmed(true);
+            setArmed(false);
             design.discard();
+            setName(p.lobbyName);
+            setDesc(p.description);
+            p.onSelect(null);
           }}
         >
-          Discard
+          {armed ? "Throw it away?" : "Discard"}
         </button>
         <button
           onClick={publish}
@@ -220,13 +242,7 @@ export default function LobbyDesigner(p: DesignerProps) {
         <IconBtn
           title="Leave Design mode"
           onClick={() => {
-            if (
-              design.dirty &&
-              !window.confirm(
-                "Leave with unpublished changes? They stay saved as a draft in this browser.",
-              )
-            )
-              return;
+            // Unpublished work stays saved as a draft in this browser.
             design.setDesigning(false);
             p.onSelect(null);
           }}
