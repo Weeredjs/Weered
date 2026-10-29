@@ -1,6 +1,6 @@
 // A lobby on its own domain (2026-10-29). Caddy issues the certificate on
 // demand for hosts registered as a lobby's customDomain and proxies them here;
-// the root of such a host opens that lobby. Every other path is the normal app
+// the root of such a host sends the visitor to that lobby, on the same host. Every other path is the normal app
 // (sign-in, rooms, profiles), and /api + /ws are same-origin through Caddy.
 //
 // Weered's own hosts, the ECEB office hosts and dev never reach the lookup.
@@ -38,14 +38,10 @@ export async function middleware(req: NextRequest) {
   if (!host || OWN_HOST.test(host)) return NextResponse.next();
   const id = await lobbyFor(host);
   if (!id) return NextResponse.next();
-  const url = req.nextUrl.clone();
-  url.pathname = `/lobby/${encodeURIComponent(id)}`;
-  // Caddy forwards proto=https, so nextUrl reads https://localhost:3000; Next
-  // serves plain http there and would treat that origin as external and try to
-  // proxy to it over TLS (EPROTO). Rewriting on its own http origin keeps it
-  // an internal rewrite.
-  url.protocol = "http:";
-  return NextResponse.rewrite(url);
+  // Redirect, not rewrite: the client app keys its shell and auth logic on the
+  // browser path, and at "/" it took a rewritten lobby for the home page (blank
+  // screen, bounce to /?next=/). The visitor stays on the club's own domain.
+  return NextResponse.redirect(new URL(`/lobby/${encodeURIComponent(id)}`, `https://${host}`), 307);
 }
 
 // Only the root of a custom host is rewritten; deeper paths are the app itself.
