@@ -11,14 +11,14 @@ test.describe("auth journey", () => {
     const stamp = `${Date.now()}${Math.floor(Math.random() * 1e6)}`;
     const username = ("e2e" + stamp).toLowerCase().slice(0, 24);
 
-    await page.goto("/login?next=%2Fhome");
-    await page.getByRole("button", { name: "register", exact: true }).click();
+    await page.goto("/login?mode=register&next=%2Fhome");
     await page.getByPlaceholder("your_handle").fill(username);
     await page.getByPlaceholder("you@example.com").fill(`${username}@example.com`);
     await page.getByPlaceholder("••••••••••").fill("E2ePassword!123");
-    await page.getByRole("button", { name: /create_account/i }).click();
+    // The tab and the submit button are both "Create account"; submit is .wl-btn.
+    await page.locator(".wl-btn").click();
 
-    // set on a successful register/login, before the pending-verification branch
+    // set on a successful register/login
     await expect(page.locator("html")).toHaveAttribute("data-weered-authed", "1", {
       timeout: 15000,
     });
