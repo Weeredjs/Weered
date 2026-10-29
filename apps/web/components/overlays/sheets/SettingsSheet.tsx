@@ -4,7 +4,7 @@ import React from "react";
 import { openConsentBanner } from "../../CookieConsent";
 import PresenceSection from "./PresenceSection";
 import { onActivate } from "@/lib/a11y";
-import { saveUiPrefs } from "../../../lib/uiPrefs";
+import { PALETTES, PALETTE_IDS, readUiPrefs, saveUiPrefs, type Palette } from "../../../lib/uiPrefs";
 
 
 // Web sessions are an httpOnly cookie (Domain=.weered.ca); mobile/desktop send a
@@ -341,6 +341,7 @@ export default function SettingsSheet({ initialTab }: { initialTab?: string } = 
                       <button
                         key={t.id}
                         type="button"
+                        className="weered-theme-option"
                         onClick={() => { patch({ theme: t.id }); saveUiPrefs({ theme: t.id }); }}
                         style={{
                           display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", cursor: "pointer",
@@ -357,6 +358,7 @@ export default function SettingsSheet({ initialTab }: { initialTab?: string } = 
                     );
                   })}
                 </div>
+                {s.theme === "nebula" && <NebulaOptions />}
                 <a
                   href="/setup"
                   style={{
@@ -485,6 +487,49 @@ function DesktopNotifyToggle({ enabled, onChange }: { enabled: boolean; onChange
   );
 }
 
+// Nebula's own knobs: colourway and starfield. Saved with the account's UI
+// prefs (lib/uiPrefs), the same place first-run setup writes them.
+function NebulaOptions() {
+  const [palette, setPalette] = React.useState<Palette>("violet");
+  const [stars, setStars] = React.useState(true);
+  React.useEffect(() => {
+    const p = readUiPrefs();
+    setPalette(p.palette || "violet");
+    setStars(p.stars !== false);
+  }, []);
+  return (
+    <div className="weered-settings-nebula" style={{ marginTop: 14 }}>
+      <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 8, color: "var(--weered-text, rgba(243,244,246,.95))" }}>Colourway</div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: 8 }}>
+        {PALETTE_IDS.map((id) => {
+          const pl = PALETTES[id];
+          const on = palette === id;
+          return (
+            <button
+              key={id}
+              type="button"
+              aria-pressed={on}
+              onClick={() => { setPalette(id); saveUiPrefs({ palette: id }); }}
+              style={{
+                position: "relative", height: 64, padding: "0 10px 8px", borderRadius: 12, cursor: "pointer",
+                display: "flex", alignItems: "flex-end", fontFamily: "inherit", fontSize: 12.5, fontWeight: 800, color: "#fff",
+                border: on ? `2px solid ${pl.a}` : "1px solid rgba(255,255,255,.12)",
+                boxShadow: on ? `0 0 0 3px ${pl.a}44, 0 10px 24px -12px ${pl.a}` : "none",
+                background: `radial-gradient(120% 90% at 0% 0%, ${pl.b}bb, transparent 60%), radial-gradient(90% 90% at 100% 100%, ${pl.c}ee, transparent 65%), ${pl.bg}`,
+              }}
+            >
+              {pl.name}
+            </button>
+          );
+        })}
+      </div>
+      <Row label="Starfield" hint="Drifting stars, twinkles and the odd shooting star behind everything.">
+        <Toggle checked={stars} onChange={(v) => { setStars(v); saveUiPrefs({ stars: v }); }} />
+      </Row>
+    </div>
+  );
+}
+
 const selectStyle: React.CSSProperties = {
   borderRadius: 8,
   border: "1px solid var(--weered-border, rgba(255,255,255,.12))",
@@ -513,6 +558,7 @@ export const btnStyle: React.CSSProperties = {
 export function Section({ title, children, onReset }: { title: string; children: React.ReactNode; onReset?: () => void }) {
   return (
     <div
+      className="weered-settings-section"
       style={{
         marginTop: 14,
         borderRadius: 10,
@@ -523,6 +569,7 @@ export function Section({ title, children, onReset }: { title: string; children:
     >
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
         <div
+          className="weered-settings-section-title"
           style={{
             fontSize: 11,
             fontWeight: 800,

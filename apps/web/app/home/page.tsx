@@ -194,6 +194,7 @@ function HeroBanner({ lobby, onJoin }: { lobby: any; onJoin: (id: string, pinned
         )}
         <button
           type="button"
+          className="home-hero-join"
           onClick={e => { e.stopPropagation(); onJoin(roomId(lobby), Boolean(lobby?.pinned)); }}
           style={{
             display: "inline-flex", alignItems: "center", gap: 7,
@@ -222,6 +223,7 @@ function LiveRoomCard({ room, onJoin }: { room: any; onJoin: (id: string, pinned
   return (
     <button
       type="button"
+      className="home-live-room"
       onClick={() => onJoin(room.id, !!room.roomIsLobby)}
       style={{
         display: "grid", gridTemplateColumns: "auto 1fr auto", gridTemplateRows: "auto auto",
@@ -342,6 +344,7 @@ function FeaturedStreamCard({ stream }: { stream: any }) {
 
   return (
     <div
+      className="home-stream"
       style={{
         display: "grid", gridTemplateColumns: `${thumbWidth}px 1fr`,
         gap: 14, padding: 0,
@@ -465,6 +468,7 @@ function FeaturedStreamCard({ stream }: { stream: any }) {
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
           <button
             type="button"
+            className="home-btn home-btn-primary"
             onClick={() => setPlaying(p => !p)}
             style={{
               display: "inline-flex", alignItems: "center", gap: 6,
@@ -482,6 +486,7 @@ function FeaturedStreamCard({ stream }: { stream: any }) {
           {stream.joinLobbyId && (
             <button
               type="button"
+              className="home-btn home-btn-ghost"
               onClick={handleJoinRoom}
               style={{
                 display: "inline-flex", alignItems: "center", gap: 5,
@@ -534,12 +539,12 @@ function LiveTicker({ rooms: _rooms, onJoin, apiBase }: { rooms: any[]; onJoin: 
 
   return (
     <div style={{ marginTop: 20 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+      <div className="home-live-head" style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
         <PulseDot color="#22c55e" size={5} />
         <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: "1.5px", textTransform: "uppercase", color: "rgba(255,255,255,.4)" }}>
           Live now
         </span>
-        <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,.06)" }} />
+        <div className="home-rule" style={{ flex: 1, height: 1, background: "rgba(255,255,255,.06)" }} />
       </div>
 
       <div style={{ display: "flex", gap: 12, alignItems: "flex-start", flexWrap: "wrap" }}>
@@ -577,6 +582,7 @@ function LobbyCard({ room, idx, onJoin }: { room: any; idx: number; onJoin: (id:
 
   return (
     <div
+      className="home-lobby-card"
       onClick={() => onJoin(roomId(room))}
       onKeyDown={onActivate(() => onJoin(roomId(room)))}
       role="button"
@@ -627,7 +633,7 @@ function LobbyCard({ room, idx, onJoin }: { room: any; idx: number; onJoin: (id:
               <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
                 <span style={{ fontFamily: "var(--font-barlow), 'Barlow Condensed', sans-serif", textTransform: "uppercase", fontWeight: 800, fontSize: 15, lineHeight: 1.1, letterSpacing: "0.02em" }}>{name}</span>
                 {room?.verified && (
-                  <span style={{
+                  <span className="home-chip" style={{
                     fontSize: 8, fontWeight: 800, padding: "2px 6px", borderRadius: 0,
                     background: `${accent}18`, border: `1px solid ${accent}30`,
                     color: accent, letterSpacing: "0.05em", flexShrink: 0,
@@ -655,7 +661,7 @@ function LobbyCard({ room, idx, onJoin }: { room: any; idx: number; onJoin: (id:
         </div>
 
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <span style={{
+          <span className="home-chip" style={{
             fontSize: 9, fontWeight: 800, padding: "2px 8px", borderRadius: 0,
             background: `${accent}12`, border: `1px solid ${accent}20`,
             color: accent, textTransform: "uppercase", letterSpacing: ".5px",
@@ -685,6 +691,7 @@ function RecentRow({ room, onJoin }: { room: any; onJoin: (id: string, pinned: b
   const pinned = isPinned(room);
   return (
     <div
+      className="home-recent-row"
       onClick={() => onJoin(roomId(room), pinned)}
       onKeyDown={onActivate(() => onJoin(roomId(room), pinned))}
       role="button"
@@ -738,10 +745,10 @@ function RecentRow({ room, onJoin }: { room: any; onJoin: (id: string, pinned: b
 
 function SectionHeader({ icon, label, count, sub }: { icon: string; label: string; count?: number; sub?: string }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        <span style={{ fontSize: 14 }}>{icon}</span>
-        <span style={{ fontWeight: 800, fontSize: 13, letterSpacing: "-0.1px" }}>{label}</span>
+    <div className="home-section-head" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+      <div className="home-section-title" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <span className="home-section-icon" style={{ fontSize: 14 }}>{icon}</span>
+        <span className="home-section-label" style={{ fontWeight: 800, fontSize: 13, letterSpacing: "-0.1px" }}>{label}</span>
         {count !== undefined && (
           <span style={{
             fontSize: 10, fontFamily: "monospace", color: "rgba(255,255,255,.3)",

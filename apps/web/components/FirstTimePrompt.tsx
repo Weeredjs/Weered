@@ -80,6 +80,7 @@ export default function FirstTimePrompt() {
 
   return (
     <div
+      className="ftp-card"
       style={{
         position: "relative",
         overflow: "hidden",
@@ -191,10 +192,10 @@ export default function FirstTimePrompt() {
           Make it yours — set an avatar, pick your colors, and choose a theme.
         </div>
         <div style={{ display: "flex", gap: 8, marginTop: 11, flexWrap: "wrap" }}>
-          <button onClick={customize} style={ctaPrimary}>
+          <button className="home-btn home-btn-primary" onClick={customize} style={ctaPrimary}>
             Customize profile
           </button>
-          <button onClick={themes} style={ctaGhost}>
+          <button className="home-btn home-btn-ghost" onClick={themes} style={ctaGhost}>
             Themes &amp; appearance →
           </button>
         </div>

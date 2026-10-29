@@ -178,6 +178,7 @@ export default function HomePulse({
 
   return (
     <div
+      className="home-pulse"
       style={{
         marginTop: 14,
         display: "flex",

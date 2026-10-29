@@ -59,9 +59,9 @@ export default function OverlayHost() {
   if (!top) return null;
 
   return (
-    <div className="fixed inset-0 z-[1000]">
+    <div className="weered-sheet-root fixed inset-0 z-[10000]">
       <div
-        className="absolute inset-0 bg-black/50"
+        className="weered-sheet-scrim absolute inset-0 bg-black/50"
         onClick={() => closeSheet()}
         onKeyDown={onActivate(() => closeSheet())}
         tabIndex={0}
@@ -69,24 +69,26 @@ export default function OverlayHost() {
       />
 
       <div
-        className={`absolute right-0 top-0 h-full ${top.type === "settings" ? "w-[640px]" : "w-[420px]"} max-w-[92vw] border-l border-white/10 bg-[var(--weered-bg,#0f1117)] shadow-2xl`}
+        className={`weered-sheet absolute right-0 top-0 h-full ${top.type === "settings" ? "w-[640px]" : "w-[420px]"} max-w-[92vw] border-l border-white/10 bg-[var(--weered-bg,#0f1117)] shadow-2xl`}
       >
-        <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
+        <div className="weered-sheet-head flex items-center justify-between border-b border-white/10 px-4 py-3">
           <div className="flex items-center gap-2">
             {stack.length > 1 ? (
               <button
-                className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm hover:bg-white/10"
+                className="weered-sheet-btn rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm hover:bg-white/10"
                 type="button"
                 onClick={() => closeSheet()}
               >
                 Back
               </button>
             ) : null}
-            <div className="text-sm font-semibold opacity-80">{sheetTitle(top.type)}</div>
+            <div className="weered-sheet-title text-sm font-semibold opacity-80">
+              {sheetTitle(top.type)}
+            </div>
           </div>
 
           <button
-            className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm hover:bg-white/10"
+            className="weered-sheet-btn rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm hover:bg-white/10"
             type="button"
             onClick={() => clearSheets()}
           >
@@ -94,7 +96,7 @@ export default function OverlayHost() {
           </button>
         </div>
 
-        <div className="h-[calc(100%-52px)] overflow-auto">
+        <div className="weered-sheet-body h-[calc(100%-52px)] overflow-auto">
           <SheetBody sheet={top} onClose={closeSheet} />
         </div>
       </div>

@@ -17,6 +17,7 @@ import DockDrawer from "./DockDrawer";
 import ShellGate from "./ShellGate";
 import ThemeRestore from "./ThemeRestore";
 import UiPrefsSync from "./UiPrefsSync";
+import NebulaSky from "./NebulaSky";
 import DesktopTitleBar from "./DesktopTitleBar";
 import LobbyBrowser from "./LobbyBrowser";
 import ServiceWorkerRegister from "./ServiceWorkerRegister";
@@ -198,6 +199,7 @@ export default function RootFrame({ children }: { children: React.ReactNode }) {
       <DesktopTitleBar />
       <ThemeRestore />
       <UiPrefsSync />
+      <NebulaSky />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(jsonLd) }} />
       <script
         type="application/ld+json"
