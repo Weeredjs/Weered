@@ -1,8 +1,55 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
-import LobbyBranding, { type BrandingValue } from "../../../components/LobbyBranding";
+// The create-lobby composer. Six steps on one scrolling page with a sticky
+// step rail, and a live preview of the lobby that redraws on every pick.
+// Creating posts the lobby with its layout and enabled modules, opens the
+// starter rooms, throws confetti, and lands the owner in Design mode.
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import {
+  TAB_DEFAULT_LABEL,
+  newBlock,
+  starterBlocks,
+  stockLayout,
+  type EffectId,
+  type EntranceId,
+  type FontId,
+  type LobbyLayout,
+  type TabId,
+} from "../../../lib/lobbyLayout";
+import {
+  EFFECT_LABEL,
+  FONT_LABEL,
+  PRESET_BY_ID,
+  SWATCH_WHEEL,
+  THEME_PRESETS,
+  type ThemePreset,
+} from "../../../lib/lobbyThemePresets";
+import {
+  DEFAULT_FEATURES,
+  DEFAULT_ROOMS,
+  GAME_BY_ID,
+  MODULE_FEATURES,
+  ROOM_PRESETS,
+  type FeatureId,
+  type GameEntry,
+  type RoomPreset,
+} from "../../../components/composer/catalog";
+import GameGrid from "../../../components/composer/GameGrid";
+import ThemePicker, { type ThemeValue } from "../../../components/composer/ThemePicker";
+import { FeatureToggles, RoomChips } from "../../../components/composer/InsidePicker";
+import Preview, { type PreviewRoom } from "../../../components/composer/Preview";
+import Confetti from "../../../components/composer/Confetti";
+import {
+  ComposerStyles,
+  FAINT,
+  MUTED,
+  Section,
+  TEXT,
+  alpha,
+  inputStyle,
+  labelStyle,
+} from "../../../components/composer/ui";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
@@ -14,30 +61,30 @@ function authHeaders(): Record<string, string> {
     return {};
   }
 }
-async function apiFetch(path: string, opts?: RequestInit) {
-  const r = await fetch(`${API}${path}`, {
-    ...opts,
-    headers: { "Content-Type": "application/json", ...authHeaders(), ...(opts?.headers || {}) },
-  });
-  return r.json();
+type ApiResult = {
+  ok?: boolean;
+  error?: string;
+  message?: string;
+  merged?: boolean;
+  lobby?: unknown;
+  user?: { tier?: string };
+  globalRole?: string;
+};
+async function apiFetch(path: string, opts?: RequestInit): Promise<ApiResult> {
+  try {
+    const r = await fetch(`${API}${path}`, {
+      ...opts,
+      headers: { "Content-Type": "application/json", ...authHeaders(), ...(opts?.headers || {}) },
+    });
+    return await r.json().catch(() => ({ ok: false, error: `http_${r.status}` }));
+  } catch {
+    return {
+      ok: false,
+      error: "network",
+      message: "Couldn't reach Weered. Check your connection.",
+    };
+  }
 }
-
-const MODULE_TYPES = [
-  { id: "NONE", label: "None", desc: "Just rooms and chat", icon: "💬" },
-  { id: "BUNGIE", label: "Destiny 2", desc: "Guardian stats, challenges, Xur", icon: "🔮" },
-  { id: "RIOT", label: "League of Legends", desc: "Summoner lookup, ranked, rotation", icon: "⚔️" },
-  { id: "FORTNITE", label: "Fortnite", desc: "Stats, item shop, cosmetics, news", icon: "🎯" },
-  {
-    id: "TRADING",
-    label: "FakeOut",
-    desc: "Paper trade crypto: live charts, fake money, leaderboards",
-    icon: "📈",
-  },
-  { id: "TWITCH", label: "Twitch", desc: "Live stream integration", icon: "📺" },
-  { id: "YOUTUBE", label: "YouTube", desc: "Video sync & watch parties", icon: "▶️" },
-  { id: "FEED", label: "Feed", desc: "Community content feed", icon: "📰" },
-  { id: "NEWS", label: "News", desc: "Live news feed from global sources", icon: "🗞️" },
-];
 
 function slugify(s: string): string {
   return s
@@ -47,70 +94,94 @@ function slugify(s: string): string {
     .replaceAll(/(^-)|(-$)/g, "")
     .slice(0, 40);
 }
+/** While typing: keep a trailing hyphen so "my-" can become "my-lobby". */
+function slugTyping(s: string): string {
+  return s
+    .toLowerCase()
+    .replaceAll(/[^a-z0-9-]/g, "-")
+    .replaceAll(/-+/g, "-")
+    .replace(/^-/, "")
+    .slice(0, 40);
+}
+
+const pick = <T,>(a: readonly T[]): T => a[Math.floor(Math.random() * a.length)];
+
+type SlugStatus = "idle" | "checking" | "available" | "taken" | "reserved";
+type Phase = "idle" | "creating" | "rooms" | "done";
+
+const STEPS = [
+  { id: "cz-name", label: "Name" },
+  { id: "cz-game", label: "Game" },
+  { id: "cz-look", label: "Look" },
+  { id: "cz-inside", label: "Inside" },
+  { id: "cz-rooms", label: "Rooms" },
+  { id: "cz-launch", label: "Launch" },
+] as const;
+
+/** Tabs the lobby page only shows when it has data for them (an LFG board, a
+ *  subreddit, a start.gg link). A new lobby has none, so the preview skips them. */
+const DATA_GATED_TABS: TabId[] = ["lfg", "reddit", "brackets"];
+
+/** The room's opening module, given what the lobby has switched on. */
+function roomModule(r: RoomPreset, enabled: Set<string>): string | null {
+  if (!r.module) return null;
+  if (enabled.has(r.module)) return r.module;
+  if (r.module === "youtube" && enabled.has("video")) return "video";
+  return null;
+}
+
+const DEFAULT_THEME: ThemeValue = {
+  preset: "midnight",
+  accent: "#7c3aed",
+  effect: "stars",
+  font: "default",
+  entrance: "rise",
+  intensity: 1,
+};
 
 export default function CreateLobbyPage() {
   const router = useRouter();
 
-  const [_me, setMe] = useState<any>(null);
+  // ── Who's here (same gate as before) ───────────────────────────────────
   const [tier, setTier] = useState("INNOCENT");
   const [loading, setLoading] = useState(true);
+  const [blocked, setBlocked] = useState<{ kind: "tier" | "limit"; message: string } | null>(null);
 
   useEffect(() => {
-    const token = localStorage.getItem("weered_token");
-    if (!token) {
-      router.replace("/subscribe");
+    // Signed-in is the cached user: the session itself is an httpOnly cookie,
+    // and the layout script deletes the old weered_token on every load, so
+    // checking the token sent every signed-in visitor to /subscribe.
+    let signedIn = false;
+    try {
+      signedIn = !!JSON.parse(localStorage.getItem("weered_user") || "null")?.id;
+    } catch {}
+    if (!signedIn) {
+      router.replace(`/login?next=${encodeURIComponent("/lobby/create")}`);
       return;
     }
     apiFetch("/staff/me")
       .then((j) => {
-        if (j?.user) {
-          setMe(j.user);
-          setTier(String(j.user?.tier || "INNOCENT").toUpperCase());
-        } else if (j?.globalRole) {
-          setTier("KINGPIN");
-          setMe({ name: "staff" });
-        }
+        if (j?.user) setTier(String(j.user?.tier || "INNOCENT").toUpperCase());
+        else if (j?.globalRole) setTier("KINGPIN");
         setLoading(false);
       })
-      .catch(() => {
-        setLoading(false);
-        router.replace("/subscribe");
-      });
-
+      .catch(() => setLoading(false));
     try {
       const u = JSON.parse(localStorage.getItem("weered_user") || "null");
-      if (u) {
-        setMe(u);
-        setTier(String(u?.tier || "INNOCENT").toUpperCase());
-      }
+      if (u) setTier(String(u?.tier || "INNOCENT").toUpperCase());
     } catch {}
-  }, []);
+  }, [router]);
 
+  // ── 1. Name ─────────────────────────────────────────────────────────────
   const [name, setName] = useState("");
-  const [slug, setSlug] = useState("");
+  const [slugRaw, setSlugRaw] = useState("");
   const [slugManual, setSlugManual] = useState(false);
   const [description, setDescription] = useState("");
-  const [accent, setAccent] = useState("#7c3aed");
-  const [logoUrl, setLogoUrl] = useState("");
-  const [bannerUrl, setBannerUrl] = useState("");
-
-  const branding: BrandingValue = { name, description, accentColor: accent, logoUrl, bannerUrl };
-  const patchBranding = (p: Partial<BrandingValue>) => {
-    if (p.name !== undefined) setName(p.name);
-    if (p.description !== undefined) setDescription(p.description);
-    if (p.accentColor !== undefined) setAccent(p.accentColor);
-    if (p.logoUrl !== undefined) setLogoUrl(p.logoUrl);
-    if (p.bannerUrl !== undefined) setBannerUrl(p.bannerUrl);
-  };
-  const [moduleType, setModuleType] = useState("NONE");
-  const [creating, setCreating] = useState(false);
-  const [error, setError] = useState("");
-  const [slugStatus, setSlugStatus] = useState<
-    "idle" | "checking" | "available" | "taken" | "reserved"
-  >("idle");
+  const [slugStatus, setSlugStatus] = useState<SlugStatus>("idle");
+  const slug = slugify(slugRaw);
 
   useEffect(() => {
-    if (!slugManual && name) setSlug(slugify(name));
+    if (!slugManual) setSlugRaw(slugify(name));
   }, [name, slugManual]);
 
   useEffect(() => {
@@ -120,44 +191,346 @@ export default function CreateLobbyPage() {
     }
     setSlugStatus("checking");
     const t = setTimeout(async () => {
-      try {
-        const j = await apiFetch(`/lobbies/${encodeURIComponent(slug)}`);
-        if (j?.ok && j?.lobby) setSlugStatus("taken");
-        else setSlugStatus("available");
-      } catch {
-        setSlugStatus("available");
-      }
+      const j = await apiFetch(`/lobbies/${encodeURIComponent(slug)}`);
+      setSlugStatus(j?.ok && j?.lobby ? "taken" : "available");
     }, 400);
     return () => clearTimeout(t);
   }, [slug]);
 
-  const canCreate = useMemo(() => {
-    return name.trim().length >= 2 && slug.length >= 2 && slugStatus === "available" && !creating;
-  }, [name, slug, slugStatus, creating]);
+  // ── 2. Game ─────────────────────────────────────────────────────────────
+  const [gameId, setGameId] = useState("NONE");
+  const [gameTouched, setGameTouched] = useState(false);
+  const game: GameEntry = GAME_BY_ID[gameId] || GAME_BY_ID.NONE;
+  const hasGame = game.id !== "NONE";
 
-  async function handleCreate() {
-    if (!canCreate) return;
-    setCreating(true);
+  // ── 3. Look ─────────────────────────────────────────────────────────────
+  const [theme, setTheme] = useState<ThemeValue>(DEFAULT_THEME);
+  const [themeTouched, setThemeTouched] = useState(false);
+  const [spinKey, setSpinKey] = useState(0);
+  const [replayKey, setReplayKey] = useState(0);
+  const preset: ThemePreset = PRESET_BY_ID[theme.preset] || THEME_PRESETS[0];
+
+  const applyPreset = useCallback((p: ThemePreset) => {
+    setTheme((t) => ({ ...t, preset: p.id, accent: p.accent, effect: p.effect, font: p.font }));
+  }, []);
+
+  function pickGame(g: GameEntry) {
+    setGameId(g.id);
+    setGameTouched(true);
+    // Until the owner styles it themselves, the theme follows the game.
+    if (!themeTouched && PRESET_BY_ID[g.preset]) {
+      applyPreset(PRESET_BY_ID[g.preset]);
+      setReplayKey((k) => k + 1);
+    }
+  }
+
+  function surprise() {
+    const p = pick(THEME_PRESETS);
+    const effects = (Object.keys(EFFECT_LABEL) as EffectId[]).filter((e) => e !== "none");
+    const entrances: EntranceId[] = ["fade", "rise", "glitch"];
+    setTheme({
+      preset: p.id,
+      accent: Math.random() < 0.65 ? pick(p.swatches.slice(0, 3)) : pick(SWATCH_WHEEL),
+      effect: Math.random() < 0.85 ? pick(effects) : "none",
+      font: pick(Object.keys(FONT_LABEL) as FontId[]),
+      entrance: pick(entrances),
+      intensity: Math.round((0.7 + Math.random() * 0.7) * 10) / 10,
+    });
+    setThemeTouched(true);
+    setSpinKey((k) => k + 1);
+    setReplayKey((k) => k + 1);
+  }
+
+  // ── 4. Inside / 5. Rooms ────────────────────────────────────────────────
+  const [features, setFeatures] = useState<Record<FeatureId, boolean>>(DEFAULT_FEATURES);
+  const [roomIds, setRoomIds] = useState<string[]>(DEFAULT_ROOMS);
+
+  // The design survives a trip to the upgrade page (and a refresh).
+  const DRAFT_KEY = "weered:composer-draft:v1";
+  const restored = React.useRef(false);
+  useEffect(() => {
+    if (restored.current) return;
+    restored.current = true;
+    try {
+      const d = JSON.parse(localStorage.getItem(DRAFT_KEY) || "null");
+      if (!d || typeof d !== "object") return;
+      if (typeof d.name === "string") setName(d.name);
+      if (typeof d.slugRaw === "string") setSlugRaw(d.slugRaw);
+      if (typeof d.slugManual === "boolean") setSlugManual(d.slugManual);
+      if (typeof d.description === "string") setDescription(d.description);
+      if (typeof d.gameId === "string") {
+        setGameId(d.gameId);
+        setGameTouched(true);
+      }
+      if (d.theme && typeof d.theme === "object") {
+        setTheme({ ...DEFAULT_THEME, ...d.theme });
+        setThemeTouched(true);
+      }
+      if (d.features && typeof d.features === "object")
+        setFeatures({ ...DEFAULT_FEATURES, ...d.features });
+      if (Array.isArray(d.roomIds)) setRoomIds(d.roomIds.map(String));
+    } catch {}
+  }, []);
+  useEffect(() => {
+    if (!restored.current) return;
+    try {
+      localStorage.setItem(
+        DRAFT_KEY,
+        JSON.stringify({
+          name,
+          slugRaw,
+          slugManual,
+          description,
+          gameId,
+          theme,
+          features,
+          roomIds,
+        }),
+      );
+    } catch {}
+  }, [name, slugRaw, slugManual, description, gameId, theme, features, roomIds]);
+
+  const enabledModules = useMemo(() => {
+    const m: string[] = MODULE_FEATURES.filter((f) => features[f]);
+    // Reddit is on for every lobby by default (Lobby.enabledModules); keep it.
+    m.push("reddit");
+    return m;
+  }, [features]);
+
+  const starterRooms: PreviewRoom[] = useMemo(() => {
+    const on = new Set(enabledModules);
+    return ROOM_PRESETS.filter((r) => roomIds.includes(r.id)).flatMap((r) =>
+      r.names.map((n) => ({ name: n, module: roomModule(r, on) })),
+    );
+  }, [roomIds, enabledModules]);
+
+  const tabsFor = useCallback(
+    (): LobbyLayout["tabs"] =>
+      stockLayout().tabs.map((t) => {
+        if (t.id === "home") return { ...t, hidden: !features.home };
+        if (t.id === "requests") return { ...t, hidden: !features.requests };
+        if (t.id === "events") return { ...t, hidden: !features.events };
+        if (t.id === "modules") return { ...t, hidden: !hasGame };
+        return t;
+      }),
+    [features, hasGame],
+  );
+
+  const landing: TabId = features.home ? "home" : "rooms";
+  const previewTabs = useMemo(
+    () =>
+      tabsFor()
+        .filter((t) => !t.hidden && !DATA_GATED_TABS.includes(t.id))
+        .map((t) => ({
+          id: t.id,
+          label: t.id === "feed" && gameId === "TRADING" ? "The Tape" : TAB_DEFAULT_LABEL[t.id],
+        })),
+    [tabsFor, gameId],
+  );
+
+  function buildLayout(): LobbyLayout {
+    const base = stockLayout();
+    let blocks: LobbyLayout["blocks"] = [];
+    if (features.home) {
+      blocks = starterBlocks(hasGame).filter((b) => features.events || b.type !== "events");
+      const welcome = blocks.find((b) => b.type === "welcome");
+      if (welcome) {
+        welcome.props = {
+          ...welcome.props,
+          title: `Welcome to ${name.trim()}`.slice(0, 120),
+          body: description.trim() || welcome.props.body,
+        };
+      }
+      if (features.requests) blocks.push(newBlock("requests"));
+    }
+    return {
+      ...base,
+      tabs: tabsFor(),
+      landing,
+      theme: {
+        preset: theme.preset,
+        accent: theme.accent,
+        effect: theme.effect,
+        intensity: theme.intensity,
+        font: theme.font,
+        entrance: theme.entrance,
+      },
+      blocks,
+    };
+  }
+
+  // ── Step rail ───────────────────────────────────────────────────────────
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [activeStep, setActiveStep] = useState<string>(STEPS[0].id);
+  const nameOk = name.trim().length >= 2 && slug.length >= 2 && slugStatus === "available";
+  const stepDone: Record<string, boolean> = {
+    "cz-name": nameOk,
+    "cz-game": gameTouched,
+    "cz-look": themeTouched || gameTouched,
+    "cz-inside": true,
+    "cz-rooms": true,
+    "cz-launch": false,
+  };
+
+  useEffect(() => {
+    if (loading) return;
+    const root = scrollRef.current;
+    if (!root || typeof IntersectionObserver === "undefined") return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) if (e.isIntersecting) setActiveStep(e.target.id);
+      },
+      { root, rootMargin: "-25% 0px -65% 0px" },
+    );
+    for (const s of STEPS) {
+      const el = document.getElementById(s.id);
+      if (el) io.observe(el);
+    }
+    return () => io.disconnect();
+  }, [loading, blocked]);
+
+  const goTo = (id: string) =>
+    document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+
+  // ── Toast ───────────────────────────────────────────────────────────────
+  const [toast, setToast] = useState<{ ok: boolean; text: string } | null>(null);
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 3200);
+    return () => clearTimeout(t);
+  }, [toast]);
+
+  async function requestGame(title: string) {
+    const j = await apiFetch("/requests", {
+      method: "POST",
+      body: JSON.stringify({ kind: "game", title, note: "Asked from the create-lobby composer." }),
+    });
+    let r: { ok: boolean; message: string };
+    if (j?.ok)
+      r = {
+        ok: true,
+        message: j.merged
+          ? `“${title}” was already on the board. Your vote is in.`
+          : `“${title}” is on the request board.`,
+      };
+    else if (j?.error === "sign_in_to_request")
+      r = { ok: false, message: "Sign in to request a game." };
+    else if (j?.error === "slow_down")
+      r = { ok: false, message: j.message || "Five requests a day. Vote on the rest." };
+    else r = { ok: false, message: j?.message || "Couldn't send that. Try again." };
+    setToast({ ok: r.ok, text: r.message });
+    return r;
+  }
+
+  // ── Launch ──────────────────────────────────────────────────────────────
+  const [phase, setPhase] = useState<Phase>("idle");
+  const [error, setError] = useState("");
+  const [roomProgress, setRoomProgress] = useState({ made: 0, tried: 0, total: 0 });
+  const [confetti, setConfetti] = useState(0);
+  const [origin, setOrigin] = useState<{ x: number; y: number } | null>(null);
+
+  const blocker =
+    name.trim().length < 2
+      ? "Give it a name first"
+      : slug.length < 2
+        ? "It needs an address"
+        : slugStatus === "checking" || slugStatus === "idle"
+          ? "Checking the address…"
+          : slugStatus === "taken"
+            ? "That address is taken"
+            : slugStatus === "reserved"
+              ? "That address is reserved"
+              : "";
+  const canCreate = !blocker && phase === "idle";
+
+  async function launch(e: React.MouseEvent<HTMLButtonElement>) {
+    if (!canCreate) {
+      if (blocker) goTo("cz-name");
+      return;
+    }
+    if (tier === "INNOCENT") {
+      setBlocked({
+        kind: "tier",
+        message:
+          "Your design is saved in this browser. Upgrade, come back to this page, and hit Create.",
+      });
+      return;
+    }
+    const rect = e.currentTarget.getBoundingClientRect();
+    setOrigin({ x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 });
+    setPhase("creating");
     setError("");
+
     const j = await apiFetch("/lobbies", {
       method: "POST",
       body: JSON.stringify({
         id: slug,
         name: name.trim(),
         description: description.trim(),
-        accentColor: accent,
-        logoUrl: logoUrl || undefined,
-        bannerUrl: bannerUrl || undefined,
-        moduleType,
+        moduleType: game.id,
+        accentColor: theme.accent,
+        layout: buildLayout(),
+        enabledModules,
       }),
     });
-    if (j?.ok) {
-      router.push(`/lobby/${encodeURIComponent(slug)}`);
-    } else {
-      setError(j?.message || j?.error || "Failed to create lobby");
-      setCreating(false);
+    if (!j?.ok) {
+      setPhase("idle");
+      const code = String(j?.error || "");
+      if (code === "tier_required") {
+        setBlocked({ kind: "tier", message: j?.message || "" });
+        return;
+      }
+      if (code === "lobby_limit") {
+        setBlocked({ kind: "limit", message: j?.message || "" });
+        return;
+      }
+      if (code === "lobby_exists") {
+        setSlugStatus("taken");
+        setError("Someone just took that address. Pick another and launch again.");
+        goTo("cz-name");
+        return;
+      }
+      if (code === "name_reserved") {
+        setSlugStatus("reserved");
+        setError(j?.message || "This lobby name is reserved and cannot be used.");
+        goTo("cz-name");
+        return;
+      }
+      if (code === "Unauthorized")
+        setError("Your session has expired. Sign in again, then come back.");
+      else setError(j?.message || j?.error || "Failed to create lobby");
+      return;
     }
+
+    // Starter rooms, one at a time (POST /rooms rate-limits bursts).
+    setPhase("rooms");
+    const total = starterRooms.length;
+    let made = 0;
+    setRoomProgress({ made: 0, tried: 0, total });
+    for (let i = 0; i < starterRooms.length; i++) {
+      const r = starterRooms[i];
+      const rj = await apiFetch("/rooms", {
+        method: "POST",
+        body: JSON.stringify({
+          name: r.name,
+          lobbyId: slug,
+          ...(r.module ? { defaultModule: r.module } : {}),
+        }),
+      });
+      if (rj?.ok) made++;
+      setRoomProgress({ made, tried: i + 1, total });
+    }
+
+    setPhase("done");
+    setConfetti((c) => c + 1);
+    try {
+      localStorage.removeItem(DRAFT_KEY);
+    } catch {}
+    setTimeout(() => router.push(`/lobby/${encodeURIComponent(slug)}?design=1`), 1900);
   }
+
+  // ── Render ──────────────────────────────────────────────────────────────
+  const accent = theme.accent;
 
   if (loading) {
     return (
@@ -176,375 +549,764 @@ export default function CreateLobbyPage() {
     );
   }
 
-  if (tier === "INNOCENT") {
+  if (blocked) {
+    const limit = blocked?.kind === "limit";
     return (
       <div
         style={{
           height: "100%",
-          background: "#050810",
+          overflowY: "auto",
+          background:
+            "radial-gradient(60% 50% at 50% 0%, rgba(124,58,237,.25), transparent 70%), #050810",
           display: "flex",
-          flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
-          padding: 40,
+          padding: "40px 16px",
+          boxSizing: "border-box",
         }}
       >
-        <div style={{ fontSize: 48, marginBottom: 16 }}>⚖️</div>
+        <ComposerStyles />
         <div
           style={{
-            fontWeight: 900,
-            fontSize: 24,
-            color: "rgba(243,244,246,.92)",
-            marginBottom: 8,
-            letterSpacing: "-0.5px",
-          }}
-        >
-          Upgrade Required
-        </div>
-        <div
-          style={{
-            fontSize: 14,
-            color: "rgba(148,163,184,.55)",
-            marginBottom: 28,
+            width: "100%",
+            maxWidth: 440,
             textAlign: "center",
-            maxWidth: 360,
+            padding: "32px 24px",
+            borderRadius: 20,
+            border: "1px solid rgba(167,139,250,.25)",
+            background: "rgba(255,255,255,.03)",
+            boxShadow: "0 30px 80px -30px rgba(124,58,237,.6)",
           }}
         >
-          You need an Indicted subscription or higher to create your own lobby.
+          <div
+            aria-hidden
+            className="cz-anim"
+            style={{
+              fontSize: 46,
+              marginBottom: 14,
+              animation: "cz-float 3s ease-in-out infinite",
+            }}
+          >
+            {limit ? "🏰" : "⚖️"}
+          </div>
+          <h1
+            style={{
+              fontWeight: 900,
+              fontSize: 24,
+              color: TEXT,
+              margin: "0 0 8px",
+              letterSpacing: "-0.5px",
+            }}
+          >
+            {limit ? "You've hit your lobby cap" : "Upgrade to build a lobby"}
+          </h1>
+          <p style={{ fontSize: 14, color: MUTED, margin: "0 0 24px", lineHeight: 1.5 }}>
+            {limit
+              ? blocked?.message ||
+                "Your plan's lobbies are all in use. Upgrade for more, or reuse one you own."
+              : `Lobbies come with an Indicted subscription or higher: your own address, theme, rooms and game integration.${blocked?.message ? ` ${blocked.message}` : ""}`}
+          </p>
+          <button
+            type="button"
+            className="cz-btn"
+            onClick={() => router.push("/subscribe")}
+            style={{
+              width: "100%",
+              padding: "13px 28px",
+              borderRadius: 12,
+              border: "none",
+              background: "linear-gradient(135deg, rgba(88,0,229,.95), rgba(167,139,250,.9))",
+              color: "#fff",
+              fontWeight: 800,
+              fontSize: 15,
+              cursor: "pointer",
+              boxShadow: "0 6px 24px rgba(88,0,229,.4)",
+              fontFamily: "inherit",
+            }}
+          >
+            View plans
+          </button>
+          <button
+            type="button"
+            className="cz-btn"
+            onClick={() => router.push("/home")}
+            style={{
+              marginTop: 10,
+              padding: "9px 20px",
+              borderRadius: 10,
+              border: "1px solid rgba(255,255,255,.10)",
+              background: "transparent",
+              color: "rgba(255,255,255,.5)",
+              fontSize: 12.5,
+              cursor: "pointer",
+              fontFamily: "inherit",
+            }}
+          >
+            Back to Home
+          </button>
         </div>
-        <button
-          onClick={() => router.push("/subscribe")}
-          style={{
-            padding: "12px 28px",
-            borderRadius: 10,
-            border: "none",
-            background: "linear-gradient(135deg, rgba(88,0,229,.9), rgba(167,139,250,.85))",
-            color: "#fff",
-            fontWeight: 800,
-            fontSize: 14,
-            cursor: "pointer",
-            boxShadow: "0 4px 20px rgba(88,0,229,.35)",
-          }}
-        >
-          View Plans
-        </button>
-        <button
-          onClick={() => router.push("/home")}
-          style={{
-            marginTop: 12,
-            padding: "8px 20px",
-            borderRadius: 8,
-            border: "1px solid rgba(255,255,255,.10)",
-            background: "transparent",
-            color: "rgba(255,255,255,.4)",
-            fontSize: 12,
-            cursor: "pointer",
-          }}
-        >
-          Back to Home
-        </button>
       </div>
     );
   }
 
+  const roomCount = starterRooms.length;
+  const featureCount = (Object.keys(features) as FeatureId[]).filter((f) => features[f]).length;
+
+  const launchButton = (big: boolean) => (
+    <button
+      type="button"
+      className="cz-btn"
+      onClick={launch}
+      aria-disabled={!canCreate}
+      style={{
+        width: "100%",
+        padding: big ? "18px 22px" : "13px 18px",
+        borderRadius: big ? 16 : 12,
+        border: "none",
+        background: canCreate
+          ? `linear-gradient(110deg, ${accent} 0%, ${alpha(accent, 0.75)} 40%, #ffffff55 50%, ${alpha(accent, 0.75)} 60%, ${accent} 100%) 0 0 / 200% 100%`
+          : "rgba(255,255,255,.06)",
+        animation: canCreate ? "cz-shimmer 3.5s linear infinite" : undefined,
+        color: canCreate ? "#fff" : "rgba(255,255,255,.35)",
+        fontWeight: 900,
+        fontSize: big ? 19 : 15,
+        letterSpacing: "-0.3px",
+        cursor: canCreate ? "pointer" : "not-allowed",
+        fontFamily: "inherit",
+        boxShadow: canCreate ? `0 10px 40px ${alpha(accent, 0.5)}` : "none",
+        textShadow: canCreate ? "0 1px 8px rgba(0,0,0,.35)" : "none",
+        transition: "box-shadow .2s, color .2s",
+      }}
+    >
+      {phase !== "idle" ? "Building…" : canCreate ? "Create lobby  →" : blocker}
+    </button>
+  );
+
   return (
     <div
+      ref={scrollRef}
       style={{
         height: "100%",
         overflowY: "auto",
-        background: "#050810",
-        color: "rgba(243,244,246,.92)",
-        padding: "40px 20px 80px",
+        overflowX: "hidden",
+        background: `radial-gradient(70% 40% at 85% 0%, ${alpha(accent, 0.14)}, transparent 70%), #050810`,
+        color: TEXT,
+        transition: "background .5s",
       }}
     >
-      <div style={{ maxWidth: 880, margin: "0 auto" }}>
-        <div style={{ marginBottom: 40 }}>
-          <button
-            onClick={() => router.push("/home")}
-            style={{
-              background: "none",
-              border: "none",
-              color: "rgba(148,163,184,.4)",
-              fontSize: 12,
-              cursor: "pointer",
-              padding: 0,
-              marginBottom: 16,
-              fontFamily: "inherit",
-            }}
-          >
-            ← Back
-          </button>
-          <div style={{ fontWeight: 900, fontSize: 28, letterSpacing: "-0.5px", lineHeight: 1.1 }}>
-            Create Your Lobby
-          </div>
-          <div style={{ fontSize: 13, color: "rgba(148,163,184,.5)", marginTop: 8 }}>
-            Your community, your rules. Pick a name, set the vibe, and open the doors.
-          </div>
-        </div>
+      <ComposerStyles />
+      <style>{`.cz-mobile-only{display:inline-flex}@media (min-width:1080px){.cz-mobile-only{display:none}}`}</style>
 
-        <div style={{ marginBottom: 28 }}>
-          <LobbyBranding value={branding} onChange={patchBranding} />
-        </div>
-
-        <div style={{ marginBottom: 28 }}>
-          <label
-            style={{
-              display: "block",
-              fontSize: 11,
-              fontWeight: 800,
-              letterSpacing: ".5px",
-              textTransform: "uppercase",
-              color: "rgba(255,255,255,.35)",
-              marginBottom: 8,
-            }}
-          >
-            URL Slug
-          </label>
-          <div style={{ position: "relative" }}>
-            <span
+      <div className="cz-shell">
+        {/* ── Form column ── */}
+        <div style={{ minWidth: 0 }}>
+          <header style={{ marginBottom: 18 }}>
+            <button
+              type="button"
+              className="cz-btn"
+              onClick={() => router.push("/home")}
               style={{
-                position: "absolute",
-                left: 14,
-                top: "50%",
-                transform: "translateY(-50%)",
+                background: "none",
+                border: "none",
+                color: FAINT,
                 fontSize: 12,
-                color: "rgba(148,163,184,.35)",
-                pointerEvents: "none",
+                cursor: "pointer",
+                padding: 0,
+                marginBottom: 14,
+                fontFamily: "inherit",
               }}
             >
-              weered.ca/lobby/
-            </span>
-            <input
-              value={slug}
-              onChange={(e) => {
-                setSlug(slugify(e.target.value));
-                setSlugManual(true);
-              }}
-              placeholder="your-lobby"
-              maxLength={40}
+              ← Back
+            </button>
+            <div
               style={{
-                width: "100%",
-                padding: "12px 16px 12px 126px",
-                borderRadius: 10,
-                background: "rgba(255,255,255,.04)",
-                border: `1px solid ${slugStatus === "available" ? "rgba(34,197,94,.35)" : slugStatus === "taken" || slugStatus === "reserved" ? "rgba(239,68,68,.35)" : "rgba(255,255,255,.10)"}`,
-                color: "rgba(243,244,246,.92)",
-                fontSize: 14,
-                fontWeight: 600,
-                outline: "none",
-                fontFamily: "inherit",
-                boxSizing: "border-box",
-                transition: "border-color .15s",
+                display: "flex",
+                alignItems: "flex-end",
+                justifyContent: "space-between",
+                gap: 12,
+                flexWrap: "wrap",
               }}
+            >
+              <div style={{ minWidth: 0 }}>
+                <h1
+                  style={{
+                    margin: 0,
+                    fontWeight: 900,
+                    fontSize: "clamp(28px, 5vw, 40px)",
+                    letterSpacing: "-1px",
+                    lineHeight: 1.02,
+                    backgroundImage: `linear-gradient(90deg, #fff 30%, ${accent})`,
+                    WebkitBackgroundClip: "text",
+                    backgroundClip: "text",
+                    color: "transparent",
+                  }}
+                >
+                  Build your lobby
+                </h1>
+                <div style={{ fontSize: 13.5, color: MUTED, marginTop: 8 }}>
+                  Name it, pick the game, paint the walls. The preview updates as you go.
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <button
+                  type="button"
+                  className="cz-btn cz-mobile-only"
+                  onClick={() =>
+                    document
+                      .getElementById("cz-preview")
+                      ?.scrollIntoView({ behavior: "smooth", block: "start" })
+                  }
+                  style={{
+                    alignItems: "center",
+                    gap: 6,
+                    padding: "10px 14px",
+                    borderRadius: 12,
+                    border: "1px solid rgba(255,255,255,.12)",
+                    background: "rgba(255,255,255,.04)",
+                    color: TEXT,
+                    fontWeight: 800,
+                    fontSize: 13,
+                    cursor: "pointer",
+                    fontFamily: "inherit",
+                  }}
+                >
+                  Preview ↓
+                </button>
+                <button
+                  type="button"
+                  className="cz-btn"
+                  onClick={surprise}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 8,
+                    padding: "10px 16px",
+                    borderRadius: 12,
+                    border: `1px solid ${alpha(accent, 0.55)}`,
+                    background: `linear-gradient(135deg, ${alpha(accent, 0.3)}, ${alpha(accent, 0.08)})`,
+                    color: "#fff",
+                    fontWeight: 900,
+                    fontSize: 13.5,
+                    cursor: "pointer",
+                    fontFamily: "inherit",
+                    boxShadow: `0 6px 24px ${alpha(accent, 0.3)}`,
+                  }}
+                >
+                  <span
+                    key={spinKey}
+                    aria-hidden
+                    className="cz-anim"
+                    style={{
+                      display: "inline-block",
+                      fontSize: 17,
+                      animation: spinKey ? "cz-spin .6s cubic-bezier(.2,.8,.2,1)" : undefined,
+                    }}
+                  >
+                    🎲
+                  </span>
+                  Surprise me
+                </button>
+              </div>
+            </div>
+          </header>
+
+          {/* Step rail */}
+          <nav
+            aria-label="Steps"
+            className="cz-rail"
+            style={{
+              position: "sticky",
+              top: 0,
+              zIndex: 20,
+              display: "flex",
+              gap: 6,
+              overflowX: "auto",
+              scrollbarWidth: "none",
+              padding: "10px 0",
+              marginBottom: 8,
+              background: "linear-gradient(180deg, #050810 75%, rgba(5,8,16,0))",
+            }}
+          >
+            {STEPS.map((s, i) => {
+              const on = activeStep === s.id;
+              const done = stepDone[s.id];
+              return (
+                <button
+                  key={s.id}
+                  type="button"
+                  className="cz-chip"
+                  aria-current={on ? "step" : undefined}
+                  onClick={() => goTo(s.id)}
+                  style={{
+                    flex: "0 0 auto",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 7,
+                    padding: "7px 12px 7px 8px",
+                    borderRadius: 99,
+                    cursor: "pointer",
+                    fontFamily: "inherit",
+                    fontSize: 12.5,
+                    fontWeight: 800,
+                    color: on ? "#fff" : MUTED,
+                    background: on ? alpha(accent, 0.22) : "rgba(255,255,255,.03)",
+                    border: `1px solid ${on ? alpha(accent, 0.6) : "rgba(255,255,255,.08)"}`,
+                  }}
+                >
+                  <span
+                    aria-hidden
+                    style={{
+                      width: 20,
+                      height: 20,
+                      borderRadius: 99,
+                      display: "grid",
+                      placeItems: "center",
+                      fontSize: 10.5,
+                      fontWeight: 900,
+                      background: done ? accent : "rgba(255,255,255,.08)",
+                      color: done ? "#fff" : FAINT,
+                      transition: "background .25s",
+                    }}
+                  >
+                    {done ? "✓" : i + 1}
+                  </span>
+                  {s.label}
+                </button>
+              );
+            })}
+          </nav>
+
+          {/* 1. Name */}
+          <Section
+            id="cz-name"
+            n={1}
+            title="Name it"
+            kicker="What people call it, and where they find it."
+            accent={accent}
+          >
+            <div style={{ display: "grid", gap: 16 }}>
+              <div>
+                <label htmlFor="cz-lobby-name" style={labelStyle}>
+                  Lobby name
+                </label>
+                <input
+                  id="cz-lobby-name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Friday Night Raids"
+                  maxLength={48}
+                  autoComplete="off"
+                  style={{ ...inputStyle, fontSize: 18, fontWeight: 800, padding: "14px 16px" }}
+                />
+              </div>
+              <div>
+                <label htmlFor="cz-slug" style={labelStyle}>
+                  Address
+                </label>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "stretch",
+                    borderRadius: 10,
+                    overflow: "hidden",
+                    border: `1px solid ${
+                      slugStatus === "available"
+                        ? "rgba(34,197,94,.45)"
+                        : slugStatus === "taken" || slugStatus === "reserved"
+                          ? "rgba(239,68,68,.45)"
+                          : "rgba(255,255,255,.10)"
+                    }`,
+                    background: "rgba(255,255,255,.04)",
+                    transition: "border-color .15s",
+                  }}
+                >
+                  <span
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      padding: "0 4px 0 14px",
+                      fontSize: 13,
+                      color: FAINT,
+                      whiteSpace: "nowrap",
+                      flex: "0 0 auto",
+                    }}
+                  >
+                    weered.ca/lobby/
+                  </span>
+                  <input
+                    id="cz-slug"
+                    value={slugRaw}
+                    onChange={(e) => {
+                      setSlugRaw(slugTyping(e.target.value));
+                      setSlugManual(true);
+                    }}
+                    onBlur={() => setSlugRaw(slug)}
+                    placeholder="your-lobby"
+                    maxLength={40}
+                    autoComplete="off"
+                    spellCheck={false}
+                    aria-describedby="cz-slug-status"
+                    style={{
+                      ...inputStyle,
+                      border: "none",
+                      background: "transparent",
+                      paddingLeft: 0,
+                      minWidth: 0,
+                      flex: 1,
+                      borderRadius: 0,
+                    }}
+                  />
+                </div>
+                <div
+                  id="cz-slug-status"
+                  role="status"
+                  style={{ fontSize: 11.5, marginTop: 6, minHeight: 16 }}
+                >
+                  {slugStatus === "checking" && (
+                    <span style={{ color: FAINT }}>Checking availability…</span>
+                  )}
+                  {slugStatus === "available" && (
+                    <span style={{ color: "rgba(74,222,128,.85)" }}>
+                      ✓ weered.ca/lobby/{slug} is yours to take
+                    </span>
+                  )}
+                  {slugStatus === "taken" && (
+                    <span style={{ color: "rgba(252,165,165,.9)" }}>
+                      ✗ Already taken. Try another.
+                    </span>
+                  )}
+                  {slugStatus === "reserved" && (
+                    <span style={{ color: "rgba(252,165,165,.9)" }}>✗ This name is reserved</span>
+                  )}
+                </div>
+              </div>
+              <div>
+                <label htmlFor="cz-desc" style={labelStyle}>
+                  One-line description
+                </label>
+                <input
+                  id="cz-desc"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Weekly raids, zero toxicity, snacks encouraged."
+                  maxLength={160}
+                  autoComplete="off"
+                  style={inputStyle}
+                />
+              </div>
+            </div>
+          </Section>
+
+          {/* 2. Game */}
+          <Section
+            id="cz-game"
+            n={2}
+            title="Pick your game"
+            kicker="Adds a Modules tab with live data for it. Or keep it a community."
+            accent={accent}
+          >
+            <GameGrid value={gameId} accent={accent} onPick={pickGame} onRequest={requestGame} />
+          </Section>
+
+          {/* 3. Look */}
+          <Section
+            id="cz-look"
+            n={3}
+            title="Make it yours"
+            kicker="A theme, a colour, something drifting in the background."
+            accent={accent}
+          >
+            <ThemePicker
+              value={theme}
+              onPreset={(p) => {
+                applyPreset(p);
+                setThemeTouched(true);
+                setReplayKey((k) => k + 1);
+              }}
+              onChange={(p) => {
+                setTheme((t) => ({ ...t, ...p }));
+                setThemeTouched(true);
+              }}
+              onReplayEntrance={() => setReplayKey((k) => k + 1)}
             />
-          </div>
-          <div style={{ fontSize: 11, marginTop: 6, height: 16 }}>
-            {slugStatus === "checking" && (
-              <span style={{ color: "rgba(148,163,184,.4)" }}>Checking availability...</span>
+          </Section>
+
+          {/* 4. Inside */}
+          <Section
+            id="cz-inside"
+            n={4}
+            title="What's inside"
+            kicker="Switch on what your people will use. All of it can change later."
+            accent={accent}
+          >
+            <FeatureToggles
+              value={features}
+              accent={accent}
+              onToggle={(id) => setFeatures((f) => ({ ...f, [id]: !f[id] }))}
+            />
+            <div style={{ fontSize: 11.5, color: FAINT, marginTop: 10 }}>
+              {features.home
+                ? "Visitors land on your Home canvas. You'll arrange its blocks in Design mode."
+                : "Visitors land on the room list."}
+            </div>
+          </Section>
+
+          {/* 5. Rooms */}
+          <Section
+            id="cz-rooms"
+            n={5}
+            title="Starter rooms"
+            kicker="Open a few doors so the place isn't empty on day one."
+            accent={accent}
+          >
+            <RoomChips
+              value={roomIds}
+              accent={accent}
+              onToggle={(id) =>
+                setRoomIds((r) => (r.includes(id) ? r.filter((x) => x !== id) : [...r, id]))
+              }
+            />
+          </Section>
+
+          {/* 6. Launch */}
+          <Section
+            id="cz-launch"
+            n={6}
+            title="Launch"
+            kicker="Doors open the moment you hit it."
+            accent={accent}
+          >
+            <div
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                gap: 6,
+                marginBottom: 14,
+                fontSize: 12,
+                color: MUTED,
+              }}
+            >
+              {[
+                `weered.ca/lobby/${slug || "…"}`,
+                game.name,
+                `${preset.name} theme`,
+                `${featureCount} features`,
+                `${roomCount} room${roomCount === 1 ? "" : "s"}`,
+              ].map((t) => (
+                <span
+                  key={t}
+                  style={{
+                    padding: "4px 10px",
+                    borderRadius: 99,
+                    background: "rgba(255,255,255,.04)",
+                    border: "1px solid rgba(255,255,255,.08)",
+                    maxWidth: "100%",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {t}
+                </span>
+              ))}
+            </div>
+            {error && (
+              <div
+                role="alert"
+                style={{
+                  marginBottom: 14,
+                  padding: "12px 16px",
+                  borderRadius: 10,
+                  background: "rgba(239,68,68,.08)",
+                  border: "1px solid rgba(239,68,68,.25)",
+                  color: "rgba(252,165,165,.95)",
+                  fontSize: 13,
+                  fontWeight: 600,
+                }}
+              >
+                {error}
+              </div>
             )}
-            {slugStatus === "available" && slug.length >= 2 && (
-              <span style={{ color: "rgba(34,197,94,.7)" }}>✓ Available</span>
-            )}
-            {slugStatus === "taken" && (
-              <span style={{ color: "rgba(239,68,68,.7)" }}>✗ Already taken</span>
-            )}
-            {slugStatus === "reserved" && (
-              <span style={{ color: "rgba(239,68,68,.7)" }}>✗ This name is reserved</span>
-            )}
-          </div>
+            {launchButton(true)}
+            <div style={{ fontSize: 11.5, color: FAINT, textAlign: "center", marginTop: 12 }}>
+              You&apos;ll land in Design mode to arrange the Home page, add a logo and fine-tune.
+            </div>
+          </Section>
         </div>
 
-        <div style={{ marginBottom: 36 }}>
-          <label
+        {/* ── Preview column ── */}
+        <aside
+          id="cz-preview"
+          className="cz-previewcol"
+          aria-label="Live preview"
+          style={{ scrollMarginTop: 16 }}
+        >
+          <div
             style={{
-              display: "block",
-              fontSize: 11,
-              fontWeight: 800,
-              letterSpacing: ".5px",
-              textTransform: "uppercase",
-              color: "rgba(255,255,255,.35)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
               marginBottom: 10,
             }}
           >
-            Primary Module
-          </label>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-            {MODULE_TYPES.map((m) => (
-              <button
-                key={m.id}
-                type="button"
-                onClick={() => setModuleType(m.id)}
-                style={{
-                  padding: "12px 14px",
-                  borderRadius: 10,
-                  background: moduleType === m.id ? `${accent}12` : "rgba(255,255,255,.03)",
-                  border:
-                    moduleType === m.id
-                      ? `1px solid ${accent}40`
-                      : "1px solid rgba(255,255,255,.08)",
-                  cursor: "pointer",
-                  textAlign: "left",
-                  transition: "all .15s",
-                  display: "flex",
-                  alignItems: "flex-start",
-                  gap: 10,
-                }}
-              >
-                <span style={{ fontSize: 18, flexShrink: 0, marginTop: 1 }}>{m.icon}</span>
-                <div>
-                  <div
-                    style={{
-                      fontWeight: 700,
-                      fontSize: 13,
-                      color: moduleType === m.id ? "rgba(243,244,246,.92)" : "rgba(243,244,246,.6)",
-                    }}
-                  >
-                    {m.label}
-                  </div>
-                  <div style={{ fontSize: 10, color: "rgba(148,163,184,.4)", marginTop: 2 }}>
-                    {m.desc}
-                  </div>
-                </div>
-              </button>
-            ))}
+            <span style={{ ...labelStyle, marginBottom: 0 }}>Live preview</span>
+            <span style={{ fontSize: 11, color: FAINT }}>
+              {EFFECT_LABEL[theme.effect]} · {FONT_LABEL[theme.font]}
+            </span>
           </div>
-        </div>
+          <Preview
+            name={name}
+            slug={slug}
+            description={description}
+            game={game}
+            preset={preset}
+            theme={theme}
+            tabs={previewTabs}
+            landing={landing}
+            rooms={starterRooms}
+            features={features}
+            spinKey={spinKey}
+            replayKey={replayKey}
+          />
+          <div style={{ marginTop: 14 }}>{launchButton(false)}</div>
+        </aside>
+      </div>
 
-        {name && (
-          <div style={{ marginBottom: 32 }}>
-            <label
-              style={{
-                display: "block",
-                fontSize: 11,
-                fontWeight: 800,
-                letterSpacing: ".5px",
-                textTransform: "uppercase",
-                color: "rgba(255,255,255,.35)",
-                marginBottom: 10,
-              }}
-            >
-              Preview
-            </label>
-            <div
-              style={{
-                borderRadius: 14,
-                overflow: "hidden",
-                border: `1px solid ${accent}22`,
-                background: "rgba(255,255,255,.02)",
-              }}
-            >
-              <div
-                style={{ height: 3, background: `linear-gradient(90deg, ${accent}55, ${accent})` }}
-              />
-              <div style={{ padding: "16px 18px" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
-                  <div
-                    style={{
-                      width: 36,
-                      height: 36,
-                      borderRadius: 9,
-                      background: `${accent}15`,
-                      border: `1px solid ${accent}25`,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontSize: 17,
-                      fontWeight: 900,
-                      color: accent,
-                    }}
-                  >
-                    {name.trim().slice(0, 1).toUpperCase()}
-                  </div>
-                  <div>
-                    <div style={{ fontWeight: 800, fontSize: 15, letterSpacing: "-0.2px" }}>
-                      {name}
-                    </div>
-                    {description && (
-                      <div style={{ fontSize: 11, color: "rgba(255,255,255,.35)", marginTop: 2 }}>
-                        {description}
-                      </div>
-                    )}
-                  </div>
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 10 }}>
-                  <span
-                    style={{
-                      fontSize: 9,
-                      fontWeight: 800,
-                      padding: "2px 8px",
-                      borderRadius: 5,
-                      background: `${accent}12`,
-                      border: `1px solid ${accent}20`,
-                      color: accent,
-                      textTransform: "uppercase",
-                      letterSpacing: ".5px",
-                    }}
-                  >
-                    lobby
-                  </span>
-                  <span style={{ fontSize: 10, color: "rgba(148,163,184,.3)" }}>
-                    weered.ca/lobby/{slug || "..."}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {error && (
+      {/* Launch overlay */}
+      {phase !== "idle" && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Creating your lobby"
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 9000,
+            display: "grid",
+            placeItems: "center",
+            padding: 16,
+            background: "rgba(3,4,10,.72)",
+            backdropFilter: "blur(6px)",
+          }}
+        >
           <div
+            className="cz-anim"
             style={{
-              marginBottom: 16,
-              padding: "12px 16px",
-              borderRadius: 10,
-              background: "rgba(239,68,68,.08)",
-              border: "1px solid rgba(239,68,68,.25)",
-              color: "rgba(252,165,165,.9)",
-              fontSize: 13,
-              fontWeight: 600,
+              width: "100%",
+              maxWidth: 380,
+              borderRadius: 20,
+              padding: "26px 22px",
+              background: `radial-gradient(90% 70% at 50% 0%, ${alpha(accent, 0.3)}, transparent 70%), #0b0b14`,
+              border: `1px solid ${alpha(accent, 0.45)}`,
+              boxShadow: `0 30px 90px ${alpha(accent, 0.45)}`,
+              animation: "cz-pop .4s both",
             }}
           >
-            {error}
+            <div
+              style={{
+                fontSize: 22,
+                fontWeight: 900,
+                letterSpacing: "-0.5px",
+                marginBottom: 16,
+                textAlign: "center",
+              }}
+            >
+              {phase === "done" ? `${name.trim()} is open 🎉` : "Building your lobby…"}
+            </div>
+            {[
+              { label: `Claiming weered.ca/lobby/${slug}`, done: phase !== "creating" },
+              { label: `Painting it ${preset.name}`, done: phase !== "creating" },
+              {
+                label:
+                  roomProgress.total === 0
+                    ? "No starter rooms"
+                    : phase === "rooms"
+                      ? `Opening rooms ${roomProgress.tried}/${roomProgress.total}`
+                      : phase === "done"
+                        ? `${roomProgress.made} of ${roomProgress.total} rooms open`
+                        : `Opening ${roomCount} rooms`,
+                done: phase === "done",
+              },
+              { label: "Doors open", done: phase === "done" },
+            ].map((s, i) => (
+              <div
+                key={i}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                  padding: "7px 0",
+                  fontSize: 13.5,
+                  color: s.done ? TEXT : MUTED,
+                }}
+              >
+                <span
+                  aria-hidden
+                  className="cz-anim"
+                  style={{
+                    width: 20,
+                    height: 20,
+                    flex: "0 0 20px",
+                    borderRadius: 99,
+                    display: "grid",
+                    placeItems: "center",
+                    fontSize: 11,
+                    fontWeight: 900,
+                    background: s.done ? accent : "transparent",
+                    border: s.done ? "none" : `2px solid ${alpha(accent, 0.4)}`,
+                    borderTopColor: s.done ? undefined : accent,
+                    animation: s.done ? "cz-pop .3s both" : "cz-spin .8s linear infinite",
+                    color: "#fff",
+                  }}
+                >
+                  {s.done ? "✓" : ""}
+                </span>
+                {s.label}
+              </div>
+            ))}
+            {phase === "done" && roomProgress.made < roomProgress.total && (
+              <div style={{ fontSize: 11.5, color: FAINT, marginTop: 8 }}>
+                Some rooms didn&apos;t open. Add them from the lobby in a moment.
+              </div>
+            )}
+            {phase === "done" && (
+              <div style={{ fontSize: 12, color: MUTED, marginTop: 12, textAlign: "center" }}>
+                Taking you to Design mode…
+              </div>
+            )}
           </div>
-        )}
-
-        <button
-          type="button"
-          onClick={handleCreate}
-          disabled={!canCreate}
-          style={{
-            width: "100%",
-            padding: "14px 20px",
-            borderRadius: 12,
-            border: "none",
-            background: canCreate
-              ? `linear-gradient(135deg, ${accent}dd, ${accent})`
-              : "rgba(255,255,255,.06)",
-            color: canCreate ? "#fff" : "rgba(255,255,255,.25)",
-            fontWeight: 800,
-            fontSize: 15,
-            cursor: canCreate ? "pointer" : "default",
-            fontFamily: "inherit",
-            letterSpacing: "-0.2px",
-            boxShadow: canCreate ? `0 4px 20px ${accent}44` : "none",
-            transition: "all .2s",
-            opacity: creating ? 0.6 : 1,
-          }}
-        >
-          {creating ? "Creating..." : "Create Lobby"}
-        </button>
-
-        <div
-          style={{
-            fontSize: 11,
-            color: "rgba(148,163,184,.3)",
-            textAlign: "center",
-            marginTop: 14,
-          }}
-        >
-          You can customize branding, rooms, and modules after creation from the Admin panel.
         </div>
-      </div>
+      )}
+
+      <Confetti
+        fire={confetti}
+        origin={origin}
+        colors={[accent, ...preset.swatches.slice(0, 4), "#ffffff"]}
+      />
+
+      {toast && (
+        <div
+          role="status"
+          style={{
+            position: "fixed",
+            left: "50%",
+            bottom: 24,
+            transform: "translateX(-50%)",
+            zIndex: 9500,
+            maxWidth: "calc(100vw - 32px)",
+            padding: "11px 18px",
+            borderRadius: 12,
+            fontSize: 13,
+            fontWeight: 700,
+            color: "#fff",
+            background: toast.ok ? "rgba(21,128,61,.92)" : "rgba(153,27,27,.92)",
+            boxShadow: "0 10px 40px rgba(0,0,0,.5)",
+            animation: "cz-toast .25s both",
+          }}
+        >
+          {toast.text}
+        </div>
+      )}
     </div>
   );
 }

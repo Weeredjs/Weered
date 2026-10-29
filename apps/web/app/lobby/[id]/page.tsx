@@ -35,6 +35,12 @@ import LobbyEvents from "../../../components/LobbyEvents";
 import GuestLaunchBar from "../../../components/GuestLaunchBar";
 
 import BungieLinkPill from "../../../components/BungieLinkPill";
+import LobbyAmbient from "../../../components/LobbyAmbient";
+import LobbyHomeCanvas from "../../../components/lobby-design/LobbyHomeCanvas";
+import LobbySparkle from "../../../components/lobby-design/LobbySparkle";
+import { useLobbyDesign } from "../../../components/lobby-design/useLobbyDesign";
+import { TAB_DEFAULT_LABEL, newBlock, type BlockType, type TabId } from "../../../lib/lobbyLayout";
+import { FONT_STACK, PRESET_BY_ID } from "../../../lib/lobbyThemePresets";
 import { useWatchHere, clearPendingStream } from "../../../lib/useWatchHere";
 
 // Per-vertical panels are code-split: a lobby only downloads its own module.
@@ -188,6 +194,10 @@ const CoworkModulesPanel = dynamic(() => import("../../../components/CoworkModul
   loading: panelLoading,
   ssr: false,
 });
+const LobbyDesigner = dynamic(() => import("../../../components/lobby-design/LobbyDesigner"), {
+  ssr: false,
+});
+const RequestBoard = dynamic(() => import("../../../components/RequestBoard"), { ssr: false });
 const ForumPage = dynamic(() => import("../../../components/forum/ForumPage"), {
   loading: panelLoading,
   ssr: false,
@@ -276,6 +286,9 @@ type LobbyInfo = {
     grantLevel: number;
   }[];
   memberPerks?: string[];
+  layout?: unknown;
+  customDomain?: string | null;
+  domainStatus?: string | null;
 };
 
 type Membership = { role: string; roleLevel: number } | null;
@@ -715,6 +728,9 @@ export default function LobbyIdPage() {
             ownerId: j.lobby.ownerId || null,
             joinMode: j.lobby.joinMode || "OPEN",
             memberPerks: Array.isArray(j.lobby.memberPerks) ? j.lobby.memberPerks : [],
+            layout: j.lobby.layout ?? null,
+            customDomain: j.lobby.customDomain ?? null,
+            domainStatus: j.lobby.domainStatus ?? null,
             _count: j.lobby._count,
             tiers: j.lobby.tiers || [],
           });
@@ -790,18 +806,310 @@ export default function LobbyIdPage() {
     if (lobbyId && memberChecked && isMember) join(lobbyId);
   }, [lobbyId, memberChecked, isMember]);
 
+  // ── Design mode ──────────────────────────────────────────────────────
+  const canDesign = isStaff || isOwner || (membership?.roleLevel ?? 0) >= 4;
+  const design = useLobbyDesign(
+    lobbyId,
+    lobbyInfo?.layout ?? null,
+    canDesign,
+    memberChecked && !!lobbyInfo,
+  );
+  const L = design.effective; // null = the stock layout
+  const dTheme = L?.theme || {};
+  const dPreset = dTheme.preset ? PRESET_BY_ID[dTheme.preset] : null;
+  const displayFont = FONT_STACK[dTheme.font || "default"];
+  const [selectedBlock, setSelectedBlock] = useState<string | null>(null);
+  const [domain, setDomain] = useState<{ host: string | null; status: string | null }>({
+    host: null,
+    status: null,
+  });
+  useEffect(() => {
+    setDomain({ host: lobbyInfo?.customDomain ?? null, status: lobbyInfo?.domainStatus ?? null });
+  }, [lobbyInfo?.customDomain, lobbyInfo?.domainStatus]);
+
   const hasModules = lobbyHasModules(lobbyId, lobbyInfo?.moduleType);
   const hasLfgBoard = LFG_BOARD_LOBBIES.has(lobbyId);
   const hasStartgg = !!(lobbyInfo?.moduleConfig as any)?.startgg?.ref;
   usePublishLobbyViews(lobbyId, hasModules, hasStartgg); // feeds the scoped rail
   const redditSub = REDDIT_TAB_LOBBIES[lobbyId];
   const KNOWN_ACCENTS: Record<string, string> = { gta6: "#e84393" };
-  const accent = lobbyInfo?.accentColor || KNOWN_ACCENTS[lobbyId] || undefined;
+  const accent = dTheme.accent || lobbyInfo?.accentColor || KNOWN_ACCENTS[lobbyId] || undefined;
   const gameName =
     lobbyInfo?.moduleConfig?.twitchCategory ||
     MODULE_GAME_NAMES[lobbyInfo?.moduleType || ""] ||
     lobbyId;
   const showAdmin = isStaff || isOwner || (membership && membership.roleLevel >= 3);
+
+  // The lobby's game module. Keyed on the lobby, not a ModuleType — lib/lobbyChrome.ts.
+  // Shared by the Modules tab and the Home canvas's game block.
+  const modulesPanel = !hasModules ? null : lobbyId === TIMBOS_LOBBY_ID ? (
+    <TimbosPanel lobbyId={lobbyId} accent={accent} />
+  ) : lobbyInfo?.moduleType === "MARATHON" ? (
+    <MarathonModulesPanel
+      lobbyId={lobbyId}
+      accentColor={accent}
+      style={{ flex: 1, minHeight: 0 }}
+    />
+  ) : lobbyInfo?.moduleType === "MLB" ? (
+    <MlbModulesPanel lobbyId={lobbyId} accentColor={accent} style={{ flex: 1, minHeight: 0 }} />
+  ) : lobbyInfo?.moduleType === "PGA" ? (
+    <PgaModulesPanel lobbyId={lobbyId} accentColor={accent} style={{ flex: 1, minHeight: 0 }} />
+  ) : lobbyInfo?.moduleType === "NEWS" ? (
+    <NewsModulesPanel lobbyId={lobbyId} accentColor={accent} style={{ flex: 1, minHeight: 0 }} />
+  ) : lobbyInfo?.moduleType === "RIOT" ? (
+    <LeagueModulesPanel
+      lobbyId={lobbyId}
+      gameName={gameName}
+      accentColor={accent}
+      style={{ flex: 1, minHeight: 0 }}
+    />
+  ) : lobbyInfo?.moduleType === "FORTNITE" ? (
+    <FortniteModulesPanel
+      lobbyId={lobbyId}
+      gameName={gameName}
+      accentColor={accent}
+      style={{ flex: 1, minHeight: 0 }}
+    />
+  ) : lobbyInfo?.moduleType === "TRADING" ? (
+    <TradingModulesPanel lobbyId={lobbyId} accent={accent} />
+  ) : lobbyInfo?.moduleType === "POKER" ? (
+    <PokerTable roomId={lobbyId} myId={me?.id || ""} myName={me?.name || ""} />
+  ) : lobbyInfo?.moduleType === "HEADQUARTERS" ? (
+    <HeadquartersModulesPanel
+      lobbyId={lobbyId}
+      accentColor={accent}
+      style={{ flex: 1, minHeight: 0 }}
+    />
+  ) : lobbyInfo?.moduleType === "CS2" ? (
+    <CS2ModulesPanel
+      lobbyId={lobbyId}
+      gameName={gameName}
+      accentColor={accent}
+      style={{ flex: 1, minHeight: 0 }}
+    />
+  ) : lobbyInfo?.moduleType === "DOTA2" ? (
+    <Dota2ModulesPanel
+      lobbyId={lobbyId}
+      gameName={gameName}
+      accentColor={accent}
+      style={{ flex: 1, minHeight: 0 }}
+    />
+  ) : lobbyInfo?.moduleType === "STUDY" ? (
+    <StudyModulesPanel lobbyId={lobbyId} accentColor={accent} style={{ flex: 1, minHeight: 0 }} />
+  ) : lobbyInfo?.moduleType === "PUBG" ? (
+    <PubgModulesPanel
+      lobbyId={lobbyId}
+      gameName={gameName}
+      accentColor={accent}
+      style={{ flex: 1, minHeight: 0 }}
+    />
+  ) : lobbyInfo?.moduleType === "DND" ? (
+    <DndModulesPanel
+      lobbyId={lobbyId}
+      gameName={gameName}
+      accentColor={accent}
+      style={{ flex: 1, minHeight: 0 }}
+    />
+  ) : lobbyInfo?.moduleType === "POE" ? (
+    <PoeModulesPanel
+      lobbyId={lobbyId}
+      gameName={gameName}
+      accentColor={accent}
+      style={{ flex: 1, minHeight: 0 }}
+    />
+  ) : lobbyInfo?.moduleType === "POE2" ? (
+    <Poe2ModulesPanel
+      lobbyId={lobbyId}
+      gameName={gameName}
+      accentColor={accent}
+      style={{ flex: 1, minHeight: 0 }}
+    />
+  ) : lobbyInfo?.moduleType === "DIVISION2" ? (
+    <Division2ModulesPanel
+      lobbyId={lobbyId}
+      gameName={gameName}
+      accentColor={accent}
+      style={{ flex: 1, minHeight: 0 }}
+    />
+  ) : lobbyInfo?.moduleType === "ASSETTOCORSA" ? (
+    <AssettoCorsaModulesPanel
+      lobbyId={lobbyId}
+      gameName={gameName}
+      accentColor={accent}
+      demoData={(lobbyInfo as any)?.moduleConfig?.demoData}
+      style={{ flex: 1, minHeight: 0 }}
+    />
+  ) : lobbyInfo?.moduleType === "WINDROSE" ? (
+    <WindroseModulesPanel
+      lobbyId={lobbyId}
+      gameName={gameName}
+      accentColor={accent}
+      style={{ flex: 1, minHeight: 0 }}
+    />
+  ) : lobbyInfo?.moduleType === "HELLDIVERS2" ? (
+    <HelldiversModulesPanel
+      lobbyId={lobbyId}
+      accentColor={accent}
+      currentUserId={me?.id}
+      style={{ flex: 1, minHeight: 0 }}
+    />
+  ) : lobbyInfo?.moduleType === "HLL" ? (
+    <HllModulesPanel
+      lobbyId={lobbyId}
+      accentColor={accent}
+      currentUserId={me?.id}
+      style={{ flex: 1, minHeight: 0 }}
+    />
+  ) : lobbyInfo?.moduleType === "HLLV" ? (
+    <HllvModulesPanel
+      lobbyId={lobbyId}
+      accentColor={accent}
+      currentUserId={me?.id}
+      style={{ flex: 1, minHeight: 0 }}
+    />
+  ) : lobbyInfo?.moduleType === "VIRTUAL_AIRLINE" ? (
+    <VaModulesPanel lobbyId={lobbyId} style={{ flex: 1, minHeight: 0 }} />
+  ) : lobbyInfo?.moduleType === "BAR" ? (
+    <BarModulesPanel lobbyId={lobbyId} accentColor={accent} style={{ flex: 1, minHeight: 0 }} />
+  ) : lobbyInfo?.moduleType === "COWORK" ? (
+    <CoworkModulesPanel
+      lobbyId={lobbyId}
+      accentColor={accent}
+      currentUserId={me?.id}
+      style={{ flex: 1, minHeight: 0 }}
+    />
+  ) : lobbyInfo?.moduleType === "CHESS" ? (
+    <ChessModulesPanel
+      lobbyId={lobbyId}
+      currentUserId={me?.id}
+      isStaff={["GOD", "ADMIN", "STAFF"].includes(globalRole || "")}
+      style={{ flex: 1, minHeight: 0 }}
+    />
+  ) : lobbyInfo?.moduleType === "EVE" ? (
+    <EveModulesPanel
+      lobbyId={lobbyId}
+      gameName={gameName}
+      accentColor={accent}
+      style={{ flex: 1, minHeight: 0 }}
+    />
+  ) : lobbyInfo?.moduleType === "MTG" ? (
+    <MtgModulesPanel lobbyId={lobbyId} style={{ flex: 1, minHeight: 0 }} />
+  ) : lobbyInfo?.moduleType === "BUNGIE" ? (
+    <div
+      style={{
+        flex: 1,
+        minHeight: 0,
+        overflow: "auto",
+        display: "flex",
+        flexDirection: "column",
+        gap: 12,
+      }}
+    >
+      <TournamentLiveStrip lobbyId={lobbyId} currentUserId={me?.id} />
+      <FlairContestStrip lobbyId={lobbyId} />
+      <LobbyModulesPanel
+        lobbyId={lobbyId}
+        gameName={gameName}
+        accentColor={accent}
+        currentUserId={me?.id}
+        isStaff={["GOD", "ADMIN", "STAFF"].includes(globalRole || "")}
+        style={{ flex: 1, minHeight: 0 }}
+      />
+    </div>
+  ) : (
+    <LobbyModulesPanel
+      lobbyId={lobbyId}
+      gameName={gameName}
+      accentColor={accent}
+      style={{ flex: 1, minHeight: 0 }}
+    />
+  );
+
+  // Which tabs this lobby can show at all, and in what order.
+  const tabAvailable: Record<TabId, boolean> = {
+    home: true,
+    rooms: true,
+    modules: hasModules,
+    feed: true,
+    events: true,
+    lfg: hasLfgBoard,
+    reddit: !!redditSub,
+    brackets: hasStartgg,
+    requests: true,
+  };
+  const availableTabs = (Object.keys(tabAvailable) as TabId[]).filter((t) => tabAvailable[t]);
+  const tabOrder: { id: TabId; label?: string; hidden?: boolean }[] = L
+    ? L.tabs.filter((t) => tabAvailable[t.id] && (!t.hidden || design.designing))
+    : (["rooms", "lfg", "reddit", "modules", "feed", "events"] as TabId[])
+        .filter((t) => tabAvailable[t])
+        .map((id) => ({ id }));
+
+  // A designed lobby opens on its landing tab (unless the link names a view).
+  const landedFor = React.useRef("");
+  useEffect(() => {
+    if (!lobbyInfo || landedFor.current === lobbyId) return;
+    landedFor.current = lobbyId;
+    if (searchParams?.get("view")) return;
+    const live = design.effective;
+    if (live && live.landing !== "rooms" && tabAvailable[live.landing]) setView(live.landing);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lobbyInfo, lobbyId]);
+
+  function renderTab(t: { id: TabId; label?: string; hidden?: boolean }) {
+    const label =
+      t.label ||
+      (t.id === "feed" && lobbyInfo?.moduleType === "TRADING"
+        ? "The Tape"
+        : TAB_DEFAULT_LABEL[t.id]);
+    const ghost = t.hidden ? { opacity: 0.35, textDecoration: "line-through" } : null;
+    const wrap = (el: React.ReactNode) =>
+      ghost ? (
+        <span key={t.id} style={ghost as React.CSSProperties} title="Hidden from members">
+          {el}
+        </span>
+      ) : (
+        <React.Fragment key={t.id}>{el}</React.Fragment>
+      );
+    if (t.id === "modules")
+      return wrap(
+        <ModulesTab
+          active={view === "modules"}
+          moduleType={lobbyInfo?.moduleType}
+          label={t.label}
+          onClick={() => setView("modules")}
+        />,
+      );
+    if (t.id === "reddit")
+      return wrap(
+        <TabBtn active={view === "reddit"} accent={accent} onClick={() => setView("reddit")}>
+          {t.label || `r/${REDDIT_TAB_LOBBIES[lobbyId] === "gta6" ? "GTA6" : redditSub}`}
+        </TabBtn>,
+      );
+    return wrap(
+      <TabBtn
+        active={view === t.id}
+        accent={accent}
+        anchor={t.id === "rooms"}
+        onClick={() => setView(t.id)}
+      >
+        {label}
+        {t.id === "feed" && feedHasNew && view !== "feed" && (
+          <span
+            style={{
+              width: 7,
+              height: 7,
+              borderRadius: "50%",
+              background: "#22c55e",
+              boxShadow: "0 0 6px #22c55e",
+              display: "inline-block",
+              marginLeft: 5,
+              verticalAlign: "middle",
+            }}
+          />
+        )}
+      </TabBtn>,
+    );
+  }
 
   return (
     <>
@@ -897,12 +1205,19 @@ export default function LobbyIdPage() {
             position: "relative",
             border: `1px solid ${accent ? `${accent}33` : "var(--weered-border)"}`,
             borderRadius: 3,
-            background: "var(--weered-panel2)",
+            background: dPreset
+              ? `linear-gradient(${dPreset.veil}, ${dPreset.veil}), ${dPreset.art}`
+              : "var(--weered-panel2)",
             overflow: "hidden",
             display: "flex",
             flexDirection: "column",
+            animation:
+              dTheme.entrance && dTheme.entrance !== "none"
+                ? `weeredEnter-${dTheme.entrance} .8s cubic-bezier(.2,.8,.2,1) both`
+                : undefined,
           }}
         >
+          <LobbyAmbient effect={dTheme.effect} accent={accent} intensity={dTheme.intensity ?? 1} />
           {accent && (
             <div
               style={{
@@ -918,20 +1233,67 @@ export default function LobbyIdPage() {
             />
           )}
 
-          <LobbyHeroBar
-            lobbyId={lobbyId}
-            lobbyName={lobbyInfo?.name || lobbyId}
-            description={lobbyInfo?.description}
-            verified={isVerified || lobbyInfo?.verified || false}
-            accentColor={accent}
-            logoUrl={lobbyInfo?.logoUrl}
-            bannerUrl={lobbyInfo?.bannerUrl}
-            roomCount={lobbyInfo?._count?.rooms}
-            memberCount={lobbyInfo?._count?.members}
-            moduleType={lobbyInfo?.moduleType}
-            gameName={hasModules ? gameName : undefined}
-            steamAppId={lobbyInfo?.moduleConfig?.steamAppId}
-          />
+          {L?.hero === "hidden" ? null : L?.hero === "compact" ? (
+            <div
+              style={{
+                position: "relative",
+                zIndex: 1,
+                display: "flex",
+                alignItems: "baseline",
+                gap: 12,
+                padding: "12px 16px 8px",
+                borderBottom: "1px solid rgba(255,255,255,.06)",
+              }}
+            >
+              <span
+                style={{ fontFamily: displayFont, fontSize: 22, fontWeight: 900, color: "#fff" }}
+              >
+                {lobbyInfo?.name || lobbyId}
+              </span>
+              {lobbyInfo?.description && (
+                <span
+                  style={{
+                    fontSize: 13,
+                    opacity: 0.65,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                    minWidth: 0,
+                  }}
+                >
+                  {lobbyInfo.description}
+                </span>
+              )}
+              <span
+                style={{
+                  marginLeft: "auto",
+                  fontSize: 12,
+                  color: accent,
+                  fontWeight: 800,
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {lobbyInfo?._count?.members ?? 0} members
+              </span>
+            </div>
+          ) : (
+            <div style={{ position: "relative", zIndex: 1 }}>
+              <LobbyHeroBar
+                lobbyId={lobbyId}
+                lobbyName={lobbyInfo?.name || lobbyId}
+                description={lobbyInfo?.description}
+                verified={isVerified || lobbyInfo?.verified || false}
+                accentColor={accent}
+                logoUrl={lobbyInfo?.logoUrl}
+                bannerUrl={lobbyInfo?.bannerUrl}
+                roomCount={lobbyInfo?._count?.rooms}
+                memberCount={lobbyInfo?._count?.members}
+                moduleType={lobbyInfo?.moduleType}
+                gameName={hasModules ? gameName : undefined}
+                steamAppId={lobbyInfo?.moduleConfig?.steamAppId}
+              />
+            </div>
+          )}
 
           {memberChecked &&
           !isMember &&
@@ -955,61 +1317,13 @@ export default function LobbyIdPage() {
                   borderBottom: "1px solid rgba(255,255,255,.06)",
                   background: accent ? `${accent}08` : "transparent",
                   flexShrink: 0,
+                  position: "relative",
+                  zIndex: 1,
+                  fontFamily: L ? displayFont : undefined,
+                  flexWrap: "wrap",
                 }}
               >
-                <TabBtn
-                  active={view === "rooms"}
-                  accent={accent}
-                  anchor
-                  onClick={() => setView("rooms")}
-                >
-                  Lobby
-                </TabBtn>
-                {hasLfgBoard && (
-                  <TabBtn active={view === "lfg"} accent={accent} onClick={() => setView("lfg")}>
-                    LFG
-                  </TabBtn>
-                )}
-                {redditSub && (
-                  <TabBtn
-                    active={view === "reddit"}
-                    accent={accent}
-                    onClick={() => setView("reddit")}
-                  >
-                    r/{REDDIT_TAB_LOBBIES[lobbyId] === "gta6" ? "GTA6" : redditSub}
-                  </TabBtn>
-                )}
-                {hasModules && (
-                  <ModulesTab
-                    active={view === "modules"}
-                    moduleType={lobbyInfo?.moduleType}
-                    onClick={() => setView("modules")}
-                  />
-                )}
-                <TabBtn active={view === "feed"} accent={accent} onClick={() => setView("feed")}>
-                  {lobbyInfo?.moduleType === "TRADING" ? "The Tape" : "Feed"}
-                  {feedHasNew && view !== "feed" && (
-                    <span
-                      style={{
-                        width: 7,
-                        height: 7,
-                        borderRadius: "50%",
-                        background: "#22c55e",
-                        boxShadow: "0 0 6px #22c55e",
-                        display: "inline-block",
-                        marginLeft: 5,
-                        verticalAlign: "middle",
-                      }}
-                    />
-                  )}
-                </TabBtn>
-                <TabBtn
-                  active={view === "events"}
-                  accent={accent}
-                  onClick={() => setView("events")}
-                >
-                  Events
-                </TabBtn>
+                {tabOrder.map(renderTab)}
                 {lobbyInfo?.moduleType === "BUNGIE" && (
                   <div style={{ display: "flex", alignItems: "center", marginLeft: 8 }}>
                     <BungieLinkPill size="xs" />
@@ -1104,11 +1418,32 @@ export default function LobbyIdPage() {
                   </button>
                 )}
 
+                {canDesign && !design.designing && (
+                  <button
+                    onClick={() => design.setDesigning(true)}
+                    title="Design mode: arrange this lobby"
+                    style={{
+                      marginLeft: "auto",
+                      padding: "5px 12px",
+                      borderRadius: 7,
+                      border: "none",
+                      background: `linear-gradient(135deg, ${accent || "#7c3aed"}, ${accent || "#7c3aed"}aa)`,
+                      color: "#0b0b0f",
+                      fontSize: 11,
+                      fontWeight: 900,
+                      letterSpacing: ".04em",
+                      cursor: "pointer",
+                      boxShadow: `0 0 14px ${accent || "#7c3aed"}55`,
+                    }}
+                  >
+                    ✦ Design
+                  </button>
+                )}
                 {showAdmin && (
                   <a
                     href={`/lobby/${encodeURIComponent(lobbyId)}/admin`}
                     style={{
-                      marginLeft: "auto",
+                      marginLeft: canDesign && !design.designing ? 6 : "auto",
                       padding: "5px 12px",
                       borderRadius: 7,
                       // Was 60%-opacity slate on a 4% white fill — it read as
@@ -1153,216 +1488,56 @@ export default function LobbyIdPage() {
                   overflow: view === "modules" && lobbyId !== TIMBOS_LOBBY_ID ? "visible" : "auto",
                   display: "flex",
                   flexDirection: "column",
+                  position: "relative",
+                  zIndex: 1,
                 }}
               >
-                {view === "brackets" && hasStartgg ? (
+                {view === "home" && L ? (
+                  <LobbyHomeCanvas
+                    lobbyId={lobbyId}
+                    layout={L}
+                    accent={accent || "#7c3aed"}
+                    displayFont={displayFont}
+                    counts={lobbyInfo?._count}
+                    gameEl={hasModules ? modulesPanel : undefined}
+                    onNavigate={(t) => setView(t)}
+                    designing={design.designing}
+                    selectedId={selectedBlock}
+                    onSelect={setSelectedBlock}
+                    onMove={(from, to) =>
+                      design.setDraft((l) => {
+                        const blocks = [...l.blocks];
+                        const i = blocks.findIndex((b) => b.id === from);
+                        if (i < 0) return l;
+                        const [m] = blocks.splice(i, 1);
+                        const j =
+                          to === "__end" ? blocks.length : blocks.findIndex((b) => b.id === to);
+                        blocks.splice(j < 0 ? blocks.length : j, 0, m);
+                        return { ...l, blocks };
+                      })
+                    }
+                    onDropNew={(type, beforeId) => {
+                      const b = newBlock(type as BlockType);
+                      design.setDraft((l) => {
+                        const blocks = [...l.blocks];
+                        const i = beforeId ? blocks.findIndex((x) => x.id === beforeId) : -1;
+                        if (i >= 0) blocks.splice(i, 0, b);
+                        else blocks.push(b);
+                        return { ...l, blocks };
+                      });
+                      setSelectedBlock(b.id);
+                    }}
+                  />
+                ) : view === "requests" ? (
+                  <div style={{ flex: 1, minHeight: 0, overflow: "auto", padding: 18 }}>
+                    <RequestBoard lobbyId={lobbyId} accent={accent} />
+                  </div>
+                ) : view === "brackets" && hasStartgg ? (
                   <div style={{ flex: 1, minHeight: 0, overflow: "auto", padding: "4px 2px" }}>
                     <StartggPanel lobbyId={lobbyId} accent={accent} />
                   </div>
                 ) : view === "modules" && hasModules ? (
-                  // Keyed on the lobby, not a ModuleType — lib/lobbyChrome.ts.
-                  lobbyId === TIMBOS_LOBBY_ID ? (
-                    <TimbosPanel lobbyId={lobbyId} accent={accent} />
-                  ) : lobbyInfo?.moduleType === "MARATHON" ? (
-                    <MarathonModulesPanel
-                      lobbyId={lobbyId}
-                      accentColor={accent}
-                      style={{ flex: 1, minHeight: 0 }}
-                    />
-                  ) : lobbyInfo?.moduleType === "MLB" ? (
-                    <MlbModulesPanel
-                      lobbyId={lobbyId}
-                      accentColor={accent}
-                      style={{ flex: 1, minHeight: 0 }}
-                    />
-                  ) : lobbyInfo?.moduleType === "PGA" ? (
-                    <PgaModulesPanel
-                      lobbyId={lobbyId}
-                      accentColor={accent}
-                      style={{ flex: 1, minHeight: 0 }}
-                    />
-                  ) : lobbyInfo?.moduleType === "NEWS" ? (
-                    <NewsModulesPanel
-                      lobbyId={lobbyId}
-                      accentColor={accent}
-                      style={{ flex: 1, minHeight: 0 }}
-                    />
-                  ) : lobbyInfo?.moduleType === "RIOT" ? (
-                    <LeagueModulesPanel
-                      lobbyId={lobbyId}
-                      gameName={gameName}
-                      accentColor={accent}
-                      style={{ flex: 1, minHeight: 0 }}
-                    />
-                  ) : lobbyInfo?.moduleType === "FORTNITE" ? (
-                    <FortniteModulesPanel
-                      lobbyId={lobbyId}
-                      gameName={gameName}
-                      accentColor={accent}
-                      style={{ flex: 1, minHeight: 0 }}
-                    />
-                  ) : lobbyInfo?.moduleType === "TRADING" ? (
-                    <TradingModulesPanel lobbyId={lobbyId} accent={accent} />
-                  ) : lobbyInfo?.moduleType === "POKER" ? (
-                    <PokerTable roomId={lobbyId} myId={me?.id || ""} myName={me?.name || ""} />
-                  ) : lobbyInfo?.moduleType === "HEADQUARTERS" ? (
-                    <HeadquartersModulesPanel
-                      lobbyId={lobbyId}
-                      accentColor={accent}
-                      style={{ flex: 1, minHeight: 0 }}
-                    />
-                  ) : lobbyInfo?.moduleType === "CS2" ? (
-                    <CS2ModulesPanel
-                      lobbyId={lobbyId}
-                      gameName={gameName}
-                      accentColor={accent}
-                      style={{ flex: 1, minHeight: 0 }}
-                    />
-                  ) : lobbyInfo?.moduleType === "DOTA2" ? (
-                    <Dota2ModulesPanel
-                      lobbyId={lobbyId}
-                      gameName={gameName}
-                      accentColor={accent}
-                      style={{ flex: 1, minHeight: 0 }}
-                    />
-                  ) : lobbyInfo?.moduleType === "STUDY" ? (
-                    <StudyModulesPanel
-                      lobbyId={lobbyId}
-                      accentColor={accent}
-                      style={{ flex: 1, minHeight: 0 }}
-                    />
-                  ) : lobbyInfo?.moduleType === "PUBG" ? (
-                    <PubgModulesPanel
-                      lobbyId={lobbyId}
-                      gameName={gameName}
-                      accentColor={accent}
-                      style={{ flex: 1, minHeight: 0 }}
-                    />
-                  ) : lobbyInfo?.moduleType === "DND" ? (
-                    <DndModulesPanel
-                      lobbyId={lobbyId}
-                      gameName={gameName}
-                      accentColor={accent}
-                      style={{ flex: 1, minHeight: 0 }}
-                    />
-                  ) : lobbyInfo?.moduleType === "POE" ? (
-                    <PoeModulesPanel
-                      lobbyId={lobbyId}
-                      gameName={gameName}
-                      accentColor={accent}
-                      style={{ flex: 1, minHeight: 0 }}
-                    />
-                  ) : lobbyInfo?.moduleType === "POE2" ? (
-                    <Poe2ModulesPanel
-                      lobbyId={lobbyId}
-                      gameName={gameName}
-                      accentColor={accent}
-                      style={{ flex: 1, minHeight: 0 }}
-                    />
-                  ) : lobbyInfo?.moduleType === "DIVISION2" ? (
-                    <Division2ModulesPanel
-                      lobbyId={lobbyId}
-                      gameName={gameName}
-                      accentColor={accent}
-                      style={{ flex: 1, minHeight: 0 }}
-                    />
-                  ) : lobbyInfo?.moduleType === "ASSETTOCORSA" ? (
-                    <AssettoCorsaModulesPanel
-                      lobbyId={lobbyId}
-                      gameName={gameName}
-                      accentColor={accent}
-                      demoData={(lobbyInfo as any)?.moduleConfig?.demoData}
-                      style={{ flex: 1, minHeight: 0 }}
-                    />
-                  ) : lobbyInfo?.moduleType === "WINDROSE" ? (
-                    <WindroseModulesPanel
-                      lobbyId={lobbyId}
-                      gameName={gameName}
-                      accentColor={accent}
-                      style={{ flex: 1, minHeight: 0 }}
-                    />
-                  ) : lobbyInfo?.moduleType === "HELLDIVERS2" ? (
-                    <HelldiversModulesPanel
-                      lobbyId={lobbyId}
-                      accentColor={accent}
-                      currentUserId={me?.id}
-                      style={{ flex: 1, minHeight: 0 }}
-                    />
-                  ) : lobbyInfo?.moduleType === "HLL" ? (
-                    <HllModulesPanel
-                      lobbyId={lobbyId}
-                      accentColor={accent}
-                      currentUserId={me?.id}
-                      style={{ flex: 1, minHeight: 0 }}
-                    />
-                  ) : lobbyInfo?.moduleType === "HLLV" ? (
-                    <HllvModulesPanel
-                      lobbyId={lobbyId}
-                      accentColor={accent}
-                      currentUserId={me?.id}
-                      style={{ flex: 1, minHeight: 0 }}
-                    />
-                  ) : lobbyInfo?.moduleType === "VIRTUAL_AIRLINE" ? (
-                    <VaModulesPanel lobbyId={lobbyId} style={{ flex: 1, minHeight: 0 }} />
-                  ) : lobbyInfo?.moduleType === "BAR" ? (
-                    <BarModulesPanel
-                      lobbyId={lobbyId}
-                      accentColor={accent}
-                      style={{ flex: 1, minHeight: 0 }}
-                    />
-                  ) : lobbyInfo?.moduleType === "COWORK" ? (
-                    <CoworkModulesPanel
-                      lobbyId={lobbyId}
-                      accentColor={accent}
-                      currentUserId={me?.id}
-                      style={{ flex: 1, minHeight: 0 }}
-                    />
-                  ) : lobbyInfo?.moduleType === "CHESS" ? (
-                    <ChessModulesPanel
-                      lobbyId={lobbyId}
-                      currentUserId={me?.id}
-                      isStaff={["GOD", "ADMIN", "STAFF"].includes(globalRole || "")}
-                      style={{ flex: 1, minHeight: 0 }}
-                    />
-                  ) : lobbyInfo?.moduleType === "EVE" ? (
-                    <EveModulesPanel
-                      lobbyId={lobbyId}
-                      gameName={gameName}
-                      accentColor={accent}
-                      style={{ flex: 1, minHeight: 0 }}
-                    />
-                  ) : lobbyInfo?.moduleType === "MTG" ? (
-                    <MtgModulesPanel lobbyId={lobbyId} style={{ flex: 1, minHeight: 0 }} />
-                  ) : lobbyInfo?.moduleType === "BUNGIE" ? (
-                    <div
-                      style={{
-                        flex: 1,
-                        minHeight: 0,
-                        overflow: "auto",
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: 12,
-                      }}
-                    >
-                      <TournamentLiveStrip lobbyId={lobbyId} currentUserId={me?.id} />
-                      <FlairContestStrip lobbyId={lobbyId} />
-                      <LobbyModulesPanel
-                        lobbyId={lobbyId}
-                        gameName={gameName}
-                        accentColor={accent}
-                        currentUserId={me?.id}
-                        isStaff={["GOD", "ADMIN", "STAFF"].includes(globalRole || "")}
-                        style={{ flex: 1, minHeight: 0 }}
-                      />
-                    </div>
-                  ) : (
-                    <LobbyModulesPanel
-                      lobbyId={lobbyId}
-                      gameName={gameName}
-                      accentColor={accent}
-                      style={{ flex: 1, minHeight: 0 }}
-                    />
-                  )
+                  modulesPanel
                 ) : view === "rooms" ? (
                   <LobbyHall
                     lobbyId={lobbyId}
@@ -1394,6 +1569,7 @@ export default function LobbyIdPage() {
                   drawer is for browsing modules / watching video. Its edge tab
                   hides while the inline chat is on screen; "Dial In" there
                   opens this drawer fullscreen. */}
+              {dTheme.sparkle && accent && <LobbySparkle accent={accent} />}
               <LobbyChatDrawer
                 roomId={lobbyId}
                 title={`${lobbyInfo?.name || lobbyId} · Chat`}
@@ -1405,6 +1581,38 @@ export default function LobbyIdPage() {
           )}
         </div>
       </div>
+      {design.designing && canDesign && (
+        <LobbyDesigner
+          lobbyId={lobbyId}
+          lobbyName={lobbyInfo?.name || lobbyId}
+          description={lobbyInfo?.description || ""}
+          accent={accent || "#7c3aed"}
+          design={design}
+          availableTabs={availableTabs}
+          hasGame={hasModules}
+          selectedId={selectedBlock}
+          onSelect={setSelectedBlock}
+          onShowTab={(t) => setView(t)}
+          domain={domain}
+          onDomainChange={setDomain}
+          onPublished={() => loadLobby()}
+        />
+      )}
+      <style>{`
+        @keyframes weeredEnter-fade { from { opacity: 0 } to { opacity: 1 } }
+        @keyframes weeredEnter-rise { from { opacity: 0; transform: translateY(24px) scale(.985) } to { opacity: 1; transform: none } }
+        @keyframes weeredEnter-glitch {
+          0% { opacity: 0; transform: translate(0) skewX(0); filter: hue-rotate(0) }
+          20% { opacity: 1; transform: translate(-6px, 2px) skewX(-6deg); filter: hue-rotate(90deg) saturate(3) }
+          40% { transform: translate(5px, -2px) skewX(4deg); filter: hue-rotate(-60deg) }
+          60% { transform: translate(-3px, 1px) skewX(-2deg); filter: none }
+          80% { transform: translate(2px, 0) }
+          100% { transform: none; filter: none }
+        }
+        html[data-weered-designing] .weered-lobby-page { padding-top: 58px; padding-bottom: 218px; box-sizing: border-box; }
+        @media (min-width: 1100px) { html[data-weered-designing] .weered-lobby-page { padding-left: 240px; } }
+        @media (min-width: 1100px) { html[data-weered-inspecting] .weered-lobby-page { padding-right: 300px; } }
+      `}</style>
     </>
   );
 }
@@ -1461,10 +1669,12 @@ const MODULE_CHIP_LABEL: Record<string, string> = {
 function ModulesTab({
   active,
   moduleType,
+  label,
   onClick,
 }: {
   active: boolean;
   moduleType?: string | null;
+  label?: string;
   onClick: () => void;
 }) {
   const mt = String(moduleType || "").toUpperCase();
@@ -1485,7 +1695,7 @@ function ModulesTab({
           />
         </svg>
       </span>
-      Modules
+      {label || "Modules"}
       {chipLabel && <span className="weered-modules-chip">{chipLabel}</span>}
     </button>
   );
