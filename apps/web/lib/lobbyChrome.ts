@@ -154,7 +154,17 @@ export function lobbyHasModules(lobbyId: string, moduleType?: string | null): bo
 }
 
 // ── Which section the lobby is showing ───────────────────────────────────
-const VIEWS = ["rooms", "feed", "modules", "events", "lfg", "reddit", "brackets"] as const;
+const VIEWS = [
+  "rooms",
+  "feed",
+  "modules",
+  "events",
+  "lfg",
+  "reddit",
+  "brackets",
+  "home",
+  "requests",
+] as const;
 export type LobbyView = (typeof VIEWS)[number];
 
 export function initialLobbyView(lobbyId: string, view?: string | null): LobbyView {

@@ -149,6 +149,19 @@ model Lobby {
   // Empty array = fall back to platform-default perk list. Owner-editable.
   memberPerks String[] @default([])
 
+  // Design mode (2026-10-29): the lobby's own arrangement. Tab order, labels and
+  // visibility, the landing tab, the Home canvas blocks, theme preset, ambient
+  // effect. Null = the stock layout, so a lobby nobody designed renders exactly
+  // as before. Shape and defaults live in apps/web/lib/lobbyLayout.ts.
+  layout Json?
+
+  // The lobby on its own domain (e.g. club.example.com). Caddy issues the
+  // certificate on demand only for hosts registered here (GET /domains/check).
+  // domainStatus: "pending" until the DNS points at us, then "live".
+  customDomain     String?   @unique
+  domainStatus     String?
+  domainVerifiedAt DateTime?
+
   // ── AutoMod-light ─────────────────────────────────────────────────────────
   // Owner-configurable per-lobby moderation. The chat WS handler checks these
   // before persisting/broadcasting a message.
@@ -264,6 +277,27 @@ model LobbyMessage {
   lobby Lobby @relation(fields: [lobbyId], references: [id], onDelete: Cascade)
 
   @@index([lobbyId, ts])
+}
+
+// The request board: games and features people want on Weered. One vote per
+// user (voterIds), voteCount kept alongside so the board sorts in the database.
+model FeatureRequest {
+  id        String   @id @default(cuid())
+  kind      String   @default("game") // "game" | "feature"
+  title     String
+  note      String   @default("")
+  userId    String
+  userName  String   @default("")
+  lobbyId   String?
+  voterIds  String[] @default([])
+  voteCount Int      @default(1)
+  status    String   @default("open") // open | planned | building | shipped | declined
+  staffNote String   @default("")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status, voteCount])
+  @@index([createdAt])
 }
 
 model LobbyAudit {

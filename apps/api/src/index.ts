@@ -121,6 +121,7 @@ import activityRoutes from "./routes/activity";
 import staffOpsRoutes from "./routes/staffOps";
 import roomsRoutes from "./routes/rooms";
 import lobbiesRoutes from "./routes/lobbies";
+import lobbyDesignRoutes from "./routes/lobbyDesign";
 import staffRoutes from "./routes/staff";
 import tradingRoutes from "./routes/trading";
 import usersSearchRoutes from "./routes/usersSearch";
@@ -1848,6 +1849,13 @@ async function main() {
     }
     return sent.size;
   }
+
+  await app.register(lobbyDesignRoutes, {
+    authFromHeader,
+    getGlobalRole,
+    canAccessStaff,
+    lobbyAdminAccess,
+  } as any);
 
   await app.register(eventsRoutes, {
     authFromHeader,

@@ -240,6 +240,9 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
         roleNames: true,
         roleIcons: true,
         memberPerks: true,
+        layout: true,
+        customDomain: true,
+        domainStatus: true,
         rooms: {
           select: {
             id: true,
@@ -675,6 +678,8 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
         logoUrl,
         bannerUrl,
         websiteUrl,
+        layout,
+        enabledModules,
       } = req.body as any;
       if (!id || !name) return reply.code(400).send({ ok: false, error: "id and name required" });
 
@@ -714,6 +719,21 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
       // create page never sends it.
       const safeModuleConfig = isStaff ? moduleConfig : undefined;
 
+      // The composer sends its design and feature picks with the create.
+      const createExtras: any = {};
+      if (layout && typeof layout === "object" && !Array.isArray(layout)) {
+        const raw = JSON.stringify(layout);
+        if (raw.length <= 48_000) createExtras.layout = JSON.parse(raw);
+      }
+      if (Array.isArray(enabledModules))
+        createExtras.enabledModules = enabledModules
+          .map(String)
+          .filter((m: string) =>
+            ["voice", "video", "screen", "youtube", "reddit", "twitch", "news", "music"].includes(
+              m,
+            ),
+          );
+
       const lobby = await prisma.lobby.upsert({
         where: { id: String(id) },
         update: {
@@ -742,6 +762,7 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
           logoUrl: logoUrl ?? null,
           bannerUrl: bannerUrl ?? null,
           websiteUrl: websiteUrl ?? null,
+          ...createExtras,
         },
       });
       // The creator is the owner: give them the level-5 membership every admin
