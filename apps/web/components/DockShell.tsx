@@ -22,6 +22,7 @@ import {
   UnreadBadge,
   SegmentedControl,
 } from "./dock/shellHelpers";
+import { isSiteTheme } from "../lib/uiPrefs";
 import { FriendsTab } from "./dock/FriendsTab";
 import { CrewTab } from "./dock/CrewTab";
 import { DmComposer } from "./dock/DmComposer";
@@ -79,8 +80,7 @@ export default function DockShell(props: { forceMode?: "rail" | "floating" } = {
   useEffect(() => {
     try {
       const v = String(localStorage.getItem(WEERED_THEME_KEY) || "").trim();
-      if (["slate", "zinc", "stone", "gray", "ishimura", "broadcast", "press"].includes(v))
-        setTheme(v as WeeredThemeName);
+      if (isSiteTheme(v)) setTheme(v as WeeredThemeName);
     } catch {}
     setThemeHydrated(true);
   }, []);

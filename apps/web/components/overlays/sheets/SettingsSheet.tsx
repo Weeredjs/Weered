@@ -4,6 +4,7 @@ import React from "react";
 import { openConsentBanner } from "../../CookieConsent";
 import PresenceSection from "./PresenceSection";
 import { onActivate } from "@/lib/a11y";
+import { saveUiPrefs } from "../../../lib/uiPrefs";
 
 
 // Web sessions are an httpOnly cookie (Domain=.weered.ca); mobile/desktop send a
@@ -28,7 +29,7 @@ async function settingsFetch(url: string, init: RequestInit = {}): Promise<Respo
   return r;
 }
 type Settings = {
-  theme: "stone" | "slate" | "zinc" | "gray" | "ishimura" | "broadcast" | "press";
+  theme: "stone" | "slate" | "zinc" | "gray" | "ishimura" | "broadcast" | "press" | "nebula";
   density: "comfortable" | "compact";
   reduceMotion: boolean;
   keepDefaultTheme: boolean;
@@ -156,6 +157,7 @@ function Toggle({
 }
 
 const THEME_OPTIONS: { id: Settings["theme"]; name: string; sw: string }[] = [
+  { id: "nebula",    name: "Nebula",    sw: "#8b5cf6" },
   { id: "press",     name: "Press",     sw: "#7C3AED" },
   { id: "ishimura",  name: "Ishimura",  sw: "#22d3ee" },
   { id: "broadcast", name: "Broadcast", sw: "#22c55e" },
@@ -330,7 +332,7 @@ export default function SettingsSheet({ initialTab }: { initialTab?: string } = 
                 </Row>
               </Section>
 
-              <Section title="Theme" onReset={() => { patch({ theme: DEFAULTS.theme }); try { document.documentElement.setAttribute("data-weered-theme", DEFAULTS.theme); } catch {} }}>
+              <Section title="Theme" onReset={() => { patch({ theme: DEFAULTS.theme }); saveUiPrefs({ theme: DEFAULTS.theme }); }}>
                 <div style={{ fontSize: 11, opacity: 0.55, marginBottom: 9 }}>The platform skin. Applies everywhere except lobbies running their own theme.</div>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(108px, 1fr))", gap: 8 }}>
                   {THEME_OPTIONS.map(t => {
@@ -339,7 +341,7 @@ export default function SettingsSheet({ initialTab }: { initialTab?: string } = 
                       <button
                         key={t.id}
                         type="button"
-                        onClick={() => { patch({ theme: t.id }); try { document.documentElement.setAttribute("data-weered-theme", t.id); } catch {} }}
+                        onClick={() => { patch({ theme: t.id }); saveUiPrefs({ theme: t.id }); }}
                         style={{
                           display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", cursor: "pointer",
                           borderRadius: 3, fontFamily: "inherit", fontSize: 12, fontWeight: 700, textAlign: "left",
@@ -355,6 +357,17 @@ export default function SettingsSheet({ initialTab }: { initialTab?: string } = 
                     );
                   })}
                 </div>
+                <a
+                  href="/setup"
+                  style={{
+                    display: "inline-flex", alignItems: "center", gap: 8, marginTop: 12, padding: "9px 14px",
+                    borderRadius: 10, border: "1px solid #a78bfa66", background: "#7c3aed26",
+                    color: "#fff", fontSize: 12.5, fontWeight: 800, textDecoration: "none",
+                  }}
+                >
+                  ✦ Run setup again
+                  <span style={{ fontWeight: 500, opacity: 0.65 }}>Look, sidebar, favorites</span>
+                </a>
               </Section>
 
               <ProfileCustomizationSection />

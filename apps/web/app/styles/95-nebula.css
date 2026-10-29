@@ -1,0 +1,492 @@
+/* =====================================================================
+   NEBULA — Weered's glass-and-starfield site theme
+   =====================================================================
+   One layout, four colourways (data-weered-palette: violet, ocean, ember,
+   aurora). Every colour below is derived from three channels:
+     --nb-a  accent            --nb-b  deep accent        --nb-c  second glow
+   written as space-separated RGB so `rgb(var(--nb-a) / .3)` tints work.
+   lib/uiPrefs.ts PALETTES carries the same values for the setup preview.
+
+   Scope: html[data-weered-theme="nebula"] minus themed lobbies
+   (data-weered-lobby), which keep their own skin. The :not() also lifts
+   these rules above the minimal-chrome stylesheet (80-chrome-min.css),
+   whose `.weered-left *` reset would otherwise strip them. */
+
+html[data-weered-theme="nebula"] {
+  --nb-a: 139 92 246;
+  --nb-b: 124 58 237;
+  --nb-c: 49 46 129;
+  --nb-hi: #c4b5fd;
+  --nb-bg: #07060f;
+}
+html[data-weered-theme="nebula"][data-weered-palette="ocean"] {
+  --nb-a: 56 189 248;
+  --nb-b: 2 132 199;
+  --nb-c: 30 58 138;
+  --nb-hi: #bae6fd;
+  --nb-bg: #040a12;
+}
+html[data-weered-theme="nebula"][data-weered-palette="ember"] {
+  --nb-a: 251 146 60;
+  --nb-b: 234 88 12;
+  --nb-c: 127 29 29;
+  --nb-hi: #fed7aa;
+  --nb-bg: #0d0705;
+}
+html[data-weered-theme="nebula"][data-weered-palette="aurora"] {
+  --nb-a: 52 211 153;
+  --nb-b: 5 150 105;
+  --nb-c: 76 29 149;
+  --nb-hi: #a7f3d0;
+  --nb-bg: #040d0b;
+}
+
+html[data-weered-theme="nebula"]:not([data-weered-lobby]) {
+  --weered-bg: var(--nb-bg);
+  --weered-panel: rgb(14 12 28 / 0.78);
+  --weered-panel2: rgb(10 9 22 / 0.86);
+  --weered-border: rgb(var(--nb-a) / 0.18);
+  --weered-border2: rgb(var(--nb-a) / 0.32);
+  --weered-bd: rgb(var(--nb-a) / 0.18);
+  --weered-bd2: rgb(var(--nb-a) / 0.32);
+  --weered-text: rgb(248 247 255 / 0.96);
+  --weered-muted: rgb(203 200 230 / 0.66);
+  --weered-accent-1: rgb(var(--nb-a));
+  --weered-accent-2: rgb(var(--nb-b));
+  --weered-accent-bg: rgb(var(--nb-a) / 0.16);
+  --weered-accent-ring: rgb(var(--nb-a) / 0.38);
+  --weered-accent-text: var(--nb-hi);
+  --weered-accent-grad: linear-gradient(135deg, rgb(var(--nb-a)), rgb(var(--nb-b)));
+  --weered-user-panel-accent: rgb(var(--nb-b) / 0.45);
+  --weered-user-panel-bg: rgb(12 10 26 / 0.7);
+  --weered-scrollbar-track: transparent;
+  --weered-scrollbar-thumb: rgb(var(--nb-a) / 0.22);
+  --weered-scrollbar-thumb-hover: rgb(var(--nb-a) / 0.4);
+  --nb-glass:
+    linear-gradient(180deg, rgb(255 255 255 / 0.05), rgb(255 255 255 / 0.012)), rgb(13 11 28 / 0.62);
+  --nb-line: rgb(var(--nb-a) / 0.2);
+  --nb-font: var(--font-rajdhani), "Rajdhani", system-ui, sans-serif;
+}
+
+/* ── Space ────────────────────────────────────────────────────────────── */
+html[data-weered-theme="nebula"]:not([data-weered-lobby]) body {
+  background: var(--nb-bg) !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-shell {
+  isolation: isolate;
+  background:
+    radial-gradient(1100px 680px at 10% -14%, rgb(var(--nb-b) / 0.42), transparent 62%),
+    radial-gradient(900px 700px at 106% 4%, rgb(var(--nb-c) / 0.62), transparent 62%),
+    radial-gradient(1000px 760px at 58% 122%, rgb(var(--nb-c) / 0.4), transparent 60%), var(--nb-bg) !important;
+}
+/* Starfield: two tiled layers on fixed pseudos, drifted with transforms
+   (compositor-only, no repaint), the near layer twinkling. */
+html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-shell::before,
+html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-shell::after {
+  content: "" !important;
+  display: block !important;
+  position: fixed !important;
+  inset: -560px !important;
+  z-index: -1 !important;
+  pointer-events: none !important;
+  will-change: transform;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-shell::before {
+  background-image:
+    radial-gradient(circle at 23px 41px, rgb(255 255 255 / 0.85) 0 0.7px, transparent 1.3px),
+    radial-gradient(circle at 81px 197px, rgb(255 255 255 / 0.7) 0 0.6px, transparent 1.2px),
+    radial-gradient(circle at 142px 89px, rgb(255 255 255 / 0.6) 0 0.6px, transparent 1.2px),
+    radial-gradient(circle at 211px 263px, rgb(255 255 255 / 0.8) 0 0.7px, transparent 1.3px),
+    radial-gradient(circle at 263px 132px, rgb(255 255 255 / 0.55) 0 0.6px, transparent 1.2px),
+    radial-gradient(circle at 177px 15px, rgb(255 255 255 / 0.5) 0 0.5px, transparent 1.1px),
+    radial-gradient(circle at 52px 278px, rgb(255 255 255 / 0.65) 0 0.6px, transparent 1.2px),
+    radial-gradient(circle at 300px 226px, rgb(var(--nb-a) / 0.9) 0 0.8px, transparent 1.5px),
+    radial-gradient(circle at 118px 140px, rgb(255 255 255 / 0.4) 0 0.5px, transparent 1px),
+    radial-gradient(circle at 236px 58px, rgb(var(--nb-a) / 0.7) 0 0.6px, transparent 1.3px);
+  background-size: 320px 320px;
+  opacity: 0.75;
+  animation: nb-drift-near 220s linear infinite;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-shell::after {
+  background-image:
+    radial-gradient(circle at 60px 110px, rgb(255 255 255 / 0.95) 0 1px, transparent 2px),
+    radial-gradient(circle at 330px 40px, rgb(255 255 255 / 0.8) 0 0.9px, transparent 1.8px),
+    radial-gradient(circle at 470px 380px, rgb(var(--nb-a) / 0.95) 0 1.1px, transparent 2.2px),
+    radial-gradient(circle at 210px 470px, rgb(255 255 255 / 0.85) 0 1px, transparent 2px),
+    radial-gradient(circle at 520px 210px, rgb(255 255 255 / 0.7) 0 0.9px, transparent 1.8px);
+  background-size: 560px 560px;
+  animation:
+    nb-drift-far 340s linear infinite,
+    nb-twinkle 5.5s ease-in-out infinite alternate;
+}
+@keyframes nb-drift-near {
+  to {
+    transform: translate3d(320px, 320px, 0);
+  }
+}
+@keyframes nb-drift-far {
+  to {
+    transform: translate3d(-560px, 560px, 0);
+  }
+}
+@keyframes nb-twinkle {
+  from {
+    opacity: 0.35;
+  }
+  to {
+    opacity: 0.95;
+  }
+}
+html[data-weered-theme="nebula"][data-weered-stars="off"] .weered-shell::before,
+html[data-weered-theme="nebula"][data-weered-stars="off"] .weered-shell::after {
+  display: none !important;
+}
+html[data-weered-theme="nebula"][data-weered-reduce-motion] .weered-shell::before,
+html[data-weered-theme="nebula"][data-weered-reduce-motion] .weered-shell::after {
+  animation: none !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  html[data-weered-theme="nebula"] .weered-shell::before,
+  html[data-weered-theme="nebula"] .weered-shell::after {
+    animation: none !important;
+  }
+}
+
+/* ── Left rail: a glass column of rounded cards ───────────────────────── */
+html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-left {
+  background:
+    linear-gradient(180deg, rgb(255 255 255 / 0.035), rgb(255 255 255 / 0.008)), rgb(9 7 20 / 0.5) !important;
+  -webkit-backdrop-filter: blur(18px) saturate(1.25);
+  backdrop-filter: blur(18px) saturate(1.25);
+  border: 1px solid rgb(var(--nb-a) / 0.14) !important;
+  border-radius: 22px !important;
+  box-shadow:
+    0 24px 70px -28px rgb(0 0 0 / 0.9),
+    inset 0 1px 0 rgb(255 255 255 / 0.05) !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-left-inner {
+  padding: 12px 10px 12px 12px !important;
+  gap: 12px !important;
+}
+
+/* The card */
+html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-usercorner {
+  margin: 0 !important;
+  border-radius: 18px !important;
+  overflow: hidden !important;
+  background:
+    radial-gradient(120% 90% at 0% 0%, rgb(var(--nb-b) / 0.55), transparent 60%),
+    radial-gradient(90% 90% at 100% 100%, rgb(var(--nb-c) / 0.55), transparent 65%),
+    rgb(13 11 28 / 0.7) !important;
+  border: 1px solid rgb(var(--nb-a) / 0.32) !important;
+  box-shadow:
+    0 18px 44px -20px rgb(var(--nb-b) / 0.85),
+    inset 0 1px 0 rgb(255 255 255 / 0.1) !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-usercorner::before,
+html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-usercorner::after,
+html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-usercorner > span {
+  display: none !important;
+  content: none !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-usercorner .weered-avatar {
+  box-shadow:
+    0 0 0 3px rgb(13 11 28 / 0.9),
+    0 0 0 5px rgb(var(--nb-a) / 0.55),
+    0 10px 26px rgb(var(--nb-a) / 0.45) !important;
+}
+
+/* Sections */
+html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-left-section,
+html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-presence {
+  position: relative !important;
+  margin: 0 !important;
+  padding: 0 0 8px !important;
+  background: var(--nb-glass) !important;
+  border: 1px solid var(--nb-line) !important;
+  border-radius: 16px !important;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.05),
+    0 14px 34px -24px rgb(var(--nb-b) / 0.75) !important;
+  overflow: hidden !important;
+}
+/* A lit hairline along each card's top edge, the composer's section mark. */
+html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-left-section::before,
+html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-presence::before {
+  content: "" !important;
+  position: absolute !important;
+  top: 0 !important;
+  left: 14% !important;
+  right: 14% !important;
+  bottom: auto !important;
+  height: 1px !important;
+  width: auto !important;
+  background: linear-gradient(90deg, transparent, rgb(var(--nb-a) / 0.9), transparent) !important;
+  clip-path: none !important;
+  opacity: 0.7 !important;
+  border-radius: 0 !important;
+  z-index: 0 !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-left-section::after,
+html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-presence::after {
+  display: none !important;
+  content: none !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-left-section > .weered-left-title,
+html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-presence > .weered-presence-head {
+  height: auto !important;
+  min-height: 0 !important;
+  padding: 13px 14px 6px !important;
+  margin: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  color: rgb(255 255 255 / 0.5) !important;
+  font-family: var(--nb-font) !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.16em !important;
+  text-transform: uppercase !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-presence-title {
+  font: inherit !important;
+  color: inherit !important;
+  letter-spacing: inherit !important;
+  text-transform: inherit !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby])
+  .weered-presence-head
+  .weered-presence-sub {
+  margin-left: auto;
+  color: rgb(255 255 255 / 0.35) !important;
+  font-size: 10.5px !important;
+  letter-spacing: 0.02em !important;
+  text-transform: none !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby])
+  .weered-left-section
+  > *:not(.weered-left-title),
+html[data-weered-theme="nebula"]:not([data-weered-lobby])
+  .weered-presence
+  > *:not(.weered-presence-head) {
+  margin-right: 0 !important;
+  margin-top: 2px !important;
+  padding-left: 6px !important;
+  padding-right: 6px !important;
+}
+
+/* Nav rows: rounded, quiet until hovered; the current page glows. */
+html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-left .weered-left-link {
+  margin: 2px 8px !important;
+  padding: 9px 12px !important;
+  border-radius: 12px !important;
+  border: 1px solid transparent !important;
+  background: transparent !important;
+  color: rgb(255 255 255 / 0.78) !important;
+  font-family: var(--nb-font) !important;
+  font-size: 15.5px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.02em !important;
+  text-transform: none !important;
+  transition:
+    background 0.18s,
+    border-color 0.18s,
+    color 0.18s,
+    box-shadow 0.18s !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-left .weered-left-link * {
+  font-family: inherit !important;
+  letter-spacing: inherit !important;
+  text-transform: none !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-left .weered-left-link:hover {
+  background: rgb(255 255 255 / 0.055) !important;
+  color: #fff !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-left .weered-left-link-active,
+html[data-weered-theme="nebula"]:not([data-weered-lobby])
+  .weered-left
+  .weered-left-link-active:hover {
+  background: linear-gradient(90deg, rgb(var(--nb-a) / 0.34), rgb(var(--nb-a) / 0.07)) !important;
+  border-color: rgb(var(--nb-a) / 0.5) !important;
+  color: #fff !important;
+  box-shadow:
+    0 0 24px -6px rgb(var(--nb-a) / 0.75),
+    inset 0 1px 0 rgb(255 255 255 / 0.1) !important;
+}
+
+/* Rows in Presence, Favorites and Recent */
+html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-left a:hover,
+html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-presence-row:hover {
+  background: rgb(255 255 255 / 0.05) !important;
+  border-radius: 12px !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-left .weered-avatar {
+  border-radius: 50% !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-presence-search {
+  width: calc(100% - 20px) !important;
+  margin: 4px 10px 6px !important;
+  padding: 9px 12px !important;
+  border-radius: 11px !important;
+  border: 1px solid rgb(255 255 255 / 0.1) !important;
+  background: rgb(0 0 0 / 0.32) !important;
+  color: #fff !important;
+  font-family: var(--nb-font) !important;
+  font-size: 14px !important;
+  letter-spacing: 0.02em !important;
+  text-transform: none !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-presence-search::placeholder {
+  color: rgb(255 255 255 / 0.38) !important;
+  text-transform: none !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-presence-search:focus {
+  outline: none !important;
+  border-color: rgb(var(--nb-a) / 0.6) !important;
+  box-shadow: 0 0 0 3px rgb(var(--nb-a) / 0.18) !important;
+}
+
+/* ── Right rail ───────────────────────────────────────────────────────── */
+html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-rail-quick,
+html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-rail-tab {
+  background: var(--nb-glass) !important;
+  border: 1px solid var(--nb-line) !important;
+  border-radius: 14px !important;
+  clip-path: none !important;
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 12px 30px -18px rgb(var(--nb-b) / 0.8) !important;
+  transition:
+    border-color 0.18s,
+    box-shadow 0.18s !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-rail-quick:hover,
+html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-rail-tab:hover,
+html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-rail-quick.is-hot {
+  border-color: rgb(var(--nb-a) / 0.55) !important;
+  box-shadow: 0 0 22px -6px rgb(var(--nb-a) / 0.7) !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-rail-quick-label,
+html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-rail-tab-label {
+  color: rgb(255 255 255 / 0.72) !important;
+}
+
+/* Chat drawer */
+html[data-weered-theme="nebula"]:not([data-weered-lobby]) .lobby-chat-drawer {
+  background:
+    linear-gradient(180deg, rgb(255 255 255 / 0.03), transparent 30%), rgb(9 7 20 / 0.72) !important;
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+  border-left: 1px solid rgb(var(--nb-a) / 0.18) !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]) .lobby-chat-tab {
+  background: rgb(13 11 28 / 0.8) !important;
+  border: 1px solid var(--nb-line) !important;
+  border-right: 0 !important;
+  border-radius: 10px 0 0 10px !important;
+  color: var(--nb-hi) !important;
+}
+
+/* ── Home ─────────────────────────────────────────────────────────────── */
+html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-center,
+html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-center > div {
+  background: transparent !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]) .home-topbar-greet span {
+  color: var(--nb-hi) !important;
+  text-shadow: 0 0 28px rgb(var(--nb-a) / 0.55);
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]) .home-search-hero input {
+  background: rgb(10 8 22 / 0.62) !important;
+  border: 1px solid rgb(var(--nb-a) / 0.36) !important;
+  border-radius: 16px !important;
+  color: #fff !important;
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  box-shadow:
+    0 0 0 4px rgb(var(--nb-a) / 0.07),
+    0 22px 50px -22px rgb(var(--nb-b) / 0.9) !important;
+}
+/* Staff picks: drop the cut-corner frames, keep the buttons as glass pills. */
+html[data-weered-theme="nebula"]:not([data-weered-lobby])
+  .home-search-hero
+  span[style*="position: relative"]
+  > span[style*="position: absolute"] {
+  display: none !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]) .home-search-hero button {
+  clip-path: none !important;
+  border-radius: 999px !important;
+  background: rgb(255 255 255 / 0.05) !important;
+  border: 1px solid rgb(var(--nb-a) / 0.3) !important;
+  box-shadow: none !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]) .home-search-hero button:hover {
+  background: rgb(var(--nb-a) / 0.16) !important;
+  border-color: rgb(var(--nb-a) / 0.6) !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]) .home-topbar-secondary {
+  background: rgb(var(--nb-a) / 0.12) !important;
+  border: 1px solid rgb(var(--nb-a) / 0.4) !important;
+  border-radius: 999px !important;
+  color: #fff !important;
+  clip-path: none !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-featured-card {
+  border-radius: 22px !important;
+  border: 1px solid rgb(var(--nb-a) / 0.32) !important;
+  box-shadow: 0 34px 80px -34px rgb(var(--nb-b) / 0.85) !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-lobby-grid > * {
+  border-radius: 16px !important;
+  overflow: hidden !important;
+  border: 1px solid rgb(255 255 255 / 0.08) !important;
+  background: var(--nb-glass) !important;
+  clip-path: none !important;
+  transition:
+    border-color 0.18s,
+    transform 0.18s,
+    box-shadow 0.18s !important;
+}
+/* Each card's game-colour strip stays, softer, so the grid reads calm. */
+html[data-weered-theme="nebula"]:not([data-weered-lobby])
+  .weered-lobby-grid
+  > *
+  > div[style*="height: 3px"] {
+  height: 2px !important;
+  opacity: 0.55;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-lobby-grid > *:hover {
+  border-color: rgb(var(--nb-a) / 0.5) !important;
+  transform: translateY(-2px);
+  box-shadow: 0 18px 40px -22px rgb(var(--nb-a) / 0.8) !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-home-pinnews > * {
+  border-radius: 16px !important;
+  overflow: hidden !important;
+}
+
+/* ── Chrome around the edges ──────────────────────────────────────────── */
+html[data-weered-theme="nebula"]:not([data-weered-lobby]) .site-footer {
+  background: rgb(7 6 15 / 0.55) !important;
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  border-top: 1px solid rgb(var(--nb-a) / 0.12) !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-mobile-nav {
+  background: rgb(9 7 20 / 0.82) !important;
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+  border-top: 1px solid rgb(var(--nb-a) / 0.18) !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-shell input:focus,
+html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-shell textarea:focus {
+  border-color: rgb(var(--nb-a) / 0.6) !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]) ::-webkit-scrollbar-thumb {
+  background: rgb(var(--nb-a) / 0.22);
+  border-radius: 99px;
+}

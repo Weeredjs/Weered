@@ -70,7 +70,8 @@ export type WeeredThemeName =
   | "gray"
   | "ishimura"
   | "broadcast"
-  | "press";
+  | "press"
+  | "nebula";
 
 export const WEERED_THEMES: Record<WeeredThemeName, any> = {
   slate: {
@@ -145,6 +146,18 @@ export const WEERED_THEMES: Record<WeeredThemeName, any> = {
     accentRing: "rgba(232,168,60,.35)",
     accentText: "rgba(240,196,120,.95)",
   },
+  nebula: {
+    bg: "rgb(7,6,15)",
+    panel: "rgba(14,12,28,.78)",
+    panel2: "rgba(10,9,22,.86)",
+    bd: "rgba(167,139,250,.18)",
+    bd2: "rgba(167,139,250,.32)",
+    text: "rgba(248,247,255,.96)",
+    muted: "rgba(203,200,230,.66)",
+    accentBg: "rgba(139,92,246,.18)",
+    accentRing: "rgba(139,92,246,.38)",
+    accentText: "rgba(196,181,253,.98)",
+  },
   press: {
     bg: "rgb(26,26,28)",
     panel: "rgba(32,32,34,.95)",
@@ -163,7 +176,7 @@ export function applyWeeredTheme(name: WeeredThemeName) {
   if (typeof document === "undefined") return;
   const t = WEERED_THEMES[name] || WEERED_THEMES.press;
   const root = document.documentElement;
-  Object.entries({
+  const vars = {
     "--weered-bg": t.bg,
     "--weered-panel": t.panel,
     "--weered-panel2": t.panel2,
@@ -174,7 +187,12 @@ export function applyWeeredTheme(name: WeeredThemeName) {
     "--weered-accent-bg": t.accentBg,
     "--weered-accent-ring": t.accentRing,
     "--weered-accent-text": t.accentText,
-  }).forEach(([k, v]) => root.style.setProperty(k, v));
+  };
+  // Nebula's colours follow its palette, so they come from the stylesheet
+  // (styles/95-nebula.css); inline values here would pin them to violet.
+  Object.entries(vars).forEach(([k, v]) =>
+    name === "nebula" ? root.style.removeProperty(k) : root.style.setProperty(k, v),
+  );
   root.setAttribute("data-weered-theme", name);
 }
 

@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { useWeered } from "./WeeredProvider";
 import { useOverlay } from "./overlays/OverlayProvider";
+import { PREFS_EVENT, readUiPrefs } from "../lib/uiPrefs";
 
 const DISMISS_KEY = "weered:onboarded:profile";
 
@@ -39,15 +40,24 @@ export default function FirstTimePrompt() {
   const { openSheet } = useOverlay();
   const [show, setShow] = useState(false);
 
+  // Only for people who skipped setup: setup has its own avatar step, and
+  // this nudge would otherwise sit under it or show up right after it.
+  const [setupState, setSetupState] = useState<string | undefined>(undefined);
+  useEffect(() => {
+    const read = () => setSetupState(readUiPrefs().setup);
+    read();
+    window.addEventListener(PREFS_EVENT, read);
+    return () => window.removeEventListener(PREFS_EVENT, read);
+  }, []);
+
   useEffect(() => {
     if (!me?.id) return;
     let dismissed = false;
     try {
       dismissed = localStorage.getItem(DISMISS_KEY) === "1";
     } catch {}
-    if (dismissed) return;
-    if (!me?.avatar) setShow(true);
-  }, [me?.id, me?.avatar]);
+    setShow(!dismissed && !me?.avatar && setupState === "skipped");
+  }, [me?.id, me?.avatar, setupState]);
 
   if (!show) return null;
 

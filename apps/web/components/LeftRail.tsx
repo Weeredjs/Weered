@@ -16,6 +16,13 @@ import { TIMBOS_NAV, TIMBOS_NAV_ICONS, TIMBOS_LOBBY_ID } from "../lib/timbosCopy
 import { isScopedRailLobby } from "../lib/lobbyChrome";
 import { SECTION_ORDER, sectionLabel, sectionIcon, HOME_LINK } from "../lib/lobbySections";
 import { isOfficeRoomPath } from "@/lib/officeRooms";
+import {
+  PREFS_EVENT,
+  readUiPrefs,
+  railOrder,
+  type RailSection,
+  type UiPrefs,
+} from "../lib/uiPrefs";
 
 function pickFirstString(...vals: any[]): string {
   for (const v of vals) if (typeof v === "string" && v.trim()) return v.trim();
@@ -512,10 +519,16 @@ export default function LeftRail() {
   // rendered, so a first render read from localStorage broke hydration.
   const [favs, setFavs] = useState<string[]>([]);
   useLayoutEffect(() => {
-    try {
-      const r = localStorage.getItem(FAVS_KEY);
-      if (r) setFavs(JSON.parse(r));
-    } catch {}
+    const read = () => {
+      try {
+        const r = localStorage.getItem(FAVS_KEY);
+        if (r) setFavs(JSON.parse(r));
+      } catch {}
+    };
+    read();
+    // Setup pins favourites from outside the rail; re-read when it does.
+    window.addEventListener("weered:favs", read);
+    return () => window.removeEventListener("weered:favs", read);
   }, []);
 
   const favsSynced = useRef(false);
@@ -769,11 +782,42 @@ export default function LeftRail() {
 
   const activeRoomNorm = normRoomKey(joinedRoomId || activeRoomId || "");
 
+  // The viewer's sidebar order and hidden sections (chosen in /setup). Drawn
+  // with flex `order`, so the sections themselves stay where they are in JSX.
+  const [uiPrefs, setUiPrefs] = useState<UiPrefs>({});
+  useEffect(() => {
+    const read = () => setUiPrefs(readUiPrefs());
+    read();
+    window.addEventListener(PREFS_EVENT, read);
+    window.addEventListener("storage", read);
+    return () => {
+      window.removeEventListener(PREFS_EVENT, read);
+      window.removeEventListener("storage", read);
+    };
+  }, []);
+  const railCss = useMemo(() => {
+    const hidden = new Set(uiPrefs.rail?.hidden || []);
+    const sel = (s: RailSection) =>
+      s === "card"
+        ? ".weered-left-inner > .weered-usercorner"
+        : `.weered-left-inner > [data-rail="${s}"]`;
+    return railOrder(uiPrefs)
+      .map(
+        (s, i) =>
+          `${sel(s)}{order:${i + 1}}` +
+          // The card bleeds up into the rail's top padding; only when first.
+          (s === "card" && i > 0 ? `${sel(s)}{margin-top:0!important}` : "") +
+          (hidden.has(s) && s !== "nav" ? `${sel(s)}{display:none!important}` : ""),
+      )
+      .join("");
+  }, [uiPrefs]);
+
   return (
     <div className="weered-left-inner">
+      <style>{railCss}</style>
       {office ? <AdvisorCredentialCard /> : <UserCorner />}
 
-      <div className="weered-left-section">
+      <div className="weered-left-section" data-rail="nav">
         <div className="weered-left-title">{office ? "Practice" : navLabels.communities}</div>
 
         {(scopedRail
@@ -937,7 +981,7 @@ export default function LeftRail() {
         </div>
       </div>
 
-      <div className="weered-presence">
+      <div className="weered-presence" data-rail="presence">
         <div className="weered-presence-head">
           <div className="weered-presence-title">{office ? "Reception" : "Presence"}</div>
           <div className="weered-presence-sub">
@@ -1065,7 +1109,7 @@ export default function LeftRail() {
           which means one section can only ever wear one hat: sharing a section
           gave Favourites a purple header and left Recent bare. */}
       {favs.length > 0 && (
-        <div className="weered-left-section">
+        <div className="weered-left-section" data-rail="favs">
           <>
             <div
               className="weered-left-title"
@@ -1236,7 +1280,7 @@ export default function LeftRail() {
       )}
 
       {recentRooms.length > 0 && (
-        <div className="weered-left-section">
+        <div className="weered-left-section" data-rail="recent">
           <>
             <div
               className="weered-left-title"
@@ -1441,6 +1485,7 @@ export default function LeftRail() {
 
       <div
         style={{
+          order: 99,
           marginTop: "auto",
           padding: "12px 0 4px",
           display: "flex",

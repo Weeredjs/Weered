@@ -199,8 +199,8 @@ export default function LobbyDesigner(p: DesignerProps) {
                   ? "Unpublished"
                   : "Up to date"}
         </span>
-        {/* Two-click confirm in place: the desktop app's webview can swallow
-            window.confirm, which left Discard doing nothing there. */}
+        {/* Two-click confirm on the button itself, and disabled when there is
+            nothing to throw away, so a click always visibly does something. */}
         <button
           disabled={!canDiscard}
           title={canDiscard ? "Throw away unpublished changes" : "Nothing to discard"}

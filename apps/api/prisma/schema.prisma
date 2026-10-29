@@ -533,6 +533,7 @@ model User {
   barUsername       String? // Beyond All Reason name, BAR's exact spelling (its replay filter is case-sensitive)
   barUserId         Int? // BAR account id, stable across in-game renames
   livePresence      Json? // { source, activity, detail?, url?, updatedAt } or null
+  uiPrefs           Json? // theme, colour, sidebar order, setup state (src/lib/uiPrefs.ts)
   presenceCheckedAt DateTime?
 
   // Streamer overlay token — OBS browser-source URL is /overlay/<token>.

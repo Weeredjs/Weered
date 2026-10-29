@@ -54,6 +54,7 @@ import {
   SKIN_CACHE_KEY,
   THEMEABLE_LOBBY_IDS,
 } from "../lib/lobbyThemes";
+import { PREFS_KEY, SITE_THEME_IDS } from "../lib/uiPrefs";
 
 export const metadata = {
   title: {
@@ -133,11 +134,16 @@ try {
   var sraw = localStorage.getItem('weered:settings:v0');
   var s = sraw ? JSON.parse(sraw) : null;
   var keepDefault = !!(s && s.keepDefaultTheme === true);
-  var valid = ['slate','zinc','stone','gray','ishimura','broadcast','press'];
+  var valid = ${JSON.stringify(SITE_THEME_IDS)};
   var theme = (v2 && valid.indexOf(v2) >= 0) ? v2
             : (s && s.theme && valid.indexOf(s.theme) >= 0) ? s.theme
             : 'press';
   d.setAttribute('data-weered-theme', theme);
+  // Nebula's colourway and starfield (lib/uiPrefs.ts), before first paint.
+  var up = null;
+  try { up = JSON.parse(localStorage.getItem(${JSON.stringify(PREFS_KEY)}) || 'null'); } catch(e) {}
+  d.setAttribute('data-weered-palette', (up && up.palette) || 'violet');
+  if (up && up.stars === false) d.setAttribute('data-weered-stars', 'off');
   if (s && s.density) d.setAttribute('data-weered-density', s.density);
   if (s && s.reduceMotion) d.setAttribute('data-weered-reduce-motion', '1');
   // SEO slab gate: hide the server-rendered lobby slab for authenticated users

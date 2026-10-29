@@ -207,7 +207,7 @@ export function DomainModal({
               <button
                 disabled={busy}
                 onClick={async () => {
-                  // Two clicks, not window.confirm (the desktop webview can swallow it).
+                  // Two clicks, confirmed on the button itself (as Discard is).
                   if (!removeArmed) return setRemoveArmed(true);
                   setRemoveArmed(false);
                   const j = await call("DELETE", base);

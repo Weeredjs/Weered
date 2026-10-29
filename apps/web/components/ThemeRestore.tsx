@@ -3,8 +3,7 @@
 import { useLayoutEffect } from "react";
 import { usePathname } from "next/navigation";
 import { applyChrome, currentChrome } from "../lib/lobbyThemes";
-
-const VALID_THEMES = ["slate", "zinc", "stone", "gray", "ishimura", "broadcast", "press"];
+import { isSiteTheme, readUiPrefs } from "../lib/uiPrefs";
 
 export default function ThemeRestore() {
   const pathname = usePathname();
@@ -17,13 +16,13 @@ export default function ThemeRestore() {
         s = raw ? JSON.parse(raw) : null;
       } catch {}
       const v2 = localStorage.getItem("weered_theme_v2");
-      const theme =
-        v2 && VALID_THEMES.includes(v2)
-          ? v2
-          : s && VALID_THEMES.includes(s.theme)
-            ? s.theme
-            : "press";
-      d.setAttribute("data-weered-theme", theme);
+      const theme = isSiteTheme(v2) ? v2 : s && isSiteTheme(s.theme) ? s.theme : "press";
+      // The office host keeps the theme the boot script forced on it.
+      if (!d.hasAttribute("data-pro-host")) d.setAttribute("data-weered-theme", theme);
+      const up = readUiPrefs();
+      d.setAttribute("data-weered-palette", up.palette || "violet");
+      if (up.stars === false) d.setAttribute("data-weered-stars", "off");
+      else d.removeAttribute("data-weered-stars");
       if (s && s.density) d.setAttribute("data-weered-density", s.density);
       if (s && s.reduceMotion) d.setAttribute("data-weered-reduce-motion", "1");
       if (localStorage.getItem("weered_user")) d.setAttribute("data-weered-authed", "1");

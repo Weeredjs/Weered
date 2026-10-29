@@ -16,6 +16,7 @@ import RightRailSwitch from "./RightRailSwitch";
 import DockDrawer from "./DockDrawer";
 import ShellGate from "./ShellGate";
 import ThemeRestore from "./ThemeRestore";
+import UiPrefsSync from "./UiPrefsSync";
 import DesktopTitleBar from "./DesktopTitleBar";
 import LobbyBrowser from "./LobbyBrowser";
 import ServiceWorkerRegister from "./ServiceWorkerRegister";
@@ -196,6 +197,7 @@ export default function RootFrame({ children }: { children: React.ReactNode }) {
       {OFFICE_LOGO_STYLE}
       <DesktopTitleBar />
       <ThemeRestore />
+      <UiPrefsSync />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(jsonLd) }} />
       <script
         type="application/ld+json"
