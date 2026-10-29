@@ -40,6 +40,11 @@ export async function middleware(req: NextRequest) {
   if (!id) return NextResponse.next();
   const url = req.nextUrl.clone();
   url.pathname = `/lobby/${encodeURIComponent(id)}`;
+  // Caddy forwards proto=https, so nextUrl reads https://localhost:3000; Next
+  // serves plain http there and would treat that origin as external and try to
+  // proxy to it over TLS (EPROTO). Rewriting on its own http origin keeps it
+  // an internal rewrite.
+  url.protocol = "http:";
   return NextResponse.rewrite(url);
 }
 
