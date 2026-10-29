@@ -43,6 +43,7 @@ async function apiFetch(
   opts?: RequestInit,
 ): Promise<{ status: number; body: ApiBody }> {
   const r = await fetch(`${API}${path}`, {
+    credentials: "include",
     ...opts,
     headers: { "Content-Type": "application/json", ...authHeaders(), ...(opts?.headers || {}) },
   });

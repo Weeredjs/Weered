@@ -254,7 +254,7 @@ export function LobbyWords({
   const [rooms, setRooms] = useState<Room[]>([]);
   const [drag, setDrag] = useState<number | null>(null);
   useEffect(() => {
-    fetch(`${API}/lobbies/${encodeURIComponent(lobbyId)}/rooms`)
+    fetch(`${API}/lobbies/${encodeURIComponent(lobbyId)}/rooms`, { credentials: "include" })
       .then((r) => r.json())
       .then((j) => setRooms(Array.isArray(j?.rooms) ? j.rooms : []))
       .catch(() => {});

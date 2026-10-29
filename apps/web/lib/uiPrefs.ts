@@ -156,6 +156,7 @@ export function saveUiPrefs(patch: UiPrefs, opts: { local?: boolean } = {}): UiP
   } catch {}
   if (!opts.local) {
     fetch(`${API}/profile/me/ui`, {
+      credentials: "include",
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ prefs: patch }),
@@ -168,7 +169,7 @@ export function saveUiPrefs(patch: UiPrefs, opts: { local?: boolean } = {}): UiP
  *  merged prefs, or null when signed out or offline. */
 export async function pullUiPrefs(): Promise<UiPrefs | null> {
   try {
-    const r = await fetch(`${API}/profile/me/ui`);
+    const r = await fetch(`${API}/profile/me/ui`, { credentials: "include" });
     if (!r.ok) return null;
     const j = await r.json();
     const local = readUiPrefs();
@@ -176,6 +177,7 @@ export async function pullUiPrefs(): Promise<UiPrefs | null> {
       // Nothing on the account yet: seed it from this browser, if anything.
       if (Object.keys(local).length) {
         fetch(`${API}/profile/me/ui`, {
+          credentials: "include",
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ prefs: local }),

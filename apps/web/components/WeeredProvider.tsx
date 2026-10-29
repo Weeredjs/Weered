@@ -1167,6 +1167,7 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
   async function devLogin(username: string) {
     const r = await fetch(`${API}/auth/dev-login`, {
       method: "POST",
+      credentials: "include",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ username }),
     });
@@ -1184,7 +1185,7 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
   }
 
   function logout() {
-    fetch(`${API}/auth/logout`, { method: "POST" }).catch(() => {});
+    fetch(`${API}/auth/logout`, { method: "POST", credentials: "include" }).catch(() => {});
     try { localStorage.removeItem("weered_token"); localStorage.removeItem("weered_user"); document.documentElement.removeAttribute("data-weered-authed"); } catch {}
     try { router.replace("/"); } catch {}
     setToken(""); setMe(null);

@@ -73,6 +73,7 @@ export default function MeetingRequest({ lobbyId }: { lobbyId?: string }) {
     setErr("");
     try {
       const r = await fetch(`${API}/requests`, {
+        credentials: "include",
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

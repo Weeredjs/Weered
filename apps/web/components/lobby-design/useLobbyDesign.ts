@@ -100,6 +100,7 @@ export function useLobbyDesign(
       setSaving("saving");
       try {
         const r = await fetch(`${API}/lobbies/${encodeURIComponent(lobbyId)}/admin/design`, {
+          credentials: "include",
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({

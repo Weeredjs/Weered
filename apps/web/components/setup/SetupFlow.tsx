@@ -83,7 +83,7 @@ export default function SetupFlow({
     initialColor.current = c || "#8b5cf6";
     setAvatarColor(c || "#8b5cf6");
     if (me?.avatar) setAvatar(me.avatar);
-    fetch(`${API}/profile/${encodeURIComponent(me.id)}`)
+    fetch(`${API}/profile/${encodeURIComponent(me.id)}`, { credentials: "include" })
       .then((r) => r.json())
       .then((j) => {
         const s = { emoji: String(j?.statusEmoji || ""), text: String(j?.statusText || "") };
@@ -230,6 +230,7 @@ export default function SetupFlow({
       );
       URL.revokeObjectURL(url);
       const r = await fetch(`${API}/profile/avatar/upload`, {
+        credentials: "include",
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ image: canvas.toDataURL("image/webp", 0.85) }),
@@ -262,6 +263,7 @@ export default function SetupFlow({
     if (avatarColor !== initialColor.current) patch.avatarColor = avatarColor;
     if (Object.keys(patch).length) {
       await fetch(`${API}/profile/me`, {
+        credentials: "include",
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(patch),
@@ -279,12 +281,16 @@ export default function SetupFlow({
     const drop = initialFavs.current.filter((id) => !picked.includes(id));
     await Promise.all([
       ...add.map((id) =>
-        fetch(`${API}/me/favorites/${encodeURIComponent(id)}`, { method: "POST" }).catch(() => {}),
+        fetch(`${API}/me/favorites/${encodeURIComponent(id)}`, {
+          method: "POST",
+          credentials: "include",
+        }).catch(() => {}),
       ),
       ...drop.map((id) =>
-        fetch(`${API}/me/favorites/${encodeURIComponent(id)}`, { method: "DELETE" }).catch(
-          () => {},
-        ),
+        fetch(`${API}/me/favorites/${encodeURIComponent(id)}`, {
+          method: "DELETE",
+          credentials: "include",
+        }).catch(() => {}),
       ),
     ]);
     try {

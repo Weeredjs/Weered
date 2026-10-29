@@ -94,8 +94,13 @@ function LoginForm() {
       const body: any = { username: u, password: p };
       if (mode === "register") body.email = e;
       if (mode === "register" && captchaToken) body.captchaToken = captchaToken;
+      // credentials: the session is the httpOnly cookie this response sets.
+      // Production's fetch wrapper (app/layout.tsx) adds it for api.weered.ca,
+      // but a stack on another origin (the CI E2E job) needs it said here, or
+      // the browser drops the cookie and every signed-in call is anonymous.
       const r = await fetch(url, {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
@@ -122,6 +127,7 @@ function LoginForm() {
     try {
       const r = await fetch(`${API}/auth/dev-login`, {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username: username.trim() }),
       });

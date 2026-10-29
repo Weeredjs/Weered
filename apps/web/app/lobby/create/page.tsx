@@ -74,6 +74,7 @@ type ApiResult = {
 async function apiFetch(path: string, opts?: RequestInit): Promise<ApiResult> {
   try {
     const r = await fetch(`${API}${path}`, {
+      credentials: "include",
       ...opts,
       headers: { "Content-Type": "application/json", ...authHeaders(), ...(opts?.headers || {}) },
     });

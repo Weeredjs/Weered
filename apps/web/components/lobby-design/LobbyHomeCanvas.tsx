@@ -28,7 +28,7 @@ function useJson<T>(url: string | null, pick: (j: any) => T, fallback: T, refres
     if (!url) return;
     let dead = false;
     const load = () =>
-      fetch(url)
+      fetch(url, { credentials: "include" })
         .then((r) => r.json())
         .then((j) => !dead && setV(pick(j)))
         .catch(() => {});

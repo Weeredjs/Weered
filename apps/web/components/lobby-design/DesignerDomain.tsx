@@ -30,6 +30,7 @@ export function DomainModal({
     setMsg(null);
     try {
       const r = await fetch(url, {
+        credentials: "include",
         method,
         headers: { "Content-Type": "application/json" },
         body: body ? JSON.stringify(body) : undefined,
