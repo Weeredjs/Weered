@@ -2,6 +2,14 @@ import type { FastifyInstance } from "fastify";
 import { promises as dns } from "dns";
 import { prisma } from "../lib/prisma";
 import { hasLobbyPerm } from "../lib/lobbyPerms";
+import { sendMail } from "../lib/email";
+
+// Custom-build meeting requests go here, not on the public board.
+const MEETING_NOTIFY_TO = process.env.MEETING_NOTIFY_TO || "james@weered.ca";
+
+function esc(s: string): string {
+  return s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+}
 
 // Design mode, custom domains and the request board (2026-10-29).
 //
@@ -243,7 +251,11 @@ export default async function lobbyDesignRoutes(app: FastifyInstance, opts: Opts
     const u = authFromHeader((req as any).headers?.authorization);
     const sort = q.sort === "new" ? "new" : "top";
     const where: any = {};
+    // Meeting requests are private: staff only, never on the public board.
+    const staff = !!u && canAccessStaff(await getGlobalRole(u.id));
     if (q.kind === "game" || q.kind === "feature") where.kind = q.kind;
+    else if (q.kind === "meeting" && staff) where.kind = "meeting";
+    else where.kind = { not: "meeting" };
     if (typeof q.status === "string" && STATUSES.has(q.status)) where.status = q.status;
     else where.status = { not: "declined" };
     const rows = await prisma.featureRequest.findMany({
@@ -263,7 +275,7 @@ export default async function lobbyDesignRoutes(app: FastifyInstance, opts: Opts
       .trim()
       .slice(0, 80);
     if (title.length < 2) return reply.code(400).send({ ok: false, error: "title_required" });
-    const kind = b.kind === "feature" ? "feature" : "game";
+    const kind = b.kind === "feature" ? "feature" : b.kind === "meeting" ? "meeting" : "game";
     const since = new Date(Date.now() - 24 * 3600_000);
     const recent = await prisma.featureRequest.count({
       where: { userId: u.id, createdAt: { gt: since } },
@@ -272,6 +284,50 @@ export default async function lobbyDesignRoutes(app: FastifyInstance, opts: Opts
       return reply
         .code(429)
         .send({ ok: false, error: "slow_down", message: "Five requests a day. Vote on the rest." });
+    if (kind === "meeting") {
+      const company = String(b.company || "")
+        .trim()
+        .slice(0, 120);
+      const contact = String(b.contact || "")
+        .trim()
+        .slice(0, 200);
+      const size = String(b.size || "")
+        .trim()
+        .slice(0, 40);
+      const details = String(b.note || "")
+        .trim()
+        .slice(0, 1500);
+      if (!contact) return reply.code(400).send({ ok: false, error: "contact_required" });
+      const note = [
+        company && `Company: ${company}`,
+        `Contact: ${contact}`,
+        size && `Size: ${size}`,
+        details,
+      ]
+        .filter(Boolean)
+        .join("\n");
+      const r = await prisma.featureRequest.create({
+        data: {
+          kind,
+          title,
+          note: note.slice(0, 2000),
+          userId: u.id,
+          userName: u.name || "",
+          lobbyId: typeof b.lobbyId === "string" ? b.lobbyId.slice(0, 100) : null,
+          voterIds: [u.id],
+          voteCount: 1,
+        },
+      });
+      sendMail({
+        to: MEETING_NOTIFY_TO,
+        subject: `[weered] Meeting request: ${title}${company ? ` (${company})` : ""}`,
+        html:
+          `<p><b>${esc(title)}</b></p>` +
+          `<p>From @${esc(u.name || u.id)}</p>` +
+          `<pre style="font:14px/1.5 sans-serif;white-space:pre-wrap">${esc(note)}</pre>`,
+      }).catch(() => {});
+      return reply.send({ ok: true, request: view(r, u.id) });
+    }
     // Same title already on the board: vote for it instead of duplicating.
     const dupe = await prisma.featureRequest.findFirst({
       where: { kind, title: { equals: title, mode: "insensitive" }, status: { not: "declined" } },

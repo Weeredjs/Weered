@@ -15,6 +15,13 @@ export default function InstallPrompt() {
   useEffect(() => {
     if (window.matchMedia("(display-mode: standalone)").matches) return;
     if ((navigator as any).standalone) return;
+    // Members only, and never on the front door or the login page.
+    if (window.location.pathname === "/" || window.location.pathname.startsWith("/login")) return;
+    try {
+      if (!localStorage.getItem("weered_user")) return;
+    } catch {
+      return;
+    }
 
     const dismissed = localStorage.getItem("weered:install:dismissed");
     if (dismissed && Date.now() - Number.parseInt(dismissed, 10) < 7 * 24 * 60 * 60 * 1000) return;

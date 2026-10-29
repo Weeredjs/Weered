@@ -55,7 +55,7 @@ async function apiFetch(
   return { status: r.status, body };
 }
 
-type Kind = "game" | "feature";
+type Kind = "game" | "feature" | "meeting";
 type Status = "open" | "planned" | "building" | "shipped" | "declined";
 type Sort = "top" | "new";
 
@@ -104,6 +104,7 @@ const STATUS_META: Record<Status, { label: string; fg: string; bg: string; bd: s
 };
 const STATUS_ORDER: Status[] = ["open", "planned", "building", "shipped", "declined"];
 const STAFF_ROLES = new Set(["GOD", "STAFF", "ADMIN"]);
+const KIND_LABEL: Record<string, string> = { game: "Game", feature: "Feature", meeting: "Meeting" };
 
 const TEXT = "var(--weered-text, rgba(243,244,246,.95))";
 const MUTED = "var(--weered-muted, rgba(203,213,225,.72))";
@@ -618,7 +619,7 @@ export default function RequestBoard({
                         >
                           {statusPill(r.status, true)}
                           <span style={{ fontSize: 11, color: MUTED }}>
-                            {r.kind === "feature" ? "Feature" : "Game"}
+                            {KIND_LABEL[r.kind] || "Game"}
                           </span>
                         </div>
                         {rowErr[r.id] && (
@@ -703,6 +704,7 @@ export default function RequestBoard({
     { key: "game", label: "Games" },
     { key: "feature", label: "Features" },
     { key: "all", label: "All" },
+    ...(isStaff ? [{ key: "meeting" as const, label: "Meetings" }] : []),
   ];
   const statusChips: Status[] = isStaff
     ? ["open", "planned", "building", "shipped", "declined"]
@@ -1030,7 +1032,7 @@ function RequestRow({
               padding: "1px 6px",
             }}
           >
-            {r.kind === "feature" ? "Feature" : "Game"}
+            {KIND_LABEL[r.kind] || "Game"}
           </span>
         </div>
         {r.note && (

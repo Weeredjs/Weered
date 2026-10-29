@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import RequestBoard from "../../components/RequestBoard";
+import MeetingRequest from "../../components/MeetingRequest";
 
 export const metadata: Metadata = {
   title: { absolute: "Request board · Weered" },
@@ -124,6 +125,8 @@ export default function RequestsPage() {
           </li>
         ))}
       </ol>
+
+      <MeetingRequest />
 
       <RequestBoard />
     </main>

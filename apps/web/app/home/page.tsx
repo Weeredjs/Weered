@@ -12,6 +12,7 @@ import EmptyState from "../../components/EmptyState";
 import LobbyChatDrawer from "../../components/LobbyChatDrawer";
 import HomeActivityTicker from "../../components/HomeActivityTicker";
 import FirstTimePrompt from "../../components/FirstTimePrompt";
+import EntryPrompt from "../../components/EntryPrompt";
 import HomePinnedNews from "../../components/HomePinnedNews";
 import HomePulse from "../../components/HomePulse";
 import LobbySearch from "../../components/LobbySearch";
@@ -1001,6 +1002,7 @@ export default function HomePage() {
       <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: "0 20px 8px" }}>
 
         <FirstTimePrompt />
+        <EntryPrompt />
 
         <div style={{ paddingTop: 14 }}>
           <HomeActivityTicker />

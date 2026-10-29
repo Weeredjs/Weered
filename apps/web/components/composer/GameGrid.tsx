@@ -1,9 +1,10 @@
 "use client";
 
-// Step 2: the game grid. Big art cards, a search box, a "Just a community"
-// card, and a request field for anything we don't have yet.
+// Step 2: "What are you doing here?" Big art cards grouped Work / Community /
+// Games, a search box, a request field for anything we don't have yet, and a
+// way into a custom-build meeting.
 import React, { useMemo, useState } from "react";
-import { GAMES, type GameEntry } from "./catalog";
+import { GAMES, GROUPS, type GameEntry } from "./catalog";
 import { FAINT, MUTED, TEXT, alpha, inputStyle, labelStyle } from "./ui";
 
 export function GameArt({
@@ -66,13 +67,15 @@ export default function GameGrid({
   onRequest: (title: string) => Promise<{ ok: boolean; message: string }>;
 }) {
   const [q, setQ] = useState("");
+  const [group, setGroup] = useState<(typeof GROUPS)[number]["id"]>("all");
   const [req, setReq] = useState("");
   const [reqBusy, setReqBusy] = useState(false);
   const [reqMsg, setReqMsg] = useState<{ ok: boolean; message: string } | null>(null);
 
   const shown = useMemo(() => {
     const s = q.trim().toLowerCase();
-    if (!s) return GAMES;
+    const inGroup = group === "all" ? GAMES : GAMES.filter((g) => g.group === group);
+    if (!s) return inGroup;
     return GAMES.filter(
       (g) =>
         g.id === "NONE" ||
@@ -80,7 +83,7 @@ export default function GameGrid({
         g.tags.some((t) => t.includes(s)) ||
         g.blurb.toLowerCase().includes(s),
     );
-  }, [q]);
+  }, [q, group]);
   const realMatches = shown.filter((g) => g.id !== "NONE").length;
 
   async function submitRequest() {
@@ -113,15 +116,52 @@ export default function GameGrid({
         </span>
         <input
           type="search"
-          aria-label="Search games"
+          aria-label="Search"
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Search games: destiny, chess, poker…"
+          placeholder="Search: team, clients, club, destiny, chess…"
           style={{ ...inputStyle, paddingLeft: 36 }}
         />
       </div>
 
-      <div className="cz-games" role="radiogroup" aria-label="Game">
+      {!q.trim() && (
+        <div
+          role="tablist"
+          aria-label="Kind"
+          style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 }}
+        >
+          {GROUPS.map((gr) => {
+            const on = group === gr.id;
+            return (
+              <button
+                key={gr.id}
+                type="button"
+                role="tab"
+                aria-selected={on}
+                onClick={() => setGroup(gr.id)}
+                className="cz-btn"
+                style={{
+                  minHeight: 34,
+                  padding: "0 14px",
+                  borderRadius: 999,
+                  border: `1px solid ${on ? alpha(accent, 0.7) : "rgba(255,255,255,.1)"}`,
+                  background: on ? alpha(accent, 0.2) : "rgba(255,255,255,.03)",
+                  color: on ? TEXT : MUTED,
+                  fontWeight: 800,
+                  fontSize: 12.5,
+                  letterSpacing: ".3px",
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                }}
+              >
+                {gr.label}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      <div className="cz-games" role="radiogroup" aria-label="What you're doing">
         {shown.map((g, i) => {
           const on = value === g.id;
           return (
@@ -223,7 +263,7 @@ export default function GameGrid({
         }}
       >
         <label htmlFor="cz-request" style={{ ...labelStyle, marginBottom: 6 }}>
-          Don&apos;t see your game?
+          Don&apos;t see it?
         </label>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <input
@@ -236,7 +276,11 @@ export default function GameGrid({
                 submitRequest();
               }
             }}
-            placeholder={q.trim() && realMatches === 0 ? q.trim() : "e.g. Deep Rock Galactic"}
+            placeholder={
+              q.trim() && realMatches === 0
+                ? q.trim()
+                : "e.g. Deep Rock Galactic, a booking calendar"
+            }
             style={{ ...inputStyle, flex: "1 1 200px", minWidth: 0 }}
           />
           <button
@@ -275,6 +319,22 @@ export default function GameGrid({
             ? reqMsg.message
             : "It goes on the public request board. Popular asks get built first."}
         </div>
+        <a
+          href="/requests?meeting=1"
+          target="_blank"
+          rel="noopener"
+          style={{
+            display: "inline-block",
+            marginTop: 10,
+            fontSize: 13,
+            fontWeight: 700,
+            color: TEXT,
+            textDecoration: "none",
+            borderBottom: `1px solid ${alpha(accent, 0.6)}`,
+          }}
+        >
+          Building for a business? I need a meeting →
+        </a>
       </div>
     </div>
   );

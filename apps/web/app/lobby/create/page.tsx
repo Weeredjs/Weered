@@ -29,6 +29,7 @@ import {
   DEFAULT_FEATURES,
   DEFAULT_ROOMS,
   GAME_BY_ID,
+  moduleOf,
   MODULE_FEATURES,
   ROOM_PRESETS,
   type FeatureId,
@@ -201,7 +202,7 @@ export default function CreateLobbyPage() {
   const [gameId, setGameId] = useState("NONE");
   const [gameTouched, setGameTouched] = useState(false);
   const game: GameEntry = GAME_BY_ID[gameId] || GAME_BY_ID.NONE;
-  const hasGame = game.id !== "NONE";
+  const hasGame = moduleOf(game) !== "NONE";
 
   // ── 3. Look ─────────────────────────────────────────────────────────────
   const [theme, setTheme] = useState<ThemeValue>(DEFAULT_THEME);
@@ -215,7 +216,12 @@ export default function CreateLobbyPage() {
   }, []);
 
   function pickGame(g: GameEntry) {
+    if (g.action === "meeting") {
+      window.open("/requests?meeting=1", "_blank", "noopener");
+      return;
+    }
     setGameId(g.id);
+    if (g.rooms) setRoomIds(g.rooms);
     setGameTouched(true);
     // Until the owner styles it themselves, the theme follows the game.
     if (!themeTouched && PRESET_BY_ID[g.preset]) {
@@ -467,7 +473,7 @@ export default function CreateLobbyPage() {
         id: slug,
         name: name.trim(),
         description: description.trim(),
-        moduleType: game.id,
+        moduleType: moduleOf(game),
         accentColor: theme.accent,
         layout: buildLayout(),
         enabledModules,
@@ -1001,8 +1007,8 @@ export default function CreateLobbyPage() {
           <Section
             id="cz-game"
             n={2}
-            title="Pick your game"
-            kicker="Adds a Modules tab with live data for it. Or keep it a community."
+            title="What are you doing here?"
+            kicker="Work, a club, a game. Pick one and the lobby sets itself up for it."
             accent={accent}
           >
             <GameGrid value={gameId} accent={accent} onPick={pickGame} onRequest={requestGame} />

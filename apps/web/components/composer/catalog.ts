@@ -1,4 +1,7 @@
-// What the create-lobby composer offers. Game types are the ones whose Modules
+// What the create-lobby composer offers ("What are you doing here?"). Entries
+// are use cases: a work space, a community, or a game. `module` is the
+// ModuleType sent when it differs from the entry id (several work and
+// community entries are plain NONE lobbies with their own rooms). Game types are the ones whose Modules
 // panel works for a brand-new lobby with no moduleConfig (POST /lobbies only
 // lets staff set moduleConfig). Each blurb describes what that panel actually
 // shows today; keep them honest when a panel changes.
@@ -18,7 +21,26 @@ export type GameEntry = {
   tags: string[];
   /** Theme preset applied on pick, until the owner touches the theme. */
   preset: string;
+  group: "work" | "community" | "games";
+  /** ModuleType for POST /lobbies when it isn't the id. */
+  module?: string;
+  /** Starter rooms (ROOM_PRESETS ids) applied on pick. */
+  rooms?: string[];
+  /** "meeting" opens the custom-build meeting request instead of picking. */
+  action?: "meeting";
 };
+
+export const GROUPS: { id: GameEntry["group"] | "all"; label: string }[] = [
+  { id: "all", label: "All" },
+  { id: "work", label: "Work" },
+  { id: "community", label: "Community" },
+  { id: "games", label: "Games" },
+];
+
+/** The ModuleType an entry creates. */
+export function moduleOf(g: GameEntry): string {
+  return g.module || g.id;
+}
 
 export const GAMES: GameEntry[] = [
   {
@@ -30,6 +52,68 @@ export const GAMES: GameEntry[] = [
     tint: "#a78bfa",
     tags: ["community", "chat", "friends", "club", "none"],
     preset: "midnight",
+    group: "community",
+  },
+  {
+    id: "TEAM",
+    module: "COWORK",
+    name: "Team HQ",
+    blurb: "Who's in today, sprint timer, the day board. Meeting and focus rooms.",
+    art: "radial-gradient(90% 90% at 15% 15%, #7fa89b55 0%, transparent 60%), radial-gradient(70% 80% at 100% 100%, #38bdf833 0%, transparent 60%), #0a1012",
+    glyph: "HQ",
+    tint: "#9fd3c3",
+    tags: ["team", "work", "office", "remote", "company", "staff", "business", "cowork"],
+    preset: "frostbite",
+    group: "work",
+    rooms: ["general", "meet", "focus"],
+  },
+  {
+    id: "CLIENTS",
+    module: "NONE",
+    name: "Client meetings",
+    blurb: "A front desk and private video rooms. Put it on your own domain.",
+    art: "radial-gradient(80% 90% at 80% 10%, #f5d08a44 0%, transparent 60%), linear-gradient(160deg, #15130f, #0a0a0c)",
+    glyph: "◈",
+    tint: "#f5d08a",
+    tags: [
+      "clients",
+      "meetings",
+      "video",
+      "consulting",
+      "agency",
+      "business",
+      "office",
+      "appointments",
+    ],
+    preset: "gold-rush",
+    group: "work",
+    rooms: ["desk", "meet"],
+  },
+  {
+    id: "CLUB",
+    module: "NONE",
+    name: "Club or association",
+    blurb: "Members, an events calendar and rooms for meets. Leagues, clubs, chapters.",
+    art: "radial-gradient(80% 90% at 20% 90%, #60a5fa44 0%, transparent 60%), radial-gradient(60% 70% at 90% 10%, #a78bfa44 0%, transparent 60%), #0b0c16",
+    glyph: "♣",
+    tint: "#93c5fd",
+    tags: ["club", "association", "league", "chapter", "members", "bridge", "nonprofit", "church"],
+    preset: "high-seas",
+    group: "community",
+    rooms: ["general", "meet", "hangout"],
+  },
+  {
+    id: "CUSTOM_BUILD",
+    module: "NONE",
+    name: "Something custom",
+    blurb: "Your data, your workflow, built into your space. Book a meeting.",
+    art: "repeating-linear-gradient(90deg, #ffffff08 0 1px, transparent 1px 22px), repeating-linear-gradient(0deg, #ffffff08 0 1px, transparent 1px 22px), radial-gradient(70% 80% at 50% 50%, #7c3aed55 0%, transparent 65%), #08080f",
+    glyph: "{ }",
+    tint: "#c4b5fd",
+    tags: ["custom", "business", "enterprise", "build", "integration", "portal", "meeting"],
+    preset: "midnight",
+    group: "work",
+    action: "meeting",
   },
   {
     id: "BUNGIE",
@@ -41,6 +125,7 @@ export const GAMES: GameEntry[] = [
     tint: "#cfd8e3",
     tags: ["destiny", "bungie", "fps", "raid", "guardian"],
     preset: "deep-space",
+    group: "games",
   },
   {
     id: "MARATHON",
@@ -51,6 +136,7 @@ export const GAMES: GameEntry[] = [
     tint: "#c6ff00",
     tags: ["marathon", "bungie", "extraction", "shooter"],
     preset: "toxic",
+    group: "games",
   },
   {
     id: "RIOT",
@@ -61,6 +147,7 @@ export const GAMES: GameEntry[] = [
     tint: "#c89b3c",
     tags: ["league", "lol", "riot", "moba"],
     preset: "gold-rush",
+    group: "games",
   },
   {
     id: "FORTNITE",
@@ -71,6 +158,7 @@ export const GAMES: GameEntry[] = [
     tint: "#ffe600",
     tags: ["fortnite", "epic", "battle royale", "br", "item shop"],
     preset: "neon-arcade",
+    group: "games",
   },
   {
     id: "CS2",
@@ -81,6 +169,7 @@ export const GAMES: GameEntry[] = [
     tint: "#de9b35",
     tags: ["cs2", "csgo", "counter-strike", "valve", "fps"],
     preset: "ironclad",
+    group: "games",
   },
   {
     id: "DOTA2",
@@ -91,6 +180,7 @@ export const GAMES: GameEntry[] = [
     tint: "#e5452f",
     tags: ["dota", "valve", "moba"],
     preset: "inferno",
+    group: "games",
   },
   {
     id: "PUBG",
@@ -101,6 +191,7 @@ export const GAMES: GameEntry[] = [
     tint: "#f2a900",
     tags: ["pubg", "battlegrounds", "battle royale", "br"],
     preset: "ironclad",
+    group: "games",
   },
   {
     id: "POE",
@@ -111,6 +202,7 @@ export const GAMES: GameEntry[] = [
     tint: "#d8a25e",
     tags: ["poe", "path of exile", "arpg", "ggg"],
     preset: "inferno",
+    group: "games",
   },
   {
     id: "POE2",
@@ -121,6 +213,7 @@ export const GAMES: GameEntry[] = [
     tint: "#c9a46b",
     tags: ["poe2", "path of exile 2", "arpg", "ggg"],
     preset: "inferno",
+    group: "games",
   },
   {
     id: "DIVISION2",
@@ -131,6 +224,7 @@ export const GAMES: GameEntry[] = [
     tint: "#ff6d10",
     tags: ["division", "tom clancy", "ubisoft", "looter shooter"],
     preset: "ironclad",
+    group: "games",
   },
   {
     id: "HELLDIVERS2",
@@ -141,6 +235,7 @@ export const GAMES: GameEntry[] = [
     tint: "#ffe81f",
     tags: ["helldivers", "democracy", "arrowhead", "co-op"],
     preset: "ironclad",
+    group: "games",
   },
   {
     id: "EVE",
@@ -151,6 +246,7 @@ export const GAMES: GameEntry[] = [
     tint: "#00b4ff",
     tags: ["eve", "ccp", "space", "mmo"],
     preset: "deep-space",
+    group: "games",
   },
   {
     id: "BAR",
@@ -161,6 +257,7 @@ export const GAMES: GameEntry[] = [
     tint: "#3fa9f5",
     tags: ["bar", "beyond all reason", "rts", "strategy"],
     preset: "deep-space",
+    group: "games",
   },
   {
     id: "CHESS",
@@ -171,6 +268,7 @@ export const GAMES: GameEntry[] = [
     tint: "#9fc46b",
     tags: ["chess", "board game", "lichess", "chess.com"],
     preset: "felt-table",
+    group: "community",
   },
   {
     id: "DND",
@@ -182,6 +280,7 @@ export const GAMES: GameEntry[] = [
     tint: "#e11d48",
     tags: ["dnd", "d&d", "ttrpg", "tabletop", "rpg"],
     preset: "midnight",
+    group: "community",
   },
   {
     id: "MTG",
@@ -192,6 +291,7 @@ export const GAMES: GameEntry[] = [
     tint: "#d3a54a",
     tags: ["mtg", "magic", "commander", "edh", "tcg"],
     preset: "midnight",
+    group: "community",
   },
   {
     id: "POKER",
@@ -203,6 +303,7 @@ export const GAMES: GameEntry[] = [
     tint: "#c9a227",
     tags: ["poker", "cards", "holdem", "casino"],
     preset: "felt-table",
+    group: "community",
   },
   {
     id: "TRADING",
@@ -214,6 +315,7 @@ export const GAMES: GameEntry[] = [
     tint: "#22c55e",
     tags: ["trading", "crypto", "stocks", "paper", "fakeout"],
     preset: "terminal",
+    group: "community",
   },
   {
     id: "STUDY",
@@ -225,6 +327,7 @@ export const GAMES: GameEntry[] = [
     tint: "#f472b6",
     tags: ["study", "school", "focus", "pomodoro", "homework"],
     preset: "sakura",
+    group: "work",
   },
   {
     id: "NEWS",
@@ -235,6 +338,7 @@ export const GAMES: GameEntry[] = [
     tint: "#7dd3fc",
     tags: ["news", "headlines", "current events"],
     preset: "frostbite",
+    group: "community",
   },
   {
     id: "MLB",
@@ -245,6 +349,7 @@ export const GAMES: GameEntry[] = [
     tint: "#ef4444",
     tags: ["mlb", "baseball", "sports"],
     preset: "high-seas",
+    group: "community",
   },
   {
     id: "PGA",
@@ -256,6 +361,7 @@ export const GAMES: GameEntry[] = [
     tint: "#4ade80",
     tags: ["golf", "pga", "sports"],
     preset: "felt-table",
+    group: "community",
   },
 ];
 
@@ -363,5 +469,33 @@ export const ROOM_PRESETS: RoomPreset[] = [
     hint: "Video",
   },
 ];
+
+export const WORK_ROOM_PRESETS: RoomPreset[] = [
+  {
+    id: "meet",
+    label: "Meeting room",
+    names: ["Meeting Room"],
+    module: "video",
+    icon: "🤝",
+    hint: "Video",
+  },
+  {
+    id: "desk",
+    label: "Front desk",
+    names: ["Front Desk"],
+    module: null,
+    icon: "🛎",
+    hint: "Text first",
+  },
+  {
+    id: "focus",
+    label: "Focus room",
+    names: ["Focus"],
+    module: "voice",
+    icon: "🎧",
+    hint: "Voice",
+  },
+];
+ROOM_PRESETS.push(...WORK_ROOM_PRESETS);
 
 export const DEFAULT_ROOMS = ["general", "hangout", "watch"];

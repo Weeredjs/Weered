@@ -8,7 +8,7 @@ import React, { useEffect, useState } from "react";
 import LobbyAmbient from "../LobbyAmbient";
 import type { TabId } from "../../lib/lobbyLayout";
 import { FONT_STACK, type ThemePreset } from "../../lib/lobbyThemePresets";
-import type { FeatureId, GameEntry } from "./catalog";
+import { moduleOf, type FeatureId, type GameEntry } from "./catalog";
 import { GameArt } from "./GameGrid";
 import type { ThemeValue } from "./ThemePicker";
 import { alpha } from "./ui";
@@ -77,6 +77,7 @@ export default function Preview({
   const head = FONT_STACK[theme.font];
   const online = useFakeOnline(display);
   const hasGame = game.id !== "NONE";
+  const hasModule = moduleOf(game) !== "NONE";
   const entranceAnim =
     theme.entrance === "none"
       ? undefined
@@ -396,7 +397,7 @@ export default function Preview({
                 </div>
               )}
 
-              {hasGame && (
+              {hasModule && (
                 <div
                   style={{
                     marginTop: 10,

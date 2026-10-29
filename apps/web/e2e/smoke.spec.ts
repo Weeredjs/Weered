@@ -31,16 +31,16 @@ for (const path of PUBLIC_PAGES) {
 }
 
 test.describe("landing flow", () => {
-  test("renders the lobbies section + get_in() CTA", async ({ page }) => {
+  test("renders the headline + Get in CTA", async ({ page }) => {
     await page.goto("/");
     await expect(page).toHaveTitle(/Weered/i);
-    await expect(page.getByRole("heading", { name: /the lobbies are open/i })).toBeVisible();
-    await expect(page.getByRole("link", { name: "get_in()" }).first()).toBeVisible();
+    await expect(page.getByRole("heading", { name: /a place for anything/i })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Get in" }).first()).toBeVisible();
   });
 
-  test("get_in() navigates to the login page", async ({ page }) => {
+  test("Get in navigates to the login page", async ({ page }) => {
     await page.goto("/");
-    await page.getByRole("link", { name: "get_in()" }).first().click();
+    await page.getByRole("link", { name: "Get in" }).first().click();
     await expect(page).toHaveURL(/\/login/);
     await expect(page.locator("body")).toContainText(/weered/i);
   });

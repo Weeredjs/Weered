@@ -33,7 +33,8 @@ const CATEGORY_LABELS: Record<Category, { label: string; placeholder: string }> 
 
 export default function BugReportButton() {
   const pathname = usePathname() || "";
-  const hidden = HIDE_ON_PREFIXES.some((p) => pathname === p || pathname.startsWith(p));
+  const hidden =
+    pathname === "/" || HIDE_ON_PREFIXES.some((p) => pathname === p || pathname.startsWith(p));
 
   const [open, setOpen] = useState(false);
   const [body, setBody] = useState("");

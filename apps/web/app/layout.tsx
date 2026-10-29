@@ -61,7 +61,7 @@ export const metadata = {
     template: "%s | Weered",
   },
   description:
-    "Weered is a real-time community platform. Lobbies, rooms, presence, and modules, built for gaming communities and beyond.",
+    "A place for anything. Voice, video, rooms and live integrations for your team, your club or your game, on your own domain if you want it.",
   metadataBase: new URL("https://weered.ca"),
   icons: {
     icon: [{ url: "/brand/logo/weered-logo-32.png", sizes: "32x32", type: "image/png" }],
@@ -72,7 +72,7 @@ export const metadata = {
   openGraph: {
     title: "Weered: Real-Time Community Platform",
     description:
-      "Lobbies, rooms, presence, and modules. A community platform that feels like a place, not a product.",
+      "A place for anything. Voice, video, rooms and live integrations, on your own domain if you want it.",
     url: "https://weered.ca",
     siteName: "Weered",
     images: [
@@ -89,7 +89,7 @@ export const metadata = {
   twitter: {
     card: "summary_large_image",
     title: "Weered: Real-Time Community Platform",
-    description: "Lobbies, rooms, presence, and modules. Built for gaming communities.",
+    description: "A place for anything. Voice, video, rooms and live integrations.",
     images: ["https://weered.ca/og"],
   },
   appleWebApp: {

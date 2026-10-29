@@ -69,6 +69,10 @@ function LoginForm() {
   }, [sp]);
 
   React.useEffect(() => {
+    if (sp?.get("mode") === "register") setMode("register");
+  }, [sp]);
+
+  React.useEffect(() => {
     try {
       if (localStorage.getItem("weered_user")) router.replace(nextPath);
     } catch {}
@@ -102,10 +106,8 @@ function LoginForm() {
         document.documentElement.setAttribute("data-weered-authed", "1");
       } catch {}
       if (j?.user) localStorage.setItem("weered_user", JSON.stringify(j.user));
-      if (j?.pendingVerification) {
-        setPendingEmail(e);
-        return;
-      }
+      // Verification mail still goes out, but it gates nothing: no dead-end
+      // "check your email" screen, straight in.
       router.replace(nextPath);
     } catch (e: any) {
       setErr(String(e?.message || "Something went wrong."));
@@ -150,7 +152,7 @@ function LoginForm() {
       <style>{`
         .wl-root {
           min-height: 100vh;
-          background: #080810;
+          background: #07060d;
           display: flex;
           align-items: center;
           justify-content: center;
@@ -162,13 +164,19 @@ function LoginForm() {
         .wl-root::before {
           content: '';
           position: fixed;
-          inset: 0;
+          inset: -20%;
           background:
-            radial-gradient(ellipse 80% 50% at 10% 0%, rgba(124,58,237,0.18) 0%, transparent 60%),
-            radial-gradient(ellipse 60% 40% at 90% 100%, rgba(217,70,239,0.10) 0%, transparent 55%);
+            radial-gradient(40% 40% at 22% 18%, rgba(124,58,237,0.42) 0%, transparent 70%),
+            radial-gradient(36% 36% at 80% 85%, rgba(14,165,233,0.20) 0%, transparent 70%),
+            radial-gradient(30% 30% at 85% 15%, rgba(217,70,239,0.14) 0%, transparent 70%);
+          filter: blur(30px);
           pointer-events: none;
           z-index: 0;
+          animation: wl-drift 20s ease-in-out infinite alternate;
         }
+        @keyframes wl-drift { to { transform: translate(4%, 3%) rotate(4deg); } }
+        @keyframes wl-rise { from { opacity: 0; transform: translateY(16px) scale(.985); } to { opacity: 1; transform: none; } }
+        @media (prefers-reduced-motion: reduce) { .wl-root::before, .wl-card { animation: none !important; } }
         .wl-root::after {
           content: '';
           position: fixed;
@@ -185,8 +193,10 @@ function LoginForm() {
           position: relative;
           z-index: 1;
           width: min(440px, 100%);
-          background: rgba(12,12,20,0.92);
-          border: 1px solid rgba(124,58,237,0.25);
+          background: linear-gradient(rgba(12,11,20,0.9), rgba(12,11,20,0.9)) padding-box,
+            linear-gradient(150deg, rgba(196,181,253,0.55), rgba(124,58,237,0.12) 40%, rgba(14,165,233,0.35)) border-box;
+          border: 1px solid transparent;
+          animation: wl-rise .6s cubic-bezier(.2,.8,.2,1) both;
           border-radius: 20px;
           padding: 36px 32px 28px;
           box-shadow: 0 0 0 1px rgba(255,255,255,0.04), 0 24px 80px rgba(0,0,0,0.6), 0 0 60px rgba(124,58,237,0.08);
@@ -247,9 +257,11 @@ function LoginForm() {
           border-radius: 9px;
           border: none;
           background: transparent;
-          color: rgba(148,163,184,0.6);
-          font-family: 'DM Mono', monospace;
-          font-size: 13px;
+          color: rgba(148,163,184,0.7);
+          font-family: var(--font-rajdhani), 'Rajdhani', sans-serif;
+          font-weight: 700;
+          font-size: 15px;
+          letter-spacing: .02em;
           cursor: pointer;
           transition: all 0.15s;
         }
@@ -301,12 +313,13 @@ function LoginForm() {
           width: 100%;
           margin-top: 20px;
           padding: 14px;
-          background: linear-gradient(135deg, rgba(124,58,237,0.85), rgba(217,70,239,0.75));
-          border: 1px solid rgba(124,58,237,0.45);
+          background: linear-gradient(135deg, #7c3aed, #5b21b6);
+          border: 1px solid rgba(196,181,253,0.45);
           border-radius: 12px;
           color: white;
-          font-family: var(--font-barlow), 'Barlow Condensed', sans-serif;
-          font-size: 15px;
+          font-family: var(--font-rajdhani), 'Rajdhani', sans-serif;
+          font-size: 17px;
+          letter-spacing: .02em;
           font-weight: 700;
           cursor: pointer;
           transition: all 0.15s;
@@ -341,7 +354,9 @@ function LoginForm() {
             </div>
             <div>
               <div className="wl-brand-name">weered</div>
-              <div className="wl-brand-sub">enter the portal</div>
+              <div className="wl-brand-sub">
+                {mode === "login" ? "Welcome back." : "Thirty seconds and you're in."}
+              </div>
             </div>
           </div>
 
@@ -353,7 +368,7 @@ function LoginForm() {
                 setErr("");
               }}
             >
-              sign_in
+              Sign in
             </button>
             <button
               className={`wl-tab${mode === "register" ? " active" : ""}`}
@@ -362,7 +377,7 @@ function LoginForm() {
                 setErr("");
               }}
             >
-              register
+              Create account
             </button>
           </div>
 
@@ -513,7 +528,7 @@ function LoginForm() {
               {err && <div className="wl-error">{err}</div>}
 
               <button className="wl-btn" disabled={busy} onClick={submit}>
-                {busy ? "working..." : mode === "login" ? "sign_in()" : "create_account()"}
+                {busy ? "One sec…" : mode === "login" ? "Sign in" : "Create account"}
               </button>
             </>
           )}
@@ -579,13 +594,13 @@ function LoginForm() {
                 fill="#EA4335"
               />
             </svg>
-            continue with Google
+            Continue with Google
           </button>
 
           {!pendingEmail && (
             <div className="wl-footer">
               <span className="wl-footer-text">
-                {mode === "login" ? "no account? " : "have an account? "}
+                {mode === "login" ? "No account? " : "Have one? "}
                 <span
                   className="wl-switch"
                   onClick={() => {
@@ -598,7 +613,7 @@ function LoginForm() {
                   })}
                   tabIndex={0}
                 >
-                  {mode === "login" ? "register" : "sign in"}
+                  {mode === "login" ? "Create one" : "Sign in"}
                 </span>
               </span>
               {isDev && (

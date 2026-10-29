@@ -7,7 +7,9 @@ const HIDE_ON = ["/login", "/register", "/staff"];
 
 export default function SiteFooter() {
   const pathname = usePathname() || "";
-  const hidden = HIDE_ON.some((r) => pathname === r || pathname.startsWith(r + "/"));
+  // The landing page carries its own footer.
+  const hidden =
+    pathname === "/" || HIDE_ON.some((r) => pathname === r || pathname.startsWith(r + "/"));
   if (hidden) return null;
 
   return (
@@ -77,8 +79,6 @@ export default function SiteFooter() {
           <div className="site-footer-divider" />
           <Link href="/desktop">desktop app</Link>
           <div className="site-footer-divider" />
-          <Link href="/premium">premium</Link>
-          <div className="site-footer-divider" />
           <Link href="/pricing">pricing</Link>
           <div className="site-footer-divider" />
           <Link href="/terms">terms</Link>
@@ -88,16 +88,6 @@ export default function SiteFooter() {
           <Link href="/guidelines">guidelines</Link>
           <div className="site-footer-divider" />
           <Link href="/contact">contact</Link>
-          <div className="site-footer-divider" />
-          <Link href="/apply">apply to mod</Link>
-          <div className="site-footer-divider" />
-          <Link href="/alternatives/guilded">guilded alternative</Link>
-          <div className="site-footer-divider" />
-          {/* Portuguese label on purpose: the people this page is for are not
-              scanning an English footer for the word "Brazil". */}
-          <Link href="/alternativas/discord-brasil" hrefLang="pt-BR">
-            discord sem vídeo (BR)
-          </Link>
         </nav>
       </footer>
     </>

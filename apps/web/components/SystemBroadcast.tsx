@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 
 type BroadcastMsg = {
   id?: string;
@@ -45,6 +46,9 @@ const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
 export default function SystemBroadcast() {
   const [msgs, setMsgs] = useState<BroadcastMsg[]>([]);
+  const pathname = usePathname() || "";
+  // The front door stays clean: broadcasts are for people already inside.
+  const frontDoor = pathname === "/" || pathname === "/login";
 
   useEffect(() => {
     let dismissedIds: string[] = [];
@@ -111,7 +115,7 @@ export default function SystemBroadcast() {
     setMsgs((prev) => prev.filter((m) => (m.id || m.ts) !== (msg.id || msg.ts)));
   }
 
-  if (msgs.length === 0) return null;
+  if (msgs.length === 0 || frontDoor) return null;
 
   return (
     <div style={{ position: "relative", zIndex: 9999 }}>
