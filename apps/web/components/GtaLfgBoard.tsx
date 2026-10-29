@@ -146,7 +146,9 @@ export default function GtaLfgBoard({
   }
 
   async function create() {
-    if (!authHeaders().Authorization) {
+    // Signed-in test is the user id, not the boot-deleted weered_token that
+    // authHeaders() reads (the httpOnly session cookie carries auth).
+    if (!meId) {
       setMsg("Log in to post a session.");
       return;
     }
@@ -175,7 +177,7 @@ export default function GtaLfgBoard({
   }
 
   async function claim(postId: string, index: number) {
-    if (!authHeaders().Authorization) {
+    if (!meId) {
       setMsg("Log in to claim a slot.");
       return;
     }

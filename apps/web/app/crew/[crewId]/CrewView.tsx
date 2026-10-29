@@ -164,7 +164,9 @@ export default function CrewView({ crewId, initial }: { crewId: string; initial:
 
   async function askToJoin() {
     const token = tok();
-    if (!token) {
+    // Signed-in test is the provider's user, not weered_token (boot-deleted
+    // since the cookie-session migration; the cookie carries auth).
+    if (!meId) {
       try {
         window.location.href = `/login?next=${encodeURIComponent(`/crew/${crewId}`)}`;
       } catch {}

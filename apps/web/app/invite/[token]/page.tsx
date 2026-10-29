@@ -14,6 +14,17 @@ function authHeaders(): Record<string, string> {
   }
 }
 
+// Signed-in test: the cached user the login page writes. The session itself is
+// an httpOnly cookie, and the layout boot script deletes weered_token on every
+// load, so the token's presence can no longer mean "signed in".
+function hasCachedUser(): boolean {
+  try {
+    return !!JSON.parse(localStorage.getItem("weered_user") || "null")?.id;
+  } catch {
+    return false;
+  }
+}
+
 type InviteInfo = {
   token: string;
   type: string;
@@ -79,8 +90,7 @@ export default function InvitePage() {
 
   async function accept() {
     setState("accepting");
-    const tok = localStorage.getItem("weered_token");
-    if (!tok) {
+    if (!hasCachedUser()) {
       router.push(`/login?next=/invite/${token}`);
       return;
     }
@@ -89,6 +99,11 @@ export default function InvitePage() {
       headers: { "Content-Type": "application/json", ...authHeaders() },
       body: JSON.stringify({}),
     });
+    // A stale cached user with an expired cookie session: send them to sign in.
+    if (r.status === 401) {
+      router.push(`/login?next=/invite/${token}`);
+      return;
+    }
     const j = await r.json();
     if (j.ok) {
       setRedirect(j.redirect || "/lobby");

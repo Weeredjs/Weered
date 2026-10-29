@@ -13,6 +13,17 @@ function getToken() {
   }
 }
 
+// Signed-in test: the cached user the login page writes. The session itself is
+// an httpOnly cookie and the layout boot script deletes weered_token on every
+// load, so the token's presence can no longer mean "signed in".
+function hasCachedUser(): boolean {
+  try {
+    return !!JSON.parse(localStorage.getItem("weered_user") || "null")?.id;
+  } catch {
+    return false;
+  }
+}
+
 interface DmPreview {
   peerId: string;
   peerName: string;
@@ -41,7 +52,7 @@ export default function DmPreviewStrip() {
 
   useEffect(() => {
     const tok = getToken();
-    if (!tok) {
+    if (!hasCachedUser()) {
       setLoaded(true);
       return;
     }

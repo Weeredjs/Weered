@@ -104,7 +104,16 @@ export default function WindroseBuildBuilder({
           return "";
         }
       })();
-      if (!tok) {
+      // Signed-in test is the cached user, not the boot-deleted weered_token
+      // (the httpOnly session cookie carries auth).
+      const signedIn = (() => {
+        try {
+          return !!JSON.parse(localStorage.getItem("weered_user") || "null")?.id;
+        } catch {
+          return false;
+        }
+      })();
+      if (!signedIn) {
         setError("Sign in to file a log.");
         setSubmitting(false);
         return;

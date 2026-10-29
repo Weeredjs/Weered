@@ -24,6 +24,13 @@ export async function apiFetch(path: string, opts?: RequestInit) {
 }
 
 export function currentUserId(): string | null {
+  // The cached user the login page writes is the identity source now: the
+  // session is an httpOnly cookie and the layout boot script deletes
+  // weered_token on every load, so decoding it alone always returned null.
+  try {
+    const u = JSON.parse(localStorage.getItem("weered_user") || "null");
+    if (u?.id) return String(u.id);
+  } catch {}
   try {
     const t = localStorage.getItem("weered_token") || "";
     const p = JSON.parse(atob(t.split(".")[1]));

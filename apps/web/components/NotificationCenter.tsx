@@ -28,6 +28,17 @@ function getToken(): string {
   }
 }
 
+// Signed-in test: the cached user the login page writes. The session itself is
+// an httpOnly cookie and the layout boot script deletes weered_token on every
+// load, so the token's presence can no longer mean "signed in".
+function hasCachedUser(): boolean {
+  try {
+    return !!JSON.parse(localStorage.getItem("weered_user") || "null")?.id;
+  } catch {
+    return false;
+  }
+}
+
 function timeAgo(iso: string): string {
   const ms = Date.now() - new Date(iso).getTime();
   const s = Math.floor(ms / 1000);
@@ -61,7 +72,7 @@ export function useNotifications() {
 
   const fetchUnreadCount = useCallback(async () => {
     const tok = getToken();
-    if (!tok) return;
+    if (!hasCachedUser()) return;
     try {
       const r = await fetch(`${API_BASE}/notifications/unread-count`, {
         headers: { Authorization: `Bearer ${tok}` },
@@ -73,7 +84,7 @@ export function useNotifications() {
 
   const fetchNotifications = useCallback(async () => {
     const tok = getToken();
-    if (!tok) return;
+    if (!hasCachedUser()) return;
     setLoading(true);
     try {
       const r = await fetch(`${API_BASE}/notifications?limit=30`, {
@@ -104,7 +115,7 @@ export function useNotifications() {
 
   const markAllRead = useCallback(async () => {
     const tok = getToken();
-    if (!tok) return;
+    if (!hasCachedUser()) return;
     try {
       await fetch(`${API_BASE}/notifications/read`, {
         method: "PATCH",
@@ -121,7 +132,7 @@ export function useNotifications() {
 
   const markOneRead = useCallback(async (id: string) => {
     const tok = getToken();
-    if (!tok) return;
+    if (!hasCachedUser()) return;
     try {
       await fetch(`${API_BASE}/notifications/read`, {
         method: "PATCH",
@@ -138,7 +149,7 @@ export function useNotifications() {
 
   const deleteNotif = useCallback(async (id: string) => {
     const tok = getToken();
-    if (!tok) return;
+    if (!hasCachedUser()) return;
     try {
       await fetch(`${API_BASE}/notifications/${id}`, {
         method: "DELETE",

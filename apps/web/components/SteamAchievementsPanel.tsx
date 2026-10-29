@@ -50,7 +50,16 @@ export default function SteamAchievementsPanel({
             return "";
           }
         })();
-        if (!tok) {
+        // Signed-in test is the cached user, not the boot-deleted
+        // weered_token (the httpOnly session cookie carries auth).
+        const signedIn = (() => {
+          try {
+            return !!JSON.parse(localStorage.getItem("weered_user") || "null")?.id;
+          } catch {
+            return false;
+          }
+        })();
+        if (!signedIn) {
           if (alive) setState({ status: "no-data" });
           return;
         }

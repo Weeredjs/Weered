@@ -520,8 +520,9 @@ export default function LeftRail() {
 
   const favsSynced = useRef(false);
   useEffect(() => {
+    // Gate on the user, not the boot-deleted weered_token (cookie carries auth).
     const token = typeof window !== "undefined" ? localStorage.getItem("weered_token") : null;
-    if (!token || !me?.id || favsSynced.current) return;
+    if (!me?.id || favsSynced.current) return;
     favsSynced.current = true;
     void (async () => {
       try {
@@ -531,7 +532,10 @@ export default function LeftRail() {
         } catch {}
         const res = await fetch(`${API_BASE}/me/favorites/merge`, {
           method: "POST",
-          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+          headers: {
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            "Content-Type": "application/json",
+          },
           body: JSON.stringify({ ids: local }),
         });
         const j = await res.json();
@@ -553,10 +557,10 @@ export default function LeftRail() {
         localStorage.setItem(FAVS_KEY, JSON.stringify(next));
       } catch {}
       const token = typeof window !== "undefined" ? localStorage.getItem("weered_token") : null;
-      if (token) {
+      if (me?.id) {
         fetch(`${API_BASE}/me/favorites/${encodeURIComponent(room)}`, {
           method: adding ? "POST" : "DELETE",
-          headers: { Authorization: `Bearer ${token}` },
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
         }).catch(() => {});
       }
       return next;
