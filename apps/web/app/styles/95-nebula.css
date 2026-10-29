@@ -326,7 +326,7 @@ html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-presence-row:h
 html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-left .weered-avatar {
   border-radius: 50% !important;
 }
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-presence-search {
+html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-left .weered-presence-search {
   width: calc(100% - 20px) !important;
   margin: 4px 10px 6px !important;
   padding: 9px 12px !important;
@@ -339,11 +339,15 @@ html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-presence-searc
   letter-spacing: 0.02em !important;
   text-transform: none !important;
 }
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-presence-search::placeholder {
+html[data-weered-theme="nebula"]:not([data-weered-lobby])
+  .weered-left
+  .weered-presence-search::placeholder {
   color: rgb(255 255 255 / 0.38) !important;
   text-transform: none !important;
 }
-html[data-weered-theme="nebula"]:not([data-weered-lobby]) .weered-presence-search:focus {
+html[data-weered-theme="nebula"]:not([data-weered-lobby])
+  .weered-left
+  .weered-presence-search:focus {
   outline: none !important;
   border-color: rgb(var(--nb-a) / 0.6) !important;
   box-shadow: 0 0 0 3px rgb(var(--nb-a) / 0.18) !important;

@@ -7,7 +7,6 @@ import { useOverlay } from "./overlays/OverlayProvider";
 import { useWeered, useRoomUsers } from "./WeeredProvider";
 import UserCorner from "./UserCorner";
 import { useUserHover } from "./UserHoverCard";
-import RoleIcon, { TierIcon } from "./RoleIcon";
 import PresenceRow from "./PresenceRow";
 import { useOfficeSkin } from "./useOfficeSkin";
 import AdvisorCredentialCard from "./AdvisorCredentialCard";
@@ -16,6 +15,7 @@ import { TIMBOS_NAV, TIMBOS_NAV_ICONS, TIMBOS_LOBBY_ID } from "../lib/timbosCopy
 import { isScopedRailLobby } from "../lib/lobbyChrome";
 import { SECTION_ORDER, sectionLabel, sectionIcon, HOME_LINK } from "../lib/lobbySections";
 import { isOfficeRoomPath } from "@/lib/officeRooms";
+import { accentForRoom, groupRank, lobbyHref, normRoomKey, pickFirstString } from "../lib/leftRail";
 import {
   PREFS_EVENT,
   readUiPrefs,
@@ -23,11 +23,6 @@ import {
   type RailSection,
   type UiPrefs,
 } from "../lib/uiPrefs";
-
-function pickFirstString(...vals: any[]): string {
-  for (const v of vals) if (typeof v === "string" && v.trim()) return v.trim();
-  return "";
-}
 
 const API_BASE = (process.env.NEXT_PUBLIC_API_BASE as string) || "http://127.0.0.1:4000";
 
@@ -38,155 +33,6 @@ function authHeaders(): Record<string, string> {
   } catch {
     return {};
   }
-}
-
-function normRoomKey(x: any): string {
-  let s = String(x || "").trim();
-  if (!s) return "";
-  if (s.startsWith("room:")) s = s.slice(5);
-  try {
-    s = decodeURIComponent(s);
-  } catch {}
-  return String(s || "").trim();
-}
-
-function lobbyHref(id: string, knownLobby = false): string {
-  let clean = id || "";
-  if (clean.startsWith("room:")) clean = clean.slice(5);
-  try {
-    clean = decodeURIComponent(clean);
-  } catch {}
-  if (!clean) return "/lobby";
-  const ROOM_PREFIXES = [
-    "mtg-", // meeting/office rooms (the consult namespace)
-    "stream-",
-    "news-",
-    "article-",
-    "watch-",
-    "fakeout-",
-    "destiny2-",
-    "dnd-",
-    "windrose-",
-    "mlb-",
-    "league-",
-    "fortnite-",
-    "cs2-",
-    "dota2-",
-    "pubg-",
-    "hq-",
-    "poker-",
-    "study-",
-    "marathon-",
-  ];
-  if (ROOM_PREFIXES.some((p) => clean.startsWith(p))) return `/room/${encodeURIComponent(clean)}`;
-  // A slug the caller has resolved as a lobby is a lobby, whatever it looks like.
-  // Lobby slugs may start with a digit ("16thir"): the old /^[a-z]/ test sent
-  // those to /room/, and the socket then minted a nameless Room row with the
-  // lobby's id, which made the mistake look permanent.
-  if (knownLobby) return `/lobby/${encodeURIComponent(clean)}`;
-  const isLobbySlug =
-    /^[a-z0-9][a-z0-9._/-]*$/.test(clean) || clean.includes(".") || clean.includes("/");
-  if (isLobbySlug) return `/lobby/${encodeURIComponent(clean)}`;
-  return `/room/${encodeURIComponent(clean)}`;
-}
-
-function normRole(x: any) {
-  const s = String(x || "")
-    .trim()
-    .toUpperCase();
-  if (!s) return "";
-  if (s === "GOD") return "GOD";
-  if (s === "SUPPORT") return "SUPPORT";
-  if (s === "STAFF") return "STAFF";
-  if (s === "ADMIN") return "ADMIN";
-  if (s === "MOD") return "MOD";
-  if (s === "OWNER") return "OWNER";
-  if (s === "MEMBER") return "MEMBER";
-  return s.slice(0, 18);
-}
-
-function userTier(u: any): string {
-  const t = String(u?.tier || "").toUpperCase();
-  if (t === "KINGPIN") return "KINGPIN";
-  if (t === "FELON") return "FELON";
-  if (t === "INDICTED") return "INDICTED";
-  return "INNOCENT";
-}
-function isPaidUser(u: any) {
-  const t = userTier(u);
-  return t === "INDICTED" || t === "FELON" || t === "KINGPIN";
-}
-
-type Flair = {
-  markClass: string;
-  nameClass?: string;
-  badge?: string;
-  badgeClass?: string;
-  icon?: React.ReactNode;
-};
-
-const ROLE_DISPLAY: Record<string, string> = {
-  GOD: "Godfather",
-  ADMIN: "Lieutenant",
-  STAFF: "Enforcer",
-  SUPPORT: "Backup",
-  MOD: "Captain",
-  OWNER: "Founder",
-};
-const ROLE_DISPLAY_WINDROSE: Record<string, string> = {
-  GOD: "Admiral",
-  ADMIN: "First Mate",
-  STAFF: "Boatswain",
-  SUPPORT: "Lookout",
-  MOD: "Quartermaster",
-  OWNER: "Captain",
-};
-const ROLE_DISPLAY_HELLDIVERS: Record<string, string> = {
-  GOD: "Supreme Commander",
-  ADMIN: "General",
-  STAFF: "Commander",
-  SUPPORT: "Officer",
-  MOD: "Drill Sergeant",
-  OWNER: "Dive Lead",
-};
-
-const ICON_GOD = <RoleIcon role="GOD" size={14} />;
-const ICON_ADMIN = <RoleIcon role="ADMIN" size={14} />;
-const ICON_STAFF = <RoleIcon role="STAFF" size={14} />;
-const ICON_SUPPORT = <RoleIcon role="SUPPORT" size={14} />;
-const ICON_MOD = <RoleIcon role="MOD" size={14} />;
-const ICON_OWNER = <RoleIcon role="OWNER" size={14} />;
-const ICON_INDICTED = <TierIcon tier="INDICTED" size={12} />;
-const ICON_FELON = <TierIcon tier="FELON" size={12} />;
-const ICON_KINGPIN_TIER = <TierIcon tier="KINGPIN" size={12} />;
-
-function groupRank(u: any): number {
-  const g = normRole(pickFirstString(u?.globalRole, u?.global_role, u?.global));
-  const rr = normRole(pickFirstString(u?.role, u?.roomRole, u?.room_role));
-  if (g === "GOD") return 0;
-  if (rr === "OWNER") return 1;
-  if (g === "ADMIN") return 2;
-  if (g === "STAFF" || g === "SUPPORT") return 3;
-  if (g === "MOD" || rr === "MOD") return 4;
-  return 5;
-}
-
-const ROOM_ACCENTS = [
-  "#7c6af7",
-  "#22c55e",
-  "#f97316",
-  "#60a5fa",
-  "#ef4444",
-  "#eab308",
-  "#ec4899",
-  "#14b8a6",
-  "#a78bfa",
-  "#fb923c",
-];
-function accentForRoom(id: string): string {
-  let h = 0;
-  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) & 0xffffffff;
-  return ROOM_ACCENTS[Math.abs(h) % ROOM_ACCENTS.length];
 }
 
 export default function LeftRail() {
