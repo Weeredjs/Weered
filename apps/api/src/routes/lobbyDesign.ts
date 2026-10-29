@@ -53,6 +53,18 @@ export function normalizeHost(raw: unknown): string | null {
   return h;
 }
 
+/** The design fields POST /lobbies accepts from the create-lobby composer. */
+export function designCreateExtras(layout: unknown, enabledModules: unknown): Record<string, any> {
+  const out: Record<string, any> = {};
+  if (layout && typeof layout === "object" && !Array.isArray(layout)) {
+    const raw = JSON.stringify(layout);
+    if (raw.length <= LAYOUT_MAX_BYTES) out.layout = JSON.parse(raw);
+  }
+  if (Array.isArray(enabledModules))
+    out.enabledModules = enabledModules.map(String).filter((m) => MODULE_KEYS.has(m));
+  return out;
+}
+
 async function addressesOf(host: string): Promise<string[]> {
   try {
     return await dns.resolve4(host);

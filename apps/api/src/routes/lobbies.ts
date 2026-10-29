@@ -3,6 +3,7 @@ import { publicModuleConfig } from "../lib/publicModuleConfig";
 import { logLobbyAudit } from "../lib/lobbyAudit";
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
+import { designCreateExtras } from "./lobbyDesign";
 import { z } from "zod";
 import { LobbyRole } from "@prisma/client";
 import { lastMessageMap } from "../lib/roomRecency";
@@ -720,19 +721,7 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
       const safeModuleConfig = isStaff ? moduleConfig : undefined;
 
       // The composer sends its design and feature picks with the create.
-      const createExtras: any = {};
-      if (layout && typeof layout === "object" && !Array.isArray(layout)) {
-        const raw = JSON.stringify(layout);
-        if (raw.length <= 48_000) createExtras.layout = JSON.parse(raw);
-      }
-      if (Array.isArray(enabledModules))
-        createExtras.enabledModules = enabledModules
-          .map(String)
-          .filter((m: string) =>
-            ["voice", "video", "screen", "youtube", "reddit", "twitch", "news", "music"].includes(
-              m,
-            ),
-          );
+      const createExtras = designCreateExtras(layout, enabledModules);
 
       const lobby = await prisma.lobby.upsert({
         where: { id: String(id) },
