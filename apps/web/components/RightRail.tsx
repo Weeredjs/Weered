@@ -12,6 +12,9 @@ import { weeredToast } from "../lib/toast";
 import PresenceRow from "./PresenceRow";
 import { LogoMenu } from "./LogoMenu";
 import { onActivate } from "@/lib/a11y";
+import ShellSlot from "./shell/ShellSlot";
+import { useShellLayout } from "../lib/shellDesign";
+import { isCore, keyOf, PANEL_CORES, type PanelCore } from "../lib/shellLayout";
 
 const API_BASE = (process.env.NEXT_PUBLIC_API_BASE as string) || "http://127.0.0.1:4000";
 
@@ -1335,12 +1338,9 @@ function DiscoverLobbiesPanel({ currentLobbyId }: { currentLobbyId: string }) {
   );
 }
 
-export default function RightRail({ lobbyId }: { lobbyId?: string }) {
-  const pathname       = usePathname() || "";
-  const { globalRole } = useWeered() as any;
-  const [mounted, setMounted] = React.useState(false);
-  React.useEffect(() => { setMounted(true); }, []);
-
+/** Which lobby and room the panel sections speak for, from the path. */
+export function useRailScope(lobbyId?: string): { lobbyId: string; currentRoomId: string } {
+  const pathname = usePathname() || "";
   const resolvedLobbyId = lobbyId ?? (() => {
     if (pathname === "/lobby" || pathname.startsWith("/lobby/")) {
       const seg = pathname.replace("/lobby/", "").replace("/lobby", "").split("/")[0];
@@ -1348,11 +1348,33 @@ export default function RightRail({ lobbyId }: { lobbyId?: string }) {
     }
     return "lobby";
   })();
+  const currentRoomId = pathname.startsWith("/room/")
+    ? decodeURIComponent(pathname.replace("/room/", ""))
+    : resolvedLobbyId;
+  return { lobbyId: resolvedLobbyId, currentRoomId };
+}
 
-  const currentRoomId = (() => {
-    if (pathname.startsWith("/room/")) return decodeURIComponent(pathname.replace("/room/", ""));
-    return resolvedLobbyId;
-  })();
+/** One of the panel's sections, wherever the viewer put it (either sidebar). */
+export function RailPanel({ id, lobbyId, currentRoomId }: { id: PanelCore; lobbyId: string; currentRoomId: string }) {
+  switch (id) {
+    case "whoshere": return <WhosHerePanel lobbyId={lobbyId} />;
+    case "rooms": return <RoomsPanel currentRoomId={currentRoomId} lobbyId={lobbyId} />;
+    case "friends": return <FriendsPanel lobbyId={lobbyId} />;
+    case "crew": return <CrewPanel lobbyId={lobbyId} />;
+    case "discover": return <DiscoverLobbiesPanel currentLobbyId={lobbyId} />;
+  }
+  return null;
+}
+
+export const isPanelCore = (v: unknown): v is PanelCore =>
+  typeof v === "string" && (PANEL_CORES as readonly string[]).includes(v);
+
+export default function RightRail({ lobbyId }: { lobbyId?: string }) {
+  const { globalRole } = useWeered() as any;
+  const [mounted, setMounted] = React.useState(false);
+  React.useEffect(() => { setMounted(true); }, []);
+  const { lobbyId: resolvedLobbyId, currentRoomId } = useRailScope(lobbyId);
+  const layout = useShellLayout();
 
   if (!mounted) return (
     <div style={{ padding: "14px 14px 20px", fontSize: 13, color: "rgba(243,244,246,.92)" }}>
@@ -1382,11 +1404,12 @@ export default function RightRail({ lobbyId }: { lobbyId?: string }) {
         </div>
       </div>
       <LobbyModPanel globalRole={globalRole || ""} lobbyId={resolvedLobbyId} />
-      <WhosHerePanel lobbyId={resolvedLobbyId} />
-      <RoomsPanel currentRoomId={currentRoomId} lobbyId={resolvedLobbyId} />
-      <FriendsPanel lobbyId={resolvedLobbyId} />
-      <CrewPanel lobbyId={resolvedLobbyId} />
-      <DiscoverLobbiesPanel currentLobbyId={resolvedLobbyId} />
+      {/* The viewer's own order (lib/shellLayout.ts): built-in sections and blocks. */}
+      {layout.right.map((it) => (
+        <ShellSlot key={keyOf(it)} item={it} region="right">
+          {isCore(it) ? (isPanelCore(it) ? <RailPanel id={it} lobbyId={resolvedLobbyId} currentRoomId={currentRoomId} /> : null) : undefined}
+        </ShellSlot>
+      ))}
     </div>
   );
 }

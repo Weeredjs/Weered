@@ -4,7 +4,21 @@ import React from "react";
 import { openConsentBanner } from "../../CookieConsent";
 import PresenceSection from "./PresenceSection";
 import { onActivate } from "@/lib/a11y";
-import { PALETTES, PALETTE_IDS, readUiPrefs, saveUiPrefs, type Palette } from "../../../lib/uiPrefs";
+import { useRouter } from "next/navigation";
+import {
+  NEBULA_FONTS,
+  NEBULA_FONT_IDS,
+  PALETTES,
+  PALETTE_IDS,
+  customPalette,
+  isHexColour,
+  readUiPrefs,
+  saveUiPrefs,
+  type NebulaFont,
+  type Palette,
+} from "../../../lib/uiPrefs";
+import { useOverlay } from "../OverlayProvider";
+import { startDesign } from "../../../lib/shellDesign";
 
 
 // Web sessions are an httpOnly cookie (Domain=.weered.ca); mobile/desktop send a
@@ -359,6 +373,7 @@ export default function SettingsSheet({ initialTab }: { initialTab?: string } = 
                   })}
                 </div>
                 {s.theme === "nebula" && <NebulaOptions />}
+                <DesignLink />
                 <a
                   href="/setup"
                   style={{
@@ -368,7 +383,7 @@ export default function SettingsSheet({ initialTab }: { initialTab?: string } = 
                   }}
                 >
                   ✦ Run setup again
-                  <span style={{ fontWeight: 500, opacity: 0.65 }}>Look, sidebar, favorites</span>
+                  <span style={{ fontWeight: 500, opacity: 0.65 }}>Look and layout</span>
                 </a>
               </Section>
 
@@ -487,16 +502,53 @@ function DesktopNotifyToggle({ enabled, onChange }: { enabled: boolean; onChange
   );
 }
 
-// Nebula's own knobs: colourway and starfield. Saved with the account's UI
-// prefs (lib/uiPrefs), the same place first-run setup writes them.
+// Design your Weered (components/shell/ShellDesigner.tsx) runs on Home: from
+// Home it opens in place, from anywhere else it goes there first.
+function DesignLink() {
+  const { clearSheets } = useOverlay();
+  const router = useRouter();
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        clearSheets();
+        if (window.location.pathname === "/home") startDesign();
+        else router.push("/home?design=1");
+      }}
+      style={{
+        display: "flex", alignItems: "center", gap: 10, width: "100%", marginTop: 14, padding: "12px 14px",
+        borderRadius: 12, cursor: "pointer", textAlign: "left", fontFamily: "inherit", color: "#fff",
+        border: "1px solid var(--weered-accent-ring, #a78bfa88)",
+        background: "linear-gradient(135deg, var(--weered-accent-bg, #7c3aed33), transparent)",
+      }}
+    >
+      <span style={{ fontSize: 18, color: "var(--weered-accent-text, #c4b5fd)" }}>✦</span>
+      <span style={{ minWidth: 0 }}>
+        <span style={{ display: "block", fontSize: 13.5, fontWeight: 800 }}>Design your Weered</span>
+        <span style={{ display: "block", fontSize: 11.5, opacity: 0.65 }}>
+          Move any section, put Friends where you want them, add blocks, pick your own colour.
+        </span>
+      </span>
+    </button>
+  );
+}
+
+// Nebula's own knobs: colourway, type and starfield. Saved with the account's
+// UI prefs (lib/uiPrefs), the same place setup and Design write them.
 function NebulaOptions() {
   const [palette, setPalette] = React.useState<Palette>("violet");
+  const [accent, setAccent] = React.useState("#8b5cf6");
+  const [font, setFont] = React.useState<NebulaFont>("default");
   const [stars, setStars] = React.useState(true);
+  const accentTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   React.useEffect(() => {
     const p = readUiPrefs();
     setPalette(p.palette || "violet");
+    if (isHexColour(p.accent)) setAccent(p.accent);
+    setFont(p.font || "default");
     setStars(p.stars !== false);
   }, []);
+  const mine = customPalette(accent);
   return (
     <div className="weered-settings-nebula" style={{ marginTop: 14 }}>
       <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 8, color: "var(--weered-text, rgba(243,244,246,.95))" }}>Colourway</div>
@@ -522,6 +574,51 @@ function NebulaOptions() {
             </button>
           );
         })}
+        <label
+          title="Pick any colour; Weered builds the rest around it"
+          style={{
+            position: "relative", height: 64, padding: "0 10px 8px", borderRadius: 12, cursor: "pointer",
+            display: "flex", alignItems: "flex-end", fontSize: 12.5, fontWeight: 800, color: "#fff",
+            border: palette === "custom" ? `2px solid ${mine.a}` : "1px solid rgba(255,255,255,.12)",
+            boxShadow: palette === "custom" ? `0 0 0 3px ${mine.a}44, 0 10px 24px -12px ${mine.a}` : "none",
+            background: `radial-gradient(120% 90% at 0% 0%, ${mine.b}bb, transparent 60%), radial-gradient(90% 90% at 100% 100%, ${mine.c}ee, transparent 65%), ${mine.bg}`,
+          }}
+        >
+          Your colour ✎
+          <input
+            type="color"
+            value={accent}
+            aria-label="Pick your own colour"
+            onChange={(e) => {
+              const v = e.target.value;
+              setAccent(v);
+              setPalette("custom");
+              // A colour picker fires on every drag step; save once it settles.
+              if (accentTimer.current) clearTimeout(accentTimer.current);
+              accentTimer.current = setTimeout(() => saveUiPrefs({ palette: "custom", accent: v }), 350);
+            }}
+            style={{ position: "absolute", inset: 0, opacity: 0, cursor: "pointer" }}
+          />
+        </label>
+      </div>
+      <div style={{ fontSize: 12, fontWeight: 700, margin: "14px 0 8px", color: "var(--weered-text, rgba(243,244,246,.95))" }}>Type</div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 6 }}>
+        {NEBULA_FONT_IDS.map((f) => (
+          <button
+            key={f}
+            type="button"
+            aria-pressed={font === f}
+            onClick={() => { setFont(f); saveUiPrefs({ font: f }); }}
+            style={{
+              padding: "8px 6px", borderRadius: 10, cursor: "pointer", fontSize: 13, color: "#fff",
+              fontFamily: NEBULA_FONTS[f].stack,
+              border: font === f ? "1px solid var(--weered-accent-ring, #a78bfa)" : "1px solid rgba(255,255,255,.1)",
+              background: font === f ? "var(--weered-accent-bg, #7c3aed33)" : "rgba(255,255,255,.03)",
+            }}
+          >
+            {NEBULA_FONTS[f].name}
+          </button>
+        ))}
       </div>
       <Row label="Starfield" hint="Drifting stars, twinkles and the odd shooting star behind everything.">
         <Toggle checked={stars} onChange={(v) => { setStars(v); saveUiPrefs({ stars: v }); }} />

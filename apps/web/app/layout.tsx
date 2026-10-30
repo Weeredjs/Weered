@@ -54,7 +54,7 @@ import {
   SKIN_CACHE_KEY,
   THEMEABLE_LOBBY_IDS,
 } from "../lib/lobbyThemes";
-import { PREFS_KEY, SITE_THEME_IDS } from "../lib/uiPrefs";
+import { NB_CUSTOM_KEY, PREFS_KEY, SITE_THEME_IDS } from "../lib/uiPrefs";
 
 export const metadata = {
   title: {
@@ -143,6 +143,13 @@ try {
   var up = null;
   try { up = JSON.parse(localStorage.getItem(${JSON.stringify(PREFS_KEY)}) || 'null'); } catch(e) {}
   d.setAttribute('data-weered-palette', (up && up.palette) || 'violet');
+  if (up && up.palette === 'custom') {
+    try {
+      var cv = JSON.parse(localStorage.getItem(${JSON.stringify(NB_CUSTOM_KEY)}) || 'null');
+      if (cv) for (var ck in cv) d.style.setProperty(ck, cv[ck]);
+    } catch(e) {}
+  }
+  if (up && up.font && up.font !== 'default') d.setAttribute('data-weered-font', up.font);
   if (up && up.stars === false) d.setAttribute('data-weered-stars', 'off');
   if (s && s.density) d.setAttribute('data-weered-density', s.density);
   if (s && s.reduceMotion) d.setAttribute('data-weered-reduce-motion', '1');

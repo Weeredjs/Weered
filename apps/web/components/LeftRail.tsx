@@ -16,13 +16,17 @@ import { isScopedRailLobby } from "../lib/lobbyChrome";
 import { SECTION_ORDER, sectionLabel, sectionIcon, HOME_LINK } from "../lib/lobbySections";
 import { isOfficeRoomPath } from "@/lib/officeRooms";
 import { accentForRoom, groupRank, lobbyHref, normRoomKey, pickFirstString } from "../lib/leftRail";
+import ShellSlot from "./shell/ShellSlot";
+import { RailPanel, isPanelCore, useRailScope } from "./RightRail";
+import { useShellDesign } from "../lib/shellDesign";
 import {
-  PREFS_EVENT,
-  readUiPrefs,
-  railOrder,
-  type RailSection,
-  type UiPrefs,
-} from "../lib/uiPrefs";
+  LEFT_CORES,
+  isCore,
+  keyOf,
+  stockShell,
+  type LeftCore,
+  type ShellLayout,
+} from "../lib/shellLayout";
 
 const API_BASE = (process.env.NEXT_PUBLIC_API_BASE as string) || "http://127.0.0.1:4000";
 
@@ -628,42 +632,52 @@ export default function LeftRail() {
 
   const activeRoomNorm = normRoomKey(joinedRoomId || activeRoomId || "");
 
-  // The viewer's sidebar order and hidden sections (chosen in /setup). Drawn
-  // with flex `order`, so the sections themselves stay where they are in JSX.
-  const [uiPrefs, setUiPrefs] = useState<UiPrefs>({});
-  useEffect(() => {
-    const read = () => setUiPrefs(readUiPrefs());
-    read();
-    window.addEventListener(PREFS_EVENT, read);
-    window.addEventListener("storage", read);
-    return () => {
-      window.removeEventListener(PREFS_EVENT, read);
-      window.removeEventListener("storage", read);
-    };
-  }, []);
+  // The viewer's own layout (lib/shellLayout.ts, set in setup and Design
+  // mode). The rail's built-in sections are drawn in JSX order and placed
+  // with flex `order`; panel sections and blocks the viewer moved here sit
+  // in slots between them. The office keeps the stock rail.
+  const design = useShellDesign();
+  const designing = design.designing && !office;
+  const stock = useMemo(() => stockShell(), []);
+  const layout: ShellLayout = office
+    ? stock
+    : design.designing && design.draft
+      ? design.draft.layout
+      : design.saved;
+  const scope = useRailScope();
+  const isLeftCore = (v: unknown): v is LeftCore =>
+    typeof v === "string" && (LEFT_CORES as readonly string[]).includes(v);
   const railCss = useMemo(() => {
-    const hidden = new Set(uiPrefs.rail?.hidden || []);
-    const sel = (s: RailSection) =>
+    const sel = (s: LeftCore) =>
       s === "card"
         ? ".weered-left-inner > .weered-usercorner"
         : `.weered-left-inner > [data-rail="${s}"]`;
-    return railOrder(uiPrefs)
-      .map(
-        (s, i) =>
-          `${sel(s)}{order:${i + 1}}` +
-          // The card bleeds up into the rail's top padding; only when first.
-          (s === "card" && i > 0 ? `${sel(s)}{margin-top:0!important}` : "") +
-          (hidden.has(s) && s !== "nav" ? `${sel(s)}{display:none!important}` : ""),
-      )
-      .join("");
-  }, [uiPrefs]);
+    const at = new Map<LeftCore, number>();
+    layout.left.forEach((it, i) => {
+      if (isLeftCore(it)) at.set(it, i);
+    });
+    return LEFT_CORES.map((s) => {
+      const i = at.get(s);
+      if (i === undefined) return `${sel(s)}{display:none!important}`;
+      return (
+        `${sel(s)}{order:${i + 1}}` +
+        // The card bleeds up into the rail's top padding; only when first.
+        (s === "card" && i > 0 ? `${sel(s)}{margin-top:0!important}` : "")
+      );
+    }).join("");
+  }, [layout]);
 
   return (
     <div className="weered-left-inner">
       <style>{railCss}</style>
       {office ? <AdvisorCredentialCard /> : <UserCorner />}
 
-      <div className="weered-left-section" data-rail="nav">
+      <div
+        className="weered-left-section"
+        data-rail="nav"
+        data-shell-key="nav"
+        data-shell-region="left"
+      >
         <div className="weered-left-title">{office ? "Practice" : navLabels.communities}</div>
 
         {(scopedRail
@@ -827,7 +841,12 @@ export default function LeftRail() {
         </div>
       </div>
 
-      <div className="weered-presence" data-rail="presence">
+      <div
+        className="weered-presence"
+        data-rail="presence"
+        data-shell-key="presence"
+        data-shell-region="left"
+      >
         <div className="weered-presence-head">
           <div className="weered-presence-title">{office ? "Reception" : "Presence"}</div>
           <div className="weered-presence-sub">
@@ -954,8 +973,13 @@ export default function LeftRail() {
           chrome-min skin paints a 28px banner on .weered-left-section::before,
           which means one section can only ever wear one hat: sharing a section
           gave Favourites a purple header and left Recent bare. */}
-      {favs.length > 0 && (
-        <div className="weered-left-section" data-rail="favs">
+      {(favs.length > 0 || designing) && (
+        <div
+          className="weered-left-section"
+          data-rail="favs"
+          data-shell-key="favs"
+          data-shell-region="left"
+        >
           <>
             <div
               className="weered-left-title"
@@ -964,6 +988,9 @@ export default function LeftRail() {
               <span>{office ? "Clients" : "Favorites"}</span>
               <span style={{ fontSize: 10, opacity: 0.4 }}>{favs.length}</span>
             </div>
+            {favs.length === 0 && (
+              <div className="weered-shell-empty">Star a place and it lands here.</div>
+            )}
             {favs.map((room) => {
               const href = lobbyHref(room, !!favMeta[room] || !!lobbyLogos[room]);
               const isActive = activeRoomNorm === room;
@@ -1125,8 +1152,13 @@ export default function LeftRail() {
         </div>
       )}
 
-      {recentRooms.length > 0 && (
-        <div className="weered-left-section" data-rail="recent">
+      {(recentRooms.length > 0 || designing) && (
+        <div
+          className="weered-left-section"
+          data-rail="recent"
+          data-shell-key="recent"
+          data-shell-region="left"
+        >
           <>
             <div
               className="weered-left-title"
@@ -1139,6 +1171,9 @@ export default function LeftRail() {
               <span>{office ? "Recent reviews" : "Recent"}</span>
               <span style={{ fontSize: 10, opacity: 0.4 }}>{recentRooms.length}</span>
             </div>
+            {recentRooms.length === 0 && (
+              <div className="weered-shell-empty">Places you visit show up here.</div>
+            )}
             {recentRooms.map((room) => {
               // The visit record knows what it was: a room visit carries roomId,
               // a lobby visit lobbyId. Guessing from the slug sent rooms such as
@@ -1323,10 +1358,31 @@ export default function LeftRail() {
         </div>
       )}
 
-      {favs.length === 0 && recentRooms.length === 0 && (
-        <div style={{ fontSize: 11, opacity: 0.3, padding: "2px 14px 4px", fontStyle: "italic" }}>
+      {favs.length === 0 && recentRooms.length === 0 && !designing && (
+        <div
+          style={{
+            order: 98,
+            fontSize: 11,
+            opacity: 0.3,
+            padding: "2px 14px 4px",
+            fontStyle: "italic",
+          }}
+        >
           {office ? "Reviews you open will appear here" : "Join a room to build your history"}
         </div>
+      )}
+
+      {/* Panel sections and blocks the viewer moved into this sidebar. */}
+      {layout.left.map((it, i) =>
+        isLeftCore(it) ? null : (
+          <ShellSlot key={keyOf(it)} item={it} region="left" order={i + 1}>
+            {isCore(it) ? (
+              isPanelCore(it) ? (
+                <RailPanel id={it} lobbyId={scope.lobbyId} currentRoomId={scope.currentRoomId} />
+              ) : null
+            ) : undefined}
+          </ShellSlot>
+        ),
       )}
 
       <div

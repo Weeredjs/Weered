@@ -6,6 +6,7 @@ import SiteFooter from "./SiteFooter";
 import { LogoMenu } from "./LogoMenu";
 import { onActivate } from "@/lib/a11y";
 import { NO_SHELL_ROUTES } from "../lib/lobbyThemes";
+import { useShellDesign } from "../lib/shellDesign";
 
 function LeftRailScroll({ children }: { children: React.ReactNode }) {
   const [hovered, setHovered] = useState(false);
@@ -420,6 +421,9 @@ export default function ShellGate({
 
   const [overlay, setOverlay] = useState<"left" | "right" | null>(null);
   const [rightCollapsed, setRightCollapsed] = useState(true);
+  // Design your Weered lays out both sidebars, so the panel stays open while
+  // designing (the viewer's own open/closed choice is left as it was).
+  const designing = useShellDesign().designing;
 
   // 0 on both sides, then the stored count before paint (see UserCorner).
   const [dmUnreadOnly, setDmUnreadOnly] = useState<number>(0);
@@ -476,6 +480,18 @@ export default function ShellGate({
     if (saved === "0") setRightCollapsed(false);
     else if (saved === "1") setRightCollapsed(true);
   }, []);
+  // Design your Weered asks for the panel open when it saved changes to it,
+  // so what was just put there isn't hidden behind a closed panel.
+  useEffect(() => {
+    const open = () => {
+      setRightCollapsed(false);
+      try {
+        localStorage.setItem("weered_right_collapsed", "0");
+      } catch {}
+    };
+    window.addEventListener("weered:rail:open-right", open);
+    return () => window.removeEventListener("weered:rail:open-right", open);
+  }, []);
   const toggleRight = () => {
     setRightCollapsed((v) => {
       localStorage.setItem("weered_right_collapsed", v ? "0" : "1");
@@ -511,7 +527,7 @@ export default function ShellGate({
 
         <main className="weered-center">{children}</main>
 
-        {rightCollapsed ? (
+        {rightCollapsed && !designing ? (
           <div className="weered-rail-stack">
             <LogoMenu />
             <RailQuickButton

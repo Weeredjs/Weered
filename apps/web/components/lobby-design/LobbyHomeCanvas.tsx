@@ -245,7 +245,7 @@ function Title({
   );
 }
 
-function youTubeEmbed(url: string): string | null {
+export function youTubeEmbed(url: string): string | null {
   try {
     const u = new URL(url);
     const list = u.searchParams.get("list");
@@ -260,7 +260,7 @@ function youTubeEmbed(url: string): string | null {
   return null;
 }
 
-function spotifyEmbed(url: string): string | null {
+export function spotifyEmbed(url: string): string | null {
   try {
     const u = new URL(url);
     if (!u.hostname.endsWith("spotify.com")) return null;
@@ -271,7 +271,7 @@ function spotifyEmbed(url: string): string | null {
   }
 }
 
-function Countdown({ at }: { at: string }) {
+export function Countdown({ at }: { at: string }) {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 1000);

@@ -1,8 +1,9 @@
-// The viewer's UI preferences: site theme and colour, sidebar order, and the
-// first-run setup state. Stored in this browser for instant paint (the boot
+// The viewer's UI preferences: site theme and colour, their own layout, and
+// the first-run setup state. Stored in this browser for instant paint (the boot
 // script in app/layout.tsx reads it before first paint) and on the account
 // (GET/PATCH /profile/me/ui) so the browser and the desktop app agree.
 // The API whitelists the same fields: apps/api/src/lib/uiPrefs.ts.
+import type { ShellLayout } from "./shellLayout";
 
 /** Every site theme id. The boot script, ThemeRestore, the dock and the
  *  settings sheets all validate against this one list. */
@@ -20,9 +21,12 @@ export type SiteThemeId = (typeof SITE_THEME_IDS)[number];
 export const isSiteTheme = (v: unknown): v is SiteThemeId =>
   typeof v === "string" && (SITE_THEME_IDS as readonly string[]).includes(v);
 
-export type Palette = "violet" | "ocean" | "ember" | "aurora" | "graphite" | "void";
+export type NamedPalette = "violet" | "ocean" | "ember" | "aurora" | "graphite" | "void";
+/** A named colourway, or "custom": one colour the viewer picked (`accent`). */
+export type Palette = NamedPalette | "custom";
 export type RailSection = "card" | "nav" | "presence" | "favs" | "recent";
-export type Interest = "work" | "community" | "games" | "place";
+/** Nebula's display face: titles, labels and buttons. */
+export type NebulaFont = "default" | "condensed" | "serif" | "stencil" | "clean" | "mono";
 
 export type UiPrefs = {
   theme?: SiteThemeId;
@@ -30,9 +34,13 @@ export type UiPrefs = {
   stars?: boolean;
   density?: "comfortable" | "compact";
   rail?: { order: RailSection[]; hidden: RailSection[] };
+  /** The viewer's own layout (lib/shellLayout.ts); absent = stock. */
+  shell?: ShellLayout;
+  /** The custom colourway's colour, when palette is "custom". */
+  accent?: string;
+  font?: NebulaFont;
   setup?: "done" | "skipped";
   setupAt?: string;
-  interests?: Interest[];
 };
 
 export const PREFS_KEY = "weered:ui-prefs:v1";
@@ -40,22 +48,6 @@ export const PREFS_EVENT = "weered:ui-prefs";
 const THEME_KEY = "weered_theme_v2";
 const SETTINGS_KEY = "weered:settings:v0";
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
-
-export const RAIL_ORDER: RailSection[] = ["card", "nav", "presence", "favs", "recent"];
-export const RAIL_LABEL: Record<RailSection, string> = {
-  card: "Your card",
-  nav: "Navigation",
-  presence: "Who's around",
-  favs: "Favorites",
-  recent: "Recent",
-};
-export const RAIL_BLURB: Record<RailSection, string> = {
-  card: "Avatar, name, status and rank.",
-  nav: "Lobby, Home, Forum, Paper. Always on.",
-  presence: "Who's online where you are.",
-  favs: "The places you starred.",
-  recent: "Where you've been lately.",
-};
 
 /** The Nebula colourways. `a` is the accent, `b` the deep accent, `c` the
  *  second glow, `ink` the glass cards sit on, `on` the text on an accent fill;
@@ -71,7 +63,7 @@ export type PaletteColours = {
   ink: string;
   on: string;
 };
-export const PALETTES: Record<Palette, PaletteColours> = {
+export const PALETTES: Record<NamedPalette, PaletteColours> = {
   violet: {
     name: "Violet",
     tagline: "Weered's own. Deep space purple.",
@@ -139,7 +131,119 @@ export const PALETTES: Record<Palette, PaletteColours> = {
     on: "#0b0b0d",
   },
 };
-export const PALETTE_IDS = Object.keys(PALETTES) as Palette[];
+export const PALETTE_IDS = Object.keys(PALETTES) as NamedPalette[];
+
+export const NEBULA_FONTS: Record<NebulaFont, { name: string; stack: string }> = {
+  default: { name: "Weered", stack: "var(--font-rajdhani), 'Rajdhani', system-ui, sans-serif" },
+  condensed: { name: "Condensed", stack: "var(--font-barlow), 'Barlow Condensed', sans-serif" },
+  serif: { name: "Serif", stack: "var(--font-cormorant), Georgia, serif" },
+  stencil: { name: "Stencil", stack: "var(--font-saira-stencil), Bahnschrift, sans-serif" },
+  clean: { name: "Clean", stack: "'Inter', 'Segoe UI', system-ui, sans-serif" },
+  mono: { name: "Terminal", stack: "'Cascadia Code', 'JetBrains Mono', Consolas, monospace" },
+};
+export const NEBULA_FONT_IDS = Object.keys(NEBULA_FONTS) as NebulaFont[];
+
+export const isHexColour = (v: unknown): v is string =>
+  typeof v === "string" && /^#[0-9a-f]{6}$/i.test(v);
+
+function hexRgb(h: string): [number, number, number] {
+  const n = parseInt(h.slice(1), 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+function rgbHsl(r: number, g: number, b: number): [number, number, number] {
+  r /= 255;
+  g /= 255;
+  b /= 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const l = (max + min) / 2;
+  if (max === min) return [0, 0, l];
+  const d = max - min;
+  const s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+  const h =
+    max === r ? (g - b) / d + (g < b ? 6 : 0) : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
+  return [h * 60, s, l];
+}
+function hslHex(h: number, s: number, l: number): string {
+  s = Math.max(0, Math.min(1, s));
+  l = Math.max(0, Math.min(1, l));
+  const k = (n: number) => (n + h / 30) % 12;
+  const a = s * Math.min(l, 1 - l);
+  const f = (n: number) => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+  return (
+    "#" +
+    [f(0), f(8), f(4)]
+      .map((x) =>
+        Math.round(x * 255)
+          .toString(16)
+          .padStart(2, "0"),
+      )
+      .join("")
+  );
+}
+function luminance(hex: string): number {
+  const [r, g, b] = hexRgb(hex).map((c) => {
+    const v = c / 255;
+    return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+/** A whole colourway from one colour: deep accent, second glow, light tint,
+ *  and a near-black sky tinted with the same hue. */
+export function customPalette(accent: string): PaletteColours {
+  const [h, s, l] = rgbHsl(...hexRgb(isHexColour(accent) ? accent : "#8b5cf6"));
+  const a = hslHex(h, s, Math.min(0.74, Math.max(0.52, l)));
+  return {
+    name: "Custom",
+    tagline: "Your own colour.",
+    a,
+    b: hslHex(h, Math.min(1, s * 1.05), Math.max(0.3, Math.min(0.62, l) - 0.12)),
+    c: hslHex((h + 330) % 360, s * 0.75, 0.22),
+    hi: hslHex(h, Math.min(1, s * 0.9 + 0.1), 0.86),
+    bg: hslHex(h, s * 0.45, 0.035),
+    ink: hslHex(h, s * 0.4, 0.075),
+    on: luminance(a) > 0.5 ? "#111114" : "#ffffff",
+  };
+}
+
+/** The colours for any colourway, custom included. */
+export function paletteColours(palette?: Palette | null, accent?: string | null): PaletteColours {
+  if (palette === "custom") return customPalette(accent || "");
+  return PALETTES[(palette && palette in PALETTES ? palette : "violet") as NamedPalette];
+}
+
+const NB_VARS = [
+  "--nb-a",
+  "--nb-b",
+  "--nb-c",
+  "--nb-hi",
+  "--nb-bg",
+  "--nb-ink",
+  "--nb-ink-2",
+  "--nb-on",
+  "--nb-mute",
+];
+/** Where the boot script (app/layout.tsx) finds a custom colourway's tokens. */
+export const NB_CUSTOM_KEY = "weered:nb-custom";
+
+/** The Nebula tokens for a colourway, written the way the stylesheet writes
+ *  them (channels as "r g b"). */
+export function nebulaVars(c: PaletteColours): Record<string, string> {
+  const ch = (hex: string) => hexRgb(hex).join(" ");
+  const [h, s] = rgbHsl(...hexRgb(c.a));
+  return {
+    "--nb-a": ch(c.a),
+    "--nb-b": ch(c.b),
+    "--nb-c": ch(c.c),
+    "--nb-hi": c.hi,
+    "--nb-bg": c.bg,
+    "--nb-ink": ch(c.ink),
+    "--nb-ink-2": ch(hslHex(h, s * 0.4, 0.05)),
+    "--nb-on": c.on,
+    "--nb-mute": ch(hslHex(h, 0.25, 0.85)),
+  };
+}
 
 export function readUiPrefs(): UiPrefs {
   try {
@@ -151,21 +255,40 @@ export function readUiPrefs(): UiPrefs {
   }
 }
 
-/** The order to draw the sidebar in, with any section a stored order lacks
- *  appended in its default slot. */
-export function railOrder(p: UiPrefs): RailSection[] {
-  const order = (p.rail?.order || []).filter((s) => RAIL_ORDER.includes(s));
-  for (const s of RAIL_ORDER) if (!order.includes(s)) order.push(s);
-  return order;
-}
-
-/** Paint the prefs onto <html>. The office host keeps its forced theme. */
-export function applyUiPrefs(p: UiPrefs) {
+/** Paint the prefs onto <html> and nothing else: Design mode previews a look
+ *  with this before it is saved. The office host keeps its forced theme. */
+export function paintUiPrefs(p: UiPrefs) {
   if (typeof document === "undefined") return;
   const d = document.documentElement;
-  const pro = d.hasAttribute("data-pro-host");
+  if (p.theme && !d.hasAttribute("data-pro-host")) d.setAttribute("data-weered-theme", p.theme);
+  d.setAttribute("data-weered-palette", p.palette || "violet");
+  for (const k of NB_VARS) d.style.removeProperty(k);
+  if (p.palette === "custom") {
+    const vars = nebulaVars(customPalette(p.accent || ""));
+    for (const [k, v] of Object.entries(vars)) d.style.setProperty(k, v);
+  }
+  if (p.font && p.font !== "default") d.setAttribute("data-weered-font", p.font);
+  else d.removeAttribute("data-weered-font");
+  if (p.stars === false) d.setAttribute("data-weered-stars", "off");
+  else d.removeAttribute("data-weered-stars");
+  if (p.density) d.setAttribute("data-weered-density", p.density);
+}
+
+/** Paint the prefs onto <html> and remember the look where the boot script
+ *  and the older settings read it. */
+export function applyUiPrefs(p: UiPrefs) {
+  if (typeof document === "undefined") return;
+  paintUiPrefs(p);
+  try {
+    if (p.palette === "custom")
+      localStorage.setItem(
+        NB_CUSTOM_KEY,
+        JSON.stringify(nebulaVars(customPalette(p.accent || ""))),
+      );
+    else localStorage.removeItem(NB_CUSTOM_KEY);
+  } catch {}
+  const pro = document.documentElement.hasAttribute("data-pro-host");
   if (p.theme && !pro) {
-    d.setAttribute("data-weered-theme", p.theme);
     try {
       localStorage.setItem(THEME_KEY, p.theme);
       const raw = localStorage.getItem(SETTINGS_KEY);
@@ -176,10 +299,17 @@ export function applyUiPrefs(p: UiPrefs) {
       );
     } catch {}
   }
-  d.setAttribute("data-weered-palette", p.palette || "violet");
-  if (p.stars === false) d.setAttribute("data-weered-stars", "off");
-  else d.removeAttribute("data-weered-stars");
-  if (p.density) d.setAttribute("data-weered-density", p.density);
+}
+
+function pushToAccount(patch: UiPrefs): Promise<boolean> {
+  return fetch(`${API}/profile/me/ui`, {
+    credentials: "include",
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ prefs: patch }),
+  })
+    .then((r) => r.ok)
+    .catch(() => false);
 }
 
 /** Merge a change into the stored prefs, paint it, tell listeners, and save
@@ -193,15 +323,14 @@ export function saveUiPrefs(patch: UiPrefs, opts: { local?: boolean } = {}): UiP
   try {
     window.dispatchEvent(new CustomEvent(PREFS_EVENT, { detail: next }));
   } catch {}
-  if (!opts.local) {
-    fetch(`${API}/profile/me/ui`, {
-      credentials: "include",
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prefs: patch }),
-    }).catch(() => {});
-  }
+  if (!opts.local) void pushToAccount(patch);
   return next;
+}
+
+/** saveUiPrefs that waits for the account to confirm. True when it did. */
+export async function saveUiPrefsToAccount(patch: UiPrefs): Promise<boolean> {
+  saveUiPrefs(patch, { local: true });
+  return pushToAccount(patch);
 }
 
 /** Pull the account's prefs and lay them over this browser's. Returns the

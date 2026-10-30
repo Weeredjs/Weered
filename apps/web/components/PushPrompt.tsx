@@ -158,6 +158,7 @@ export default function PushPrompt() {
   if (mode === "ios") {
     return (
       <div
+        className="weered-push-prompt"
         style={{
           position: "fixed",
           bottom: 24,
@@ -331,6 +332,7 @@ export default function PushPrompt() {
 
   return (
     <div
+      className="weered-push-prompt"
       style={{
         position: "fixed",
         bottom: 72,

@@ -172,7 +172,9 @@ const safeUrl = (v: unknown): string | undefined => {
   }
 };
 
-function sanitizeProps(type: BlockType, p: any): Record<string, any> {
+/** One block's settings, cleaned. Also used by the viewer's own layout
+ *  (lib/shellLayout.ts), which offers the same blocks. */
+export function sanitizeProps(type: BlockType, p: any): Record<string, any> {
   p = p && typeof p === "object" ? p : {};
   switch (type) {
     case "welcome":

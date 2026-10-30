@@ -1,0 +1,428 @@
+/* =====================================================================
+   DESIGN YOUR WEERED — the viewer's own layout (lib/shellLayout.ts)
+   =====================================================================
+   Blocks in the sidebars and on Home, the Home grid, Nebula's type choice,
+   and Design mode itself (components/shell/ShellDesigner.tsx): the shell
+   slides right and down to make room for the build panel and the top bar,
+   and sections that are empty for now keep a slot you can see and grab. */
+
+/* ── Home: a 12-column grid, sections full width, blocks at their size ── */
+.weered-home-grid {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  column-gap: 14px;
+  align-content: start;
+}
+.weered-shell-slot-home.is-block {
+  margin-top: 18px;
+  min-width: 0;
+}
+@media (max-width: 760px) {
+  .weered-shell-slot-home.is-block {
+    grid-column: 1 / -1 !important;
+  }
+}
+
+/* ── Blocks ─────────────────────────────────────────────────────────── */
+.weered-shell-block {
+  min-width: 0;
+}
+.weered-shell-block-home {
+  position: relative;
+  height: 100%;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(10, 10, 16, 0.55);
+  overflow: hidden;
+  padding: 16px 18px;
+  box-sizing: border-box;
+}
+.weered-shell-block-home > div:first-child .weered-rr-section-title {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.5);
+  margin-bottom: 10px;
+}
+.weered-shell-block .wsb {
+  min-width: 0;
+}
+.weered-shell-block .wsb-hint {
+  font-size: 12px;
+  opacity: 0.55;
+  font-style: italic;
+  padding: 2px 0;
+}
+.weered-shell-block .wsb-banner-title {
+  font-weight: 900;
+  font-size: 19px;
+  line-height: 1.1;
+  color: #fff;
+}
+.weered-shell-block-home .wsb-banner {
+  padding: 14px 6px;
+}
+.weered-shell-block-home .wsb-banner-title {
+  font-size: clamp(24px, 3.4vw, 40px);
+  letter-spacing: -0.01em;
+}
+.weered-shell-block .wsb-banner-body {
+  margin: 8px 0 0;
+  font-size: 13px;
+  line-height: 1.5;
+  opacity: 0.8;
+  white-space: pre-wrap;
+}
+.weered-shell-block-home .wsb-banner-body {
+  font-size: 15px;
+  max-width: 680px;
+}
+.weered-shell-block .wsb-cta {
+  display: inline-flex;
+  margin-top: 12px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  background: var(--weered-accent, #7c3aed);
+  color: #0b0b0f;
+  font-weight: 800;
+  font-size: 13px;
+  text-decoration: none;
+}
+.weered-shell-block .wsb-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.weered-shell-block .wsb-links a {
+  padding: 6px 11px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.04);
+  color: inherit;
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 12px;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.weered-shell-block .wsb-links a:hover {
+  border-color: var(--weered-accent, #a78bfa);
+}
+.weered-shell-block .wsb-list {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 4px;
+  font-size: 13px;
+  line-height: 1.45;
+}
+.weered-shell-block .wsb-count {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.weered-shell-block .wsb-count > div {
+  text-align: center;
+  min-width: 40px;
+}
+.weered-shell-block .wsb-count b {
+  display: block;
+  font-size: 22px;
+  font-weight: 900;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.weered-shell-block-home .wsb-count b {
+  font-size: 30px;
+}
+.weered-shell-block .wsb-count span,
+.weered-shell-block .wsb-stats span {
+  display: block;
+  font-size: 9.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  opacity: 0.6;
+  margin-top: 3px;
+}
+.weered-shell-block .wsb-count-done {
+  font-size: 22px;
+  font-weight: 900;
+}
+.weered-shell-block .wsb-figure {
+  margin: 0;
+}
+.weered-shell-block .wsb-img {
+  width: 100%;
+  display: block;
+  object-fit: cover;
+  max-height: 240px;
+  border-radius: 10px;
+}
+.weered-shell-block-home .wsb-img {
+  max-height: 480px;
+}
+.weered-shell-block .wsb-figure figcaption {
+  padding: 8px 2px 0;
+  font-size: 12px;
+  opacity: 0.75;
+}
+.weered-shell-block .wsb-embed {
+  aspect-ratio: 16 / 9;
+  width: 100%;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #000;
+}
+.weered-shell-block .wsb-embed iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
+}
+.weered-shell-block .wsb-embed-spotify {
+  background: transparent;
+}
+.weered-shell-block .wsb-rows {
+  display: grid;
+  gap: 6px;
+}
+.weered-shell-block .wsb-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  color: inherit;
+  text-decoration: none;
+  min-width: 0;
+}
+.weered-shell-block .wsb-row:hover {
+  border-color: var(--weered-accent-ring, rgba(167, 139, 250, 0.5));
+}
+.weered-shell-block .wsb-row-main {
+  flex: 1;
+  min-width: 0;
+  font-weight: 700;
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.weered-shell-block .wsb-row-main small {
+  display: block;
+  font-weight: 500;
+  font-size: 11px;
+  opacity: 0.6;
+  white-space: normal;
+}
+.weered-shell-block .wsb-row-side {
+  font-size: 11px;
+  opacity: 0.6;
+  flex-shrink: 0;
+}
+.weered-shell-block .wsb-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.2);
+  flex-shrink: 0;
+}
+.weered-shell-block .wsb-dot.is-live {
+  background: #22c55e;
+  box-shadow: 0 0 8px #22c55e;
+}
+.weered-shell-block .wsb-date {
+  width: 38px;
+  flex-shrink: 0;
+  text-align: center;
+  border-radius: 8px;
+  padding: 3px 0;
+  background: var(--weered-accent-bg, rgba(124, 58, 237, 0.16));
+}
+.weered-shell-block .wsb-date i {
+  display: block;
+  font-style: normal;
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: var(--weered-accent-text, #c4b5fd);
+}
+.weered-shell-block .wsb-date b {
+  display: block;
+  font-size: 16px;
+  line-height: 1;
+}
+.weered-shell-block .wsb-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.weered-shell-block .wsb-stats b {
+  display: block;
+  font-size: 22px;
+  font-weight: 900;
+  line-height: 1;
+  color: #fff;
+}
+
+/* An empty Favorites or Recent, shown while designing. */
+.weered-shell-empty {
+  font-size: 11px;
+  opacity: 0.45;
+  font-style: italic;
+  padding: 4px 14px 6px;
+}
+
+/* Home's ✦ Design button */
+.home-topbar-design {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: 2px;
+  border: 1px solid rgba(167, 139, 250, 0.45);
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.28), rgba(124, 58, 237, 0.1));
+  color: #e9e3ff;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.2s;
+}
+.home-topbar-design:hover {
+  border-color: rgba(196, 181, 253, 0.85);
+  box-shadow: 0 0 18px rgba(124, 58, 237, 0.35);
+}
+@media (max-width: 999px) {
+  .home-topbar-design {
+    display: none;
+  }
+}
+
+/* ── Nebula ─────────────────────────────────────────────────────────── */
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-shell-block-home {
+  background: var(--nb-glass) !important;
+  border: 1px solid var(--nb-line) !important;
+  border-radius: 16px !important;
+  box-shadow: var(--nb-shadow) !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb)
+  .weered-shell-block-home
+  > div:first-child
+  .weered-rr-section-title {
+  font-family: var(--nb-font) !important;
+  letter-spacing: 0.16em !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-shell-block .wsb-cta {
+  border-radius: 999px !important;
+  background: linear-gradient(135deg, rgb(var(--nb-a)), rgb(var(--nb-b))) !important;
+  color: var(--nb-on) !important;
+  font-family: var(--nb-font) !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb)
+  .weered-shell-block
+  .wsb-banner-title {
+  font-family: var(--nb-font) !important;
+  text-shadow: 0 0 26px rgb(var(--nb-a) / 0.55);
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-shell-block .wsb-row,
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb)
+  .weered-shell-block
+  .wsb-links
+  a {
+  border-color: rgb(255 255 255 / 0.08) !important;
+  background: rgb(255 255 255 / 0.03) !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb)
+  .weered-shell-block
+  .wsb-row:hover,
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb)
+  .weered-shell-block
+  .wsb-links
+  a:hover {
+  border-color: rgb(var(--nb-a) / 0.45) !important;
+  background: rgb(var(--nb-a) / 0.1) !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .home-topbar-design {
+  border-radius: 999px !important;
+  border: 1px solid rgb(var(--nb-a) / 0.45) !important;
+  background: rgb(var(--nb-a) / 0.14) !important;
+  color: var(--nb-hi) !important;
+  font-family: var(--nb-font) !important;
+  font-size: 12.5px !important;
+  letter-spacing: 0.06em !important;
+}
+/* Panel sections moved into the left sidebar keep the left's spacing. */
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb)
+  .weered-left-inner
+  > .weered-shell-slot
+  > .weered-rr-section {
+  margin: 0 !important;
+}
+
+/* Nebula's type: titles, labels and buttons. */
+html[data-weered-theme="nebula"][data-weered-font="condensed"]:not([data-weered-lobby]):not(#nb) {
+  --nb-font: var(--font-barlow), "Barlow Condensed", sans-serif;
+}
+html[data-weered-theme="nebula"][data-weered-font="serif"]:not([data-weered-lobby]):not(#nb) {
+  --nb-font: var(--font-cormorant), Georgia, serif;
+}
+html[data-weered-theme="nebula"][data-weered-font="stencil"]:not([data-weered-lobby]):not(#nb) {
+  --nb-font: var(--font-saira-stencil), Bahnschrift, sans-serif;
+}
+html[data-weered-theme="nebula"][data-weered-font="clean"]:not([data-weered-lobby]):not(#nb) {
+  --nb-font: "Inter", "Segoe UI", system-ui, sans-serif;
+}
+html[data-weered-theme="nebula"][data-weered-font="mono"]:not([data-weered-lobby]):not(#nb) {
+  --nb-font: "Cascadia Code", "JetBrains Mono", Consolas, monospace;
+}
+
+/* ── Design mode ────────────────────────────────────────────────────── */
+html[data-weered-shell-design="1"] .weered-shell {
+  left: 344px !important;
+  top: calc(var(--wtb-h, 0px) + 66px) !important;
+  height: auto !important;
+}
+html[data-weered-shell-design="1"][data-weered-shell-design-panel="off"] .weered-shell {
+  left: 0 !important;
+}
+.weered-shell-design-panel[hidden] {
+  display: none !important;
+}
+html[data-weered-shell-design="1"] .weered-icon-strip,
+html[data-weered-shell-design="1"] .weered-mobile-nav,
+html[data-weered-shell-design="1"] .weered-rail-close,
+html[data-weered-shell-design="1"] .lobby-chat-drawer,
+html[data-weered-shell-design="1"] .lobby-chat-tab,
+html[data-weered-shell-design="1"] .home-topbar-actions,
+html[data-weered-shell-design="1"] .home-topbar-search,
+html[data-weered-shell-design="1"] .weered-push-prompt {
+  display: none !important;
+}
+/* A section with nothing to show yet still gets a slot to grab. */
+html[data-weered-shell-design="1"] .weered-shell-slot {
+  min-height: 44px;
+}
+html[data-weered-shell-design="1"] .weered-shell-slot:empty::before {
+  content: attr(data-shell-label) " · shows when there's something to show";
+  display: block;
+  padding: 14px 14px;
+  font-size: 11px;
+  font-style: italic;
+  opacity: 0.45;
+}
+html[data-weered-shell-design="1"] .weered-shell-slot-left:empty,
+html[data-weered-shell-design="1"] .weered-shell-slot-right:empty {
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.025);
+  margin-bottom: 10px;
+}

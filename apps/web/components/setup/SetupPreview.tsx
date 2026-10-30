@@ -1,17 +1,15 @@
 "use client";
 
-// The setup's live preview: a miniature of the signed-in app (sidebar on the
-// left, Home on the right) repainted on every pick. Nebula colourways come
+// The setup's live preview: a miniature of the signed-in app (the left
+// sidebar, Home, and the right panel when the layout uses it) repainted on
+// every pick. Nebula colourways come
 // from lib/uiPrefs PALETTES, the same values styles/95-nebula.css uses, so
 // what this shows is what the real shell turns into. "Classic" draws the
 // current look (purple banners, grey plates) so the two can be compared.
-import React, { useMemo } from "react";
+import React from "react";
 import { alpha } from "../composer/ui";
-import { GameArt } from "../composer/GameGrid";
-import type { GameEntry } from "../composer/catalog";
-import { PALETTES, type Palette, type RailSection } from "../../lib/uiPrefs";
-
-export type PreviewFav = { id: string; name: string; art: GameEntry };
+import { paletteColours, type Palette } from "../../lib/uiPrefs";
+import { BLOCK_META, isCore, type ShellItem, type ShellLayout } from "../../lib/shellLayout";
 
 type Props = {
   name: string;
@@ -24,9 +22,7 @@ type Props = {
   palette: Palette;
   stars: boolean;
   compact: boolean;
-  order: RailSection[];
-  hidden: RailSection[];
-  favs: PreviewFav[];
+  layout: ShellLayout;
   pulseKey: number;
 };
 
@@ -57,7 +53,7 @@ function greeting() {
 
 export default function SetupPreview(p: Props) {
   const neb = p.look === "nebula";
-  const C = neb ? PALETTES[p.palette] : CLASSIC;
+  const C = neb ? paletteColours(p.palette) : CLASSIC;
   const display = p.name || "you";
   const gap = p.compact ? 7 : 10;
   const rowPad = p.compact ? "5px 9px" : "7px 10px";
@@ -171,7 +167,130 @@ export default function SetupPreview(p: Props) {
     </div>
   );
 
-  const sections: Record<RailSection, React.ReactNode> = {
+  // A friend or crew row, as the real rows read: name, where, Join.
+  const person = (n: string, sub: string, color: string, join = false) => (
+    <div key={n} style={{ display: "flex", alignItems: "center", gap: 7, padding: "4px 10px" }}>
+      <div
+        style={{
+          width: 18,
+          height: 18,
+          flex: "0 0 18px",
+          borderRadius: "50%",
+          background: color,
+          display: "grid",
+          placeItems: "center",
+          fontSize: 8,
+          fontWeight: 900,
+          color: "#fff",
+        }}
+      >
+        {n.slice(0, 1).toUpperCase()}
+      </div>
+      <div style={{ minWidth: 0, flex: 1 }}>
+        <div
+          style={{
+            fontSize: 10.5,
+            fontWeight: 800,
+            color: "#fff",
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+          }}
+        >
+          {n}
+        </div>
+        <div style={{ fontSize: 8.5, color: "rgba(255,255,255,.45)", whiteSpace: "nowrap" }}>
+          {sub}
+        </div>
+      </div>
+      {join && (
+        <span
+          style={{
+            fontSize: 8,
+            fontWeight: 800,
+            padding: "2px 7px",
+            borderRadius: neb ? 99 : 0,
+            color: neb ? C.on : "#fff",
+            background: neb ? `linear-gradient(135deg, ${C.a}, ${C.b})` : "#7c3aed",
+          }}
+        >
+          Join
+        </span>
+      )}
+    </div>
+  );
+  const line = (w: string, key?: string) => (
+    <div
+      key={key}
+      style={{
+        height: 6,
+        width: w,
+        margin: "5px 10px",
+        borderRadius: 4,
+        background: "rgba(255,255,255,.14)",
+      }}
+    />
+  );
+
+  // A block, drawn as a hint of what it holds.
+  const blockMini = (it: Exclude<ShellItem, string>) => {
+    const meta = BLOCK_META[it.type];
+    const pr = it.props || {};
+    const media = it.type === "stream" || it.type === "video" || it.type === "music";
+    return (
+      <div key={it.id} style={card({ paddingBottom: 7 })}>
+        {it.type !== "welcome" && title(pr.title || pr.label || meta?.name || it.type)}
+        {it.type === "welcome" ? (
+          <div style={{ padding: "10px 11px 4px" }}>
+            <div style={{ fontSize: 13, fontWeight: 900, color: "#fff" }}>
+              {pr.title || "Welcome back"}
+            </div>
+            {line("70%")}
+          </div>
+        ) : media ? (
+          <div
+            style={{
+              margin: "2px 9px 0",
+              height: it.type === "music" ? 30 : 42,
+              borderRadius: neb ? 8 : 0,
+              display: "grid",
+              placeItems: "center",
+              fontSize: 13,
+              color: "rgba(255,255,255,.7)",
+              background: `linear-gradient(135deg, ${alpha(C.a, 0.35)}, rgba(0,0,0,.6))`,
+            }}
+          >
+            {it.type === "music" ? "♪" : "▶"}
+          </div>
+        ) : it.type === "countdown" ? (
+          <div style={{ padding: "2px 10px", fontSize: 13, fontWeight: 900, color: "#fff" }}>
+            08 · 22 · 05
+          </div>
+        ) : it.type === "links" ? (
+          <div style={{ display: "flex", gap: 4, padding: "3px 9px" }}>
+            {["38%", "30%"].map((w) => (
+              <span
+                key={w}
+                style={{
+                  width: w,
+                  height: 12,
+                  borderRadius: 99,
+                  border: `1px solid ${alpha(C.a, 0.5)}`,
+                }}
+              />
+            ))}
+          </div>
+        ) : (
+          <>
+            {line("80%", "a")}
+            {line("55%", "b")}
+          </>
+        )}
+      </div>
+    );
+  };
+
+  const sections: Record<string, React.ReactNode> = {
     card: (
       <div
         key="card"
@@ -336,46 +455,35 @@ export default function SetupPreview(p: Props) {
     ),
     favs: (
       <div key="favs" style={card({ paddingBottom: 6 })}>
-        {title(`Favorites${p.favs.length ? ` · ${p.favs.length}` : ""}`)}
-        {p.favs.length === 0 ? (
-          <div style={{ padding: "4px 11px 6px", fontSize: 9.5, color: "rgba(255,255,255,.4)" }}>
-            Star places below to pin them here.
-          </div>
-        ) : (
-          p.favs.slice(0, 4).map((f) => (
+        {title("Favorites")}
+        {["The Lobby", "Co-Work"].map((f) => (
+          <div
+            key={f}
+            style={{ display: "flex", alignItems: "center", gap: 7, padding: "4px 10px" }}
+          >
             <div
-              key={f.id}
-              style={{ display: "flex", alignItems: "center", gap: 7, padding: "4px 10px" }}
+              style={{
+                width: 18,
+                height: 18,
+                flex: "0 0 18px",
+                borderRadius: 5,
+                background: `linear-gradient(135deg, ${alpha(C.a, 0.6)}, ${alpha(C.c, 0.8)})`,
+              }}
+            />
+            <div
+              style={{
+                flex: 1,
+                minWidth: 0,
+                fontSize: 10.5,
+                fontWeight: 700,
+                color: "rgba(255,255,255,.88)",
+              }}
             >
-              <div
-                style={{
-                  width: 18,
-                  height: 18,
-                  borderRadius: 5,
-                  overflow: "hidden",
-                  flex: "0 0 18px",
-                }}
-              >
-                <GameArt game={f.art} height={18} radius={5} />
-              </div>
-              <div
-                style={{
-                  flex: 1,
-                  minWidth: 0,
-                  fontSize: 10.5,
-                  fontWeight: 700,
-                  color: "rgba(255,255,255,.88)",
-                  whiteSpace: "nowrap",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                }}
-              >
-                {f.name}
-              </div>
-              <span style={{ fontSize: 9, color: neb ? C.hi : "#d9a942" }}>★</span>
+              {f}
             </div>
-          ))
-        )}
+            <span style={{ fontSize: 9, color: neb ? C.hi : "#d9a942" }}>★</span>
+          </div>
+        ))}
       </div>
     ),
     recent: (
@@ -393,18 +501,88 @@ export default function SetupPreview(p: Props) {
         ))}
       </div>
     ),
+    friends: (
+      <div key="friends" style={card({ paddingBottom: 6 })}>
+        {title("Friends · 2 online")}
+        {person("donkey", "in Destiny 2", "#7c3aed", true)}
+        {person("kom", "online", "#16a34a")}
+      </div>
+    ),
+    crew: (
+      <div key="crew" style={card({ paddingBottom: 6 })}>
+        {title("Crew · 2 online")}
+        {person(display, "[8MTR] Home Lobby", p.avatarColor)}
+        {person("donkey", "[8MTR] Destiny 2", "#7c3aed", true)}
+      </div>
+    ),
+    rooms: (
+      <div key="rooms" style={card({ paddingBottom: 6 })}>
+        {title("Rooms")}
+        {[
+          ["Dev Chat", "3 in"],
+          ["Squad Up", "open"],
+        ].map(([n, c]) => (
+          <div
+            key={n}
+            style={{ display: "flex", alignItems: "center", gap: 7, padding: "4px 10px" }}
+          >
+            <span
+              style={{
+                width: 6,
+                height: 6,
+                borderRadius: 9,
+                background: c === "open" ? "rgba(255,255,255,.25)" : "#22c55e",
+              }}
+            />
+            <span style={{ flex: 1, fontSize: 10.5, fontWeight: 700, color: "#fff" }}>{n}</span>
+            <span style={{ fontSize: 8.5, color: "rgba(255,255,255,.45)" }}>{c}</span>
+          </div>
+        ))}
+      </div>
+    ),
+    whoshere: (
+      <div key="whoshere" style={card({ paddingBottom: 8 })}>
+        {title("Who's here")}
+        <div style={{ display: "flex", gap: 4, padding: "2px 10px" }}>
+          {["#7c3aed", "#16a34a", "#eab308", "#ec4899", "#14b8a6"].map((c) => (
+            <span key={c} style={{ width: 16, height: 16, borderRadius: 99, background: c }} />
+          ))}
+        </div>
+      </div>
+    ),
+    discover: (
+      <div key="discover" style={card({ paddingBottom: 6 })}>
+        {title("Discover")}
+        {["EVE Online", "Destiny 2"].map((n) => (
+          <div
+            key={n}
+            style={{ display: "flex", alignItems: "center", gap: 7, padding: "4px 10px" }}
+          >
+            <span
+              style={{
+                width: 16,
+                height: 16,
+                borderRadius: 5,
+                background: alpha(C.a, 0.35),
+                display: "grid",
+                placeItems: "center",
+                fontSize: 8,
+                fontWeight: 900,
+                color: "#fff",
+              }}
+            >
+              {n[0]}
+            </span>
+            <span style={{ fontSize: 10.5, fontWeight: 700, color: "#fff" }}>{n}</span>
+          </div>
+        ))}
+      </div>
+    ),
   };
+  const draw = (it: ShellItem) => (isCore(it) ? (sections[it] ?? null) : blockMini(it));
 
-  const featured = p.favs[0];
-  const tiles = useMemo(() => {
-    const picked = p.favs
-      .slice(1, 5)
-      .map((f) => ({ id: f.id, name: f.name, art: f.art as GameEntry | null }));
-    const fill = ["The Lobby", "Co-Work", "Chess", "Study Hall"]
-      .filter((n) => !picked.some((x) => x.name === n))
-      .map((n) => ({ id: n, name: n, art: null as GameEntry | null }));
-    return [...picked, ...fill].slice(0, 4);
-  }, [p.favs]);
+  const tiles = ["The Lobby", "Co-Work", "Chess", "Study Hall"];
+  const right = p.layout.right;
 
   return (
     <div
@@ -520,14 +698,16 @@ export default function SetupPreview(p: Props) {
           style={{
             position: "relative",
             display: "grid",
-            gridTemplateColumns: "minmax(0, 44%) minmax(0, 1fr)",
+            gridTemplateColumns: right.length
+              ? "minmax(0, 36%) minmax(0, 1fr) minmax(0, 27%)"
+              : "minmax(0, 44%) minmax(0, 1fr)",
             gap,
             padding: gap + 2,
           }}
         >
           {/* Sidebar */}
           <div style={{ display: "flex", flexDirection: "column", gap }}>
-            {p.order.filter((s) => !p.hidden.includes(s) || s === "nav").map((s) => sections[s])}
+            {p.layout.left.map(draw)}
           </div>
 
           {/* Home */}
@@ -580,122 +760,159 @@ export default function SetupPreview(p: Props) {
               🔍 Search lobbies, people, rooms…
             </div>
 
-            {/* Featured */}
-            <div
-              style={{
-                position: "relative",
-                borderRadius: neb ? 16 : 2,
-                overflow: "hidden",
-                border: `1px solid ${neb ? alpha(C.a, 0.34) : "rgba(124,58,237,.5)"}`,
-                boxShadow: neb ? `0 22px 50px -26px ${alpha(C.b, 0.9)}` : "none",
-                minHeight: 128,
-                transition: "border-color .35s, box-shadow .35s",
-              }}
-            >
-              {featured ? (
-                <GameArt game={featured.art} height={128} radius={0} />
-              ) : (
-                <div
-                  style={{
-                    height: 128,
-                    background: `radial-gradient(90% 120% at 10% 0%, ${alpha(C.a, 0.55)}, transparent 60%), radial-gradient(80% 90% at 100% 100%, ${alpha(C.c, 0.8)}, transparent 60%), ${C.ink}`,
-                  }}
-                />
-              )}
-              <div
-                style={{
-                  position: "absolute",
-                  inset: 0,
-                  padding: 12,
-                  display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "flex-end",
-                  background: "linear-gradient(180deg, transparent 20%, rgba(0,0,0,.72))",
-                }}
-              >
-                <span
-                  style={{
-                    alignSelf: "flex-start",
-                    fontSize: 7.5,
-                    fontWeight: 900,
-                    letterSpacing: ".14em",
-                    padding: "3px 7px",
-                    borderRadius: neb ? 99 : 0,
-                    color: "#fff",
-                    background: neb ? alpha(C.a, 0.35) : "#b91c1c",
-                    border: neb ? `1px solid ${alpha(C.a, 0.6)}` : "none",
-                  }}
-                >
-                  {featured ? "★ PINNED" : "FEATURED"}
-                </span>
-                <div style={{ fontSize: 16, fontWeight: 900, color: "#fff", marginTop: 6 }}>
-                  {featured ? featured.name : "Your next hangout"}
-                </div>
-                <span
-                  style={{
-                    alignSelf: "flex-start",
-                    marginTop: 7,
-                    fontSize: 9.5,
-                    fontWeight: 800,
-                    padding: "5px 11px",
-                    borderRadius: neb ? 99 : 0,
-                    color: neb ? C.on : "#fff",
-                    background: neb ? `linear-gradient(135deg, ${C.a}, ${C.b})` : "#e8452f",
-                    boxShadow: neb ? `0 6px 18px ${alpha(C.a, 0.5)}` : "none",
-                  }}
-                >
-                  Join lobby
-                </span>
-              </div>
-            </div>
-
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-                gap: gap - 2,
-              }}
-            >
-              {tiles.map((t) => (
-                <div
-                  key={t.id}
-                  style={{
-                    borderRadius: neb ? 12 : 2,
-                    overflow: "hidden",
-                    border: `1px solid ${neb ? "rgba(255,255,255,.08)" : "rgba(217,169,66,.35)"}`,
-                    background: neb
-                      ? `linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.012)), ${alpha(C.ink, 0.62)}`
-                      : "#1b1b1f",
-                  }}
-                >
-                  {t.art ? (
-                    <GameArt game={t.art} height={34} radius={0} />
-                  ) : (
-                    <div
-                      style={{
-                        height: 34,
-                        background: `linear-gradient(120deg, ${alpha(C.a, 0.4)}, ${alpha(C.c, 0.5)})`,
-                      }}
-                    />
-                  )}
+            {/* Home's sections, in the layout's order: the ones a miniature can show. */}
+            {p.layout.home.map((it) => {
+              if (!isCore(it)) return blockMini(it);
+              if (it === "hero")
+                return (
                   <div
+                    key="hero"
                     style={{
-                      padding: "5px 8px 7px",
-                      fontSize: 10,
-                      fontWeight: 800,
-                      color: "#fff",
-                      whiteSpace: "nowrap",
+                      position: "relative",
+                      borderRadius: neb ? 16 : 2,
                       overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      textTransform: neb ? "none" : "uppercase",
+                      border: `1px solid ${neb ? alpha(C.a, 0.34) : "rgba(124,58,237,.5)"}`,
+                      boxShadow: neb ? `0 22px 50px -26px ${alpha(C.b, 0.9)}` : "none",
+                      minHeight: 112,
+                      transition: "border-color .35s, box-shadow .35s",
+                      background: `radial-gradient(90% 120% at 10% 0%, ${alpha(C.a, 0.55)}, transparent 60%), radial-gradient(80% 90% at 100% 100%, ${alpha(C.c, 0.8)}, transparent 60%), ${C.ink}`,
                     }}
                   >
-                    {t.name}
+                    <div
+                      style={{
+                        position: "absolute",
+                        inset: 0,
+                        padding: 12,
+                        display: "flex",
+                        flexDirection: "column",
+                        justifyContent: "flex-end",
+                        background: "linear-gradient(180deg, transparent 20%, rgba(0,0,0,.72))",
+                      }}
+                    >
+                      <span
+                        style={{
+                          alignSelf: "flex-start",
+                          fontSize: 7.5,
+                          fontWeight: 900,
+                          letterSpacing: ".14em",
+                          padding: "3px 7px",
+                          borderRadius: neb ? 99 : 0,
+                          color: "#fff",
+                          background: neb ? alpha(C.a, 0.35) : "#b91c1c",
+                          border: neb ? `1px solid ${alpha(C.a, 0.6)}` : "none",
+                        }}
+                      >
+                        FEATURED
+                      </span>
+                      <div style={{ fontSize: 15, fontWeight: 900, color: "#fff", marginTop: 6 }}>
+                        Your next hangout
+                      </div>
+                      <span
+                        style={{
+                          alignSelf: "flex-start",
+                          marginTop: 7,
+                          fontSize: 9.5,
+                          fontWeight: 800,
+                          padding: "5px 11px",
+                          borderRadius: neb ? 99 : 0,
+                          color: neb ? C.on : "#fff",
+                          background: neb ? `linear-gradient(135deg, ${C.a}, ${C.b})` : "#e8452f",
+                          boxShadow: neb ? `0 6px 18px ${alpha(C.a, 0.5)}` : "none",
+                        }}
+                      >
+                        Join lobby
+                      </span>
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                );
+              if (it === "pulse")
+                return (
+                  <div key="pulse" style={card({ paddingBottom: 7 })}>
+                    {title("Friends & crew · 2 online")}
+                    <div style={{ display: "flex", gap: 6, padding: "2px 9px" }}>
+                      {[
+                        ["donkey", "#7c3aed"],
+                        ["kom", "#16a34a"],
+                      ].map(([n, c]) => (
+                        <span
+                          key={n}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 5,
+                            padding: "3px 8px 3px 3px",
+                            borderRadius: 99,
+                            fontSize: 9.5,
+                            fontWeight: 800,
+                            color: "#fff",
+                            background: "rgba(255,255,255,.06)",
+                          }}
+                        >
+                          <span
+                            style={{ width: 14, height: 14, borderRadius: 99, background: c }}
+                          />
+                          {n}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                );
+              if (it === "featured")
+                return (
+                  <div
+                    key="featured"
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+                      gap: gap - 2,
+                    }}
+                  >
+                    {tiles.map((t) => (
+                      <div
+                        key={t}
+                        style={{
+                          borderRadius: neb ? 12 : 2,
+                          overflow: "hidden",
+                          border: `1px solid ${neb ? "rgba(255,255,255,.08)" : "rgba(217,169,66,.35)"}`,
+                          background: neb
+                            ? `linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.012)), ${alpha(C.ink, 0.62)}`
+                            : "#1b1b1f",
+                        }}
+                      >
+                        <div
+                          style={{
+                            height: 30,
+                            background: `linear-gradient(120deg, ${alpha(C.a, 0.4)}, ${alpha(C.c, 0.5)})`,
+                          }}
+                        />
+                        <div
+                          style={{
+                            padding: "5px 8px 7px",
+                            fontSize: 10,
+                            fontWeight: 800,
+                            color: "#fff",
+                            whiteSpace: "nowrap",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            textTransform: neb ? "none" : "uppercase",
+                          }}
+                        >
+                          {t}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                );
+              return null;
+            })}
           </div>
+
+          {/* Right panel */}
+          {right.length > 0 && (
+            <div style={{ minWidth: 0, display: "flex", flexDirection: "column", gap }}>
+              {right.map(draw)}
+            </div>
+          )}
         </div>
       </div>
     </div>

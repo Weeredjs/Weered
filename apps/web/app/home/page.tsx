@@ -17,6 +17,10 @@ import HomePinnedNews from "../../components/HomePinnedNews";
 import HomePulse from "../../components/HomePulse";
 import LobbySearch from "../../components/LobbySearch";
 import { onActivate } from "@/lib/a11y";
+import ShellSlot from "../../components/shell/ShellSlot";
+import ShellDesigner from "../../components/shell/ShellDesigner";
+import { startDesign, useShellLayout } from "../../lib/shellDesign";
+import { isCore, keyOf } from "../../lib/shellLayout";
 
 function pickFirst(...vals: any[]): string {
   for (const v of vals) if (typeof v === "string" && v.trim()) return v.trim();
@@ -774,6 +778,7 @@ export default function HomePage() {
   }, [me?.id, joinedRoomId, joinStatus, join]);
 
   const [showShowcase, setShowShowcase] = useState(false);
+  const homeLayout = useShellLayout().home;
   const [fetchedRooms, setFetchedRooms] = React.useState<any[]>([]);
 
   const [lobbyPresenceCounts, setLobbyPresenceCounts] = React.useState<Record<string, number>>({});
@@ -957,6 +962,210 @@ export default function HomePage() {
     } catch {}
   }
 
+  // Home's built-in sections, by id. The viewer's layout (lib/shellLayout.ts)
+  // decides which show and in what order, with their blocks between them.
+  const homeSection = (id: string): React.ReactNode => {
+    switch (id) {
+      case "ticker":
+        return (
+          <>
+            <div style={{ paddingTop: 14 }}>
+              <HomeActivityTicker />
+            </div>
+          </>
+        );
+      case "pulse":
+        return (
+          <>
+            {/* Mplayer, the home way: people are the doors. Live Home Lobby faces
+                + friends/crew with where they are and one-click Join. */}
+            <HomePulse
+              homeUsers={(usersByRoom as any)?.["lobby"] ?? (usersByRoom as any)?.["room:lobby"] ?? []}
+              onDm={handleDm}
+            />
+          </>
+        );
+      case "hero":
+        return (
+          <>
+            <div style={{ paddingTop: 14 }}>
+              <HeroBanner lobby={featured} onJoin={handleJoin} />
+            </div>
+          </>
+        );
+      case "live":
+        return (
+          <>
+            <LiveTicker rooms={allRooms} onJoin={handleJoin} apiBase="https://api.weered.ca" />
+          </>
+        );
+      case "featured":
+        return (
+          <>
+            {lobbies.length > 0 && (() => {
+              const visibleLobbies = lobbies.filter(r => featuredId ? (roomId(r) !== featuredId) : true);
+              const FEATURED_PRIORITY = ["eve", "destiny2", "poe", "helldivers2", "league-of-legends", "fakeout", "fortnite", "windrose", "counter-strike-2", "dota-2", "pubg", "mlb", "pga", "chess"];
+              const pri = (r: any) => { const i = FEATURED_PRIORITY.indexOf(roomId(r)); return i === -1 ? 999 : i; };
+              const ordered = [...visibleLobbies].sort((a, b) => {
+                const pa = pri(a), pb = pri(b);
+                if (pa !== pb) return pa - pb;
+                return (b?.featured ? 1 : 0) - (a?.featured ? 1 : 0);
+              });
+              const cardLobbies = ordered.slice(0, 7);
+              const canCreate = String(me?.tier || "INNOCENT").toUpperCase() !== "INNOCENT";
+              return (
+                <div style={{ marginTop: 24 }}>
+                  <SectionHeader icon="&#10022;" label="Featured Lobbies" sub="verified communities" />
+                  <div className="weered-lobby-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
+                    {cardLobbies.map((r, i) => <LobbyCard key={roomId(r) || i} room={r} idx={i} onJoin={(id) => { handleLobbyVisit(id); handleJoin(id, true); }} />)}
+
+                    <div
+                      onClick={() => { try { window.dispatchEvent(new CustomEvent("weered:lobby:browse")); } catch {} }}
+                      onKeyDown={onActivate(() => { try { window.dispatchEvent(new CustomEvent("weered:lobby:browse")); } catch {} })}
+                      role="button"
+                      tabIndex={0}
+                      style={{
+                        background: "linear-gradient(135deg, rgba(124,58,237,.10), rgba(255,255,255,.02))",
+                        border: "1px solid rgba(124,58,237,.3)",
+                        borderRadius: 2, cursor: "pointer", position: "relative", overflow: "hidden",
+                        transition: "border-color .2s, transform .15s",
+                        display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                        minHeight: 112, gap: 4,
+                      }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(124,58,237,.6)"; (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)"; }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(124,58,237,.3)"; (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; }}
+                    >
+                      <div style={{ fontSize: 28, marginBottom: 4, opacity: 0.85 }}>🧭</div>
+                      <div style={{ fontFamily: "var(--font-barlow), sans-serif", fontWeight: 800, fontSize: 15, letterSpacing: "1px", textTransform: "uppercase", color: "rgba(243,244,246,.95)" }}>
+                        Browse all {lobbies.length} lobbies
+                      </div>
+                      <div style={{ fontSize: 10, color: "rgba(148,163,184,.55)" }}>Search · discover · find your community</div>
+                    </div>
+
+                    <div
+                      onClick={() => router.push(canCreate ? "/lobby/create" : "/subscribe")}
+                      onKeyDown={onActivate(() => router.push(canCreate ? "/lobby/create" : "/subscribe"))}
+                      role="button"
+                      tabIndex={0}
+                      style={{
+                        background: "linear-gradient(135deg, rgba(245,183,0,.12), rgba(88,0,229,.10))",
+                        border: "1px solid rgba(245,183,0,.30)",
+                        borderRadius: 2, cursor: "pointer", position: "relative", overflow: "hidden",
+                        transition: "border-color .2s, transform .15s",
+                        display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                        minHeight: 112, gap: 4,
+                      }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(245,183,0,.6)"; (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)"; }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(245,183,0,.30)"; (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; }}
+                    >
+                      <div style={{ fontSize: 30, marginBottom: 2, opacity: 0.9, color: "#f5b700", fontWeight: 300, lineHeight: 1 }}>+</div>
+                      <div style={{ fontFamily: "var(--font-barlow), sans-serif", fontWeight: 800, fontSize: 15, letterSpacing: "1px", textTransform: "uppercase", color: "#f5d27a" }}>
+                        Build your lobby
+                      </div>
+                      <div style={{ fontSize: 10, color: "rgba(245,210,122,.55)" }}>
+                        {canCreate ? "Your game · your rules · your brand" : "Get Indicted to host your own"}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+          </>
+        );
+      case "news":
+        return (
+          <>
+            <HomePinnedNews />
+          </>
+        );
+      case "upgrade":
+        return (
+          <>
+            {me && String(me?.tier || "INNOCENT").toUpperCase() === "INNOCENT" && (
+              <div
+                onClick={() => router.push("/subscribe")}
+                onKeyDown={onActivate(() => router.push("/subscribe"))}
+                role="button"
+                tabIndex={0}
+                style={{
+                  marginTop: 14, padding: "14px 20px",
+                  borderRadius: 2, cursor: "pointer",
+                  background: "linear-gradient(135deg, rgba(88,0,229,.08) 0%, rgba(167,139,250,.06) 50%, rgba(249,115,22,.05) 100%)",
+                  border: "1px solid rgba(88,0,229,.18)",
+                  display: "flex", alignItems: "center", justifyContent: "space-between",
+                  gap: 16, transition: "all .2s",
+                }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(88,0,229,.35)"; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(88,0,229,.18)"; }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <img src="/brand/logo/weered-logo-128.png" alt="Weered logo" style={{ width: 36, height: 36, objectFit: "contain" }} />
+                  <div>
+                    <div style={{ fontWeight: 800, fontSize: 13, color: "rgba(243,244,246,.88)", letterSpacing: "-0.1px" }}>
+                      Get Indicted. Own a lobby.
+                    </div>
+                    <div style={{ fontSize: 11, color: "rgba(148,163,184,.5)", marginTop: 2 }}>
+                      Create your own branded community. Premium features. Your rules.
+                    </div>
+                  </div>
+                </div>
+                <span style={{
+                  flexShrink: 0, fontSize: 11, fontWeight: 800, padding: "6px 14px",
+                  borderRadius: 2, background: "rgba(88,0,229,.15)", border: "1px solid rgba(88,0,229,.30)",
+                  color: "rgba(167,139,250,.9)", letterSpacing: ".2px",
+                }}>
+                  Upgrade
+                </span>
+              </div>
+            )}
+          </>
+        );
+      case "popular":
+        return (
+          <>
+            {popularRooms.length > 0 && (
+              <div style={{ marginTop: 24 }}>
+                <SectionHeader icon="&#128293;" label="Popular Rooms" count={popularRooms.length} sub="active right now" />
+                <div className="weered-lobby-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
+                  {popularRooms.map((r, i) => <LobbyCard key={roomId(r) || i} room={r} idx={i} onJoin={handleJoin} />)}
+                </div>
+              </div>
+            )}
+          </>
+        );
+      case "dms":
+        return (
+          <>
+            <div style={{ marginTop: 24 }}>
+              <DmPreviewStrip />
+            </div>
+          </>
+        );
+      case "activity":
+        return (
+          <>
+            <div style={{ marginTop: 24 }}>
+              <ActivityFeed initialCount={5} />
+            </div>
+          </>
+        );
+      case "visited":
+        return (
+          <>
+            {recentRooms.length > 0 && (
+              <div style={{ marginTop: 24 }}>
+                <SectionHeader icon="&#128339;" label="Recently Visited" count={recentRooms.length} />
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  {recentRooms.slice(0, 5).map((r, i) => <RecentRow key={roomId(r) || i} room={r} onJoin={handleJoin} />)}
+                </div>
+              </div>
+            )}
+          </>
+        );
+    }
+    return null;
+  };
+
   return (
     <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}>
 
@@ -973,6 +1182,16 @@ export default function HomePage() {
         </div>
 
         <div className="home-topbar-actions" style={{ flex: 1, display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 10 }}>
+          {me && (
+            <button
+              type="button"
+              onClick={() => startDesign()}
+              className="home-topbar-design"
+              title="Design your Weered: move sections, add blocks, pick a look"
+            >
+              <span aria-hidden>✦</span> Design
+            </button>
+          )}
           <Link
             href="/desktop"
             className="home-topbar-secondary"
@@ -1006,163 +1225,18 @@ export default function HomePage() {
         </div>
       </div>
 
-      <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: "0 20px 8px" }}>
+      <div data-shell-scroller="home" style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: "0 20px 8px" }}>
 
         <FirstTimePrompt />
         <SetupGate />
 
-        <div style={{ paddingTop: 14 }}>
-          <HomeActivityTicker />
+        <div className="weered-home-grid" data-shell-root="home">
+          {homeLayout.map((it) => (
+            <ShellSlot key={keyOf(it)} item={it} region="home">
+              {isCore(it) ? homeSection(it) : undefined}
+            </ShellSlot>
+          ))}
         </div>
-
-        {/* Mplayer, the home way: people are the doors. Live Home Lobby faces
-            + friends/crew with where they are and one-click Join. */}
-        <HomePulse
-          homeUsers={(usersByRoom as any)?.["lobby"] ?? (usersByRoom as any)?.["room:lobby"] ?? []}
-          onDm={handleDm}
-        />
-
-        <div style={{ paddingTop: 14 }}>
-          <HeroBanner lobby={featured} onJoin={handleJoin} />
-        </div>
-
-        <LiveTicker rooms={allRooms} onJoin={handleJoin} apiBase="https://api.weered.ca" />
-
-        {lobbies.length > 0 && (() => {
-          const visibleLobbies = lobbies.filter(r => featuredId ? (roomId(r) !== featuredId) : true);
-          const FEATURED_PRIORITY = ["eve", "destiny2", "poe", "helldivers2", "league-of-legends", "fakeout", "fortnite", "windrose", "counter-strike-2", "dota-2", "pubg", "mlb", "pga", "chess"];
-          const pri = (r: any) => { const i = FEATURED_PRIORITY.indexOf(roomId(r)); return i === -1 ? 999 : i; };
-          const ordered = [...visibleLobbies].sort((a, b) => {
-            const pa = pri(a), pb = pri(b);
-            if (pa !== pb) return pa - pb;
-            return (b?.featured ? 1 : 0) - (a?.featured ? 1 : 0);
-          });
-          const cardLobbies = ordered.slice(0, 7);
-          const canCreate = String(me?.tier || "INNOCENT").toUpperCase() !== "INNOCENT";
-          return (
-            <div style={{ marginTop: 24 }}>
-              <SectionHeader icon="&#10022;" label="Featured Lobbies" sub="verified communities" />
-              <div className="weered-lobby-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
-                {cardLobbies.map((r, i) => <LobbyCard key={roomId(r) || i} room={r} idx={i} onJoin={(id) => { handleLobbyVisit(id); handleJoin(id, true); }} />)}
-
-                <div
-                  onClick={() => { try { window.dispatchEvent(new CustomEvent("weered:lobby:browse")); } catch {} }}
-                  onKeyDown={onActivate(() => { try { window.dispatchEvent(new CustomEvent("weered:lobby:browse")); } catch {} })}
-                  role="button"
-                  tabIndex={0}
-                  style={{
-                    background: "linear-gradient(135deg, rgba(124,58,237,.10), rgba(255,255,255,.02))",
-                    border: "1px solid rgba(124,58,237,.3)",
-                    borderRadius: 2, cursor: "pointer", position: "relative", overflow: "hidden",
-                    transition: "border-color .2s, transform .15s",
-                    display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-                    minHeight: 112, gap: 4,
-                  }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(124,58,237,.6)"; (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)"; }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(124,58,237,.3)"; (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; }}
-                >
-                  <div style={{ fontSize: 28, marginBottom: 4, opacity: 0.85 }}>🧭</div>
-                  <div style={{ fontFamily: "var(--font-barlow), sans-serif", fontWeight: 800, fontSize: 15, letterSpacing: "1px", textTransform: "uppercase", color: "rgba(243,244,246,.95)" }}>
-                    Browse all {lobbies.length} lobbies
-                  </div>
-                  <div style={{ fontSize: 10, color: "rgba(148,163,184,.55)" }}>Search · discover · find your community</div>
-                </div>
-
-                <div
-                  onClick={() => router.push(canCreate ? "/lobby/create" : "/subscribe")}
-                  onKeyDown={onActivate(() => router.push(canCreate ? "/lobby/create" : "/subscribe"))}
-                  role="button"
-                  tabIndex={0}
-                  style={{
-                    background: "linear-gradient(135deg, rgba(245,183,0,.12), rgba(88,0,229,.10))",
-                    border: "1px solid rgba(245,183,0,.30)",
-                    borderRadius: 2, cursor: "pointer", position: "relative", overflow: "hidden",
-                    transition: "border-color .2s, transform .15s",
-                    display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-                    minHeight: 112, gap: 4,
-                  }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(245,183,0,.6)"; (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)"; }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(245,183,0,.30)"; (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; }}
-                >
-                  <div style={{ fontSize: 30, marginBottom: 2, opacity: 0.9, color: "#f5b700", fontWeight: 300, lineHeight: 1 }}>+</div>
-                  <div style={{ fontFamily: "var(--font-barlow), sans-serif", fontWeight: 800, fontSize: 15, letterSpacing: "1px", textTransform: "uppercase", color: "#f5d27a" }}>
-                    Build your lobby
-                  </div>
-                  <div style={{ fontSize: 10, color: "rgba(245,210,122,.55)" }}>
-                    {canCreate ? "Your game · your rules · your brand" : "Get Indicted to host your own"}
-                  </div>
-                </div>
-              </div>
-            </div>
-          );
-        })()}
-
-        <HomePinnedNews />
-
-        {me && String(me?.tier || "INNOCENT").toUpperCase() === "INNOCENT" && (
-          <div
-            onClick={() => router.push("/subscribe")}
-            onKeyDown={onActivate(() => router.push("/subscribe"))}
-            role="button"
-            tabIndex={0}
-            style={{
-              marginTop: 14, padding: "14px 20px",
-              borderRadius: 2, cursor: "pointer",
-              background: "linear-gradient(135deg, rgba(88,0,229,.08) 0%, rgba(167,139,250,.06) 50%, rgba(249,115,22,.05) 100%)",
-              border: "1px solid rgba(88,0,229,.18)",
-              display: "flex", alignItems: "center", justifyContent: "space-between",
-              gap: 16, transition: "all .2s",
-            }}
-            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(88,0,229,.35)"; }}
-            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(88,0,229,.18)"; }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <img src="/brand/logo/weered-logo-128.png" alt="Weered logo" style={{ width: 36, height: 36, objectFit: "contain" }} />
-              <div>
-                <div style={{ fontWeight: 800, fontSize: 13, color: "rgba(243,244,246,.88)", letterSpacing: "-0.1px" }}>
-                  Get Indicted. Own a lobby.
-                </div>
-                <div style={{ fontSize: 11, color: "rgba(148,163,184,.5)", marginTop: 2 }}>
-                  Create your own branded community. Premium features. Your rules.
-                </div>
-              </div>
-            </div>
-            <span style={{
-              flexShrink: 0, fontSize: 11, fontWeight: 800, padding: "6px 14px",
-              borderRadius: 2, background: "rgba(88,0,229,.15)", border: "1px solid rgba(88,0,229,.30)",
-              color: "rgba(167,139,250,.9)", letterSpacing: ".2px",
-            }}>
-              Upgrade
-            </span>
-          </div>
-        )}
-
-        {popularRooms.length > 0 && (
-          <div style={{ marginTop: 24 }}>
-            <SectionHeader icon="&#128293;" label="Popular Rooms" count={popularRooms.length} sub="active right now" />
-            <div className="weered-lobby-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
-              {popularRooms.map((r, i) => <LobbyCard key={roomId(r) || i} room={r} idx={i} onJoin={handleJoin} />)}
-            </div>
-          </div>
-        )}
-
-
-        <div style={{ marginTop: 24 }}>
-          <DmPreviewStrip />
-        </div>
-
-        <div style={{ marginTop: 24 }}>
-          <ActivityFeed initialCount={5} />
-        </div>
-
-        {recentRooms.length > 0 && (
-          <div style={{ marginTop: 24 }}>
-            <SectionHeader icon="&#128339;" label="Recently Visited" count={recentRooms.length} />
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              {recentRooms.slice(0, 5).map((r, i) => <RecentRow key={roomId(r) || i} room={r} onJoin={handleJoin} />)}
-            </div>
-          </div>
-        )}
 
         {lobbies.length === 0 && popularRooms.length === 0 && (
           <EmptyState
@@ -1177,6 +1251,8 @@ export default function HomePage() {
       <style>{`div::-webkit-scrollbar{display:none}`}</style>
 
       <FeatureShowcase open={showShowcase} onClose={() => setShowShowcase(false)} />
+
+      {me && <ShellDesigner />}
 
       <LobbyChatDrawer roomId="room:lobby" title="Lobby Chat" />
     </div>

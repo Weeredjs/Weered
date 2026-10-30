@@ -2,51 +2,51 @@
 
 // First-run setup for the whole of Weered, built the way the lobby composer
 // is: pick-and-choose sections on the left, a live preview on the right.
-// Intro (set it up / skip) → You, What you're here for, Your places, Look,
-// Sidebar → done. Saves the profile bits (status, avatar colour), favourites,
-// and the UI prefs (theme, colourway, starfield, density, sidebar order) to
-// the account. "first" runs once per account; "again" is /setup from Settings.
+// Intro (set it up / skip) → You, Look, Layout → done, which points at the
+// next step: a place of your own. Build your own Weered, then your own lobby.
+// Saves the profile bits (status, avatar colour) and the UI prefs (theme,
+// colourway, starfield, density, layout) to the account. "first" runs once
+// per account; "again" is /setup from Settings. Moving single sections and
+// adding blocks is Design mode's job (components/shell/ShellDesigner.tsx).
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useWeered } from "../WeeredProvider";
 import { ComposerStyles, Section, alpha, inputStyle, labelStyle } from "../composer/ui";
-import { GameArt } from "../composer/GameGrid";
 import Confetti from "../composer/Confetti";
-import SetupPreview, { type PreviewFav } from "./SetupPreview";
-import { INTERESTS, STATUS_EMOJI, groupOf, lobbyArt, type DirLobby } from "./setupData";
+import SetupPreview from "./SetupPreview";
+import { STATUS_EMOJI } from "./setupData";
+import { LayoutThumb } from "../shell/ShellDesignPanels";
+import {
+  SHELL_PRESETS,
+  presetLayout,
+  railFromShell,
+  shellFromPrefs,
+  type ShellLayout,
+} from "../../lib/shellLayout";
+import { startDesign } from "../../lib/shellDesign";
 import { AVATAR_PALETTE } from "../../lib/avatarColor";
 import {
   PALETTES,
+  paletteColours,
   PALETTE_IDS,
-  RAIL_BLURB,
-  RAIL_LABEL,
   readUiPrefs,
-  railOrder,
   saveUiPrefs,
-  type Interest,
   type Palette,
-  type RailSection,
   type SiteThemeId,
 } from "../../lib/uiPrefs";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
-const FAVS_KEY = "weered:favs:v1";
 const STEPS = [
   { id: "su-you", label: "You" },
-  { id: "su-why", label: "Why" },
-  { id: "su-places", label: "Places" },
   { id: "su-look", label: "Look" },
-  { id: "su-sidebar", label: "Sidebar" },
+  { id: "su-layout", label: "Layout" },
 ];
 
-function readFavs(): string[] {
-  try {
-    const v = JSON.parse(localStorage.getItem(FAVS_KEY) || "[]");
-    return Array.isArray(v) ? v.map(String) : [];
-  } catch {
-    return [];
-  }
-}
+// The layouts setup offers: the ones with nothing to fill in.
+const SETUP_PRESETS = SHELL_PRESETS.filter((p) => p.setup);
+const sameLayout = (a: ShellLayout, b: ShellLayout) =>
+  JSON.stringify([a.left, a.right, a.home, a.hidden]) ===
+  JSON.stringify([b.left, b.right, b.home, b.hidden]);
 
 export default function SetupFlow({
   mode,
@@ -63,6 +63,8 @@ export default function SetupFlow({
   );
   const [leaving, setLeaving] = useState(false);
   const scroller = useRef<HTMLDivElement | null>(null);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
   // ── You ──
   const name = String(me?.name || "").trim();
@@ -95,23 +97,7 @@ export default function SetupFlow({
       .catch(() => {});
   }, [me?.id, me?.avatar, me?.avatarColor]);
 
-  // ── Why + places ──
-  const [interests, setInterests] = useState<Interest[]>(prefs0.interests || []);
-  const [lobbies, setLobbies] = useState<DirLobby[]>([]);
-  const initialFavs = useRef<string[]>([]);
-  const [picked, setPicked] = useState<string[]>([]);
-  const [showAll, setShowAll] = useState(false);
-  useEffect(() => {
-    const f = readFavs();
-    initialFavs.current = f;
-    setPicked(f);
-    fetch(`${API}/lobbies`)
-      .then((r) => r.json())
-      .then((j) => setLobbies(Array.isArray(j?.lobbies) ? j.lobbies : []))
-      .catch(() => {});
-  }, []);
-
-  // ── Look + sidebar ──
+  // ── Look + layout ──
   const classicTheme: SiteThemeId =
     prefs0.theme && prefs0.theme !== "nebula" ? prefs0.theme : "press";
   const [look, setLook] = useState<"nebula" | "classic">(
@@ -120,8 +106,17 @@ export default function SetupFlow({
   const [palette, setPalette] = useState<Palette>(prefs0.palette || "violet");
   const [stars, setStars] = useState(prefs0.stars !== false);
   const [compact, setCompact] = useState(prefs0.density === "compact");
-  const [order, setOrder] = useState<RailSection[]>(railOrder(prefs0));
-  const [hidden, setHidden] = useState<RailSection[]>(prefs0.rail?.hidden || []);
+  // Start from the viewer's own layout; a preset it matches shows as picked.
+  const layout0 = useMemo(() => shellFromPrefs(prefs0), [prefs0]);
+  const [layout, setLayout] = useState<ShellLayout>(layout0);
+  const [presetId, setPresetId] = useState<string>(() => {
+    const hit = SETUP_PRESETS.find((p) => {
+      const l = presetLayout(p.id);
+      return l && sameLayout(l, layout0);
+    });
+    return hit ? hit.id : "mine";
+  });
+  const thumbs = useMemo(() => Object.fromEntries(SETUP_PRESETS.map((p) => [p.id, p.build()])), []);
   const [pulse, setPulse] = useState(0);
   const bump = () => setPulse((n) => n + 1);
 
@@ -131,7 +126,7 @@ export default function SetupFlow({
 
   const C =
     look === "nebula"
-      ? PALETTES[palette]
+      ? paletteColours(palette)
       : {
           a: "#7c3aed",
           b: "#5b21b6",
@@ -142,47 +137,29 @@ export default function SetupFlow({
           on: "#ffffff",
         };
 
-  // Directory tiles: matching interests first (all when none picked),
-  // verified/pinned first, then by who's around.
-  const groups = interests.filter((i): i is Exclude<Interest, "place"> => i !== "place");
-  const shown = useMemo(() => {
-    const score = (l: DirLobby) =>
-      (l.pinned ? 4 : 0) + (l.verified ? 2 : 0) + Math.min(3, Number(l.onlineCount || 0));
-    const pool = lobbies
-      .filter((l) => !String(l.id).startsWith("r/"))
-      .filter((l) => !groups.length || groups.includes(groupOf(l)));
-    return pool.sort((a, b) => score(b) - score(a));
-  }, [lobbies, groups.join(",")]); // eslint-disable-line react-hooks/exhaustive-deps
-  const visibleTiles = showAll ? shown : shown.slice(0, 12);
-
-  const previewFavs: PreviewFav[] = useMemo(() => {
-    const byId = new Map(lobbies.map((l) => [l.id, l]));
-    return picked
-      .map((id) => byId.get(id))
-      .filter(Boolean)
-      .map((l) => ({ id: l!.id, name: l!.name, art: lobbyArt(l!) }));
-  }, [picked, lobbies]);
-
-  // Which section is on screen, for the step pills.
+  // Which section is on screen, for the step pills: the last one whose top
+  // has passed a line a third of the way down, or the last one at the end.
   useEffect(() => {
     if (phase !== "build") return;
     const root = scroller.current;
     if (!root) return;
-    const io = new IntersectionObserver(
-      (es) => {
-        const vis = es
-          .filter((e) => e.isIntersecting)
-          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
-        if (vis[0]) setActive(vis[0].target.id);
-      },
-      { root, rootMargin: "-20% 0px -60% 0px" },
-    );
-    STEPS.forEach((s) => {
-      const el = document.getElementById(s.id);
-      if (el) io.observe(el);
-    });
-    return () => io.disconnect();
-  }, [phase]);
+    const onScroll = () => {
+      const line = root.getBoundingClientRect().top + root.clientHeight / 3;
+      let cur = STEPS[0].id;
+      for (const st of STEPS) {
+        const el = document.getElementById(st.id);
+        if (el && el.getBoundingClientRect().top <= line) cur = st.id;
+      }
+      if (root.scrollTop + root.clientHeight >= root.scrollHeight - 4)
+        cur = STEPS[STEPS.length - 1].id;
+      setActive(cur);
+    };
+    onScroll();
+    root.addEventListener("scroll", onScroll, { passive: true });
+    return () => root.removeEventListener("scroll", onScroll);
+    // `mounted`: the flow renders nothing on its first pass, so on /setup
+    // (which starts at "build") the scroller only exists after it.
+  }, [phase, mounted]);
 
   // Lock the page behind while the flow is up.
   useEffect(() => {
@@ -284,38 +261,13 @@ export default function SetupFlow({
       }
     }
 
-    const had = readFavs();
-    const add = picked.filter((id) => !had.includes(id));
-    const drop = initialFavs.current.filter((id) => !picked.includes(id));
-    await Promise.all([
-      ...add.map((id) =>
-        fetch(`${API}/me/favorites/${encodeURIComponent(id)}`, {
-          method: "POST",
-          credentials: "include",
-        }).catch(() => {}),
-      ),
-      ...drop.map((id) =>
-        fetch(`${API}/me/favorites/${encodeURIComponent(id)}`, {
-          method: "DELETE",
-          credentials: "include",
-        }).catch(() => {}),
-      ),
-    ]);
-    try {
-      localStorage.setItem(
-        FAVS_KEY,
-        JSON.stringify([...add, ...had.filter((id) => !drop.includes(id))]),
-      );
-      window.dispatchEvent(new Event("weered:favs"));
-    } catch {}
-
     saveUiPrefs({
       theme: look === "nebula" ? "nebula" : classicTheme,
       palette,
       stars,
       density: compact ? "compact" : "comfortable",
-      rail: { order, hidden },
-      interests,
+      shell: layout,
+      rail: railFromShell(layout),
       ...(mode === "first" || prefs0.setup !== "done"
         ? { setup: "done" as const, setupAt: new Date().toISOString() }
         : {}),
@@ -329,19 +281,6 @@ export default function SetupFlow({
     setConfetti((n) => n + 1);
   }
 
-  const toggle = <T,>(list: T[], v: T) =>
-    list.includes(v) ? list.filter((x) => x !== v) : [...list, v];
-  const move = (i: number, d: -1 | 1) => {
-    const j = i + d;
-    if (j < 0 || j >= order.length) return;
-    const next = [...order];
-    [next[i], next[j]] = [next[j], next[i]];
-    setOrder(next);
-    bump();
-  };
-
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
   if (!mounted) return null;
 
   const accentBtn: React.CSSProperties = {
@@ -408,7 +347,7 @@ export default function SetupFlow({
             Let&apos;s make it yours.
           </h1>
           <p className="su-sub">
-            Pick a look, set up your sidebar, pin your places. About a minute.
+            Pick a look and a layout. Then, if you want one, a place of your own.
           </p>
           <div className="su-cta">
             <button
@@ -631,191 +570,10 @@ export default function SetupFlow({
                 </div>
               </Section>
 
-              {/* 02 Why */}
-              <Section
-                id="su-why"
-                n={2}
-                title="What are you here for?"
-                kicker="Pick any. We'll line up places to match."
-                accent={C.a}
-              >
-                <div className="su-why">
-                  {INTERESTS.map((it) => {
-                    const on = interests.includes(it.id);
-                    return (
-                      <button
-                        key={it.id}
-                        type="button"
-                        aria-pressed={on}
-                        className="cz-card"
-                        onClick={() => {
-                          setInterests(toggle(interests, it.id));
-                          setShowAll(false);
-                        }}
-                        style={{
-                          position: "relative",
-                          textAlign: "left",
-                          padding: "16px 16px 14px",
-                          borderRadius: 16,
-                          cursor: "pointer",
-                          color: "#fff",
-                          fontFamily: "inherit",
-                          border: `1px solid ${on ? alpha(C.a, 0.85) : "rgba(255,255,255,.1)"}`,
-                          background: on
-                            ? `radial-gradient(120% 120% at 0% 0%, ${alpha(C.a, 0.35)}, transparent 60%), rgba(255,255,255,.04)`
-                            : "rgba(255,255,255,.035)",
-                          boxShadow: on
-                            ? `0 0 0 3px ${alpha(C.a, 0.18)}, 0 16px 40px -20px ${alpha(C.a, 0.9)}`
-                            : "none",
-                        }}
-                      >
-                        <div style={{ fontSize: 26 }}>{it.icon}</div>
-                        <div style={{ fontSize: 19, fontWeight: 700, marginTop: 6 }}>{it.name}</div>
-                        <div
-                          style={{
-                            fontSize: 13.5,
-                            color: "rgba(255,255,255,.62)",
-                            marginTop: 2,
-                            lineHeight: 1.35,
-                          }}
-                        >
-                          {it.blurb}
-                        </div>
-                        {on && (
-                          <span
-                            aria-hidden
-                            className="cz-anim"
-                            style={{
-                              position: "absolute",
-                              top: 10,
-                              right: 10,
-                              width: 22,
-                              height: 22,
-                              borderRadius: 99,
-                              display: "grid",
-                              placeItems: "center",
-                              fontSize: 12,
-                              fontWeight: 900,
-                              background: C.a,
-                              color: C.on,
-                              animation: "cz-pop .3s",
-                            }}
-                          >
-                            ✓
-                          </span>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-              </Section>
-
-              {/* 03 Places */}
-              <Section
-                id="su-places"
-                n={3}
-                title="Pin your places"
-                kicker="Starred places sit in your sidebar, one click away."
-                accent={C.a}
-              >
-                {lobbies.length === 0 ? (
-                  <div style={{ fontSize: 14, color: "rgba(255,255,255,.5)" }}>Loading places…</div>
-                ) : (
-                  <>
-                    <div className="cz-games">
-                      {visibleTiles.map((l) => {
-                        const on = picked.includes(l.id);
-                        return (
-                          <button
-                            key={l.id}
-                            type="button"
-                            aria-pressed={on}
-                            className="cz-card"
-                            onClick={() => {
-                              setPicked(toggle(picked, l.id));
-                              bump();
-                            }}
-                            style={{
-                              position: "relative",
-                              padding: 0,
-                              textAlign: "left",
-                              borderRadius: 14,
-                              overflow: "hidden",
-                              cursor: "pointer",
-                              color: "#fff",
-                              fontFamily: "inherit",
-                              border: `1px solid ${on ? alpha(C.a, 0.9) : "rgba(255,255,255,.1)"}`,
-                              background: "rgba(10,8,20,.7)",
-                              boxShadow: on
-                                ? `0 0 0 3px ${alpha(C.a, 0.2)}, 0 14px 34px -16px ${alpha(C.a, 0.9)}`
-                                : "none",
-                            }}
-                          >
-                            <GameArt game={lobbyArt(l)} height={70} radius={0} />
-                            <div style={{ padding: "8px 10px 10px" }}>
-                              <div
-                                style={{
-                                  fontSize: 15,
-                                  fontWeight: 700,
-                                  whiteSpace: "nowrap",
-                                  overflow: "hidden",
-                                  textOverflow: "ellipsis",
-                                }}
-                              >
-                                {l.name}
-                              </div>
-                              <div
-                                style={{
-                                  fontSize: 11.5,
-                                  color: "rgba(255,255,255,.5)",
-                                  textTransform: "capitalize",
-                                }}
-                              >
-                                {groupOf(l)}
-                                {l.verified ? " · verified" : ""}
-                              </div>
-                            </div>
-                            <span
-                              aria-hidden
-                              style={{
-                                position: "absolute",
-                                top: 8,
-                                right: 8,
-                                width: 26,
-                                height: 26,
-                                borderRadius: 99,
-                                display: "grid",
-                                placeItems: "center",
-                                fontSize: 14,
-                                background: on ? C.a : "rgba(0,0,0,.55)",
-                                border: `1px solid ${on ? alpha(C.hi, 0.8) : "rgba(255,255,255,.2)"}`,
-                                color: on ? C.on : "rgba(255,255,255,.7)",
-                                transition: "background .2s",
-                              }}
-                            >
-                              {on ? "★" : "☆"}
-                            </span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                    {shown.length > 12 && (
-                      <button
-                        type="button"
-                        className="su-more"
-                        onClick={() => setShowAll(!showAll)}
-                      >
-                        {showAll ? "Show fewer" : `Show all ${shown.length}`}
-                      </button>
-                    )}
-                  </>
-                )}
-              </Section>
-
-              {/* 04 Look */}
+              {/* 02 Look */}
               <Section
                 id="su-look"
-                n={4}
+                n={2}
                 title="Look"
                 kicker="One layout, your colours. Changes everywhere but themed lobbies."
                 accent={C.a}
@@ -995,101 +753,50 @@ export default function SetupFlow({
                 </div>
               </Section>
 
-              {/* 05 Sidebar */}
+              {/* 03 Layout */}
               <Section
-                id="su-sidebar"
-                n={5}
-                title="Sidebar"
-                kicker="Put what you use on top. Hide the rest."
+                id="su-layout"
+                n={3}
+                title="Layout"
+                kicker="Where everything sits. Friends where you can see them, or a quieter screen."
                 accent={C.a}
               >
-                <div style={{ display: "grid", gap: 8 }}>
-                  {order.map((s, i) => {
-                    const off = hidden.includes(s) && s !== "nav";
-                    return (
-                      <div
-                        key={s}
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 12,
-                          padding: "10px 12px",
-                          borderRadius: 13,
-                          border: `1px solid ${off ? "rgba(255,255,255,.06)" : alpha(C.a, 0.3)}`,
-                          background: off ? "rgba(255,255,255,.02)" : "rgba(255,255,255,.045)",
-                          opacity: off ? 0.55 : 1,
-                          transition: "opacity .2s, border-color .2s",
-                        }}
-                      >
-                        <div style={{ display: "grid", gap: 2 }}>
-                          <button
-                            type="button"
-                            aria-label={`Move ${RAIL_LABEL[s]} up`}
-                            disabled={i === 0}
-                            onClick={() => move(i, -1)}
-                            className="su-arrow"
-                          >
-                            ▲
-                          </button>
-                          <button
-                            type="button"
-                            aria-label={`Move ${RAIL_LABEL[s]} down`}
-                            disabled={i === order.length - 1}
-                            onClick={() => move(i, 1)}
-                            className="su-arrow"
-                          >
-                            ▼
-                          </button>
-                        </div>
-                        <div style={{ minWidth: 0, flex: 1 }}>
-                          <div style={{ fontSize: 16, fontWeight: 700 }}>{RAIL_LABEL[s]}</div>
-                          <div style={{ fontSize: 12.5, color: "rgba(255,255,255,.55)" }}>
-                            {RAIL_BLURB[s]}
-                          </div>
-                        </div>
-                        {s === "nav" ? (
-                          <span style={{ fontSize: 12, color: "rgba(255,255,255,.45)" }}>
-                            Always on
-                          </span>
-                        ) : (
-                          <button
-                            type="button"
-                            role="switch"
-                            aria-checked={!off}
-                            aria-label={`Show ${RAIL_LABEL[s]}`}
-                            onClick={() => {
-                              setHidden(toggle(hidden, s));
-                              bump();
-                            }}
-                            style={{
-                              position: "relative",
-                              width: 44,
-                              height: 24,
-                              flex: "0 0 44px",
-                              borderRadius: 99,
-                              border: "none",
-                              cursor: "pointer",
-                              background: off ? "rgba(255,255,255,.14)" : C.a,
-                              transition: "background .2s",
-                            }}
-                          >
-                            <span
-                              style={{
-                                position: "absolute",
-                                top: 3,
-                                left: off ? 3 : 23,
-                                width: 18,
-                                height: 18,
-                                borderRadius: 99,
-                                background: off ? "#fff" : C.on,
-                                transition: "left .18s, background .2s",
-                              }}
-                            />
-                          </button>
-                        )}
-                      </div>
-                    );
-                  })}
+                <div className="su-layouts">
+                  {presetId === "mine" && (
+                    <LayoutCard
+                      on
+                      name="Yours"
+                      blurb="The layout you have now."
+                      thumb={layout0}
+                      C={C}
+                      onPick={() => {
+                        setLayout(layout0);
+                        setPresetId("mine");
+                        bump();
+                      }}
+                    />
+                  )}
+                  {SETUP_PRESETS.map((pr) => (
+                    <LayoutCard
+                      key={pr.id}
+                      on={presetId === pr.id}
+                      name={pr.name}
+                      blurb={pr.blurb}
+                      thumb={thumbs[pr.id]}
+                      C={C}
+                      onPick={() => {
+                        const l = presetLayout(pr.id);
+                        if (!l) return;
+                        setLayout(l);
+                        setPresetId(pr.id);
+                        bump();
+                      }}
+                    />
+                  ))}
+                </div>
+                <div className="su-layout-note">
+                  Later, <b>✦ Design</b> on Home moves any section, puts Friends wherever you like,
+                  and adds blocks: a Twitch stream, a playlist, links, a countdown.
                 </div>
               </Section>
             </div>
@@ -1106,30 +813,33 @@ export default function SetupFlow({
               >
                 LIVE PREVIEW
               </div>
-              <SetupPreview
-                name={name}
-                avatar={avatar}
-                avatarColor={avatarColor}
-                statusEmoji={statusEmoji}
-                statusText={statusText}
-                tier={me?.tier && me.tier !== "INNOCENT" ? String(me.tier) : undefined}
-                look={look}
-                palette={palette}
-                stars={stars}
-                compact={compact}
-                order={order}
-                hidden={hidden}
-                favs={previewFavs}
-                pulseKey={pulse}
-              />
+              <FitPreview>
+                <SetupPreview
+                  name={name}
+                  avatar={avatar}
+                  avatarColor={avatarColor}
+                  statusEmoji={statusEmoji}
+                  statusText={statusText}
+                  tier={me?.tier && me.tier !== "INNOCENT" ? String(me.tier) : undefined}
+                  look={look}
+                  palette={palette}
+                  stars={stars}
+                  compact={compact}
+                  layout={layout}
+                  pulseKey={pulse}
+                />
+              </FitPreview>
             </div>
           </div>
 
           {/* Finish bar */}
           <div className="su-bar">
             <div style={{ fontSize: 14, color: "rgba(255,255,255,.6)", minWidth: 0 }}>
-              {picked.length ? `${picked.length} pinned · ` : ""}
-              {look === "nebula" ? `Nebula · ${PALETTES[palette].name}` : "Classic"}
+              {look === "nebula" ? `Nebula · ${paletteColours(palette).name}` : "Classic"}
+              {" · "}
+              {presetId === "mine"
+                ? "your layout"
+                : `${SETUP_PRESETS.find((x) => x.id === presetId)?.name || ""} layout`}
             </div>
             <button
               type="button"
@@ -1154,47 +864,152 @@ export default function SetupFlow({
             You&apos;re in.
           </h1>
           <p className="su-sub">
-            {interests.includes("place")
-              ? "Your look is saved. Want to build your place now?"
-              : "Your look, sidebar and places are saved. Change any of it from Settings."}
+            Your Weered is set. Next, a place of your own: a lobby with its own look, rooms and
+            members, on your own domain if you want.
           </p>
           <div className="su-cta">
-            {interests.includes("place") ? (
-              <>
-                <button
-                  type="button"
-                  autoFocus
-                  className="su-btn su-btn-main"
-                  style={accentBtn}
-                  onClick={() => close("/lobby/create")}
-                >
-                  Build my place →
-                </button>
-                <button
-                  type="button"
-                  className="su-btn"
-                  style={ghostBtn}
-                  onClick={() => close("/home")}
-                >
-                  Later
-                </button>
-              </>
-            ) : (
-              <button
-                type="button"
-                autoFocus
-                className="su-btn su-btn-main"
-                style={accentBtn}
-                onClick={() => close("/home")}
-              >
-                Take me home →
-              </button>
-            )}
+            <button
+              type="button"
+              autoFocus
+              className="su-btn su-btn-main"
+              style={accentBtn}
+              onClick={() => close("/lobby/create")}
+            >
+              Build my place →
+            </button>
+            <button
+              type="button"
+              className="su-btn"
+              style={ghostBtn}
+              onClick={() => close("/home")}
+            >
+              Take me home
+            </button>
           </div>
+          <button
+            type="button"
+            className="su-note su-note-link"
+            onClick={() => {
+              if (mode === "first") {
+                close();
+                setTimeout(() => startDesign(), 360);
+              } else close("/home?design=1");
+            }}
+          >
+            Or fine-tune your layout in Design →
+          </button>
         </div>
       )}
     </div>,
     document.body,
+  );
+}
+
+/** The preview, scaled down to fit the window beside the steps (a layout
+ *  with everything on is taller than a laptop screen). */
+function FitPreview({ children }: { children: React.ReactNode }) {
+  const inner = useRef<HTMLDivElement | null>(null);
+  const [fit, setFit] = useState<{ s: number; h: number } | null>(null);
+  useEffect(() => {
+    const el = inner.current;
+    if (!el) return;
+    const measure = () => {
+      if (!window.matchMedia("(min-width: 1080px)").matches) return setFit(null);
+      const natural = el.offsetHeight; // layout height; transforms don't change it
+      // Below the top bar, above the finish bar and the steps' end padding:
+      // any taller and the sticky column runs out of room at the last step.
+      const room = window.innerHeight - 330;
+      const s = Math.max(0.5, Math.min(1, room / Math.max(1, natural)));
+      setFit(s < 1 ? { s, h: natural * s } : null);
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    window.addEventListener("resize", measure);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", measure);
+    };
+  }, []);
+  return (
+    <div style={fit ? { height: fit.h } : undefined}>
+      <div
+        ref={inner}
+        style={fit ? { transform: `scale(${fit.s})`, transformOrigin: "top center" } : undefined}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function LayoutCard({
+  on,
+  name,
+  blurb,
+  thumb,
+  C,
+  onPick,
+}: {
+  on: boolean;
+  name: string;
+  blurb: string;
+  thumb: Pick<ShellLayout, "left" | "right" | "home">;
+  C: { a: string; hi: string; on: string };
+  onPick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={on}
+      className="cz-card"
+      onClick={onPick}
+      style={{
+        position: "relative",
+        padding: 10,
+        borderRadius: 16,
+        textAlign: "left",
+        cursor: "pointer",
+        color: "#fff",
+        fontFamily: "inherit",
+        border: `1px solid ${on ? alpha(C.a, 0.85) : "rgba(255,255,255,.1)"}`,
+        background: on
+          ? `radial-gradient(120% 120% at 0% 0%, ${alpha(C.a, 0.3)}, transparent 60%), rgba(255,255,255,.04)`
+          : "rgba(255,255,255,.035)",
+        boxShadow: on
+          ? `0 0 0 3px ${alpha(C.a, 0.18)}, 0 16px 40px -20px ${alpha(C.a, 0.9)}`
+          : "none",
+      }}
+    >
+      <LayoutThumb layout={thumb} accent={C.a} hi={C.hi} height={66} />
+      <div style={{ fontSize: 18, fontWeight: 700, marginTop: 9 }}>{name}</div>
+      <div style={{ fontSize: 13, color: "rgba(255,255,255,.6)", lineHeight: 1.35, marginTop: 1 }}>
+        {blurb}
+      </div>
+      {on && (
+        <span
+          aria-hidden
+          className="cz-anim"
+          style={{
+            position: "absolute",
+            top: 16,
+            right: 16,
+            width: 22,
+            height: 22,
+            borderRadius: 99,
+            display: "grid",
+            placeItems: "center",
+            fontSize: 12,
+            fontWeight: 900,
+            background: C.a,
+            color: C.on,
+            animation: "cz-pop .3s",
+          }}
+        >
+          ✓
+        </span>
+      )}
+    </button>
   );
 }
 
@@ -1231,7 +1046,12 @@ const SETUP_CSS = `
 .su-pills::-webkit-scrollbar{display:none}
 .su-skip{flex:0 0 auto;background:none;border:none;color:rgba(255,255,255,.6);font:inherit;font-weight:700;font-size:14.5px;cursor:pointer;padding:8px 4px}
 .su-skip:hover{color:#fff}
-.su-why{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px}
+.su-scroll .cz-previewcol{top:76px}
+.su-layouts{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
+.su-layout-note{margin-top:14px;font-size:14px;line-height:1.5;color:rgba(255,255,255,.55)}
+.su-layout-note b{color:#fff}
+.su-note-link{display:block;margin-left:auto;margin-right:auto;background:none;border:none;font-family:inherit;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+.su-note-link:hover{color:#fff}
 .su-more{margin-top:12px;background:none;border:1px solid rgba(255,255,255,.14);border-radius:999px;color:#fff;font:inherit;font-weight:700;font-size:13.5px;padding:8px 16px;cursor:pointer}
 .su-arrow{width:24px;height:16px;padding:0;border:none;border-radius:4px;background:rgba(255,255,255,.07);color:rgba(255,255,255,.75);font-size:8px;cursor:pointer;line-height:1}
 .su-arrow:disabled{opacity:.25;cursor:default}
