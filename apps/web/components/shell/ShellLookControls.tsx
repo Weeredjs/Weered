@@ -149,14 +149,19 @@ function Pick<T extends string>({
   );
 }
 
+/** Where a change goes: Design's draft by default; Settings saves it outright. */
+type OnLook = (patch: Partial<ShellLook>, merge?: string) => void;
+
 export function StructureControls({
   accent,
   look,
   c,
+  onLook = editLook,
 }: {
   accent: string;
   look: ShellLook;
   c: PaletteColours;
+  onLook?: OnLook;
 }) {
   return (
     <>
@@ -165,7 +170,7 @@ export function StructureControls({
         items={SHAPES}
         value={look.shape}
         accent={accent}
-        onPick={(v) => editLook({ shape: v })}
+        onPick={(v) => onLook({ shape: v })}
         render={(id) => (
           <Swatch shape={id} texture={look.texture} hard={look.lines === "hard"} c={c} />
         )}
@@ -176,7 +181,7 @@ export function StructureControls({
         value={look.lines}
         accent={accent}
         cols={2}
-        onPick={(v) => editLook({ lines: v })}
+        onPick={(v) => onLook({ lines: v })}
         render={(id) => (
           <Swatch shape={look.shape} texture={look.texture} hard={id === "hard"} c={c} />
         )}
@@ -187,7 +192,7 @@ export function StructureControls({
         value={look.texture}
         accent={accent}
         cols={5}
-        onPick={(v) => editLook({ texture: v })}
+        onPick={(v) => onLook({ texture: v })}
         render={(id) => (
           <Swatch shape={look.shape} texture={id} hard={look.lines === "hard"} c={c} />
         )}
@@ -198,7 +203,7 @@ export function StructureControls({
         value={look.backdrop}
         accent={accent}
         cols={3}
-        onPick={(v) => editLook({ backdrop: v })}
+        onPick={(v) => onLook({ backdrop: v })}
       />
     </>
   );
@@ -208,10 +213,12 @@ export function EffectControls({
   accent,
   look,
   c,
+  onLook = editLook,
 }: {
   accent: string;
   look: ShellLook;
   c: PaletteColours;
+  onLook?: OnLook;
 }) {
   return (
     <>
@@ -223,7 +230,7 @@ export function EffectControls({
             <button
               key={fx}
               type="button"
-              onClick={() => editLook({ fx })}
+              onClick={() => onLook({ fx })}
               style={{
                 position: "relative",
                 height: 46,
@@ -266,7 +273,7 @@ export function EffectControls({
             <input
               value={look.fxSymbol}
               maxLength={12}
-              onChange={(e) => editLook({ fxSymbol: e.target.value }, "fxSymbol")}
+              onChange={(e) => onLook({ fxSymbol: e.target.value }, "fxSymbol")}
               aria-label="Your symbol"
               style={{ ...input, width: 64, textAlign: "center", fontSize: 18, padding: "6px 4px" }}
             />
@@ -274,7 +281,7 @@ export function EffectControls({
               <button
                 key={sym}
                 type="button"
-                onClick={() => editLook({ fxSymbol: sym })}
+                onClick={() => onLook({ fxSymbol: sym })}
                 style={{ ...chip(look.fxSymbol === sym, accent), padding: "4px 7px", fontSize: 15 }}
               >
                 {sym}
@@ -295,7 +302,7 @@ export function EffectControls({
             max={1.5}
             step={0.1}
             value={look.fxIntensity}
-            onChange={(e) => editLook({ fxIntensity: Number(e.target.value) }, "fxIntensity")}
+            onChange={(e) => onLook({ fxIntensity: Number(e.target.value) }, "fxIntensity")}
             style={{ width: "100%", accentColor: accent }}
             aria-label="Effect intensity"
           />
@@ -307,7 +314,7 @@ export function EffectControls({
               <button
                 key={String(front)}
                 type="button"
-                onClick={() => editLook({ fxFront: front as boolean })}
+                onClick={() => onLook({ fxFront: front as boolean })}
                 title={
                   front
                     ? "Floats over the page; clicks go straight through"

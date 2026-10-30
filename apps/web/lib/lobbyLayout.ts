@@ -93,9 +93,75 @@ export type LobbyTheme = {
   sparkle?: boolean;
   /** What floats by when the effect is "symbol": an emoji or a few characters. */
   symbol?: string;
+  /** The effect and sparkle show even for visitors who turned animations
+   *  off (James 2026-10-30: "users can't opt out"). Their system's
+   *  reduce-motion setting still wins; see lib/motion.ts. */
+  fxForced?: boolean;
 };
 
 export type TabEntry = { id: TabId; label?: string; hidden?: boolean };
+
+// ── The front door ──────────────────────────────────────────────────────────
+// What a visitor gets through before joining (James 2026-10-30: "the entry
+// overlays for lobbies, rules, other questions, gates"): a welcome, the
+// rules to accept, a few questions, and gates (18+, account age). Owners set
+// it in Admin → Front door; components/lobby/LobbyDoor.tsx draws it. Joining
+// is checked by the API (apps/api/src/lib/lobbyDoor.ts), which keeps the
+// answers with the membership or the join request.
+export type DoorQuestion = {
+  id: string;
+  q: string;
+  /** "text": a short answer; "choice": pick one of `options`. */
+  kind: "text" | "choice";
+  options: string[];
+  required: boolean;
+};
+
+export type LobbyDoor = {
+  on: boolean;
+  /** Empty: "Welcome to <lobby name>". */
+  title: string;
+  body: string;
+  /** https image across the top; empty: the lobby's banner. */
+  image: string;
+  /** The join button's words; empty: "Come in". */
+  button: string;
+  rules: string[];
+  questions: DoorQuestion[];
+  /** Visitors confirm they're 18 or older. */
+  age18: boolean;
+  /** Accounts younger than this many days can't join (0 = any). */
+  minAccountDays: number;
+  /** Visitors can't look around until they're through. */
+  lock: boolean;
+};
+
+export const DOOR_MAX = {
+  title: 80,
+  body: 600,
+  button: 24,
+  rules: 12,
+  rule: 200,
+  questions: 5,
+  q: 140,
+  options: 8,
+  option: 40,
+} as const;
+
+export function emptyDoor(): LobbyDoor {
+  return {
+    on: false,
+    title: "",
+    body: "",
+    image: "",
+    button: "",
+    rules: [],
+    questions: [],
+    age18: false,
+    minAccountDays: 0,
+    lock: false,
+  };
+}
 
 export type LobbyLayout = {
   v: 1;
@@ -105,6 +171,7 @@ export type LobbyLayout = {
   theme: LobbyTheme;
   blocks: Block[];
   roomOrder: string[];
+  door?: LobbyDoor;
 };
 
 const TAB_IDS = Object.keys(TAB_DEFAULT_LABEL) as TabId[];
@@ -251,6 +318,43 @@ export function cleanSymbol(v: unknown): string | undefined {
   return parts.slice(0, 3).join("").slice(0, 24) || undefined;
 }
 
+/** The door, cleaned: trimmed, capped, https images only, a choice question
+ *  needs two options. Undefined when there is nothing to keep. */
+export function sanitizeDoor(raw: unknown): LobbyDoor | undefined {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return undefined;
+  const d = raw as any;
+  const t = (v: unknown, max: number) => (typeof v === "string" ? v.trim().slice(0, max) : "");
+  const questions: DoorQuestion[] = (Array.isArray(d.questions) ? d.questions : [])
+    .slice(0, DOOR_MAX.questions)
+    .map((q: any) => ({
+      id: t(q?.id, 40) || `q${Math.random().toString(36).slice(2, 8)}`,
+      q: t(q?.q, DOOR_MAX.q),
+      kind: q?.kind === "choice" ? ("choice" as const) : ("text" as const),
+      options: (Array.isArray(q?.options) ? q.options : [])
+        .map((o: unknown) => t(o, DOOR_MAX.option))
+        .filter(Boolean)
+        .slice(0, DOOR_MAX.options),
+      required: q?.required === true,
+    }))
+    .filter((q: DoorQuestion) => q.q && (q.kind === "text" || q.options.length >= 2));
+  const days = Math.floor(Number(d.minAccountDays));
+  return {
+    on: d.on === true,
+    title: t(d.title, DOOR_MAX.title),
+    body: t(d.body, DOOR_MAX.body),
+    image: safeUrl(t(d.image, 600)) || "",
+    button: t(d.button, DOOR_MAX.button),
+    rules: (Array.isArray(d.rules) ? d.rules : [])
+      .map((r: unknown) => t(r, DOOR_MAX.rule))
+      .filter(Boolean)
+      .slice(0, DOOR_MAX.rules),
+    questions,
+    age18: d.age18 === true,
+    minAccountDays: Number.isFinite(days) ? Math.max(0, Math.min(365, days)) : 0,
+    lock: d.lock === true,
+  };
+}
+
 export function sanitizeLayout(raw: unknown): LobbyLayout | null {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
   const r = raw as any;
@@ -288,6 +392,7 @@ export function sanitizeLayout(raw: unknown): LobbyLayout | null {
     entrance: ENTRANCES.includes(th.entrance) ? th.entrance : undefined,
     sparkle: !!th.sparkle,
     symbol: cleanSymbol(th.symbol),
+    fxForced: th.fxForced === true ? true : undefined,
   };
 
   return {
@@ -298,6 +403,7 @@ export function sanitizeLayout(raw: unknown): LobbyLayout | null {
     theme,
     blocks,
     roomOrder: (Array.isArray(r.roomOrder) ? r.roomOrder : []).map(String).slice(0, 200),
+    door: sanitizeDoor(r.door),
   };
 }
 

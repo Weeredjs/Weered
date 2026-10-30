@@ -5,6 +5,13 @@ import { fetchWithTimeout } from "../lib/fetchWithTimeout";
 import { prisma } from "../lib/prisma";
 import { assertSafeUrl } from "../lib/ssrfGuard";
 
+// Rows stored before titles were decoded at ingestion still hold entities
+// (&#8216;); decoding again on the way out is harmless for clean ones.
+const plainTitle = <T extends { title: string }>(a: T): T => ({
+  ...a,
+  title: decodeEntities(a.title),
+});
+
 export default async function newsRoutes(app: FastifyInstance) {
   const newsCache = new Map<string, { articles: any[]; cachedAt: number }>();
   const NEWS_CACHE_TTL = 5 * 60 * 1000;
@@ -22,11 +29,13 @@ export default async function newsRoutes(app: FastifyInstance) {
         updatedAt: new Date(cached.cachedAt).toISOString(),
       });
     }
-    const articles = await prisma.newsArticle.findMany({
-      where: source ? { category, source } : { category },
-      orderBy: source ? { publishedAt: "desc" } : { heat: "desc" },
-      take: limit,
-    });
+    const articles = (
+      await prisma.newsArticle.findMany({
+        where: source ? { category, source } : { category },
+        orderBy: source ? { publishedAt: "desc" } : { heat: "desc" },
+        take: limit,
+      })
+    ).map(plainTitle);
     newsCache.set(cacheKey, { articles, cachedAt: Date.now() });
     return reply.send({ ok: true, articles, updatedAt: new Date().toISOString() });
   });
@@ -36,10 +45,12 @@ export default async function newsRoutes(app: FastifyInstance) {
     if (cached && Date.now() - cached.cachedAt < NEWS_CACHE_TTL) {
       return reply.send({ ok: true, articles: cached.articles });
     }
-    const articles = await prisma.newsArticle.findMany({
-      orderBy: { heat: "desc" },
-      take: 10,
-    });
+    const articles = (
+      await prisma.newsArticle.findMany({
+        orderBy: { heat: "desc" },
+        take: 10,
+      })
+    ).map(plainTitle);
     newsCache.set("trending", { articles, cachedAt: Date.now() });
     return reply.send({ ok: true, articles });
   });

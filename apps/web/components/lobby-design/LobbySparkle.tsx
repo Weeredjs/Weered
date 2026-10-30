@@ -1,18 +1,23 @@
 "use client";
 
 // Cursor sparkle: a short trail of accent-coloured glints behind the pointer
-// inside a designed lobby. Pure fun; off for reduced motion and touch.
+// inside a designed lobby. Pure fun; off for touch, and when the viewer turns
+// animations off unless the lobby forces its effects on (lib/motion.ts).
 import { useEffect } from "react";
+import { useMotionOff } from "../../lib/motion";
 
 export default function LobbySparkle({
   accent,
   scope = ".weered-lobby-page",
+  forced = false,
 }: {
   accent: string;
   scope?: string;
+  forced?: boolean;
 }) {
+  const still = useMotionOff(forced);
   useEffect(() => {
-    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+    if (still) return;
     if (window.matchMedia?.("(pointer: coarse)").matches) return;
     const root = document.querySelector(scope) as HTMLElement | null;
     if (!root) return;
@@ -34,6 +39,6 @@ export default function LobbySparkle({
     };
     root.addEventListener("pointermove", onMove);
     return () => root.removeEventListener("pointermove", onMove);
-  }, [accent, scope]);
+  }, [accent, scope, still]);
   return null;
 }

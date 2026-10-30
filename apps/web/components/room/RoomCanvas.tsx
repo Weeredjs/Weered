@@ -8,6 +8,13 @@ import RoomDenied from "./RoomDenied";
 import VocnTabLogo from "./VocnTabLogo";
 import RoomChatPanel from "../RoomChatPanel";
 import RoomStage, { StageMode } from "./RoomStage";
+import {
+  ALL_MODULES,
+  DEFAULT_ROOM_MODULES,
+  LOBBY_MODULE_MAP,
+  LOBBY_SWITCHED,
+  OFFICE_MODULE_SKIN,
+} from "./roomModules";
 import LaunchPad from "./LaunchPad";
 import { useOverlay } from "../overlays/OverlayProvider";
 import { useVoice } from "../VoiceContext";
@@ -94,79 +101,6 @@ function YouTubeIcon({ size = 11, color = "#FF0000", style }: { size?: number; c
 function safeJsonParse<T>(s: string | null, fallback: T): T {
   try { if (!s) return fallback; return JSON.parse(s) as T; } catch { return fallback; }
 }
-
-const ALL_MODULES: { id: NonNullable<StageMode>; label: string; icon: string; live: boolean }[] = [
-  { id: "voice",   icon: "🎙", label: "Humans",  live: true  },
-  { id: "youtube", icon: "__youtube__",  label: "YouTube", live: true  },
-  { id: "twitch",  icon: "__twitch__", label: "Twitch",  live: true  },
-  { id: "browser", icon: "🌐", label: "Browser", live: true  },
-  { id: "article", icon: "📰", label: "Article", live: true  },
-  { id: "screen",  icon: "🖥", label: "Screen",  live: true  },
-  { id: "poker",   icon: "♦",  label: "Poker",   live: true  },
-  { id: "fakeout", icon: "📈", label: "FakeOut", live: true  },
-  { id: "destiny", icon: "⚔",  label: "Destiny",  live: true  },
-  { id: "league",  icon: "🏆", label: "League",   live: true  },
-  { id: "fortnite",icon: "🎯", label: "Fortnite", live: true  },
-  { id: "pubg",    icon: "🪖", label: "PUBG",     live: true  },
-  { id: "hq",      icon: "🏢", label: "HQ",       live: true  },
-  { id: "cs2",     icon: "💀", label: "CS2",      live: true  },
-  { id: "dota2",   icon: "⚔",  label: "Dota 2",   live: true  },
-  { id: "study",   icon: "📚", label: "Focus",    live: true  },
-  { id: "dnd",     icon: "🐉", label: "D&D",      live: true  },
-  { id: "windrose",icon: "⚓", label: "Windrose", live: true  },
-  { id: "helldivers",icon: "💀", label: "Helldivers", live: true  },
-  { id: "hll",     icon: "🎖", label: "HLL",       live: true  },
-  { id: "hllv",    icon: "🚁", label: "Vietnam",   live: true  },
-  { id: "chess",   icon: "♟",  label: "Chess",    live: true  },
-  { id: "gta",     icon: "🌴", label: "GTA",      live: true  },
-  { id: "eve",     icon: "🛰", label: "EVE",      live: true  },
-  { id: "assetto", icon: "🏁", label: "Assetto",  live: true  },
-  { id: "va",      icon: "✈",  label: "Crew Hub", live: true  },
-];
-
-const LOBBY_MODULE_MAP: Record<string, string[]> = {
-  POKER:   ["voice", "poker"],
-  TRADING: ["voice", "fakeout", "video", "screen"],
-  BUNGIE:  ["voice", "destiny", "youtube", "twitch", "video", "screen"],
-  RIOT:    ["voice", "league", "youtube", "twitch", "video", "screen"],
-  FORTNITE:["voice", "fortnite", "youtube", "twitch", "video", "screen"],
-  PUBG:    ["voice", "pubg", "youtube", "twitch", "video", "screen"],
-  MARATHON:["voice", "youtube", "twitch", "video", "screen"],
-  HEADQUARTERS:["voice", "hq", "video", "screen"],
-  CS2:         ["voice", "cs2", "youtube", "twitch", "video", "screen"],
-  DOTA2:       ["voice", "dota2", "youtube", "twitch", "video", "screen"],
-  STUDY:       ["voice", "study", "video", "screen"],
-  DND:         ["voice", "dnd", "youtube", "browser", "video", "screen"],
-  WINDROSE:    ["voice", "windrose", "youtube", "twitch", "video", "screen"],
-  HELLDIVERS2: ["voice", "helldivers", "youtube", "twitch", "video", "screen"],
-  HLL:         ["voice", "hll", "youtube", "twitch", "video", "screen"],
-  HLLV:        ["voice", "hllv", "youtube", "twitch", "video", "screen"],
-  // Screen share is the point: the host's game goes out to the room.
-  BAR:         ["voice", "screen", "video", "youtube", "twitch"],
-  CHESS:       ["voice", "chess", "youtube", "twitch", "video", "screen"],
-  EVE:         ["voice", "eve", "youtube", "twitch", "video", "screen"],
-  // The server board belongs in the room as much as the lobby — a race night
-  // happens in voice with the grid on screen, not on a separate page.
-  ASSETTOCORSA:["voice", "assetto", "youtube", "twitch", "video", "screen"],
-  // The airline's Crew Hub opens on the room stage from the last tab.
-  VIRTUAL_AIRLINE:["voice", "youtube", "twitch", "browser", "video", "screen", "va"],
-};
-
-const DEFAULT_ROOM_MODULES = ["voice", "youtube", "twitch", "browser", "video", "screen"];
-
-// Office rooms (mtg-*) present the same modules under advisory-office language.
-// Display-only remap applied at the single point MODULES is built, so the header
-// pills, bottom bar, and any other consumer all pick it up. Module ids, wiring,
-// and behavior are untouched; non-office rooms never enter this path.
-const OFFICE_MODULE_SKIN: Record<string, { label: string; icon?: string }> = {
-  voice:   { label: "Conversation" },
-  youtube: { label: "Walkthrough", icon: "▶" },
-  twitch:  { label: "Broadcast",   icon: "◉" },
-  browser: { label: "Co-browse" },
-  screen:  { label: "Screen" },
-  video:   { label: "Faces" },
-  office:  { label: "The Review" },
-};
 
 const ROOM_NAME_CACHE_KEY = "weered:roomnames:v1";
 
@@ -267,6 +201,9 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
       const allowed = LOBBY_MODULE_MAP[lobbyContext.moduleType] || DEFAULT_ROOM_MODULES;
       base = ALL_MODULES.filter(m => allowed.includes(m.id));
     }
+    const switchedOn = lobbyContext?.enabledModules;
+    if (Array.isArray(switchedOn))
+      base = base.filter((m) => !LOBBY_SWITCHED.includes(m.id) || switchedOn.includes(m.id));
     // vOCN's own rooms wear the airline's logo on the Crew Hub tab.
     if (currentLobbyId === "vocn") base = base.map((m) => (m.id === "va" ? { ...m, icon: "__vocn__" } : m));
     // The Office is a first-class module in meeting rooms, for office staff only.
@@ -288,7 +225,21 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
     }
     return base;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lobbyContext?.moduleType, currentLobbyId, isOfficeRoom, w?.me?.id, w?.globalRole, w?.meta?.ownerId, w?.meta?.mods]);
+  }, [lobbyContext?.moduleType, lobbyContext?.enabledModules, currentLobbyId, isOfficeRoom, w?.me?.id, w?.globalRole, w?.meta?.ownerId, w?.meta?.mods]);
+
+  // A tool the lobby switched off never takes the stage, whether it arrives as
+  // the room's default, from the room's shared state or from a link.
+  const lobbySwitchedOn = lobbyContext?.enabledModules;
+  const lobbyOff = (mode: StageMode) =>
+    !!mode &&
+    LOBBY_SWITCHED.includes(mode) &&
+    Array.isArray(lobbySwitchedOn) &&
+    !lobbySwitchedOn.includes(mode);
+  const voiceOff = lobbyOff("voice");
+  useEffect(() => {
+    if (lobbyOff(stageMode)) setStageMode(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stageMode, lobbyContext?.enabledModules]);
 
   // A room is inside its lobby, so its scoped rail needs the same section
   // list the lobby page publishes — otherwise the rail has nothing to show.
@@ -755,7 +706,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
 
       <LaunchPad roomId={roomId} moduleType={lobbyContext?.moduleType} />
 
-      {voicePrompt && voice.connState !== "connected" && voice.connState !== "connecting" && (
+      {voicePrompt && !voiceOff && voice.connState !== "connected" && voice.connState !== "connecting" && (
         <div style={{ flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 16px", gap: 12, background: "color-mix(in srgb, var(--weered-room-accent, #7c3aed) 8%, transparent)", borderBottom: "1px solid color-mix(in srgb, var(--weered-room-accent, #7c3aed) 18%, transparent)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#22c55e", boxShadow: "0 0 8px #22c55e", flexShrink: 0 }} />
@@ -834,7 +785,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
 
         {!officeStage && stageActive && stageMode !== "browser" && stageMode !== "twitch" && stageMode !== "article" && (
           <div style={{ height: "100%" }}>
-            <RoomStage roomId={roomId} mode={stageMode} moduleType={lobbyContext?.moduleType} roomUsers={(() => {
+            <RoomStage roomId={roomId} mode={stageMode} moduleType={lobbyContext?.moduleType} allow={{ video: !lobbyOff("video"), screen: !lobbyOff("screen") }} roomUsers={(() => {
               const wsUsers = liveUsers;
               const me: any = w?.me;
               const meId = String(me?.id || "");

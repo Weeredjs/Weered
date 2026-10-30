@@ -1337,7 +1337,11 @@ async function main() {
       let m: RegExpExecArray | null;
       while ((m = itemRx.exec(xml)) !== null) {
         const block = m[1];
-        const title = titleRx.exec(block)?.[1]?.trim();
+        // Titles carry entities too (Kotaku's &#8216;quotes&#8217;); the upsert
+        // rewrites stored titles on each refresh, so old rows heal as well.
+        const title = decodeEntities(stripTags(titleRx.exec(block)?.[1] || ""))
+          .replaceAll(/\s+/g, " ")
+          .trim();
         const link = linkRx.exec(block)?.[1]?.trim();
         const dateStr = dateRx.exec(block)?.[1];
         const rawDesc = descRx.exec(block)?.[1] || "";

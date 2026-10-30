@@ -131,8 +131,10 @@ model Lobby {
   // this map, so changing an icon updates everywhere at once instead of leaving
   // stale copies on each connected user.
   roleIcons      Json?
-  // enabledModules: which modules lobby rooms can use, e.g. ["voice","youtube","reddit"]
-  enabledModules String[] @default(["voice", "youtube", "reddit"])
+  // enabledModules: the everyday tools lobby rooms offer ("What's inside":
+  // voice, video, screen, youtube, twitch), plus reddit. Rooms honour it since
+  // 2026-10-30; a game's own module comes with moduleType regardless.
+  enabledModules String[] @default(["voice", "video", "screen", "youtube", "twitch", "reddit"])
 
   ownerId   String?
   createdAt DateTime @default(now())
@@ -225,6 +227,9 @@ model LobbyMember {
   name      String    @default("")
   role      LobbyRole @default(MEMBER)
   roleLevel Int       @default(1) // 1=Member, 2=Trusted, 3=Moderator, 4=Admin, 5=Owner
+  // What they told the lobby's front door on the way in: rules accepted, 18+,
+  // answers with their questions (apps/api/src/lib/lobbyDoor.ts DoorEntry).
+  door      Json?
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 
@@ -251,6 +256,9 @@ model LobbyJoinRequest {
   userId         String
   userName       String    @default("")
   message        String    @default("") // optional "why I want to join"
+  // The front door's answers, for the reviewer (lib/lobbyDoor.ts DoorEntry);
+  // copied to LobbyMember.door on approval.
+  answers        Json?
   status         String    @default("PENDING") // PENDING, APPROVED, DENIED
   reviewedById   String?
   reviewedByName String?

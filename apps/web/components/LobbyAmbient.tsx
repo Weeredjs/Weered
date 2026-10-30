@@ -4,9 +4,11 @@
 // (components/shell/ShellAmbient.tsx): stars, snow, a blizzard, embers, rain,
 // petals, bubbles, fireflies, code rain, or a symbol of your own floating by,
 // drawn on one canvas behind the content. Pointer-transparent, paused when the
-// tab is hidden, off for reduced motion.
+// tab is hidden, off when the viewer turns animations off (lib/motion.ts)
+// unless the lobby forces its effect on.
 import React, { useEffect, useRef } from "react";
 import type { EffectId } from "../lib/lobbyLayout";
+import { useMotionOff } from "../lib/motion";
 
 type P = {
   x: number;
@@ -25,6 +27,7 @@ export default function LobbyAmbient({
   intensity = 1,
   symbol = "✦",
   light = false,
+  forced = false,
   style,
 }: {
   effect?: EffectId;
@@ -34,14 +37,17 @@ export default function LobbyAmbient({
   symbol?: string;
   /** Drawn over a light background (Blizzard): flakes go grey-blue to show. */
   light?: boolean;
+  /** The lobby's own effect, set to show even for viewers who turned
+   *  animations off (never past their system's reduce-motion setting). */
+  forced?: boolean;
   style?: React.CSSProperties;
 }) {
   const ref = useRef<HTMLCanvasElement>(null);
+  const still = useMotionOff(forced);
 
   useEffect(() => {
     const canvas = ref.current;
-    if (!canvas || !effect || effect === "none") return;
-    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+    if (!canvas || !effect || effect === "none" || still) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
@@ -339,7 +345,7 @@ export default function LobbyAmbient({
       cancelAnimationFrame(raf);
       ro.disconnect();
     };
-  }, [effect, accent, intensity, symbol, light]);
+  }, [effect, accent, intensity, symbol, light, still]);
 
   if (!effect || effect === "none") return null;
   return (

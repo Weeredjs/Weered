@@ -37,6 +37,7 @@ import GuestLaunchBar from "../../../components/GuestLaunchBar";
 import BungieLinkPill from "../../../components/BungieLinkPill";
 import LobbyAmbient from "../../../components/LobbyAmbient";
 import LobbyJoinGate, { type LobbyInfo } from "./LobbyJoinGate";
+import LobbyDoor, { doorDismissed } from "../../../components/LobbyDoor";
 import LobbyHomeCanvas from "../../../components/lobby-design/LobbyHomeCanvas";
 import LobbySparkle from "../../../components/lobby-design/LobbySparkle";
 import { useLobbyDesign } from "../../../components/lobby-design/useLobbyDesign";
@@ -453,6 +454,18 @@ export default function LobbyIdPage() {
     memberChecked && !!lobbyInfo,
   );
   const L = design.effective; // null = the stock layout
+  // The front door (components/LobbyDoor.tsx), for anyone not yet in. An Open
+  // lobby's door closes for a look round (unless locked) and stays closed for
+  // the session; any other join mode keeps it up.
+  const door = L?.door?.on ? L.door : null;
+  const doorOn = !!door;
+  const doorLock = !!door?.lock;
+  const doorMode = (lobbyInfo?.joinMode || "OPEN").toUpperCase();
+  const [doorOpen, setDoorOpen] = useState(false);
+  useEffect(() => {
+    if (!doorOn || !memberChecked || isMember) return;
+    setDoorOpen(doorLock || doorMode !== "OPEN" || !doorDismissed(lobbyId));
+  }, [doorOn, doorLock, doorMode, memberChecked, isMember, lobbyId]);
   const dTheme = L?.theme || {};
   const dPreset = dTheme.preset ? PRESET_BY_ID[dTheme.preset] : null;
   const displayFont = FONT_STACK[dTheme.font || "default"];
@@ -757,7 +770,21 @@ export default function LobbyIdPage() {
         loggedIn={!!me?.id}
       />
       {/* No join wall on preview lobbies — see lib/lobbyChrome.ts. */}
-      {memberChecked && !isMember && lobbyInfo && !isForcedThemeLobby(lobbyId) && (
+      {door && doorOpen && memberChecked && !isMember && lobbyInfo && (
+        <LobbyDoor
+          lobbyId={lobbyId}
+          lobbyName={lobbyInfo.name || lobbyId}
+          door={door}
+          accent={accent || "#7c3aed"}
+          banner={lobbyInfo.bannerUrl}
+          joinMode={doorMode}
+          signedIn={!!me?.id}
+          pending={joinRequest?.status === "PENDING"}
+          onJoined={loadLobby}
+          onClose={() => setDoorOpen(false)}
+        />
+      )}
+      {memberChecked && !isMember && lobbyInfo && !door && !isForcedThemeLobby(lobbyId) && (
         <JoinLobbyOverlay
           lobbyId={lobbyId}
           lobbyName={lobbyInfo.name || lobbyId}
@@ -860,6 +887,7 @@ export default function LobbyIdPage() {
             accent={accent}
             intensity={dTheme.intensity ?? 1}
             symbol={dTheme.symbol}
+            forced={dTheme.fxForced}
           />
           {accent && (
             <div
@@ -981,6 +1009,8 @@ export default function LobbyIdPage() {
                   me?.id && (
                     <button
                       onClick={async () => {
+                        // A lobby with a front door is joined through it.
+                        if (door) return setDoorOpen(true);
                         try {
                           const res = await fetch(
                             `${API}/lobbies/${encodeURIComponent(lobbyId)}/join`,
@@ -1212,7 +1242,9 @@ export default function LobbyIdPage() {
                   drawer is for browsing modules / watching video. Its edge tab
                   hides while the inline chat is on screen; "Dial In" there
                   opens this drawer fullscreen. */}
-              {dTheme.sparkle && accent && <LobbySparkle accent={accent} />}
+              {dTheme.sparkle && accent && (
+                <LobbySparkle accent={accent} forced={dTheme.fxForced} />
+              )}
               <LobbyChatDrawer
                 roomId={lobbyId}
                 title={`${lobbyInfo?.name || lobbyId} · Chat`}

@@ -7,6 +7,7 @@
 // transform and opacity, so it stays on the compositor. Starfield off
 // (data-weered-stars="off") hides the stars; Reduce motion freezes it all.
 import { useEffect, useRef, useState } from "react";
+import { motionOff } from "../lib/motion";
 import { createPortal } from "react-dom";
 
 // [left %, top %, size px, twinkle s, delay s]
@@ -45,7 +46,7 @@ export default function NebulaSky() {
   // (--mx/--my, -0.5..0.5; the stylesheet turns them into `translate`).
   useEffect(() => {
     const el = sky.current;
-    if (!el || window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+    if (!el || motionOff()) return;
     let raf = 0;
     let x = 0;
     let y = 0;

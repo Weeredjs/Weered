@@ -4,6 +4,7 @@ import { logLobbyAudit } from "../lib/lobbyAudit";
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
 import { designCreateExtras } from "./lobbyDesign";
+import { registerLobbyJoin } from "./lobbyJoin";
 import { z } from "zod";
 import { LobbyRole } from "@prisma/client";
 import { lastMessageMap } from "../lib/roomRecency";
@@ -40,6 +41,16 @@ type Opts = {
   awardNotoriety: (userId: string, action: string) => Promise<number | null>;
   send: (ws: any, msg: any) => void;
 };
+
+// Front-door answers can be personal (a real name, an age); moderators and
+// up read them, Trusted members (level 2) see the list without them.
+function doorAnswersFor<T extends { door?: unknown }>(
+  ctx: { member?: { roleLevel?: number } | null; overrideRole?: string | null },
+  members: T[],
+): T[] {
+  const level = ctx.overrideRole ? 5 : (ctx.member?.roleLevel ?? 1);
+  return level >= 3 ? members : members.map((m) => ({ ...m, door: undefined }));
+}
 
 export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
   const {
@@ -336,297 +347,7 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
     });
   });
 
-  app.post(
-    "/lobbies/:id/join",
-    {
-      schema: { tags: ["lobbies"], params: z.object({ id: z.string().min(1) }) },
-    },
-    async (req, reply) => {
-      const lobbyId = (req.params as any).id as string;
-      const u = authFromHeader((req as any).headers?.authorization);
-      if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
-
-      const lobby = await prisma.lobby.findUnique({
-        where: { id: lobbyId },
-        select: { id: true, joinMode: true, joinPassword: true, name: true },
-      });
-      if (!lobby) return reply.code(404).send({ ok: false, error: "not_found" });
-
-      const ban = await prisma.lobbyBan.findUnique({
-        where: { lobbyId_userId: { lobbyId, userId: u.id } },
-      });
-      if (ban)
-        return reply
-          .code(403)
-          .send({ ok: false, error: "banned", message: "You are banned from this lobby." });
-
-      const existing = await prisma.lobbyMember.findUnique({
-        where: { lobbyId_userId: { lobbyId, userId: u.id } },
-      });
-      if (existing)
-        return reply.send({
-          ok: true,
-          already: true,
-          role: existing.role,
-          roleLevel: existing.roleLevel,
-        });
-
-      const body = (req.body || {}) as any;
-      const mode = lobby.joinMode || "OPEN";
-
-      if (mode === "PAID") {
-        return reply.code(403).send({
-          ok: false,
-          error: "paid_required",
-          message: "Subscribe to a lobby tier to join.",
-        });
-      }
-
-      if (mode === "PASSWORD") {
-        const pw = String(body.password || "").trim();
-        if (!pw || pw !== lobby.joinPassword) {
-          return reply
-            .code(403)
-            .send({ ok: false, error: "wrong_password", message: "Incorrect lobby password." });
-        }
-      }
-
-      if (mode === "APPROVAL") {
-        const existingReq = await prisma.lobbyJoinRequest.findUnique({
-          where: { lobbyId_userId: { lobbyId, userId: u.id } },
-        });
-        if (existingReq) {
-          if (existingReq.status === "PENDING") return reply.send({ ok: true, pending: true });
-          if (existingReq.status === "DENIED") {
-            await prisma.lobbyJoinRequest.update({
-              where: { id: existingReq.id },
-              data: {
-                status: "PENDING",
-                message: String(body.message || "").slice(0, 500),
-                reviewedAt: null,
-                reviewedById: null,
-                reviewedByName: null,
-                denyReason: null,
-              },
-            });
-            return reply.send({ ok: true, pending: true, resubmitted: true });
-          }
-        }
-        const user = await prisma.user.findUnique({ where: { id: u.id }, select: { name: true } });
-        await prisma.lobbyJoinRequest.create({
-          data: {
-            lobbyId,
-            userId: u.id,
-            userName: user?.name || u.name || "Unknown",
-            message: String(body.message || "").slice(0, 500),
-          },
-        });
-        return reply.send({ ok: true, pending: true });
-      }
-
-      const user = await prisma.user.findUnique({ where: { id: u.id }, select: { name: true } });
-      const member = await prisma.lobbyMember.create({
-        data: {
-          lobbyId,
-          userId: u.id,
-          name: user?.name || u.name || "Unknown",
-          role: "MEMBER",
-          roleLevel: 1,
-        },
-      });
-
-      await logLobbyAudit({
-        lobbyId,
-        type: "member_join",
-        actorId: u.id,
-        actorName: user?.name || "Unknown",
-        note: `Joined lobby (${mode})`,
-      });
-
-      return reply.send({ ok: true, role: member.role, roleLevel: member.roleLevel });
-    },
-  );
-
-  app.post(
-    "/lobbies/:id/leave",
-    {
-      schema: { tags: ["lobbies"], params: z.object({ id: z.string().min(1) }) },
-    },
-    async (req, reply) => {
-      const lobbyId = (req.params as any).id as string;
-      const u = authFromHeader((req as any).headers?.authorization);
-      if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
-
-      const member = await prisma.lobbyMember.findUnique({
-        where: { lobbyId_userId: { lobbyId, userId: u.id } },
-        select: { id: true, role: true, roleLevel: true },
-      });
-      if (!member) return reply.code(404).send({ ok: false, error: "not_a_member" });
-
-      if (member.roleLevel >= 5) {
-        return reply.code(403).send({
-          ok: false,
-          error: "owner_cannot_leave",
-          message: "Transfer ownership before leaving.",
-        });
-      }
-
-      await prisma.lobbyMember.delete({ where: { id: member.id } });
-
-      await prisma.lobbyTierSub.updateMany({
-        where: { lobbyId, userId: u.id, status: "active" },
-        data: { status: "canceled", cancelAtPeriodEnd: true },
-      });
-
-      const user = await prisma.user.findUnique({ where: { id: u.id }, select: { name: true } });
-      await logLobbyAudit({
-        lobbyId,
-        type: "member_leave",
-        actorId: u.id,
-        actorName: user?.name || "Unknown",
-        note: "Left lobby",
-      });
-
-      return reply.send({ ok: true });
-    },
-  );
-
-  app.get("/lobbies/:id/admin/join-requests", async (req, reply) => {
-    const ctx = await lobbyAdminAccess(req, reply, 3);
-    if (!ctx) return;
-    const requests = await prisma.lobbyJoinRequest.findMany({
-      where: { lobbyId: ctx.lobby.id },
-      orderBy: { createdAt: "desc" },
-      take: 100,
-    });
-    return reply.send({ ok: true, requests });
-  });
-
-  app.post(
-    "/lobbies/:id/admin/join-requests/:reqId/approve",
-    {
-      schema: {
-        tags: ["lobbies"],
-        params: z.object({ id: z.string().min(1), reqId: z.string().min(1) }),
-      },
-    },
-    async (req, reply) => {
-      const ctx = await lobbyAdminAccess(req, reply, 3);
-      if (!ctx) return;
-      const reqId = (req.params as any).reqId as string;
-      const jr = await prisma.lobbyJoinRequest.findUnique({ where: { id: reqId } });
-      if (!jr || jr.lobbyId !== ctx.lobby.id)
-        return reply.code(404).send({ ok: false, error: "not_found" });
-      if (jr.status !== "PENDING")
-        return reply.code(400).send({ ok: false, error: "already_reviewed" });
-
-      await prisma.lobbyJoinRequest.update({
-        where: { id: reqId },
-        data: {
-          status: "APPROVED",
-          reviewedById: ctx.member.userId,
-          reviewedByName: ctx.member.name,
-          reviewedAt: new Date(),
-        },
-      });
-      await prisma.lobbyMember.create({
-        data: {
-          lobbyId: ctx.lobby.id,
-          userId: jr.userId,
-          name: jr.userName,
-          role: "MEMBER",
-          roleLevel: 1,
-        },
-      });
-
-      await logLobbyAudit({
-        lobbyId: ctx.lobby.id,
-        type: "join_request_approved",
-        actorId: ctx.member.userId,
-        actorName: ctx.member.name,
-        note: `Approved join request from ${jr.userName}`,
-      });
-
-      return reply.send({ ok: true });
-    },
-  );
-
-  app.post(
-    "/lobbies/:id/admin/join-requests/:reqId/deny",
-    {
-      schema: {
-        tags: ["lobbies"],
-        params: z.object({ id: z.string().min(1), reqId: z.string().min(1) }),
-      },
-    },
-    async (req, reply) => {
-      const ctx = await lobbyAdminAccess(req, reply, 3);
-      if (!ctx) return;
-      const reqId = (req.params as any).reqId as string;
-      const jr = await prisma.lobbyJoinRequest.findUnique({ where: { id: reqId } });
-      if (!jr || jr.lobbyId !== ctx.lobby.id)
-        return reply.code(404).send({ ok: false, error: "not_found" });
-      if (jr.status !== "PENDING")
-        return reply.code(400).send({ ok: false, error: "already_reviewed" });
-
-      const body = (req.body || {}) as any;
-      await prisma.lobbyJoinRequest.update({
-        where: { id: reqId },
-        data: {
-          status: "DENIED",
-          reviewedById: ctx.member.userId,
-          reviewedByName: ctx.member.name,
-          reviewedAt: new Date(),
-          denyReason: String(body.reason || "").slice(0, 500) || null,
-        },
-      });
-
-      await logLobbyAudit({
-        lobbyId: ctx.lobby.id,
-        type: "join_request_denied",
-        actorId: ctx.member.userId,
-        actorName: ctx.member.name,
-        note: `Denied join request from ${jr.userName}`,
-      });
-
-      return reply.send({ ok: true });
-    },
-  );
-
-  app.patch(
-    "/lobbies/:id/admin/join-mode",
-    {
-      schema: { tags: ["lobbies"], params: z.object({ id: z.string().min(1) }) },
-    },
-    async (req, reply) => {
-      const ctx = await lobbyAdminAccess(req, reply, 4);
-      if (!ctx) return;
-      const body = (req.body || {}) as any;
-      const mode = String(body.joinMode || "OPEN");
-      if (!["OPEN", "APPROVAL", "PASSWORD", "PAID"].includes(mode)) {
-        return reply.code(400).send({ ok: false, error: "invalid_mode" });
-      }
-      const data: any = { joinMode: mode };
-      if (mode === "PASSWORD") {
-        const pw = String(body.password || "").trim();
-        if (!pw) return reply.code(400).send({ ok: false, error: "password_required" });
-        data.joinPassword = pw;
-      } else {
-        data.joinPassword = null;
-      }
-      await prisma.lobby.update({ where: { id: ctx.lobby.id }, data });
-
-      await logLobbyAudit({
-        lobbyId: ctx.lobby.id,
-        type: "join_mode_changed",
-        actorId: ctx.member.userId,
-        actorName: ctx.member.name,
-        note: `Join mode set to ${mode}`,
-      });
-
-      return reply.send({ ok: true, joinMode: mode });
-    },
-  );
+  registerLobbyJoin(app, { authFromHeader, lobbyAdminAccess });
 
   app.post(
     "/lobbies",
@@ -832,6 +553,8 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
           role: true,
           roleLevel: true,
           createdAt: true,
+          // What they told the front door (lib/lobbyDoor.ts DoorEntry).
+          door: true,
         },
       }),
       prisma.room.findMany({
@@ -880,6 +603,8 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
         websiteUrl: lobby.websiteUrl,
         keywords: lobby.keywords,
         enabledModules: lobby.enabledModules,
+        // Admin → What's inside and Front door edit parts of it in place.
+        layout: lobby.layout ?? null,
         roleNames,
         roleIcons,
         joinMode: lobby.joinMode || "OPEN",
@@ -888,7 +613,7 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
         blockedDomains: canModerate ? lobby.blockedDomains || [] : [],
         newAccountChatHours: lobby.newAccountChatHours ?? 0,
       },
-      members,
+      members: doorAnswersFor(ctx, members),
       rooms: roomList.map((r: any) => ({
         id: r.id,
         name: r.name || r.id,
@@ -1156,9 +881,17 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
     const members = await prisma.lobbyMember.findMany({
       where: { lobbyId: ctx.lobby.id },
       orderBy: [{ roleLevel: "desc" }, { name: "asc" }],
-      select: { id: true, userId: true, name: true, role: true, roleLevel: true, createdAt: true },
+      select: {
+        id: true,
+        userId: true,
+        name: true,
+        role: true,
+        roleLevel: true,
+        createdAt: true,
+        door: true,
+      },
     });
-    return reply.send({ ok: true, members });
+    return reply.send({ ok: true, members: doorAnswersFor(ctx, members) });
   });
 
   app.post(

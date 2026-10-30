@@ -3,6 +3,7 @@
 // A one-shot confetti burst on a full-screen canvas. Bump `fire` to launch;
 // `onDone` runs when the last piece has fallen (or at once for reduced motion).
 import React, { useEffect, useRef } from "react";
+import { motionOff } from "../../lib/motion";
 
 type Bit = {
   x: number;
@@ -40,7 +41,7 @@ export default function Confetti({
   useEffect(() => {
     if (!fire) return;
     const canvas = ref.current;
-    const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    const reduce = motionOff();
     const ctx = canvas?.getContext("2d");
     if (!canvas || !ctx || reduce) {
       doneRef.current?.();

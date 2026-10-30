@@ -11,6 +11,8 @@ export type AdminMember = {
   role: string;
   roleLevel: number;
   createdAt: string;
+  /** What they told the front door (moderators and up only). */
+  door?: unknown;
 };
 export type AdminRoom = {
   id: string;
@@ -45,6 +47,8 @@ export type LobbyData = {
   websiteUrl: string | null;
   keywords: string[];
   enabledModules: string[];
+  /** The Design layout (lib/lobbyLayout.ts); null when never designed. */
+  layout?: unknown;
   roleNames: Record<string, string>;
   /** Per-level icon shown beside members at that level; blank means none. */
   roleIcons?: Record<string, string>;
@@ -233,7 +237,8 @@ export function OverrideBadge({ role }: { role: string }) {
 
 export const NAV_ITEMS = [
   { id: "branding", label: "Branding", icon: "🎨", minLevel: 4 },
-  { id: "modules", label: "Modules", icon: "🧩", minLevel: 4 },
+  { id: "modules", label: "What's inside", icon: "🧩", minLevel: 4 },
+  { id: "door", label: "Front door", icon: "🛎️", minLevel: 4 },
   { id: "moderation", label: "Moderation", icon: "🛡️", minLevel: 4 },
   { id: "rooms", label: "Rooms", icon: "🚪", minLevel: 3 },
   // moduleTypes: a tab only some lobbies can use. Challenges is authored per

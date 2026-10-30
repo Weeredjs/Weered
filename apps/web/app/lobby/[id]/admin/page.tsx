@@ -23,6 +23,7 @@ import { LobbyEventsTab } from "./LobbyEventsTab";
 import { MembersTab } from "./MembersTab";
 import { ModerationTab } from "./ModerationTab";
 import { ModulesTab } from "./ModulesTab";
+import { FrontDoorTab } from "./FrontDoorTab";
 import { DEFAULT_ROLE_NAMES, RolesTab } from "./RolesTab";
 import { RoomsTab } from "./RoomsTab";
 import { TiersTab } from "./TiersTab";
@@ -307,6 +308,7 @@ export default function LobbyAdminPage() {
           <div style={{ flex: 1, overflowY: "auto", padding: "20px 20px 80px" }}>
             {nav === "branding" && <BrandingTab lobby={lobby} onRefresh={load} />}
             {nav === "modules" && <ModulesTab lobby={lobby} onRefresh={load} />}
+            {nav === "door" && <FrontDoorTab lobby={lobby} onRefresh={load} />}
             {nav === "moderation" && <ModerationTab lobby={lobby} onRefresh={load} />}
             {nav === "rooms" && (
               <RoomsTab

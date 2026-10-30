@@ -214,6 +214,7 @@ export default function HomePinnedNews() {
           {pins.map((p) => {
             const inner = (
               <div
+                className="weered-pin-card"
                 style={{
                   display: "flex",
                   alignItems: "center",
@@ -319,6 +320,7 @@ export default function HomePinnedNews() {
         {lead && (
           <button
             type="button"
+            className="weered-news-card weered-news-lead"
             onClick={(e) => openStory(e, lead)}
             style={{
               width: "100%",
@@ -422,6 +424,7 @@ export default function HomePinnedNews() {
             <button
               key={n.id}
               type="button"
+              className="weered-news-card"
               onClick={(e) => openStory(e, n)}
               style={{
                 width: "100%",

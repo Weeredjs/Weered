@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { S, apiFetch, fmtDate } from "./shared";
+import { DoorAnswers } from "./DoorAnswers";
 
 export function JoinRequestsTab({ lobbyId }: { lobbyId: string }) {
   const [requests, setRequests] = useState<any[]>([]);
@@ -70,6 +71,7 @@ export function JoinRequestsTab({ lobbyId }: { lobbyId: string }) {
                 "{r.message}"
               </div>
             )}
+            <DoorAnswers entry={r.answers} />
             <div style={{ fontSize: 10, opacity: 0.35, marginTop: 3 }}>{fmtDate(r.createdAt)}</div>
           </div>
           <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>

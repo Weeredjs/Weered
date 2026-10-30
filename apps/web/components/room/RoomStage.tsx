@@ -20,6 +20,8 @@ interface Props {
   roomUsers?: { id: string; name: string; role?: string; globalRole?: string; avatarColor?: string }[];
   onClose: () => void;
   style?: React.CSSProperties;
+  /** Cameras and screen sharing, as the lobby's "What's inside" allows. */
+  allow?: { video?: boolean; screen?: boolean };
 }
 
 
@@ -680,7 +682,7 @@ function VoiceCard({ tile, moduleType, roomUsers, getVideoElement }: { tile: any
   );
 }
 
-function VoiceStage({ roomId, moduleType, roomUsers, onClose, style }: { roomId: string; moduleType?: string; roomUsers?: { id: string; name: string; role?: string; globalRole?: string; avatarColor?: string }[]; onClose: () => void; style?: React.CSSProperties }) {
+function VoiceStage({ roomId, moduleType, roomUsers, onClose, style, allow }: { roomId: string; moduleType?: string; roomUsers?: { id: string; name: string; role?: string; globalRole?: string; avatarColor?: string }[]; onClose: () => void; style?: React.CSSProperties; allow?: Props["allow"] }) {
   const voice = useVoice();
   const alreadyInRoom = voice.connState === "connected" && voice.activeRoomId === roomId;
   const [prompted, _setPrompted] = useState(alreadyInRoom);
@@ -755,12 +757,16 @@ function VoiceStage({ roomId, moduleType, roomUsers, onClose, style }: { roomId:
           )}
           {connState !== "connecting" && (
             <>
+              {allow?.video !== false && (
               <button onClick={startCam} style={{ padding: "5px 12px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 700, background: cameraOn ? "rgba(239,68,68,.15)" : "var(--weered-room-surface-3)", color: cameraOn ? "#fca5a5" : "rgba(255,255,255,.8)" }}>
                 {cameraOn ? "📷 Stop Cam" : "📷 Start Cam"}
               </button>
+              )}
+              {allow?.screen !== false && (
               <button onClick={startScreen} style={{ padding: "5px 12px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 700, background: screenShareOn ? "rgba(239,68,68,.15)" : "var(--weered-room-surface-3)", color: screenShareOn ? "#fca5a5" : "rgba(255,255,255,.8)" }}>
                 {screenShareOn ? "🖥 Stop Share" : "🖥 Share Screen"}
               </button>
+              )}
             </>
           )}
           {live && <MicSettings />}
@@ -1036,7 +1042,7 @@ const ctrlBtn: React.CSSProperties = {
   fontSize: 10, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
 };
 
-export default function RoomStage({ roomId, mode, moduleType, roomUsers, onClose, style }: Props) {
+export default function RoomStage({ roomId, mode, moduleType, roomUsers, onClose, style, allow }: Props) {
   const ctx = useWeered() as any;
   if (mode === "poker") return <PokerTable roomId={roomId} myId={ctx?.me?.id || ""} myName={ctx?.me?.name || ""} />;
   if (mode === "fakeout") return <TradingModulesPanel lobbyId={ctx?.currentLobbyId || roomId} accent="#22c55e" />;
@@ -1061,7 +1067,7 @@ export default function RoomStage({ roomId, mode, moduleType, roomUsers, onClose
   if (mode === "assetto") return <AssettoCorsaModulesPanel lobbyId={ctx?.currentLobbyId || "assettocorsa"} gameName="Assetto Corsa" style={{ flex: 1, minHeight: 0 }} />;
   if (mode === "dnd") return <DndStage roomId={roomId} onClose={onClose} />;
   if (mode === "youtube") return <YoutubeStage roomId={roomId} onClose={onClose} style={style} />;
-  if (mode === "voice")   return <VoiceStage   roomId={roomId} moduleType={moduleType} roomUsers={roomUsers} onClose={onClose} style={style} />;
+  if (mode === "voice")   return <VoiceStage   roomId={roomId} moduleType={moduleType} roomUsers={roomUsers} onClose={onClose} style={style} allow={allow} />;
   if (mode === "video")   return <VideoStage   roomId={roomId} onClose={onClose} style={style} />;
   if (mode === "screen")  return <ScreenStage  roomId={roomId} onClose={onClose} style={style} />;
 

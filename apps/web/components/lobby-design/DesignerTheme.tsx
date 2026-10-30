@@ -254,6 +254,24 @@ export function ThemeDock({
             />
           </div>
         )}
+        {((th.effect && th.effect !== "none") || th.sparkle) && (
+          <button
+            type="button"
+            aria-pressed={!!th.fxForced}
+            onClick={() => setTheme({ fxForced: !th.fxForced })}
+            title="Visitors who turned animations off see it anyway. Their system's reduce-motion setting still wins."
+            style={{
+              ...chip(!!th.fxForced, accent),
+              marginTop: 8,
+              padding: "6px 10px",
+              fontSize: 11.5,
+              width: "100%",
+              textAlign: "left",
+            }}
+          >
+            {th.fxForced ? "● " : "○ "}Always on: visitors can&apos;t turn it off
+          </button>
+        )}
       </div>
     </div>
   );

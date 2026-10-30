@@ -168,7 +168,7 @@ export function useShellLook(): ShellLook | null {
   return s.designing && s.draft ? s.draft.look : s.savedLook;
 }
 
-function lookFromPrefs(p: UiPrefs): ShellLook {
+export function lookFromPrefs(p: UiPrefs): ShellLook {
   let theme: SiteThemeId = "press";
   if (p.theme && isSiteTheme(p.theme)) theme = p.theme;
   else {

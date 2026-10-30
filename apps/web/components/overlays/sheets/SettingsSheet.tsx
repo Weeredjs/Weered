@@ -12,13 +12,17 @@ import {
   PALETTE_IDS,
   customPalette,
   isHexColour,
+  paletteColours,
   readUiPrefs,
   saveUiPrefs,
   type NebulaFont,
   type Palette,
+  type UiPrefs,
 } from "../../../lib/uiPrefs";
 import { useOverlay } from "../OverlayProvider";
-import { startDesign } from "../../../lib/shellDesign";
+import { lookFromPrefs, startDesign, type ShellLook } from "../../../lib/shellDesign";
+import { cleanSymbol } from "../../../lib/lobbyLayout";
+import { EffectControls, StructureControls } from "../../shell/ShellLookControls";
 
 
 // Web sessions are an httpOnly cookie (Domain=.weered.ca); mobile/desktop send a
@@ -290,6 +294,8 @@ export default function SettingsSheet({ initialTab }: { initialTab?: string } = 
         How Weered behaves and how you appear.
       </div>
 
+      <DesignBar />
+
       <div className="weered-settings-shell" style={{ display: "flex", gap: 16, alignItems: "flex-start" }}>
         <nav className="weered-settings-nav" style={{ display: "flex", flexDirection: "column", gap: 2, flexShrink: 0, width: 150 }}>
           {TABS.map(t => {
@@ -331,22 +337,7 @@ export default function SettingsSheet({ initialTab }: { initialTab?: string } = 
 
           {tab === "appearance" && (
             <>
-              <Section title="Display" onReset={() => patch({ density: DEFAULTS.density, reduceMotion: DEFAULTS.reduceMotion, keepDefaultTheme: DEFAULTS.keepDefaultTheme })}>
-                <Row label="Density" hint="Compact tightens rails and lists.">
-                  <select style={selectStyle} value={s.density} onChange={(e) => patch({ density: e.target.value as any })}>
-                    <option value="comfortable">Comfortable</option>
-                    <option value="compact">Compact</option>
-                  </select>
-                </Row>
-                <Row label="Reduce motion" hint="Drops animations and transitions.">
-                  <Toggle checked={s.reduceMotion} onChange={(v) => patch({ reduceMotion: v })} />
-                </Row>
-                <Row label="Keep default theme in themed lobbies" hint="Lobbies with their own look (vOCN, Windrose, Timbo's, D&D and others) show the standard Weered theme instead, rooms included.">
-                  <Toggle checked={s.keepDefaultTheme} onChange={(v) => patch({ keepDefaultTheme: v })} />
-                </Row>
-              </Section>
-
-              <Section title="Theme" onReset={() => { patch({ theme: DEFAULTS.theme }); saveUiPrefs({ theme: DEFAULTS.theme }); }}>
+              <Section title="Look" onReset={() => { patch({ theme: DEFAULTS.theme }); saveUiPrefs({ theme: DEFAULTS.theme }); }}>
                 <div style={{ fontSize: 11, opacity: 0.55, marginBottom: 9 }}>The platform skin. Applies everywhere except lobbies running their own theme.</div>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(108px, 1fr))", gap: 8 }}>
                   {THEME_OPTIONS.map(t => {
@@ -373,21 +364,24 @@ export default function SettingsSheet({ initialTab }: { initialTab?: string } = 
                   })}
                 </div>
                 {s.theme === "nebula" && <NebulaOptions />}
-                <DesignLink />
-                <a
-                  href="/setup"
-                  style={{
-                    display: "inline-flex", alignItems: "center", gap: 8, marginTop: 12, padding: "9px 14px",
-                    borderRadius: 10, border: "1px solid var(--weered-accent-ring, #a78bfa66)", background: "var(--weered-accent-bg, #7c3aed26)",
-                    color: "#fff", fontSize: 12.5, fontWeight: 800, textDecoration: "none",
-                  }}
-                >
-                  ✦ Run setup again
-                  <span style={{ fontWeight: 500, opacity: 0.65 }}>Look and layout</span>
-                </a>
               </Section>
 
-              <ProfileCustomizationSection />
+              <Section title="Display" onReset={() => patch({ density: DEFAULTS.density, reduceMotion: DEFAULTS.reduceMotion, keepDefaultTheme: DEFAULTS.keepDefaultTheme })}>
+                <Row label="Density" hint="Compact tightens rails and lists.">
+                  <select style={selectStyle} value={s.density} onChange={(e) => patch({ density: e.target.value as any })}>
+                    <option value="comfortable">Comfortable</option>
+                    <option value="compact">Compact</option>
+                  </select>
+                </Row>
+                <Row label="Turn off all animations" hint="No effects, no moving starfield, no transitions, here or in lobbies. A lobby that makes its effect part of the room still shows it.">
+                  <Toggle checked={s.reduceMotion} onChange={(v) => patch({ reduceMotion: v })} />
+                </Row>
+                <Row label="Keep default theme in themed lobbies" hint="Lobbies with their own look (vOCN, Windrose, Timbo's, D&D and others) show the standard Weered theme instead, rooms included.">
+                  <Toggle checked={s.keepDefaultTheme} onChange={(v) => patch({ keepDefaultTheme: v })} />
+                </Row>
+              </Section>
+
+              <ProfileCustomizationSection nebula={s.theme === "nebula"} />
             </>
           )}
 
@@ -502,44 +496,61 @@ function DesktopNotifyToggle({ enabled, onChange }: { enabled: boolean; onChange
   );
 }
 
-// Design your Weered (components/shell/ShellDesigner.tsx) runs on Home: from
-// Home it opens in place, from anywhere else it goes there first.
-function DesignLink() {
+// Top of Settings, above every tab (James 2026-10-30: "I find I use it the
+// most"). Design your Weered (components/shell/ShellDesigner.tsx) runs on
+// Home: from Home it opens in place, from anywhere else it goes there first.
+function DesignBar() {
   const { clearSheets } = useOverlay();
   const router = useRouter();
   return (
-    <button
-      type="button"
-      onClick={() => {
-        clearSheets();
-        if (window.location.pathname === "/home") startDesign();
-        else router.push("/home?design=1");
-      }}
-      style={{
-        display: "flex", alignItems: "center", gap: 10, width: "100%", marginTop: 14, padding: "12px 14px",
-        borderRadius: 12, cursor: "pointer", textAlign: "left", fontFamily: "inherit", color: "#fff",
-        border: "1px solid var(--weered-accent-ring, #a78bfa88)",
-        background: "linear-gradient(135deg, var(--weered-accent-bg, #7c3aed33), transparent)",
-      }}
-    >
-      <span style={{ fontSize: 18, color: "var(--weered-accent-text, #c4b5fd)" }}>✦</span>
-      <span style={{ minWidth: 0 }}>
-        <span style={{ display: "block", fontSize: 13.5, fontWeight: 800 }}>Design your Weered</span>
-        <span style={{ display: "block", fontSize: 11.5, opacity: 0.65 }}>
-          Move any section, put Friends where you want them, add blocks, pick your own colour.
+    <div className="weered-settings-designbar" style={{ display: "flex", gap: 8, marginBottom: 6, flexWrap: "wrap" }}>
+      <button
+        type="button"
+        onClick={() => {
+          clearSheets();
+          if (window.location.pathname === "/home") startDesign();
+          else router.push("/home?design=1");
+        }}
+        style={{
+          flex: "1 1 260px", display: "flex", alignItems: "center", gap: 10, padding: "11px 14px",
+          borderRadius: 12, cursor: "pointer", textAlign: "left", fontFamily: "inherit", color: "#fff",
+          border: "1px solid var(--weered-accent-ring, #a78bfa88)",
+          background: "linear-gradient(135deg, var(--weered-accent-bg, #7c3aed33), transparent)",
+        }}
+      >
+        <span style={{ fontSize: 18, color: "var(--weered-accent-text, #c4b5fd)" }}>✦</span>
+        <span style={{ minWidth: 0 }}>
+          <span style={{ display: "block", fontSize: 13.5, fontWeight: 800 }}>Design your Weered</span>
+          <span style={{ display: "block", fontSize: 11.5, opacity: 0.65 }}>
+            Move any section, put Friends where you want them, add blocks, pick your own colour.
+          </span>
         </span>
-      </span>
-    </button>
+      </button>
+      <a
+        href="/setup"
+        onClick={() => clearSheets()}
+        style={{
+          flex: "0 1 auto", display: "flex", flexDirection: "column", justifyContent: "center", gap: 2, padding: "9px 14px",
+          borderRadius: 12, border: "1px solid var(--weered-border, rgba(255,255,255,.12))", background: "rgba(255,255,255,.03)",
+          color: "#fff", fontSize: 12.5, fontWeight: 800, textDecoration: "none",
+        }}
+      >
+        Run setup again
+        <span style={{ fontWeight: 500, fontSize: 11.5, opacity: 0.6 }}>Look and layout</span>
+      </a>
+    </div>
   );
 }
 
-// Nebula's own knobs: colourway, type and starfield. Saved with the account's
-// UI prefs (lib/uiPrefs), the same place setup and Design write them.
+// Nebula's own knobs: colourway, type, starfield, and the same structure and
+// effect controls as Design → Look. Saved with the account's UI prefs
+// (lib/uiPrefs), the same place setup and Design write them.
 function NebulaOptions() {
   const [palette, setPalette] = React.useState<Palette>("violet");
   const [accent, setAccent] = React.useState("#8b5cf6");
   const [font, setFont] = React.useState<NebulaFont>("default");
   const [stars, setStars] = React.useState(true);
+  const [look, setLook] = React.useState<ShellLook | null>(null);
   const accentTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   React.useEffect(() => {
     const p = readUiPrefs();
@@ -547,8 +558,30 @@ function NebulaOptions() {
     if (isHexColour(p.accent)) setAccent(p.accent);
     setFont(p.font || "default");
     setStars(p.stars !== false);
+    setLook(lookFromPrefs(p));
   }, []);
+  // Typing (the symbol) and dragging (intensity) save once they settle; a
+  // click saves at once, taking anything still pending with it.
+  const pending = React.useRef<UiPrefs>({});
+  const lookTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const flush = React.useCallback(() => {
+    if (lookTimer.current) clearTimeout(lookTimer.current);
+    lookTimer.current = null;
+    const p = pending.current;
+    pending.current = {};
+    if ("fxSymbol" in p) p.fxSymbol = cleanSymbol(p.fxSymbol) || "✦";
+    if (Object.keys(p).length) saveUiPrefs(p);
+  }, []);
+  React.useEffect(() => flush, [flush]);
+  const onLook = (patch: Partial<ShellLook>, merge?: string) => {
+    setLook((l) => (l ? { ...l, ...patch } : l));
+    pending.current = { ...pending.current, ...(patch as UiPrefs) };
+    if (!merge) return flush();
+    if (lookTimer.current) clearTimeout(lookTimer.current);
+    lookTimer.current = setTimeout(flush, 400);
+  };
   const mine = customPalette(accent);
+  const colours = paletteColours(palette, accent);
   return (
     <div className="weered-settings-nebula" style={{ marginTop: 14 }}>
       <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 8, color: "var(--weered-text, rgba(243,244,246,.95))" }}>Colourway</div>
@@ -623,6 +656,12 @@ function NebulaOptions() {
       <Row label="Starfield" hint="Drifting stars, twinkles and the odd shooting star behind everything.">
         <Toggle checked={stars} onChange={(v) => { setStars(v); saveUiPrefs({ stars: v }); }} />
       </Row>
+      {look && (
+        <div className="weered-settings-structure">
+          <StructureControls accent={colours.a} look={look} c={colours} onLook={onLook} />
+          <EffectControls accent={colours.a} look={look} c={colours} onLook={onLook} />
+        </div>
+      )}
     </div>
   );
 }
@@ -705,7 +744,10 @@ export function Section({ title, children, onReset }: { title: string; children:
   );
 }
 
-function ProfileCustomizationSection() {
+// Under Nebula these colours sit out: the colourway paints your own Weered,
+// and people rows carry no tint or stripe there. They still dress your ID card
+// and row inside lobbies with their own theme, and on Classic.
+function ProfileCustomizationSection({ nebula = false }: { nebula?: boolean }) {
   const apiBase = (process.env.NEXT_PUBLIC_API_BASE as string) || "https://api.weered.ca";
   const [panelBgColor, setPanelBgColor] = React.useState<string>("");
   const [panelAccentColor, setPanelAccentColor] = React.useState<string>("");
@@ -781,9 +823,11 @@ function ProfileCustomizationSection() {
   ];
 
   return (
-    <Section title="Your colors" onReset={resetColors}>
+    <Section title={nebula ? "Your colors in themed lobbies" : "Your colors"} onReset={resetColors}>
       <div style={{ fontSize: 11, color: "var(--weered-muted, rgba(148,163,184,.7))", marginBottom: 10 }}>
-        Personalize how you appear in lobbies and on your right-rail ID card. Changes save automatically.
+        {nebula
+          ? "Nebula paints your own Weered from the colourway above. These colours dress your ID card and your row inside lobbies with their own theme, and for anyone on Classic. Changes save automatically."
+          : "Personalize how you appear in lobbies and on your ID card. Changes save automatically."}
       </div>
 
       <ColorPreview
@@ -963,7 +1007,7 @@ function BannerUploadRow() {
   }
 
   return (
-    <Row label="ID card banner" hint="Wide image at the top of your right-rail card. PNG/JPEG/WebP/GIF, ≤4 MB. Indicted+ tier.">
+    <Row label="ID card banner" hint="Wide image across the top of your ID card. PNG/JPEG/WebP/GIF, ≤4 MB. Indicted+ tier.">
       <div style={{ display: "flex", flexDirection: "column", gap: 8, alignItems: "stretch", minWidth: 240 }}>
         {bannerUrl && (
           <div style={{

@@ -228,8 +228,7 @@ html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .home-hero-jo
 html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .home-stream,
 html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .home-lobby-card,
 html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .home-live-room,
-html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .home-recent-row,
-html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-home-pinnews > * {
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .home-recent-row {
   border-radius: 16px !important;
   overflow: hidden !important;
   border: 1px solid rgb(255 255 255 / 0.08) !important;
@@ -239,6 +238,28 @@ html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-home-
     border-color 0.18s,
     transform 0.18s,
     box-shadow 0.18s !important;
+}
+/* Pinned and Gaming News: each card is its own panel. A glass frame round
+   each column boxed the cards in a second border with no room inside them
+   (James 2026-10-30: "really TIGHT"). The cards keep their own accent wash;
+   the glass goes underneath it. */
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb)
+  :is(.weered-pin-card, .weered-news-card) {
+  border-radius: 14px !important;
+  background-color: rgb(var(--nb-ink) / 0.62) !important;
+  -webkit-backdrop-filter: blur(14px) saturate(1.2);
+  backdrop-filter: blur(14px) saturate(1.2);
+  box-shadow: 0 14px 34px -24px rgb(0 0 0 / 0.9) !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-news-card:hover {
+  border-color: rgb(var(--nb-a) / 0.45) !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-news-lead {
+  padding: 12px !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-news-card img,
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-pin-card img {
+  border-radius: 9px !important;
 }
 html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .home-stream {
   border-color: rgb(var(--nb-a) / 0.28) !important;

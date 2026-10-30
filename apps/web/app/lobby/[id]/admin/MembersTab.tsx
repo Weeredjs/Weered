@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { weeredConfirm } from "../../../../lib/confirm";
 import { AdminMember, LevelBadge, S, apiFetch, fmtDate } from "./shared";
+import { DoorAnswers } from "./DoorAnswers";
 import { onActivate } from "@/lib/a11y";
 
 export function MembersTab({
@@ -188,6 +189,12 @@ export function MembersTab({
             <div style={{ fontSize: 11, opacity: 0.4, fontFamily: "monospace" }}>
               ID: {selected.userId}
             </div>
+            {selected.door ? (
+              <>
+                <div style={{ ...S.label, marginTop: 12 }}>At the front door</div>
+                <DoorAnswers entry={selected.door} />
+              </>
+            ) : null}
           </div>
 
           {canRole && (

@@ -3,9 +3,42 @@
 // Step 2: "What are you doing here?" Big art cards grouped Work / Community /
 // Games, a search box, a request field for anything we don't have yet, and a
 // way into a custom-build meeting.
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { GAMES, GROUPS, type GameEntry } from "./catalog";
 import { FAINT, MUTED, TEXT, alpha, inputStyle, labelStyle } from "./ui";
+
+const API = process.env.NEXT_PUBLIC_API_BASE || "https://api.weered.ca";
+
+// The official lobbies' hero banners, by lobby id: one fetch per page load,
+// shared by every card. A banner is used only as an http(s) or site path.
+let heroes: Promise<Record<string, string>> | null = null;
+function lobbyHeroes(): Promise<Record<string, string>> {
+  heroes ||= fetch(`${API}/lobbies`)
+    .then((r) => r.json())
+    .then((j) => {
+      const out: Record<string, string> = {};
+      for (const l of Array.isArray(j?.lobbies) ? j.lobbies : []) {
+        const b = typeof l?.bannerUrl === "string" ? l.bannerUrl.trim() : "";
+        if (l?.id && (/^https?:\/\//i.test(b) || /^\/(?!\/)/.test(b))) out[l.id] = b;
+      }
+      return out;
+    })
+    .catch(() => ({}));
+  return heroes;
+}
+
+function useLobbyHero(id?: string): string | undefined {
+  const [src, setSrc] = useState<string | undefined>(undefined);
+  useEffect(() => {
+    if (!id) return;
+    let live = true;
+    void lobbyHeroes().then((m) => live && setSrc(m[id]));
+    return () => {
+      live = false;
+    };
+  }, [id]);
+  return src;
+}
 
 export function GameArt({
   game,
@@ -18,6 +51,10 @@ export function GameArt({
   radius?: number;
   children?: React.ReactNode;
 }) {
+  const hero = useLobbyHero(game.image ? undefined : game.lobby);
+  const src = game.image || hero;
+  const [failed, setFailed] = useState<string | null>(null);
+  const showImg = !!src && failed !== src;
   return (
     <div
       aria-hidden
@@ -26,12 +63,37 @@ export function GameArt({
         height,
         borderRadius: radius,
         overflow: "hidden",
-        background: game.image
-          ? `linear-gradient(180deg, transparent 40%, rgba(0,0,0,.55)), url("${game.image}") center/cover no-repeat, ${game.art}`
-          : game.art,
+        background: game.art,
       }}
     >
-      {!game.image && (
+      {showImg && (
+        <>
+          {/* eslint-disable-next-line @next/next/no-img-element -- third-party banners, sized by the card */}
+          <img
+            src={src}
+            alt=""
+            loading="lazy"
+            decoding="async"
+            referrerPolicy="no-referrer"
+            onError={() => setFailed(src)}
+            style={{
+              position: "absolute",
+              inset: 0,
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+            }}
+          />
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              background: "linear-gradient(180deg, transparent 40%, rgba(0,0,0,.55))",
+            }}
+          />
+        </>
+      )}
+      {!showImg && (
         <div
           style={{
             position: "absolute",

@@ -15,6 +15,9 @@ export type GameEntry = {
   art: string;
   /** Real art under /public, used over `art` where we have it. */
   image?: string;
+  /** The official lobby whose hero banner the card wears when there is no
+   *  `image` (fetched live, so a new banner shows here too). */
+  lobby?: string;
   /** One or two characters drawn on the card when there is no image. */
   glyph: string;
   tint: string;
@@ -57,6 +60,7 @@ export const GAMES: GameEntry[] = [
   {
     id: "TEAM",
     module: "COWORK",
+    image: "/brand/lobbies/hq-banner.webp",
     name: "Team HQ",
     blurb: "Who's in today, sprint timer, the day board. Meeting and focus rooms.",
     art: "radial-gradient(90% 90% at 15% 15%, #7fa89b55 0%, transparent 60%), radial-gradient(70% 80% at 100% 100%, #38bdf833 0%, transparent 60%), #0a1012",
@@ -129,6 +133,7 @@ export const GAMES: GameEntry[] = [
   },
   {
     id: "MARATHON",
+    lobby: "marathon",
     name: "Marathon",
     blurb: "Maps, runner shells, rank ladder, squad finder and live streams.",
     art: "repeating-linear-gradient(-45deg, #c6ff0014 0 10px, transparent 10px 20px), radial-gradient(70% 70% at 80% 20%, #c6ff0055 0%, transparent 60%), #0b0d06",
@@ -140,6 +145,7 @@ export const GAMES: GameEntry[] = [
   },
   {
     id: "RIOT",
+    lobby: "league-of-legends",
     name: "League of Legends",
     blurb: "Summoner lookup, free champion rotation, ranked ladder, find team.",
     art: "radial-gradient(80% 80% at 50% 0%, #c89b3c66 0%, transparent 60%), linear-gradient(#0a1428, #010a13)",
@@ -151,6 +157,7 @@ export const GAMES: GameEntry[] = [
   },
   {
     id: "FORTNITE",
+    lobby: "fortnite",
     name: "Fortnite",
     blurb: "Player stats, ranked, today's item shop, new cosmetics, news.",
     art: "radial-gradient(70% 70% at 20% 20%, #00c3ff88 0%, transparent 60%), radial-gradient(70% 70% at 90% 90%, #ffe60066 0%, transparent 60%), linear-gradient(135deg, #3d1a8c, #1b0b45)",
@@ -162,6 +169,7 @@ export const GAMES: GameEntry[] = [
   },
   {
     id: "CS2",
+    lobby: "counter-strike-2",
     name: "Counter-Strike 2",
     blurb: "Squad finder, Premier rank bands, the map pool, live streams.",
     art: "radial-gradient(70% 70% at 80% 20%, #de9b3566 0%, transparent 60%), linear-gradient(#1b2838, #0b1118)",
@@ -173,6 +181,7 @@ export const GAMES: GameEntry[] = [
   },
   {
     id: "DOTA2",
+    lobby: "dota-2",
     name: "Dota 2",
     blurb: "Stack finder, player lookup, live pro matches, hero browser.",
     art: "radial-gradient(80% 70% at 50% 110%, #a32a1b99 0%, transparent 60%), linear-gradient(#180606, #070202)",
@@ -184,6 +193,7 @@ export const GAMES: GameEntry[] = [
   },
   {
     id: "PUBG",
+    lobby: "pubg",
     name: "PUBG: Battlegrounds",
     blurb: "Player stats, recent matches, leaderboards, weapons, find team.",
     art: "repeating-linear-gradient(45deg, #f2a90012 0 14px, transparent 14px 28px), radial-gradient(70% 70% at 30% 20%, #f2a90055 0%, transparent 60%), #15130c",
@@ -195,6 +205,7 @@ export const GAMES: GameEntry[] = [
   },
   {
     id: "POE",
+    lobby: "poe",
     name: "Path of Exile",
     blurb: "League economy, ladder, skill tree, div cards, item bases.",
     art: "radial-gradient(70% 70% at 50% 100%, #af602566 0%, transparent 60%), linear-gradient(#120c08, #050302)",
@@ -206,6 +217,7 @@ export const GAMES: GameEntry[] = [
   },
   {
     id: "POE2",
+    lobby: "poe2",
     name: "Path of Exile 2",
     blurb: "PoE2 league economy, ladder and item bases, find team.",
     art: "radial-gradient(70% 70% at 70% 10%, #8a1c1c88 0%, transparent 60%), linear-gradient(#140707, #050202)",
@@ -217,6 +229,7 @@ export const GAMES: GameEntry[] = [
   },
   {
     id: "DIVISION2",
+    lobby: "division2",
     name: "The Division 2",
     blurb: "Ops board for raids and incursions, squad finder, server status.",
     art: "radial-gradient(70% 70% at 80% 20%, #ff6d1066 0%, transparent 60%), linear-gradient(#1a1a1a, #0a0a0a)",
@@ -228,6 +241,7 @@ export const GAMES: GameEntry[] = [
   },
   {
     id: "HELLDIVERS2",
+    lobby: "helldivers2",
     name: "Helldivers 2",
     blurb: "Live galactic war map, Major Order, stratagems, squad finder.",
     art: "repeating-linear-gradient(-45deg, #ffe81f10 0 12px, transparent 12px 24px), radial-gradient(70% 70% at 50% 0%, #ffe81f44 0%, transparent 60%), #0d0d0a",
@@ -239,6 +253,7 @@ export const GAMES: GameEntry[] = [
   },
   {
     id: "EVE",
+    lobby: "eve",
     name: "EVE Online",
     blurb: "Killboard, sovereignty, market signals, capsuleer lookup.",
     art: "radial-gradient(50% 50% at 70% 30%, #00b4ff55 0%, transparent 70%), radial-gradient(40% 40% at 20% 80%, #6d28d944 0%, transparent 70%), #03060c",
@@ -250,6 +265,7 @@ export const GAMES: GameEntry[] = [
   },
   {
     id: "BAR",
+    lobby: "beyond-all-reason",
     name: "Beyond All Reason",
     blurb: "Live battles, match history, the map browser, a room launcher.",
     art: "radial-gradient(70% 70% at 30% 30%, #3fa9f555 0%, transparent 60%), radial-gradient(60% 60% at 90% 90%, #f9731644 0%, transparent 60%), #08111a",
@@ -261,6 +277,7 @@ export const GAMES: GameEntry[] = [
   },
   {
     id: "CHESS",
+    lobby: "chess",
     name: "Chess",
     blurb: "Lobby challenges, tournaments, your chess profile, streams.",
     art: "repeating-conic-gradient(#769656 0 25%, #eeeed2 0 50%) 0 0 / 28px 28px",
@@ -284,6 +301,7 @@ export const GAMES: GameEntry[] = [
   },
   {
     id: "MTG",
+    lobby: "mtg",
     name: "Magic: The Gathering",
     blurb: "Card search, ban lists, deckbuilder and EDHREC shortcuts.",
     art: "conic-gradient(from 90deg at 50% 50%, #f9faf455, #0e68ab88, #150b00, #d3202a88, #00733e88, #f9faf455)",
@@ -331,6 +349,7 @@ export const GAMES: GameEntry[] = [
   },
   {
     id: "NEWS",
+    lobby: "news",
     name: "News desk",
     blurb: "Live headlines: world, Canada, tech, business, science, sports.",
     art: "repeating-linear-gradient(0deg, #ffffff08 0 1px, transparent 1px 9px), radial-gradient(70% 70% at 80% 10%, #7dd3fc44 0%, transparent 60%), #071019",
@@ -342,6 +361,7 @@ export const GAMES: GameEntry[] = [
   },
   {
     id: "MLB",
+    lobby: "mlb",
     name: "Baseball",
     blurb: "Scoreboard, matchups, standings, highlights, player search.",
     art: "radial-gradient(70% 70% at 80% 20%, #d5003255 0%, transparent 60%), linear-gradient(#002d72, #00163a)",
