@@ -1,7 +1,8 @@
 "use client";
 
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
-import { Room, RoomEvent, Track, TrackPublication } from "livekit-client";
+import { Room, RoomEvent, Track, TrackPublication, type LocalAudioTrack } from "livekit-client";
+import { VOICE_FX_KEY, savedVoiceFx, voiceFxProcessor, type VoiceFx } from "../lib/voiceFx";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
@@ -54,6 +55,9 @@ interface VoiceContextValue {
   setMic: (deviceId: string) => Promise<void>;
   refreshMics: () => Promise<void>;
   getVideoElement: (trackSid: string) => HTMLVideoElement | null;
+  /** The voice effect everyone hears (lib/voiceFx.ts); kept on this device. */
+  voiceFx: VoiceFx;
+  setVoiceFx: (fx: VoiceFx) => void;
 }
 
 const VoiceContext = createContext<VoiceContextValue | null>(null);
@@ -79,6 +83,50 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
 
   const audioCtxRef = useRef<AudioContext | null>(null);
   const meterRafRef = useRef<number | null>(null);
+
+  // Voice effect: a LiveKit audio processor on the mic track, run in its own
+  // AudioContext (the level meter's closes whenever the meter restarts).
+  const [voiceFx, setVoiceFxState] = useState<VoiceFx>("off");
+  const voiceFxRef = useRef<VoiceFx>("off");
+  const fxCtxRef = useRef<AudioContext | null>(null);
+  useEffect(() => {
+    const fx = savedVoiceFx();
+    voiceFxRef.current = fx;
+    setVoiceFxState(fx);
+  }, []);
+  const applyVoiceFx = useCallback(async (room: Room, fx: VoiceFx) => {
+    const track = room.localParticipant.getTrackPublication(Track.Source.Microphone)?.track as
+      | LocalAudioTrack
+      | undefined;
+    if (!track) return;
+    try {
+      if (fx === "off") {
+        await track.stopProcessor();
+        return;
+      }
+      if (!fxCtxRef.current || fxCtxRef.current.state === "closed") {
+        const AC = window.AudioContext || (window as any).webkitAudioContext;
+        if (!AC) return;
+        fxCtxRef.current = new AC();
+      }
+      track.setAudioContext(fxCtxRef.current);
+      await track.setProcessor(voiceFxProcessor(fx));
+    } catch (e: any) {
+      console.warn("voice effect failed:", e?.message);
+    }
+  }, []);
+  const setVoiceFx = useCallback(
+    (fx: VoiceFx) => {
+      voiceFxRef.current = fx;
+      setVoiceFxState(fx);
+      try {
+        localStorage.setItem(VOICE_FX_KEY, fx);
+      } catch {}
+      const room = roomRef.current;
+      if (room) void applyVoiceFx(room, fx);
+    },
+    [applyVoiceFx],
+  );
 
   const stopLevelMeter = useCallback(() => {
     if (meterRafRef.current != null) {
@@ -332,6 +380,7 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
             }
             void refreshMics();
             startLevelMeter(room);
+            if (voiceFxRef.current !== "off") void applyVoiceFx(room, voiceFxRef.current);
           } catch (e: any) {
             console.warn("Mic unavailable:", e?.message);
             setMuted(true);
@@ -347,7 +396,7 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
         setActiveRoomId(null);
       }
     },
-    [connState, activeRoomId, rebuildTiles, refreshMics, startLevelMeter],
+    [connState, activeRoomId, rebuildTiles, refreshMics, startLevelMeter, applyVoiceFx],
   );
 
   const disconnect = useCallback(() => {
@@ -513,6 +562,8 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
         setMic,
         refreshMics,
         getVideoElement,
+        voiceFx,
+        setVoiceFx,
       }}
     >
       {children}

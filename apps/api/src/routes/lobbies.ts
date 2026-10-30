@@ -5,6 +5,7 @@ import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
 import { designCreateExtras } from "./lobbyDesign";
 import { registerLobbyJoin } from "./lobbyJoin";
+import { registerFrontDesk } from "./frontDesk";
 import { z } from "zod";
 import { LobbyRole } from "@prisma/client";
 import { lastMessageMap } from "../lib/roomRecency";
@@ -348,6 +349,7 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
   });
 
   registerLobbyJoin(app, { authFromHeader, lobbyAdminAccess });
+  registerFrontDesk(app, { authFromHeader });
 
   app.post(
     "/lobbies",

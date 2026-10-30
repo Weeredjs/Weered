@@ -123,3 +123,16 @@ describe("What's inside, read and written where it lives", () => {
     expect(off.tabs.find((t) => t.id === "home")?.hidden).toBe(true);
   });
 });
+
+describe("the front desk block", () => {
+  it("starts with a title and a note, and keeps only a clean room id", () => {
+    const b = newBlock("frontdesk");
+    expect(b.props).toMatchObject({ title: "Front desk", roomId: "" });
+    expect(b.props.note).toMatch(/Ring/);
+    const L = sanitizeLayout({
+      tabs: [],
+      blocks: [{ id: "x", type: "frontdesk", size: "m", props: { roomId: "ab<c>d_1-2", note: 7 } }],
+    })!;
+    expect(L.blocks[0].props).toEqual({ title: "Front desk", note: "", roomId: "abcd_1-2" });
+  });
+});

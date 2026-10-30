@@ -59,7 +59,8 @@ export type BlockType =
   | "stats"
   | "requests"
   | "rules"
-  | "web";
+  | "web"
+  | "frontdesk";
 
 export type Block = {
   id: string;
@@ -191,6 +192,7 @@ const BLOCK_TYPES: BlockType[] = [
   "requests",
   "rules",
   "web",
+  "frontdesk",
 ];
 const EFFECTS: EffectId[] = [
   "none",
@@ -262,6 +264,13 @@ export function sanitizeProps(type: BlockType, p: any): Record<string, any> {
       };
     case "rules":
       return { title: str(p.title, 80) ?? "House rules", body: str(p.body, 2000) ?? "" };
+    case "frontdesk":
+      return {
+        title: str(p.title, 80) ?? "Front desk",
+        note: str(p.note, 300) ?? "",
+        // The room visitors wait in; its id, as the API makes them.
+        roomId: (str(p.roomId, 64) ?? "").replace(/[^A-Za-z0-9_-]/g, ""),
+      };
     case "web":
       return {
         url: safeUrl(p.url) ?? "",
@@ -428,6 +437,7 @@ const BLOCK_DEFAULTS: Partial<Record<BlockType, any>> = {
   rules: { title: "House rules", body: "Be decent.\nNo spam.\nHave fun." },
   links: { title: "Links", items: [] },
   countdown: { label: "Next big night" },
+  frontdesk: { title: "Front desk", note: "Ring and someone will be right with you." },
 };
 
 export type BlockMeta = {
@@ -458,6 +468,13 @@ export const BLOCK_CATALOG: BlockMeta[] = [
     name: "Up next",
     blurb: "The next events on your calendar.",
     icon: "📅",
+    group: "Essentials",
+  },
+  {
+    type: "frontdesk",
+    name: "Front desk",
+    blurb: "Visitors ring; your staff get a ping.",
+    icon: "🛎",
     group: "Essentials",
   },
   {

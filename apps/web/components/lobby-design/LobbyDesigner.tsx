@@ -354,6 +354,7 @@ export default function LobbyDesigner(p: DesignerProps) {
           }}
         >
           <Inspector
+            lobbyId={p.lobbyId}
             accent={accent}
             block={selected}
             index={d.blocks.findIndex((b) => b.id === selected.id)}

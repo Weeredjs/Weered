@@ -3,9 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useVoice } from "./VoiceContext";
+import { VOICE_FX } from "../lib/voiceFx";
 
 export default function MicSettings() {
-  const { mics, micId, inputLevel, setMic, refreshMics, muted } = useVoice();
+  const { mics, micId, inputLevel, setMic, refreshMics, muted, voiceFx, setVoiceFx } = useVoice();
   const [open, setOpen] = useState(false);
   const [rect, setRect] = useState<DOMRect | null>(null);
   const btnRef = useRef<HTMLButtonElement | null>(null);
@@ -185,6 +186,60 @@ export default function MicSettings() {
                   ? "Unmute to test your mic."
                   : "Speak normally — the bar should turn green. If tapping the mic moves it but talking doesn't, raise your input level in Windows Sound settings or pick another device above."}
               </div>
+            </div>
+
+            <div
+              style={{
+                fontSize: 10,
+                fontWeight: 800,
+                letterSpacing: "1px",
+                textTransform: "uppercase",
+                color: "rgba(167,139,250,.85)",
+                margin: "14px 0 8px",
+              }}
+            >
+              Voice effect
+            </div>
+            <div
+              style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: 5 }}
+            >
+              {VOICE_FX.map((f) => {
+                const on = voiceFx === f.id;
+                return (
+                  <button
+                    key={f.id}
+                    type="button"
+                    aria-pressed={on}
+                    title={f.blurb}
+                    onClick={() => setVoiceFx(f.id)}
+                    style={{
+                      padding: "6px 2px",
+                      borderRadius: 8,
+                      cursor: "pointer",
+                      fontFamily: "inherit",
+                      fontSize: 11,
+                      fontWeight: 800,
+                      color: on ? "#fff" : "rgba(226,232,240,.75)",
+                      border: `1px solid ${on ? "rgba(167,139,250,.8)" : "rgba(255,255,255,.1)"}`,
+                      background: on ? "rgba(124,58,237,.35)" : "rgba(255,255,255,.04)",
+                    }}
+                  >
+                    {f.name}
+                  </button>
+                );
+              })}
+            </div>
+            <div
+              style={{
+                fontSize: 10,
+                color: "rgba(148,163,184,.55)",
+                marginTop: 7,
+                lineHeight: 1.4,
+              }}
+            >
+              {voiceFx === "off"
+                ? "Everyone in the room hears the effect you pick. It stays on this device."
+                : `${VOICE_FX.find((f) => f.id === voiceFx)?.blurb}. Everyone in the room hears it.`}
             </div>
           </div>,
           document.body,

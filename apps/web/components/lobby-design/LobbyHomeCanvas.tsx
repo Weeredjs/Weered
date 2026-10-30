@@ -9,6 +9,7 @@ import dynamic from "next/dynamic";
 import type { Block, LobbyLayout, TabId } from "../../lib/lobbyLayout";
 import { SIZE_SPAN, BLOCK_CATALOG } from "../../lib/lobbyLayout";
 import WebpageEmbed from "../WebpageEmbed";
+import FrontDeskBlock from "./FrontDeskBlock";
 
 const RequestBoard = dynamic(() => import("../RequestBoard"), { ssr: false });
 
@@ -708,6 +709,18 @@ function BlockBody({ block, rooms, ...p }: CanvasProps & { block: Block; rooms: 
             )}
           </div>
         </div>
+      );
+
+    case "frontdesk":
+      return (
+        <FrontDeskBlock
+          lobbyId={p.lobbyId}
+          props={pr}
+          accent={accent}
+          font={font}
+          rooms={rooms}
+          designing={p.designing}
+        />
       );
 
     case "countdown":

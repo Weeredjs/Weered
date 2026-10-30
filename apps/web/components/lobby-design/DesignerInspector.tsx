@@ -13,8 +13,53 @@ import {
 import { IconBtn, chip, input, label } from "./designerKit";
 
 // ── Inspector ──────────────────────────────────────────────────────────────
+const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
+
+/** The lobby's rooms, for a block that points at one (the front desk). */
+function RoomPick({
+  lobbyId,
+  value,
+  onPick,
+}: {
+  lobbyId: string;
+  value: string;
+  onPick: (id: string) => void;
+}) {
+  const [rooms, setRooms] = React.useState<{ id: string; name: string }[]>([]);
+  React.useEffect(() => {
+    let live = true;
+    fetch(`${API}/lobbies/${encodeURIComponent(lobbyId)}/rooms`, { credentials: "include" })
+      .then((r) => r.json())
+      .then((j) => {
+        const list = Array.isArray(j?.rooms) ? j.rooms : [];
+        if (live)
+          setRooms(list.map((r: any) => ({ id: String(r.id), name: String(r.name || r.id) })));
+      })
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, [lobbyId]);
+  return (
+    <select
+      value={value || ""}
+      onChange={(e) => onPick(e.target.value)}
+      style={{ ...input, cursor: "pointer" }}
+      aria-label="Visitors wait in"
+    >
+      <option value="">No waiting room</option>
+      {rooms.map((r) => (
+        <option key={r.id} value={r.id}>
+          {r.name}
+        </option>
+      ))}
+    </select>
+  );
+}
+
 export function Inspector({
   accent,
+  lobbyId,
   block,
   index,
   count,
@@ -25,6 +70,7 @@ export function Inspector({
   onClose,
 }: {
   accent: string;
+  lobbyId?: string;
   block: Block;
   index: number;
   count: number;
@@ -175,6 +221,26 @@ export function Inspector({
           <div style={{ fontSize: 11, opacity: 0.55, marginTop: 8, lineHeight: 1.45 }}>
             Sites that allow it show live. Big ones that refuse (Google, X, Reddit, GitHub) show as
             a link card instead, never a blank box.
+          </div>
+        </>
+      )}
+      {block.type === "frontdesk" && (
+        <>
+          {field("title", "Title", "Front desk")}
+          {field("note", "Note to visitors", "Ring and someone will be right with you.")}
+          {lobbyId && (
+            <>
+              <div style={label}>Visitors wait in</div>
+              <RoomPick
+                lobbyId={lobbyId}
+                value={pr.roomId}
+                onPick={(id) => setProp("roomId", id)}
+              />
+            </>
+          )}
+          <div style={{ fontSize: 11, opacity: 0.55, marginTop: 8, lineHeight: 1.45 }}>
+            Ringing pings the owner and everyone at moderator level or above, with a link to the
+            waiting room.
           </div>
         </>
       )}

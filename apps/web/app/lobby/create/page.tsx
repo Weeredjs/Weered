@@ -8,12 +8,14 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useRouter } from "next/navigation";
 import {
   TAB_DEFAULT_LABEL,
+  emptyDoor,
   newBlock,
   starterBlocks,
   stockLayout,
   type EffectId,
   type EntranceId,
   type FontId,
+  type LobbyDoor,
   type LobbyLayout,
   type TabId,
 } from "../../../lib/lobbyLayout";
@@ -140,6 +142,20 @@ const DEFAULT_THEME: ThemeValue = {
   entrance: "rise",
   intensity: 1,
 };
+
+/** The Digital office's front door: a sign-in, nothing required. */
+function officeDoor(): LobbyDoor {
+  return {
+    ...emptyDoor(),
+    on: true,
+    body: "Sign in at the desk and someone will be right with you.",
+    button: "Sign in",
+    questions: [
+      { id: "who", q: "Who are you here to see?", kind: "text", options: [], required: false },
+      { id: "from", q: "Your name and company", kind: "text", options: [], required: false },
+    ],
+  };
+}
 
 export default function CreateLobbyPage() {
   const router = useRouter();
@@ -345,13 +361,24 @@ export default function CreateLobbyPage() {
         welcome.props = {
           ...welcome.props,
           title: `Welcome to ${name.trim()}`.slice(0, 120),
-          body: description.trim() || welcome.props.body,
+          body:
+            description.trim() ||
+            (gameId === "OFFICE"
+              ? "Take a seat in Reception and ring the desk. Someone will be right with you."
+              : welcome.props.body),
         };
       }
       if (features.requests) blocks.push(newBlock("requests"));
+      // The Digital office: the front desk sits right under the welcome. Its
+      // waiting room is set once Reception exists (see launch()).
+      if (gameId === "OFFICE") {
+        const at = blocks.findIndex((b) => b.type === "welcome");
+        blocks.splice(at + 1, 0, newBlock("frontdesk"));
+      }
     }
     return {
       ...base,
+      ...(gameId === "OFFICE" ? { door: officeDoor() } : {}),
       tabs: tabsFor(),
       landing,
       theme: {
@@ -468,6 +495,7 @@ export default function CreateLobbyPage() {
     setPhase("creating");
     setError("");
 
+    const sentLayout = buildLayout();
     const j = await apiFetch("/lobbies", {
       method: "POST",
       body: JSON.stringify({
@@ -476,7 +504,7 @@ export default function CreateLobbyPage() {
         description: description.trim(),
         moduleType: moduleOf(game),
         accentColor: theme.accent,
-        layout: buildLayout(),
+        layout: sentLayout,
         enabledModules,
       }),
     });
@@ -513,6 +541,8 @@ export default function CreateLobbyPage() {
     setPhase("rooms");
     const total = starterRooms.length;
     let made = 0;
+    let receptionId = "";
+    const createdIds: string[] = [];
     setRoomProgress({ made: 0, tried: 0, total });
     for (let i = 0; i < starterRooms.length; i++) {
       const r = starterRooms[i];
@@ -525,7 +555,31 @@ export default function CreateLobbyPage() {
         }),
       });
       if (rj?.ok) made++;
+      const madeId = (rj as { room?: { id?: string } } | null)?.room?.id;
+      if (rj?.ok && madeId) {
+        createdIds.push(String(madeId));
+        if (r.name === "Reception") receptionId = String(madeId);
+      }
       setRoomProgress({ made, tried: i + 1, total });
+    }
+    // Starter rooms keep the order the template lists them (the room list
+    // runs newest first otherwise), and the office's front desk sends
+    // visitors to wait in Reception.
+    if (createdIds.length) {
+      await apiFetch(`/lobbies/${encodeURIComponent(slug)}/admin/design`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          layout: {
+            ...sentLayout,
+            roomOrder: createdIds,
+            blocks: sentLayout.blocks.map((b) =>
+              b.type === "frontdesk" && receptionId
+                ? { ...b, props: { ...b.props, roomId: receptionId } }
+                : b,
+            ),
+          },
+        }),
+      });
     }
 
     setPhase("done");
