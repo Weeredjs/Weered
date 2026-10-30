@@ -1,10 +1,11 @@
 "use client";
 
-// Home's Mplayer moment, done the home way: PEOPLE are the doors. Home rooms
-// stay hidden from the canvas (you reach them by joining a friend who's
-// there); what home shows is who's around — the live Home Lobby roster (from
-// the WS presence you're already in) and your friends/crew with where they
-// are and a one-click Join. No room directory here, by design.
+// Home's Mplayer moment, done the home way: PEOPLE are the doors. Your
+// friends and crew who are on, with where they are and a one-click Join.
+// Shows only when someone is on. The Home Lobby's room list used to sit here
+// too, mostly reading "quiet" (James 2026-10-30: "The active rooms is ...");
+// rooms with people in them are under Live now, and every Home Lobby room is
+// on /lobby.
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
@@ -78,25 +79,6 @@ function Face({
   );
 }
 
-type HomeRoom = {
-  id: string;
-  name: string;
-  onlineCount?: number;
-  onlineUsers?: { id: string; name?: string; avatar?: string | null }[];
-  lastMessageAt?: string | null;
-};
-
-function timeAgo(iso?: string | null): string | null {
-  const t = iso ? Date.parse(iso) : Number.NaN;
-  if (!Number.isFinite(t)) return null;
-  const s = Math.max(0, (Date.now() - t) / 1000);
-  if (s < 90) return "just now";
-  if (s < 3600) return `${Math.floor(s / 60)}m`;
-  if (s < 86400) return `${Math.floor(s / 3600)}h`;
-  if (s < 7 * 86400) return `${Math.floor(s / 86400)}d`;
-  return null;
-}
-
 export default function HomePulse({
   homeUsers: _homeUsers,
   onDm,
@@ -105,19 +87,6 @@ export default function HomePulse({
   onDm: (u: any) => void;
 }) {
   const [friends, setFriends] = useState<any[]>([]);
-  const [rooms, setRooms] = useState<HomeRoom[]>([]);
-
-  // The Home Lobby's rooms — the hidden pool you're already inside once you're
-  // on /home. Listed here (not as a browsable directory) so people who made it
-  // through the door can actually see where to go.
-  const loadRooms = useCallback(() => {
-    fetch(`${API}/lobbies/lobby/rooms`, { headers: authHeaders() as any })
-      .then((r) => r.json())
-      .then((j) => {
-        if (j?.ok && Array.isArray(j.rooms)) setRooms(j.rooms);
-      })
-      .catch(() => {});
-  }, []);
 
   const loadFriends = useCallback(() => {
     fetch(`${API}/friends`, { headers: authHeaders() as any })
@@ -131,10 +100,7 @@ export default function HomePulse({
   // Friends go LIVE: 60s poll + refetch on presence WS events (the old home
   // strip fetched once and quietly went stale for the whole session).
   useEffect(() => {
-    const refresh = () => {
-      loadFriends();
-      loadRooms();
-    };
+    const refresh = () => loadFriends();
     refresh();
     const iv = setInterval(refresh, 60_000);
     let t: ReturnType<typeof setTimeout> | null = null;
@@ -149,23 +115,10 @@ export default function HomePulse({
       if (t) clearTimeout(t);
       for (const e of events) window.removeEventListener(e, onActivity);
     };
-  }, [loadFriends, loadRooms]);
+  }, [loadFriends]);
 
   const online = useMemo(() => (friends || []).filter((u) => u?.online).slice(0, 16), [friends]);
-  // Live rooms first, then most recently active.
-  const sortedRooms = useMemo(
-    () =>
-      [...rooms].sort((a, b) => {
-        const live = (b.onlineCount ?? 0) - (a.onlineCount ?? 0);
-        if (live !== 0) return live;
-        const ra = a.lastMessageAt ? Date.parse(a.lastMessageAt) : 0;
-        const rb = b.lastMessageAt ? Date.parse(b.lastMessageAt) : 0;
-        return rb - ra;
-      }),
-    [rooms],
-  );
-
-  if (sortedRooms.length === 0 && online.length === 0) return null;
+  if (online.length === 0) return null;
 
   const label: React.CSSProperties = {
     fontSize: 10,
@@ -190,106 +143,6 @@ export default function HomePulse({
         background: "linear-gradient(135deg, rgba(88,0,229,.07), rgba(255,255,255,.02))",
       }}
     >
-      {sortedRooms.length > 0 && (
-        <div style={{ minWidth: 210, maxWidth: 320 }}>
-          <div className="home-pulse-label" style={label}>
-            Home rooms · {sortedRooms.length}
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-            {sortedRooms.slice(0, 4).map((r) => {
-              const live = r.onlineCount ?? 0;
-              const ago = live > 0 ? null : timeAgo(r.lastMessageAt);
-              const occupants = r.onlineUsers ?? [];
-              return (
-                <Link
-                  key={r.id}
-                  href={`/room/${encodeURIComponent(r.id)}`}
-                  className="home-pulse-room"
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 8,
-                    padding: "6px 9px",
-                    borderRadius: 2,
-                    textDecoration: "none",
-                    background: "rgba(255,255,255,.03)",
-                    border: `1px solid ${live > 0 ? "rgba(34,197,94,.28)" : "rgba(255,255,255,.07)"}`,
-                  }}
-                >
-                  <span
-                    style={{
-                      width: 7,
-                      height: 7,
-                      borderRadius: "50%",
-                      flexShrink: 0,
-                      background: live > 0 ? "#22c55e" : "rgba(148,163,184,.3)",
-                      boxShadow: live > 0 ? "0 0 6px #22c55e88" : "none",
-                    }}
-                  />
-                  <span
-                    style={{
-                      fontSize: 11.5,
-                      fontWeight: 700,
-                      color: "rgba(243,244,246,.88)",
-                      whiteSpace: "nowrap",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      flex: 1,
-                      minWidth: 0,
-                    }}
-                  >
-                    {r.name}
-                  </span>
-                  {occupants.length > 0 && (
-                    <span style={{ display: "flex", alignItems: "center", flexShrink: 0 }}>
-                      {occupants.slice(0, 3).map((u, i) => (
-                        <span
-                          key={u.id || i}
-                          style={{ marginLeft: i === 0 ? 0 : -7, zIndex: 3 - i, display: "flex" }}
-                        >
-                          <Face name={u.name || "?"} avatar={u.avatar} size={20} />
-                        </span>
-                      ))}
-                      {live > occupants.length && (
-                        <span
-                          style={{
-                            marginLeft: -7,
-                            width: 20,
-                            height: 20,
-                            borderRadius: "50%",
-                            background: "rgba(255,255,255,.08)",
-                            border: "2px solid rgba(10,10,15,.9)",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            fontSize: 8,
-                            fontWeight: 800,
-                            color: "rgba(255,255,255,.5)",
-                            fontFamily: "monospace",
-                          }}
-                        >
-                          +{live - occupants.length}
-                        </span>
-                      )}
-                    </span>
-                  )}
-                  <span
-                    style={{
-                      fontSize: 9.5,
-                      fontFamily: "monospace",
-                      color: live > 0 ? "rgba(34,197,94,.85)" : "rgba(148,163,184,.45)",
-                      flexShrink: 0,
-                    }}
-                  >
-                    {live > 0 ? `${live} here` : ago ? ago : "quiet"}
-                  </span>
-                </Link>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
       {online.length > 0 && (
         <div style={{ flex: 1, minWidth: 260 }}>
           <div className="home-pulse-label" style={label}>

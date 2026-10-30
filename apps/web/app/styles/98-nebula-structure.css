@@ -87,6 +87,7 @@ html[data-weered-theme="nebula"][data-weered-shape="cut"]:not([data-weered-lobby
     .weered-rr-section,
     .weered-usercorner,
     .home-pulse,
+    .home-build-card,
     .weered-shell-block-home,
     .home-lobby-card,
     .home-live-room,
@@ -108,6 +109,9 @@ html[data-weered-theme="nebula"][data-weered-shape="cut"]:not([data-weered-lobby
     .weered-rr-join,
     .weered-rr-invite,
     .home-topbar-design,
+    .home-build-go,
+    .home-build-ghost,
+    .home-search-browse,
     .weered-btn,
     .home-pulse-join,
     .wsb-cta

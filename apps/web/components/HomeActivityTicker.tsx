@@ -160,9 +160,16 @@ export default function HomeActivityTicker() {
         }
       `}</style>
       <div className="home-ticker" aria-label="Live rooms and lobbies across Weered">
+        {/* "Live" only when a room has people in it; otherwise it's a list. */}
         <div className="home-ticker-label">
-          <span className="home-ticker-pulse" />
-          live
+          {items.some((it) => it.live && it.online > 0) ? (
+            <>
+              <span className="home-ticker-pulse" />
+              live
+            </>
+          ) : (
+            "lobbies"
+          )}
         </div>
         <div className="home-ticker-track">
           {belt.length === 0 && hasFetched && (

@@ -17,7 +17,7 @@ import {
 } from "../../lib/lobbyLayout";
 import { PRESET_BY_ID } from "../../lib/lobbyThemePresets";
 import type { DesignState } from "./useLobbyDesign";
-import { IconBtn, chip, panel } from "./designerKit";
+import { IconBtn, belowTitlebar, chip, panel } from "./designerKit";
 import { BlocksPalette, LobbyWords, TabsEditor } from "./DesignerPanels";
 import { Inspector } from "./DesignerInspector";
 import { ThemeDock } from "./DesignerTheme";
@@ -139,9 +139,12 @@ export default function LobbyDesigner(p: DesignerProps) {
       <div
         style={{
           ...panel,
-          top: 12,
+          top: belowTitlebar(12),
           left: "50%",
           transform: "translateX(-50%)",
+          // Centred from 50%, a fixed box shrinks to half the window and
+          // wraps its last button under the rest; size it to its buttons.
+          width: "max-content",
           display: "flex",
           alignItems: "center",
           gap: 8,
@@ -256,7 +259,7 @@ export default function LobbyDesigner(p: DesignerProps) {
         <div
           style={{
             ...panel,
-            top: 76,
+            top: belowTitlebar(76),
             left: 12,
             bottom: dockOpen ? 228 : 12,
             width: 300,
@@ -345,10 +348,10 @@ export default function LobbyDesigner(p: DesignerProps) {
         <div
           style={{
             ...panel,
-            top: 76,
+            top: belowTitlebar(76),
             right: 12,
             width: 320,
-            maxHeight: `calc(100vh - ${dockOpen ? 316 : 100}px)`,
+            maxHeight: `calc(100vh - var(--wtb-h, 0px) - ${dockOpen ? 316 : 100}px)`,
             overflow: "auto",
             padding: 16,
           }}

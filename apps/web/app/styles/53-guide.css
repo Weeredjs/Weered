@@ -1,0 +1,929 @@
+/* =====================================================================
+   THE WEERED GUIDE — components/guide/WeeredGuide.tsx
+   =====================================================================
+   A dialog portalled to <body>, dark in every theme. Every rule is scoped
+   under .wg (two classes) so the global button and link rules in
+   40-core-layout.css, hover included, never reach it. It sits under the
+   desktop app's title bar (--wtb-h, 90-desktop-chrome.css). */
+
+.wg-overlay {
+  position: fixed;
+  inset: var(--wtb-h, 0px) 0 0 0;
+  z-index: 99980;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(3, 3, 8, 0.78);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+.wg {
+  position: relative;
+  display: grid;
+  grid-template-columns: 236px minmax(0, 1fr);
+  width: min(1120px, 100%);
+  height: min(860px, 100%);
+  overflow: hidden;
+  border-radius: 20px;
+  border: 1px solid rgba(124, 58, 237, 0.32);
+  background:
+    radial-gradient(90% 60% at 100% 0%, rgba(124, 58, 237, 0.14), transparent 60%),
+    radial-gradient(70% 50% at 0% 100%, rgba(56, 189, 248, 0.06), transparent 60%), #0c0b14;
+  box-shadow: 0 40px 120px -30px rgba(0, 0, 0, 0.9);
+  color: rgba(226, 232, 240, 0.9);
+  font-family: var(--font-rajdhani), "Rajdhani", system-ui, sans-serif;
+  outline: none;
+}
+
+/* ── The chapter list ───────────────────────────────────────────────── */
+.wg .wg-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-height: 0;
+  padding: 18px 12px;
+  border-right: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.02);
+}
+.wg .wg-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 2px 8px 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+.wg .wg-brand img {
+  width: 30px;
+  height: 30px;
+  object-fit: contain;
+}
+.wg .wg-brand b {
+  display: block;
+  font-size: 14px;
+  font-weight: 800;
+  color: #fff;
+}
+.wg .wg-brand small {
+  display: block;
+  font-size: 11px;
+  color: rgba(148, 163, 184, 0.8);
+}
+.wg .wg-nav-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+.wg .wg-nav-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 10px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: rgba(226, 232, 240, 0.7);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+  filter: none;
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+.wg .wg-nav-btn:hover {
+  border: 0;
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+  filter: none;
+}
+.wg .wg-nav-btn.is-on {
+  background: rgba(255, 255, 255, 0.07);
+  color: #fff;
+  box-shadow: inset 3px 0 0 var(--wg-c, #a78bfa);
+}
+.wg .wg-nav-icon {
+  width: 22px;
+  text-align: center;
+  font-size: 16px;
+}
+.wg .wg-nav-name {
+  flex: 1;
+  min-width: 0;
+}
+.wg .wg-new {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: rgba(34, 197, 94, 0.16);
+  color: #4ade80;
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  vertical-align: 2px;
+}
+
+/* ── The page ───────────────────────────────────────────────────────── */
+.wg .wg-main {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+}
+.wg .wg-close {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  z-index: 2;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  background: rgba(12, 11, 20, 0.85);
+  color: rgba(226, 232, 240, 0.75);
+  font-size: 15px;
+  cursor: pointer;
+  filter: none;
+}
+.wg .wg-close:hover {
+  border-color: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  filter: none;
+}
+.wg .wg-body {
+  height: 100%;
+  box-sizing: border-box;
+  overflow-y: auto;
+  padding: 30px 38px 34px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(124, 58, 237, 0.3) transparent;
+}
+.wg .wg-head {
+  max-width: 720px;
+  padding-right: 40px;
+}
+.wg .wg-kicker {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--wg-c, #a78bfa);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+.wg .wg-title {
+  margin: 8px 0 0;
+  background: linear-gradient(135deg, #fff 40%, var(--wg-c, #a78bfa));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  font-size: 34px;
+  font-weight: 900;
+  line-height: 1.05;
+  letter-spacing: -0.5px;
+}
+.wg .wg-intro {
+  margin: 10px 0 0;
+  color: rgba(203, 213, 225, 0.78);
+  font-size: 15px;
+  line-height: 1.55;
+}
+.wg .wg-sec {
+  margin-top: 28px;
+}
+.wg .wg-sec-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 10px;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+.wg .wg-sec-title::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(167, 139, 250, 0.45), transparent);
+}
+.wg .wg-note {
+  margin: 0 0 12px;
+  max-width: 720px;
+  color: rgba(148, 163, 184, 0.92);
+  font-size: 13.5px;
+  line-height: 1.55;
+}
+.wg .wg-note b {
+  color: #e2e8f0;
+}
+.wg .wg-group {
+  margin-bottom: 10px;
+}
+.wg .wg-group-label {
+  margin: 14px 0 8px;
+  color: rgba(148, 163, 184, 0.8);
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.wg .wg-facts {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.wg .wg-facts li {
+  position: relative;
+  padding-left: 18px;
+  color: rgba(203, 213, 225, 0.85);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.wg .wg-facts li::before {
+  content: "";
+  position: absolute;
+  top: 0.62em;
+  left: 2px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #a78bfa;
+  box-shadow: 0 0 8px rgba(167, 139, 250, 0.8);
+}
+.wg .wg-facts b {
+  color: #fff;
+}
+.wg .wg-chips + .wg-facts {
+  margin-top: 16px;
+}
+.wg .wg-head + .wg-grid {
+  margin-top: 22px;
+}
+
+/* Buttons */
+.wg .wg-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+.wg .wg-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  color: #e2e8f0;
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 800;
+  white-space: nowrap;
+  cursor: pointer;
+  filter: none;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
+}
+.wg .wg-btn:hover {
+  border-color: rgba(167, 139, 250, 0.7);
+  background: rgba(124, 58, 237, 0.18);
+  color: #fff;
+  filter: none;
+}
+.wg .wg-btn.is-primary {
+  border-color: rgba(221, 214, 254, 0.5);
+  background: linear-gradient(135deg, #8b5cf6, #5800e5);
+  box-shadow: 0 10px 26px -12px rgba(124, 58, 237, 0.95);
+  color: #fff;
+}
+.wg .wg-btn.is-primary:hover {
+  background: linear-gradient(135deg, #9d74f8, #6a12f0);
+}
+.wg .wg-inline {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #c4b5fd;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+.wg .wg-inline:hover {
+  border: 0;
+  background: none;
+  color: #fff;
+  filter: none;
+}
+.wg .wg-next {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  margin-top: 34px;
+  padding: 16px 18px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.025);
+  color: #e2e8f0;
+  font-family: inherit;
+  cursor: pointer;
+  filter: none;
+}
+.wg .wg-next span {
+  color: rgba(148, 163, 184, 0.85);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+.wg .wg-next b {
+  font-size: 16px;
+}
+.wg .wg-next:hover {
+  border-color: rgba(167, 139, 250, 0.5);
+  background: rgba(124, 58, 237, 0.1);
+  color: #fff;
+  filter: none;
+}
+
+/* Grids and tiles */
+.wg .wg-grid {
+  display: grid;
+  gap: 10px;
+}
+.wg .wg-grid-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 22px;
+}
+.wg .wg-grid-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.wg .wg-grid-4 {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.wg .wg-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 13px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.025);
+  color: inherit;
+  font-family: inherit;
+  font-weight: 400;
+  text-align: left;
+}
+.wg .wg-tile.is-link {
+  cursor: pointer;
+}
+.wg .wg-tile.is-link:hover {
+  border-color: rgba(167, 139, 250, 0.45);
+  background: rgba(124, 58, 237, 0.08);
+  filter: none;
+}
+.wg .wg-tile-icon {
+  font-size: 18px;
+  line-height: 1.2;
+}
+.wg .wg-tile-name {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  color: #fff;
+  font-size: 14.5px;
+  font-weight: 800;
+}
+.wg .wg-tile-blurb {
+  color: rgba(148, 163, 184, 0.92);
+  font-size: 13px;
+  line-height: 1.45;
+}
+.wg .wg-status {
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.wg .wg-status.is-planned {
+  background: rgba(34, 197, 94, 0.14);
+  color: #4ade80;
+}
+.wg .wg-status.is-exploring {
+  background: rgba(245, 158, 11, 0.14);
+  color: #fbbf24;
+}
+.wg .wg-status.is-open {
+  background: rgba(59, 130, 246, 0.16);
+  color: #60a5fa;
+}
+
+/* Start here */
+.wg .wg-pillars {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 24px;
+}
+.wg .wg-pillar {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 15px 16px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-top: 2px solid var(--wg-c, #a78bfa);
+  border-radius: 14px;
+  background:
+    radial-gradient(
+      120% 90% at 0% 0%,
+      color-mix(in srgb, var(--wg-c, #a78bfa) 14%, transparent),
+      transparent 70%
+    ),
+    rgba(255, 255, 255, 0.02);
+  color: inherit;
+  font-family: inherit;
+  font-weight: 400;
+  text-align: left;
+  cursor: pointer;
+  filter: none;
+  transition:
+    transform 0.15s,
+    border-color 0.15s;
+}
+.wg .wg-pillar:hover {
+  transform: translateY(-2px);
+  border-color: rgba(255, 255, 255, 0.16);
+  border-top-color: var(--wg-c, #a78bfa);
+  background:
+    radial-gradient(
+      120% 90% at 0% 0%,
+      color-mix(in srgb, var(--wg-c, #a78bfa) 22%, transparent),
+      transparent 70%
+    ),
+    rgba(255, 255, 255, 0.03);
+  filter: none;
+}
+.wg .wg-pillar-icon {
+  font-size: 22px;
+}
+.wg .wg-pillar-name {
+  color: var(--wg-c, #a78bfa);
+  font-size: 17px;
+  font-weight: 800;
+}
+.wg .wg-pillar-blurb {
+  color: rgba(148, 163, 184, 0.95);
+  font-size: 13px;
+  line-height: 1.45;
+}
+.wg .wg-steps {
+  display: grid;
+  gap: 8px;
+}
+.wg .wg-step {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.02);
+}
+.wg .wg-step-n {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: rgba(124, 58, 237, 0.25);
+  color: #ddd6fe;
+  font-weight: 900;
+}
+.wg .wg-step-text {
+  flex: 1;
+  min-width: 0;
+  color: rgba(203, 213, 225, 0.85);
+  font-size: 14px;
+  line-height: 1.45;
+}
+.wg .wg-step-text b {
+  color: #fff;
+}
+
+/* Chips */
+.wg .wg-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.wg .wg-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 11px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  color: #e2e8f0;
+  font-size: 13px;
+  font-weight: 700;
+}
+.wg .wg-chip i {
+  font-style: normal;
+}
+
+/* Your Weered */
+.wg .wg-swatches {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 12px;
+}
+.wg .wg-swatch {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.wg .wg-swatch-chip {
+  display: block;
+  height: 54px;
+  margin-bottom: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 12px;
+  box-shadow: 0 10px 24px -14px rgba(0, 0, 0, 0.9);
+}
+.wg .wg-swatch b {
+  color: #fff;
+  font-size: 14px;
+}
+.wg .wg-swatch small {
+  color: rgba(148, 163, 184, 0.9);
+  font-size: 12px;
+  line-height: 1.35;
+}
+.wg .wg-fonts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.wg .wg-font {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 84px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.025);
+}
+.wg .wg-font span {
+  color: #fff;
+  font-size: 30px;
+  line-height: 1.1;
+}
+.wg .wg-font small {
+  color: rgba(148, 163, 184, 0.9);
+  font-size: 12px;
+}
+.wg .wg-structure {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px 24px;
+}
+.wg .wg-samples .wg-group-label {
+  margin-top: 6px;
+}
+.wg .wg-samples-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.wg .wg-sample {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+.wg .wg-sample-box {
+  display: block;
+  width: 56px;
+  height: 40px;
+  border: 1px solid rgba(196, 181, 253, 0.4);
+  background: linear-gradient(160deg, rgba(167, 139, 250, 0.3), rgba(30, 20, 60, 0.6));
+}
+.wg .wg-sample small {
+  color: rgba(203, 213, 225, 0.85);
+  font-size: 12px;
+}
+
+/* Build a lobby */
+.wg .wg-template {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 8px 11px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.025);
+  color: inherit;
+  font-family: inherit;
+  font-weight: 400;
+  text-align: left;
+  cursor: pointer;
+  filter: none;
+  transition:
+    border-color 0.15s,
+    transform 0.15s;
+}
+.wg .wg-template:hover {
+  transform: translateY(-2px);
+  border-color: rgba(167, 139, 250, 0.5);
+  background: rgba(124, 58, 237, 0.08);
+  filter: none;
+}
+.wg .wg-template b {
+  margin: 4px 4px 0;
+  color: #fff;
+  font-size: 14.5px;
+  font-weight: 800;
+}
+.wg .wg-template > span {
+  display: -webkit-box;
+  margin: 0 4px;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  color: rgba(148, 163, 184, 0.92);
+  font-size: 12.5px;
+  line-height: 1.4;
+}
+.wg .wg-themes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+  gap: 10px;
+}
+.wg .wg-theme {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.wg .wg-theme-art {
+  position: relative;
+  display: block;
+  height: 56px;
+  margin-bottom: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.wg .wg-theme-art span {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  box-shadow: 0 0 10px currentColor;
+}
+.wg .wg-theme b {
+  color: #fff;
+  font-size: 13.5px;
+}
+.wg .wg-theme small {
+  color: rgba(148, 163, 184, 0.9);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+/* The front door, drawn */
+.wg .wg-door {
+  display: flex;
+  justify-content: center;
+  margin-top: 22px;
+  padding: 26px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 18px;
+  background:
+    radial-gradient(70% 90% at 50% 0%, rgba(251, 146, 60, 0.16), transparent 70%),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.025) 0 1px, transparent 1px 28px),
+    #0a0910;
+}
+.wg .wg-door-card {
+  width: min(360px, 100%);
+  padding: 20px 22px;
+  border: 1px solid rgba(251, 146, 60, 0.35);
+  border-radius: 16px;
+  background: rgba(17, 14, 24, 0.95);
+  box-shadow: 0 24px 60px -24px rgba(251, 146, 60, 0.45);
+}
+.wg .wg-door-kicker {
+  color: #fb923c;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+.wg .wg-door-title {
+  margin-top: 2px;
+  color: #fff;
+  font-size: 22px;
+  font-weight: 900;
+}
+.wg .wg-door-body {
+  margin-top: 4px;
+  color: rgba(203, 213, 225, 0.8);
+  font-size: 13px;
+}
+.wg .wg-door-rules {
+  margin: 10px 0 8px;
+  padding-left: 20px;
+  list-style: decimal outside;
+  color: rgba(226, 232, 240, 0.88);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.wg .wg-door-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+}
+.wg .wg-door-check span {
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  background: #fb923c;
+  box-shadow: inset 0 0 0 3px #1b1424;
+}
+.wg .wg-door-q {
+  margin-top: 12px;
+  color: rgba(226, 232, 240, 0.9);
+  font-size: 13px;
+  font-weight: 700;
+}
+.wg .wg-door-opts {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+}
+.wg .wg-door-opts span {
+  padding: 4px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  color: rgba(226, 232, 240, 0.85);
+  font-size: 12px;
+}
+.wg .wg-door-opts span.is-on {
+  border-color: #fb923c;
+  background: rgba(251, 146, 60, 0.18);
+  color: #fff;
+}
+.wg .wg-door-go {
+  margin-top: 14px;
+  padding: 10px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #fb923c, #ea580c);
+  color: #fff;
+  font-weight: 900;
+  text-align: center;
+}
+
+/* The digital office, as a floor plan */
+.wg .wg-floor {
+  display: grid;
+  grid-template-columns: 1.2fr 1.6fr 1.2fr 1fr;
+  gap: 6px;
+  margin-top: 22px;
+  padding: 6px;
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  border-radius: 16px;
+  background: repeating-linear-gradient(
+    45deg,
+    rgba(56, 189, 248, 0.04) 0 2px,
+    transparent 2px 12px
+  );
+}
+.wg .wg-room {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-height: 92px;
+  padding: 12px;
+  border: 1px solid rgba(56, 189, 248, 0.22);
+  border-radius: 11px;
+  background: rgba(10, 18, 28, 0.85);
+}
+.wg .wg-room span {
+  font-size: 20px;
+}
+.wg .wg-room b {
+  color: #fff;
+  font-size: 14px;
+}
+.wg .wg-room small {
+  color: rgba(125, 211, 252, 0.85);
+  font-size: 12px;
+}
+
+/* ── Narrow windows ─────────────────────────────────────────────────── */
+@media (max-width: 1000px) {
+  .wg .wg-grid-4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .wg .wg-grid-3,
+  .wg .wg-pillars {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 760px) {
+  .wg-overlay {
+    padding: 0;
+  }
+  .wg {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    width: 100%;
+    height: 100%;
+    border-radius: 0;
+    border: 0;
+  }
+  .wg .wg-nav {
+    padding: 10px 10px 8px;
+    border-right: 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  }
+  .wg .wg-brand {
+    display: none;
+  }
+  .wg .wg-nav-list {
+    flex-direction: row;
+    overflow-x: auto;
+    padding-right: 44px;
+  }
+  .wg .wg-nav-btn {
+    width: auto;
+    white-space: nowrap;
+  }
+  .wg .wg-nav-btn.is-on {
+    box-shadow: inset 0 -2px 0 var(--wg-c, #a78bfa);
+  }
+  /* The close button moves up beside the chapter strip. */
+  .wg .wg-main {
+    position: static;
+  }
+  .wg .wg-close {
+    top: 8px;
+    right: 8px;
+  }
+  .wg .wg-body {
+    padding: 20px 18px 26px;
+  }
+  .wg .wg-title {
+    font-size: 27px;
+  }
+  .wg .wg-structure,
+  .wg .wg-floor {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .wg .wg-step {
+    flex-wrap: wrap;
+  }
+}
+@media (max-width: 520px) {
+  .wg .wg-grid-2,
+  .wg .wg-grid-3,
+  .wg .wg-grid-4,
+  .wg .wg-pillars {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wg .wg-pillar,
+  .wg .wg-template {
+    transition: none;
+  }
+}

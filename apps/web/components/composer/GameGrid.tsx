@@ -121,15 +121,18 @@ export default function GameGrid({
   accent,
   onPick,
   onRequest,
+  initialGroup = "all",
 }: {
   value: string;
   accent: string;
+  /** The group shown first (Home's Build your own can open on Games). */
+  initialGroup?: (typeof GROUPS)[number]["id"];
   onPick: (g: GameEntry) => void;
   /** Resolves to the message to show under the field. */
   onRequest: (title: string) => Promise<{ ok: boolean; message: string }>;
 }) {
   const [q, setQ] = useState("");
-  const [group, setGroup] = useState<(typeof GROUPS)[number]["id"]>("all");
+  const [group, setGroup] = useState<(typeof GROUPS)[number]["id"]>(initialGroup);
   const [req, setReq] = useState("");
   const [reqBusy, setReqBusy] = useState(false);
   const [reqMsg, setReqMsg] = useState<{ ok: boolean; message: string } | null>(null);

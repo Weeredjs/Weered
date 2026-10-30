@@ -7,7 +7,8 @@ import Link from "next/link";
 import { useWeered, useUsersByRoom } from "../../components/WeeredProvider";
 import DmPreviewStrip from "../../components/DmPreviewStrip";
 import ActivityFeed from "../../components/ActivityFeed";
-import FeatureShowcase from "../../components/FeatureShowcase";
+import WeeredGuide from "../../components/guide/WeeredGuide";
+import { useOverlay } from "../../components/overlays/OverlayProvider";
 import EmptyState from "../../components/EmptyState";
 import LobbyChatDrawer from "../../components/LobbyChatDrawer";
 import HomeActivityTicker from "../../components/HomeActivityTicker";
@@ -15,15 +16,15 @@ import FirstTimePrompt from "../../components/FirstTimePrompt";
 import SetupGate from "../../components/setup/SetupGate";
 import HomePinnedNews from "../../components/HomePinnedNews";
 import HomePulse from "../../components/HomePulse";
+import HomeBuild from "../../components/HomeBuild";
 import LobbySearch from "../../components/LobbySearch";
 import { onActivate } from "@/lib/a11y";
 import ShellSlot from "../../components/shell/ShellSlot";
 import ShellDesigner from "../../components/shell/ShellDesigner";
 import { startDesign, useShellLayout } from "../../lib/shellDesign";
-import { isCore, keyOf, stockShell } from "../../lib/shellLayout";
+import { LEGACY_HOME, isCore, keyOf } from "../../lib/shellLayout";
 import { useOfficeSkin } from "../../components/useOfficeSkin";
 
-const STOCK_HOME = stockShell().home;
 
 function pickFirst(...vals: any[]): string {
   for (const v of vals) if (typeof v === "string" && v.trim()) return v.trim();
@@ -687,6 +688,53 @@ function LobbyCard({ room, idx, onJoin }: { room: any; idx: number; onJoin: (id:
   );
 }
 
+// The featured lobby (GET /featured), first in the lobbies grid and two cards
+// wide: its banner, name and pitch. A link, so the global button styles
+// (40-core-layout.css) leave it alone.
+function LeadLobbyCard({ lobby, onVisit }: { lobby: any; onVisit: (id: string) => void }) {
+  const id = roomId(lobby);
+  const name = roomName(lobby);
+  const accent = typeof lobby?.accentColor === "string" && /^#[0-9a-f]{6}$/i.test(lobby.accentColor) ? lobby.accentColor : "#7C3AED";
+  const banner = lobby?.bannerUrl;
+  const cnt = onlineCount(lobby);
+  return (
+    <Link
+      href={`/lobby/${encodeURIComponent(id)}`}
+      onClick={() => onVisit(id)}
+      className="home-lobby-card home-lobby-lead"
+      style={{ textDecoration: "none", color: "inherit", borderColor: `${accent}55` }}
+    >
+      {banner && (
+        <Image
+          src={banner}
+          alt=""
+          fill
+          sizes="(max-width: 760px) 100vw, 900px"
+          style={{ objectFit: "cover", pointerEvents: "none" }}
+          unoptimized={banner.startsWith("/")}
+        />
+      )}
+      {/* The words sit on the shade, so Blizzard (components/shell/BlizzardGuard.tsx)
+          reads a dark fill behind them over a banner and keeps them white. */}
+      <span
+        className="home-lobby-lead-content"
+        style={{
+          background: banner
+            ? "linear-gradient(90deg, rgba(8,8,12,.88) 0%, rgba(8,8,12,.55) 55%, rgba(8,8,12,.25))"
+            : `radial-gradient(ellipse at 18% 60%, ${accent}2e 0%, transparent 58%), radial-gradient(ellipse at 88% 18%, ${accent}1f 0%, transparent 46%)`,
+        }}
+      >
+        <span className="home-lobby-lead-tag" style={{ color: accent, border: `1px solid ${accent}55` }}>
+          <PulseDot color={accent} size={5} />
+          FEATURED{cnt > 0 ? ` · ${cnt} ONLINE` : ""}
+        </span>
+        <span className="home-lobby-lead-name">{name}</span>
+        {lobby?.description && <span className="home-lobby-lead-desc">{lobby.description}</span>}
+      </span>
+    </Link>
+  );
+}
+
 // (The old FriendStrip lived here — replaced by components/HomePulse, which
 // adds live refresh and the join-a-friend door.)
 
@@ -781,15 +829,18 @@ export default function HomePage() {
   }, [me?.id, joinedRoomId, joinStatus, join]);
 
   const [showShowcase, setShowShowcase] = useState(false);
-  // The office desk keeps the stock Home and has no Design.
+  const { openSheet } = useOverlay() as any;
+  // The office desk keeps the Home it always had, and has no Design.
   const office = useOfficeSkin();
   const ownHome = useShellLayout().home;
-  const homeLayout = office ? STOCK_HOME : ownHome;
+  const homeLayout = office ? LEGACY_HOME : ownHome;
   const [fetchedRooms, setFetchedRooms] = React.useState<any[]>([]);
 
   const [lobbyPresenceCounts, setLobbyPresenceCounts] = React.useState<Record<string, number>>({});
 
   const [featuredLobby, setFeaturedLobby] = React.useState<any>(null);
+  // Every lobby, as the lobby browser lists them (the grid shows the live set).
+  const [lobbyTotal, setLobbyTotal] = React.useState(0);
 
   const [serverRecents, setServerRecents] = React.useState<any[]>([]);
 
@@ -809,6 +860,7 @@ export default function HomePage() {
       const lobbies = Array.isArray(lobbyData?.lobbies)
         ? lobbyData.lobbies.map((l: any) => ({ ...l, pinned: true, onlineCount: l._count?.members ?? 0 }))
         : [];
+      setLobbyTotal(lobbies.length);
       const rms = Array.isArray(roomData?.rooms) ? roomData.rooms : [];
       const seen = new Set<string>();
       const merged = [...lobbies, ...rms].filter(r => {
@@ -972,6 +1024,8 @@ export default function HomePage() {
   // decides which show and in what order, with their blocks between them.
   const homeSection = (id: string): React.ReactNode => {
     switch (id) {
+      case "build":
+        return <HomeBuild lobbies={lobbies} signedIn={!!me?.id} canDesign={!!me && !office} />;
       case "ticker":
         return (
           <>
@@ -1009,6 +1063,9 @@ export default function HomePage() {
         return (
           <>
             {lobbies.length > 0 && (() => {
+              // The featured lobby leads the grid, unless this Home also
+              // shows it as the big banner.
+              const lead = homeLayout.includes("hero") ? null : featured;
               const visibleLobbies = lobbies.filter(r => featuredId ? (roomId(r) !== featuredId) : true);
               const FEATURED_PRIORITY = ["eve", "destiny2", "poe", "helldivers2", "league-of-legends", "fakeout", "fortnite", "windrose", "counter-strike-2", "dota-2", "pubg", "mlb", "pga", "chess"];
               const pri = (r: any) => { const i = FEATURED_PRIORITY.indexOf(roomId(r)); return i === -1 ? 999 : i; };
@@ -1017,12 +1074,13 @@ export default function HomePage() {
                 if (pa !== pb) return pa - pb;
                 return (b?.featured ? 1 : 0) - (a?.featured ? 1 : 0);
               });
-              const cardLobbies = ordered.slice(0, 7);
-              const canCreate = String(me?.tier || "INNOCENT").toUpperCase() !== "INNOCENT";
+              // Three full rows: the lead takes two cells, Browse one.
+              const cardLobbies = ordered.slice(0, lead ? 6 : 8);
               return (
                 <div style={{ marginTop: 24 }}>
                   <SectionHeader icon="&#10022;" label="Featured Lobbies" sub="verified communities" />
                   <div className="weered-lobby-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
+                    {lead && <LeadLobbyCard lobby={lead} onVisit={handleLobbyVisit} />}
                     {cardLobbies.map((r, i) => <LobbyCard key={roomId(r) || i} room={r} idx={i} onJoin={(id) => { handleLobbyVisit(id); handleJoin(id, true); }} />)}
 
                     <div
@@ -1043,35 +1101,11 @@ export default function HomePage() {
                     >
                       <div style={{ fontSize: 28, marginBottom: 4, opacity: 0.85 }}>🧭</div>
                       <div style={{ fontFamily: "var(--font-barlow), sans-serif", fontWeight: 800, fontSize: 15, letterSpacing: "1px", textTransform: "uppercase", color: "rgba(243,244,246,.95)" }}>
-                        Browse all {lobbies.length} lobbies
+                        Browse all {lobbyTotal || lobbies.length} lobbies
                       </div>
                       <div style={{ fontSize: 10, color: "rgba(148,163,184,.55)" }}>Search · discover · find your community</div>
                     </div>
 
-                    <div
-                      onClick={() => router.push(canCreate ? "/lobby/create" : "/subscribe")}
-                      onKeyDown={onActivate(() => router.push(canCreate ? "/lobby/create" : "/subscribe"))}
-                      role="button"
-                      tabIndex={0}
-                      style={{
-                        background: "linear-gradient(135deg, rgba(245,183,0,.12), rgba(88,0,229,.10))",
-                        border: "1px solid rgba(245,183,0,.30)",
-                        borderRadius: 2, cursor: "pointer", position: "relative", overflow: "hidden",
-                        transition: "border-color .2s, transform .15s",
-                        display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-                        minHeight: 112, gap: 4,
-                      }}
-                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(245,183,0,.6)"; (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)"; }}
-                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(245,183,0,.30)"; (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; }}
-                    >
-                      <div style={{ fontSize: 30, marginBottom: 2, opacity: 0.9, color: "#f5b700", fontWeight: 300, lineHeight: 1 }}>+</div>
-                      <div style={{ fontFamily: "var(--font-barlow), sans-serif", fontWeight: 800, fontSize: 15, letterSpacing: "1px", textTransform: "uppercase", color: "#f5d27a" }}>
-                        Build your lobby
-                      </div>
-                      <div style={{ fontSize: 10, color: "rgba(245,210,122,.55)" }}>
-                        {canCreate ? "Your game · your rules · your brand" : "Get Indicted to host your own"}
-                      </div>
-                    </div>
                   </div>
                 </div>
               );
@@ -1176,18 +1210,18 @@ export default function HomePage() {
     <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}>
 
       <div className="home-topbar" style={{ display: "flex", alignItems: "center", gap: 14, padding: "16px 20px 12px", borderBottom: "1px solid rgba(255,255,255,.06)", flexShrink: 0, flexWrap: "wrap" }}>
-        <div className="home-topbar-greet" style={{ flex: 1, minWidth: 0 }}>
+        <div className="home-topbar-greet" style={{ flex: "0 1 auto", minWidth: 120 }}>
           <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: "1.5px", textTransform: "uppercase", color: "rgba(255,255,255,.25)" }}>{greeting()}</div>
           <div style={{ fontWeight: 900, fontSize: 22, lineHeight: 1.1, marginTop: 3, letterSpacing: "-0.5px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
             Hey, <span style={{ color: "#5800E5" }}>{myName}</span>
           </div>
         </div>
 
-        <div className="home-topbar-search" style={{ flex: "1 1 auto", display: "flex", justifyContent: "center", minWidth: 0, maxWidth: 600 }}>
-          <LobbySearch hero width={560} />
+        <div className="home-topbar-search" style={{ flex: "1 1 360px", display: "flex", justifyContent: "center", minWidth: 0, maxWidth: 680 }}>
+          <LobbySearch hero width={680} />
         </div>
 
-        <div className="home-topbar-actions" style={{ flex: 1, display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 10 }}>
+        <div className="home-topbar-actions" style={{ flex: "0 0 auto", display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 10 }}>
           {me && !office && (
             <button
               type="button"
@@ -1256,7 +1290,16 @@ export default function HomePage() {
 
       <style>{`div::-webkit-scrollbar{display:none}`}</style>
 
-      <FeatureShowcase open={showShowcase} onClose={() => setShowShowcase(false)} />
+      <WeeredGuide
+        open={showShowcase}
+        onClose={() => setShowShowcase(false)}
+        actions={{
+          design: me && !office ? () => startDesign() : undefined,
+          look: () => openSheet?.("settings", { tab: "appearance" }),
+          build: () => router.push("/lobby/create"),
+          href: (path) => router.push(path),
+        }}
+      />
 
       {me && !office && <ShellDesigner />}
 

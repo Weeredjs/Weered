@@ -21,6 +21,7 @@ export const REGION_LABEL: Record<ShellRegion, string> = {
 export const LEFT_CORES = ["card", "nav", "presence", "favs", "recent"] as const;
 export const PANEL_CORES = ["whoshere", "rooms", "friends", "crew", "discover"] as const;
 export const HOME_CORES = [
+  "build",
   "ticker",
   "pulse",
   "hero",
@@ -138,6 +139,12 @@ export const CORE_META: Record<CoreId, CoreMeta> = {
     icon: "🔭",
     regions: ["left", "right"],
   },
+  build: {
+    name: "Build your own",
+    blurb: "Build a lobby, design your Weered, and the lobbies you run.",
+    icon: "🛠",
+    regions: ["home"],
+  },
   ticker: {
     name: "Activity ticker",
     blurb: "Live rooms and lobbies, scrolling past.",
@@ -146,7 +153,7 @@ export const CORE_META: Record<CoreId, CoreMeta> = {
   },
   pulse: {
     name: "Friends & crew",
-    blurb: "Who's on and where, one click to join them.",
+    blurb: "Friends and crew who are on, where they are, one click to join them.",
     icon: "💫",
     regions: ["home"],
   },
@@ -329,11 +336,36 @@ export const itemName = (it: ShellItem): string =>
 export const itemIcon = (it: ShellItem): string =>
   isCore(it) ? CORE_META[it].icon : BLOCK_META[it.type]?.icon || "▪";
 
+// Home, re-arranged 2026-10-30 (James: "lose staff pics", "a focus on build
+// your own. Right at the top", "this entire section needs a re-arrangement"):
+// build first, then who's on and what's live, the lobbies, the news. The
+// rest repeated something already on screen (the ticker and the big banner
+// list lobbies the grid shows; Recently visited and Messages are in the
+// sidebar and the dock; Activity was an XP log), so they start switched off,
+// one click away in Design.
 const STOCK: Record<ShellRegion, CoreId[]> = {
   left: ["card", "nav", "presence", "favs", "recent"],
   right: ["whoshere", "rooms", "friends", "crew", "discover"],
-  home: [...HOME_CORES],
+  home: ["build", "pulse", "live", "featured", "news", "upgrade"],
 };
+/** Sections that start switched off. */
+const STOCK_OFF: CoreId[] = ["ticker", "hero", "popular", "dms", "activity", "visited"];
+/** Home as it came before 2026-10-30. A saved Home still in exactly this order
+ *  was never arranged by hand, so it follows the new one; the office desk
+ *  (components/useOfficeSkin.ts) keeps it. */
+export const LEGACY_HOME: CoreId[] = [
+  "ticker",
+  "pulse",
+  "hero",
+  "live",
+  "featured",
+  "news",
+  "upgrade",
+  "popular",
+  "dms",
+  "activity",
+  "visited",
+];
 
 export function stockShell(): ShellLayout {
   return {
@@ -341,7 +373,7 @@ export function stockShell(): ShellLayout {
     left: [...STOCK.left],
     right: [...STOCK.right],
     home: [...STOCK.home],
-    hidden: [],
+    hidden: [...STOCK_OFF],
   };
 }
 
@@ -430,6 +462,7 @@ export function newShellBlock(type: ShellBlockType, props: Record<string, any> =
 function restoreMissing(l: ShellLayout): ShellLayout {
   const has = (id: CoreId) =>
     l.left.includes(id) || l.right.includes(id) || l.home.includes(id) || l.hidden.includes(id);
+  for (const id of STOCK_OFF) if (!has(id) && !CORE_META[id].locked) l.hidden.push(id);
   for (const region of REGIONS) {
     const stock = STOCK[region];
     stock.forEach((id, i) => {
@@ -474,7 +507,11 @@ export function sanitizeShell(raw: unknown): ShellLayout | null {
   };
   const left = take(r.left, "left");
   const right = take(r.right, "right");
-  const home = take(r.home, "home");
+  const legacy =
+    Array.isArray(r.home) &&
+    r.home.length === LEGACY_HOME.length &&
+    r.home.every((x: unknown, i: number) => x === LEGACY_HOME[i]);
+  const home = take(legacy ? STOCK.home : r.home, "home");
   const hidden: CoreId[] = [];
   for (const x of Array.isArray(r.hidden) ? r.hidden : []) {
     const id = x as CoreId;
@@ -502,7 +539,7 @@ export function shellFromPrefs(p: {
     );
     for (const s of LEFT_CORES) if (!order.includes(s)) order.push(s);
     base.left = order.filter((s) => !off.has(s));
-    base.hidden = order.filter((s) => off.has(s));
+    base.hidden = [...base.hidden, ...order.filter((s) => off.has(s))];
   }
   return base;
 }
@@ -636,19 +673,7 @@ export const SHELL_PRESETS: ShellPreset[] = [
     build: () => ({
       left: ["card", "nav", "friends", "crew", "favs", "presence", "recent"],
       right: ["rooms", "whoshere", "discover"],
-      home: [
-        "ticker",
-        "pulse",
-        "dms",
-        "activity",
-        "hero",
-        "live",
-        "featured",
-        "news",
-        "upgrade",
-        "popular",
-        "visited",
-      ],
+      home: ["build", "pulse", "dms", "activity", "live", "featured", "news", "upgrade", "visited"],
     }),
   },
   {
@@ -670,7 +695,20 @@ export const SHELL_PRESETS: ShellPreset[] = [
     build: () => ({
       left: ["card", "nav", "presence", "friends", "favs", "recent"],
       right: ["whoshere", "rooms", "crew", "discover"],
-      home: [...STOCK.home],
+      home: [
+        "build",
+        "pulse",
+        "ticker",
+        "hero",
+        "live",
+        "featured",
+        "news",
+        "upgrade",
+        "popular",
+        "dms",
+        "activity",
+        "visited",
+      ],
     }),
   },
   {

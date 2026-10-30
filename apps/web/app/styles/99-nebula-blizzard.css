@@ -299,3 +299,35 @@ html[data-weered-theme="nebula"][data-weered-palette="blizzard"][data-weered-lin
   ) {
   border: 1px solid rgb(15 23 42 / 0.8) !important;
 }
+
+/* Home: Build your own and the search's Browse (52-home.css). The art strip
+   and the featured lobby's banner keep their white type. */
+html[data-weered-theme="nebula"][data-weered-palette="blizzard"]:not([data-weered-lobby]):not(#nb)
+  :is(.home-build-title, .home-build-chip, .home-build-ghost, .home-build-mine-item a) {
+  color: #0f172a !important;
+  text-shadow: none !important;
+}
+html[data-weered-theme="nebula"][data-weered-palette="blizzard"]:not([data-weered-lobby]):not(#nb)
+  :is(.home-build-line, .home-build-mine-label) {
+  color: rgb(51 65 85 / 0.9) !important;
+}
+html[data-weered-theme="nebula"][data-weered-palette="blizzard"]:not([data-weered-lobby]):not(#nb)
+  :is(.home-build-chip, .home-build-mine-item) {
+  background: rgb(15 23 42 / 0.04) !important;
+}
+html[data-weered-theme="nebula"][data-weered-palette="blizzard"]:not([data-weered-lobby]):not(#nb)
+  .home-build-sketch {
+  background: rgb(15 23 42 / 0.05) !important;
+}
+html[data-weered-theme="nebula"][data-weered-palette="blizzard"]:not([data-weered-lobby]):not(#nb)
+  .home-search-hero
+  .home-search-browse {
+  background: rgb(15 23 42 / 0.045) !important;
+  border-color: rgb(15 23 42 / 0.16) !important;
+  color: #0f172a !important;
+}
+html[data-weered-theme="nebula"][data-weered-palette="blizzard"]:not([data-weered-lobby]):not(#nb)
+  .home-build-mine {
+  border-top-color: rgb(15 23 42 / 0.1) !important;
+  background: linear-gradient(90deg, rgb(255 255 255 / 0.95), rgb(255 255 255 / 0.82)) !important;
+}

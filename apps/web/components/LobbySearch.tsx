@@ -32,26 +32,7 @@ const HERO_HINTS = [
   "Roll for initiative in D&D…",
   "Talk Destiny raids…",
   "Paper-trade with FakeOut…",
-  "36 lobbies. Find your people.",
 ];
-
-const HERO_CHIPS: { label: string; logo: string; q: string }[] = [
-  { label: "Poker", logo: "/brand/lobbies/poker-logo.png", q: "poker" },
-  {
-    label: "EVE",
-    logo: "https://api.weered.ca/banners/lobby-logo-cmmqq3boa001s76y9a3lpbnxq-1780779044131.jpg",
-    q: "eve",
-  },
-  { label: "D&D", logo: "/brand/lobbies/dnd/shield-04.webp", q: "dnd" },
-  { label: "Destiny", logo: "/brand/lobbies/destiny2-logo.png", q: "destiny" },
-];
-
-const CHIP_CLIP = "polygon(7px 0, 100% 0, calc(100% - 7px) 100%, 0 100%)";
-const CHIP_FACE = "#120c20";
-const CHIP_CORONA =
-  "conic-gradient(from 12deg at 50% 55%, transparent 0 6deg, rgba(201,185,255,1) 9deg, transparent 13deg 41deg, rgba(188,166,255,.88) 45deg, transparent 49deg 96deg, rgba(201,185,255,1) 100deg, transparent 105deg 151deg, rgba(188,166,255,.82) 155deg, transparent 160deg 211deg, rgba(201,185,255,.97) 215deg, transparent 220deg 271deg, rgba(188,166,255,.88) 275deg, transparent 280deg 331deg, rgba(201,185,255,.95) 335deg, transparent 340deg 360deg)";
-const CHIP_MASK =
-  "radial-gradient(ellipse at center, #000 8%, rgba(0,0,0,.55) 40%, transparent 76%)";
 
 const FEATURED_PRIORITY = [
   "eve",
@@ -92,7 +73,6 @@ export default function LobbySearch({
   const [searching, setSearching] = useState(false);
   const [focused, setFocused] = useState(false);
   const [hintIdx, setHintIdx] = useState(0);
-  const [hoveredChip, setHoveredChip] = useState<string | null>(null);
   const [allLobbies, setAllLobbies] = useState<LobbyResult[]>([]);
 
   useEffect(() => {
@@ -182,12 +162,6 @@ export default function LobbySearch({
     setQ("");
     if (it.kind === "lobby") router.push(`/lobby/${it.lobby.id}`);
     else router.push(`/room/${it.room.id}`);
-  }
-
-  function pick(term: string) {
-    setQ(term);
-    setOpen(true);
-    inputRef.current?.focus();
   }
 
   function onKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
@@ -324,228 +298,114 @@ export default function LobbySearch({
   );
 
   if (hero) {
-    const ph = focused || q ? "Search lobbies, rooms, people, tags…" : HERO_HINTS[hintIdx];
+    const hints = allLobbies.length
+      ? [...HERO_HINTS, `${allLobbies.length} lobbies. Find your people.`]
+      : HERO_HINTS;
+    const ph =
+      focused || q ? "Search lobbies, rooms, people, tags…" : hints[hintIdx % hints.length];
     return (
       <div
         ref={boxRef}
         className="home-topbar-search home-search-hero"
-        style={{ width, maxWidth: "100%" }}
+        style={{ width: "100%", maxWidth: width }}
       >
-        <style>{`@keyframes weeredSearchBreath{0%,100%{box-shadow:0 0 0 1px rgba(124,58,237,.38),0 0 22px rgba(124,58,237,.18)}50%{box-shadow:0 0 0 1px rgba(124,58,237,.58),0 0 38px rgba(124,58,237,.32)}}@keyframes weeredChipCorona{0%{transform:rotate(0deg) scale(.98)}50%{transform:rotate(6deg) scale(1.05)}100%{transform:rotate(0deg) scale(.98)}}`}</style>
-        <div style={{ position: "relative" }}>
-          <span
-            aria-hidden
-            style={{
-              position: "absolute",
-              left: 17,
-              top: "50%",
-              transform: "translateY(-50%)",
-              color: focused ? "#a78bfa" : "rgba(167,139,250,.7)",
-              pointerEvents: "none",
-              display: "flex",
-              transition: "color .2s",
-            }}
-          >
-            <svg
-              width="19"
-              height="19"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.4"
-              strokeLinecap="round"
-              strokeLinejoin="round"
+        <style>{`@keyframes weeredSearchBreath{0%,100%{box-shadow:0 0 0 1px rgba(124,58,237,.38),0 0 22px rgba(124,58,237,.18)}50%{box-shadow:0 0 0 1px rgba(124,58,237,.58),0 0 38px rgba(124,58,237,.32)}}`}</style>
+        <div className="home-search-row">
+          <div style={{ position: "relative", flex: 1, minWidth: 0 }}>
+            <span
+              aria-hidden
+              style={{
+                position: "absolute",
+                left: 17,
+                top: "50%",
+                transform: "translateY(-50%)",
+                color: focused ? "#a78bfa" : "rgba(167,139,250,.7)",
+                pointerEvents: "none",
+                display: "flex",
+                transition: "color .2s",
+              }}
             >
-              <circle cx="11" cy="11" r="7" />
-              <path d="M21 21l-4.3-4.3" />
-            </svg>
-          </span>
-          <input
-            ref={inputRef}
-            data-weered-search
-            value={q}
-            onChange={(e) => {
-              setQ(e.target.value);
-              setOpen(true);
-            }}
-            onFocus={() => {
-              setFocused(true);
-              setOpen(true);
-            }}
-            onBlur={() => setFocused(false)}
-            onKeyDown={onKeyDown}
-            placeholder={ph}
-            style={{
-              width: "100%",
-              boxSizing: "border-box",
-              background: focused ? "rgba(124,58,237,.12)" : "rgba(124,58,237,.05)",
-              border: `1.5px solid ${focused ? "rgba(167,139,250,.85)" : "rgba(124,58,237,.40)"}`,
-              borderRadius: 4,
-              padding: "15px 18px 15px 50px",
-              color: "#fff",
-              fontSize: 16,
-              fontWeight: 500,
-              outline: "none",
-              fontFamily: "inherit",
-              letterSpacing: ".01em",
-              boxShadow: focused
-                ? "0 0 0 1px rgba(167,139,250,.7), 0 0 34px rgba(124,58,237,.40)"
-                : undefined,
-              animation: focused ? "none" : "weeredSearchBreath 3.6s ease-in-out infinite",
-              transition: "background .2s, border-color .2s",
-            }}
-          />
-          {dropdown}
-        </div>
-
-        <div
-          style={{
-            display: "flex",
-            gap: 8,
-            marginTop: 9,
-            justifyContent: "center",
-            alignItems: "center",
-            flexWrap: "wrap",
-          }}
-        >
-          <span
-            style={{
-              fontSize: 10,
-              fontWeight: 800,
-              letterSpacing: ".12em",
-              textTransform: "uppercase",
-              color: "rgba(167,139,250,.7)",
-              marginRight: 2,
-            }}
-          >
-            Staff Picks
-          </span>
-          {HERO_CHIPS.map((c) => {
-            const on = hoveredChip === c.q;
-            return (
-              <span key={c.q} style={{ position: "relative", display: "inline-flex" }}>
-                <span
-                  aria-hidden
-                  style={{
-                    position: "absolute",
-                    top: -17,
-                    bottom: -17,
-                    left: -22,
-                    right: -22,
-                    zIndex: 0,
-                    pointerEvents: "none",
-                    background: CHIP_CORONA,
-                    WebkitMaskImage: CHIP_MASK,
-                    maskImage: CHIP_MASK,
-                    filter: "blur(2.4px)",
-                    opacity: on ? 0.8 : 0.5,
-                    transition: "opacity .18s",
-                    animation: "weeredChipCorona 80s ease-in-out infinite",
-                  }}
-                />
-                <span
-                  aria-hidden
-                  style={{
-                    position: "absolute",
-                    top: -2,
-                    bottom: -2,
-                    left: -2,
-                    right: -2,
-                    zIndex: 1,
-                    pointerEvents: "none",
-                    clipPath: CHIP_CLIP,
-                    background: `rgba(167,139,250,${on ? 0.95 : 0.72})`,
-                    transition: "background .15s",
-                  }}
-                />
-                <span
-                  aria-hidden
-                  style={{
-                    position: "absolute",
-                    top: -1,
-                    bottom: -1,
-                    left: -1,
-                    right: -1,
-                    zIndex: 2,
-                    pointerEvents: "none",
-                    clipPath: CHIP_CLIP,
-                    background:
-                      "linear-gradient(135deg, rgba(46,26,78,.96) 0%, rgba(20,11,38,.96) 100%)",
-                  }}
-                />
-                <button
-                  type="button"
-                  onClick={() => pick(c.q)}
-                  onMouseEnter={() => setHoveredChip(c.q)}
-                  onMouseLeave={() => setHoveredChip((h) => (h === c.q ? null : h))}
-                  style={{
-                    position: "relative",
-                    zIndex: 3,
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 7,
-                    padding: "6px 14px",
-                    cursor: "pointer",
-                    fontFamily: "inherit",
-                    fontSize: 12,
-                    fontWeight: 700,
-                    letterSpacing: ".02em",
-                    color: on ? "#fff" : "rgba(226,232,240,.85)",
-                    background: CHIP_FACE,
-                    border: "none",
-                    clipPath: CHIP_CLIP,
-                    boxShadow: "none",
-                    transition: "color .15s",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  <img
-                    src={c.logo}
-                    alt=""
-                    style={{ width: 16, height: 16, objectFit: "contain", flexShrink: 0 }}
-                  />
-                  {c.label}
-                </button>
-              </span>
-            );
-          })}
+              <svg
+                width="19"
+                height="19"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.4"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <circle cx="11" cy="11" r="7" />
+                <path d="M21 21l-4.3-4.3" />
+              </svg>
+            </span>
+            <input
+              ref={inputRef}
+              data-weered-search
+              value={q}
+              onChange={(e) => {
+                setQ(e.target.value);
+                setOpen(true);
+              }}
+              onFocus={() => {
+                setFocused(true);
+                setOpen(true);
+              }}
+              onBlur={() => setFocused(false)}
+              onKeyDown={onKeyDown}
+              placeholder={ph}
+              style={{
+                width: "100%",
+                boxSizing: "border-box",
+                background: focused ? "rgba(124,58,237,.12)" : "rgba(124,58,237,.05)",
+                border: `1.5px solid ${focused ? "rgba(167,139,250,.85)" : "rgba(124,58,237,.40)"}`,
+                borderRadius: 4,
+                padding: "15px 18px 15px 50px",
+                color: "#fff",
+                fontSize: 16,
+                fontWeight: 500,
+                outline: "none",
+                fontFamily: "inherit",
+                letterSpacing: ".01em",
+                boxShadow: focused
+                  ? "0 0 0 1px rgba(167,139,250,.7), 0 0 34px rgba(124,58,237,.40)"
+                  : undefined,
+                animation: focused ? "none" : "weeredSearchBreath 3.6s ease-in-out infinite",
+                transition: "background .2s, border-color .2s",
+              }}
+            />
+            {dropdown}
+          </div>
           <button
             type="button"
+            className="home-search-browse"
+            title="Browse every lobby"
             onClick={() => {
+              setOpen(false);
               try {
                 window.dispatchEvent(new CustomEvent("weered:lobby:browse"));
               } catch {}
             }}
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 4,
-              padding: "6px 14px",
-              cursor: "pointer",
-              fontFamily: "inherit",
-              fontSize: 12,
-              fontWeight: 700,
-              letterSpacing: ".02em",
-              color: "rgba(148,163,184,.7)",
-              background: "transparent",
-              border: "none",
-              clipPath: CHIP_CLIP,
-              boxShadow: "inset 0 0 0 1px rgba(255,255,255,.10)",
-              transition: "color .15s, box-shadow .15s",
-              whiteSpace: "nowrap",
-            }}
-            onMouseEnter={(e) => {
-              const t = e.currentTarget;
-              t.style.color = "#fff";
-              t.style.boxShadow = "inset 0 0 0 1px rgba(255,255,255,.26)";
-            }}
-            onMouseLeave={(e) => {
-              const t = e.currentTarget;
-              t.style.color = "rgba(148,163,184,.7)";
-              t.style.boxShadow = "inset 0 0 0 1px rgba(255,255,255,.10)";
-            }}
           >
-            Browse all 36 →
+            <svg
+              aria-hidden
+              width="15"
+              height="15"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <rect x="3" y="3" width="7" height="7" rx="1.5" />
+              <rect x="14" y="3" width="7" height="7" rx="1.5" />
+              <rect x="3" y="14" width="7" height="7" rx="1.5" />
+              <rect x="14" y="14" width="7" height="7" rx="1.5" />
+            </svg>
+            <span className="home-search-browse-label">
+              Browse{allLobbies.length ? ` all ${allLobbies.length}` : " all"}
+            </span>
           </button>
         </div>
       </div>

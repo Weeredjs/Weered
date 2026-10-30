@@ -5,6 +5,11 @@ import React from "react";
 
 export const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
+/** `px` below the top of the window, clear of the desktop app's title bar
+ *  (--wtb-h: 38px there, 0 in a browser; styles/90-desktop-chrome.css).
+ *  James 2026-10-30: the Design bars sat under it in the desktop app. */
+export const belowTitlebar = (px: number) => `calc(var(--wtb-h, 0px) + ${px}px)`;
+
 export const panel: React.CSSProperties = {
   position: "fixed",
   zIndex: 99990,

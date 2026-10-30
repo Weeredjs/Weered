@@ -426,6 +426,29 @@ export default function CreateLobbyPage() {
   const goTo = (id: string) =>
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
 
+  // Home's Build your own (components/HomeBuild.tsx) opens the composer on a
+  // template (?start=OFFICE) or on a group of them (?start=games).
+  const [startGroup, setStartGroup] = useState<"games" | "work" | "community" | null>(null);
+  useEffect(() => {
+    let start = "";
+    try {
+      start = new URLSearchParams(window.location.search).get("start") || "";
+    } catch {}
+    if (start === "games" || start === "work" || start === "community") {
+      setStartGroup(start);
+      return;
+    }
+    const g = GAME_BY_ID[start];
+    if (g && !g.action) pickGame(g);
+    // Once, on arrival; the draft restore above has run by now.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  useEffect(() => {
+    if (loading || !startGroup) return;
+    const t = setTimeout(() => goTo("cz-game"), 300);
+    return () => clearTimeout(t);
+  }, [loading, startGroup]);
+
   // ── Toast ───────────────────────────────────────────────────────────────
   const [toast, setToast] = useState<{ ok: boolean; text: string } | null>(null);
   useEffect(() => {
@@ -1066,7 +1089,14 @@ export default function CreateLobbyPage() {
             kicker="Work, a club, a game. Pick one and the lobby sets itself up for it."
             accent={accent}
           >
-            <GameGrid value={gameId} accent={accent} onPick={pickGame} onRequest={requestGame} />
+            <GameGrid
+              key={startGroup || "all"}
+              initialGroup={startGroup || "all"}
+              value={gameId}
+              accent={accent}
+              onPick={pickGame}
+              onRequest={requestGame}
+            />
           </Section>
 
           {/* 3. Look */}

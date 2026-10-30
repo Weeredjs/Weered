@@ -423,3 +423,87 @@ html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) ::-webkit-scr
   background: rgb(var(--nb-a) / 0.22);
   border-radius: 99px;
 }
+
+/* ── Home: Build your own (components/HomeBuild.tsx) ───────────────── */
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .home-build-card {
+  border-radius: 20px !important;
+  border: 1px solid rgb(var(--nb-a) / 0.3) !important;
+  background:
+    radial-gradient(120% 150% at 0% 0%, rgb(var(--nb-b) / 0.32), transparent 58%), var(--nb-glass) !important;
+  box-shadow: var(--nb-shadow) !important;
+  -webkit-backdrop-filter: blur(14px) saturate(1.2);
+  backdrop-filter: blur(14px) saturate(1.2);
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .home-build-eyebrow {
+  color: rgb(var(--nb-a)) !important;
+  font-family: var(--nb-font) !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .home-build-title {
+  font-family: var(--nb-font) !important;
+  text-transform: none !important;
+  letter-spacing: 0 !important;
+  text-shadow: 0 0 26px rgb(var(--nb-a) / 0.5);
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .home-build .home-build-go {
+  border-radius: 999px !important;
+  border: 1px solid rgb(255 255 255 / 0.22) !important;
+  background: linear-gradient(135deg, rgb(var(--nb-a)), rgb(var(--nb-b))) !important;
+  box-shadow: 0 12px 30px -14px rgb(var(--nb-b) / 0.95) !important;
+  color: var(--nb-on) !important;
+  font-family: var(--nb-font) !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb)
+  .home-build
+  :is(.home-build-ghost, .home-build-chip, .home-build-mine-item) {
+  border-radius: 999px !important;
+  border-color: rgb(var(--nb-a) / 0.32) !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb)
+  .home-build
+  :is(.home-build-ghost, .home-build-chip):hover {
+  border-color: rgb(var(--nb-a) / 0.65) !important;
+  background: rgb(var(--nb-a) / 0.16) !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .home-build-sketch {
+  border-radius: 12px !important;
+  border-color: rgb(var(--nb-a) / 0.35) !important;
+  box-shadow: 0 18px 40px -20px rgb(var(--nb-b) / 0.9) !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .hbs-col i {
+  background: rgb(var(--nb-a) / 0.3) !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .hbs-left i:first-child {
+  background: rgb(var(--nb-a) / 0.6) !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .hbs-home b {
+  background: linear-gradient(135deg, rgb(var(--nb-a)), rgb(var(--nb-c))) !important;
+}
+/* The search's Browse matches the field beside it. */
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb)
+  .home-search-hero
+  .home-search-browse {
+  border-radius: 16px !important;
+  border: 1px solid rgb(var(--nb-a) / 0.36) !important;
+  background: rgb(var(--nb-ink-2) / 0.62) !important;
+  color: #fff !important;
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb)
+  .home-search-hero
+  .home-search-browse:hover {
+  border-color: rgb(var(--nb-a) / 0.7) !important;
+  background: rgb(var(--nb-a) / 0.18) !important;
+}
+/* The featured lobby, leading the grid. */
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .home-lobby-lead {
+  border: 1px solid rgb(var(--nb-a) / 0.32) !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .home-lobby-lead-name {
+  font-family: var(--nb-font) !important;
+  text-transform: none !important;
+  letter-spacing: 0 !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .home-lobby-lead-tag {
+  border-radius: 999px !important;
+}

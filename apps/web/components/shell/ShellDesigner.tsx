@@ -7,7 +7,7 @@
 // or by landing on /home?design=1.
 import React, { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { IconBtn, chip, panel } from "../lobby-design/designerKit";
+import { IconBtn, belowTitlebar, chip, panel } from "../lobby-design/designerKit";
 import Confetti from "../composer/Confetti";
 import { useWeered } from "../WeeredProvider";
 import { hideItem, findItem, type ShellRegion } from "../../lib/shellLayout";
@@ -157,7 +157,7 @@ export default function ShellDesigner() {
         className="weered-shell-design-bar"
         style={{
           ...panel,
-          top: 12,
+          top: belowTitlebar(12),
           left: panelOpen ? 344 : 12,
           right: 12,
           display: "flex",
@@ -263,7 +263,7 @@ export default function ShellDesigner() {
         hidden={!panelOpen}
         style={{
           ...panel,
-          top: 12,
+          top: belowTitlebar(12),
           left: 12,
           bottom: 12,
           width: 320,

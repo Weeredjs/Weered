@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   CORE_IDS,
   CORE_META,
+  LEGACY_HOME,
   SHELL_PRESETS,
   findItem,
   hideItem,
@@ -94,7 +95,7 @@ describe("the viewer's own layout", () => {
       rail: { order: ["favs", "card", "nav"], hidden: ["presence", "nav"] },
     });
     expect(l.left).toEqual(["favs", "card", "nav", "recent"]);
-    expect(l.hidden).toEqual(["presence"]);
+    expect(l.hidden).toEqual([...stockShell().hidden, "presence"]);
     expectWhole(l);
     expect(railFromShell(l)).toEqual({
       order: ["favs", "card", "nav", "recent", "presence"],
@@ -236,5 +237,52 @@ describe("custom colourway", () => {
   it("falls back to violet for anything unknown", () => {
     expect(paletteColours(undefined).name).toBe("Violet");
     expect(paletteColours("custom", "nope").a).toMatch(/^#[0-9a-f]{6}$/);
+  });
+});
+
+describe("Home, re-arranged 2026-10-30", () => {
+  const OFF = ["ticker", "hero", "popular", "dms", "activity", "visited"];
+
+  it("leads with Build your own and starts the repeats switched off", () => {
+    const s = stockShell();
+    expect(s.home).toEqual(["build", "pulse", "live", "featured", "news", "upgrade"]);
+    expect(s.hidden).toEqual(expect.arrayContaining(OFF));
+    expectWhole(s);
+  });
+
+  it("moves a Home still in the old stock order to the new one", () => {
+    const old = { ...stockShell(), home: [...LEGACY_HOME], hidden: [] };
+    const l = sanitizeShell(old)!;
+    expect(l.home).toEqual(stockShell().home);
+    expect(l.hidden).toEqual(expect.arrayContaining(OFF));
+    expectWhole(l);
+  });
+
+  it("keeps a Home arranged by hand, with Build your own added at the top", () => {
+    const l = sanitizeShell({
+      ...stockShell(),
+      home: ["featured", "ticker", "news", "upgrade", "pulse", "live"],
+      hidden: ["hero", "popular", "dms", "activity", "visited"],
+    })!;
+    expect(l.home).toEqual(["build", "featured", "ticker", "news", "upgrade", "pulse", "live"]);
+    expectWhole(l);
+  });
+
+  it("leaves Build your own off for someone who switched it off", () => {
+    const l = sanitizeShell({
+      ...stockShell(),
+      hidden: [...stockShell().hidden, "build"],
+      home: ["pulse", "upgrade"],
+    })!;
+    expect(l.home).not.toContain("build");
+    expect(l.hidden).toContain("build");
+    expectWhole(l);
+  });
+
+  it("keeps every preset whole", () => {
+    for (const p of SHELL_PRESETS) expectWhole(presetLayout(p.id)!);
+    expect(
+      presetLayout("everything")!.hidden.filter((h) => CORE_META[h].regions.includes("home")),
+    ).toEqual([]);
   });
 });
