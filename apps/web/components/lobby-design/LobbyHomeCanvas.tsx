@@ -324,8 +324,13 @@ function BlockBody({ block, rooms, ...p }: CanvasProps & { block: Block; rooms: 
   const pad: React.CSSProperties = { padding: 18 };
   const lobby = encodeURIComponent(p.lobbyId);
 
+  // Upcoming only (from an hour ago, fixed for this mount): the oldest 50
+  // left a lobby with a long past showing an empty calendar.
+  const [since] = useState(() => new Date(Date.now() - 3600_000).toISOString());
   const events = useJson<any[]>(
-    block.type === "events" ? `${API}/lobbies/${lobby}/events?limit=50` : null,
+    block.type === "events"
+      ? `${API}/lobbies/${lobby}/events?limit=50&from=${encodeURIComponent(since)}`
+      : null,
     (j) =>
       (Array.isArray(j?.events) ? j.events : [])
         .filter((e: any) => Date.parse(e.startsAt) >= Date.now() - 3600_000)

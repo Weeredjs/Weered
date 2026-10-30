@@ -301,15 +301,17 @@ export function applyUiPrefs(p: UiPrefs) {
   }
 }
 
-function pushToAccount(patch: UiPrefs): Promise<boolean> {
+export type AccountSave = "ok" | "too_large" | "failed";
+
+function pushToAccount(patch: UiPrefs): Promise<AccountSave> {
   return fetch(`${API}/profile/me/ui`, {
     credentials: "include",
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ prefs: patch }),
   })
-    .then((r) => r.ok)
-    .catch(() => false);
+    .then((r) => (r.ok ? "ok" : r.status === 413 ? "too_large" : "failed") as AccountSave)
+    .catch(() => "failed" as AccountSave);
 }
 
 /** Merge a change into the stored prefs, paint it, tell listeners, and save
@@ -327,10 +329,13 @@ export function saveUiPrefs(patch: UiPrefs, opts: { local?: boolean } = {}): UiP
   return next;
 }
 
-/** saveUiPrefs that waits for the account to confirm. True when it did. */
-export async function saveUiPrefsToAccount(patch: UiPrefs): Promise<boolean> {
-  saveUiPrefs(patch, { local: true });
-  return pushToAccount(patch);
+/** Save to the account first and, once it has confirmed, here too: a change
+ *  the account refused must not show as saved in this browser only, to be
+ *  undone by the next sync. */
+export async function saveUiPrefsToAccount(patch: UiPrefs): Promise<AccountSave> {
+  const res = await pushToAccount(patch);
+  if (res === "ok") saveUiPrefs(patch, { local: true });
+  return res;
 }
 
 /** Pull the account's prefs and lay them over this browser's. Returns the

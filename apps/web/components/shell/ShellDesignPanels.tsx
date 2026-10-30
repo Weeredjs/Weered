@@ -76,19 +76,20 @@ export function SectionsTab({
     blurb: string,
     make: () => ShellItem,
     locked = false,
+    capped = false,
   ) => (
     <button
       key={key}
       type="button"
       onPointerDown={(e) => {
-        if (!locked && !full) beginLibraryDrag(make(), e);
+        if (!locked && !capped) beginLibraryDrag(make(), e);
       }}
       onClick={() => {
         if (locked) {
           window.location.href = "/subscribe";
           return;
         }
-        if (!full) add(make());
+        if (!capped) add(make());
       }}
       title={locked ? "Comes with a paid plan" : "Click to add, or drag it onto the page"}
       style={{
@@ -102,8 +103,8 @@ export function SectionsTab({
         background: "rgba(255,255,255,.03)",
         color: "inherit",
         textAlign: "left",
-        cursor: full ? "not-allowed" : "grab",
-        opacity: full ? 0.5 : 1,
+        cursor: capped ? "not-allowed" : "grab",
+        opacity: capped ? 0.5 : 1,
         touchAction: "none",
       }}
     >
@@ -183,6 +184,7 @@ export function SectionsTab({
                 b.blurb,
                 () => newShellBlock(b.type as ShellBlockType),
                 !canUseBlock(b.type, tier),
+                full,
               ),
             )}
           </div>
@@ -324,7 +326,8 @@ export function LayoutsTab({
       <div style={{ fontSize: 11.5, opacity: 0.62, lineHeight: 1.5 }}>
         Friends, Crew, Rooms, Who&apos;s here and Discover go in either sidebar. Your card,
         navigation, Presence, Favorites and Recent are built into the left one. Blocks go anywhere,
-        Home included.
+        Home included. On screens under 1400px wide the left sidebar folds into the icon strip; it
+        opens with one click.
       </div>
     </div>
   );

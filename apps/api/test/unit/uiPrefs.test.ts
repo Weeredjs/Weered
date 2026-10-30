@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mergeUiPrefs, RAIL_SECTIONS, sanitizeUiPrefs } from "../../src/lib/uiPrefs";
+import { mergeUiPrefs, RAIL_SECTIONS, sanitizeUiPrefs, shellRejected } from "../../src/lib/uiPrefs";
 
 describe("UI prefs", () => {
   it("keeps known values and drops everything else", () => {
@@ -124,6 +124,15 @@ describe("UI prefs", () => {
     expect(sanitizeUiPrefs({ shell: big }).shell).toBeUndefined();
     expect(sanitizeUiPrefs({ shell: "left" }).shell).toBeUndefined();
     expect(sanitizeUiPrefs({ shell: [1] }).shell).toBeUndefined();
+  });
+
+  it("says when a layout would be dropped, so the route can refuse it", () => {
+    const big = { left: [{ id: "b1", type: "rules", props: { body: "x".repeat(30_000) } }] };
+    expect(shellRejected({ shell: big })).toBe(true);
+    expect(shellRejected({ shell: "left" })).toBe(true);
+    expect(shellRejected({ shell: { left: ["card"] } })).toBe(false);
+    expect(shellRejected({ theme: "nebula" })).toBe(false);
+    expect(shellRejected({ shell: null })).toBe(false);
   });
 
   it("bounds what a block's settings can hold", () => {

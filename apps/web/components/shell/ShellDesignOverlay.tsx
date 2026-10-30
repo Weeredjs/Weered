@@ -265,7 +265,9 @@ export default function ShellDesignOverlay({ accent }: { accent: string }) {
     const byKey = new Map(geo.boxes.filter((b) => b.region === t.region).map((b) => [b.key, b]));
     const full = layout[t.region];
     const at = full[t.index];
-    const atBox = at && keyOf(at) !== dragKey ? byKey.get(keyOf(at)) : undefined;
+    // Over the dragged item itself the drop changes nothing; the bar sits at
+    // its top, where it already is.
+    const atBox = at ? byKey.get(keyOf(at)) : undefined;
     const last = [...list].reverse().find((it) => byKey.get(keyOf(it)));
     const lastBox = last ? byKey.get(keyOf(last)) : undefined;
     if (atBox) bar = { x: atBox.x, y: atBox.y - 7, w: atBox.w, h: 4 };

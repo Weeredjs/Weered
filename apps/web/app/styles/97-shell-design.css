@@ -395,6 +395,13 @@ html[data-weered-shell-design="1"] .weered-shell {
 html[data-weered-shell-design="1"][data-weered-shell-design-panel="off"] .weered-shell {
   left: 0 !important;
 }
+@media (max-width: 1399px) {
+  html[data-weered-shell-design="1"] .weered-left {
+    display: block !important;
+    width: 290px !important;
+    flex: 0 0 290px !important;
+  }
+}
 .weered-shell-design-panel[hidden] {
   display: none !important;
 }

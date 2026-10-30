@@ -7,7 +7,7 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import { BLOCK_META, type ShellBlock, type ShellRegion } from "../../lib/shellLayout";
+import { BLOCK_META, isSitePath, type ShellBlock, type ShellRegion } from "../../lib/shellLayout";
 import { spotifyEmbed, youTubeEmbed } from "../lobby-design/LobbyHomeCanvas";
 
 const RequestBoard = dynamic(() => import("../RequestBoard"), { ssr: false });
@@ -99,8 +99,13 @@ function Body({ block, wide }: { block: ShellBlock; wide: boolean }) {
     (j) => j?.lobby || null,
     null,
   );
+  // From an hour ago on, fixed for this mount (a fresh timestamp each
+  // render would be a fresh URL and a refetch every time).
+  const [since] = useState(() => new Date(Date.now() - 3600_000).toISOString());
   const events = useJson<any[]>(
-    block.type === "events" ? `${API}/lobbies/${encodeURIComponent(scope)}/events?limit=50` : null,
+    block.type === "events"
+      ? `${API}/lobbies/${encodeURIComponent(scope)}/events?limit=20&from=${encodeURIComponent(since)}`
+      : null,
     (j) =>
       (Array.isArray(j?.events) ? j.events : []).filter(
         (e: any) => Date.parse(e.startsAt) >= Date.now() - 3600_000,
@@ -118,7 +123,7 @@ function Body({ block, wide }: { block: ShellBlock; wide: boolean }) {
   switch (block.type) {
     case "welcome": {
       const raw = String(p.href || "");
-      const href = raw.startsWith("/") && !raw.startsWith("//") ? raw : https(raw);
+      const href = raw.startsWith("/") ? (isSitePath(raw) ? raw : "") : https(raw);
       const cta = p.cta ? (
         href.startsWith("/") ? (
           <Link href={href} className="wsb-cta">
@@ -204,6 +209,7 @@ function Body({ block, wide }: { block: ShellBlock; wide: boolean }) {
             title={`${p.channel} on Twitch`}
             src={`https://player.twitch.tv/?channel=${encodeURIComponent(p.channel)}&parent=${parent}&muted=true`}
             allowFullScreen
+            loading="lazy"
           />
         </div>
       );

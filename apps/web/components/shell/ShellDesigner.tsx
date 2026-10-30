@@ -136,12 +136,16 @@ export default function ShellDesigner() {
 
   const save = async () => {
     const rightBefore = JSON.stringify(s.base?.layout.right);
-    const ok = await saveDesign();
-    if (ok) {
+    const res = await saveDesign();
+    if (res === "ok") {
       setConfetti((n) => n + 1);
       if (JSON.stringify(d.layout.right) !== rightBefore && d.layout.right.length)
         window.dispatchEvent(new Event("weered:rail:open-right"));
-    } else weeredToast.error("Couldn't save to your account. Check your connection and try again.");
+    } else if (res === "too_large")
+      weeredToast.error(
+        "That's more than a layout can hold. Shorten a few blocks (long lists and banners take the most room), then Save.",
+      );
+    else weeredToast.error("Couldn't save to your account. Check your connection and try again.");
   };
 
   return createPortal(

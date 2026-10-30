@@ -20,7 +20,10 @@ import { onActivate } from "@/lib/a11y";
 import ShellSlot from "../../components/shell/ShellSlot";
 import ShellDesigner from "../../components/shell/ShellDesigner";
 import { startDesign, useShellLayout } from "../../lib/shellDesign";
-import { isCore, keyOf } from "../../lib/shellLayout";
+import { isCore, keyOf, stockShell } from "../../lib/shellLayout";
+import { useOfficeSkin } from "../../components/useOfficeSkin";
+
+const STOCK_HOME = stockShell().home;
 
 function pickFirst(...vals: any[]): string {
   for (const v of vals) if (typeof v === "string" && v.trim()) return v.trim();
@@ -778,7 +781,10 @@ export default function HomePage() {
   }, [me?.id, joinedRoomId, joinStatus, join]);
 
   const [showShowcase, setShowShowcase] = useState(false);
-  const homeLayout = useShellLayout().home;
+  // The office desk keeps the stock Home and has no Design.
+  const office = useOfficeSkin();
+  const ownHome = useShellLayout().home;
+  const homeLayout = office ? STOCK_HOME : ownHome;
   const [fetchedRooms, setFetchedRooms] = React.useState<any[]>([]);
 
   const [lobbyPresenceCounts, setLobbyPresenceCounts] = React.useState<Record<string, number>>({});
@@ -1182,7 +1188,7 @@ export default function HomePage() {
         </div>
 
         <div className="home-topbar-actions" style={{ flex: 1, display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 10 }}>
-          {me && (
+          {me && !office && (
             <button
               type="button"
               onClick={() => startDesign()}
@@ -1252,7 +1258,7 @@ export default function HomePage() {
 
       <FeatureShowcase open={showShowcase} onClose={() => setShowShowcase(false)} />
 
-      {me && <ShellDesigner />}
+      {me && !office && <ShellDesigner />}
 
       <LobbyChatDrawer roomId="room:lobby" title="Lobby Chat" />
     </div>

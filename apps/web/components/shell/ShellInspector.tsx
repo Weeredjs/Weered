@@ -7,6 +7,8 @@ import { IconBtn, chip, input, label } from "../lobby-design/designerKit";
 import {
   BLOCK_META,
   CORE_META,
+  SHELL_MAX_BLOCKS,
+  blockCount,
   REGION_LABEL,
   canPlace,
   entryIndex,
@@ -445,7 +447,14 @@ export default function ShellInspector({
           <button
             type="button"
             style={chip(false, accent)}
+            disabled={blockCount(layout) >= SHELL_MAX_BLOCKS}
+            title={
+              blockCount(layout) >= SHELL_MAX_BLOCKS
+                ? `A layout holds ${SHELL_MAX_BLOCKS} blocks`
+                : "Add a copy right after this one"
+            }
             onClick={() => {
+              if (blockCount(layout) >= SHELL_MAX_BLOCKS) return;
               const copy = newShellBlock(item.type, { ...item.props });
               copy.size = item.size;
               editLayout((l) => placeItem(l, copy, region, index + 1));

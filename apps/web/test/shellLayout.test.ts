@@ -12,7 +12,10 @@ import {
   placeItem,
   presetLayout,
   railFromShell,
+  SHELL_MAX_BLOCKS,
+  isSitePath,
   sanitizeShell,
+  sanitizeShellBlock,
   shellFromPrefs,
   stockShell,
   type ShellLayout,
@@ -152,6 +155,37 @@ describe("the viewer's own layout", () => {
   it("an edit forgets which preset the layout came from", () => {
     const l = presetLayout("focus")!;
     expect(placeItem(l, "crew", "left", 0).preset).toBeUndefined();
+  });
+});
+
+describe("what a layout may hold", () => {
+  it("takes only real Weered paths for a Banner button", () => {
+    expect(isSitePath("/lobby/timbos?view=events")).toBe(true);
+    expect(isSitePath("/forum")).toBe(true);
+    for (const bad of ["//evil.example", "/\\evil.example", "/x y", "javascript:alert(1)", "lobby"])
+      expect(isSitePath(bad)).toBe(false);
+    const b = sanitizeShellBlock({ id: "b1", type: "welcome", props: { href: "/\\evil.example" } });
+    expect(b?.props.href).toBe("");
+  });
+
+  it("keeps every block on a long Home (the block total is the limit)", () => {
+    const blocks = Array.from({ length: 14 }, (_, i) => ({
+      id: `h${i}`,
+      type: "countdown",
+      props: {},
+    }));
+    const l = sanitizeShell({ ...stockShell(), home: [...stockShell().home, ...blocks] })!;
+    expect(l.home.filter((x) => !isCore(x))).toHaveLength(14);
+  });
+
+  it("stops at the block total", () => {
+    const blocks = Array.from({ length: 35 }, (_, i) => ({
+      id: `k${i}`,
+      type: "links",
+      props: {},
+    }));
+    const l = sanitizeShell({ left: blocks })!;
+    expect(l.left.filter((x) => !isCore(x))).toHaveLength(SHELL_MAX_BLOCKS);
   });
 });
 

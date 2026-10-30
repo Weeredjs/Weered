@@ -14,7 +14,10 @@ import { LogoMenu } from "./LogoMenu";
 import { onActivate } from "@/lib/a11y";
 import ShellSlot from "./shell/ShellSlot";
 import { useShellLayout } from "../lib/shellDesign";
-import { isCore, keyOf, PANEL_CORES, type PanelCore } from "../lib/shellLayout";
+import { isCore, keyOf, PANEL_CORES, stockShell, type PanelCore } from "../lib/shellLayout";
+import { useOfficeSkin } from "./useOfficeSkin";
+
+const STOCK_SHELL = stockShell();
 
 const API_BASE = (process.env.NEXT_PUBLIC_API_BASE as string) || "http://127.0.0.1:4000";
 
@@ -1374,7 +1377,10 @@ export default function RightRail({ lobbyId }: { lobbyId?: string }) {
   const [mounted, setMounted] = React.useState(false);
   React.useEffect(() => { setMounted(true); }, []);
   const { lobbyId: resolvedLobbyId, currentRoomId } = useRailScope(lobbyId);
-  const layout = useShellLayout();
+  // The office desk (useOfficeSkin) keeps the stock panel, as the left rail does.
+  const office = useOfficeSkin();
+  const ownLayout = useShellLayout();
+  const layout = office ? STOCK_SHELL : ownLayout;
 
   if (!mounted) return (
     <div style={{ padding: "14px 14px 20px", fontSize: 13, color: "rgba(243,244,246,.92)" }}>

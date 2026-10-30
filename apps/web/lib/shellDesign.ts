@@ -8,6 +8,7 @@
 
 import { useSyncExternalStore } from "react";
 import {
+  SHELL_MAX_CHARS,
   railFromShell,
   sanitizeShell,
   shellFromPrefs,
@@ -26,6 +27,7 @@ import {
   PALETTE_IDS,
   type NebulaFont,
   type Palette,
+  type AccountSave,
   type SiteThemeId,
   type UiPrefs,
 } from "./uiPrefs";
@@ -53,7 +55,15 @@ export type ShellDesignState = {
   saved: ShellLayout;
 };
 
-const DRAFT_KEY = "weered:shell-draft:v1";
+/** The unsaved draft, per account in this browser, so a second account on
+ *  the same machine never picks up someone else's. */
+function draftKey(): string {
+  let id = "";
+  try {
+    id = String(JSON.parse(localStorage.getItem("weered_user") || "null")?.id || "");
+  } catch {}
+  return `weered:shell-draft:v1:${id}`;
+}
 let past: ShellSnap[] = [];
 let future: ShellSnap[] = [];
 const INITIAL: ShellDesignState = {
@@ -127,7 +137,13 @@ function lookFromPrefs(p: UiPrefs): ShellLook {
     accent: isHexColour(p.accent) ? p.accent : "#8b5cf6",
     font: p.font || "default",
     stars: p.stars !== false,
-    density: p.density || "comfortable",
+    // Settings → Display keeps density in its own store; what's on the page
+    // is the truth when the prefs don't say.
+    density:
+      p.density ||
+      (document.documentElement.getAttribute("data-weered-density") === "compact"
+        ? "compact"
+        : "comfortable"),
   };
 }
 
@@ -153,13 +169,16 @@ export function startDesign() {
   ensureStarted();
   const prefs = readUiPrefs();
   const base: ShellSnap = { layout: shellFromPrefs(prefs), look: lookFromPrefs(prefs) };
-  // Resume a draft left unsaved in this browser.
+  // Resume a draft left unsaved in this browser, if it was made from what is
+  // saved now. A draft from before a later save (setup, another device,
+  // Settings) would quietly undo it, so it goes.
   let draft = base;
   try {
-    const raw = localStorage.getItem(DRAFT_KEY);
+    const raw = localStorage.getItem(draftKey());
     const j = raw ? JSON.parse(raw) : null;
-    const layout = sanitizeShell(j?.layout);
+    const layout = j && j.basedOn === JSON.stringify(base) ? sanitizeShell(j.layout) : null;
     if (layout) draft = { layout, look: cleanLook(j.look, base.look) };
+    else if (raw) localStorage.removeItem(draftKey());
   } catch {}
   past = [];
   future = [];
@@ -177,15 +196,17 @@ export function stopDesign() {
   set({ designing: false, selected: null });
 }
 
+function persistDraft(d: ShellSnap) {
+  try {
+    localStorage.setItem(draftKey(), JSON.stringify({ ...d, basedOn: JSON.stringify(state.base) }));
+  } catch {}
+}
+
 function commit(next: ShellSnap, persist = true) {
   if (!state.draft || JSON.stringify(next.look) !== JSON.stringify(state.draft.look))
     paintLook(next.look);
-  if (persist) {
-    try {
-      localStorage.setItem(DRAFT_KEY, JSON.stringify(next));
-    } catch {}
-  }
-  set({ draft: next, saving: "idle" });
+  if (persist) persistDraft(next);
+  set({ draft: next, saving: state.saving === "saving" ? "saving" : "idle" });
 }
 
 let lastMerge: { key: string; at: number } | null = null;
@@ -221,6 +242,7 @@ export const editLook = (patch: Partial<ShellLook>, merge?: string) =>
 export function undo() {
   const prev = past.pop();
   if (!prev || !state.draft) return;
+  lastMerge = null;
   future.push(state.draft);
   commit(prev);
 }
@@ -228,6 +250,7 @@ export function undo() {
 export function redo() {
   const next = future.pop();
   if (!next || !state.draft) return;
+  lastMerge = null;
   past.push(state.draft);
   commit(next);
 }
@@ -240,15 +263,19 @@ export function isDirty(s: ShellDesignState = state): boolean {
   return !!(s.designing && s.draft && s.base && JSON.stringify(s.draft) !== JSON.stringify(s.base));
 }
 
-/** Save the draft to the account. True when the account confirmed it. */
-export async function saveDesign(): Promise<boolean> {
+/** Save the draft to the account. "ok" once the account has it. */
+export async function saveDesign(): Promise<AccountSave> {
   const raw = state.draft;
-  if (!raw) return false;
+  if (!raw) return "failed";
   // Settings are kept as typed while designing; what's saved is cleaned
   // (a half-written link goes), and the draft becomes exactly that.
   const d: ShellSnap = { ...raw, layout: sanitizeShell(raw.layout) ?? raw.layout };
+  if (JSON.stringify(d.layout).length > SHELL_MAX_CHARS) {
+    set({ saving: "error" });
+    return "too_large";
+  }
   set({ saving: "saving" });
-  const ok = await saveUiPrefsToAccount({
+  const res = await saveUiPrefsToAccount({
     shell: d.layout,
     rail: railFromShell(d.layout),
     theme: d.look.theme,
@@ -258,13 +285,22 @@ export async function saveDesign(): Promise<boolean> {
     stars: d.look.stars,
     density: d.look.density,
   });
-  if (ok) {
+  if (res !== "ok") {
+    set({ saving: "error" });
+    return res;
+  }
+  if (state.draft === raw) {
     try {
-      localStorage.removeItem(DRAFT_KEY);
+      localStorage.removeItem(draftKey());
     } catch {}
     set({ base: d, draft: d, saved: d.layout, saving: "saved" });
-  } else set({ saving: "error" });
-  return ok;
+  } else {
+    // Edited while the save was on its way: what was saved is the new base,
+    // and the newer edits stay as the draft.
+    set({ base: d, saved: d.layout, saving: "idle" });
+    if (state.draft) persistDraft(state.draft);
+  }
+  return "ok";
 }
 
 export function discardDesign() {
@@ -272,7 +308,7 @@ export function discardDesign() {
   past = [];
   future = [];
   try {
-    localStorage.removeItem(DRAFT_KEY);
+    localStorage.removeItem(draftKey());
   } catch {}
   commit(state.base, false);
   set({ selected: null });

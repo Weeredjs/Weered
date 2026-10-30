@@ -202,6 +202,9 @@ export default async function eventsRoutes(app: FastifyInstance, opts: Opts) {
     }
     const where: any = { lobbyId };
     if (!showAll) where.status = "PUBLISHED";
+    // ?from=<ISO date>: only events starting then or later.
+    const from = typeof q.from === "string" ? new Date(q.from) : null;
+    if (from && !Number.isNaN(from.getTime())) where.startsAt = { gte: from };
     const events = await prisma.event.findMany({
       where,
       orderBy: { startsAt: "asc" },

@@ -338,17 +338,25 @@ export function stockShell(): ShellLayout {
 const SIZES: BlockSize[] = ["s", "m", "l", "full"];
 const BLOCK_ID_RE = /^[a-z0-9_-]{1,40}$/i;
 const LOBBY_ID_RE = /^[a-z0-9][a-z0-9._/-]{0,79}$/i;
-const MAX_PER_REGION = 24;
+// A region holds its own sections plus every block (Home: 11 + 30); the
+// real limit is the block total.
+const MAX_PER_REGION = 48;
+/** The most the account keeps for a layout (apps/api/src/lib/uiPrefs.ts). */
+export const SHELL_MAX_CHARS = 24_000;
 const MAX_BLOCKS = 30;
 
 export const freshBlockId = () =>
   `b${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 
+/** A path on Weered: one leading slash, URL characters only (no backslash,
+ *  which browsers read as "//" and leave the site by). */
+export const isSitePath = (s: string) => /^\/(?![/\\])[A-Za-z0-9._~!$&'()*+,;=:@%/?#-]*$/.test(s);
+
 /** Where a Banner's button goes: an https link or a path on Weered. */
 function safeHref(v: unknown): string {
   const s = typeof v === "string" ? v.trim().slice(0, 600) : "";
   if (!s) return "";
-  if (s.startsWith("/") && !s.startsWith("//")) return s;
+  if (s.startsWith("/")) return isSitePath(s) ? s : "";
   try {
     const u = new URL(s);
     return u.protocol === "https:" ? u.toString() : "";
@@ -612,7 +620,7 @@ export const SHELL_PRESETS: ShellPreset[] = [
   {
     id: "social",
     name: "Social",
-    blurb: "Friends and crew in your sidebar, always in view.",
+    blurb: "Friends and crew up in your sidebar, next to your places.",
     setup: true,
     build: () => ({
       left: ["card", "nav", "friends", "crew", "favs", "presence", "recent"],

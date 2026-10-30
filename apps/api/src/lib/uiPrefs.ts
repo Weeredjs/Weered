@@ -71,7 +71,7 @@ export const SHELL_BLOCK_TYPES = [
 ] as const;
 const SHELL_REGIONS = ["left", "right", "home"] as const;
 export const SHELL_MAX_BYTES = 24_000;
-const SHELL_MAX_PER_REGION = 24;
+const SHELL_MAX_PER_REGION = 48;
 const SHELL_MAX_BLOCKS = 30;
 
 type ShellBlock = { id: string; type: string; size: string; props: Record<string, unknown> };
@@ -187,6 +187,14 @@ function sanitizeShell(raw: unknown): ShellPrefs | undefined {
   const preset =
     typeof r.preset === "string" && /^[a-z0-9-]{1,40}$/.test(r.preset) ? r.preset : undefined;
   return { v: 1, ...(preset ? { preset } : {}), left, right, home, hidden };
+}
+
+/** True when a client sent a layout that the whitelist would drop (too
+ *  big, or not a layout at all), so the route can say so instead of
+ *  answering 200 and keeping the old one. */
+export function shellRejected(patch: unknown): boolean {
+  const p = patch && typeof patch === "object" ? (patch as any) : {};
+  return p.shell !== undefined && p.shell !== null && !sanitizeShell(p.shell);
 }
 
 /** Only the known fields, each validated. Never throws. */
