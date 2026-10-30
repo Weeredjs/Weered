@@ -126,6 +126,40 @@ describe("UI prefs", () => {
     expect(sanitizeUiPrefs({ shell: [1] }).shell).toBeUndefined();
   });
 
+  it("keeps the look's structure, effect and symbol", () => {
+    expect(
+      sanitizeUiPrefs({
+        palette: "blizzard",
+        shape: "cut",
+        lines: "hard",
+        texture: "dots",
+        backdrop: "grid",
+        fx: "symbol",
+        fxIntensity: 9,
+        fxSymbol: "  🔥\u0007 ",
+      }),
+    ).toEqual({
+      palette: "blizzard",
+      shape: "cut",
+      lines: "hard",
+      texture: "dots",
+      backdrop: "grid",
+      fx: "symbol",
+      fxIntensity: 1.5,
+      fxSymbol: "🔥",
+    });
+    expect(sanitizeUiPrefs({ shape: "blob", fx: "lasers", fxSymbol: "   " })).toEqual({});
+    expect(sanitizeUiPrefs({ fxFront: true }).fxFront).toBe(true);
+    expect(sanitizeUiPrefs({ fxFront: "yes" }).fxFront).toBeUndefined();
+  });
+
+  it("keeps a Webpage block in the layout", () => {
+    const p = sanitizeUiPrefs({
+      shell: { left: [{ id: "w1", type: "web", props: { url: "https://example.com" } }] },
+    });
+    expect((p.shell!.left[0] as any).type).toBe("web");
+  });
+
   it("says when a layout would be dropped, so the route can refuse it", () => {
     const big = { left: [{ id: "b1", type: "rules", props: { body: "x".repeat(30_000) } }] };
     expect(shellRejected({ shell: big })).toBe(true);

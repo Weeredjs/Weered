@@ -156,6 +156,28 @@ export function Inspector({
           {field("link", "Clicking it opens (optional)", "https://")}
         </>
       )}
+      {block.type === "web" && (
+        <>
+          {field("url", "Link (https)", "https://")}
+          {field("title", "Title (optional)")}
+          <div style={label}>Height</div>
+          <div style={{ display: "flex", gap: 6 }}>
+            {(["s", "m", "l"] as const).map((h) => (
+              <button
+                key={h}
+                style={{ ...chip((pr.height || "m") === h, accent), flex: 1 }}
+                onClick={() => setProp("height", h)}
+              >
+                {h === "s" ? "Short" : h === "m" ? "Medium" : "Tall"}
+              </button>
+            ))}
+          </div>
+          <div style={{ fontSize: 11, opacity: 0.55, marginTop: 8, lineHeight: 1.45 }}>
+            Sites that allow it show live. Big ones that refuse (Google, X, Reddit, GitHub) show as
+            a link card instead, never a blank box.
+          </div>
+        </>
+      )}
       {block.type === "countdown" && (
         <>
           {field("label", "What's coming", "Season finale")}

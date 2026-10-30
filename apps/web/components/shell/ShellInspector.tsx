@@ -213,6 +213,30 @@ function BlockFields({ block, accent }: { block: ShellBlock; accent: string }) {
           {field("title", "Title (optional)")}
         </>
       );
+    case "web":
+      return (
+        <>
+          {field("url", "Link (https)", "https://")}
+          {field("title", "Title (optional)")}
+          <div style={label}>Height</div>
+          <div style={{ display: "flex", gap: 6 }}>
+            {(["s", "m", "l"] as const).map((hgt) => (
+              <button
+                key={hgt}
+                type="button"
+                style={{ ...chip((pr.height || "m") === hgt, accent), flex: 1 }}
+                onClick={() => setProp("height", hgt)}
+              >
+                {hgt === "s" ? "Short" : hgt === "m" ? "Medium" : "Tall"}
+              </button>
+            ))}
+          </div>
+          <div style={{ fontSize: 11, opacity: 0.55, marginTop: 8, lineHeight: 1.45 }}>
+            Sites that allow it show live. Big ones that refuse (Google, X, Reddit, GitHub) show as
+            a link card instead, never a blank box.
+          </div>
+        </>
+      );
     case "links":
       return (
         <>

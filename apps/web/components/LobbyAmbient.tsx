@@ -1,8 +1,10 @@
 "use client";
 
-// Ambient effect layer for a designed lobby: stars, snow, embers, rain, petals,
-// bubbles, fireflies or code rain, drawn on one canvas behind the content.
-// Pointer-transparent, paused when the tab is hidden, off for reduced motion.
+// Ambient effect layer for a designed lobby, and for the viewer's own Weered
+// (components/shell/ShellAmbient.tsx): stars, snow, a blizzard, embers, rain,
+// petals, bubbles, fireflies, code rain, or a symbol of your own floating by,
+// drawn on one canvas behind the content. Pointer-transparent, paused when the
+// tab is hidden, off for reduced motion.
 import React, { useEffect, useRef } from "react";
 import type { EffectId } from "../lib/lobbyLayout";
 
@@ -21,11 +23,17 @@ export default function LobbyAmbient({
   effect,
   accent = "#7c3aed",
   intensity = 1,
+  symbol = "✦",
+  light = false,
   style,
 }: {
   effect?: EffectId;
   accent?: string;
   intensity?: number;
+  /** What floats by when the effect is "symbol". */
+  symbol?: string;
+  /** Drawn over a light background (Blizzard): flakes go grey-blue to show. */
+  light?: boolean;
   style?: React.CSSProperties;
 }) {
   const ref = useRef<HTMLCanvasElement>(null);
@@ -53,6 +61,8 @@ export default function LobbyAmbient({
       bubbles: 0.00005,
       fireflies: 0.00005,
       matrix: 0,
+      blizzard: 0.00042,
+      symbol: 0.000022,
     };
 
     function spawn(initial: boolean): P {
@@ -76,6 +86,38 @@ export default function LobbyAmbient({
             vy: rnd(0.3, 1.1),
             r: rnd(1, 3.2),
             a: rnd(0.4, 0.9),
+            t: rnd(0, 6.28),
+          };
+        case "blizzard":
+          // Driven by a wind from the left: some come in over the top,
+          // some from the side.
+          return Math.random() < 0.35 && !initial
+            ? {
+                x: -20,
+                y: rnd(0, h),
+                vx: rnd(3, 6),
+                vy: rnd(1.2, 3),
+                r: rnd(0.6, 2.2),
+                a: rnd(0.45, 0.95),
+                t: rnd(0, 6.28),
+              }
+            : {
+                x: rnd(-w * 0.3, w),
+                y: y0,
+                vx: rnd(3, 6),
+                vy: rnd(1.2, 3),
+                r: rnd(0.6, 2.2),
+                a: rnd(0.45, 0.95),
+                t: rnd(0, 6.28),
+              };
+        case "symbol":
+          return {
+            x: rnd(0, w),
+            y: initial ? rnd(0, h) : h + 15,
+            vx: rnd(-0.25, 0.25),
+            vy: -rnd(0.12, 0.45),
+            r: rnd(14, 34),
+            a: rnd(0.35, 0.85),
             t: rnd(0, 6.28),
           };
         case "embers":
@@ -152,6 +194,9 @@ export default function LobbyAmbient({
     ro.observe(canvas);
 
     let last = performance.now();
+    const flake = light ? "rgba(71,85,105,1)" : "rgba(255,255,255,1)";
+    const glyphFont = (px: number) =>
+      `${Math.round(px)}px "Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",system-ui,sans-serif`;
     function frame(now: number) {
       const dt = Math.min(3, (now - last) / 16.7);
       last = now;
@@ -182,10 +227,14 @@ export default function LobbyAmbient({
         return;
       }
 
+      // The blizzard's wind comes in gusts.
+      const gust =
+        effect === "blizzard" ? 1 + 0.55 * Math.sin(now / 2300) + 0.3 * Math.sin(now / 710) : 1;
       for (let i = 0; i < parts.length; i++) {
         const p = parts[i];
         p.t += 0.02 * dt;
-        p.x += (p.vx + (effect === "snow" || effect === "petals" ? Math.sin(p.t) * 0.3 : 0)) * dt;
+        p.x +=
+          (p.vx * gust + (effect === "snow" || effect === "petals" ? Math.sin(p.t) * 0.3 : 0)) * dt;
         p.y += p.vy * dt;
         if (effect === "fireflies") {
           p.vx += rnd(-0.03, 0.03);
@@ -207,6 +256,28 @@ export default function LobbyAmbient({
           Math.min(1, p.a * (effect === "stars" ? 0.6 + 0.4 * Math.sin(p.t * 3) : 1)),
         );
         switch (effect) {
+          case "blizzard": {
+            // Streaks along the wind, longer in a gust.
+            ctx!.strokeStyle = flake;
+            ctx!.lineWidth = p.r;
+            ctx!.lineCap = "round";
+            ctx!.beginPath();
+            ctx!.moveTo(p.x, p.y);
+            ctx!.lineTo(p.x - p.vx * gust * 1.6, p.y - p.vy * 1.6);
+            ctx!.stroke();
+            break;
+          }
+          case "symbol":
+            ctx!.save();
+            ctx!.translate(p.x, p.y);
+            ctx!.rotate(Math.sin(p.t) * 0.35);
+            ctx!.font = glyphFont(p.r);
+            ctx!.textAlign = "center";
+            ctx!.textBaseline = "middle";
+            ctx!.fillStyle = accent;
+            ctx!.fillText(symbol || "✦", 0, 0);
+            ctx!.restore();
+            break;
           case "rain":
             ctx!.strokeStyle = "rgba(180,200,255,1)";
             ctx!.lineWidth = 1;
@@ -268,7 +339,7 @@ export default function LobbyAmbient({
       cancelAnimationFrame(raf);
       ro.disconnect();
     };
-  }, [effect, accent, intensity]);
+  }, [effect, accent, intensity, symbol, light]);
 
   if (!effect || effect === "none") return null;
   return (

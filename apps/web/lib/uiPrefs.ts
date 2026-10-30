@@ -21,12 +21,39 @@ export type SiteThemeId = (typeof SITE_THEME_IDS)[number];
 export const isSiteTheme = (v: unknown): v is SiteThemeId =>
   typeof v === "string" && (SITE_THEME_IDS as readonly string[]).includes(v);
 
-export type NamedPalette = "violet" | "ocean" | "ember" | "aurora" | "graphite" | "void";
+export type NamedPalette =
+  | "violet"
+  | "ocean"
+  | "ember"
+  | "aurora"
+  | "graphite"
+  | "void"
+  | "blizzard";
 /** A named colourway, or "custom": one colour the viewer picked (`accent`). */
 export type Palette = NamedPalette | "custom";
 export type RailSection = "card" | "nav" | "presence" | "favs" | "recent";
 /** Nebula's display face: titles, labels and buttons. */
 export type NebulaFont = "default" | "condensed" | "serif" | "stencil" | "clean" | "mono";
+/** Corners: round (Nebula's own), soft, square (all corners), cut (chamfered). */
+export type ShellShape = "round" | "soft" | "square" | "cut";
+/** Line weight: soft glow hairlines, or hard crisp edges. */
+export type ShellLines = "soft" | "hard";
+/** What the cards are made of. */
+export type ShellTexture = "glass" | "grid" | "lines" | "dots" | "solid";
+/** What's behind the glass. */
+export type ShellBackdrop = "sky" | "grid" | "plain";
+/** A moving effect behind everything (components/LobbyAmbient.tsx). */
+export type ShellFx =
+  | "none"
+  | "snow"
+  | "blizzard"
+  | "embers"
+  | "rain"
+  | "petals"
+  | "bubbles"
+  | "fireflies"
+  | "matrix"
+  | "symbol";
 
 export type UiPrefs = {
   theme?: SiteThemeId;
@@ -39,6 +66,15 @@ export type UiPrefs = {
   /** The custom colourway's colour, when palette is "custom". */
   accent?: string;
   font?: NebulaFont;
+  shape?: ShellShape;
+  lines?: ShellLines;
+  texture?: ShellTexture;
+  backdrop?: ShellBackdrop;
+  fx?: ShellFx;
+  fxIntensity?: number;
+  fxSymbol?: string;
+  /** The effect floats over the page instead of behind the glass. */
+  fxFront?: boolean;
   setup?: "done" | "skipped";
   setupAt?: string;
 };
@@ -62,6 +98,8 @@ export type PaletteColours = {
   bg: string;
   ink: string;
   on: string;
+  /** A light colourway: dark text on white glass (styles/99-nebula-blizzard.css). */
+  light?: boolean;
 };
 export const PALETTES: Record<NamedPalette, PaletteColours> = {
   violet: {
@@ -130,8 +168,24 @@ export const PALETTES: Record<NamedPalette, PaletteColours> = {
     ink: "#111114",
     on: "#0b0b0d",
   },
+  blizzard: {
+    name: "Blizzard",
+    tagline: "White out. Hard lines.",
+    a: "#0284c7",
+    b: "#0369a1",
+    c: "#bfdbfe",
+    hi: "#0c4a6e",
+    bg: "#e9eff5",
+    ink: "#ffffff",
+    on: "#ffffff",
+    light: true,
+  },
 };
-export const PALETTE_IDS = Object.keys(PALETTES) as NamedPalette[];
+/** Blizzard (the white one) is offered once its stylesheet is in. */
+export const BLIZZARD_READY = false;
+export const PALETTE_IDS = (Object.keys(PALETTES) as NamedPalette[]).filter(
+  (id) => id !== "blizzard" || BLIZZARD_READY,
+);
 
 export const NEBULA_FONTS: Record<NebulaFont, { name: string; stack: string }> = {
   default: { name: "Weered", stack: "var(--font-rajdhani), 'Rajdhani', system-ui, sans-serif" },
@@ -269,6 +323,15 @@ export function paintUiPrefs(p: UiPrefs) {
   }
   if (p.font && p.font !== "default") d.setAttribute("data-weered-font", p.font);
   else d.removeAttribute("data-weered-font");
+  // Structure: only the non-default choices are written.
+  const attr = (name: string, v: string | undefined, dflt: string) => {
+    if (v && v !== dflt) d.setAttribute(name, v);
+    else d.removeAttribute(name);
+  };
+  attr("data-weered-shape", p.shape, "round");
+  attr("data-weered-lines", p.lines, "soft");
+  attr("data-weered-texture", p.texture, "glass");
+  attr("data-weered-backdrop", p.backdrop, "sky");
   if (p.stars === false) d.setAttribute("data-weered-stars", "off");
   else d.removeAttribute("data-weered-stars");
   if (p.density) d.setAttribute("data-weered-density", p.density);

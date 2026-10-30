@@ -855,7 +855,12 @@ export default function LobbyIdPage() {
                 : undefined,
           }}
         >
-          <LobbyAmbient effect={dTheme.effect} accent={accent} intensity={dTheme.intensity ?? 1} />
+          <LobbyAmbient
+            effect={dTheme.effect}
+            accent={accent}
+            intensity={dTheme.intensity ?? 1}
+            symbol={dTheme.symbol}
+          />
           {accent && (
             <div
               style={{

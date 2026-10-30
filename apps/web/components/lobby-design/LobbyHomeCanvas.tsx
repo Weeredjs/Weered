@@ -8,6 +8,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import type { Block, LobbyLayout, TabId } from "../../lib/lobbyLayout";
 import { SIZE_SPAN, BLOCK_CATALOG } from "../../lib/lobbyLayout";
+import WebpageEmbed from "../WebpageEmbed";
 
 const RequestBoard = dynamic(() => import("../RequestBoard"), { ssr: false });
 
@@ -771,6 +772,22 @@ function BlockBody({ block, rooms, ...p }: CanvasProps & { block: Block; rooms: 
             accent={accent}
             title={pr.title || undefined}
           />
+        </div>
+      );
+
+    case "web":
+      return (
+        <div>
+          {pr.title && (
+            <div style={{ padding: "14px 18px 0" }}>
+              <Title font={font} accent={accent}>
+                {pr.title}
+              </Title>
+            </div>
+          )}
+          <div style={{ padding: pr.title ? "0 12px 12px" : 12 }}>
+            <WebpageEmbed url={pr.url} height={pr.height} wide title={pr.title} />
+          </div>
         </div>
       );
 

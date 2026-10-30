@@ -36,6 +36,7 @@ import {
 } from "../../lib/uiPrefs";
 import { editLayout, editLook, selectItem, type ShellLook } from "../../lib/shellDesign";
 import { beginLibraryDrag, justDragged } from "./ShellDesignOverlay";
+import { EffectControls, StructureControls } from "./ShellLookControls";
 
 // ── Sections ──────────────────────────────────────────────────────────────
 export function SectionsTab({
@@ -413,6 +414,7 @@ function Toggle({
 export function LookTab({ accent, look }: { accent: string; look: ShellLook }) {
   const neb = look.theme === "nebula";
   const custom = customPalette(look.accent);
+  const colours = look.palette === "custom" ? custom : PALETTES[look.palette];
   const swatch = (c: { a: string; b: string; c: string; bg: string }) =>
     `radial-gradient(120% 120% at 0% 0%, ${alpha(c.b, 0.85)}, transparent 60%), radial-gradient(120% 120% at 100% 100%, ${alpha(c.c, 0.9)}, transparent 60%), ${c.bg}`;
   return (
@@ -532,6 +534,8 @@ export function LookTab({ accent, look }: { accent: string; look: ShellLook }) {
             title="Starfield"
             blurb="Drifting stars behind everything."
           />
+          <EffectControls accent={accent} look={look} c={colours} />
+          <StructureControls accent={accent} look={look} c={colours} />
         </>
       ) : (
         <>

@@ -9,6 +9,7 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import { BLOCK_META, isSitePath, type ShellBlock, type ShellRegion } from "../../lib/shellLayout";
 import { spotifyEmbed, youTubeEmbed } from "../lobby-design/LobbyHomeCanvas";
+import WebpageEmbed from "../WebpageEmbed";
 
 const RequestBoard = dynamic(() => import("../RequestBoard"), { ssr: false });
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
@@ -243,6 +244,9 @@ function Body({ block, wide }: { block: ShellBlock; wide: boolean }) {
       );
     }
 
+    case "web":
+      return <WebpageEmbed url={p.url} height={p.height} wide={wide} title={p.title} />;
+
     case "rooms": {
       const list = rooms.slice(0, limit);
       if (!list.length) return <Hint>No rooms open there yet.</Hint>;
@@ -370,6 +374,13 @@ function blockTitle(b: ShellBlock): string | null {
       return p.title || "YouTube";
     case "rules":
       return p.title || "List";
+    case "web":
+      if (p.title) return p.title;
+      try {
+        return new URL(p.url).hostname.replace(/^www\./, "");
+      } catch {
+        return "Webpage";
+      }
     default:
       return p.title || BLOCK_META[b.type]?.name || null;
   }

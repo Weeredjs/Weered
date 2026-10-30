@@ -99,7 +99,7 @@ const nextConfig = {
           {
             key: "Content-Security-Policy-Report-Only",
             value:
-              "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://challenges.cloudflare.com https://js.stripe.com https://embed.twitch.tv https://player.twitch.tv; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https: wss:; media-src 'self' blob: https:; frame-src 'self' https://challenges.cloudflare.com https://js.stripe.com https://hooks.stripe.com https://player.twitch.tv https://embed.twitch.tv https://www.youtube.com https://www.youtube-nocookie.com https://open.spotify.com; object-src 'none'; base-uri 'self'; frame-ancestors 'self'",
+              "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://challenges.cloudflare.com https://js.stripe.com https://embed.twitch.tv https://player.twitch.tv; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https: wss:; media-src 'self' blob: https:; frame-src 'self' https:; object-src 'none'; base-uri 'self'; frame-ancestors 'self'",
           },
         ],
       },

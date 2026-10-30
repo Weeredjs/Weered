@@ -29,6 +29,8 @@ const CHIP_INTENSITY: Record<EffectId, number> = {
   bubbles: 50,
   fireflies: 60,
   matrix: 1.2,
+  blizzard: 12,
+  symbol: 70,
 };
 const ENTRANCES: { id: EntranceId; name: string; hint: string }[] = [
   { id: "none", name: "None", hint: "Just there" },

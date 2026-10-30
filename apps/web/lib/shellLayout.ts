@@ -50,6 +50,7 @@ export const SHELL_BLOCK_TYPES: ShellBlockType[] = [
   "stream",
   "video",
   "music",
+  "web",
   "rooms",
   "events",
   "stats",
@@ -257,6 +258,14 @@ export const SHELL_BLOCKS: ShellBlockMeta[] = [
     plan: "plus",
   },
   {
+    type: "web",
+    name: "Webpage",
+    blurb: "Any site that allows it, live. The rest as a link card.",
+    icon: "🌐",
+    group: "Media",
+    plan: "plus",
+  },
+  {
     type: "rooms",
     name: "Rooms",
     blurb: "Live rooms in a lobby you pick.",
@@ -366,7 +375,7 @@ function safeHref(v: unknown): string {
 }
 
 function defaultSize(type: ShellBlockType): BlockSize {
-  if (type === "welcome" || type === "stream" || type === "video") return "full";
+  if (type === "welcome" || type === "stream" || type === "video" || type === "web") return "full";
   if (type === "stats") return "s";
   return "m";
 }
@@ -398,6 +407,7 @@ const BLOCK_DEFAULTS: Partial<Record<ShellBlockType, Record<string, any>>> = {
   rules: { title: "This week", body: "One thing per line." },
   links: { title: "Links", items: [] },
   countdown: { label: "Next big night" },
+  web: { height: "m" },
   rooms: { limit: 4 },
   events: { limit: 3 },
   feed: { limit: 3 },

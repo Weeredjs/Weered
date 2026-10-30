@@ -21,9 +21,28 @@ export const UI_PALETTES = [
   "aurora",
   "graphite",
   "void",
+  "blizzard",
   "custom",
 ] as const;
 export const UI_FONTS = ["default", "condensed", "serif", "stencil", "clean", "mono"] as const;
+// The look's structure and motion (apps/web/lib/uiPrefs.ts): corners, line
+// weight, card texture, what's behind the glass, and a moving effect.
+export const UI_SHAPES = ["round", "soft", "square", "cut"] as const;
+export const UI_LINES = ["soft", "hard"] as const;
+export const UI_TEXTURES = ["glass", "grid", "lines", "dots", "solid"] as const;
+export const UI_BACKDROPS = ["sky", "grid", "plain"] as const;
+export const UI_FX = [
+  "none",
+  "snow",
+  "blizzard",
+  "embers",
+  "rain",
+  "petals",
+  "bubbles",
+  "fireflies",
+  "matrix",
+  "symbol",
+] as const;
 export const RAIL_SECTIONS = ["card", "nav", "presence", "favs", "recent"] as const;
 export const UI_INTERESTS = ["work", "community", "games", "place"] as const;
 
@@ -63,6 +82,7 @@ export const SHELL_BLOCK_TYPES = [
   "stream",
   "video",
   "music",
+  "web",
   "rooms",
   "events",
   "stats",
@@ -91,6 +111,14 @@ export type UiPrefs = {
   palette?: (typeof UI_PALETTES)[number];
   accent?: string;
   font?: (typeof UI_FONTS)[number];
+  shape?: (typeof UI_SHAPES)[number];
+  lines?: (typeof UI_LINES)[number];
+  texture?: (typeof UI_TEXTURES)[number];
+  backdrop?: (typeof UI_BACKDROPS)[number];
+  fx?: (typeof UI_FX)[number];
+  fxIntensity?: number;
+  fxSymbol?: string;
+  fxFront?: boolean;
   stars?: boolean;
   density?: "comfortable" | "compact";
   rail?: { order: RailSection[]; hidden: RailSection[] };
@@ -208,6 +236,27 @@ export function sanitizeUiPrefs(raw: unknown): UiPrefs {
   if (typeof src.accent === "string" && /^#[0-9a-f]{6}$/i.test(src.accent)) out.accent = src.accent;
   const font = oneOf(UI_FONTS, src.font);
   if (font) out.font = font;
+  const shape = oneOf(UI_SHAPES, src.shape);
+  if (shape) out.shape = shape;
+  const lines = oneOf(UI_LINES, src.lines);
+  if (lines) out.lines = lines;
+  const texture = oneOf(UI_TEXTURES, src.texture);
+  if (texture) out.texture = texture;
+  const backdrop = oneOf(UI_BACKDROPS, src.backdrop);
+  if (backdrop) out.backdrop = backdrop;
+  const fx = oneOf(UI_FX, src.fx);
+  if (fx) out.fx = fx;
+  if (typeof src.fxIntensity === "number" && Number.isFinite(src.fxIntensity))
+    out.fxIntensity = Math.max(0.2, Math.min(1.5, src.fxIntensity));
+  // The floating symbol: an emoji or a few characters, drawn on a canvas.
+  if (typeof src.fxSymbol === "string") {
+    const sym = src.fxSymbol
+      .replace(/[\u0000-\u001f\u007f]/g, "")
+      .trim()
+      .slice(0, 16);
+    if (sym) out.fxSymbol = sym;
+  }
+  if (typeof src.fxFront === "boolean") out.fxFront = src.fxFront;
   if (typeof src.stars === "boolean") out.stars = src.stars;
   const density = oneOf(["comfortable", "compact"] as const, src.density);
   if (density) out.density = density;

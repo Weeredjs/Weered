@@ -185,7 +185,12 @@ export const EFFECT_LABEL: Record<EffectId, string> = {
   bubbles: "Bubbles",
   fireflies: "Fireflies",
   matrix: "Code rain",
+  blizzard: "Blizzard",
+  symbol: "Your symbol",
 };
+
+/** Quick picks for the floating symbol. */
+export const SYMBOL_PICKS = ["✦", "⭐", "🔥", "💜", "⚡", "🎮", "👑", "❄️", "🌙", "🍀", "💀", "🎲"];
 
 /** Extra swatches for the custom row, beyond the preset's own. */
 export const SWATCH_WHEEL = [

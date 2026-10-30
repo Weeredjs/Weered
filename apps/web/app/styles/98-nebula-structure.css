@@ -1,0 +1,214 @@
+/* =====================================================================
+   NEBULA STRUCTURE — corners, lines, card texture, backdrop
+   =====================================================================
+   Set in Design your Weered → Look (lib/uiPrefs.ts paints the attributes,
+   the boot script in app/layout.tsx paints them before first paint):
+     data-weered-shape     soft | square | cut   (round = Nebula's own)
+     data-weered-lines     hard                  (soft = hairlines + glow)
+     data-weered-texture   grid | lines | dots | solid   (glass = own)
+     data-weered-backdrop  grid | plain          (sky = own)
+   Each rule adds its attribute to Nebula's own prefix, so it outranks the
+   rule it changes (95/96-nebula*.css), and inline styles via !important.
+   Avatars and anything drawn as a circle (border-radius: 50%) keep round. */
+
+/* ── Corners ────────────────────────────────────────────────────────── */
+/* Square: every corner a corner. */
+html[data-weered-theme="nebula"][data-weered-shape="square"]:not([data-weered-lobby]):not(#nb)
+  :is(.weered-shell, .weered-sheet-root, .weered-dock, .lobby-chat-drawer, .weered-rail-stack)
+  :not(.weered-avatar):not(.weered-avatar *):not([style*="border-radius: 50%"]):not(img),
+html[data-weered-theme="nebula"][data-weered-shape="square"]:not([data-weered-lobby]):not(#nb)
+  :is(
+    .weered-dock,
+    .lobby-chat-drawer,
+    .weered-sheet,
+    .weered-left,
+    .weered-right,
+    main.weered-center
+  ) {
+  border-radius: 0 !important;
+}
+html[data-weered-theme="nebula"][data-weered-shape="square"]:not([data-weered-lobby]):not(#nb)
+  :is(.weered-shell, .weered-sheet-root, .weered-dock, .lobby-chat-drawer)
+  *::before,
+html[data-weered-theme="nebula"][data-weered-shape="square"]:not([data-weered-lobby]):not(#nb)
+  :is(.weered-shell, .weered-sheet-root, .weered-dock, .lobby-chat-drawer)
+  *::after {
+  border-radius: 0 !important;
+}
+
+/* Soft: small, even corners everywhere; the big panels a little more. */
+html[data-weered-theme="nebula"][data-weered-shape="soft"]:not([data-weered-lobby]):not(#nb)
+  :is(.weered-shell, .weered-sheet-root, .weered-dock, .lobby-chat-drawer, .weered-rail-stack)
+  :not(.weered-avatar):not(.weered-avatar *):not([style*="border-radius: 50%"]):not(img) {
+  border-radius: 6px !important;
+}
+html[data-weered-theme="nebula"][data-weered-shape="soft"]:not([data-weered-lobby]):not(#nb)
+  :is(
+    .weered-dock,
+    .lobby-chat-drawer,
+    .weered-sheet,
+    .weered-left,
+    .weered-right,
+    main.weered-center
+  ) {
+  border-radius: 10px !important;
+}
+
+/* Cut: square, with the panels and cards chamfered at two corners. */
+html[data-weered-theme="nebula"][data-weered-shape="cut"]:not([data-weered-lobby]):not(#nb)
+  :is(.weered-shell, .weered-sheet-root, .weered-dock, .lobby-chat-drawer, .weered-rail-stack)
+  :not(.weered-avatar):not(.weered-avatar *):not([style*="border-radius: 50%"]):not(img),
+html[data-weered-theme="nebula"][data-weered-shape="cut"]:not([data-weered-lobby]):not(#nb)
+  :is(
+    .weered-dock,
+    .lobby-chat-drawer,
+    .weered-sheet,
+    .weered-left,
+    .weered-right,
+    main.weered-center
+  ) {
+  border-radius: 0 !important;
+}
+html[data-weered-theme="nebula"][data-weered-shape="cut"]:not([data-weered-lobby]):not(#nb)
+  :is(.weered-left, .weered-right, main.weered-center, .weered-dock, .weered-sheet) {
+  clip-path: polygon(
+    22px 0,
+    100% 0,
+    100% calc(100% - 22px),
+    calc(100% - 22px) 100%,
+    0 100%,
+    0 22px
+  ) !important;
+}
+html[data-weered-theme="nebula"][data-weered-shape="cut"]:not([data-weered-lobby]):not(#nb)
+  :is(
+    .weered-left-section,
+    .weered-presence,
+    .weered-rr-section,
+    .weered-usercorner,
+    .home-pulse,
+    .weered-shell-block-home,
+    .home-lobby-card,
+    .home-live-room,
+    .home-stream,
+    .weered-settings-section
+  ) {
+  clip-path: polygon(
+    14px 0,
+    100% 0,
+    100% calc(100% - 14px),
+    calc(100% - 14px) 100%,
+    0 100%,
+    0 14px
+  ) !important;
+}
+html[data-weered-theme="nebula"][data-weered-shape="cut"]:not([data-weered-lobby]):not(#nb)
+  :is(
+    .home-btn,
+    .weered-rr-join,
+    .weered-rr-invite,
+    .home-topbar-design,
+    .weered-btn,
+    .home-pulse-join,
+    .wsb-cta
+  ) {
+  clip-path: polygon(
+    7px 0,
+    100% 0,
+    100% calc(100% - 7px),
+    calc(100% - 7px) 100%,
+    0 100%,
+    0 7px
+  ) !important;
+}
+
+/* ── Lines ──────────────────────────────────────────────────────────── */
+/* Hard: crisp, strong edges and no glow. */
+html[data-weered-theme="nebula"][data-weered-lines="hard"]:not([data-weered-lobby]):not(#nb) {
+  --nb-line: rgb(var(--nb-a) / 0.72);
+  --nb-shadow: none;
+}
+html[data-weered-theme="nebula"][data-weered-lines="hard"]:not([data-weered-lobby]):not(#nb)
+  :is(.weered-shell, .weered-sheet-root, .weered-dock, .lobby-chat-drawer)
+  :not(:focus-visible) {
+  box-shadow: none !important;
+  text-shadow: none !important;
+}
+html[data-weered-theme="nebula"][data-weered-lines="hard"]:not([data-weered-lobby]):not(#nb)
+  :is(.weered-left, .weered-right, main.weered-center, .weered-dock, .weered-sheet) {
+  border: 1px solid rgb(var(--nb-a) / 0.7) !important;
+  box-shadow: none !important;
+}
+html[data-weered-theme="nebula"][data-weered-lines="hard"]:not([data-weered-lobby]):not(#nb)
+  :is(
+    .weered-left-section,
+    .weered-presence,
+    .weered-rr-section,
+    .weered-usercorner,
+    .home-pulse,
+    .weered-shell-block-home,
+    .weered-settings-section,
+    .home-lobby-card,
+    .home-live-room
+  ) {
+  border: 1px solid rgb(var(--nb-a) / 0.6) !important;
+}
+/* The lit hairline along a card's top is a glow; hard lines drop it. */
+html[data-weered-theme="nebula"][data-weered-lines="hard"]:not([data-weered-lobby]):not(#nb)
+  :is(
+    .weered-left-section,
+    .weered-presence,
+    .weered-rr-section,
+    .weered-settings-section,
+    .home-pulse
+  )::before {
+  display: none !important;
+}
+
+/* ── Card texture ───────────────────────────────────────────────────── */
+html[data-weered-theme="nebula"][data-weered-texture="grid"]:not([data-weered-lobby]):not(#nb) {
+  --nb-glass:
+    linear-gradient(rgb(var(--nb-a) / 0.09) 1px, transparent 1px) 0 0 / 16px 16px,
+    linear-gradient(90deg, rgb(var(--nb-a) / 0.09) 1px, transparent 1px) 0 0 / 16px 16px,
+    rgb(var(--nb-ink) / 0.66);
+}
+html[data-weered-theme="nebula"][data-weered-texture="lines"]:not([data-weered-lobby]):not(#nb) {
+  --nb-glass:
+    repeating-linear-gradient(135deg, rgb(var(--nb-a) / 0.08) 0 1px, transparent 1px 8px),
+    rgb(var(--nb-ink) / 0.66);
+}
+html[data-weered-theme="nebula"][data-weered-texture="dots"]:not([data-weered-lobby]):not(#nb) {
+  --nb-glass:
+    radial-gradient(rgb(var(--nb-a) / 0.2) 1px, transparent 1.6px) 0 0 / 11px 11px,
+    rgb(var(--nb-ink) / 0.66);
+}
+html[data-weered-theme="nebula"][data-weered-texture="solid"]:not([data-weered-lobby]):not(#nb) {
+  --nb-glass: rgb(var(--nb-ink) / 0.97);
+}
+html[data-weered-theme="nebula"][data-weered-texture="solid"]:not([data-weered-lobby]):not(#nb)
+  :is(.weered-left, .weered-right, main.weered-center) {
+  background: rgb(var(--nb-ink-2) / 0.97) !important;
+}
+
+/* ── Behind the glass ───────────────────────────────────────────────── */
+/* Grid: a drafting grid instead of clouds; the stars stay theirs to toggle. */
+html[data-weered-theme="nebula"][data-weered-backdrop="grid"]:not([data-weered-lobby]):not(#nb)
+  .nb-sky {
+  background:
+    linear-gradient(rgb(var(--nb-a) / 0.14) 1px, transparent 1px) 0 0 / 120px 120px,
+    linear-gradient(90deg, rgb(var(--nb-a) / 0.14) 1px, transparent 1px) 0 0 / 120px 120px,
+    linear-gradient(rgb(var(--nb-a) / 0.06) 1px, transparent 1px) 0 0 / 24px 24px,
+    linear-gradient(90deg, rgb(var(--nb-a) / 0.06) 1px, transparent 1px) 0 0 / 24px 24px,
+    radial-gradient(120% 80% at 50% 120%, rgb(var(--nb-c) / 0.3), transparent 60%),
+    var(--nb-bg) !important;
+}
+html[data-weered-theme="nebula"][data-weered-backdrop="grid"]:not([data-weered-lobby]):not(#nb)
+  :is(.nb-cloud, .nb-aurora),
+html[data-weered-theme="nebula"][data-weered-backdrop="plain"]:not([data-weered-lobby]):not(#nb)
+  :is(.nb-cloud, .nb-aurora) {
+  display: none !important;
+}
+html[data-weered-theme="nebula"][data-weered-backdrop="plain"]:not([data-weered-lobby]):not(#nb)
+  .nb-sky {
+  background: var(--nb-bg) !important;
+}

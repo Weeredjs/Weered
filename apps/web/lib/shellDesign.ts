@@ -27,6 +27,11 @@ import {
   PALETTE_IDS,
   type NebulaFont,
   type Palette,
+  type ShellBackdrop,
+  type ShellFx,
+  type ShellLines,
+  type ShellShape,
+  type ShellTexture,
   type AccountSave,
   type SiteThemeId,
   type UiPrefs,
@@ -39,7 +44,31 @@ export type ShellLook = {
   font: NebulaFont;
   stars: boolean;
   density: "comfortable" | "compact";
+  shape: ShellShape;
+  lines: ShellLines;
+  texture: ShellTexture;
+  backdrop: ShellBackdrop;
+  fx: ShellFx;
+  fxIntensity: number;
+  fxSymbol: string;
+  fxFront: boolean;
 };
+
+const SHAPES: ShellShape[] = ["round", "soft", "square", "cut"];
+const TEXTURES: ShellTexture[] = ["glass", "grid", "lines", "dots", "solid"];
+const BACKDROPS: ShellBackdrop[] = ["sky", "grid", "plain"];
+export const SHELL_FX: ShellFx[] = [
+  "none",
+  "snow",
+  "blizzard",
+  "embers",
+  "rain",
+  "petals",
+  "bubbles",
+  "fireflies",
+  "matrix",
+  "symbol",
+];
 export type ShellSnap = { layout: ShellLayout; look: ShellLook };
 
 export type ShellDesignState = {
@@ -53,6 +82,8 @@ export type ShellDesignState = {
   canRedo: boolean;
   /** The saved layout: what the shell draws outside Design mode. */
   saved: ShellLayout;
+  /** The saved look (null before the browser has read it). */
+  savedLook: ShellLook | null;
 };
 
 /** The unsaved draft, per account in this browser, so a second account on
@@ -75,6 +106,7 @@ const INITIAL: ShellDesignState = {
   canUndo: false,
   canRedo: false,
   saved: stockShell(),
+  savedLook: null,
 };
 let state: ShellDesignState = INITIAL;
 const listeners = new Set<() => void>();
@@ -89,8 +121,14 @@ function ensureStarted() {
   if (started || typeof window === "undefined") return;
   started = true;
   const refresh = () => {
-    const saved = shellFromPrefs(readUiPrefs());
-    if (JSON.stringify(saved) !== JSON.stringify(state.saved)) set({ saved });
+    const prefs = readUiPrefs();
+    const saved = shellFromPrefs(prefs);
+    const savedLook = lookFromPrefs(prefs);
+    if (
+      JSON.stringify(saved) !== JSON.stringify(state.saved) ||
+      JSON.stringify(savedLook) !== JSON.stringify(state.savedLook)
+    )
+      set({ saved, savedLook });
   };
   refresh();
   window.addEventListener(PREFS_EVENT, refresh);
@@ -124,6 +162,12 @@ export function useShellLayout(): ShellLayout {
   return s.designing && s.draft ? s.draft.layout : s.saved;
 }
 
+/** The look right now: the draft's while designing, else the saved one. */
+export function useShellLook(): ShellLook | null {
+  const s = useShellDesign();
+  return s.designing && s.draft ? s.draft.look : s.savedLook;
+}
+
 function lookFromPrefs(p: UiPrefs): ShellLook {
   let theme: SiteThemeId = "press";
   if (p.theme && isSiteTheme(p.theme)) theme = p.theme;
@@ -137,6 +181,14 @@ function lookFromPrefs(p: UiPrefs): ShellLook {
     accent: isHexColour(p.accent) ? p.accent : "#8b5cf6",
     font: p.font || "default",
     stars: p.stars !== false,
+    shape: p.shape || "round",
+    lines: p.lines || "soft",
+    texture: p.texture || "glass",
+    backdrop: p.backdrop || "sky",
+    fx: p.fx || "none",
+    fxIntensity: typeof p.fxIntensity === "number" ? p.fxIntensity : 1,
+    fxSymbol: p.fxSymbol || "✦",
+    fxFront: p.fxFront === true,
     // Settings → Display keeps density in its own store; what's on the page
     // is the truth when the prefs don't say.
     density:
@@ -159,6 +211,18 @@ function cleanLook(raw: any, base: ShellLook): ShellLook {
     font: (NEBULA_FONT_IDS as string[]).includes(r.font) ? r.font : base.font,
     stars: typeof r.stars === "boolean" ? r.stars : base.stars,
     density: r.density === "compact" || r.density === "comfortable" ? r.density : base.density,
+    shape: SHAPES.includes(r.shape) ? r.shape : base.shape,
+    lines: r.lines === "hard" || r.lines === "soft" ? r.lines : base.lines,
+    texture: TEXTURES.includes(r.texture) ? r.texture : base.texture,
+    backdrop: BACKDROPS.includes(r.backdrop) ? r.backdrop : base.backdrop,
+    fx: SHELL_FX.includes(r.fx) ? r.fx : base.fx,
+    fxIntensity:
+      typeof r.fxIntensity === "number" && Number.isFinite(r.fxIntensity)
+        ? Math.max(0.2, Math.min(1.5, r.fxIntensity))
+        : base.fxIntensity,
+    fxFront: typeof r.fxFront === "boolean" ? r.fxFront : base.fxFront,
+    fxSymbol:
+      typeof r.fxSymbol === "string" && r.fxSymbol.trim() ? r.fxSymbol.slice(0, 24) : base.fxSymbol,
   };
 }
 
@@ -284,6 +348,14 @@ export async function saveDesign(): Promise<AccountSave> {
     font: d.look.font,
     stars: d.look.stars,
     density: d.look.density,
+    shape: d.look.shape,
+    lines: d.look.lines,
+    texture: d.look.texture,
+    backdrop: d.look.backdrop,
+    fx: d.look.fx,
+    fxIntensity: d.look.fxIntensity,
+    fxSymbol: d.look.fxSymbol,
+    fxFront: d.look.fxFront,
   });
   if (res !== "ok") {
     set({ saving: "error" });

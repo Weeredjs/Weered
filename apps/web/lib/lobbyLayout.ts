@@ -58,7 +58,8 @@ export type BlockType =
   | "countdown"
   | "stats"
   | "requests"
-  | "rules";
+  | "rules"
+  | "web";
 
 export type Block = {
   id: string;
@@ -76,7 +77,9 @@ export type EffectId =
   | "petals"
   | "bubbles"
   | "fireflies"
-  | "matrix";
+  | "matrix"
+  | "blizzard"
+  | "symbol";
 export type FontId = "default" | "display" | "serif" | "mono" | "rounded" | "stencil";
 export type EntranceId = "none" | "fade" | "rise" | "glitch";
 
@@ -88,6 +91,8 @@ export type LobbyTheme = {
   font?: FontId;
   entrance?: EntranceId;
   sparkle?: boolean;
+  /** What floats by when the effect is "symbol": an emoji or a few characters. */
+  symbol?: string;
 };
 
 export type TabEntry = { id: TabId; label?: string; hidden?: boolean };
@@ -118,6 +123,7 @@ const BLOCK_TYPES: BlockType[] = [
   "stats",
   "requests",
   "rules",
+  "web",
 ];
 const EFFECTS: EffectId[] = [
   "none",
@@ -129,6 +135,8 @@ const EFFECTS: EffectId[] = [
   "bubbles",
   "fireflies",
   "matrix",
+  "blizzard",
+  "symbol",
 ];
 const FONTS: FontId[] = ["default", "display", "serif", "mono", "rounded", "stencil"];
 const ENTRANCES: EntranceId[] = ["none", "fade", "rise", "glitch"];
@@ -187,6 +195,12 @@ export function sanitizeProps(type: BlockType, p: any): Record<string, any> {
       };
     case "rules":
       return { title: str(p.title, 80) ?? "House rules", body: str(p.body, 2000) ?? "" };
+    case "web":
+      return {
+        url: safeUrl(p.url) ?? "",
+        title: str(p.title, 80) ?? "",
+        height: p.height === "s" || p.height === "l" ? p.height : "m",
+      };
     case "stream":
       return { channel: (str(p.channel, 40) ?? "").replace(/[^a-zA-Z0-9_]/g, "") };
     case "video":
@@ -222,6 +236,19 @@ export function sanitizeProps(type: BlockType, p: any): Record<string, any> {
     default:
       return { title: str(p.title, 80) ?? "" };
   }
+}
+
+/** The floating symbol: an emoji or a few characters, no control codes. */
+export function cleanSymbol(v: unknown): string | undefined {
+  if (typeof v !== "string") return undefined;
+  const t = v.replace(/[\u0000-\u001f\u007f]/g, "").trim();
+  if (!t) return undefined;
+  // Up to three characters as people see them (an emoji family is one).
+  const Seg = (Intl as any).Segmenter;
+  const parts: string[] = Seg
+    ? Array.from(new Seg(undefined, { granularity: "grapheme" }).segment(t), (x: any) => x.segment)
+    : Array.from(t);
+  return parts.slice(0, 3).join("").slice(0, 24) || undefined;
 }
 
 export function sanitizeLayout(raw: unknown): LobbyLayout | null {
@@ -260,6 +287,7 @@ export function sanitizeLayout(raw: unknown): LobbyLayout | null {
     font: FONTS.includes(th.font) ? th.font : undefined,
     entrance: ENTRANCES.includes(th.entrance) ? th.entrance : undefined,
     sparkle: !!th.sparkle,
+    symbol: cleanSymbol(th.symbol),
   };
 
   return {
@@ -390,6 +418,13 @@ export const BLOCK_CATALOG: BlockMeta[] = [
     blurb: "The ground rules, pinned.",
     icon: "📜",
     group: "Community",
+  },
+  {
+    type: "web",
+    name: "Webpage",
+    blurb: "Any site that allows it, live. The rest as a link card.",
+    icon: "🌐",
+    group: "Media",
   },
 ];
 

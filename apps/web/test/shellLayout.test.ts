@@ -21,6 +21,7 @@ import {
   type ShellLayout,
 } from "../lib/shellLayout";
 import { customPalette, paletteColours } from "../lib/uiPrefs";
+import { cleanSymbol, sanitizeLayout } from "../lib/lobbyLayout";
 
 /** Every built-in section is in exactly one region or switched off, and
  *  each sits somewhere it's allowed. */
@@ -186,6 +187,39 @@ describe("what a layout may hold", () => {
     }));
     const l = sanitizeShell({ left: blocks })!;
     expect(l.left.filter((x) => !isCore(x))).toHaveLength(SHELL_MAX_BLOCKS);
+  });
+});
+
+describe("effects", () => {
+  it("keeps a floating symbol to three characters as people see them", () => {
+    expect(cleanSymbol("🔥")).toBe("🔥");
+    expect(cleanSymbol("  ab\u0007c d ")).toBe("abc");
+    expect(cleanSymbol("👨‍👩‍👧x")).toBe("👨‍👩‍👧x");
+    expect(cleanSymbol("   ")).toBeUndefined();
+    expect(cleanSymbol(5)).toBeUndefined();
+  });
+
+  it("keeps the new lobby effects and the symbol", () => {
+    const l = sanitizeLayout({ theme: { effect: "symbol", symbol: "⭐" } })!;
+    expect(l.theme.effect).toBe("symbol");
+    expect(l.theme.symbol).toBe("⭐");
+    expect(sanitizeLayout({ theme: { effect: "blizzard" } })!.theme.effect).toBe("blizzard");
+    expect(sanitizeLayout({ theme: { effect: "lasers" } })!.theme.effect).toBeUndefined();
+  });
+
+  it("keeps a Webpage block's https link and height", () => {
+    const b = sanitizeShellBlock({
+      id: "w1",
+      type: "web",
+      props: { url: "https://example.com/x", height: "l" },
+    })!;
+    expect(b.props).toMatchObject({ url: "https://example.com/x", height: "l" });
+    const bad = sanitizeShellBlock({
+      id: "w2",
+      type: "web",
+      props: { url: "javascript:alert(1)", height: "huge" },
+    })!;
+    expect(bad.props).toMatchObject({ url: "", height: "m" });
   });
 });
 

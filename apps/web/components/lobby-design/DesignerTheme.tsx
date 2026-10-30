@@ -9,6 +9,7 @@ import {
   FONT_STACK,
   PRESET_BY_ID,
   SWATCH_WHEEL,
+  SYMBOL_PICKS,
   THEME_PRESETS,
 } from "../../lib/lobbyThemePresets";
 import { chip, label, panel } from "./designerKit";
@@ -200,6 +201,44 @@ export function ThemeDock({
             ✨ Cursor sparkle
           </button>
         </div>
+        {th.effect === "symbol" && (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 4,
+              marginTop: 8,
+              flexWrap: "wrap",
+            }}
+          >
+            <input
+              value={th.symbol ?? ""}
+              placeholder="✦"
+              maxLength={12}
+              onChange={(e) => setTheme({ symbol: e.target.value })}
+              aria-label="Your symbol"
+              style={{
+                width: 54,
+                padding: "4px 6px",
+                borderRadius: 8,
+                border: "1px solid rgba(255,255,255,.14)",
+                background: "rgba(0,0,0,.35)",
+                color: "inherit",
+                fontSize: 15,
+                textAlign: "center",
+              }}
+            />
+            {SYMBOL_PICKS.map((sym) => (
+              <button
+                key={sym}
+                style={{ ...chip(th.symbol === sym, accent), padding: "2px 6px", fontSize: 14 }}
+                onClick={() => setTheme({ symbol: sym })}
+              >
+                {sym}
+              </button>
+            ))}
+          </div>
+        )}
         {th.effect && th.effect !== "none" && (
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8 }}>
             <span style={{ fontSize: 11, opacity: 0.6 }}>Intensity</span>

@@ -123,6 +123,7 @@ import roomsRoutes from "./routes/rooms";
 import lobbiesRoutes from "./routes/lobbies";
 import lobbyDesignRoutes from "./routes/lobbyDesign";
 import uiPrefsRoutes from "./routes/uiPrefs";
+import embedCheckRoutes from "./routes/embedCheck";
 import staffRoutes from "./routes/staff";
 import tradingRoutes from "./routes/trading";
 import usersSearchRoutes from "./routes/usersSearch";
@@ -1852,6 +1853,7 @@ async function main() {
   }
 
   await app.register(uiPrefsRoutes, { authFromHeader } as any);
+  await app.register(embedCheckRoutes);
 
   await app.register(lobbyDesignRoutes, {
     authFromHeader,

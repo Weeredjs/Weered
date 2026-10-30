@@ -236,7 +236,8 @@ export default function SetupPreview(p: Props) {
   const blockMini = (it: Exclude<ShellItem, string>) => {
     const meta = BLOCK_META[it.type];
     const pr = it.props || {};
-    const media = it.type === "stream" || it.type === "video" || it.type === "music";
+    const media =
+      it.type === "stream" || it.type === "video" || it.type === "music" || it.type === "web";
     return (
       <div key={it.id} style={card({ paddingBottom: 7 })}>
         {it.type !== "welcome" && title(pr.title || pr.label || meta?.name || it.type)}
@@ -260,7 +261,7 @@ export default function SetupPreview(p: Props) {
               background: `linear-gradient(135deg, ${alpha(C.a, 0.35)}, rgba(0,0,0,.6))`,
             }}
           >
-            {it.type === "music" ? "♪" : "▶"}
+            {it.type === "music" ? "♪" : it.type === "web" ? "🌐" : "▶"}
           </div>
         ) : it.type === "countdown" ? (
           <div style={{ padding: "2px 10px", fontSize: 13, fontWeight: 900, color: "#fff" }}>

@@ -150,6 +150,10 @@ try {
     } catch(e) {}
   }
   if (up && up.font && up.font !== 'default') d.setAttribute('data-weered-font', up.font);
+  if (up && up.shape && up.shape !== 'round') d.setAttribute('data-weered-shape', up.shape);
+  if (up && up.lines === 'hard') d.setAttribute('data-weered-lines', 'hard');
+  if (up && up.texture && up.texture !== 'glass') d.setAttribute('data-weered-texture', up.texture);
+  if (up && up.backdrop && up.backdrop !== 'sky') d.setAttribute('data-weered-backdrop', up.backdrop);
   if (up && up.stars === false) d.setAttribute('data-weered-stars', 'off');
   if (s && s.density) d.setAttribute('data-weered-density', s.density);
   if (s && s.reduceMotion) d.setAttribute('data-weered-reduce-motion', '1');
