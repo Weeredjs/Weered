@@ -95,7 +95,14 @@ export function beginLibraryDrag(item: ShellItem, e: React.PointerEvent) {
 /** True right after a drag ended, so the press that started it isn't also a click. */
 export const justDragged = () => Date.now() < suppressClickUntil;
 
-export default function ShellDesignOverlay({ accent }: { accent: string }) {
+export default function ShellDesignOverlay({
+  accent,
+  light = false,
+}: {
+  accent: string;
+  /** A light colourway (Blizzard): the dashed outlines go dark to show. */
+  light?: boolean;
+}) {
   const s = useShellDesign();
   const layout = s.draft?.layout;
   const [geo, setGeo] = useState<{ boxes: Box[]; roots: Partial<Record<ShellRegion, Rect>> }>(
@@ -315,7 +322,7 @@ export default function ShellDesignOverlay({ accent }: { accent: string }) {
               borderRadius: 14,
               border: sel
                 ? `2px solid ${accent}`
-                : `1px dashed ${hover === b.key ? accent : "rgba(255,255,255,.28)"}`,
+                : `1px dashed ${hover === b.key ? accent : light ? "rgba(15,23,42,.38)" : "rgba(255,255,255,.28)"}`,
               boxShadow: sel ? `0 0 0 4px ${accent}33, 0 0 28px ${accent}33` : "none",
               background: dragging
                 ? "rgba(0,0,0,.45)"

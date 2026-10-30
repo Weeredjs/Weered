@@ -19,6 +19,7 @@ import ThemeRestore from "./ThemeRestore";
 import UiPrefsSync from "./UiPrefsSync";
 import NebulaSky from "./NebulaSky";
 import ShellAmbient from "./shell/ShellAmbient";
+import BlizzardGuard from "./shell/BlizzardGuard";
 import DesktopTitleBar from "./DesktopTitleBar";
 import LobbyBrowser from "./LobbyBrowser";
 import ServiceWorkerRegister from "./ServiceWorkerRegister";
@@ -202,6 +203,7 @@ export default function RootFrame({ children }: { children: React.ReactNode }) {
       <UiPrefsSync />
       <NebulaSky />
       <ShellAmbient />
+      <BlizzardGuard />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(jsonLd) }} />
       <script
         type="application/ld+json"

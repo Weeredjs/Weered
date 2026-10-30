@@ -182,7 +182,7 @@ export const PALETTES: Record<NamedPalette, PaletteColours> = {
   },
 };
 /** Blizzard (the white one) is offered once its stylesheet is in. */
-export const BLIZZARD_READY = false;
+export const BLIZZARD_READY = true;
 export const PALETTE_IDS = (Object.keys(PALETTES) as NamedPalette[]).filter(
   (id) => id !== "blizzard" || BLIZZARD_READY,
 );

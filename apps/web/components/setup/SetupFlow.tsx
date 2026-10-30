@@ -579,7 +579,9 @@ export default function SetupFlow({
                 accent={C.a}
               >
                 <div className="cz-presets">
-                  {PALETTE_IDS.map((id) => {
+                  {/* The light colourway (Blizzard) lives in Design and Settings; this
+                      preview is drawn for dark glass. */}
+                  {PALETTE_IDS.filter((id) => !PALETTES[id].light).map((id) => {
                     const pl = PALETTES[id];
                     const on = look === "nebula" && palette === id;
                     return (

@@ -564,10 +564,10 @@ function NebulaOptions() {
               onClick={() => { setPalette(id); saveUiPrefs({ palette: id }); }}
               style={{
                 position: "relative", height: 64, padding: "0 10px 8px", borderRadius: 12, cursor: "pointer",
-                display: "flex", alignItems: "flex-end", fontFamily: "inherit", fontSize: 12.5, fontWeight: 800, color: "#fff",
+                display: "flex", alignItems: "flex-end", fontFamily: "inherit", fontSize: 12.5, fontWeight: 800, color: pl.light ? "#0f172a" : "#fff",
                 border: on ? `2px solid ${pl.a}` : "1px solid rgba(255,255,255,.12)",
                 boxShadow: on ? `0 0 0 3px ${pl.a}44, 0 10px 24px -12px ${pl.a}` : "none",
-                background: `radial-gradient(120% 90% at 0% 0%, ${pl.b}bb, transparent 60%), radial-gradient(90% 90% at 100% 100%, ${pl.c}ee, transparent 65%), ${pl.bg}`,
+                background: pl.light ? `linear-gradient(180deg, #ffffff, ${pl.bg})` : `radial-gradient(120% 90% at 0% 0%, ${pl.b}bb, transparent 60%), radial-gradient(90% 90% at 100% 100%, ${pl.c}ee, transparent 65%), ${pl.bg}`,
               }}
             >
               {pl.name}

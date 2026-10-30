@@ -1,0 +1,301 @@
+/* =====================================================================
+   NEBULA · BLIZZARD — the white one
+   =====================================================================
+   White glass on a pale storm sky, dark text, ice-blue accent; with Hard
+   lines (98-nebula-structure.css) its edges go near-black. Pairs with the
+   Blizzard effect (components/LobbyAmbient.tsx, drawn grey-blue to show on
+   white). Nebula's own rules are written for white text on dark glass, so
+   this file turns each of those around, then the text components style
+   inline — except over pictures (banners, the featured lobby, streams),
+   which keep their white type. */
+
+/* ── Tokens ─────────────────────────────────────────────────────────── */
+html[data-weered-theme="nebula"][data-weered-palette="blizzard"] {
+  --nb-a: 2 132 199;
+  --nb-b: 3 105 161;
+  --nb-c: 191 219 254;
+  --nb-hi: #0c4a6e;
+  --nb-bg: #e8eef4;
+  --nb-ink: 255 255 255;
+  --nb-ink-2: 246 249 252;
+  --nb-on: #ffffff;
+  --nb-mute: 71 85 105;
+}
+html[data-weered-theme="nebula"][data-weered-palette="blizzard"]:not([data-weered-lobby]):not(#nb) {
+  color-scheme: light;
+  --weered-panel: rgb(255 255 255 / 0.9);
+  --weered-panel2: rgb(246 249 252 / 0.96);
+  --weered-border: rgb(15 23 42 / 0.12);
+  --weered-border2: rgb(15 23 42 / 0.24);
+  --weered-bd: rgb(15 23 42 / 0.12);
+  --weered-bd2: rgb(15 23 42 / 0.24);
+  --weered-text: #0f172a;
+  --weered-muted: rgb(51 65 85 / 0.8);
+  --weered-accent-text: #0369a1 !important;
+  --weered-user-panel-bg: rgb(255 255 255 / 0.92);
+  --nb-glass: linear-gradient(180deg, rgb(255 255 255 / 0.96), rgb(248 250 252 / 0.9));
+  --nb-line: rgb(15 23 42 / 0.12);
+  --nb-shadow: 0 1px 0 rgb(255 255 255 / 0.9) inset, 0 12px 32px -22px rgb(15 23 42 / 0.4);
+  --weered-scrollbar-thumb: rgb(15 23 42 / 0.2);
+}
+
+/* ── The storm ──────────────────────────────────────────────────────── */
+html[data-weered-theme="nebula"][data-weered-palette="blizzard"]:not([data-weered-lobby]):not(#nb)
+  .nb-sky {
+  background:
+    radial-gradient(120% 70% at 20% -10%, #ffffff, transparent 60%),
+    radial-gradient(90% 70% at 110% 10%, rgb(191 219 254 / 0.55), transparent 62%),
+    linear-gradient(180deg, #dde6ef, #eef3f8 55%, #e3eaf2) !important;
+}
+/* Stars don't show on white; the clouds become drifting grey weather. */
+html[data-weered-theme="nebula"][data-weered-palette="blizzard"]:not([data-weered-lobby]):not(#nb)
+  :is(.nb-stars, .nb-sparkles, .nb-shooting, .nb-aurora) {
+  display: none !important;
+}
+html[data-weered-theme="nebula"][data-weered-palette="blizzard"]:not([data-weered-lobby]):not(#nb)
+  .nb-cloud {
+  mix-blend-mode: multiply !important;
+  opacity: 0.16 !important;
+  filter: grayscale(0.6);
+}
+html[data-weered-theme="nebula"][data-weered-palette="blizzard"]:not([data-weered-lobby]):not(#nb)
+  .nb-vignette {
+  background: radial-gradient(
+    ellipse at 50% 45%,
+    transparent 60%,
+    rgb(15 23 42 / 0.1) 100%
+  ) !important;
+}
+
+/* ── Panels ─────────────────────────────────────────────────────────── */
+html[data-weered-theme="nebula"][data-weered-palette="blizzard"]:not([data-weered-lobby]):not(#nb)
+  :is(.weered-left, .weered-right) {
+  background: rgb(255 255 255 / 0.8) !important;
+  border: 1px solid rgb(15 23 42 / 0.14) !important;
+  box-shadow: 0 22px 56px -36px rgb(15 23 42 / 0.5) !important;
+}
+html[data-weered-theme="nebula"][data-weered-palette="blizzard"]:not([data-weered-lobby]):not(#nb)
+  main.weered-center {
+  background:
+    radial-gradient(120% 60% at 50% 0%, rgb(var(--nb-c) / 0.35), transparent 60%),
+    rgb(255 255 255 / 0.72) !important;
+  border: 1px solid rgb(15 23 42 / 0.12) !important;
+  box-shadow: 0 26px 70px -44px rgb(15 23 42 / 0.5) !important;
+}
+html[data-weered-theme="nebula"][data-weered-palette="blizzard"]:not([data-weered-lobby]):not(#nb)
+  :is(.weered-dock, .weered-sheet, .lobby-chat-drawer, .weered-mobile-nav, .site-footer) {
+  background: rgb(255 255 255 / 0.94) !important;
+  color: #0f172a;
+}
+/* The ID card: ice instead of night. */
+html[data-weered-theme="nebula"][data-weered-palette="blizzard"]:not([data-weered-lobby]):not(#nb)
+  .weered-usercorner {
+  background:
+    radial-gradient(120% 90% at 0% 0%, rgb(186 230 253 / 0.9), transparent 62%),
+    radial-gradient(90% 90% at 100% 100%, rgb(219 234 254 / 0.9), transparent 65%), #ffffff !important;
+  border: 1px solid rgb(15 23 42 / 0.14) !important;
+}
+
+/* ── Dark type everywhere Weered draws its own surfaces ─────────────── */
+html[data-weered-theme="nebula"][data-weered-palette="blizzard"]:not([data-weered-lobby]):not(#nb)
+  :is(
+    .weered-shell,
+    .weered-sheet-root,
+    .weered-dock,
+    .lobby-chat-drawer,
+    .weered-rail-stack,
+    .site-footer
+  ) {
+  color: #0f172a;
+}
+/* Nebula's own light-on-dark rules, turned round. */
+html[data-weered-theme="nebula"][data-weered-palette="blizzard"]:not([data-weered-lobby]):not(#nb)
+  :is(
+    .weered-left-section > .weered-left-title,
+    .weered-presence > .weered-presence-head,
+    .weered-rr-section > div:first-child,
+    .weered-rr-section .weered-rr-section-title,
+    .home-pulse-label,
+    .weered-rail-quick-label,
+    .weered-rail-tab-label,
+    .weered-shell-block-home > div:first-child .weered-rr-section-title
+  ) {
+  color: rgb(15 23 42 / 0.58) !important;
+}
+html[data-weered-theme="nebula"][data-weered-palette="blizzard"]:not([data-weered-lobby]):not(#nb)
+  .weered-presence-head
+  .weered-presence-sub {
+  color: rgb(15 23 42 / 0.45) !important;
+}
+html[data-weered-theme="nebula"][data-weered-palette="blizzard"]:not([data-weered-lobby]):not(#nb)
+  :is(
+    .home-btn-ghost,
+    .weered-rail-close,
+    .weered-chat-fullscreen-cta,
+    .weered-sheet-btn,
+    .weered-btn,
+    .weered-left .weered-left-link,
+    .weered-left .weered-left-link:hover,
+    .weered-left .weered-left-link-active,
+    .lobby-drawer-close,
+    .lobby-drawer-close:hover,
+    .weered-dock-close,
+    .weered-dock-close:hover,
+    .weered-dock-tab:not(.weered-dock-tab-active):hover,
+    .home-topbar-secondary,
+    .home-section-label,
+    .home-live-head > span,
+    .weered-shell-block .wsb-banner-title,
+    .weered-shell-block .wsb-stats b
+  ) {
+  color: #0f172a !important;
+}
+html[data-weered-theme="nebula"][data-weered-palette="blizzard"]:not([data-weered-lobby]):not(#nb)
+  .weered-left
+  .weered-left-link {
+  color: rgb(15 23 42 / 0.78) !important;
+}
+html[data-weered-theme="nebula"][data-weered-palette="blizzard"]:not([data-weered-lobby]):not(#nb)
+  .weered-dock-tab-active {
+  color: #ffffff !important;
+}
+/* Fields: pale wells instead of dark ones. */
+html[data-weered-theme="nebula"][data-weered-palette="blizzard"]:not([data-weered-lobby]):not(#nb)
+  :is(
+    .weered-left .weered-presence-search,
+    .weered-right .weered-rr-search,
+    .weered-dock input,
+    .weered-dock textarea,
+    .lobby-chat-drawer input:not([type="file"]),
+    .home-search-hero input
+  ) {
+  background: rgb(15 23 42 / 0.045) !important;
+  border-color: rgb(15 23 42 / 0.16) !important;
+  color: #0f172a !important;
+}
+html[data-weered-theme="nebula"][data-weered-palette="blizzard"]:not([data-weered-lobby]):not(#nb)
+  :is(.weered-shell, .weered-dock, .lobby-chat-drawer, .weered-sheet-root)
+  :is(input, textarea)::placeholder {
+  color: rgb(15 23 42 / 0.42) !important;
+}
+html[data-weered-theme="nebula"][data-weered-palette="blizzard"]:not([data-weered-lobby]):not(#nb)
+  :is(.weered-rr-mod-panel, .weered-rr-create-panel, .weered-rr-chatlock, .weered-dock-tabs) {
+  background: rgb(15 23 42 / 0.05) !important;
+  border-color: rgb(15 23 42 / 0.1) !important;
+}
+/* Rows and chips that were white-on-dark tints. */
+html[data-weered-theme="nebula"][data-weered-palette="blizzard"]:not([data-weered-lobby]):not(#nb)
+  :is(
+    .home-pulse-room,
+    .home-pulse-person,
+    .weered-shell-block .wsb-row,
+    .weered-shell-block .wsb-links a
+  ) {
+  background: rgb(15 23 42 / 0.04) !important;
+  border-color: rgb(15 23 42 / 0.12) !important;
+  color: #0f172a !important;
+}
+html[data-weered-theme="nebula"][data-weered-palette="blizzard"]:not([data-weered-lobby]):not(#nb)
+  .weered-rr-section
+  > div:not(:first-child)
+  > :is(div[style*="border-radius"], button) {
+  background: rgb(15 23 42 / 0.03) !important;
+  border-color: rgb(15 23 42 / 0.1) !important;
+}
+html[data-weered-theme="nebula"][data-weered-palette="blizzard"]:not([data-weered-lobby]):not(#nb)
+  .weered-left
+  .weered-left-link-active {
+  background: linear-gradient(90deg, rgb(var(--nb-a) / 0.16), rgb(var(--nb-a) / 0.04)) !important;
+  border-color: rgb(var(--nb-a) / 0.45) !important;
+}
+
+/* Text components style inline: light colours turn dark, the faint ones
+   muted. Not over pictures, which keep their white type. */
+html[data-weered-theme="nebula"][data-weered-palette="blizzard"]:not([data-weered-lobby]):not(#nb)
+  :is(.weered-shell, .weered-sheet-root, .weered-dock, .lobby-chat-drawer, .weered-rail-stack)
+  :is(
+    [style*="color: rgba(255, 255, 255, 0."],
+    [style*="color: rgba(243, 244, 246, 0."],
+    [style*="color: rgba(226, 232, 240, 0."],
+    [style*="color: rgba(229, 231, 235, 0."],
+    [style*="color: rgba(203, 213, 225, 0."],
+    [style*="color: rgba(248, 250, 252, 0."]
+  ):not(:is(.weered-featured-card, .home-stream, .home-lobby-card, [style*="url("]) *) {
+  color: rgb(15 23 42 / 0.6) !important;
+}
+html[data-weered-theme="nebula"][data-weered-palette="blizzard"]:not([data-weered-lobby]):not(#nb)
+  :is(.weered-shell, .weered-sheet-root, .weered-dock, .lobby-chat-drawer, .weered-rail-stack)
+  :is(
+    [style*="color: rgb(255, 255, 255)"],
+    [style*="color: white"],
+    [style*="color: rgb(243, 244, 246)"],
+    [style*="color: rgb(248, 250, 252)"],
+    [style*="color: rgb(226, 232, 240)"],
+    [style*="color: rgb(229, 231, 235)"],
+    [style*="color: rgba(255, 255, 255, 0.9"],
+    [style*="color: rgba(255, 255, 255, 0.8"],
+    [style*="color: rgba(243, 244, 246, 0.9"],
+    [style*="color: rgba(243, 244, 246, 0.8"],
+    [style*="color: rgba(226, 232, 240, 0.9"],
+    [style*="color: rgba(226, 232, 240, 0.8"]
+  ):not(:is(.weered-featured-card, .home-stream, .home-lobby-card, [style*="url("]) *):not(
+    [style*="background: linear-gradient(135deg"]
+  ) {
+  color: #0f172a !important;
+}
+/* Hairlines drawn in white (invisible on white) become grey. */
+html[data-weered-theme="nebula"][data-weered-palette="blizzard"]:not([data-weered-lobby]):not(#nb)
+  :is(.weered-shell, .weered-sheet-root, .weered-dock, .lobby-chat-drawer)
+  [style*="solid rgba(255, 255, 255"]:not(
+    :is(.weered-featured-card, .home-stream, .home-lobby-card) *
+  ) {
+  border-color: rgb(15 23 42 / 0.12) !important;
+}
+/* Dark wells drawn inline (rgba(0,0,0,…)) become pale. */
+html[data-weered-theme="nebula"][data-weered-palette="blizzard"]:not([data-weered-lobby]):not(#nb)
+  :is(.weered-shell, .weered-sheet-root, .weered-dock, .lobby-chat-drawer)
+  :is([style*="background: rgba(0, 0, 0, 0."], [style*="background-color: rgba(0, 0, 0, 0."]):not(
+    :is(.weered-featured-card, .home-stream, .home-lobby-card, [style*="url("]) *
+  ):not([style*="url("]) {
+  background: rgb(15 23 42 / 0.045) !important;
+}
+
+/* Whatever the guard (components/shell/BlizzardGuard.tsx) found light on
+   light: strong text dark, faint text muted. */
+html[data-weered-theme="nebula"][data-weered-palette="blizzard"]:not([data-weered-lobby]):not(#nb)
+  [data-nb-dark="1"] {
+  color: #0f172a !important;
+}
+html[data-weered-theme="nebula"][data-weered-palette="blizzard"]:not([data-weered-lobby]):not(#nb)
+  [data-nb-dark="2"] {
+  color: rgb(15 23 42 / 0.58) !important;
+}
+
+/* ── Hard lines on white: near-black ────────────────────────────────── */
+html[data-weered-theme="nebula"][data-weered-palette="blizzard"][data-weered-lines="hard"]:not(
+    [data-weered-lobby]
+  ):not(#nb) {
+  --nb-line: rgb(15 23 42 / 0.85);
+}
+html[data-weered-theme="nebula"][data-weered-palette="blizzard"][data-weered-lines="hard"]:not(
+    [data-weered-lobby]
+  ):not(#nb)
+  :is(.weered-left, .weered-right, main.weered-center, .weered-dock, .weered-sheet) {
+  border: 1.5px solid #0f172a !important;
+}
+html[data-weered-theme="nebula"][data-weered-palette="blizzard"][data-weered-lines="hard"]:not(
+    [data-weered-lobby]
+  ):not(#nb)
+  :is(
+    .weered-left-section,
+    .weered-presence,
+    .weered-rr-section,
+    .weered-usercorner,
+    .home-pulse,
+    .weered-shell-block-home,
+    .weered-settings-section,
+    .home-lobby-card,
+    .home-live-room
+  ) {
+  border: 1px solid rgb(15 23 42 / 0.8) !important;
+}

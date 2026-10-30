@@ -455,8 +455,10 @@ export function LookTab({ accent, look }: { accent: string; look: ShellLook }) {
                     borderRadius: 12,
                     textAlign: "left",
                     cursor: "pointer",
-                    color: "#fff",
-                    background: swatch(c),
+                    color: c.light ? "#0f172a" : "#fff",
+                    background: c.light
+                      ? `radial-gradient(120% 120% at 0% 0%, #ffffff, transparent 60%), linear-gradient(180deg, ${c.bg}, #ffffff)`
+                      : swatch(c),
                     border: `1px solid ${on ? c.a : "rgba(255,255,255,.1)"}`,
                     boxShadow: on ? `0 0 0 3px ${alpha(c.a, 0.35)}` : "none",
                   }}

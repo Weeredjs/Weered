@@ -150,7 +150,7 @@ export default function ShellDesigner() {
 
   return createPortal(
     <>
-      <ShellDesignOverlay accent={accent} />
+      <ShellDesignOverlay accent={accent} light={d.look.theme === "nebula" && !!colours.light} />
 
       {/* ── Top bar ─────────────────────────────────────────────────────── */}
       <div
