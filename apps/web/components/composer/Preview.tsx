@@ -58,6 +58,7 @@ export default function Preview({
   features,
   spinKey,
   replayKey,
+  welcome,
 }: {
   name: string;
   slug: string;
@@ -71,6 +72,8 @@ export default function Preview({
   features: Record<FeatureId, boolean>;
   spinKey: number;
   replayKey: number;
+  /** The Home banner's words, when a description wrote them. */
+  welcome?: { title: string; body: string; cta: string } | null;
 }) {
   const accent = theme.accent;
   const display = name.trim() || "Your lobby";
@@ -375,10 +378,10 @@ export default function Preview({
                   }}
                 >
                   <div style={{ fontSize: 15, fontWeight: 900, color: "#fff", ...headStyle }}>
-                    Welcome to {display}
+                    {welcome?.title || `Welcome to ${display}`}
                   </div>
                   <div style={{ fontSize: 11, color: "rgba(226,232,240,.7)", marginTop: 4 }}>
-                    Pull up a chair. Rooms are open, the calendar is below.
+                    {welcome?.body || "Pull up a chair. Rooms are open, the calendar is below."}
                   </div>
                   <span
                     style={{
@@ -392,7 +395,7 @@ export default function Preview({
                       fontWeight: 900,
                     }}
                   >
-                    Jump in
+                    {welcome?.cta || "Jump in"}
                   </span>
                 </div>
               )}

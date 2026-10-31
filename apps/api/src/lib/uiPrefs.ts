@@ -61,6 +61,7 @@ const SHELL_CORES: Record<string, readonly string[]> = {
   friends: ["left", "right"],
   crew: ["left", "right"],
   discover: ["left", "right"],
+  build: ["home"],
   ticker: ["home"],
   pulse: ["home"],
   hero: ["home"],

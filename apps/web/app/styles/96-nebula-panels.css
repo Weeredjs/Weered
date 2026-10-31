@@ -464,6 +464,19 @@ html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb)
   border-color: rgb(var(--nb-a) / 0.65) !important;
   background: rgb(var(--nb-a) / 0.16) !important;
 }
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb)
+  .home-build
+  .home-build-ask-input {
+  border-radius: 999px !important;
+  border-color: rgb(var(--nb-a) / 0.32) !important;
+  background: rgb(var(--nb-ink, 6 4 18) / 0.45) !important;
+  font-family: var(--nb-font) !important;
+}
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb)
+  .home-build
+  .home-build-ask-input:focus {
+  border-color: rgb(var(--nb-a) / 0.75) !important;
+}
 html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .home-build-sketch {
   border-radius: 12px !important;
   border-color: rgb(var(--nb-a) / 0.35) !important;

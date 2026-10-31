@@ -159,6 +159,52 @@
   background: rgba(255, 255, 255, 0.07);
   filter: none;
 }
+/* Describe it: the words go to the composer (/lobby/create?describe=). */
+.home-build-ask {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  margin: 6px 0 0;
+}
+.home-build .home-build-ask-input {
+  flex: 1;
+  min-width: 0;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 9px 12px;
+  border-radius: 2px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(0, 0, 0, 0.38);
+  color: #fff;
+  font: inherit;
+  font-size: 13.5px;
+  outline: none;
+  transition:
+    border-color 0.15s,
+    background 0.15s;
+}
+.home-build .home-build-ask-input::placeholder {
+  color: rgba(226, 232, 240, 0.45);
+}
+.home-build .home-build-ask-input:focus {
+  border-color: rgba(167, 139, 250, 0.75);
+  background: rgba(0, 0, 0, 0.5);
+}
+.home-build .home-build-ask .home-build-go:disabled {
+  opacity: 0.6;
+  cursor: default;
+  filter: none;
+}
+@container (max-width: 430px) {
+  .home-build-ask {
+    flex-wrap: wrap;
+  }
+  .home-build .home-build-ask .home-build-go {
+    flex: 1 1 100%;
+    justify-content: center;
+  }
+}
+
 /* Design mode needs a window at least 1180px wide (ShellDesigner). */
 @media (max-width: 1179px) {
   .home-build .home-build-design {

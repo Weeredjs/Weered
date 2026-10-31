@@ -10,9 +10,10 @@ import { createPortal } from "react-dom";
 import { IconBtn, belowTitlebar, chip, panel } from "../lobby-design/designerKit";
 import Confetti from "../composer/Confetti";
 import { useWeered } from "../WeeredProvider";
-import { hideItem, findItem, type ShellRegion } from "../../lib/shellLayout";
+import { hideItem, findItem, presetLayout, type ShellRegion } from "../../lib/shellLayout";
 import {
   discardDesign,
+  editDraft,
   editLayout,
   isDirty,
   redo,
@@ -22,7 +23,10 @@ import {
   stopDesign,
   undo,
   useShellDesign,
+  type ShellLook,
 } from "../../lib/shellDesign";
+import DescribeBox from "../build/DescribeBox";
+import { dripByWords } from "../../lib/aiBuild";
 import { paletteColours } from "../../lib/uiPrefs";
 import { weeredToast } from "../../lib/toast";
 import ShellDesignOverlay from "./ShellDesignOverlay";
@@ -42,6 +46,8 @@ export default function ShellDesigner() {
   // The build panel can step aside so the page gets the whole window; it
   // comes back when something is picked, since the inspector lives in it.
   const [panelOpen, setPanelOpen] = useState(true);
+  // Describe your drip (components/build/DescribeBox.tsx), under the top bar.
+  const [describeOpen, setDescribeOpen] = useState(true);
   useEffect(() => {
     if (s.selected) setPanelOpen(true);
   }, [s.selected]);
@@ -196,6 +202,14 @@ export default function ShellDesigner() {
         >
           {panelOpen ? "Hide panel" : "Show panel"}
         </button>
+        <button
+          type="button"
+          style={chip(describeOpen, accent)}
+          title="Say what you want and it changes"
+          onClick={() => setDescribeOpen((v) => !v)}
+        >
+          ✦ Describe
+        </button>
         <span style={{ flex: 1 }} />
         <span
           style={{
@@ -256,6 +270,29 @@ export default function ShellDesigner() {
           ✕
         </IconBtn>
       </div>
+
+      {describeOpen && (
+        <div className="db-dock" style={{ left: panelOpen ? "calc(50% + 166px)" : "50%" }}>
+          <DescribeBox
+            kind="drip"
+            variant="bar"
+            accent={accent}
+            placeholder="Describe your drip: “ice blue and glassy, sharp corners, light snow”"
+            placeholderAfter="Keep going: warmer, no snow, square corners…"
+            onClose={() => setDescribeOpen(false)}
+            onBuild={async (prompt) => {
+              const r = await dripByWords(prompt, { ...d.look });
+              const preset = r.layout ? presetLayout(r.layout) : null;
+              editDraft((snap) => ({
+                ...snap,
+                look: { ...snap.look, ...(r.look as Partial<ShellLook>) },
+                ...(preset ? { layout: preset } : {}),
+              }));
+              return { summary: r.summary || "Done.", undo };
+            }}
+          />
+        </div>
+      )}
 
       {/* ── Left: build panel / inspector ───────────────────────────────── */}
       <div

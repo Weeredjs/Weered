@@ -43,6 +43,10 @@ import ThemePicker, { type ThemeValue } from "../../../components/composer/Theme
 import { FeatureToggles, RoomChips } from "../../../components/composer/InsidePicker";
 import Preview, { type PreviewRoom } from "../../../components/composer/Preview";
 import Confetti from "../../../components/composer/Confetti";
+import LaunchOverlay from "../../../components/composer/LaunchOverlay";
+import CustomRooms from "../../../components/composer/CustomRooms";
+import DescribeBox from "../../../components/build/DescribeBox";
+import { extraBlocks, planLobby, type LobbyPlan, type RoomKind } from "../../../lib/aiBuild";
 import {
   ComposerStyles,
   FAINT,
@@ -134,6 +138,13 @@ function roomModule(r: RoomPreset, enabled: Set<string>): string | null {
   return null;
 }
 
+const DESCRIBE_EXAMPLES = [
+  "Helldivers crew, dark and loud",
+  "Book club, Thursdays at 7",
+  "Dentist office with a front desk",
+  "Poker night, invite only",
+];
+
 const DEFAULT_THEME: ThemeValue = {
   preset: "midnight",
   accent: "#7c3aed",
@@ -174,7 +185,7 @@ export default function CreateLobbyPage() {
       signedIn = !!JSON.parse(localStorage.getItem("weered_user") || "null")?.id;
     } catch {}
     if (!signedIn) {
-      router.replace(`/login?next=${encodeURIComponent("/lobby/create")}`);
+      router.replace(`/login?next=${encodeURIComponent(`/lobby/create${window.location.search}`)}`);
       return;
     }
     apiFetch("/staff/me")
@@ -268,6 +279,14 @@ export default function CreateLobbyPage() {
   const [features, setFeatures] = useState<Record<FeatureId, boolean>>(DEFAULT_FEATURES);
   const [roomIds, setRoomIds] = useState<string[]>(DEFAULT_ROOMS);
 
+  // ── Describe it (components/build/DescribeBox.tsx) ──────────────────────
+  // What a description adds beyond the steps: rooms by name, the Home
+  // banner's words, extra blocks, a front door, a symbol.
+  type AiHome = Pick<LobbyPlan, "welcome" | "extras" | "door"> & { symbol?: string };
+  const [customRooms, setCustomRooms] = useState<{ name: string; kind: RoomKind }[] | null>(null);
+  const [aiHome, setAiHome] = useState<AiHome | null>(null);
+  const [describeAsk, setDescribeAsk] = useState("");
+
   // The design survives a trip to the upgrade page (and a refresh).
   const DRAFT_KEY = "weered:composer-draft:v1";
   const restored = React.useRef(false);
@@ -292,6 +311,8 @@ export default function CreateLobbyPage() {
       if (d.features && typeof d.features === "object")
         setFeatures({ ...DEFAULT_FEATURES, ...d.features });
       if (Array.isArray(d.roomIds)) setRoomIds(d.roomIds.map(String));
+      if (Array.isArray(d.customRooms)) setCustomRooms(d.customRooms);
+      if (d.aiHome && typeof d.aiHome === "object") setAiHome(d.aiHome);
     } catch {}
   }, []);
   useEffect(() => {
@@ -308,10 +329,23 @@ export default function CreateLobbyPage() {
           theme,
           features,
           roomIds,
+          customRooms,
+          aiHome,
         }),
       );
     } catch {}
-  }, [name, slugRaw, slugManual, description, gameId, theme, features, roomIds]);
+  }, [
+    name,
+    slugRaw,
+    slugManual,
+    description,
+    gameId,
+    theme,
+    features,
+    roomIds,
+    customRooms,
+    aiHome,
+  ]);
 
   const enabledModules = useMemo(() => {
     const m: string[] = MODULE_FEATURES.filter((f) => features[f]);
@@ -322,10 +356,15 @@ export default function CreateLobbyPage() {
 
   const starterRooms: PreviewRoom[] = useMemo(() => {
     const on = new Set(enabledModules);
+    if (customRooms)
+      return customRooms.map((r) => ({
+        name: r.name,
+        module: r.kind === "text" ? null : roomModule({ module: r.kind } as RoomPreset, on),
+      }));
     return ROOM_PRESETS.filter((r) => roomIds.includes(r.id)).flatMap((r) =>
       r.names.map((n) => ({ name: n, module: roomModule(r, on) })),
     );
-  }, [roomIds, enabledModules]);
+  }, [roomIds, enabledModules, customRooms]);
 
   const tabsFor = useCallback(
     (): LobbyLayout["tabs"] =>
@@ -360,8 +399,10 @@ export default function CreateLobbyPage() {
       if (welcome) {
         welcome.props = {
           ...welcome.props,
-          title: `Welcome to ${name.trim()}`.slice(0, 120),
+          title: (aiHome?.welcome.title || `Welcome to ${name.trim()}`).slice(0, 120),
+          ...(aiHome?.welcome.cta ? { cta: aiHome.welcome.cta } : {}),
           body:
+            aiHome?.welcome.body ||
             description.trim() ||
             (gameId === "OFFICE"
               ? "Take a seat in Reception and ring the desk. Someone will be right with you."
@@ -369,6 +410,7 @@ export default function CreateLobbyPage() {
         };
       }
       if (features.requests) blocks.push(newBlock("requests"));
+      if (aiHome?.extras.length) blocks.push(...extraBlocks(aiHome.extras));
       // The Digital office: the front desk sits right under the welcome. Its
       // waiting room is set once Reception exists (see launch()).
       if (gameId === "OFFICE") {
@@ -379,6 +421,7 @@ export default function CreateLobbyPage() {
     return {
       ...base,
       ...(gameId === "OFFICE" ? { door: officeDoor() } : {}),
+      ...(aiHome?.door ? { door: aiHome.door } : {}),
       tabs: tabsFor(),
       landing,
       theme: {
@@ -388,6 +431,7 @@ export default function CreateLobbyPage() {
         intensity: theme.intensity,
         font: theme.font,
         entrance: theme.entrance,
+        ...(theme.effect === "symbol" && aiHome?.symbol ? { symbol: aiHome.symbol } : {}),
       },
       blocks,
     };
@@ -432,7 +476,10 @@ export default function CreateLobbyPage() {
   useEffect(() => {
     let start = "";
     try {
-      start = new URLSearchParams(window.location.search).get("start") || "";
+      const q = new URLSearchParams(window.location.search);
+      start = q.get("start") || "";
+      // Home's describe box hands its words over (?describe=).
+      setDescribeAsk((q.get("describe") || "").trim().slice(0, 600));
     } catch {}
     if (start === "games" || start === "work" || start === "community") {
       setStartGroup(start);
@@ -448,6 +495,66 @@ export default function CreateLobbyPage() {
     const t = setTimeout(() => goTo("cz-game"), 300);
     return () => clearTimeout(t);
   }, [loading, startGroup]);
+
+  /** What's on the page now, as a plan the builder can revise. Only once a
+   *  description has filled it: before that it's just the defaults. */
+  function currentPlan(): LobbyPlan | null {
+    if (!aiHome) return null;
+    return {
+      name,
+      description,
+      template: gameId,
+      look: { ...theme, ...(aiHome.symbol ? { symbol: aiHome.symbol } : {}) },
+      inside: features,
+      rooms:
+        customRooms ||
+        starterRooms.map((r) => ({ name: r.name, kind: (r.module || "text") as RoomKind })),
+      welcome: aiHome.welcome,
+      extras: aiHome.extras,
+      door: aiHome.door,
+      summary: "",
+    };
+  }
+  /** Fill every step from a plan; returns the Undo. */
+  function applyPlan(p: LobbyPlan): () => void {
+    const was = { name, slugRaw, slugManual, description, gameId, gameTouched, theme };
+    const was2 = { themeTouched, features, roomIds, customRooms, aiHome };
+    // A name typed before the first description stays theirs.
+    if (aiHome || !name.trim()) {
+      setName(p.name);
+      setSlugManual(false);
+    }
+    setDescription(p.description);
+    setGameId(GAME_BY_ID[p.template] ? p.template : "NONE");
+    setGameTouched(true);
+    const { symbol, ...look } = p.look;
+    setTheme(look);
+    setThemeTouched(true);
+    setReplayKey((k) => k + 1);
+    setFeatures({ ...DEFAULT_FEATURES, ...p.inside } as Record<FeatureId, boolean>);
+    setCustomRooms(p.rooms);
+    setAiHome({
+      welcome: p.welcome,
+      extras: p.extras,
+      door: p.door,
+      ...(symbol ? { symbol } : {}),
+    });
+    return () => {
+      setName(was.name);
+      setSlugRaw(was.slugRaw);
+      setSlugManual(was.slugManual);
+      setDescription(was.description);
+      setGameId(was.gameId);
+      setGameTouched(was.gameTouched);
+      setTheme(was.theme);
+      setThemeTouched(was2.themeTouched);
+      setFeatures(was2.features);
+      setRoomIds(was2.roomIds);
+      setCustomRooms(was2.customRooms);
+      setAiHome(was2.aiHome);
+      setReplayKey((k) => k + 1);
+    };
+  }
 
   // ── Toast ───────────────────────────────────────────────────────────────
   const [toast, setToast] = useState<{ ok: boolean; text: string } | null>(null);
@@ -828,7 +935,8 @@ export default function CreateLobbyPage() {
                   Build your lobby
                 </h1>
                 <div style={{ fontSize: 13.5, color: MUTED, marginTop: 8 }}>
-                  Name it, pick the game, paint the walls. The preview updates as you go.
+                  Say what you want and it builds, or go step by step. The preview updates as you
+                  go.
                 </div>
               </div>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -891,6 +999,23 @@ export default function CreateLobbyPage() {
                   Surprise me
                 </button>
               </div>
+            </div>
+            <div style={{ marginTop: 16 }}>
+              <DescribeBox
+                key={describeAsk}
+                kind="lobby"
+                accent={accent}
+                label="Vibe code it"
+                placeholder="Describe it: “A Helldivers crew, dark and loud, with a war room and a squad board.”"
+                placeholderAfter="Change anything: louder, a watch party room, a new name…"
+                examples={DESCRIBE_EXAMPLES}
+                initial={describeAsk}
+                autoRun={!!describeAsk}
+                onBuild={async (prompt) => {
+                  const plan = await planLobby(prompt, currentPlan());
+                  return { summary: plan.summary, undo: applyPlan(plan) };
+                }}
+              />
             </div>
           </header>
 
@@ -1150,13 +1275,22 @@ export default function CreateLobbyPage() {
             kicker="Open a few doors so the place isn't empty on day one."
             accent={accent}
           >
-            <RoomChips
-              value={roomIds}
-              accent={accent}
-              onToggle={(id) =>
-                setRoomIds((r) => (r.includes(id) ? r.filter((x) => x !== id) : [...r, id]))
-              }
-            />
+            {customRooms ? (
+              <CustomRooms
+                rooms={customRooms}
+                accent={accent}
+                onChange={setCustomRooms}
+                onPresets={() => setCustomRooms(null)}
+              />
+            ) : (
+              <RoomChips
+                value={roomIds}
+                accent={accent}
+                onToggle={(id) =>
+                  setRoomIds((r) => (r.includes(id) ? r.filter((x) => x !== id) : [...r, id]))
+                }
+              />
+            )}
           </Section>
 
           {/* 6. Launch */}
@@ -1258,6 +1392,7 @@ export default function CreateLobbyPage() {
             features={features}
             spinKey={spinKey}
             replayKey={replayKey}
+            welcome={aiHome?.welcome}
           />
           <div style={{ marginTop: 14 }}>{launchButton(false)}</div>
         </aside>
@@ -1265,108 +1400,15 @@ export default function CreateLobbyPage() {
 
       {/* Launch overlay */}
       {phase !== "idle" && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label="Creating your lobby"
-          style={{
-            position: "fixed",
-            inset: 0,
-            zIndex: 9000,
-            display: "grid",
-            placeItems: "center",
-            padding: 16,
-            background: "rgba(3,4,10,.72)",
-            backdropFilter: "blur(6px)",
-          }}
-        >
-          <div
-            className="cz-anim"
-            style={{
-              width: "100%",
-              maxWidth: 380,
-              borderRadius: 20,
-              padding: "26px 22px",
-              background: `radial-gradient(90% 70% at 50% 0%, ${alpha(accent, 0.3)}, transparent 70%), #0b0b14`,
-              border: `1px solid ${alpha(accent, 0.45)}`,
-              boxShadow: `0 30px 90px ${alpha(accent, 0.45)}`,
-              animation: "cz-pop .4s both",
-            }}
-          >
-            <div
-              style={{
-                fontSize: 22,
-                fontWeight: 900,
-                letterSpacing: "-0.5px",
-                marginBottom: 16,
-                textAlign: "center",
-              }}
-            >
-              {phase === "done" ? `${name.trim()} is open 🎉` : "Building your lobby…"}
-            </div>
-            {[
-              { label: `Claiming weered.ca/lobby/${slug}`, done: phase !== "creating" },
-              { label: `Painting it ${preset.name}`, done: phase !== "creating" },
-              {
-                label:
-                  roomProgress.total === 0
-                    ? "No starter rooms"
-                    : phase === "rooms"
-                      ? `Opening rooms ${roomProgress.tried}/${roomProgress.total}`
-                      : phase === "done"
-                        ? `${roomProgress.made} of ${roomProgress.total} rooms open`
-                        : `Opening ${roomCount} rooms`,
-                done: phase === "done",
-              },
-              { label: "Doors open", done: phase === "done" },
-            ].map((s, i) => (
-              <div
-                key={i}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 10,
-                  padding: "7px 0",
-                  fontSize: 13.5,
-                  color: s.done ? TEXT : MUTED,
-                }}
-              >
-                <span
-                  aria-hidden
-                  className="cz-anim"
-                  style={{
-                    width: 20,
-                    height: 20,
-                    flex: "0 0 20px",
-                    borderRadius: 99,
-                    display: "grid",
-                    placeItems: "center",
-                    fontSize: 11,
-                    fontWeight: 900,
-                    background: s.done ? accent : "transparent",
-                    border: s.done ? "none" : `2px solid ${alpha(accent, 0.4)}`,
-                    borderTopColor: s.done ? undefined : accent,
-                    animation: s.done ? "cz-pop .3s both" : "cz-spin .8s linear infinite",
-                    color: "#fff",
-                  }}
-                >
-                  {s.done ? "✓" : ""}
-                </span>
-                {s.label}
-              </div>
-            ))}
-            {phase === "done" && roomProgress.made < roomProgress.total && (
-              <div style={{ fontSize: 11.5, color: FAINT, marginTop: 8 }}>
-                Some rooms didn&apos;t open. Add them from the lobby in a moment.
-              </div>
-            )}
-            {phase === "done" && (
-              <div style={{ fontSize: 12, color: MUTED, marginTop: 12, textAlign: "center" }}>
-                Taking you to Design mode…
-              </div>
-            )}
-          </div>
-        </div>
+        <LaunchOverlay
+          phase={phase}
+          name={name}
+          slug={slug}
+          presetName={preset.name}
+          roomProgress={roomProgress}
+          roomCount={roomCount}
+          accent={accent}
+        />
       )}
 
       <Confetti

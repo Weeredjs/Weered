@@ -15,16 +15,22 @@ export const AI_DAILY = {
   search: 50,
   quiz: 20,
   operator: 30,
+  // The builder (routes/aiBuild.ts) passes its own cap: 60 paid, 10 free.
+  build: 60,
 } as const;
 
 /** Spend one call from the user's allowance for `bucket`; false when it is gone. */
-export function takeAiBudget(userId: string, bucket: keyof typeof AI_DAILY): boolean {
+export function takeAiBudget(
+  userId: string,
+  bucket: keyof typeof AI_DAILY,
+  limit: number = AI_DAILY[bucket],
+): boolean {
   if (!userId) return false;
   const day = new Date().toISOString().slice(0, 10);
   const key = `${bucket}:${userId}`;
   const cur = used.get(key);
   const n = cur && cur.day === day ? cur.n : 0;
-  if (n >= AI_DAILY[bucket]) return false;
+  if (n >= limit) return false;
   if (used.size > 50_000) used.clear();
   used.set(key, { day, n: n + 1 });
   return true;

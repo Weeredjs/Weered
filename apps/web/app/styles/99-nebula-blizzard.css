@@ -316,6 +316,13 @@ html[data-weered-theme="nebula"][data-weered-palette="blizzard"]:not([data-weere
   background: rgb(15 23 42 / 0.04) !important;
 }
 html[data-weered-theme="nebula"][data-weered-palette="blizzard"]:not([data-weered-lobby]):not(#nb)
+  .home-build
+  .home-build-ask-input {
+  background: rgb(255 255 255 / 0.85) !important;
+  border-color: rgb(15 23 42 / 0.18) !important;
+  color: #0f172a !important;
+}
+html[data-weered-theme="nebula"][data-weered-palette="blizzard"]:not([data-weered-lobby]):not(#nb)
   .home-build-sketch {
   background: rgb(15 23 42 / 0.05) !important;
 }

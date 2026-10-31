@@ -482,6 +482,10 @@ function Yours({ actions }: { actions: GuideActions }) {
             ["Add blocks.", `Up to ${SHELL_MAX_BLOCKS} across your sidebars and Home.`],
             ["Undo and redo.", "Leave half-way and your draft waits in this browser."],
             ["Hide the panel", "to see the page full width while you work."],
+            [
+              "Or describe it.",
+              "✦ Describe: “ice blue and glassy, sharp corners, light snow”, and it changes. Undo takes it back.",
+            ],
           ]}
         />
       </Section>
@@ -603,6 +607,27 @@ function Lobbies({ go, actions }: { go: (id: ChapterId) => void; actions: GuideA
           Build a lobby
         </Btn>
       </div>
+
+      <Section title="Or just say it" note="Vibe code your own lobby.">
+        <Facts
+          items={[
+            [
+              "Describe it.",
+              "“A Helldivers crew, dark and loud, with a war room and a squad board.” The builder names it, picks the game, the look, the rooms, the welcome and any rules, and fills in every step.",
+            ],
+            [
+              "Keep going.",
+              "“Calmer. Add a watch party room.” It changes what you asked and keeps the rest.",
+            ],
+            ["Undo.", "Every build can be taken back. Nothing is live until you hit Create."],
+            [
+              "In Design too.",
+              "✦ Describe on a lobby you run: “a countdown to Friday at 8, house rules up top”.",
+            ],
+            ["How many.", "10 builds a day on a free account, 60 with a plan."],
+          ]}
+        />
+      </Section>
 
       <Section
         title="Start from"

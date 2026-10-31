@@ -5,7 +5,7 @@
 // words and room order), the inspector for the selected block, and the theme
 // dock along the bottom. The lobby itself renders the draft live underneath,
 // so every change is visible the moment it's made.
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
   newBlock,
@@ -22,6 +22,8 @@ import { BlocksPalette, LobbyWords, TabsEditor } from "./DesignerPanels";
 import { Inspector } from "./DesignerInspector";
 import { ThemeDock } from "./DesignerTheme";
 import { Confetti, DomainModal } from "./DesignerDomain";
+import DescribeBox from "../build/DescribeBox";
+import { applyOps, editLobbyByWords } from "../../lib/aiBuild";
 
 export type DesignerProps = {
   lobbyId: string;
@@ -50,6 +52,11 @@ export default function LobbyDesigner(p: DesignerProps) {
   const [name, setName] = useState(p.lobbyName);
   const [desc, setDesc] = useState(p.description);
   const [confetti, setConfetti] = useState(0);
+  // Describe a change (components/build/DescribeBox.tsx), under the top bar.
+  // The draft can move while a change is being built, so it's read fresh.
+  const [describeOpen, setDescribeOpen] = useState(true);
+  const draftRef = useRef(d);
+  draftRef.current = d;
   const selected = d.blocks.find((b) => b.id === p.selectedId) || null;
   const [armed, setArmed] = useState(false);
   const canDiscard = design.dirty || name.trim() !== p.lobbyName || desc !== p.description;
@@ -181,6 +188,13 @@ export default function LobbyDesigner(p: DesignerProps) {
         <button style={chip(dockOpen, accent)} onClick={() => setDockOpen((v) => !v)}>
           Theme
         </button>
+        <button
+          style={chip(describeOpen, accent)}
+          title="Say what you want and it changes"
+          onClick={() => setDescribeOpen((v) => !v)}
+        >
+          ✦ Describe
+        </button>
         <button style={chip(domainOpen, accent)} onClick={() => setDomainOpen(true)}>
           {p.domain.host ? `🌐 ${p.domain.host}` : "🌐 Your domain"}
         </button>
@@ -253,6 +267,40 @@ export default function LobbyDesigner(p: DesignerProps) {
           ✕
         </IconBtn>
       </div>
+
+      {describeOpen && (
+        <div className="db-dock">
+          <DescribeBox
+            kind="edit"
+            variant="bar"
+            accent={accent}
+            placeholder="Describe a change: “darker, house rules up top, a countdown to Friday 8pm”"
+            placeholderAfter="Keep going: louder, move the rooms up, rename it…"
+            onClose={() => setDescribeOpen(false)}
+            onBuild={async (prompt) => {
+              const r = await editLobbyByWords(p.lobbyId, prompt, draftRef.current, {
+                name,
+                description: desc,
+              });
+              if (!r.ops.length) return { summary: r.summary || "Nothing to change there." };
+              const out = applyOps(draftRef.current, r.ops);
+              const was = { name, desc };
+              set(() => out.layout);
+              if (out.rename.name) setName(out.rename.name);
+              if (out.rename.description !== undefined) setDesc(out.rename.description);
+              if (out.added.length) p.onShowTab("home");
+              return {
+                summary: r.summary || "Done.",
+                undo: () => {
+                  design.undo();
+                  setName(was.name);
+                  setDesc(was.desc);
+                },
+              };
+            }}
+          />
+        </div>
+      )}
 
       {/* ── Left: build panel ──────────────────────────────────────────── */}
       {leftOpen && (

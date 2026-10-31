@@ -1,12 +1,14 @@
 "use client";
 
 // "Build your own", the top of Home (James 2026-10-30: "we also need to have a
-// focus on build your own. Right at the top."). Two doors: build a lobby (the
-// composer, with a few ways in) and design your own Weered (Design mode, and
-// the look in Settings). Lobby owners and admins also get their lobbies here,
-// one click from Home. Styles: app/styles/52-home.css (+ Nebula in 96).
+// focus on build your own. Right at the top."). Two doors: build a lobby (say
+// what you want and the composer builds it, or go step by step) and design
+// your own Weered (Design mode, and the look in Settings). Lobby owners and
+// admins also get their lobbies here, one click from Home. Styles:
+// app/styles/52-home.css (+ Nebula in 96).
 import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useOverlay } from "./overlays/OverlayProvider";
 import { startDesign } from "../lib/shellDesign";
 import { PALETTES, PALETTE_IDS } from "../lib/uiPrefs";
@@ -53,7 +55,9 @@ export default function HomeBuild({
   canDesign: boolean;
 }) {
   const { openSheet } = useOverlay() as any;
+  const router = useRouter();
   const [mine, setMine] = useState<Lobby[]>([]);
+  const [ask, setAsk] = useState("");
 
   useEffect(() => {
     if (!signedIn) return;
@@ -100,14 +104,38 @@ export default function HomeBuild({
           )}
           <div className="home-build-body">
             <div className="home-build-eyebrow">Build your own</div>
-            <h2 className="home-build-title">Build a lobby</h2>
+            {/* James 2026-10-30: "Vibe code your own lobby". Live since the
+                builder could do it (2026-10-31, lib/aiBuild.ts). */}
+            <h2 className="home-build-title">Vibe code your own lobby</h2>
             <p className="home-build-line">
-              Your game, your crew, your club or your business. Rooms, a front door and your own
-              look, up in a minute.
+              Say what you want: your game, your crew, your club or your business. Rooms, a front
+              door and your own look, built in seconds.
             </p>
+            <form
+              className="home-build-ask"
+              onSubmit={(e) => {
+                e.preventDefault();
+                const words = ask.trim();
+                if (words.length < 3) return;
+                const to = `/lobby/create?describe=${encodeURIComponent(words.slice(0, 600))}`;
+                router.push(signedIn ? to : `/login?next=${encodeURIComponent(to)}`);
+              }}
+            >
+              <input
+                className="home-build-ask-input"
+                value={ask}
+                onChange={(e) => setAsk(e.target.value)}
+                placeholder="A Helldivers crew, dark and loud, war room, squad board"
+                maxLength={600}
+                aria-label="Describe your lobby"
+              />
+              <button type="submit" className="home-build-go" disabled={ask.trim().length < 3}>
+                <span aria-hidden>✦</span> Build it
+              </button>
+            </form>
             <div className="home-build-row">
-              <Link href="/lobby/create" className="home-build-go">
-                Start building →
+              <Link href="/lobby/create" className="home-build-chip">
+                Step by step →
               </Link>
               {STARTS.map((s) => (
                 <Link
