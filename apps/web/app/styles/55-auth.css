@@ -1,0 +1,473 @@
+/* =====================================================================
+   SIGN IN / CREATE ACCOUNT (app/login/page.tsx), 2026-10-31
+   =====================================================================
+   Matches the landing page (app/page.tsx): the same aura, grid and
+   headline. On a wide screen the pitch sits beside the card; on a phone
+   it's the card alone. Buttons are scoped under two classes so the global
+   button:hover (40-core-layout.css) can't repaint them. */
+
+.wa {
+  position: relative;
+  min-height: 100vh;
+  overflow: hidden;
+  background: #07060d;
+  color: rgba(243, 244, 246, 0.96);
+  font-family: var(--font-rajdhani), "Rajdhani", system-ui, sans-serif;
+}
+.wa-aura {
+  position: fixed;
+  inset: -20%;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(40% 40% at 22% 18%, rgba(124, 58, 237, 0.42) 0%, transparent 70%),
+    radial-gradient(36% 36% at 80% 85%, rgba(14, 165, 233, 0.2) 0%, transparent 70%),
+    radial-gradient(30% 30% at 85% 15%, rgba(217, 70, 239, 0.14) 0%, transparent 70%);
+  filter: blur(30px);
+  animation: waDrift 20s ease-in-out infinite alternate;
+}
+.wa-grid {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+  background-size: 48px 48px;
+  -webkit-mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, #000 30%, transparent 100%);
+  mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, #000 30%, transparent 100%);
+}
+@keyframes waDrift {
+  to {
+    transform: translate(4%, 3%) rotate(4deg);
+  }
+}
+@keyframes waRise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.wa-shell {
+  position: relative;
+  z-index: 1;
+  box-sizing: border-box;
+  min-height: 100vh;
+  width: min(1080px, 100%);
+  margin: 0 auto;
+  padding: 32px 16px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: center;
+  justify-items: center;
+  gap: 48px;
+}
+@media (min-width: 960px) {
+  .wa-shell {
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 440px);
+    justify-items: stretch;
+    padding: 40px 32px;
+  }
+}
+
+/* The pitch */
+.wa-pitch {
+  display: none;
+}
+@media (min-width: 960px) {
+  .wa-pitch {
+    display: block;
+    animation: waRise 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  }
+}
+.wa .wa-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: #fff;
+  font-family: var(--font-barlow), "Barlow Condensed", sans-serif;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  text-decoration: none;
+}
+.wa-brand img {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 14px rgba(124, 58, 237, 0.45));
+}
+.wa-headline {
+  margin: 28px 0 22px;
+  font-size: clamp(44px, 5.4vw, 68px);
+  font-weight: 800;
+  line-height: 0.98;
+  letter-spacing: -0.02em;
+  color: #fff;
+  text-shadow: 0 0 40px rgba(124, 58, 237, 0.35);
+}
+.wa-points {
+  display: grid;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  max-width: 480px;
+}
+.wa-points li {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  align-items: baseline;
+  font-size: 17px;
+  line-height: 1.4;
+  color: rgba(226, 232, 240, 0.78);
+}
+.wa-points li > span:first-child {
+  font-size: 17px;
+}
+.wa-points b {
+  color: #fff;
+  font-weight: 700;
+}
+.wa-fine {
+  margin-top: 26px;
+  font-size: 14px;
+  color: rgba(167, 139, 250, 0.85);
+  font-weight: 700;
+}
+
+/* The card */
+.wa-card {
+  box-sizing: border-box;
+  width: min(440px, 100%);
+  padding: 30px 28px 22px;
+  border-radius: 20px;
+  border: 1px solid transparent;
+  background:
+    linear-gradient(rgba(12, 11, 20, 0.9), rgba(12, 11, 20, 0.9)) padding-box,
+    linear-gradient(
+        150deg,
+        rgba(196, 181, 253, 0.55),
+        rgba(124, 58, 237, 0.12) 40%,
+        rgba(14, 165, 233, 0.35)
+      )
+      border-box;
+  box-shadow:
+    0 24px 80px rgba(0, 0, 0, 0.6),
+    0 0 60px rgba(124, 58, 237, 0.1);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+  animation: waRise 0.6s 0.06s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@media (min-width: 960px) {
+  .wa-card {
+    justify-self: end;
+  }
+  .wa-brand-small {
+    display: none !important;
+  }
+}
+.wa-brand-small {
+  margin-bottom: 18px;
+  font-size: 19px;
+}
+.wa-brand-small img {
+  width: 32px;
+  height: 32px;
+}
+.wa-title {
+  margin: 0;
+  font-size: 30px;
+  font-weight: 800;
+  line-height: 1.05;
+  color: #fff;
+}
+.wa-sub {
+  margin: 6px 0 20px;
+  font-size: 15px;
+  color: rgba(203, 213, 225, 0.62);
+}
+
+.wa-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  margin-bottom: 18px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.04);
+}
+.wa .wa-tab {
+  flex: 1;
+  padding: 9px;
+  border-radius: 9px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: rgba(148, 163, 184, 0.75);
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    color 0.15s,
+    background 0.15s;
+}
+.wa .wa-tab:hover {
+  color: rgba(243, 244, 246, 0.92);
+  background: transparent;
+}
+.wa .wa-tab.is-on {
+  color: #fff;
+  background: rgba(124, 58, 237, 0.22);
+  border-color: rgba(124, 58, 237, 0.4);
+  box-shadow: 0 0 16px rgba(124, 58, 237, 0.15);
+}
+
+.wa-notice {
+  margin: 0 0 14px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(250, 204, 21, 0.3);
+  background: rgba(250, 204, 21, 0.08);
+  color: rgba(254, 240, 138, 0.95);
+  font-size: 14px;
+}
+
+.wa-providers {
+  display: grid;
+  gap: 8px;
+}
+.wa .wa-provider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(243, 244, 246, 0.95);
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
+}
+.wa .wa-provider:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.24);
+  color: #fff;
+}
+
+.wa-or {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 18px 0 4px;
+  font-size: 13px;
+  color: rgba(148, 163, 184, 0.55);
+}
+.wa-or::before,
+.wa-or::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.wa-label-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+.wa-label {
+  display: block;
+  margin: 14px 0 6px;
+  font-size: 14px;
+  font-weight: 700;
+  color: rgba(203, 213, 225, 0.8);
+}
+.wa .wa-forgot {
+  font-size: 13px;
+  color: rgba(167, 139, 250, 0.85);
+  text-decoration: none;
+}
+.wa .wa-forgot:hover {
+  text-decoration: underline;
+}
+.wa .wa-input {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+  font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+  font-size: 15px;
+  outline: none;
+  /* The Classic theme puts a gold ring on every input, with !important. */
+  box-shadow: none !important;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s,
+    background 0.15s;
+}
+.wa .wa-input::placeholder {
+  color: rgba(148, 163, 184, 0.38);
+}
+.wa .wa-input:focus {
+  border-color: rgba(167, 139, 250, 0.7);
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.16) !important;
+  background: rgba(255, 255, 255, 0.07);
+}
+.wa .wa-input:-webkit-autofill,
+.wa .wa-input:-webkit-autofill:hover,
+.wa .wa-input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 1000px rgba(22, 20, 36, 0.98) inset !important;
+  -webkit-text-fill-color: #fff !important;
+  caret-color: #fff;
+}
+.wa-pw {
+  position: relative;
+}
+.wa-pw .wa-input {
+  padding-right: 68px;
+}
+.wa .wa-eye {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
+  padding: 5px 9px;
+  border-radius: 8px;
+  border: none;
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(203, 213, 225, 0.75);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.wa .wa-eye:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+.wa-captcha {
+  display: flex;
+  justify-content: center;
+}
+.wa-captcha:not(:empty) {
+  margin-top: 14px;
+}
+
+.wa-error {
+  margin-top: 12px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(239, 68, 68, 0.28);
+  background: rgba(239, 68, 68, 0.1);
+  color: rgba(254, 202, 202, 0.96);
+  font-size: 14px;
+}
+.wa .wa-go {
+  width: 100%;
+  margin-top: 18px;
+  padding: 13px;
+  border-radius: 12px;
+  border: 1px solid rgba(196, 181, 253, 0.45);
+  background: linear-gradient(135deg, #7c3aed, #5b21b6);
+  box-shadow: 0 6px 26px rgba(124, 58, 237, 0.3);
+  color: #fff;
+  font-family: inherit;
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  transition:
+    box-shadow 0.15s,
+    transform 0.15s;
+}
+.wa .wa-go:hover:not(:disabled) {
+  background: linear-gradient(135deg, #7c3aed, #5b21b6);
+  box-shadow: 0 8px 34px rgba(124, 58, 237, 0.45);
+  transform: translateY(-1px);
+  color: #fff;
+}
+.wa .wa-go:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.wa-legal {
+  margin: 12px 0 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: rgba(148, 163, 184, 0.65);
+  text-align: center;
+}
+.wa .wa-legal a {
+  color: rgba(196, 181, 253, 0.9);
+}
+
+.wa-switch {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  font-size: 14px;
+  color: rgba(148, 163, 184, 0.7);
+}
+.wa .wa-switch button {
+  padding: 0;
+  border: none;
+  background: none;
+  color: rgba(196, 181, 253, 0.95);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.wa .wa-switch button:hover {
+  background: none;
+  color: #fff;
+  text-decoration: underline;
+}
+.wa .wa-switch .wa-dev {
+  margin-left: 10px;
+  color: rgba(100, 116, 139, 0.6);
+  font-weight: 600;
+}
+.wa-links {
+  display: flex;
+  justify-content: center;
+  gap: 18px;
+  margin-top: 14px;
+}
+.wa .wa-links a {
+  font-size: 13px;
+  color: rgba(148, 163, 184, 0.5);
+  text-decoration: none;
+}
+.wa .wa-links a:hover {
+  color: rgba(196, 181, 253, 0.9);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wa-aura,
+  .wa-pitch,
+  .wa-card {
+    animation: none !important;
+  }
+}

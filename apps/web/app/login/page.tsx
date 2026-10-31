@@ -1,8 +1,11 @@
 "use client";
 
+// Sign in and create an account. Redone 2026-10-31 to match the landing page
+// (styles: app/styles/55-auth.css): the pitch beside the card on wide
+// screens, sign-in services first, then a username form password managers
+// understand.
 import React, { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { onActivate } from "@/lib/a11y";
 
 const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || "";
 /** Set on this device by any sign-in (here, and the socket's auth:ok in
@@ -31,7 +34,7 @@ function LoginForm() {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
-  const [pendingEmail, setPendingEmail] = useState("");
+  const [showPw, setShowPw] = useState(false);
   const [captchaToken, setCaptchaToken] = useState("");
   const captchaRef = React.useRef<HTMLDivElement | null>(null);
   const captchaWidgetIdRef = React.useRef<string | null>(null);
@@ -60,6 +63,7 @@ function LoginForm() {
       captchaWidgetIdRef.current = (window as any).turnstile.render(captchaRef.current, {
         sitekey: TURNSTILE_SITE_KEY,
         theme: "dark",
+        appearance: "interaction-only",
         callback: (tok: string) => setCaptchaToken(tok),
         "expired-callback": () => setCaptchaToken(""),
         "error-callback": () => setCaptchaToken(""),
@@ -206,543 +210,254 @@ function LoginForm() {
     window.location.href = `${API}/auth/google`;
   }
 
+  // A failed or refused Google sign-in lands back here with ?error=; it used to
+  // show nothing at all.
+  const notice = React.useMemo(() => {
+    const e = sp?.get("error") || "";
+    if (sp?.get("deleted") === "1") return "Your account is deleted. Thanks for being here.";
+    if (e === "registration_closed") return "New accounts are closed right now. Try again soon.";
+    if (e === "account_suspended") return "This account is suspended.";
+    if (e) return "That sign-in didn't finish. Try again.";
+    return "";
+  }, [sp]);
   const isDev = process.env.NODE_ENV === "development";
+  const switchMode = (m: "login" | "register") => {
+    setMode(m);
+    setErr("");
+  };
 
   return (
-    <>
-      <style>{`
-        .wl-root {
-          min-height: 100vh;
-          background: #07060d;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          padding: 20px;
-          font-family: 'DM Mono', monospace;
-          position: relative;
-          overflow: hidden;
-        }
-        .wl-root::before {
-          content: '';
-          position: fixed;
-          inset: -20%;
-          background:
-            radial-gradient(40% 40% at 22% 18%, rgba(124,58,237,0.42) 0%, transparent 70%),
-            radial-gradient(36% 36% at 80% 85%, rgba(14,165,233,0.20) 0%, transparent 70%),
-            radial-gradient(30% 30% at 85% 15%, rgba(217,70,239,0.14) 0%, transparent 70%);
-          filter: blur(30px);
-          pointer-events: none;
-          z-index: 0;
-          animation: wl-drift 20s ease-in-out infinite alternate;
-        }
-        @keyframes wl-drift { to { transform: translate(4%, 3%) rotate(4deg); } }
-        @keyframes wl-rise { from { opacity: 0; transform: translateY(16px) scale(.985); } to { opacity: 1; transform: none; } }
-        @media (prefers-reduced-motion: reduce) { .wl-root::before, .wl-card { animation: none !important; } }
-        .wl-root::after {
-          content: '';
-          position: fixed;
-          inset: 0;
-          background-image:
-            linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
-          background-size: 48px 48px;
-          pointer-events: none;
-          z-index: 0;
-          mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 30%, transparent 100%);
-        }
-        .wl-card {
-          position: relative;
-          z-index: 1;
-          width: min(440px, 100%);
-          background: linear-gradient(rgba(12,11,20,0.9), rgba(12,11,20,0.9)) padding-box,
-            linear-gradient(150deg, rgba(196,181,253,0.55), rgba(124,58,237,0.12) 40%, rgba(14,165,233,0.35)) border-box;
-          border: 1px solid transparent;
-          animation: wl-rise .6s cubic-bezier(.2,.8,.2,1) both;
-          border-radius: 20px;
-          padding: 36px 32px 28px;
-          box-shadow: 0 0 0 1px rgba(255,255,255,0.04), 0 24px 80px rgba(0,0,0,0.6), 0 0 60px rgba(124,58,237,0.08);
-          backdrop-filter: blur(20px);
-        }
-        .wl-brand {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          margin-bottom: 28px;
-        }
-        .wl-logo {
-          width: 72px;
-          height: 72px;
-          border-radius: 0;
-          flex-shrink: 0;
-          overflow: hidden;
-        }
-        .wl-logo img {
-          width: 100%;
-          height: 100%;
-          object-fit: contain;
-          filter: drop-shadow(0 0 16px rgba(124,58,237,0.4));
-        }
-         .wl-input:-webkit-autofill,
-        .wl-input:-webkit-autofill:hover,
-        .wl-input:-webkit-autofill:focus {
-          -webkit-box-shadow: 0 0 0 1000px rgba(20,20,35,0.95) inset !important;
-          -webkit-text-fill-color: rgba(243,244,246,0.98) !important;
-          caret-color: rgba(243,244,246,0.98);
-        } 
-        .wl-brand-name {
-          font-family: var(--font-barlow), 'Barlow Condensed', sans-serif;
-          font-weight: 800;
-          font-size: 20px;
-          color: rgba(243,244,246,0.98);
-          letter-spacing: -0.5px;
-          line-height: 1;
-        }
-        .wl-brand-sub {
-          font-size: 11px;
-          color: rgba(148,163,184,0.55);
-          margin-top: 3px;
-          letter-spacing: 0.3px;
-        }
-        .wl-tabs {
-          display: flex;
-          gap: 4px;
-          background: rgba(255,255,255,0.04);
-          border: 1px solid rgba(255,255,255,0.07);
-          border-radius: 12px;
-          padding: 4px;
-          margin-bottom: 24px;
-        }
-        .wl-tab {
-          flex: 1;
-          padding: 9px;
-          border-radius: 9px;
-          border: none;
-          background: transparent;
-          color: rgba(148,163,184,0.7);
-          font-family: var(--font-rajdhani), 'Rajdhani', sans-serif;
-          font-weight: 700;
-          font-size: 15px;
-          letter-spacing: .02em;
-          cursor: pointer;
-          transition: all 0.15s;
-        }
-        .wl-tab:hover { color: rgba(243,244,246,0.9); }
-        .wl-tab.active {
-          background: rgba(124,58,237,0.20);
-          border: 1px solid rgba(124,58,237,0.35);
-          color: rgba(243,244,246,0.98);
-          box-shadow: 0 0 16px rgba(124,58,237,0.15);
-        }
-        .wl-label {
-          display: block;
-          font-size: 11px;
-          color: rgba(148,163,184,0.65);
-          letter-spacing: 0.8px;
-          text-transform: uppercase;
-          margin-bottom: 8px;
-          margin-top: 14px;
-        }
-        .wl-input {
-          width: 100%;
-          padding: 13px 14px;
-          background: rgba(255,255,255,0.05);
-          border: 1px solid rgba(255,255,255,0.10);
-          border-radius: 12px;
-          color: rgba(243,244,246,0.98);
-          font-family: 'DM Mono', monospace;
-          font-size: 14px;
-          outline: none;
-          transition: border-color 0.15s, box-shadow 0.15s;
-          box-sizing: border-box;
-        }
-        .wl-input::placeholder { color: rgba(148,163,184,0.30); }
-        .wl-input:focus {
-          border-color: rgba(124,58,237,0.55);
-          box-shadow: 0 0 0 3px rgba(124,58,237,0.12);
-          background: rgba(255,255,255,0.07);
-        }
-        .wl-error {
-          margin-top: 12px;
-          padding: 10px 14px;
-          background: rgba(239,68,68,0.10);
-          border: 1px solid rgba(239,68,68,0.25);
-          border-radius: 10px;
-          color: rgba(254,202,202,0.95);
-          font-size: 12px;
-        }
-        .wl-btn {
-          width: 100%;
-          margin-top: 20px;
-          padding: 14px;
-          background: linear-gradient(135deg, #7c3aed, #5b21b6);
-          border: 1px solid rgba(196,181,253,0.45);
-          border-radius: 12px;
-          color: white;
-          font-family: var(--font-rajdhani), 'Rajdhani', sans-serif;
-          font-size: 17px;
-          letter-spacing: .02em;
-          font-weight: 700;
-          cursor: pointer;
-          transition: all 0.15s;
-          box-shadow: 0 4px 24px rgba(124,58,237,0.25);
-        }
-        .wl-btn:hover:not(:disabled) {
-          box-shadow: 0 4px 32px rgba(124,58,237,0.40);
-          transform: translateY(-1px);
-        }
-        .wl-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-        .wl-footer {
-          margin-top: 20px;
-          padding-top: 16px;
-          border-top: 1px solid rgba(255,255,255,0.06);
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 12px;
-        }
-        .wl-footer-text { font-size: 11px; color: rgba(148,163,184,0.45); }
-        .wl-switch { color: rgba(167,139,250,0.65); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
-        .wl-switch:hover { color: rgba(167,139,250,0.90); }
-        .wl-dev { font-size: 11px; color: rgba(100,116,139,0.40); background: none; border: none; cursor: pointer; font-family: 'DM Mono', monospace; text-decoration: underline; text-underline-offset: 3px; }
-        .wl-dev:hover { color: rgba(100,116,139,0.70); }
-      `}</style>
+    <div className="wa">
+      <div className="wa-aura" aria-hidden />
+      <div className="wa-grid" aria-hidden />
+      <div className="wa-shell">
+        {/* ── The pitch, beside the card on wide screens ── */}
+        <section className="wa-pitch" aria-label="What Weered is">
+          <a href="/" className="wa-brand">
+            {/* eslint-disable-next-line @next/next/no-img-element -- the brand mark */}
+            <img src="/brand/logo/weered-logo-128.png" alt="" />
+            Weered
+          </a>
+          <h1 className="wa-headline">A place for anything.</h1>
+          <ul className="wa-points">
+            <li>
+              <span aria-hidden>✦</span>
+              <span>
+                <b>Vibe code your own lobby.</b> Say what you want and it builds.
+              </span>
+            </li>
+            <li>
+              <span aria-hidden>🏠</span>
+              <span>
+                <b>A place of your own</b> at yourname.weered.ca.
+              </span>
+            </li>
+            <li>
+              <span aria-hidden>🎙</span>
+              <span>
+                <b>Rooms that are live</b> the moment you walk in: voice, video, watch parties.
+              </span>
+            </li>
+            <li>
+              <span aria-hidden>🎮</span>
+              <span>
+                <b>Your games and your crew,</b> together in one spot.
+              </span>
+            </li>
+          </ul>
+          <div className="wa-fine">Free to join. Your own lobby is $6 a month.</div>
+        </section>
 
-      <div className="wl-root">
-        <div className="wl-card">
-          <div className="wl-brand">
-            <div className="wl-logo">
-              <img src="/brand/logo/weered-logo-128.png" alt="Weered" />
-            </div>
-            <div>
-              <div className="wl-brand-name">weered</div>
-              <div className="wl-brand-sub">
-                {mode === "login" ? "Welcome back." : "Thirty seconds and you're in."}
-              </div>
-            </div>
-          </div>
+        {/* ── The card ── */}
+        <main className="wa-card">
+          <a href="/" className="wa-brand wa-brand-small">
+            {/* eslint-disable-next-line @next/next/no-img-element -- the brand mark */}
+            <img src="/brand/logo/weered-logo-128.png" alt="" />
+            Weered
+          </a>
+          <h2 className="wa-title">{mode === "login" ? "Welcome back" : "Create your account"}</h2>
+          <p className="wa-sub">
+            {mode === "login"
+              ? "Sign in and pick up where you left off."
+              : "Thirty seconds and you're in."}
+          </p>
 
-          <div className="wl-tabs">
+          <div className="wa-tabs" role="group" aria-label="Sign in or create an account">
             <button
               type="button"
-              className={`wl-tab${mode === "login" ? " active" : ""}`}
-              onClick={() => {
-                setMode("login");
-                setErr("");
-              }}
+              className={`wa-tab${mode === "login" ? " is-on" : ""}`}
+              aria-pressed={mode === "login"}
+              onClick={() => switchMode("login")}
             >
               Sign in
             </button>
             <button
               type="button"
-              className={`wl-tab${mode === "register" ? " active" : ""}`}
-              onClick={() => {
-                setMode("register");
-                setErr("");
-              }}
+              className={`wa-tab${mode === "register" ? " is-on" : ""}`}
+              aria-pressed={mode === "register"}
+              onClick={() => switchMode("register")}
             >
               Create account
             </button>
           </div>
 
-          {pendingEmail ? (
-            <div style={{ textAlign: "center", padding: "12px 0 8px" }}>
-              <div style={{ fontSize: 32, marginBottom: 16, opacity: 0.9 }}>
-                <svg
-                  width="40"
-                  height="40"
-                  viewBox="0 0 40 40"
-                  fill="none"
-                  style={{ margin: "0 auto", display: "block" }}
-                >
-                  <rect
-                    width="40"
-                    height="40"
-                    rx="10"
-                    fill="rgba(124,58,237,0.15)"
-                    stroke="rgba(124,58,237,0.3)"
-                    strokeWidth="1"
-                  />
-                  <path
-                    d="M8 14l12 9 12-9"
-                    stroke="#a78bfa"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                  />
-                  <rect
-                    x="8"
-                    y="12"
-                    width="24"
-                    height="17"
-                    rx="2"
-                    stroke="#a78bfa"
-                    strokeWidth="1.5"
-                  />
-                </svg>
-              </div>
-              <div
-                style={{
-                  fontFamily: "var(--font-barlow), 'Barlow Condensed', sans-serif",
-                  fontWeight: 800,
-                  fontSize: 18,
-                  color: "rgba(232,232,240,0.95)",
-                  marginBottom: 8,
-                }}
-              >
-                Check your email.
-              </div>
-              <div
-                style={{
-                  fontSize: 12,
-                  color: "rgba(148,163,184,0.6)",
-                  lineHeight: 1.8,
-                  marginBottom: 20,
-                }}
-              >
-                We sent a verification link to
-                <br />
-                <span style={{ color: "rgba(167,139,250,0.8)" }}>{pendingEmail}</span>
-              </div>
-              <div style={{ fontSize: 11, color: "rgba(100,116,139,0.5)", lineHeight: 1.7 }}>
-                Click the link in the email to activate your account.
-                <br />
-                You can browse in the meantime.
-              </div>
-              <button
-                style={{
-                  marginTop: 20,
-                  background: "none",
-                  border: "none",
-                  color: "rgba(167,139,250,0.45)",
-                  fontSize: 11,
-                  cursor: "pointer",
-                  fontFamily: "'DM Mono', monospace",
-                  textDecoration: "underline",
-                  textUnderlineOffset: 3,
-                }}
-                onClick={() => router.replace(nextPath)}
-              >
-                continue to weered →
-              </button>
+          {notice && (
+            <div className="wa-notice" role="status">
+              {notice}
             </div>
-          ) : (
-            // A real form, so password managers know this is a login: they
-            // offer saved accounts on Sign in and offer to save on success.
-            <form
-              method="post"
-              noValidate
-              onSubmit={(e) => {
-                e.preventDefault();
-                void submit();
-              }}
-            >
-              <label className="wl-label" htmlFor="wl-username">
-                username
-              </label>
-              <input
-                id="wl-username"
-                name="username"
-                className="wl-input"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="your_handle"
-                autoComplete="username"
-                autoCapitalize="none"
-                spellCheck={false}
-                autoFocus
-              />
+          )}
 
-              {mode === "register" && (
-                <>
-                  <label className="wl-label" htmlFor="wl-email">
-                    email
-                  </label>
-                  <input
-                    id="wl-email"
-                    name="email"
-                    className="wl-input"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="you@example.com"
-                    autoComplete="email"
-                  />
-                </>
-              )}
+          {/* Sign-in services. A new one (Discord, Twitch, Steam) is one more button here. */}
+          <div className="wa-providers">
+            <button type="button" className="wa-provider" onClick={googleLogin} disabled={busy}>
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden>
+                <path
+                  d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.716v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"
+                  fill="#4285F4"
+                />
+                <path
+                  d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"
+                  fill="#34A853"
+                />
+                <path
+                  d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z"
+                  fill="#FBBC05"
+                />
+                <path
+                  d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 6.29C4.672 4.163 6.656 3.58 9 3.58z"
+                  fill="#EA4335"
+                />
+              </svg>
+              Continue with Google
+            </button>
+          </div>
 
-              <div
-                style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}
-              >
-                <label className="wl-label" htmlFor="wl-password">
-                  password
+          <div className="wa-or">
+            <span>{mode === "login" ? "or sign in with your username" : "or make a username"}</span>
+          </div>
+
+          {/* A real form, so password managers know this is a login: they
+              offer saved accounts on Sign in and offer to save on success. */}
+          <form
+            method="post"
+            noValidate
+            onSubmit={(e) => {
+              e.preventDefault();
+              void submit();
+            }}
+          >
+            <label className="wa-label" htmlFor="wl-username">
+              Username
+            </label>
+            <input
+              id="wl-username"
+              name="username"
+              className="wa-input"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="your_handle"
+              autoComplete="username"
+              autoCapitalize="none"
+              spellCheck={false}
+              autoFocus
+            />
+
+            {mode === "register" && (
+              <>
+                <label className="wa-label" htmlFor="wl-email">
+                  Email
                 </label>
-                {mode === "login" && (
-                  <a
-                    href="/forgot-password"
-                    style={{
-                      fontSize: 10,
-                      color: "rgba(167,139,250,0.55)",
-                      textDecoration: "underline",
-                      textUnderlineOffset: 2,
-                      fontFamily: "'DM Mono', monospace",
-                    }}
-                  >
-                    forgot?
-                  </a>
-                )}
-              </div>
+                <input
+                  id="wl-email"
+                  name="email"
+                  className="wa-input"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  autoComplete="email"
+                />
+              </>
+            )}
+
+            <div className="wa-label-row">
+              <label className="wa-label" htmlFor="wl-password">
+                Password
+              </label>
+              {mode === "login" && (
+                <a href="/forgot-password" className="wa-forgot">
+                  Forgot it?
+                </a>
+              )}
+            </div>
+            <div className="wa-pw">
               <input
                 id="wl-password"
                 name="password"
-                className="wl-input"
-                type="password"
+                className="wa-input"
+                type={showPw ? "text" : "password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••••"
                 autoComplete={mode === "login" ? "current-password" : "new-password"}
               />
-
-              {mode === "register" && TURNSTILE_SITE_KEY && (
-                <div
-                  ref={captchaRef}
-                  style={{ marginTop: 16, display: "flex", justifyContent: "center" }}
-                />
-              )}
-
-              {err && <div className="wl-error">{err}</div>}
-
-              <button type="submit" className="wl-btn" disabled={busy}>
-                {busy ? "One sec…" : mode === "login" ? "Sign in" : "Create account"}
-              </button>
-            </form>
-          )}
-
-          <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "18px 0 4px" }}>
-            <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.07)" }} />
-            <span
-              style={{
-                fontSize: 11,
-                color: "rgba(148,163,184,0.35)",
-                letterSpacing: "0.06em",
-                fontFamily: "'DM Mono', monospace",
-              }}
-            >
-              or
-            </span>
-            <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.07)" }} />
-          </div>
-
-          <button
-            type="button"
-            onClick={googleLogin}
-            disabled={busy}
-            style={{
-              width: "100%",
-              padding: "13px 14px",
-              background: "rgba(255,255,255,0.05)",
-              border: "1px solid rgba(255,255,255,0.12)",
-              borderRadius: 12,
-              color: "rgba(243,244,246,0.90)",
-              fontFamily: "'DM Mono', monospace",
-              fontSize: 13,
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 10,
-              transition: "all 0.15s",
-            }}
-            onMouseEnter={(e) => {
-              (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.09)";
-              (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,0.20)";
-            }}
-            onMouseLeave={(e) => {
-              (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.05)";
-              (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,0.12)";
-            }}
-          >
-            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-              <path
-                d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.716v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"
-                fill="#4285F4"
-              />
-              <path
-                d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"
-                fill="#34A853"
-              />
-              <path
-                d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z"
-                fill="#FBBC05"
-              />
-              <path
-                d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 6.29C4.672 4.163 6.656 3.58 9 3.58z"
-                fill="#EA4335"
-              />
-            </svg>
-            Continue with Google
-          </button>
-
-          {!pendingEmail && (
-            <div className="wl-footer">
-              <span className="wl-footer-text">
-                {mode === "login" ? "No account? " : "Have one? "}
-                <span
-                  className="wl-switch"
-                  onClick={() => {
-                    setMode(mode === "login" ? "register" : "login");
-                    setErr("");
-                  }}
-                  onKeyDown={onActivate(() => {
-                    setMode(mode === "login" ? "register" : "login");
-                    setErr("");
-                  })}
-                  tabIndex={0}
-                >
-                  {mode === "login" ? "Create one" : "Sign in"}
-                </span>
-              </span>
-              {isDev && (
-                <button className="wl-dev" onClick={devLogin} disabled={busy}>
-                  dev_login()
-                </button>
-              )}
-            </div>
-          )}
-          <div
-            style={{
-              marginTop: 16,
-              paddingTop: 14,
-              borderTop: "1px solid rgba(255,255,255,0.05)",
-              display: "flex",
-              justifyContent: "center",
-              gap: 20,
-            }}
-          >
-            {[
-              ["about", "/about"],
-              ["premium", "/premium"],
-              ["contact", "/contact"],
-            ].map(([label, href]) => (
-              <a
-                key={href}
-                href={href}
-                style={{
-                  fontSize: 10,
-                  color: "rgba(167,139,250,0.35)",
-                  textDecoration: "none",
-                  letterSpacing: "0.08em",
-                  fontFamily: "'DM Mono', monospace",
-                  transition: "color 0.15s",
-                }}
-                onMouseEnter={(e) => (e.currentTarget.style.color = "rgba(167,139,250,0.75)")}
-                onMouseLeave={(e) => (e.currentTarget.style.color = "rgba(167,139,250,0.35)")}
+              <button
+                type="button"
+                className="wa-eye"
+                onClick={() => setShowPw((v) => !v)}
+                aria-label={showPw ? "Hide password" : "Show password"}
+                aria-pressed={showPw}
               >
-                {label}
-              </a>
-            ))}
+                {showPw ? "Hide" : "Show"}
+              </button>
+            </div>
+
+            {/* Cloudflare's check: it shows only when it needs a click. */}
+            {mode === "register" && TURNSTILE_SITE_KEY && (
+              <div ref={captchaRef} className="wa-captcha" />
+            )}
+
+            {err && (
+              <div className="wa-error" role="alert">
+                {err}
+              </div>
+            )}
+
+            <button type="submit" className="wl-btn wa-go" disabled={busy}>
+              {busy ? "One sec…" : mode === "login" ? "Sign in" : "Create account"}
+            </button>
+
+            {mode === "register" && (
+              <p className="wa-legal">
+                By creating an account you agree to the <a href="/terms">Terms</a> and{" "}
+                <a href="/privacy">Privacy Policy</a>.
+              </p>
+            )}
+          </form>
+
+          <div className="wa-switch">
+            {mode === "login" ? "New here?" : "Have an account?"}{" "}
+            <button
+              type="button"
+              onClick={() => switchMode(mode === "login" ? "register" : "login")}
+            >
+              {mode === "login" ? "Create one" : "Sign in"}
+            </button>
+            {isDev && (
+              <button type="button" className="wa-dev" onClick={devLogin} disabled={busy}>
+                dev login
+              </button>
+            )}
           </div>
-        </div>
+
+          <nav className="wa-links" aria-label="More">
+            <a href="/about">About</a>
+            <a href="/pricing">Pricing</a>
+            <a href="/contact">Contact</a>
+          </nav>
+        </main>
       </div>
-    </>
+    </div>
   );
 }
 
