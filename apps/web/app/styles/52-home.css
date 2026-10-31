@@ -284,6 +284,22 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.home-build-mine-gate {
+  flex-shrink: 0;
+  margin: 0 4px 0 2px;
+  padding: 2px 4px;
+  border: none;
+  border-left: 1px solid rgba(255, 255, 255, 0.13);
+  background: transparent;
+  color: rgba(226, 232, 240, 0.85);
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.home-build-mine-gate option {
+  color: #111;
+}
 .home-build-mine-item .home-build-mine-design {
   border-left: 1px solid rgba(255, 255, 255, 0.1);
   color: #c4b5fd;

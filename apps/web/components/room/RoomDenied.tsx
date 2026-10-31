@@ -21,27 +21,32 @@ export default function RoomDenied({ roomIds }: { roomIds: string[] }) {
   const staff = gated && Number(info.minLevel) >= 4;
 
   const removed = info.reason === "lobby_banned" || info.reason === "lobby_kicked";
+  const place = info.reason === "place_gated";
 
-  const title = gated
-    ? staff
-      ? "Staff only"
-      : "Members only"
-    : removed
-      ? "Removed from this community"
-      : "Entry denied";
-  const body = gated
-    ? staff
-      ? `This room is for ${lobby}'s staff.`
-      : `This room opens once ${lobby}'s staff give you access.`
-    : info.reason === "lobby_banned"
-      ? `${lobby}'s staff have banned you from its rooms.`
-      : info.reason === "lobby_kicked"
-        ? `${lobby}'s staff removed you from the community.`
-        : info.reason === "private_meeting"
-          ? "This is a private meeting room."
-          : info.reason === "rate_limited"
-            ? "You've opened a lot of new rooms in the last hour. Try again in a little while."
-            : "A moderator declined your request";
+  const title = place
+    ? "Not open to you"
+    : gated
+      ? staff
+        ? "Staff only"
+        : "Members only"
+      : removed
+        ? "Removed from this community"
+        : "Entry denied";
+  const body = place
+    ? "Whoever lives here decides who comes in: friends only, ask first, or closed. Their Home page says which."
+    : gated
+      ? staff
+        ? `This room is for ${lobby}'s staff.`
+        : `This room opens once ${lobby}'s staff give you access.`
+      : info.reason === "lobby_banned"
+        ? `${lobby}'s staff have banned you from its rooms.`
+        : info.reason === "lobby_kicked"
+          ? `${lobby}'s staff removed you from the community.`
+          : info.reason === "private_meeting"
+            ? "This is a private meeting room."
+            : info.reason === "rate_limited"
+              ? "You've opened a lot of new rooms in the last hour. Try again in a little while."
+              : "A moderator declined your request";
 
   return (
     <div

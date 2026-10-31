@@ -23,6 +23,7 @@ const WEERED_THEMES: Record<WeeredThemeName, { bg: string; panel: string; panel2
 };
 
 import SteamAchievementsPanel from "../../SteamAchievementsPanel";
+import { placeAddress, placeOf, type Place } from "../../../lib/place";
 
 function applyWeeredTheme(name: WeeredThemeName) {
   if (typeof document === "undefined") return;
@@ -385,6 +386,14 @@ export default function ProfileSheet({ userId }: { userId: string }) {
   const [uploading,   setUploading  ] = useState(false);
   const [uploadError, setUploadError] = useState("");
   const [_theme,       setTheme      ] = useState<WeeredThemeName>("press");
+  // Their place (lib/place.ts), linked from the sheet (James 2026-10-31).
+  const [place,        setPlace      ] = useState<Place | null>(null);
+  useEffect(() => {
+    if (!profile?.id) return;
+    let alive = true;
+    placeOf(String(profile.id)).then((p) => { if (alive) setPlace(p); });
+    return () => { alive = false; };
+  }, [profile?.id]);
 
   useEffect(() => {
     try {
@@ -1049,6 +1058,15 @@ export default function ProfileSheet({ userId }: { userId: string }) {
           <SteamAchievementsPanel appId="553850" userId={profile.id} gameDisplayName="Helldivers 2" accentColor="#FFD700" />
           <SteamAchievementsPanel appId="3041230" userId={profile.id} gameDisplayName="Windrose" accentColor="#b8935a" />
           <SteamAchievementsPanel appId="1085660" userId={profile.id} gameDisplayName="Destiny 2" accentColor="#f58220" />
+        </div>
+      )}
+
+      {place && (
+        <div style={{ ...section, marginTop: 10 }}>
+          <a href={`/lobby/${encodeURIComponent(place.id)}`} style={{ ...actionButton, padding: "9px 12px", textDecoration: "none", width: "100%", justifyContent: "space-between", boxSizing: "border-box" }}>
+            <span><span style={{ fontSize: 14 }}>🏠</span> {isMe ? "Your place" : "Their place"}</span>
+            <span style={{ opacity: 0.6, fontSize: 12 }}>{placeAddress(place)} →</span>
+          </a>
         </div>
       )}
 

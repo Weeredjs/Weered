@@ -3,7 +3,7 @@ import { promises as dns } from "dns";
 import { prisma } from "../lib/prisma";
 import { hasLobbyPerm } from "../lib/lobbyPerms";
 import { sendMail } from "../lib/email";
-import { placeForHost } from "./places";
+import { isPlaceId, placeForHost } from "./places";
 
 // Custom-build meeting requests go here, not on the public board.
 const MEETING_NOTIFY_TO = process.env.MEETING_NOTIFY_TO || "james@weered.ca";
@@ -132,9 +132,9 @@ export default async function lobbyDesignRoutes(app: FastifyInstance, opts: Opts
       data.name = body.name.trim().slice(0, 100);
     if (typeof body.description === "string") data.description = body.description.slice(0, 500);
     if (Array.isArray(body.enabledModules))
-      data.enabledModules = body.enabledModules
-        .map(String)
-        .filter((m: string) => MODULE_KEYS.has(m));
+      data.enabledModules = isPlaceId(ctx.lobby.id)
+        ? [] // members' places are text only (routes/places.ts)
+        : body.enabledModules.map(String).filter((m: string) => MODULE_KEYS.has(m));
     if (Object.keys(data).length === 0)
       return reply.code(400).send({ ok: false, error: "nothing_to_update" });
     await prisma.lobby.update({ where: { id: ctx.lobby.id }, data });

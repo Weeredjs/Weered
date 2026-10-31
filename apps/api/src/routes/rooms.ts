@@ -1,4 +1,5 @@
 import { log, swallow } from "../lib/logger";
+import { isPlaceId } from "./places";
 import type { FastifyInstance } from "fastify";
 import { fetchWithTimeout } from "../lib/fetchWithTimeout";
 import { prisma } from "../lib/prisma";
@@ -216,7 +217,8 @@ export default async function roomsRoutes(app: FastifyInstance, opts: Opts) {
 
       const rawDM =
         typeof body.defaultModule === "string" ? body.defaultModule.trim().toLowerCase() : "";
-      const defaultModule = isValidRoomModule(rawDM) ? rawDM : null;
+      // Members' places are text only (routes/places.ts).
+      const defaultModule = isValidRoomModule(rawDM) && !isPlaceId(lobbyId) ? rawDM : null;
       const rawDisabled = Array.isArray(body.disabledModules) ? body.disabledModules : [];
       const disabledModules = Array.from(
         new Set(

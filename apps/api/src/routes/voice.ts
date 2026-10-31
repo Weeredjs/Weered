@@ -3,6 +3,7 @@ import type { FastifyInstance } from "fastify";
 import { AccessToken } from "livekit-server-sdk";
 import { prisma } from "../lib/prisma";
 import { canEnterGatedRoom } from "../lib/lobbyAccess";
+import { isPlaceId } from "./places";
 import { isOfficeRoom, scopeAllows } from "../lib/officeRooms";
 
 // LiveKit voice token minting (extracted from index.ts). The LIVEKIT_* config
@@ -82,6 +83,14 @@ export default async function voiceRoutes(app: FastifyInstance, opts: Opts) {
           swallow(e);
           return reply.code(503).send({ ok: false, error: "gate_unavailable" });
         }
+        // Members' places are text only: talking happens in lobbies
+        // (routes/places.ts, James 2026-10-31).
+        if (
+          isPlaceId(lookup) ||
+          isPlaceId(gate?.lobbyId) ||
+          (lookup.startsWith("lobby:") && isPlaceId(lookup.slice("lobby:".length)))
+        )
+          return reply.code(403).send({ ok: false, error: "text_only" });
         if (
           gate &&
           gate.minLevel > 0 &&

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { placeIdForHost, placeLabel } from "../../src/routes/places";
+import { gateOf, isPlaceId, placeIdForHost, placeLabel } from "../../src/routes/places";
 
 // Your place: <label>.weered.ca and weered.ca/u/<label> are someone's lobby
 // "u-<label>". Weered's own subdomains must never resolve to a member.
@@ -34,5 +34,20 @@ describe("placeIdForHost", () => {
       "-bad.weered.ca",
     ])
       expect(placeIdForHost(h), h).toBeNull();
+  });
+});
+
+describe("gateOf / isPlaceId", () => {
+  it("reads the gate from a place's config, anyone by default", () => {
+    expect(gateOf({ moduleConfig: { gate: "friends" } })).toBe("friends");
+    expect(gateOf({ moduleConfig: { gate: "me" } })).toBe("me");
+    expect(gateOf({ moduleConfig: { gate: "nonsense" } })).toBe("anyone");
+    expect(gateOf({ moduleConfig: null })).toBe("anyone");
+    expect(gateOf(null)).toBe("anyone");
+  });
+  it("knows a place by its id", () => {
+    expect(isPlaceId("u-donkey")).toBe(true);
+    expect(isPlaceId("helldivers2")).toBe(false);
+    expect(isPlaceId(null)).toBe(false);
   });
 });

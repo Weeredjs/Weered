@@ -6,6 +6,7 @@ import { avatarBg } from "../lib/avatarColor";
 import RoleIcon, { TierIcon, getRoleDisplayName, getRoleColor } from "./RoleIcon";
 import { SteamIcon, TwitchIcon, XboxIcon } from "./PresenceRow";
 import { onActivate } from "@/lib/a11y";
+import { placeOf, type Place } from "../lib/place";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 const FONT =
@@ -114,7 +115,16 @@ export interface UserHoverCardProps {
   onMessage?: (userId: string, userName: string) => void;
 }
 
-function HoverFriendRow({ profile, userId }: { profile: any; userId: string }) {
+function HoverFriendRow({
+  profile,
+  userId,
+  place,
+}: {
+  profile: any;
+  userId: string;
+  /** Their place (lib/place.ts), linked from the hover (James 2026-10-31). */
+  place?: Place | null;
+}) {
   const [status, setStatus] = React.useState<string>("");
   const [busy, setBusy] = React.useState(false);
   React.useEffect(() => {
@@ -141,7 +151,27 @@ function HoverFriendRow({ profile, userId }: { profile: any; userId: string }) {
     textAlign: "center",
   };
   const joinable = !!(profile?.joinable && profile?.currentRoomId);
-  if (status === "self") return null;
+  const placeChip = place ? (
+    <a
+      href={`/lobby/${encodeURIComponent(place.id)}`}
+      onClick={(e) => e.stopPropagation()}
+      title={place.host}
+      style={{
+        ...chip,
+        border: "1px solid rgba(245,183,0,.3)",
+        background: "rgba(245,183,0,.08)",
+        color: "rgba(253,224,71,.92)",
+        textDecoration: "none",
+        cursor: "pointer",
+      }}
+    >
+      🏠 {status === "self" ? "Your place" : "Place"}
+    </a>
+  ) : null;
+  if (status === "self")
+    return placeChip ? (
+      <div style={{ display: "flex", gap: 6, paddingBottom: 8 }}>{placeChip}</div>
+    ) : null;
   return (
     <div style={{ display: "flex", gap: 6, paddingBottom: 8 }}>
       {status === "friends" ? (
@@ -244,6 +274,7 @@ function HoverFriendRow({ profile, userId }: { profile: any; userId: string }) {
           {"\u27A4"} Join
         </button>
       )}
+      {placeChip}
     </div>
   );
 }
@@ -261,6 +292,16 @@ export default function UserHoverCard({
   onMessage,
 }: UserHoverCardProps) {
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [place, setPlace] = useState<Place | null>(null);
+  useEffect(() => {
+    const id = (profile as any)?.id;
+    if (!id) return;
+    let alive = true;
+    placeOf(String(id)).then((p) => alive && setPlace(p));
+    return () => {
+      alive = false;
+    };
+  }, [(profile as any)?.id]);
   const [guardian, setGuardian] = useState<GuardianInfo | null>(null);
   const [badges, setBadges] = useState<UserBadgeDisplay[]>([]);
   const [loading, setLoading] = useState(true);
@@ -874,7 +915,7 @@ export default function UserHoverCard({
           </div>
         )}
 
-        <HoverFriendRow profile={profile} userId={userId} />
+        <HoverFriendRow profile={profile} userId={userId} place={place} />
         <div style={{ display: "flex", gap: 6, paddingBottom: 12 }}>
           {onViewProfile && (
             <button

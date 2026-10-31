@@ -16,6 +16,11 @@ import { swallow } from "../lib/logger";
 // (routes/lobbyDesign.ts), through placeForHost below.
 
 export const PLACE_PREFIX = "u-";
+/** A member's place. Places are text only (no voice, video or screen share:
+ *  that's what lobbies are for, James 2026-10-31) and their owner says who
+ *  gets in. */
+export const isPlaceId = (id: unknown): boolean =>
+  typeof id === "string" && id.startsWith(PLACE_PREFIX);
 const LAYOUT_MAX = 48_000;
 /** Weered's own subdomains, and words that would read as Weered's: never a place. */
 const SYSTEM_LABELS = new Set([
@@ -95,15 +100,85 @@ export async function placeForHost(host: string): Promise<string | null> {
   return row ? id : null;
 }
 
-function view(l: { id: string; name: string }) {
+// ── Who can come in ─────────────────────────────────────────────────────
+// Kept in the place's moduleConfig (a place has no game module, so it's free),
+// with joinMode set to match: OPEN for anyone, APPROVAL for the rest, so a path
+// that only reads joinMode still makes a stranger knock rather than walk in.
+//   anyone   open to everyone with the link
+//   friends  the owner's friends walk in; nobody else
+//   ask      people knock (a join request); the owner lets them in
+//   me       closed: only the owner
+export const PLACE_GATES = ["anyone", "friends", "ask", "me"] as const;
+export type PlaceGate = (typeof PLACE_GATES)[number];
+
+export function gateOf(l: { moduleConfig?: unknown } | null | undefined): PlaceGate {
+  const g = (l?.moduleConfig as any)?.gate;
+  return PLACE_GATES.includes(g) ? g : "anyone";
+}
+
+export async function areFriends(a: string, b: string): Promise<boolean> {
+  if (!a || !b || a === b) return false;
+  const fr = await prisma.friendRequest
+    .findFirst({
+      where: {
+        status: "ACCEPTED",
+        OR: [
+          { fromId: a, toId: b },
+          { fromId: b, toId: a },
+        ],
+      },
+      select: { id: true },
+    })
+    .catch(() => null);
+  return !!fr;
+}
+
+/** May this user be inside this place (its chat, its rooms)? Staff always;
+ *  the owner always; then the gate: anyone, a friend (friends), a member who
+ *  was let in (ask). Fails closed on a lookup error. */
+export async function canEnterPlace(
+  user: { id?: string; guest?: boolean; globalRole?: string } | null | undefined,
+  lobbyId: string,
+): Promise<boolean> {
+  try {
+    const lobby = await prisma.lobby.findUnique({
+      where: { id: lobbyId },
+      select: { ownerId: true, moduleConfig: true },
+    });
+    if (!lobby) return false;
+    const gate = gateOf(lobby);
+    if (gate === "anyone") return true;
+    if (!user?.id || user.guest) return false;
+    if (user.id === lobby.ownerId) return true;
+    if (["STAFF", "ADMIN", "GOD"].includes(String(user.globalRole || ""))) return true;
+    if (gate === "me") return false;
+    if (gate === "friends") return areFriends(user.id, String(lobby.ownerId || ""));
+    const m = await prisma.lobbyMember.findUnique({
+      where: { lobbyId_userId: { lobbyId, userId: user.id } },
+      select: { id: true },
+    });
+    return !!m;
+  } catch {
+    return false;
+  }
+}
+
+function view(l: { id: string; name: string; moduleConfig?: unknown }) {
   const label = l.id.slice(PLACE_PREFIX.length);
-  return { id: l.id, name: l.name, label, path: `/u/${label}`, host: `${label}.weered.ca` };
+  return {
+    id: l.id,
+    name: l.name,
+    label,
+    path: `/u/${label}`,
+    host: `${label}.weered.ca`,
+    gate: gateOf(l),
+  };
 }
 
 async function placeOf(userId: string) {
   return prisma.lobby.findFirst({
     where: { ownerId: userId, id: { startsWith: PLACE_PREFIX } },
-    select: { id: true, name: true },
+    select: { id: true, name: true, moduleConfig: true },
     orderBy: { createdAt: "asc" },
   });
 }
@@ -119,6 +194,28 @@ export default async function placesRoutes(app: FastifyInstance, opts: Opts) {
     const p = await placeOf(u.id);
     return reply.send({ ok: true, place: p ? view(p) : null });
   });
+
+  // Who can come in: the owner's one switch (components/PlaceGate.tsx).
+  app.patch(
+    "/places/mine/gate",
+    { config: { rateLimit: { max: 20, timeWindow: "1 minute" } } },
+    async (req, reply) => {
+      const u = authFromHeader((req.headers as any).authorization);
+      if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+      const gate = String(((req as any).body || {}).gate || "") as PlaceGate;
+      if (!PLACE_GATES.includes(gate))
+        return reply.code(400).send({ ok: false, error: "bad_gate" });
+      const p = await placeOf(u.id);
+      if (!p) return reply.code(404).send({ ok: false, error: "no_place" });
+      const cfg =
+        p.moduleConfig && typeof p.moduleConfig === "object" ? (p.moduleConfig as any) : {};
+      await prisma.lobby.update({
+        where: { id: p.id },
+        data: { moduleConfig: { ...cfg, gate }, joinMode: gate === "anyone" ? "OPEN" : "APPROVAL" },
+      });
+      return reply.send({ ok: true, gate });
+    },
+  );
 
   app.get("/places/of/:userId", async (req, reply) => {
     const userId = String((req.params as any).userId || "").slice(0, 64);
@@ -175,7 +272,8 @@ export default async function placesRoutes(app: FastifyInstance, opts: Opts) {
             verified: false,
             unlisted: true,
             accentColor: accent,
-            enabledModules: ["voice", "video", "screen", "youtube", "reddit"],
+            // Text only: talking happens in lobbies (isPlaceId, below).
+            enabledModules: [],
             ...(layout ? { layout } : {}),
           } as any,
           select: { id: true, name: true },

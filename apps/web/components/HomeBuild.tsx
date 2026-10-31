@@ -14,6 +14,7 @@ import { startDesign } from "../lib/shellDesign";
 import { PALETTES, PALETTE_IDS, paletteColours } from "../lib/uiPrefs";
 import { useShellLook } from "../lib/shellDesign";
 import { makePlace, myPlace, placeAddress, type Place } from "../lib/place";
+import { GATES, setPlaceGate, type Gate } from "./PlaceGate";
 import { useWeered } from "./WeeredProvider";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "https://api.weered.ca";
@@ -94,7 +95,13 @@ export default function HomeBuild({
       .then((j) => {
         if (!alive || !Array.isArray(j?.lobbies)) return;
         // The ones you run: owners (5) and admins (4).
-        setMine(j.lobbies.filter((l: Lobby) => (l.roleLevel ?? 1) >= 4 && l.id !== "lobby"));
+        // Your place has its own strip below, so it isn't one of these too.
+        setMine(
+          j.lobbies.filter(
+            (l: Lobby) =>
+              (l.roleLevel ?? 1) >= 4 && l.id !== "lobby" && !String(l.id).startsWith("u-"),
+          ),
+        );
       })
       .catch(() => {});
     return () => {
@@ -265,6 +272,29 @@ export default function HomeBuild({
                     >
                       Design
                     </Link>
+                    {/* Who can come in, one tap from Home (components/PlaceGate.tsx). */}
+                    <select
+                      className="home-build-mine-gate"
+                      aria-label="Who can come in"
+                      title="Who can come in"
+                      value={place.gate || "anyone"}
+                      onChange={async (e) => {
+                        const was = place;
+                        const g = e.target.value as Gate;
+                        setPlace({ ...place, gate: g });
+                        try {
+                          await setPlaceGate(g);
+                        } catch {
+                          setPlace(was);
+                        }
+                      }}
+                    >
+                      {GATES.map((g) => (
+                        <option key={g.id} value={g.id}>
+                          🚪 {g.label}
+                        </option>
+                      ))}
+                    </select>
                   </span>
                 ) : (
                   <button

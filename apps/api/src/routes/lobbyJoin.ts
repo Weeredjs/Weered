@@ -7,6 +7,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "../lib/prisma";
 import { logLobbyAudit } from "../lib/lobbyAudit";
 import { passDoor, readDoor, type DoorEntry } from "../lib/lobbyDoor";
+import { areFriends, gateOf, isPlaceId } from "./places";
 
 type Deps = {
   authFromHeader: (h?: string) => { id: string; name: string } | null;
@@ -29,7 +30,15 @@ export function registerLobbyJoin(
 
       const lobby = await prisma.lobby.findUnique({
         where: { id: lobbyId },
-        select: { id: true, joinMode: true, joinPassword: true, name: true, layout: true },
+        select: {
+          id: true,
+          joinMode: true,
+          joinPassword: true,
+          name: true,
+          layout: true,
+          ownerId: true,
+          moduleConfig: true,
+        },
       });
       if (!lobby) return reply.code(404).send({ ok: false, error: "not_found" });
 
@@ -53,7 +62,25 @@ export function registerLobbyJoin(
         });
 
       const body = (req.body || {}) as any;
-      const mode = lobby.joinMode || "OPEN";
+      let mode = lobby.joinMode || "OPEN";
+
+      // A member's place (routes/places.ts): its owner's gate decides.
+      if (isPlaceId(lobbyId)) {
+        const gate = gateOf(lobby);
+        if (gate === "me")
+          return reply
+            .code(403)
+            .send({ ok: false, error: "place_closed", message: "This place is closed right now." });
+        if (gate === "friends") {
+          if (!(await areFriends(u.id, String(lobby.ownerId || ""))))
+            return reply.code(403).send({
+              ok: false,
+              error: "friends_only",
+              message: "Only friends get into this place.",
+            });
+          mode = "OPEN";
+        } else mode = gate === "ask" ? "APPROVAL" : "OPEN";
+      }
 
       if (mode === "PAID") {
         return reply.code(403).send({
@@ -310,6 +337,29 @@ export function registerLobbyJoin(
       const mode = String(body.joinMode || "OPEN");
       if (!["OPEN", "APPROVAL", "PASSWORD", "PAID"].includes(mode)) {
         return reply.code(400).send({ ok: false, error: "invalid_mode" });
+      }
+      // A place's door is its gate (routes/places.ts): Open and Approval map
+      // onto it; a password or paid door isn't a place thing.
+      if (isPlaceId(ctx.lobby.id)) {
+        if (mode !== "OPEN" && mode !== "APPROVAL")
+          return reply.code(400).send({
+            ok: false,
+            error: "place_gate",
+            message: "A place uses Who can come in: anyone, friends, ask first or just me.",
+          });
+        const cfg =
+          ctx.lobby.moduleConfig && typeof ctx.lobby.moduleConfig === "object"
+            ? (ctx.lobby.moduleConfig as any)
+            : {};
+        await prisma.lobby.update({
+          where: { id: ctx.lobby.id },
+          data: {
+            joinMode: mode,
+            joinPassword: null,
+            moduleConfig: { ...cfg, gate: mode === "OPEN" ? "anyone" : "ask" },
+          },
+        });
+        return reply.send({ ok: true, joinMode: mode });
       }
       const data: any = { joinMode: mode };
       if (mode === "PASSWORD") {

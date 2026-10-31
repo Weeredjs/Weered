@@ -6,6 +6,7 @@ import { prisma } from "../lib/prisma";
 import { designCreateExtras } from "./lobbyDesign";
 import { registerLobbyJoin } from "./lobbyJoin";
 import { registerFrontDesk } from "./frontDesk";
+import { isPlaceId } from "./places";
 import { z } from "zod";
 import { LobbyRole } from "@prisma/client";
 import { lastMessageMap } from "../lib/roomRecency";
@@ -386,7 +387,10 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
             message: "Indicted tier or higher required to create lobbies.",
           });
         }
-        const ownedCount = await prisma.lobby.count({ where: { ownerId: u.id } });
+        // A member's place (routes/places.ts) is free and never counts toward the limit.
+        const ownedCount = await prisma.lobby.count({
+          where: { ownerId: u.id, NOT: { id: { startsWith: "u-" } } },
+        });
         const maxLobbies = tier === "KINGPIN" ? 999 : tier === "FELON" ? 3 : 1;
         if (ownedCount >= maxLobbies) {
           return reply.code(403).send({
@@ -818,7 +822,9 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
         "hq",
       ];
       const enabledModules = Array.isArray(body.enabledModules)
-        ? body.enabledModules.filter((m: string) => valid.includes(m))
+        ? isPlaceId(ctx.lobby.id)
+          ? [] // members' places are text only (routes/places.ts)
+          : body.enabledModules.filter((m: string) => valid.includes(m))
         : null;
       if (!enabledModules)
         return reply.code(400).send({ ok: false, error: "enabledModules required" });

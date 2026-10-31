@@ -5,6 +5,9 @@
 // play and stream. Any lobby can use it; it shows whoever owns the lobby.
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
+import { useWeered } from "../WeeredProvider";
+import { placeOf, type Place } from "../../lib/place";
+import PlaceGate, { GATES } from "../PlaceGate";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "https://api.weered.ca";
 
@@ -23,7 +26,9 @@ type Profile = {
   xboxGamertag?: string | null;
   gameAccounts?: { gameType: string; displayName: string; platform?: string | null }[];
   primaryCrew?: { name: string; tag?: string; accentColor?: string | null } | null;
+  /** Set only when this viewer may join them (their join setting). */
   currentRoomId?: string | null;
+  currentRoomIsLobby?: boolean;
 };
 
 const pretty = (s: string) =>
@@ -45,6 +50,18 @@ export default function OwnerBlock({
 }) {
   const [p, setP] = useState<Profile | null>(null);
   const [gone, setGone] = useState(false);
+  const { me } = useWeered() as any;
+  // Who can come in (components/PlaceGate.tsx): the owner switches it here;
+  // a visitor the gate keeps out is told how to get in.
+  const [place, setPlace] = useState<Place | null>(null);
+  useEffect(() => {
+    if (!p?.id || !lobbyId.startsWith("u-")) return;
+    let alive = true;
+    placeOf(p.id).then((x) => alive && setPlace(x && x.id === lobbyId ? x : null));
+    return () => {
+      alive = false;
+    };
+  }, [p?.id, lobbyId]);
 
   useEffect(() => {
     let alive = true;
@@ -164,7 +181,20 @@ export default function OwnerBlock({
                 {p.primaryCrew.name}
               </Chip>
             )}
-            {p.currentRoomId && <Chip accent="#22c55e">● In a room now</Chip>}
+            {/* A place is text only; where they're talking is a lobby room, one
+                click away (James 2026-10-31: places mustn't pull from lobbies). */}
+            {p.currentRoomId && (
+              <a
+                href={
+                  p.currentRoomIsLobby
+                    ? `/lobby/${encodeURIComponent(p.currentRoomId)}`
+                    : `/room/${encodeURIComponent(p.currentRoomId)}`
+                }
+                style={{ textDecoration: "none" }}
+              >
+                <Chip accent="#22c55e">● In a room now · Join them →</Chip>
+              </a>
+            )}
           </div>
           {p.bio && (
             <p
@@ -216,12 +246,36 @@ export default function OwnerBlock({
               )}
             </div>
           )}
+          {place && me?.id === p.id && (
+            <div style={{ marginTop: 12 }}>
+              <PlaceGate value={place.gate || "anyone"} accent={accent} />
+            </div>
+          )}
+          {place && me?.id !== p.id && place.gate && place.gate !== "anyone" && (
+            <div
+              style={{
+                marginTop: 12,
+                padding: "8px 12px",
+                borderRadius: 10,
+                fontSize: 12.5,
+                background: "rgba(255,255,255,.05)",
+                border: "1px solid rgba(255,255,255,.12)",
+              }}
+            >
+              🚪 {GATES.find((g) => g.id === place.gate)?.label}:{" "}
+              {place.gate === "friends"
+                ? `only ${p.name}'s friends get in. Add them from their profile.`
+                : place.gate === "ask"
+                  ? "knock with Join, and they'll let you in."
+                  : "closed right now."}
+            </div>
+          )}
           <div style={{ marginTop: 12 }}>
             <Link
               href={`/profile/${encodeURIComponent(p.id)}`}
               style={{ fontSize: 12.5, fontWeight: 800, color: accent, textDecoration: "none" }}
             >
-              Their profile →
+              {me?.id === p.id ? "Your profile →" : "Their profile →"}
             </Link>
           </div>
         </div>

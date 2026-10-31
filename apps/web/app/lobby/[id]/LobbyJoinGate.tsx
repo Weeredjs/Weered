@@ -1,6 +1,7 @@
 "use client";
 
-// The gate a non-member sees on a password, approval or paid lobby.
+// The gate a non-member sees on a password, approval or paid lobby, and on a
+// member's place that's friends only or closed (api routes/places.ts).
 import React, { useState } from "react";
 import LobbyTierCards from "../../../components/LobbyTierCards";
 
@@ -70,6 +71,40 @@ export default function LobbyJoinGate({
 
   const mode = lobbyInfo.joinMode || "OPEN";
 
+  // A member's place: its gate, from the owner's place (api routes/places.ts).
+  const isPlace = lobbyId.startsWith("u-");
+  const [gate, setGate] = useState("");
+  const [friendSent, setFriendSent] = useState(false);
+  React.useEffect(() => {
+    if (!isPlace || !lobbyInfo.ownerId) return;
+    let alive = true;
+    fetch(`${API}/places/of/${encodeURIComponent(lobbyInfo.ownerId)}`)
+      .then((r) => r.json())
+      .then((j) => alive && setGate(String(j?.place?.gate || "")))
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [isPlace, lobbyInfo.ownerId]);
+  async function addFriend() {
+    if (!lobbyInfo.ownerId) return;
+    setLoading(true);
+    setError("");
+    try {
+      const r = await fetch(`${API}/friends/request/${encodeURIComponent(lobbyInfo.ownerId)}`, {
+        method: "POST",
+        credentials: "include",
+        headers: authHeaders(),
+      }).then((x) => x.json());
+      if (r?.ok) setFriendSent(true);
+      else setError(r?.message || r?.error || "Couldn't send that.");
+    } catch {
+      setError("Network error");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   async function handleJoin() {
     setError("");
     setLoading(true);
@@ -110,6 +145,86 @@ export default function LobbyJoinGate({
     background: `${accent}08`,
     textAlign: "center",
   };
+
+  if (isPlace && (gate === "friends" || gate === "me")) {
+    const where = lobbyInfo.name || "This place";
+    return (
+      <div
+        style={{
+          flex: 1,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: 24,
+        }}
+      >
+        <div style={cardStyle}>
+          <div style={{ fontSize: 32, marginBottom: 12 }}>{gate === "me" ? "🔒" : "🏠"}</div>
+          <h3
+            style={{
+              fontSize: 18,
+              fontWeight: 800,
+              color: "rgba(243,244,246,0.95)",
+              margin: "0 0 8px",
+            }}
+          >
+            {gate === "me" ? "Closed right now" : "Friends only"}
+          </h3>
+          <p
+            style={{
+              fontSize: 13,
+              lineHeight: 1.55,
+              color: "rgba(203,213,225,.75)",
+              margin: "0 0 18px",
+            }}
+          >
+            {gate === "me"
+              ? `${where} is closed. Only whoever lives here gets in.`
+              : `Only friends get into ${where}. Add them, and you're in once they accept.`}
+          </p>
+          {gate === "friends" && (
+            <div style={{ display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
+              <button
+                type="button"
+                onClick={addFriend}
+                disabled={loading || friendSent}
+                style={{
+                  padding: "10px 18px",
+                  borderRadius: 3,
+                  border: "none",
+                  background: accent,
+                  color: "#fff",
+                  fontWeight: 800,
+                  cursor: loading || friendSent ? "default" : "pointer",
+                  opacity: friendSent ? 0.7 : 1,
+                }}
+              >
+                {friendSent ? "Friend request sent" : "Add friend"}
+              </button>
+              <button
+                type="button"
+                onClick={handleJoin}
+                disabled={loading}
+                style={{
+                  padding: "10px 18px",
+                  borderRadius: 3,
+                  border: `1px solid ${accent}66`,
+                  background: "transparent",
+                  color: "rgba(243,244,246,.9)",
+                  fontWeight: 700,
+                  cursor: loading ? "default" : "pointer",
+                }}
+              >
+                We're friends, let me in
+              </button>
+            </div>
+          )}
+          {error && <div style={{ marginTop: 12, fontSize: 12.5, color: "#fca5a5" }}>{error}</div>}
+        </div>
+      </div>
+    );
+  }
 
   if (mode === "PAID") {
     return (

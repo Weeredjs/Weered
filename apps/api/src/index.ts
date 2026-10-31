@@ -123,7 +123,7 @@ import roomsRoutes from "./routes/rooms";
 import lobbiesRoutes from "./routes/lobbies";
 import lobbyDesignRoutes from "./routes/lobbyDesign";
 import aiBuildRoutes from "./routes/aiBuild";
-import placesRoutes from "./routes/places";
+import placesRoutes, { canEnterPlace, isPlaceId } from "./routes/places";
 import uiPrefsRoutes from "./routes/uiPrefs";
 import embedCheckRoutes from "./routes/embedCheck";
 import staffRoutes from "./routes/staff";
@@ -591,6 +591,16 @@ async function doJoin(ws: Sock, roomId: string) {
         send(ws, { type: "room:denied", roomId, reason: "lobby_banned" });
         return false;
       }
+    }
+  }
+
+  // A member's place (routes/places.ts): its owner's gate holds at its chat and
+  // at every room in it. Every entry path runs through here.
+  {
+    const placeLobby = String(room.lobbyId || (roomId.startsWith("lobby:") ? roomId.slice(6) : ""));
+    if (isPlaceId(placeLobby) && !(await canEnterPlace(ws.user as any, placeLobby))) {
+      send(ws, { type: "room:denied", roomId, reason: "place_gated" });
+      return false;
     }
   }
 
