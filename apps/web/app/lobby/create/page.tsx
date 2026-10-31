@@ -286,6 +286,8 @@ export default function CreateLobbyPage() {
   const [customRooms, setCustomRooms] = useState<{ name: string; kind: RoomKind }[] | null>(null);
   const [aiHome, setAiHome] = useState<AiHome | null>(null);
   const [describeAsk, setDescribeAsk] = useState("");
+  // Words from Home start a new lobby, even over a draft left in this browser.
+  const freshAsk = useRef(true);
 
   // The design survives a trip to the upgrade page (and a refresh).
   const DRAFT_KEY = "weered:composer-draft:v1";
@@ -516,11 +518,11 @@ export default function CreateLobbyPage() {
     };
   }
   /** Fill every step from a plan; returns the Undo. */
-  function applyPlan(p: LobbyPlan): () => void {
+  function applyPlan(p: LobbyPlan, fresh = false): () => void {
     const was = { name, slugRaw, slugManual, description, gameId, gameTouched, theme };
     const was2 = { themeTouched, features, roomIds, customRooms, aiHome };
-    // A name typed before the first description stays theirs.
-    if (aiHome || !name.trim()) {
+    // A name typed before the first description stays theirs (not over words from Home).
+    if (fresh || aiHome || !name.trim()) {
       setName(p.name);
       setSlugManual(false);
     }
@@ -1012,8 +1014,10 @@ export default function CreateLobbyPage() {
                 initial={describeAsk}
                 autoRun={!!describeAsk}
                 onBuild={async (prompt) => {
-                  const plan = await planLobby(prompt, currentPlan());
-                  return { summary: plan.summary, undo: applyPlan(plan) };
+                  const fresh = freshAsk.current && prompt === describeAsk;
+                  freshAsk.current = false;
+                  const plan = await planLobby(prompt, fresh ? null : currentPlan());
+                  return { summary: plan.summary, undo: applyPlan(plan, fresh) };
                 }}
               />
             </div>
