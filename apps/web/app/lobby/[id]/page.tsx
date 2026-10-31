@@ -468,6 +468,18 @@ export default function LobbyIdPage() {
     setDoorOpen(doorLock || doorMode !== "OPEN" || !doorDismissed(lobbyId));
   }, [doorOn, doorLock, doorMode, memberChecked, isMember, lobbyId]);
   const dTheme = L?.theme || {};
+  // The look reaches the rails and the lobby's rooms too (components/SpaceTheme.tsx),
+  // the draft's while designing.
+  const dThemeKey = JSON.stringify(L?.theme || null);
+  useEffect(() => {
+    if (!L) return;
+    try {
+      window.dispatchEvent(
+        new CustomEvent("weered:space-theme", { detail: { lobbyId, theme: L.theme } }),
+      );
+    } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lobbyId, dThemeKey]);
   const dPreset = dTheme.preset ? PRESET_BY_ID[dTheme.preset] : null;
   const displayFont = FONT_STACK[dTheme.font || "default"];
   const [selectedBlock, setSelectedBlock] = useState<string | null>(null);

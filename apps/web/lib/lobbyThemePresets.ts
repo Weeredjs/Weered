@@ -151,6 +151,20 @@ export const THEME_PRESETS: ThemePreset[] = [
     effect: "bubbles",
     font: "stencil",
   },
+  {
+    // A work space (James 2026-10-31: "I also don't know what the office is
+    // supposed to look like"): calm graphite, a faint ruled grid, one teal
+    // light, nothing moving. Team HQ starts here.
+    id: "office",
+    name: "Office",
+    tagline: "Calm graphite, clean lines. Heads down.",
+    accent: "#2dd4bf",
+    swatches: ["#2dd4bf", "#60a5fa", "#a3e635", "#f8fafc", "#334155"],
+    art: "repeating-linear-gradient(0deg, rgba(148,163,184,.055) 0 1px, transparent 1px 44px), repeating-linear-gradient(90deg, rgba(148,163,184,.04) 0 1px, transparent 1px 44px), radial-gradient(80% 60% at 85% 0%, #0f766e40 0%, transparent 60%), linear-gradient(180deg, #0b1120, #0f172a)",
+    veil: "rgba(11,17,32,.70)",
+    effect: "none",
+    font: "default",
+  },
 ];
 
 export const PRESET_BY_ID: Record<string, ThemePreset> = Object.fromEntries(

@@ -114,7 +114,31 @@ export async function handleChat(ws: any, msg: any, opts: Opts): Promise<void> {
     if (!room) return;
     if (!room.users.has(ws.user.id)) return;
     if (room.banned.has(ws.user.id)) return;
-    if (room.muted.has(ws.user.id)) return;
+    // Muted and locked used to drop the message without a word: the sender
+    // saw it vanish and never knew why (2026-10-31).
+    if (room.muted.has(ws.user.id)) {
+      send(ws, { type: "chat:rejected", roomId, reason: "A moderator muted you here." });
+      return;
+    }
+    if (room.chatLocked && !isModOrOwner(room, ws.user.id, ws.user.globalRole)) {
+      send(ws, { type: "chat:rejected", roomId, reason: "Chat is locked by a moderator." });
+      return;
+    }
+    // Slow mode: the panel's setting used to change nothing but its own label.
+    if (room.slowSec && !isModOrOwner(room, ws.user.id, ws.user.globalRole)) {
+      const last = room.lastSaid?.get(ws.user.id) || 0;
+      const wait = room.slowSec * 1000 - (Date.now() - last);
+      if (wait > 0) {
+        send(ws, {
+          type: "chat:rejected",
+          roomId,
+          reason: `Slow mode is on: ${Math.ceil(wait / 1000)}s until you can post again.`,
+        });
+        return;
+      }
+      (room.lastSaid ||= new Map()).set(ws.user.id, Date.now());
+      if (room.lastSaid.size > 2000) room.lastSaid.clear();
+    }
     if (body.length > CHAT_BODY_MAX) {
       send(ws, { type: "chat:rejected", roomId, reason: CHAT_TOO_LONG });
       return;

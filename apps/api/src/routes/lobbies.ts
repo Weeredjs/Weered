@@ -18,6 +18,7 @@ import {
 } from "../lib/lobbyRoles";
 import { LEVEL_PERMS, hasLobbyPerm } from "../lib/lobbyPerms";
 import { evictFromLobbyRooms } from "../lib/lobbyEviction";
+import { broadcast as broadcastRoom, publishState, roleOf } from "../lib/roomState";
 import { registerLobbyPresence } from "./lobbyPresence";
 
 import { touchLobbyViewer } from "../lib/lobbyViewers";
@@ -99,6 +100,7 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
         bannerUrl: true,
         accentColor: true,
         minLevel: true,
+        defaultModule: true,
         _count: { select: { members: true } },
       },
     });
@@ -133,6 +135,7 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
         ownerId: r.ownerId,
         hasPassword: !!(wsRoom?.passwordHash || (r as any).passwordHash),
         minLevel: Number((r as any).minLevel) || 0,
+        defaultModule: (r as any).defaultModule || null,
         _count: r._count,
       };
     });
@@ -270,6 +273,7 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
             bannerUrl: true,
             accentColor: true,
             minLevel: true,
+            defaultModule: true,
             _count: { select: { members: true } },
           },
           orderBy: [{ isEvent: "desc" }, { name: "asc" }],
@@ -967,6 +971,23 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
         allowedLevel: newLevel,
         reason: "level_required",
       });
+      // The new rank shows, and works, in the rooms they are in right now: it
+      // was read only at join, so a promoted moderator had no powers and no
+      // badge until they rejoined (2026-10-31).
+      for (const r of rooms.values()) {
+        if (r.lobbyId !== ctx.lobby.id) continue;
+        const entry = r.users.get(targetUserId);
+        if (!entry) continue;
+        entry.lobbyRoleLevel = newLevel;
+        broadcastRoom(r, {
+          type: "presence:role",
+          roomId: r.roomId,
+          userId: targetUserId,
+          role: roleOf(r, targetUserId),
+          lobbyRoleLevel: newLevel,
+        });
+        publishState(r);
+      }
       return reply.send({ ok: true, userId: targetUserId, roleLevel: newLevel });
     },
   );

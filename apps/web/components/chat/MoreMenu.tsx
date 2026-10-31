@@ -159,6 +159,34 @@ export function MoreMenu({
     }
     onClose();
   };
+  // Opens upward when it would run past the bottom of the chat and there's
+  // more room above: on the newest message the last items (Delete for a
+  // moderator, Report) were below the fold and the chat kept snapping back
+  // to the bottom (2026-10-31).
+  const boxRef = React.useRef<HTMLDivElement | null>(null);
+  const [up, setUp] = React.useState(false);
+  const [maxH, setMaxH] = React.useState<number | undefined>(undefined);
+  React.useLayoutEffect(() => {
+    const el = boxRef.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    let top = 0;
+    let bottom = window.innerHeight;
+    for (let p = el.parentElement; p; p = p.parentElement) {
+      if (/(auto|scroll|hidden)/.test(getComputedStyle(p).overflowY)) {
+        const pr = p.getBoundingClientRect();
+        top = Math.max(top, pr.top);
+        bottom = Math.min(bottom, pr.bottom);
+        break;
+      }
+    }
+    const goUp = r.bottom > bottom - 6 && r.top - top > bottom - r.top;
+    if (goUp) setUp(true);
+    // Never taller than the room it has: the rest scrolls inside it.
+    const host = (el.offsetParent as HTMLElement | null)?.getBoundingClientRect();
+    const room = goUp ? (host ? host.bottom - 22 : r.top) - top : bottom - r.top;
+    if (room > 80 && room < r.height + 6) setMaxH(Math.floor(room - 6));
+  }, []);
   const handleReport = async () => {
     const res = await weeredReport({ targetType: "MESSAGE", targetId: msgId, context: roomId });
     if (res?.ok) weeredToast.success("Report submitted. Staff will review.");
@@ -175,15 +203,18 @@ export function MoreMenu({
     <div
       data-reaction-ui
       data-more-menu
+      data-chat-popover
       onClick={(e) => e.stopPropagation()}
       onKeyDown={(e) => {
         e.stopPropagation();
       }}
       role="button"
       tabIndex={0}
+      ref={boxRef}
       style={{
         position: "absolute",
-        top: 22,
+        ...(up ? { bottom: 22 } : { top: 22 }),
+        ...(maxH ? { maxHeight: maxH, overflowY: "auto" as const } : {}),
         right: 4,
         minWidth: 220,
         padding: 5,

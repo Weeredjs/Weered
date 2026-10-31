@@ -251,6 +251,23 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
   const banned   = useMemo((): string[] => admin?.banned ?? [], [admin]);
   const muted    = useMemo((): string[] => admin?.muted  ?? [], [admin]);
   const auditLog = useMemo(() => (admin?.audit ?? []).slice().reverse().slice(0, 40), [admin]);
+  // The Banned tab showed raw account ids: look up their names.
+  const [bannedNames, setBannedNames] = useState<Record<string, string>>({});
+  useEffect(() => {
+    const missing = banned.filter(id => !bannedNames[id]).slice(0, 20);
+    if (!missing.length) return;
+    let dead = false;
+    void Promise.all(
+      missing.map(id =>
+        fetch(`${API_BASE}/profile/${encodeURIComponent(id)}`, { credentials: "include" })
+          .then(r => r.json())
+          .then(j => [id, String(j?.name || j?.usernameKey || id)] as const)
+          .catch(() => [id, id] as const),
+      ),
+    ).then(pairs => { if (!dead) setBannedNames(prev => ({ ...prev, ...Object.fromEntries(pairs) })); });
+    return () => { dead = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [banned.join(",")]);
 
   const roomLabel = (() => {
     const n = ctx?.meta?.name || ctx?.metaByRoom?.[roomId]?.name;
@@ -259,6 +276,8 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
   })();
 
   const metaLocked = Boolean(ctx?.meta?.locked ?? false);
+  const roomMeta = ctx?.metaByRoom?.[roomId] ?? ctx?.meta ?? null;
+  const chatLocked = Boolean(roomMeta?.chatDisabled);
   const [lockedOverride, setLockedOverride] = useState<boolean | null>(null);
   const locked = lockedOverride ?? metaLocked;
 
@@ -270,6 +289,7 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
   }, [metaLocked, lockedOverride]);
 
   const [slowSec,      setSlowSec     ] = useState(0);
+  useEffect(() => { setSlowSec(Number(roomMeta?.slowSec || 0)); }, [roomMeta?.slowSec]);
   const [selectedId,   setSelectedId  ] = useState("");
   const [confirm,      setConfirm     ] = useState<{ kind: string; userId: string; name: string } | null>(null);
   const [note,         setNote        ] = useState("");
@@ -278,10 +298,10 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
   const [tab,          setTab         ] = useState<"users"|"knocks"|"banned"|"audit">("users");
   const [showInvite,   setShowInvite  ] = useState(false);
 
-  const selected = useMemo(() => {
-    const id = selectedId || people[0]?.id || people[0]?.name || "";
-    return people.find(p => (p.id ?? p.name) === id) ?? people[0] ?? null;
-  }, [people, selectedId]);
+  const selected = useMemo(
+    () => (selectedId ? people.find(p => String(p.id ?? p.name ?? "") === selectedId) ?? null : null),
+    [people, selectedId],
+  );
 
   const copyText = useCallback(async (label: string, text: string) => {
     try { await navigator.clipboard.writeText(text); setNote(`Copied ${label}`); }
@@ -294,7 +314,7 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
       ? (people.find(p => p.id === overrideId)?.name ?? knocks.find(k => k.userId === overrideId)?.name ?? overrideId)
       : String(selected?.name ?? selected?.handle ?? targetId);
 
-    if (!targetId && !["lock","unlock"].includes(kind)) { setNote("Select a user first."); return; }
+    if (!targetId && !["lock","unlock"].includes(kind)) { setNote("Pick someone in the list first."); return; }
     if (["kick","ban"].includes(kind)) { setConfirm({ kind, userId: targetId, name: targetName }); return; }
 
     try {
@@ -340,8 +360,8 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
 
   const s = {
     section:    { marginTop: 10, borderRadius: 12, border: "1px solid rgba(255,255,255,.08)", background: "var(--weered-room-surface)", padding: "10px 12px" } as React.CSSProperties,
-    label:      { fontSize: 10, fontWeight: 700, opacity: 0.55, letterSpacing: ".7px", textTransform: "uppercase" as const, marginBottom: 7 },
-    btn:        { padding: "6px 10px", borderRadius: 8, border: "1px solid rgba(255,255,255,.10)", background: "var(--weered-room-surface-2)", fontSize: 11, cursor: "pointer", color: "var(--weered-room-text-2)" } as React.CSSProperties,
+    label:      { fontSize: 11, fontWeight: 800, opacity: 0.8, letterSpacing: ".6px", textTransform: "uppercase" as const, marginBottom: 7, color: "rgba(243,244,246,.92)" },
+    btn:        { padding: "7px 10px", borderRadius: 8, border: "1px solid rgba(255,255,255,.16)", background: "rgba(255,255,255,.07)", fontSize: 12, fontWeight: 600, cursor: "pointer", color: "rgba(243,244,246,.95)" } as React.CSSProperties,
     btnPrimary: { padding: "6px 10px", borderRadius: 8, border: "1px solid rgba(124,58,237,.30)", background: "rgba(124,58,237,.14)", fontSize: 11, cursor: "pointer", color: "var(--weered-room-accent-2)", fontWeight: 600 } as React.CSSProperties,
     btnGreen:   { padding: "6px 10px", borderRadius: 8, border: "1px solid rgba(16,185,129,.30)",  background: "rgba(16,185,129,.10)",  fontSize: 11, cursor: "pointer", color: "rgb(167,243,208)" } as React.CSSProperties,
     btnRed:     { padding: "6px 10px", borderRadius: 8, border: "1px solid rgba(239,68,68,.25)",   background: "rgba(239,68,68,.08)",   fontSize: 11, cursor: "pointer", color: "rgba(252,165,165,.90)" } as React.CSSProperties,
@@ -351,7 +371,7 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
       padding: "4px 10px", borderRadius: 6, fontSize: 10, fontWeight: 700, cursor: "pointer", letterSpacing: ".4px",
       border: active ? "1px solid rgba(124,58,237,.45)" : alert ? "1px solid rgba(245,158,11,.4)" : "1px solid rgba(255,255,255,.08)",
       background: active ? "rgba(124,58,237,.18)" : "transparent",
-      color: active ? "var(--weered-room-accent-2)" : alert ? "rgb(253,230,138)" : "rgba(255,255,255,.40)",
+      color: active ? "#f3f4f6" : alert ? "rgb(253,230,138)" : "rgba(243,244,246,.72)",
     } as React.CSSProperties),
   };
 
@@ -412,18 +432,38 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
 
             {tab === "users" && (<>
               <div style={s.section}>
-                <div style={s.label}>Select user</div>
-                <div style={{ display: "flex", gap: 6 }}>
-                  <select style={s.select} value={selectedId} onChange={e => setSelectedId(e.target.value)}>
-                    <option value="">(first in list)</option>
-                    {people.map((p, i) => {
+                <div style={s.label}>Pick someone</div>
+                <div role="listbox" aria-label="People in this room" style={{ display: "flex", flexDirection: "column", gap: 3, maxHeight: 210, overflowY: "auto" }}>
+                  {people.filter(p => String(p.id ?? "") !== String(ctx?.me?.id ?? "") && String(p.id ?? "") !== "operator").length === 0 && (
+                    <div style={{ fontSize: 12, opacity: 0.7, padding: "6px 2px" }}>Nobody else is here.</div>
+                  )}
+                  {people
+                    .filter(p => String(p.id ?? "") !== String(ctx?.me?.id ?? "") && String(p.id ?? "") !== "operator")
+                    .map((p, i) => {
                       const id = String(p.id ?? p.name ?? i);
-                      const isMuted  = muted.includes(id);
-                      const isBanned = banned.includes(id);
-                      return <option key={id} value={id}>{String(p.name ?? id)}{isMuted ? " [muted]" : ""}{isBanned ? " [banned]" : ""}</option>;
+                      const on = id === selectedId;
+                      const role = String(p.role ?? "").toLowerCase();
+                      return (
+                        <button
+                          key={id}
+                          type="button"
+                          role="option"
+                          aria-selected={on}
+                          onClick={() => setSelectedId(on ? "" : id)}
+                          style={{
+                            display: "flex", alignItems: "center", gap: 8, width: "100%", textAlign: "left",
+                            padding: "7px 10px", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600,
+                            color: "#f3f4f6",
+                            border: `1px solid ${on ? "rgba(167,139,250,.8)" : "rgba(255,255,255,.08)"}`,
+                            background: on ? "rgba(124,58,237,.28)" : "rgba(255,255,255,.04)",
+                          }}
+                        >
+                          <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{String(p.name ?? id)}</span>
+                          {(role === "owner" || role === "mod") && <span style={{ fontSize: 10, fontWeight: 800, color: "rgb(216,180,254)" }}>{role === "owner" ? "OWNER" : "MOD"}</span>}
+                          {muted.includes(id)  && <span style={{ fontSize: 10, fontWeight: 800, color: "rgb(253,230,138)" }}>MUTED</span>}
+                        </button>
+                      );
                     })}
-                  </select>
-                  <button style={s.btn} onClick={() => setSelectedId("")}>&#x2715;</button>
                 </div>
                 {selected && (
                   <div style={{ marginTop: 6, fontSize: 11, opacity: 0.65, display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
@@ -467,6 +507,14 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
                   <button style={locked ? s.btn : s.btnRed}   onClick={() => doAction("lock")}>🔒 Lock entry</button>
                   <button style={locked ? s.btnGreen : s.btn} onClick={() => doAction("unlock")}>🔓 Unlock entry</button>
                   <button
+                    style={chatLocked ? s.btn : s.btnRed}
+                    onClick={() => { ctx?.sendRaw?.({ type: "room:chat:lock", roomId }); setNote("Chat locked: only moderators can post."); }}
+                  >💬 Lock chat</button>
+                  <button
+                    style={chatLocked ? s.btnGreen : s.btn}
+                    onClick={() => { ctx?.sendRaw?.({ type: "room:chat:unlock", roomId }); setNote("Chat open."); }}
+                  >💬 Open chat</button>
+                  <button
                     style={{ ...s.btnRed, gridColumn: "span 2" }}
                     onClick={async () => {
                       const ok = await weeredConfirm({ title: "Clear all chat in this room?", body: "Every message gets wiped for everyone. This can't be undone.", confirmLabel: "Clear chat", destructive: true });
@@ -494,10 +542,13 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
                 <div style={{ marginTop: 8 }}>
                   <div style={{ ...s.label, marginBottom: 4 }}>Slow mode</div>
                   <div style={{ display: "flex", gap: 6 }}>
-                    <select style={s.select} value={String(slowSec)} onChange={e => setSlowSec(Number.parseInt(e.target.value || "0", 10))}>
-                      <option value="0">Off</option><option value="5">5s</option><option value="10">10s</option><option value="30">30s</option><option value="60">60s</option>
-                    </select>
-                    <button style={s.btn} onClick={() => setSlowSec(0)}>Off</button>
+                    {[0, 5, 10, 30, 60].map(sec => (
+                      <button
+                        key={sec}
+                        style={{ ...(slowSec === sec ? s.btnPrimary : s.btn), flex: 1, padding: "6px 4px" }}
+                        onClick={() => { ctx?.sendRaw?.({ type: "room:slow", roomId, seconds: sec }); setSlowSec(sec); setNote(sec ? `Slow mode: ${sec}s between messages.` : "Slow mode off."); }}
+                      >{sec ? `${sec}s` : "Off"}</button>
+                    ))}
                   </div>
                 </div>
               </div>
@@ -535,7 +586,7 @@ export default function RightRailRoom({ roomId }: { roomId: string }) {
                   : <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                     {banned.map(uid => (
                       <div key={uid} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 10px", borderRadius: 9, background: "rgba(239,68,68,.05)", border: "1px solid rgba(239,68,68,.14)" }}>
-                        <span style={{ fontSize: 11, fontFamily: "monospace", opacity: 0.7, flex: 1, overflow: "hidden", textOverflow: "ellipsis" }}>{uid}</span>
+                        <span style={{ fontSize: 12, fontWeight: 600, flex: 1, overflow: "hidden", textOverflow: "ellipsis" }}>{bannedNames[uid] || "…"}</span>
                         <button style={s.btnGreen} onClick={() => doAction("unban", uid)}>Unban</button>
                       </div>
                     ))}

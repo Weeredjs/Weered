@@ -1210,14 +1210,17 @@ export default function HomePage() {
     <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}>
 
       <div className="home-topbar" style={{ display: "flex", alignItems: "center", gap: 14, padding: "16px 20px 12px", borderBottom: "1px solid rgba(255,255,255,.06)", flexShrink: 0, flexWrap: "wrap" }}>
-        <div className="home-topbar-greet" style={{ flex: "0 1 auto", minWidth: 120 }}>
+        {/* The name holds the left and takes whatever room is left (a long one
+            shortens with an ellipsis); search and the buttons sit on the right,
+            so they stay put whatever the name (James 2026-10-31). */}
+        <div className="home-topbar-greet" style={{ flex: "1 1 160px", minWidth: 120 }}>
           <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: "1.5px", textTransform: "uppercase", color: "rgba(255,255,255,.25)" }}>{greeting()}</div>
           <div style={{ fontWeight: 900, fontSize: 22, lineHeight: 1.1, marginTop: 3, letterSpacing: "-0.5px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
             Hey, <span style={{ color: "#5800E5" }}>{myName}</span>
           </div>
         </div>
 
-        <div className="home-topbar-search" style={{ flex: "1 1 360px", display: "flex", justifyContent: "center", minWidth: 0, maxWidth: 680 }}>
+        <div className="home-topbar-search" style={{ flex: "0 1 560px", display: "flex", justifyContent: "flex-end", minWidth: 0, maxWidth: 680 }}>
           <LobbySearch hero width={680} />
         </div>
 

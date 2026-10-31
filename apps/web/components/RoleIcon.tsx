@@ -9,6 +9,10 @@ const ROLE_MAP: Record<string, { file: string; color: string }> = {
   MOD: { file: "captain", color: "#5800E5" },
   OWNER: { file: "founder", color: "#F97316" },
   MEMBER: { file: "member", color: "#94A3B8" },
+  // A room's (or its lobby's) moderators and owner: the God star's shape, in
+  // their own colours (James 2026-10-31).
+  ROOM_MOD: { file: "mod-star", color: "#C7D2FE" },
+  ROOM_OWNER: { file: "owner-star", color: "#FB923C" },
 };
 
 const TIER_MAP: Record<string, { file: string; color: string }> = {
@@ -24,7 +28,15 @@ const DISPLAY_NAMES: Record<string, string> = {
   SUPPORT: "Backup",
   MOD: "Captain",
   OWNER: "Founder",
+  ROOM_MOD: "Moderator",
+  ROOM_OWNER: "Owner",
 };
+
+/** The star for someone's rank in this room, or null for everyone else. */
+export function roomRoleIcon(role?: string | null): "ROOM_OWNER" | "ROOM_MOD" | null {
+  const r = String(role || "").toLowerCase();
+  return r === "owner" ? "ROOM_OWNER" : r === "mod" ? "ROOM_MOD" : null;
+}
 
 interface RoleIconProps {
   role: string;

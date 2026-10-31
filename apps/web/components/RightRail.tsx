@@ -4,6 +4,7 @@ import React from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useWeered, useRoomUsers } from "./WeeredProvider";
+import { moduleGlyph, roomMonogram } from "../lib/roomGlyph";
 import { useOverlay } from "./overlays/OverlayProvider";
 import { avatarBg } from "../lib/avatarColor";
 import EmptyState from "./EmptyState";
@@ -594,7 +595,9 @@ function RoomsPanel({ currentRoomId, lobbyId }: { currentRoomId: string; lobbyId
                   style={{ objectFit: "contain" }}
                 />
               )
-            : "◆";
+            : moduleGlyph((rm as any).defaultModule) || (
+                <span style={{ fontSize: 11, fontWeight: 900, lineHeight: 1 }}>{roomMonogram(String(rm.name || rm.id || ""))}</span>
+              );
 
           const cardAccent = customAccent || (isLive ? "#22c55e" : active ? "#5800E5" : "rgba(255,255,255,.08)");
           const borderColor = customAccent ? `${customAccent}55` : (active ? "rgba(88,0,229,.45)" : isLive ? "rgba(34,197,94,.25)" : "rgba(255,255,255,.06)");
@@ -745,10 +748,18 @@ function RoomsPanel({ currentRoomId, lobbyId }: { currentRoomId: string; lobbyId
 }
 
 function LobbyModPanel({ globalRole, lobbyId }: { globalRole: string; lobbyId: string }) {
-  const canMod = ["GOD", "STAFF", "ADMIN", "SUPPORT"].includes(globalRole);
-
   const ctx = useWeered() as any;
-  const ctxLocked: boolean | null = typeof ctx?.meta?.locked === "boolean" ? ctx.meta.locked : null;
+  // Weered's staff, and the lobby's own moderators and up (their rank rides
+  // on their entry in the lobby's chat as owner/mod).
+  const lobbyUsers = useRoomUsers(lobbyId);
+  const meId = String(ctx?.me?.id || "");
+  const myRole = String((lobbyUsers as any[]).find((u: any) => String(u?.id || "") === meId)?.role || "").toLowerCase();
+  const canMod = ["GOD", "STAFF", "ADMIN", "SUPPORT"].includes(globalRole) || myRole === "owner" || myRole === "mod";
+
+  // The CHAT lock, from the lobby chat's own state. It read the door lock
+  // (meta.locked) of whatever room was active (2026-10-31).
+  const lobbyMeta = ctx?.metaByRoom?.[lobbyId];
+  const ctxLocked: boolean | null = typeof lobbyMeta?.chatDisabled === "boolean" ? lobbyMeta.chatDisabled : null;
   const [optimistic, setOptimistic] = React.useState<boolean | null>(null);
 
   React.useEffect(() => {
@@ -782,8 +793,7 @@ function LobbyModPanel({ globalRole, lobbyId }: { globalRole: string; lobbyId: s
     const willLock = type === "lock";
     setOptimistic(willLock);
     try {
-      let j = await apiFetch(`/staff/lobby/${type}`, { method: "POST", body: JSON.stringify({ lobbyId }) });
-      if (!j?.ok && type === "unlock") j = await apiFetch("/staff/lobby/lock", { method: "POST", body: JSON.stringify({ lobbyId, locked: false }) });
+      const j = await apiFetch(`/staff/lobby/${type}`, { method: "POST", body: JSON.stringify({ lobbyId }) });
       if (j?.ok) { setNote(willLock ? "Chat locked." : "Chat unlocked."); try { localStorage.setItem(LS_KEY, String(willLock)); } catch {} }
       else { setOptimistic(!willLock); setNote(j?.error || "Failed."); }
     } catch { setOptimistic(null); setNote("Request failed."); }
@@ -837,7 +847,7 @@ function LobbyModPanel({ globalRole, lobbyId }: { globalRole: string; lobbyId: s
             const ok = await weeredConfirm({ title: "Clear all lobby chat?", body: "Every message in this lobby's chat gets wiped. Can't be undone.", confirmLabel: "Clear chat", destructive: true });
             if (!ok) return;
             setLoad(true);
-            try { const j = await apiFetch("/staff/lobby/clear-chat", { method: "POST", body: JSON.stringify({ lobbyId }) }); setNote(j.ok ? "Chat cleared." : j.error || "Failed."); }
+            try { const j = await apiFetch("/staff/lobby/clear-chat", { method: "POST", body: JSON.stringify({ lobbyId }) }); setNote(j.ok ? `Chat cleared (${j.removed ?? 0} messages).` : j.error || "Failed."); }
             catch { setNote("Request failed."); } finally { setLoad(false); }
           }}
           onKeyDown={(e) => { if ((e.key === "Enter" || e.key === " ") && !loading) (e.currentTarget as HTMLElement).click(); }}

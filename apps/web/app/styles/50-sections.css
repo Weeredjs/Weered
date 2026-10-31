@@ -616,3 +616,27 @@ html[data-weered-theme] .weered-rr-crew-row:hover {
 .weered-rr-friend-row:focus-within .weered-rr-invite.is-extra {
   display: inline-flex;
 }
+
+/* Someone is knocking at a room you moderate: the collapsed Panel tab glows
+   amber and carries the count (components/ShellGate.tsx). */
+.weered-rail-stack .weered-rail-tab.has-knocks,
+html[data-weered-chrome="min"] .weered-rail-stack .weered-rail-tab.has-knocks {
+  box-shadow:
+    0 0 0 1px rgba(245, 158, 11, 0.65),
+    0 0 18px rgba(245, 158, 11, 0.45) !important;
+  animation: weered-knock-pulse 1.6s ease-in-out infinite;
+}
+@keyframes weered-knock-pulse {
+  0%,
+  100% {
+    filter: brightness(1);
+  }
+  50% {
+    filter: brightness(1.35);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .weered-rail-stack .weered-rail-tab.has-knocks {
+    animation: none;
+  }
+}

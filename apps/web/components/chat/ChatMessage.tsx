@@ -3,6 +3,7 @@ import { type Ctx } from "../WeeredProvider";
 
 import React from "react";
 import { avatarBg } from "../../lib/avatarColor";
+import { nameFx } from "../../lib/looks";
 import { weeredConfirm } from "../../lib/confirm";
 import { weeredToast } from "../../lib/toast";
 import RoleIcon, { TierIcon } from "../RoleIcon";
@@ -449,7 +450,15 @@ export function ChatMessage(props: ChatMessageProps) {
   const editedAt = m?.editedAt ? Number(m.editedAt) : 0;
   const deletedAt = m?.deletedAt ? Number(m.deletedAt) : 0;
   const editable = isMine && !deletedAt && ts > 0 && Date.now() - ts < 15 * 60 * 1000;
-  const deletable = isMine && !deletedAt;
+  // The room's moderators can take any message down too (the server always
+  // allowed it; there was no button for it).
+  const iModerate =
+    ["owner", "mod"].includes(
+      String(
+        (liveRoomUsers || []).find((u: any) => String(u?.id || "") === meId)?.role || "",
+      ).toLowerCase(),
+    ) || ["GOD", "ADMIN", "STAFF", "SUPPORT"].includes(String(ctx?.globalRole || "").toUpperCase());
+  const deletable = (isMine || iModerate) && !deletedAt && msgUserId !== "operator";
   const isEditing = editingMsgId === mId && mId !== "";
   const msgAvatar = m?.user?.avatar || null;
   const isHovered = hoveredMsgId === mId;
@@ -603,12 +612,8 @@ export function ChatMessage(props: ChatMessageProps) {
                   onMouseLeave={() => hoverClose(160)}
                 >
                   <span
-                    className={
-                      (umeta as any)?.nameEffect
-                        ? "weered-name-" + (umeta as any).nameEffect
-                        : undefined
-                    }
-                    style={nameStyle}
+                    className={nameFx((umeta as any)?.nameEffect).className}
+                    style={{ ...nameStyle, ...nameFx((umeta as any)?.nameEffect).style }}
                   >
                     {uname}
                   </span>
@@ -1109,6 +1114,7 @@ export function ChatMessage(props: ChatMessageProps) {
         {pickerMsgId === mId && (
           <div
             data-reaction-ui
+            data-chat-popover
             onClick={(e) => e.stopPropagation()}
             onKeyDown={(e) => {
               e.stopPropagation();

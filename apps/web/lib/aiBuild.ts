@@ -59,6 +59,9 @@ export type EditOp =
       sparkle?: boolean;
       symbol?: string;
       forced?: boolean;
+      shape?: "round" | "soft" | "square" | "cut";
+      texture?: "glass" | "grid" | "lines" | "dots" | "solid";
+      backdrop?: "sky" | "grid" | "plain";
     }
   | { op: "add"; type: BlockType; size?: BlockSize; props: Record<string, any>; at: string }
   | { op: "update"; id: string; size?: BlockSize; props?: Record<string, any> }
@@ -216,6 +219,9 @@ export function applyOps(
         if (op.sparkle !== undefined) t.sparkle = op.sparkle;
         if (op.symbol) t.symbol = op.symbol;
         if (op.forced !== undefined) t.fxForced = op.forced;
+        if (op.shape) t.shape = op.shape;
+        if (op.texture) t.texture = op.texture;
+        if (op.backdrop) t.backdrop = op.backdrop;
         l.theme = t;
         break;
       }

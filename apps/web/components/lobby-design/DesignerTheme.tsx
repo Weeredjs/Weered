@@ -149,6 +149,52 @@ export function ThemeDock({
             style={{ width: 26, height: 22, border: "none", background: "none", padding: 0 }}
           />
         </div>
+        <div style={{ ...label, margin: "10px 0 6px" }}>
+          The whole space · corners · surface · backdrop
+        </div>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+          {(["round", "soft", "square", "cut"] as const).map((v) => (
+            <button
+              key={v}
+              style={{
+                ...chip((th.shape || "round") === v, accent),
+                padding: "4px 9px",
+                fontSize: 11,
+              }}
+              onClick={() => setTheme({ shape: v })}
+            >
+              {v === "round" ? "Round" : v === "soft" ? "Soft" : v === "square" ? "Square" : "Cut"}
+            </button>
+          ))}
+          <span style={{ width: 8 }} />
+          {(["glass", "grid", "lines", "dots", "solid"] as const).map((v) => (
+            <button
+              key={v}
+              style={{
+                ...chip((th.texture || "glass") === v, accent),
+                padding: "4px 9px",
+                fontSize: 11,
+              }}
+              onClick={() => setTheme({ texture: v })}
+            >
+              {v[0].toUpperCase() + v.slice(1)}
+            </button>
+          ))}
+          <span style={{ width: 8 }} />
+          {(["sky", "grid", "plain"] as const).map((v) => (
+            <button
+              key={v}
+              style={{
+                ...chip((th.backdrop || "sky") === v, accent),
+                padding: "4px 9px",
+                fontSize: 11,
+              }}
+              onClick={() => setTheme({ backdrop: v })}
+            >
+              {v === "sky" ? "Sky" : v === "grid" ? "Grid" : "Plain"}
+            </button>
+          ))}
+        </div>
         <div style={{ ...label, margin: "10px 0 6px" }}>Atmosphere</div>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
           {(Object.keys(EFFECT_LABEL) as EffectId[]).map((e) => (

@@ -384,8 +384,16 @@ export default function LobbyChatPanel(
     effectiveRoomId === joinedRoomId &&
     effectiveJoinStatus === "joined",
   );
-  const chatBlocked = props.embedded ? Boolean(meta?.chatDisabled) : Boolean(meta?.locked);
-  const joinedByMeta = Boolean((meta || admin) && !chatBlocked && !admin?.locked);
+  // Chat is blocked by the chat lock only, and never for the room's moderators.
+  // It used to read the DOOR lock outside the lobby view, so locking a room's
+  // entry silenced everyone already inside (2026-10-31).
+  const meId = String(ctx?.me?.id || "");
+  const myEntry: any = (liveRoomUsers || []).find((u: any) => String(u?.id || "") === meId);
+  const iModerate =
+    ["owner", "mod"].includes(String(myEntry?.role || "").toLowerCase()) ||
+    ["GOD", "ADMIN", "STAFF", "SUPPORT"].includes(String(ctx?.globalRole || "").toUpperCase());
+  const chatBlocked = Boolean(meta?.chatDisabled) && !iModerate;
+  const joinedByMeta = Boolean((meta || admin) && !chatBlocked);
   const canType = (joinedStrict || joinedByMeta) && !chatBlocked;
   const msgTrim = String(text || "").trim();
   const canSend = !!canType && msgTrim.length > 0; // attachment-only send handled via canSendNow below
@@ -721,7 +729,7 @@ export default function LobbyChatPanel(
               marginBottom: props.hideInput ? 0 : 10,
             }}
           >
-            <style>{`[data-weered-msglist] > div { content-visibility: auto; contain-intrinsic-size: auto 56px; }`}</style>
+            <style>{`[data-weered-msglist] > div:not(:has([data-chat-popover])) { content-visibility: auto; contain-intrinsic-size: auto 56px; }`}</style>
             {msgs.length === 0 ? (
               <EmptyState title="Crickets." hint="Be the one who drops the first line." />
             ) : (

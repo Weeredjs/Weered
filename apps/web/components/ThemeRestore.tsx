@@ -16,11 +16,11 @@ export default function ThemeRestore() {
         s = raw ? JSON.parse(raw) : null;
       } catch {}
       const v2 = localStorage.getItem("weered_theme_v2");
-      const theme = isSiteTheme(v2) ? v2 : s && isSiteTheme(s.theme) ? s.theme : "press";
+      const theme = isSiteTheme(v2) ? v2 : s && isSiteTheme(s.theme) ? s.theme : "nebula";
       // The office host keeps the theme the boot script forced on it.
       if (!d.hasAttribute("data-pro-host")) d.setAttribute("data-weered-theme", theme);
       const up = readUiPrefs();
-      d.setAttribute("data-weered-palette", up.palette || "violet");
+      d.setAttribute("data-weered-palette", up.palette || "custom");
       if (up.stars === false) d.setAttribute("data-weered-stars", "off");
       else d.removeAttribute("data-weered-stars");
       if (s && s.density) d.setAttribute("data-weered-density", s.density);

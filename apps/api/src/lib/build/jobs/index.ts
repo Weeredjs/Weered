@@ -3,6 +3,7 @@ import { blockJob, gameJob } from "./code";
 import { doorJob } from "./door";
 import { eventJob, roomJob, rolesJob, rulesJob } from "./lobbyTools";
 import { pageJob } from "./pages";
+import { lookJob } from "./look";
 import { alertJob, crewJob, feedJob, hostJob, overlayJob, postJob } from "./people";
 
 // Every "describe it" job (routes/aiDescribe.ts), by id.
@@ -21,4 +22,5 @@ export const DESCRIBE_JOBS: BuildJob<any>[] = [
   blockJob,
   gameJob,
   pageJob,
+  lookJob,
 ];

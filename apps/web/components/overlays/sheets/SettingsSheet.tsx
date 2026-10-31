@@ -70,7 +70,7 @@ type Settings = {
 const KEY = "weered:settings:v0";
 
 const DEFAULTS: Settings = {
-  theme: "press",
+  theme: "nebula",
   density: "comfortable",
   reduceMotion: false,
   // A fresh field: the old keepDefaultThemeInLobbies defaulted to true and sits

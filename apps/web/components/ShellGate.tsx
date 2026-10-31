@@ -7,6 +7,7 @@ import { LogoMenu } from "./LogoMenu";
 import { onActivate } from "@/lib/a11y";
 import { NO_SHELL_ROUTES } from "../lib/lobbyThemes";
 import { useShellDesign } from "../lib/shellDesign";
+import { useWeered } from "./WeeredProvider";
 
 function LeftRailScroll({ children }: { children: React.ReactNode }) {
   const [hovered, setHovered] = useState(false);
@@ -424,6 +425,9 @@ export default function ShellGate({
   // Design your Weered lays out both sidebars, so the panel stays open while
   // designing (the viewer's own open/closed choice is left as it was).
   const designing = useShellDesign().designing;
+  // Knocks at the door of the room you moderate: the collapsed Panel tab shows
+  // them, so nobody waits unseen while the panel is closed (James 2026-10-31).
+  const knockCount = Number(((useWeered() as any)?.admin?.knocks || []).length || 0);
 
   // 0 on both sides, then the stored count before paint (see UserCorner).
   const [dmUnreadOnly, setDmUnreadOnly] = useState<number>(0);
@@ -574,10 +578,20 @@ export default function ShellGate({
             />
             <button
               type="button"
-              title="Expand panel"
+              title={
+                knockCount > 0
+                  ? `${knockCount} waiting at the door: open the panel`
+                  : "Expand panel"
+              }
               onClick={toggleRight}
-              className="weered-rail-tab weered-rail-tab-glow"
+              className={`weered-rail-tab weered-rail-tab-glow${knockCount > 0 ? " has-knocks" : ""}`}
+              style={{ position: "relative" }}
             >
+              {knockCount > 0 && (
+                <span className="weered-rail-quick-badge" aria-label={`${knockCount} knocking`}>
+                  {knockCount > 99 ? "99+" : knockCount}
+                </span>
+              )}
               <svg
                 width="14"
                 height="14"

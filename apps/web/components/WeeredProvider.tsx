@@ -52,7 +52,7 @@ type AuditItem = {
   targetId?: string; targetName?: string; note?: string;
 };
 
-type RoomMeta   = { name: string; locked: boolean; chatDisabled: boolean; thumbnail?: string; ownerId: string; mods: string[]; description?: string; iconUrl?: string; bannerUrl?: string; accentColor?: string; disabledModules?: string[] };
+type RoomMeta   = { name: string; locked: boolean; chatDisabled: boolean; slowSec?: number; thumbnail?: string; ownerId: string; mods: string[]; description?: string; iconUrl?: string; bannerUrl?: string; accentColor?: string; disabledModules?: string[] };
 type AdminState = { knocks: Knock[]; banned: string[]; muted: string[]; audit: AuditItem[] };
 type ModuleState = { mode: string; url?: string; channel?: string; setBy?: string; setAt?: number } | null;
 
@@ -99,7 +99,7 @@ export type Ctx = {
   meta: RoomMeta | null; admin: AdminState | null;
   moduleState: ModuleState;
   role: Role; joinStatus: JoinStatus; statusByRoom: Record<string, JoinStatus>;
-  deniedByRoom: Record<string, { reason?: string; minLevel?: number }>; // why a join was refused
+  deniedByRoom: Record<string, { reason?: string; minLevel?: number; minutes?: number; by?: string }>; // why a join was refused
   rooms: any[];
   join: (roomId: string) => void;
   leave: () => void;
@@ -135,7 +135,7 @@ function normalizeInbound(msg: any) {
 function applySettingsToDom(s: any) {
   if (typeof document === "undefined") return;
   const root = document.documentElement;
-  root.setAttribute("data-weered-theme", String(s?.theme || "press"));
+  root.setAttribute("data-weered-theme", String(s?.theme || "nebula"));
   root.setAttribute("data-weered-density",      String(s?.density      ?? "comfortable"));
   root.setAttribute("data-weered-reduce-motion", s?.reduceMotion ? "1" : "0");
 }
@@ -285,7 +285,7 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
   const [metaByRoom,    setMetaByRoom   ] = useState<Record<string, RoomMeta>>({});
   const [adminByRoom,   setAdminByRoom  ] = useState<Record<string, AdminState>>({});
   const [statusByRoom,  setStatusByRoom ] = useState<Record<string, JoinStatus>>({});
-  const [deniedByRoom,  setDeniedByRoom ] = useState<Record<string, { reason?: string; minLevel?: number }>>({});
+  const [deniedByRoom,  setDeniedByRoom ] = useState<Record<string, { reason?: string; minLevel?: number; minutes?: number; by?: string }>>({});
   const [moduleByRoom,  setModuleByRoom ] = useState<Record<string, ModuleState>>({});
   const [ytStateByRoom, setYtStateByRoom] = useState<Record<string, { videoId: string; playing: boolean; position: number; updatedAt: number }>>({});
   const [launchByRoom,  setLaunchByRoom ] = useState<Record<string, LaunchSnapshot | null>>({});
@@ -302,12 +302,25 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
   const joinStatus = activeRoomId ? (statusByRoom[activeRoomId] || "idle")  : "idle";
   const moduleState: ModuleState = activeRoomId ? (moduleByRoom[activeRoomId] ?? null) : null;
 
+  // What the room says I am (roomState roleOf): it counts a lobby's own staff
+  // (level 3 moderates, 5 owns) and follows a live promotion (presence:role).
+  // Read as one string so presence ticks don't re-render the provider.
+  const myRoomRole = React.useSyncExternalStore(
+    hotStore.subscribe,
+    () => {
+      if (!activeRoomId || !me?.id) return "";
+      const mine = hotStore.state.usersByRoom[activeRoomId]?.find((u: any) => u.id === me.id);
+      return String((mine as any)?.role || "");
+    },
+    () => "",
+  );
   const role: Role = useMemo(() => {
     if (!meta || !me?.id) return "none";
     if (meta.ownerId === me.id) return "owner";
     if (Array.isArray(meta.mods) && meta.mods.includes(me.id)) return "mod";
+    if (myRoomRole === "owner" || myRoomRole === "mod") return myRoomRole;
     return "member";
-  }, [meta, me]);
+  }, [meta, me, myRoomRole]);
 
   useEffect(() => {
     if (!token) { setGlobalRole(""); return; }
@@ -527,6 +540,7 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
             name: String(msg.name || rid),
             locked: Boolean(msg.locked),
             chatDisabled: Boolean(msg.chatDisabled ?? false),
+            slowSec: Number(msg.slowSec || 0),
             thumbnail: msg.thumbnail || undefined,
             ownerId: String(msg.ownerId || ""),
             mods: Array.isArray(msg.mods) ? msg.mods.map(String) : [],
@@ -608,6 +622,65 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
+      // Someone's rank changed (promote, demote, a lobby rank): re-sort and badge
+      // now, and tell the left rail. Never fire presence:join/leave/state or
+      // lobby:activity as window events: lobby:activity reaches every socket on
+      // the site, and the rails refetch over HTTP on them (pulled 2026-10-31).
+      if (msg.type === "presence:role") {
+        try { window.dispatchEvent(new CustomEvent("weered:presence:role", { detail: msg })); } catch {}
+        const rid = String(msg.roomId || "");
+        const uid = String(msg.userId || "");
+        if (!rid || !uid) return;
+        setUsersByRoom(prev => {
+          const cur = prev[rid];
+          if (!cur) return prev;
+          return {
+            ...prev,
+            [rid]: cur.map((u: any) => u.id === uid
+              ? { ...u, role: msg.role ?? u.role, ...(msg.lobbyRoleLevel != null ? { lobbyRoleLevel: msg.lobbyRoleLevel } : {}) }
+              : u),
+          };
+        });
+        return;
+      }
+
+      // Removed by a moderator: say so, and take them out of the room. They
+      // used to be left on a frozen screen, and a refresh walked them back in.
+      if (msg.type === "mod:kicked" || msg.type === "mod:banned") {
+        const rid = String(msg.roomId || "");
+        const banned = msg.type === "mod:banned";
+        const where = msg.roomName ? `"${String(msg.roomName)}"` : "this room";
+        const by = msg.by ? ` by ${String(msg.by)}` : "";
+        weeredToast.warn(
+          banned
+            ? `You were banned from ${where}${by}.`
+            : `You were removed from ${where}${by}. You can come back in ${Number(msg.minutes) || 10} minutes.`,
+        );
+        if (rid) {
+          setDeniedByRoom(prev => ({ ...prev, [rid]: { reason: banned ? "banned" : "kicked", minutes: Number(msg.minutes) || undefined, by: msg.by ? String(msg.by) : undefined } }));
+          setStatusByRoom(prev => ({ ...prev, [rid]: "denied" }));
+          setUsersByRoom(prev => (prev[rid] ? { ...prev, [rid]: [] } : prev));
+        }
+        try {
+          if (window.location.pathname.startsWith("/room/")) {
+            router.replace(msg.lobbyId ? `/lobby/${encodeURIComponent(String(msg.lobbyId))}` : "/home");
+          }
+        } catch {}
+        return;
+      }
+      if (msg.type === "mod:muted") {
+        weeredToast.warn(`A moderator muted you${msg.roomName ? ` in "${String(msg.roomName)}"` : ""}. You can read, not post.`);
+        return;
+      }
+      if (msg.type === "mod:unmuted") {
+        weeredToast.success?.(`You can post again${msg.roomName ? ` in "${String(msg.roomName)}"` : ""}.`);
+        return;
+      }
+      if (msg.type === "mod:error") {
+        weeredToast.warn(String(msg.reason || "That didn't work."));
+        return;
+      }
+
       if (msg.type === "presence:join") {
         const rid  = String(msg.roomId || "");
         const user = msg.user as RoomUser | null;
@@ -659,18 +732,24 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
             audit:   Array.isArray(msg.audit)   ? msg.audit                   : [],
           },
         }));
-        setMetaByRoom(prev => ({
-          ...prev,
-          [rid]: {
-            ...(prev[rid] || {}),
-            name: String(msg.name || rid),
-            locked: Boolean(msg.locked),
-            chatDisabled: Boolean(msg.chatDisabled ?? false),
-            thumbnail: msg.thumbnail || undefined,
-            ownerId: String(msg.ownerId || ""),
-            mods: Array.isArray(msg.mods) ? msg.mods.map(String) : [],
-          },
-        }));
+        // Only what this message carries. It used to reset the chat lock and
+        // the thumbnail that presence:state had just set (2026-10-31).
+        setMetaByRoom(prev => {
+          const cur: any = prev[rid] || {};
+          return {
+            ...prev,
+            [rid]: {
+              ...cur,
+              name: String(msg.name || cur.name || rid),
+              locked: Boolean(msg.locked),
+              chatDisabled: typeof msg.chatDisabled === "boolean" ? msg.chatDisabled : Boolean(cur.chatDisabled),
+              ...(typeof msg.slowSec === "number" ? { slowSec: msg.slowSec } : {}),
+              ...(msg.thumbnail !== undefined ? { thumbnail: msg.thumbnail || undefined } : {}),
+              ownerId: String(msg.ownerId || ""),
+              mods: Array.isArray(msg.mods) ? msg.mods.map(String) : [],
+            },
+          };
+        });
         return;
       }
 
@@ -918,16 +997,30 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (msg.type === "room:knock:queued") { setStatusByRoom(prev => ({ ...prev, [String(msg.roomId || "")]: "knocking" })); return; }
-      if (msg.type === "room:banned")       { setStatusByRoom(prev => ({ ...prev, [String(msg.roomId || "")]: "banned"   })); return; }
+      // Banned: the same screen as any refusal, saying why ("banned" status
+      // was set and never drawn anywhere).
+      if (msg.type === "room:banned")       { const rid = String(msg.roomId || ""); setDeniedByRoom(prev => ({ ...prev, [rid]: { reason: "banned" } })); setStatusByRoom(prev => ({ ...prev, [rid]: "denied" })); return; }
       if (msg.type === "room:password:required") { setPasswordRoomId(String(msg.roomId || "")); setPasswordError(""); return; }
       if (msg.type === "room:password:wrong")    { setPasswordError("Wrong password."); return; }
-      if (msg.type === "room:denied")       { const rid = String(msg.roomId || ""); setDeniedByRoom(prev => ({ ...prev, [rid]: { reason: msg.reason, minLevel: msg.minLevel } })); setStatusByRoom(prev => ({ ...prev, [rid]: "denied"   })); return; }
+      if (msg.type === "room:denied")       { const rid = String(msg.roomId || ""); setDeniedByRoom(prev => ({ ...prev, [rid]: { reason: msg.reason, minLevel: msg.minLevel, minutes: msg.minutes } })); setStatusByRoom(prev => ({ ...prev, [rid]: "denied"   })); return; }
       if (msg.type === "staff:kicked") {
         const rid = String(msg.roomId || "");
         if (rid) setStatusByRoom(prev => ({ ...prev, [rid]: "idle" }));
         setActiveRoomId("");
         setJoinedRoomId("");
         try { router.replace("/lobby"); } catch {}
+        return;
+      }
+      if (msg.type === "room:deleted") {
+        // Its lobby's staff deleted it (the client never heard this before).
+        const rid = String(msg.roomId || "");
+        if (rid) setStatusByRoom(prev => ({ ...prev, [rid]: "idle" }));
+        if (rid && window.location.pathname === `/room/${encodeURIComponent(rid)}`) {
+          weeredToast.warn("This room was deleted.");
+          setActiveRoomId("");
+          setJoinedRoomId("");
+          try { router.replace("/home"); } catch {}
+        }
         return;
       }
       if (msg.type === "room:closed") {

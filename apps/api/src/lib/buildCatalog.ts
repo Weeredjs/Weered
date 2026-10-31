@@ -27,7 +27,7 @@ export const BUILD_TEMPLATES: BuildTemplate[] = [
     group: "work",
     blurb: "Who's in today, sprint timer, the day board. Meeting and focus rooms.",
     tags: ["team", "work", "office", "remote", "company", "staff", "business", "cowork"],
-    preset: "frostbite",
+    preset: "office",
     rooms: ["general", "meet", "focus"],
   },
   {
@@ -351,6 +351,14 @@ export const BUILD_THEMES = [
     accent: "#a3e635",
     effect: "bubbles",
     font: "stencil",
+  },
+  {
+    id: "office",
+    name: "Office",
+    tagline: "Calm graphite, clean lines. Heads down.",
+    accent: "#2dd4bf",
+    effect: "none",
+    font: "default",
   },
 ];
 

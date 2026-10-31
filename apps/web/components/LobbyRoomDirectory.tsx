@@ -1,6 +1,7 @@
 "use client";
 
 import RoomDescribe from "./build/RoomDescribe";
+import { moduleGlyph, roomMonogram } from "../lib/roomGlyph";
 import AlertsPanel from "./build/AlertsPanel";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -43,6 +44,7 @@ interface RoomData {
   iconUrl?: string | null;
   bannerUrl?: string | null;
   accentColor?: string | null;
+  defaultModule?: string | null;
 }
 
 // "2m" / "3h" / "2d" — recency chip for quiet rooms.
@@ -79,7 +81,11 @@ function SailMark({ size = 22 }: { size?: number }) {
   );
 }
 
-function roomIcon(name: string, moduleType?: string): React.ReactNode {
+function roomIcon(
+  name: string,
+  moduleType?: string,
+  defaultModule?: string | null,
+): React.ReactNode {
   const n = name.toLowerCase();
   if (moduleType === "WINDROSE") {
     if (n.includes("helm") || n.includes("wheel")) return "⚓";
@@ -107,8 +113,20 @@ function roomIcon(name: string, moduleType?: string): React.ReactNode {
   if (n.includes("music") || n.includes("audio")) return "🎵";
   if (n.includes("art") || n.includes("creative")) return "🎨";
   if (n.includes("cryo") || n.includes("archive")) return "🧊";
+  if (n.includes("raid") || n.includes("fireteam") || n.includes("strike")) return "⚔️";
+  if (n.includes("clip") || n.includes("highlight")) return "🎬";
+  if (n.includes("comms") || n.includes("party")) return "🎧";
+  if (n.includes("movie") || n.includes("cinema") || n.includes("film")) return "🍿";
+  if (n.includes("tower") || n.includes("hub") || n.includes("hq")) return "🏰";
+  if (n.includes("event") || n.includes("tournament")) return "🏟️";
+  if (moduleGlyph(defaultModule)) return moduleGlyph(defaultModule);
   if (moduleType === "WINDROSE") return <SailMark size={22} />;
-  return "◆";
+  // No diamond: the room's initials.
+  return (
+    <span style={{ fontSize: 13, fontWeight: 900, letterSpacing: ".02em", lineHeight: 1 }}>
+      {roomMonogram(name)}
+    </span>
+  );
 }
 
 function roomSubtitle(name: string): string {
@@ -935,7 +953,7 @@ export default function LobbyRoomDirectory({
                 style={{ width: "100%", height: "100%", objectFit: "cover" }}
               />
             ) : (
-              roomIcon(room.name, moduleType)
+              roomIcon(room.name, moduleType, room.defaultModule)
             );
             const subtitle = room.description || roomSubtitle(room.name);
             const memberCount = room._count?.members ?? 0;

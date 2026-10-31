@@ -105,6 +105,12 @@ export type LobbyTheme = {
    *  off (James 2026-10-30: "users can't opt out"). Their system's
    *  reduce-motion setting still wins; see lib/motion.ts. */
   fxForced?: boolean;
+  /** The whole space, not just the page (components/SpaceTheme.tsx): the
+   *  corners, what the cards are made of, and what's behind them, across both
+   *  rails and the lobby's rooms (James 2026-10-31). */
+  shape?: "round" | "soft" | "square" | "cut";
+  texture?: "glass" | "grid" | "lines" | "dots" | "solid";
+  backdrop?: "sky" | "grid" | "plain";
 };
 
 export type TabEntry = { id: TabId; label?: string; hidden?: boolean };
@@ -423,6 +429,11 @@ export function sanitizeLayout(raw: unknown): LobbyLayout | null {
     sparkle: !!th.sparkle,
     symbol: cleanSymbol(th.symbol),
     fxForced: th.fxForced === true ? true : undefined,
+    shape: ["round", "soft", "square", "cut"].includes(th.shape) ? th.shape : undefined,
+    texture: ["glass", "grid", "lines", "dots", "solid"].includes(th.texture)
+      ? th.texture
+      : undefined,
+    backdrop: ["sky", "grid", "plain"].includes(th.backdrop) ? th.backdrop : undefined,
   };
 
   return {

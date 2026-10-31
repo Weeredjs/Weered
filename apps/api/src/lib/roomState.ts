@@ -156,6 +156,14 @@ export type RoomState = {
   pinned: boolean;
   /** Pinned chat messages (chat:pin), not to be confused with a pinned room. */
   pinnedMsgs?: Set<string>;
+  /** Chat lock: only moderators may post (Room.chatLocked). */
+  chatLocked?: boolean;
+  /** Who was kicked, until when (ms): they can't walk straight back in. */
+  kickedUntil?: Map<string, number>;
+  /** Slow mode: seconds between one person's messages (moderators exempt). */
+  slowSec?: number;
+  /** When each person last posted, for slow mode. */
+  lastSaid?: Map<string, number>;
   isEvent: boolean;
   passwordHash?: string;
   launch?: LaunchState;
@@ -254,11 +262,26 @@ export async function loadExistingRoom(roomId: string): Promise<RoomState | null
   return row ? ensureRoomLoaded(roomId) : null;
 }
 
+// One load per room. People arriving together at a room that isn't in
+// memory (everyone reconnecting after a deploy) each built their own copy,
+// and the last copy stored replaced the others: whoever joined an earlier
+// copy sat in a room nobody else was in, and never saw anyone arrive
+// (found 2026-10-31). Everyone now waits on the one load.
+const loadingRooms = new Map<string, Promise<RoomState>>();
+
 export async function ensureRoomLoaded(roomId: string): Promise<RoomState> {
   roomId = normalizeRoomId(roomId);
   const cached = rooms.get(roomId);
   if (cached) return cached;
+  let loading = loadingRooms.get(roomId);
+  if (!loading) {
+    loading = loadRoom(roomId).finally(() => loadingRooms.delete(roomId));
+    loadingRooms.set(roomId, loading);
+  }
+  return loading;
+}
 
+async function loadRoom(roomId: string): Promise<RoomState> {
   // The Home Lobby used to be built here as an empty in-memory room with no
   // Room row, and every persistence path skipped it. Its chat therefore lived
   // exactly as long as the API process, which restarts on every deploy. Give
@@ -304,6 +327,7 @@ export async function ensureRoomLoaded(roomId: string): Promise<RoomState> {
     r.bannerUrl = (dbRoom as any).bannerUrl || undefined;
     r.accentColor = (dbRoom as any).accentColor || undefined;
     r.locked = Boolean(dbRoom.locked);
+    r.chatLocked = Boolean((dbRoom as any).chatLocked);
     r.pinned = Boolean((dbRoom as any).pinned);
     r.isEvent = Boolean((dbRoom as any).isEvent);
     r.ownerId = dbRoom.ownerId || undefined;
@@ -487,6 +511,8 @@ export async function ensureRoomLoaded(roomId: string): Promise<RoomState> {
     }
   }
 
+  const raced = rooms.get(roomId);
+  if (raced) return raced;
   rooms.set(roomId, r);
   return r;
 }
@@ -561,13 +587,40 @@ export function isElevatedGlobal(globalRole?: string) {
   const r = String(globalRole || "").toUpperCase();
   return r === "GOD" || r === "STAFF" || r === "SUPPORT" || r === "ADMIN";
 }
+/** Their rank in the lobby this room belongs to (5 owner … 1 member), as
+ *  read when they joined; 0 outside a lobby. */
+export function lobbyLevelIn(room: RoomState, userId?: string): number {
+  if (!userId || !room.lobbyId) return 0;
+  return Number((room.users.get(userId) as any)?.lobbyRoleLevel || 0);
+}
+/** A lobby's moderators and up moderate every room in it, its own chat
+ *  included; its owner runs them. Before this, a lobby's staff had no powers
+ *  in their own lobby's rooms (found 2026-10-31). */
 export function isModOrOwner(room: RoomState, userId?: string, globalRole?: string) {
-  return isElevatedGlobal(globalRole) || isOwner(room, userId) || isMod(room, userId);
+  return (
+    isElevatedGlobal(globalRole) ||
+    isOwner(room, userId) ||
+    isMod(room, userId) ||
+    lobbyLevelIn(room, userId) >= 3
+  );
 }
 export function roleOf(room: RoomState, userId: string): Role {
-  if (isOwner(room, userId)) return "owner";
-  if (isMod(room, userId)) return "mod";
+  if (isOwner(room, userId) || lobbyLevelIn(room, userId) >= 5) return "owner";
+  if (isMod(room, userId) || lobbyLevelIn(room, userId) >= 3) return "mod";
   return "member";
+}
+/** Who outranks whom in a room: Weered's staff, then the room's (or lobby's)
+ *  owner, then its moderators, then everyone else. A moderator acts only on
+ *  people below them. */
+export function rankIn(room: RoomState, userId: string, globalRole?: string): number {
+  const g = String(globalRole || (room.users.get(userId) as any)?.globalRole || "").toUpperCase();
+  if (g === "GOD") return 6;
+  if (g === "ADMIN" || g === "STAFF") return 5;
+  const role = roleOf(room, userId);
+  if (role === "owner") return 4;
+  if (g === "SUPPORT") return 3;
+  if (role === "mod") return 2;
+  return 1;
 }
 
 export function ensureLaunch(room: RoomState): LaunchState {
@@ -677,6 +730,8 @@ export function buildStatePayload(room: RoomState) {
     users,
     count: users.length - (_isAIAvailable() ? 1 : 0),
     locked: Boolean(room.locked),
+    chatDisabled: Boolean(room.chatLocked),
+    slowSec: room.slowSec || 0,
     ownerId: room.ownerId || "",
     mods: Array.from(room.mods.values()),
     muted: Array.from(room.muted.values()),
@@ -692,23 +747,31 @@ export function buildStatePayload(room: RoomState) {
   };
 }
 
+/** What a room's moderators see besides everyone's state. It follows the
+ *  state message, so it carries the chat lock and slow mode too: without
+ *  them a moderator's screen showed the chat open again a moment after
+ *  locking it (2026-10-31). */
+export function adminStatePayload(room: RoomState) {
+  return {
+    type: "room:adminState",
+    roomId: room.roomId,
+    name: room.name || room.roomId,
+    locked: Boolean(room.locked),
+    chatDisabled: Boolean(room.chatLocked),
+    slowSec: room.slowSec || 0,
+    ownerId: room.ownerId || "",
+    mods: Array.from(room.mods.values()),
+    knocks: room.knocks.slice(-50),
+    banned: Array.from(room.banned.values()),
+    muted: Array.from(room.muted.values()),
+    audit: room.audit.slice(-50),
+  };
+}
+
 export function publishStateToSocket(ws: Sock, room: RoomState) {
   send(ws, buildStatePayload(room));
   const uid = ws.user?.id;
-  if (uid && isModOrOwner(room, uid, ws.user?.globalRole)) {
-    send(ws, {
-      type: "room:adminState",
-      roomId: room.roomId,
-      name: room.name || room.roomId,
-      locked: Boolean(room.locked),
-      ownerId: room.ownerId || "",
-      mods: Array.from(room.mods.values()),
-      knocks: room.knocks.slice(-50),
-      banned: Array.from(room.banned.values()),
-      muted: Array.from(room.muted.values()),
-      audit: room.audit.slice(-50),
-    });
-  }
+  if (uid && isModOrOwner(room, uid, ws.user?.globalRole)) send(ws, adminStatePayload(room));
 }
 
 export function publishState(room: RoomState) {
@@ -718,18 +781,7 @@ export function publishState(room: RoomState) {
   for (const s of room.sockets) {
     const uid = s.user?.id;
     if (!uid || !isModOrOwner(room, uid, s.user?.globalRole)) continue;
-    send(s, {
-      type: "room:adminState",
-      roomId: room.roomId,
-      name: room.name || room.roomId,
-      locked: Boolean(room.locked),
-      ownerId: room.ownerId || "",
-      mods: Array.from(room.mods.values()),
-      knocks: room.knocks.slice(-50),
-      banned: Array.from(room.banned.values()),
-      muted: Array.from(room.muted.values()),
-      audit: room.audit.slice(-50),
-    });
+    send(s, adminStatePayload(room));
   }
 }
 

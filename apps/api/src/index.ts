@@ -1,5 +1,6 @@
 import { decodeEntities, stripTags } from "./lib/htmlText";
 import { log, logger, swallow } from "./lib/logger";
+import { lobbyLevelOf } from "./lib/lobbyAccess";
 // Before anything decodes an image: switches off the vulnerable HEIF/AVIF loader.
 import "./lib/sharpSafety";
 import dotenv from "dotenv";
@@ -612,8 +613,28 @@ async function doJoin(ws: Sock, roomId: string) {
   // Banned first: the ownership claim below used to run BEFORE this check, so a
   // room-banned user could become the owner of an ownerless room on the way out.
   if (ws.user && room.banned.has(ws.user.id)) {
-    send(ws, { type: "room:banned", roomId });
+    send(ws, { type: "room:banned", roomId, roomName: room.name || "" });
     return false;
+  }
+
+  // Kicked: out until the kick runs out (sockets/roomMod.ts KICK_MS). A refresh
+  // used to walk them straight back in (James 2026-10-31). Staff are exempt.
+  {
+    const until = ws.user ? room.kickedUntil?.get(ws.user.id) : undefined;
+    if (
+      until &&
+      until > Date.now() &&
+      !isElevatedGlobal(String((ws.user as any)?.globalRole || ""))
+    ) {
+      send(ws, {
+        type: "room:denied",
+        roomId,
+        reason: "kicked",
+        minutes: Math.max(1, Math.ceil((until - Date.now()) / 60_000)),
+      });
+      return false;
+    }
+    if (until && until <= Date.now()) room.kickedUntil?.delete(ws.user!.id);
   }
 
   // First joiner claims ONLY an ad-hoc room: never a pinned/seeded platform room,
@@ -658,11 +679,9 @@ async function doJoin(ws: Sock, roomId: string) {
     let lobbyRoleLevel: number | undefined;
     if (room.lobbyId && !(ws.user as any).guest) {
       try {
-        const lm = await prisma.lobbyMember.findUnique({
-          where: { lobbyId_userId: { lobbyId: room.lobbyId, userId: ws.user.id } },
-          select: { roleLevel: true },
-        });
-        if (lm?.roleLevel != null) lobbyRoleLevel = lm.roleLevel;
+        // The lobby's owner counts as its owner with or without a member row.
+        const level = await lobbyLevelOf(ws.user.id, room.lobbyId);
+        if (level > 0) lobbyRoleLevel = level;
       } catch (e) {
         swallow(e);
       }
@@ -1734,8 +1753,9 @@ async function main() {
         const actorName = ws.user.name;
         const actorGlobalRole = ws.user.globalRole || "USER";
         const actorIsMod = roomId ? isModOrOwner(room, actorId, actorGlobalRole) : false;
+        // The room's owner, its lobby's owner, or Weered's staff.
         const actorIsOwner = roomId
-          ? isOwner(room, actorId) || isElevatedGlobal(actorGlobalRole)
+          ? roleOf(room, actorId) === "owner" || isElevatedGlobal(actorGlobalRole)
           : false;
 
         if (isCrewOrDm) {
@@ -1761,6 +1781,9 @@ async function main() {
           msg.type === "room:rename" ||
           msg.type === "room:lock" ||
           msg.type === "room:unlock" ||
+          msg.type === "room:chat:lock" ||
+          msg.type === "room:chat:unlock" ||
+          msg.type === "room:slow" ||
           msg.type === "room:admit" ||
           msg.type === "room:deny" ||
           msg.type === "staff:kick" ||

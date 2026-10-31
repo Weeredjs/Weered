@@ -353,6 +353,9 @@ model Room {
   name            String        @default("")
   description     String        @default("")
   locked          Boolean       @default(false)
+  // Chat lock (separate from `locked`, the door): while on, only the room's
+  // moderators can post (sockets/messaging.ts chat:send).
+  chatLocked      Boolean       @default(false)
   pinned          Boolean       @default(false)
   isEvent         Boolean       @default(false)
   passwordHash    String?

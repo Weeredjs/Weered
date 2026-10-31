@@ -2,6 +2,10 @@ import { swallow } from "../lib/logger";
 import { prisma } from "../lib/prisma";
 import { RoomRole } from "@prisma/client";
 import { removeFromVoice } from "../lib/livekitAdmin";
+import { rankIn, roleOf } from "../lib/roomState";
+
+/** How long a kick keeps someone out of the room. */
+export const KICK_MS = 10 * 60_000;
 
 // Room lifecycle + moderation WS handlers extracted from the index.ts main
 // message handler. handleRoomClose (room:close) is dispatched PRE-preamble: it
@@ -225,6 +229,8 @@ export async function handleRoomMod(
     if (!targetId || targetId === kickActorId) return;
     for (const r of rooms.values()) {
       if (r.users.has(targetId) || r.mods.has(targetId)) {
+        // Kept out a while, like a room kick (a refresh walked them back in).
+        (r.kickedUntil ||= new Map()).set(targetId, Date.now() + KICK_MS);
         r.users.delete(targetId);
         r.mods.delete(targetId);
         try {
@@ -272,12 +278,49 @@ export async function handleRoomMod(
     return;
   }
 
+  // Moderators act only on people below them: a mod can't kick another mod,
+  // the owner, or Weered's staff (only the owner was protected before).
+  // At least what the dispatcher found them to be (a room mod, an owner).
+  const actorRank = Math.max(
+    rankIn(room, actorId, ws.user?.globalRole),
+    actorIsOwner ? 4 : actorIsMod ? 2 : 1,
+  );
+  const outranks = (targetId: string) => {
+    const targetRank = Math.max(rankIn(room, targetId), isOwner(room, targetId) ? 4 : 1);
+    if (targetRank < actorRank) return true;
+    send(ws, { type: "mod:error", roomId, reason: "They're at or above your rank here." });
+    return false;
+  };
+  const where = { roomId, roomName: room.name || "", lobbyId: room.lobbyId || null, by: actorName };
+
+  if (msg.type === "room:slow") {
+    if (!actorIsMod) return;
+    const allowed = [0, 5, 10, 30, 60, 120];
+    const sec = Number(msg.seconds);
+    room.slowSec = allowed.includes(sec) ? sec : 0;
+    audit(room, { type: "room:slow", actorId, actorName, note: `${room.slowSec}s` });
+    publishState(room);
+    return;
+  }
+
+  if (msg.type === "room:chat:lock" || msg.type === "room:chat:unlock") {
+    if (!actorIsMod) return;
+    room.chatLocked = msg.type === "room:chat:lock";
+    void prisma.room
+      .update({ where: { id: roomId }, data: { chatLocked: room.chatLocked } as any })
+      .catch(swallow);
+    audit(room, { type: msg.type, actorId, actorName });
+    broadcast(room, { type: room.chatLocked ? "room:chat:disable" : "room:chat:enable", roomId });
+    publishState(room);
+    return;
+  }
+
   if (msg.type === "mod:mute") {
     if (!actorIsMod) return;
     const targetId = String(msg.userId || "");
-    if (!targetId || isOwner(room, targetId)) return;
+    if (!targetId || targetId === actorId || !outranks(targetId)) return;
     room.muted.add(targetId);
-    for (const s of findSocketsByUser(room, targetId)) send(s, { type: "mod:muted", roomId });
+    for (const s of findSocketsByUser(room, targetId)) send(s, { type: "mod:muted", ...where });
     audit(room, { type: "mod:mute", actorId, actorName, targetId });
     publishState(room);
     return;
@@ -288,7 +331,7 @@ export async function handleRoomMod(
     const targetId = String(msg.userId || "");
     if (!targetId) return;
     room.muted.delete(targetId);
-    for (const s of findSocketsByUser(room, targetId)) send(s, { type: "mod:unmuted", roomId });
+    for (const s of findSocketsByUser(room, targetId)) send(s, { type: "mod:unmuted", ...where });
     audit(room, { type: "mod:unmute", actorId, actorName, targetId });
     publishState(room);
     return;
@@ -297,7 +340,10 @@ export async function handleRoomMod(
   if (msg.type === "mod:kick") {
     if (!actorIsMod) return;
     const targetId = String(msg.userId || "");
-    if (!targetId || isOwner(room, targetId)) return;
+    if (!targetId || targetId === actorId || !outranks(targetId)) return;
+    // A kick holds for a while: a refresh used to walk them straight back in
+    // without ever knowing (James 2026-10-31). doJoin refuses until then.
+    (room.kickedUntil ||= new Map()).set(targetId, Date.now() + KICK_MS);
     room.users.delete(targetId);
     room.mods.delete(targetId);
     if (room.roomId !== "lobby") {
@@ -309,7 +355,7 @@ export async function handleRoomMod(
         .catch(swallow);
     }
     for (const s of findSocketsByUser(room, targetId)) {
-      send(s, { type: "mod:kicked", roomId });
+      send(s, { type: "mod:kicked", ...where, minutes: KICK_MS / 60_000 });
       // Out of room.sockets too: every broadcast iterates that set, so clearing
       // s.roomId alone left the removed user receiving the room's chat
       // (found 2026-09-26).
@@ -331,7 +377,7 @@ export async function handleRoomMod(
   if (msg.type === "mod:ban") {
     if (!actorIsMod) return;
     const targetId = String(msg.userId || "");
-    if (!targetId || isOwner(room, targetId)) return;
+    if (!targetId || targetId === actorId || !outranks(targetId)) return;
     room.banned.add(targetId);
     room.users.delete(targetId);
     room.mods.delete(targetId);
@@ -345,7 +391,7 @@ export async function handleRoomMod(
         .catch(swallow);
     }
     for (const s of findSocketsByUser(room, targetId)) {
-      send(s, { type: "mod:banned", roomId });
+      send(s, { type: "mod:banned", ...where });
       // Out of room.sockets too: every broadcast iterates that set, so clearing
       // s.roomId alone left the removed user receiving the room's chat
       // (found 2026-09-26).
@@ -382,7 +428,7 @@ export async function handleRoomMod(
   if (msg.type === "mod:promote") {
     if (!actorIsOwner) return;
     const targetId = String(msg.userId || "");
-    if (!targetId || isOwner(room, targetId)) return;
+    if (!targetId || targetId === actorId || !outranks(targetId)) return;
     room.mods.add(targetId);
     if (room.roomId !== "lobby") {
       void prisma.roomMember
@@ -395,13 +441,20 @@ export async function handleRoomMod(
     }
     audit(room, { type: "mod:promote", actorId, actorName, targetId });
     publishState(room);
+    // Lists re-sort and show the badge now, not at their next poll.
+    broadcast(room, {
+      type: "presence:role",
+      roomId,
+      userId: targetId,
+      role: roleOf(room, targetId),
+    });
     return;
   }
 
   if (msg.type === "mod:demote") {
     if (!actorIsOwner) return;
     const targetId = String(msg.userId || "");
-    if (!targetId || isOwner(room, targetId)) return;
+    if (!targetId || targetId === actorId || !outranks(targetId)) return;
     room.mods.delete(targetId);
     if (room.roomId !== "lobby") {
       void prisma.roomMember
@@ -413,6 +466,12 @@ export async function handleRoomMod(
     }
     audit(room, { type: "mod:demote", actorId, actorName, targetId });
     publishState(room);
+    broadcast(room, {
+      type: "presence:role",
+      roomId,
+      userId: targetId,
+      role: roleOf(room, targetId),
+    });
     return;
   }
 }

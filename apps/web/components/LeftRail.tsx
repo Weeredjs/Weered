@@ -208,9 +208,28 @@ export default function LeftRail() {
     };
     void fetchPresence();
     const t = setInterval(fetchPresence, 20000);
+    // And soon after someone's rank changes, so a promotion shows. Only then:
+    // every open page refetching on every arrival or departure is a request
+    // per viewer per join in a busy lobby; the poll above covers those.
+    // Spread out so a whole lobby doesn't ask in the same instant.
+    let soon: ReturnType<typeof setTimeout> | null = null;
+    const nudge = () => {
+      if (soon) return;
+      soon = setTimeout(
+        () => {
+          soon = null;
+          void fetchPresence();
+        },
+        700 + Math.random() * 2300,
+      );
+    };
+    const kinds = ["weered:presence:role"];
+    for (const k of kinds) window.addEventListener(k, nudge);
     return () => {
       cancelled = true;
       clearInterval(t);
+      if (soon) clearTimeout(soon);
+      for (const k of kinds) window.removeEventListener(k, nudge);
     };
   }, [lobbyPresenceId]);
 
@@ -932,6 +951,7 @@ export default function LeftRail() {
                   avatarColor={u?.avatarColor}
                   globalRole={u?.globalRole}
                   tier={u?.tier}
+                  roomRole={u?.role}
                   roleIcon={
                     u?.lobbyRoleLevel != null ? roleIcons[String(u.lobbyRoleLevel)] : undefined
                   }

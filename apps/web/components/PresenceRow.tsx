@@ -2,9 +2,10 @@
 
 import React from "react";
 import RoleGlyph from "./RoleGlyph";
-import RoleIcon, { TierIcon } from "./RoleIcon";
+import RoleIcon, { TierIcon, roomRoleIcon } from "./RoleIcon";
 
 import { avatarBg } from "../lib/avatarColor";
+import { frameFx, nameFx } from "../lib/looks";
 
 export function SteamIcon({ size = 14 }: { size?: number }) {
   return (
@@ -102,6 +103,8 @@ export interface PresenceRowProps {
    *  not set icons. `roleTitle` is the hover label that goes with it. */
   roleIcon?: string | null;
   roleTitle?: string | null;
+  /** owner / mod in the room or lobby they're in: a star beside the name. */
+  roomRole?: string | null;
 
   online?: boolean;
   roomName?: string | null;
@@ -135,6 +138,7 @@ export default function PresenceRow({
   tier,
   roleIcon,
   roleTitle,
+  roomRole,
   online,
   roomName: _roomName,
   livePresence,
@@ -345,8 +349,12 @@ export default function PresenceRow({
         }}
       >
         <div
-          className={"weered-avatar" + (avatarFrame ? " weered-frame-" + avatarFrame : "")}
+          className={
+            "weered-avatar" +
+            (frameFx(avatarFrame).className ? " " + frameFx(avatarFrame).className : "")
+          }
           style={{
+            ...frameFx(avatarFrame).style,
             width: avatarSize,
             height: avatarSize,
             borderRadius: "50%",
@@ -404,8 +412,9 @@ export default function PresenceRow({
       >
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <span
-            className={nameEffect ? "weered-name-" + nameEffect : undefined}
+            className={nameFx(nameEffect).className}
             style={{
+              ...nameFx(nameEffect).style,
               fontWeight: 700,
               fontSize: compact ? 13 : 14,
               color: "var(--weered-text, rgba(243,244,246,.96))",
@@ -434,6 +443,12 @@ export default function PresenceRow({
           {globalRole && globalRole !== "USER" ? (
             <RoleIcon
               role={globalRole}
+              size={compact ? 16 : 18}
+              style={{ filter: "drop-shadow(0 1px 1px rgba(0,0,0,.5))" }}
+            />
+          ) : roomRoleIcon(roomRole) ? (
+            <RoleIcon
+              role={roomRoleIcon(roomRole)!}
               size={compact ? 16 : 18}
               style={{ filter: "drop-shadow(0 1px 1px rgba(0,0,0,.5))" }}
             />

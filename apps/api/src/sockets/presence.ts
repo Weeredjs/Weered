@@ -1,5 +1,5 @@
 import { prisma } from "../lib/prisma";
-import { canEnterGatedRoom } from "../lib/lobbyAccess";
+import { canEnterGatedRoom, lobbyLevelOf } from "../lib/lobbyAccess";
 import { isOfficeRoom, scopeAllows } from "../lib/officeRooms";
 import bcrypt from "bcryptjs";
 
@@ -160,7 +160,21 @@ export async function handlePresence(ws: any, msg: any, opts: Opts): Promise<voi
       }
     }
 
-    if (room.passwordHash && !isLobby && !isModOrOwner(room, uid, ws.user?.globalRole)) {
+    // A lobby's own moderators (level 3 and up) pass its rooms' password and
+    // lock. Their rank sits on their entry in the room only once they're in, so
+    // it's looked up here: a promoted moderator was left knocking at their own
+    // locked door (2026-10-31). Asked once, and only when there's a door.
+    let staffHere: boolean | undefined;
+    const passes = async () => {
+      if (staffHere === undefined) {
+        staffHere = isModOrOwner(room, uid, ws.user?.globalRole);
+        if (!staffHere && room.lobbyId && !(ws.user as any)?.guest)
+          staffHere = (await lobbyLevelOf(uid, room.lobbyId).catch(() => 0)) >= 3;
+      }
+      return staffHere;
+    };
+
+    if (room.passwordHash && !isLobby && !(await passes())) {
       const suppliedPassword = typeof msg.password === "string" ? msg.password : "";
       if (!suppliedPassword) {
         send(ws, { type: "room:password:required", roomId });
@@ -174,7 +188,7 @@ export async function handlePresence(ws: any, msg: any, opts: Opts): Promise<voi
     }
 
     if (isLobby) room.locked = false;
-    if (room.locked && !isLobby && !isModOrOwner(room, uid, ws.user?.globalRole)) {
+    if (room.locked && !isLobby && !(await passes())) {
       if (!room.knocks.some((k: any) => k.userId === uid)) {
         room.knocks.push({ userId: uid, name: ws.user.name, ts: Date.now() });
         if (room.knocks.length > 200) room.knocks.splice(0, room.knocks.length - 200);

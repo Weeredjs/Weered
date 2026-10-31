@@ -169,7 +169,7 @@ export function useShellLook(): ShellLook | null {
 }
 
 export function lookFromPrefs(p: UiPrefs): ShellLook {
-  let theme: SiteThemeId = "press";
+  let theme: SiteThemeId = "nebula";
   if (p.theme && isSiteTheme(p.theme)) theme = p.theme;
   else {
     const attr = document.documentElement.getAttribute("data-weered-theme");
@@ -177,11 +177,11 @@ export function lookFromPrefs(p: UiPrefs): ShellLook {
   }
   return {
     theme,
-    palette: p.palette || "violet",
+    palette: p.palette || "custom",
     accent: isHexColour(p.accent) ? p.accent : "#8b5cf6",
     font: p.font || "default",
     stars: p.stars !== false,
-    shape: p.shape || "round",
+    shape: p.shape || "soft",
     lines: p.lines || "soft",
     texture: p.texture || "glass",
     backdrop: p.backdrop || "sky",

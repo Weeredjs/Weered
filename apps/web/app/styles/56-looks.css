@@ -1,0 +1,291 @@
+/* =====================================================================
+   LOOKS — name effects and avatar frames beyond the first set
+   (lib/looks.ts). The first presets live in 80-chrome-min.css; these add
+   eight name effects, six frames, and "your own": colours a member picks,
+   passed in as CSS variables (--nfx/--nglow for names, --ffx/--fc1..3 for
+   frames). James 2026-10-31: "way more profile customization. Even the
+   colors for the avatar frame and name effect."
+   ===================================================================== */
+
+/* ── Name effects ─────────────────────────────────────────────────────── */
+/* background-IMAGE only: the `background` shorthand resets background-clip,
+   and the name draws as a solid bar (caught 2026-10-31). */
+.weered-name-sunset,
+.weered-name-ocean,
+.weered-name-chrome,
+.weered-name-blood,
+.weered-name-mint,
+.weered-name-void,
+.weered-name-gilded,
+.weered-name-custom {
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  color: transparent !important;
+}
+.weered-name-neon {
+  color: #a5f3fc !important;
+  text-shadow:
+    0 0 6px rgba(34, 211, 238, 0.9),
+    0 0 14px rgba(34, 211, 238, 0.5);
+}
+.weered-name-sunset {
+  background-image: linear-gradient(90deg, #fbbf24, #f97316, #ec4899, #8b5cf6) !important;
+}
+.weered-name-ocean {
+  background-image: linear-gradient(90deg, #a5f3fc, #38bdf8, #2563eb) !important;
+}
+.weered-name-chrome {
+  background-image: linear-gradient(90deg, #f8fafc, #94a3b8, #e2e8f0, #64748b) !important;
+}
+.weered-name-blood {
+  background-image: linear-gradient(90deg, #fca5a5, #ef4444, #991b1b) !important;
+}
+.weered-name-mint {
+  background-image: linear-gradient(90deg, #d1fae5, #34d399, #059669) !important;
+}
+.weered-name-void {
+  background-image: linear-gradient(90deg, #ddd6fe, #8b5cf6, #4c1d95) !important;
+  filter: drop-shadow(0 0 6px rgba(139, 92, 246, 0.55));
+}
+.weered-name-gilded {
+  background-image: linear-gradient(90deg, #fef3c7, #fbbf24, #b45309, #fde68a) !important;
+}
+/* Their own: a colour or a gradient, maybe a glow, maybe moving. */
+.weered-name-custom {
+  background-image: var(--nfx, linear-gradient(90deg, #e5e7eb, #e5e7eb)) !important;
+}
+.weered-name-custom.is-glow {
+  filter: drop-shadow(0 0 6px var(--nglow, rgba(255, 255, 255, 0.6)));
+}
+.weered-name-custom.is-shimmer {
+  background-size: 200% 100% !important;
+  animation: weered-name-shimmer 3.2s linear infinite;
+}
+.weered-name-custom.is-pulse {
+  animation: weered-name-pulse 2.4s ease-in-out infinite;
+}
+@keyframes weered-name-shimmer {
+  from {
+    background-position: 0% 50%;
+  }
+  to {
+    background-position: 200% 50%;
+  }
+}
+@keyframes weered-name-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.62;
+  }
+}
+
+/* The minimal chrome strips every background inside the left rail (the
+   user corner included): put these back, as it already does for the first
+   set (80-chrome-min.css "NAME-EFFECT RESCUE"). */
+html[data-weered-chrome="min"] :is(.weered-left, .weered-usercorner) .weered-name-sunset {
+  background-image: linear-gradient(90deg, #fbbf24, #f97316, #ec4899, #8b5cf6) !important;
+}
+html[data-weered-chrome="min"] :is(.weered-left, .weered-usercorner) .weered-name-ocean {
+  background-image: linear-gradient(90deg, #a5f3fc, #38bdf8, #2563eb) !important;
+}
+html[data-weered-chrome="min"] :is(.weered-left, .weered-usercorner) .weered-name-chrome {
+  background-image: linear-gradient(90deg, #f8fafc, #94a3b8, #e2e8f0, #64748b) !important;
+}
+html[data-weered-chrome="min"] :is(.weered-left, .weered-usercorner) .weered-name-blood {
+  background-image: linear-gradient(90deg, #fca5a5, #ef4444, #991b1b) !important;
+}
+html[data-weered-chrome="min"] :is(.weered-left, .weered-usercorner) .weered-name-mint {
+  background-image: linear-gradient(90deg, #d1fae5, #34d399, #059669) !important;
+}
+html[data-weered-chrome="min"] :is(.weered-left, .weered-usercorner) .weered-name-void {
+  background-image: linear-gradient(90deg, #ddd6fe, #8b5cf6, #4c1d95) !important;
+}
+html[data-weered-chrome="min"] :is(.weered-left, .weered-usercorner) .weered-name-gilded {
+  background-image: linear-gradient(90deg, #fef3c7, #fbbf24, #b45309, #fde68a) !important;
+}
+html[data-weered-chrome="min"] :is(.weered-left, .weered-usercorner) .weered-name-custom {
+  background-image: var(--nfx, linear-gradient(90deg, #e5e7eb, #e5e7eb)) !important;
+}
+html[data-weered-chrome="min"]
+  :is(.weered-left, .weered-usercorner)
+  .weered-name-custom.is-shimmer {
+  background-size: 200% 100% !important;
+}
+
+/* ── Avatar frames ────────────────────────────────────────────────────── */
+.weered-frame-ember {
+  box-shadow:
+    0 0 0 3px #1a0a00,
+    0 0 0 5px #fb923c,
+    0 0 0 7px #7c2d12,
+    0 0 18px rgba(251, 146, 60, 0.6) !important;
+  animation: weered-frame-pulse 2.6s ease-in-out infinite;
+}
+.weered-frame-frost {
+  box-shadow:
+    0 0 0 3px #0b1220,
+    0 0 0 5px #e0f2fe,
+    0 0 0 7px #7dd3fc,
+    0 0 14px rgba(125, 211, 252, 0.55) !important;
+}
+.weered-frame-void {
+  box-shadow:
+    0 0 0 3px #05030f,
+    0 0 0 5px #7c3aed,
+    0 0 22px rgba(124, 58, 237, 0.75) !important;
+}
+.weered-frame-holo {
+  box-shadow:
+    0 0 0 2px #f472b6,
+    0 0 0 4px #a78bfa,
+    0 0 0 6px #38bdf8,
+    0 0 16px rgba(167, 139, 250, 0.6) !important;
+  animation: weered-frame-holo 6s linear infinite;
+}
+.weered-frame-blood {
+  box-shadow:
+    0 0 0 3px #1a0505,
+    0 0 0 5px #dc2626,
+    0 0 16px rgba(220, 38, 38, 0.6) !important;
+}
+.weered-frame-mint {
+  box-shadow:
+    0 0 0 3px #03140d,
+    0 0 0 5px #34d399,
+    0 0 14px rgba(52, 211, 153, 0.5) !important;
+}
+/* Their own. Colour changes animate the rings, never the picture inside. */
+.weered-frame-custom {
+  box-shadow: var(--ffx) !important;
+}
+.weered-frame-custom.is-dashed {
+  box-shadow: none !important;
+  outline: 2px dashed var(--fc1, #a78bfa);
+  outline-offset: 2px;
+}
+.weered-frame-custom.is-cycle {
+  animation: weered-frame-cycle 4.5s linear infinite;
+}
+.weered-frame-custom.is-pulse {
+  animation: weered-frame-glow 2.2s ease-in-out infinite;
+}
+@keyframes weered-frame-cycle {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 3px #0b0b10,
+      0 0 0 5px var(--fc1),
+      0 0 16px var(--fc1);
+  }
+  33% {
+    box-shadow:
+      0 0 0 3px #0b0b10,
+      0 0 0 5px var(--fc2),
+      0 0 16px var(--fc2);
+  }
+  66% {
+    box-shadow:
+      0 0 0 3px #0b0b10,
+      0 0 0 5px var(--fc3),
+      0 0 16px var(--fc3);
+  }
+}
+@keyframes weered-frame-glow {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 3px #0b0b10,
+      0 0 0 5px var(--fc1),
+      0 0 6px var(--fc2);
+  }
+  50% {
+    box-shadow:
+      0 0 0 3px #0b0b10,
+      0 0 0 5px var(--fc1),
+      0 0 24px var(--fc2);
+  }
+}
+@keyframes weered-frame-holo {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 2px #f472b6,
+      0 0 0 4px #a78bfa,
+      0 0 0 6px #38bdf8,
+      0 0 16px rgba(167, 139, 250, 0.6);
+  }
+  50% {
+    box-shadow:
+      0 0 0 2px #38bdf8,
+      0 0 0 4px #f472b6,
+      0 0 0 6px #a78bfa,
+      0 0 16px rgba(56, 189, 248, 0.6);
+  }
+}
+
+/* The user corner's ring behind the avatar (80-chrome-min.css "UC FRAMES"). */
+html[data-weered-chrome="min"][data-uc-frame="ember"]
+  .weered-usercorner
+  button[aria-label="Open profile"]
+  > div::before {
+  background: linear-gradient(135deg, #fdba74, #fb923c 45%, #7c2d12);
+  filter: drop-shadow(0 0 9px rgba(251, 146, 60, 0.6));
+  animation: weered-frame-pulse 2.6s ease-in-out infinite;
+}
+html[data-weered-chrome="min"][data-uc-frame="frost"]
+  .weered-usercorner
+  button[aria-label="Open profile"]
+  > div::before {
+  background: linear-gradient(135deg, #f0f9ff, #7dd3fc);
+  filter: drop-shadow(0 0 8px rgba(125, 211, 252, 0.55));
+}
+html[data-weered-chrome="min"][data-uc-frame="void"]
+  .weered-usercorner
+  button[aria-label="Open profile"]
+  > div::before {
+  background: linear-gradient(135deg, #a78bfa, #4c1d95);
+  filter: drop-shadow(0 0 10px rgba(124, 58, 237, 0.7));
+}
+html[data-weered-chrome="min"][data-uc-frame="holo"]
+  .weered-usercorner
+  button[aria-label="Open profile"]
+  > div::before {
+  background: linear-gradient(135deg, #f472b6, #a78bfa, #38bdf8);
+  filter: drop-shadow(0 0 9px rgba(167, 139, 250, 0.6));
+}
+html[data-weered-chrome="min"][data-uc-frame="blood"]
+  .weered-usercorner
+  button[aria-label="Open profile"]
+  > div::before {
+  background: linear-gradient(135deg, #f87171, #991b1b);
+  filter: drop-shadow(0 0 8px rgba(220, 38, 38, 0.6));
+}
+html[data-weered-chrome="min"][data-uc-frame="mint"]
+  .weered-usercorner
+  button[aria-label="Open profile"]
+  > div::before {
+  background: linear-gradient(135deg, #a7f3d0, #059669);
+  filter: drop-shadow(0 0 8px rgba(52, 211, 153, 0.5));
+}
+html[data-weered-chrome="min"][data-uc-frame="custom"]
+  .weered-usercorner
+  button[aria-label="Open profile"]
+  > div::before {
+  background: var(--uc-ffx, #a78bfa);
+  filter: drop-shadow(0 0 9px var(--uc-fglow, rgba(167, 139, 250, 0.6)));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .weered-name-custom.is-shimmer,
+  .weered-name-custom.is-pulse,
+  .weered-frame-custom.is-cycle,
+  .weered-frame-custom.is-pulse,
+  .weered-frame-holo,
+  .weered-frame-ember {
+    animation: none !important;
+  }
+}

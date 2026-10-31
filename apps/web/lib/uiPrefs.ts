@@ -80,6 +80,33 @@ export type UiPrefs = {
 };
 
 export const PREFS_KEY = "weered:ui-prefs:v1";
+
+/** Everyone's look until they pick their own: the one on the weered account
+ *  (James 2026-10-31: "make the default theme the one on the Weered account
+ *  currently. It has curved square edges"). Nebula, violet #8b5cf6, soft
+ *  corners, glass on the sky, stars, no effect. */
+export const DEFAULT_LOOK: UiPrefs = {
+  theme: "nebula",
+  palette: "custom",
+  accent: "#8b5cf6",
+  font: "default",
+  shape: "soft",
+  lines: "soft",
+  texture: "glass",
+  backdrop: "sky",
+  stars: true,
+  density: "comfortable",
+  fx: "none",
+  fxIntensity: 1,
+  fxSymbol: "✦",
+  fxFront: false,
+};
+/** The look fields a clean slate resets (layouts and setup state stay). */
+export const LOOK_FIELDS = Object.keys(DEFAULT_LOOK) as (keyof UiPrefs)[];
+/** Bumped to put every browser back on DEFAULT_LOOK once ("Clean slate",
+ *  2026-10-31); the boot script in app/layout.tsx does it before first paint. */
+export const LOOK_EPOCH = "2026-10-31";
+export const LOOK_EPOCH_KEY = "weered:look-epoch";
 export const PREFS_EVENT = "weered:ui-prefs";
 const THEME_KEY = "weered_theme_v2";
 const SETTINGS_KEY = "weered:settings:v0";

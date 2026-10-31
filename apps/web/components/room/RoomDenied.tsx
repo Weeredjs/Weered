@@ -22,31 +22,41 @@ export default function RoomDenied({ roomIds }: { roomIds: string[] }) {
 
   const removed = info.reason === "lobby_banned" || info.reason === "lobby_kicked";
   const place = info.reason === "place_gated";
+  const kicked = info.reason === "kicked";
+  const banned = info.reason === "banned";
 
-  const title = place
-    ? "Not open to you"
-    : gated
-      ? staff
-        ? "Staff only"
-        : "Members only"
-      : removed
-        ? "Removed from this community"
-        : "Entry denied";
-  const body = place
-    ? "Whoever lives here decides who comes in: friends only, ask first, or closed. Their Home page says which."
-    : gated
-      ? staff
-        ? `This room is for ${lobby}'s staff.`
-        : `This room opens once ${lobby}'s staff give you access.`
-      : info.reason === "lobby_banned"
-        ? `${lobby}'s staff have banned you from its rooms.`
-        : info.reason === "lobby_kicked"
-          ? `${lobby}'s staff removed you from the community.`
-          : info.reason === "private_meeting"
-            ? "This is a private meeting room."
-            : info.reason === "rate_limited"
-              ? "You've opened a lot of new rooms in the last hour. Try again in a little while."
-              : "A moderator declined your request";
+  const title = kicked
+    ? "You were removed from this room"
+    : banned
+      ? "You're banned from this room"
+      : place
+        ? "Not open to you"
+        : gated
+          ? staff
+            ? "Staff only"
+            : "Members only"
+          : removed
+            ? "Removed from this community"
+            : "Entry denied";
+  const body = kicked
+    ? `A moderator${info.by ? ` (${info.by})` : ""} removed you. You can come back in ${Number(info.minutes) || 10} minute${Number(info.minutes) === 1 ? "" : "s"}.`
+    : banned
+      ? `A moderator${info.by ? ` (${info.by})` : ""} banned you from this room. Its moderators can lift it.`
+      : place
+        ? "Whoever lives here decides who comes in: friends only, ask first, or closed. Their Home page says which."
+        : gated
+          ? staff
+            ? `This room is for ${lobby}'s staff.`
+            : `This room opens once ${lobby}'s staff give you access.`
+          : info.reason === "lobby_banned"
+            ? `${lobby}'s staff have banned you from its rooms.`
+            : info.reason === "lobby_kicked"
+              ? `${lobby}'s staff removed you from the community.`
+              : info.reason === "private_meeting"
+                ? "This is a private meeting room."
+                : info.reason === "rate_limited"
+                  ? "You've opened a lot of new rooms in the last hour. Try again in a little while."
+                  : "A moderator declined your request";
 
   return (
     <div

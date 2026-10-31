@@ -1,5 +1,5 @@
 import type { FastifyInstance } from "fastify";
-import { isAIAvailable, OPERATOR_PRESENCE } from "../lib/roomState";
+import { isAIAvailable, OPERATOR_PRESENCE, roleOf } from "../lib/roomState";
 import { lobbyLevelOf } from "../lib/lobbyAccess";
 
 // GET /lobbies/:lobbyId/presence: who is online in a lobby, for its member
@@ -38,7 +38,10 @@ export function registerLobbyPresence(app: FastifyInstance, deps: Deps) {
           seen.set(uid, {
             id: uid,
             name: u.name,
-            role: u.role,
+            // owner / mod / member here (the room's, or the lobby's rank): it was
+            // copied from a field the entry never had, so lists never sorted
+            // moderators up or badged them (2026-10-31).
+            role: roleOf(room, uid),
             // Rank in this lobby (1..5) — the client turns it into a title and
             // icon via the lobby's roleNames/roleIcons.
             lobbyRoleLevel: u.lobbyRoleLevel ?? null,

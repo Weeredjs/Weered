@@ -1,7 +1,7 @@
 "use client";
 
 import { avatarBg } from "../../lib/avatarColor";
-import RoleIcon from "../RoleIcon";
+import RoleIcon, { roomRoleIcon } from "../RoleIcon";
 import { CrewFlair } from "./flair";
 import { nameStyleFor } from "./chatShared";
 
@@ -34,10 +34,12 @@ export function ChatMembers({ ctx, liveRoomUsers, openHover, hoverClose }: ChatM
         const rankOf = (u: any) => {
           const r = String(u?.globalRole || "").toUpperCase();
           const t = String(u?.tier || "").toUpperCase();
+          const here = String(u?.role || "").toLowerCase();
           if (r === "GOD") return 0;
           if (r === "STAFF" || r === "ADMIN") return 1;
+          if (here === "owner") return 1.5;
           if (r === "SUPPORT") return 2;
-          if (r === "MOD") return 3;
+          if (r === "MOD" || here === "mod") return 3;
           if (t === "KINGPIN") return 4;
           if (t === "FELON") return 5;
           if (t === "INDICTED") return 6;
@@ -174,7 +176,11 @@ export function ChatMembers({ ctx, liveRoomUsers, openHover, hoverClose }: ChatM
                         </span>
                       )}
                     </span>
-                    {role && role !== "USER" && <RoleIcon role={role} size={11} />}
+                    {role && role !== "USER" ? (
+                      <RoleIcon role={role} size={11} />
+                    ) : roomRoleIcon(u?.role) ? (
+                      <RoleIcon role={roomRoleIcon(u?.role)!} size={11} />
+                    ) : null}
                     {u.id && <CrewFlair userId={u.id} size={11} />}
                   </button>
                 );

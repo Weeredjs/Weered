@@ -1,5 +1,6 @@
 import { swallow } from "../lib/logger";
 import { prisma } from "../lib/prisma";
+import { publishState } from "../lib/roomState";
 
 // Connection-lifecycle WS handlers extracted from index.ts wss.on("connection"):
 // handleAuthHello -- the auth:hello entry gate, still dispatched FIRST (before the
@@ -179,7 +180,14 @@ export function handleClose(
     if (r) {
       const set = r.pending.get(ws.user.id);
       if (set) set.delete(ws);
-      if (set && set.size === 0) r.pending.delete(ws.user.id);
+      if (set && set.size === 0) {
+        r.pending.delete(ws.user.id);
+        // Their knock leaves with them: knocks from closed tabs used to pile
+        // up in the moderators' list (2026-10-31).
+        const before = r.knocks.length;
+        r.knocks = r.knocks.filter((k: any) => k.userId !== ws.user.id);
+        if (r.knocks.length !== before) publishState(r);
+      }
     }
   }
   if (ws.user) {

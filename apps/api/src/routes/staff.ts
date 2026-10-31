@@ -181,44 +181,61 @@ export default async function staffRoutes(app: FastifyInstance, opts: Opts) {
     return reply.send({ ok: true, logs });
   });
 
-  app.post("/staff/lobby/lock", async (req, reply) => {
-    const u = authFromHeader((req as any).headers?.authorization);
-    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
-    const role = await getGlobalRole(u.id);
-    if (!canAccessStaff(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
-    const lid = String((req.body as any)?.lobbyId || "lobby");
-    const room = rooms.get(lid);
-    if (room) room.locked = true;
-    await globalAudit(u.id, u.name, "lobby_lock", lid);
-    if (room) broadcast(room, { type: "room:locked", roomId: lid });
-    return reply.send({ ok: true });
-  });
+  // The Control Panel's lobby controls: lock and unlock its chat, and clear it.
+  // Weered's staff, or the lobby's own moderators and up.
+  //
+  // Lock used to flip the lobby chat's DOOR (room.locked): chat stayed open,
+  // and anyone arriving was queued at a knock nobody could answer from a lobby
+  // page. Clear deleted from a table nothing writes to (lobbyMessage), so the
+  // messages came back on the next load. Both fixed 2026-10-31.
+  async function lobbyModerator(userId: string, lobbyId: string): Promise<boolean> {
+    if (canAccessStaff(await getGlobalRole(userId))) return true;
+    if (lobbyId === "lobby") return false;
+    const m = await prisma.lobbyMember
+      .findUnique({ where: { lobbyId_userId: { lobbyId, userId } }, select: { roleLevel: true } })
+      .catch(() => null);
+    return (m?.roleLevel ?? 0) >= 3;
+  }
 
-  app.post("/staff/lobby/unlock", async (req, reply) => {
+  async function setLobbyChatLock(req: any, reply: any, locked: boolean) {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
-    const role = await getGlobalRole(u.id);
-    if (!canAccessStaff(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
     const lid = String((req.body as any)?.lobbyId || "lobby");
+    if (!(await lobbyModerator(u.id, lid)))
+      return reply.code(403).send({ ok: false, error: "forbidden" });
+    await prisma.room
+      .updateMany({ where: { id: lid }, data: { chatLocked: locked } as any })
+      .catch(swallow);
     const room = rooms.get(lid);
-    if (room) room.locked = false;
-    await globalAudit(u.id, u.name, "lobby_unlock", lid);
-    if (room) broadcast(room, { type: "room:unlocked", roomId: lid });
-    return reply.send({ ok: true });
-  });
+    if (room) {
+      room.chatLocked = locked;
+      broadcast(room, { type: locked ? "room:chat:disable" : "room:chat:enable", roomId: lid });
+      publishState(room);
+    }
+    await globalAudit(u.id, u.name, locked ? "lobby_chat_lock" : "lobby_chat_unlock", lid);
+    return reply.send({ ok: true, locked });
+  }
+
+  app.post("/staff/lobby/lock", (req, reply) => setLobbyChatLock(req, reply, true));
+  app.post("/staff/lobby/unlock", (req, reply) => setLobbyChatLock(req, reply, false));
 
   app.post("/staff/lobby/clear-chat", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
-    const role = await getGlobalRole(u.id);
-    if (!canAssignRoles(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
     const lid = String((req.body as any)?.lobbyId || "lobby");
+    if (!(await lobbyModerator(u.id, lid)))
+      return reply.code(403).send({ ok: false, error: "forbidden" });
+    // A lobby's chat is the room whose id is the lobby's.
+    const gone = await prisma.roomMessage.deleteMany({ where: { roomId: lid } });
     const room = rooms.get(lid);
-    if (room) room.msgs = [];
-    await prisma.lobbyMessage.deleteMany({ where: { lobbyId: lid } });
+    if (room) {
+      room.msgs = [];
+      room.pinnedMsgs?.clear();
+      broadcast(room, { type: "chat:cleared", roomId: lid });
+      broadcast(room, { type: "chat:pins", roomId: lid, pinned: [] });
+    }
     await globalAudit(u.id, u.name, "lobby_clear_chat", lid);
-    if (room) broadcast(room, { type: "chat:cleared", roomId: lid });
-    return reply.send({ ok: true });
+    return reply.send({ ok: true, removed: gone.count });
   });
 
   app.post("/staff/room/clear-chat", async (req, reply) => {
@@ -232,9 +249,11 @@ export default async function staffRoutes(app: FastifyInstance, opts: Opts) {
     if (!isModOrOwner(room, u.id, globalRole))
       return reply.code(403).send({ ok: false, error: "forbidden" });
     room.msgs = [];
+    room.pinnedMsgs?.clear();
     await prisma.roomMessage.deleteMany({ where: { roomId: rid } });
     audit(room, { type: "chat_clear", actorId: u.id, actorName: u.name });
     broadcast(room, { type: "chat:cleared", roomId: rid });
+    broadcast(room, { type: "chat:pins", roomId: rid, pinned: [] });
     return reply.send({ ok: true });
   });
 
@@ -277,6 +296,8 @@ export default async function staffRoutes(app: FastifyInstance, opts: Opts) {
       return reply.code(403).send({ ok: false, error: "cannot_kick_god" });
     for (const room of rooms.values()) {
       if (room.users.has(targetId) || room.mods.has(targetId)) {
+        // Kept out of these rooms for ten minutes, as a room kick does.
+        (room.kickedUntil ||= new Map()).set(targetId, Date.now() + 10 * 60_000);
         room.users.delete(targetId);
         room.mods.delete(targetId);
         for (const s of findSocketsByUser(room, targetId)) {

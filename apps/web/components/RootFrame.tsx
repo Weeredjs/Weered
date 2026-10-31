@@ -6,6 +6,7 @@
 // is the escape hatch. The JSON-LD lives here as module consts (NOT props) so it is
 // never serialized into the /foyer RSC payload. Non-foyer routes render the exact same
 // tree as before (zero behavior change).
+import SpaceTheme from "./SpaceTheme";
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { WeeredProvider } from "./WeeredProvider";
@@ -223,6 +224,8 @@ export default function RootFrame({ children }: { children: React.ReactNode }) {
       />
       <OverlayProvider>
         <WeeredProvider>
+          {/* A designed lobby's look across its whole space (after ThemeRestore). */}
+          <SpaceTheme />
           <ShellGate left={<LeftRail />} right={<RightRailSwitch />}>
             {children}
           </ShellGate>

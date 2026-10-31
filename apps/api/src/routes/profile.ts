@@ -1,5 +1,6 @@
 import { log, swallow } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
+import { cleanFrame, cleanNameEffect } from "../lib/looks";
 import { fetchWithTimeout } from "../lib/fetchWithTimeout";
 import { prisma } from "../lib/prisma";
 import { cutoffNow } from "../lib/sessionCutoff";
@@ -252,16 +253,12 @@ export default async function profileRoutes(app: FastifyInstance, opts: Opts) {
         typeof body.statusText === "string" ? body.statusText.trim().slice(0, 80) : undefined;
       const statusEmoji =
         typeof body.statusEmoji === "string" ? body.statusEmoji.trim().slice(0, 24) : undefined;
-      const FRAME_KEYS = ["none", "gold", "flames", "crystal", "neon", "circuit"];
-      const avatarFrame =
-        typeof body.avatarFrame === "string" && FRAME_KEYS.includes(body.avatarFrame)
-          ? body.avatarFrame
-          : undefined;
-      const NAME_KEYS = ["none", "gold", "fire", "ice", "toxic", "royal", "rainbow"];
-      const nameEffect =
-        typeof body.nameEffect === "string" && NAME_KEYS.includes(body.nameEffect)
-          ? body.nameEffect
-          : undefined;
+      // A preset key, "none", or their own colours (lib/looks.ts). "none"
+      // becomes null below; anything it can't read is left alone.
+      const frameIn = body.avatarFrame === undefined ? undefined : cleanFrame(body.avatarFrame);
+      const avatarFrame = frameIn === null ? "none" : frameIn;
+      const nameIn = body.nameEffect === undefined ? undefined : cleanNameEffect(body.nameEffect);
+      const nameEffect = nameIn === null ? "none" : nameIn;
       const JOIN_KEYS = ["EVERYONE", "FRIENDS", "OFF"];
       const joinPolicy =
         typeof body.joinPolicy === "string" && JOIN_KEYS.includes(body.joinPolicy)

@@ -54,7 +54,20 @@ import {
   SKIN_CACHE_KEY,
   THEMEABLE_LOBBY_IDS,
 } from "../lib/lobbyThemes";
-import { NB_CUSTOM_KEY, PREFS_KEY, SITE_THEME_IDS } from "../lib/uiPrefs";
+import {
+  NB_CUSTOM_KEY,
+  PREFS_KEY,
+  SITE_THEME_IDS,
+  DEFAULT_LOOK,
+  LOOK_EPOCH,
+  LOOK_EPOCH_KEY,
+  LOOK_FIELDS,
+  customPalette,
+  nebulaVars,
+} from "../lib/uiPrefs";
+
+/** The default colourway's tokens, for the boot script's clean slate. */
+const DEFAULT_LOOK_VARS = nebulaVars(customPalette(DEFAULT_LOOK.accent || "#8b5cf6"));
 
 export const metadata = {
   title: {
@@ -130,6 +143,25 @@ export const viewport = {
 const themeBootScript = `
 try {
   var d = document.documentElement;
+  // Clean slate (lib/uiPrefs.ts LOOK_EPOCH): once per epoch every browser goes
+  // back to Weered's look. Its own layout and setup state stay.
+  if (localStorage.getItem(${JSON.stringify(LOOK_EPOCH_KEY)}) !== ${JSON.stringify(LOOK_EPOCH)}) {
+    var cur = null;
+    try { cur = JSON.parse(localStorage.getItem(${JSON.stringify(PREFS_KEY)}) || 'null'); } catch(e) {}
+    var next = ${JSON.stringify(DEFAULT_LOOK)};
+    if (cur && typeof cur === 'object') {
+      for (var k in cur) if (${JSON.stringify(LOOK_FIELDS)}.indexOf(k) < 0) next[k] = cur[k];
+    }
+    localStorage.setItem(${JSON.stringify(PREFS_KEY)}, JSON.stringify(next));
+    localStorage.setItem(${JSON.stringify(NB_CUSTOM_KEY)}, ${JSON.stringify(JSON.stringify(DEFAULT_LOOK_VARS))});
+    localStorage.setItem('weered_theme_v2', 'nebula');
+    try {
+      var so = JSON.parse(localStorage.getItem('weered:settings:v0') || 'null') || {};
+      so.theme = 'nebula';
+      localStorage.setItem('weered:settings:v0', JSON.stringify(so));
+    } catch(e) {}
+    localStorage.setItem(${JSON.stringify(LOOK_EPOCH_KEY)}, ${JSON.stringify(LOOK_EPOCH)});
+  }
   var v2 = localStorage.getItem('weered_theme_v2');
   var sraw = localStorage.getItem('weered:settings:v0');
   var s = sraw ? JSON.parse(sraw) : null;
@@ -137,20 +169,21 @@ try {
   var valid = ${JSON.stringify(SITE_THEME_IDS)};
   var theme = (v2 && valid.indexOf(v2) >= 0) ? v2
             : (s && s.theme && valid.indexOf(s.theme) >= 0) ? s.theme
-            : 'press';
+            : 'nebula';
   d.setAttribute('data-weered-theme', theme);
   // Nebula's colourway and starfield (lib/uiPrefs.ts), before first paint.
   var up = null;
   try { up = JSON.parse(localStorage.getItem(${JSON.stringify(PREFS_KEY)}) || 'null'); } catch(e) {}
-  d.setAttribute('data-weered-palette', (up && up.palette) || 'violet');
-  if (up && up.palette === 'custom') {
+  d.setAttribute('data-weered-palette', (up && up.palette) || 'custom');
+  if (!up || up.palette === 'custom') {
     try {
       var cv = JSON.parse(localStorage.getItem(${JSON.stringify(NB_CUSTOM_KEY)}) || 'null');
       if (cv) for (var ck in cv) d.style.setProperty(ck, cv[ck]);
     } catch(e) {}
   }
   if (up && up.font && up.font !== 'default') d.setAttribute('data-weered-font', up.font);
-  if (up && up.shape && up.shape !== 'round') d.setAttribute('data-weered-shape', up.shape);
+  var shp = (up && up.shape) || 'soft';
+  if (shp !== 'round') d.setAttribute('data-weered-shape', shp);
   if (up && up.lines === 'hard') d.setAttribute('data-weered-lines', 'hard');
   if (up && up.texture && up.texture !== 'glass') d.setAttribute('data-weered-texture', up.texture);
   if (up && up.backdrop && up.backdrop !== 'sky') d.setAttribute('data-weered-backdrop', up.backdrop);

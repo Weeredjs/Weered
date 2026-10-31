@@ -67,7 +67,7 @@ export const GAMES: GameEntry[] = [
     glyph: "HQ",
     tint: "#9fd3c3",
     tags: ["team", "work", "office", "remote", "company", "staff", "business", "cowork"],
-    preset: "frostbite",
+    preset: "office",
     group: "work",
     rooms: ["general", "meet", "focus"],
   },

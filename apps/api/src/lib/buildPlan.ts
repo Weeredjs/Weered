@@ -275,6 +275,9 @@ export type EditOp =
       sparkle?: boolean;
       symbol?: string;
       forced?: boolean;
+      shape?: string;
+      texture?: string;
+      backdrop?: string;
     }
   | { op: "add"; type: string; size?: string; props: Record<string, any>; at: string }
   | { op: "update"; id: string; size?: string; props?: Record<string, any> }
@@ -402,6 +405,11 @@ export function cleanOps(raw: unknown, blocks: Map<string, string>, given: strin
         if (bool(o.sparkle) !== undefined) op.sparkle = o.sparkle;
         if (o.symbol !== undefined && clip(o.symbol, 12)) op.symbol = clip(o.symbol, 12);
         if (bool(o.forced) !== undefined) op.forced = o.forced;
+        // The whole space: corners, surface and backdrop (web components/SpaceTheme.tsx).
+        if (oneOf(o.shape, ["round", "soft", "square", "cut"] as const)) op.shape = o.shape;
+        if (oneOf(o.texture, ["glass", "grid", "lines", "dots", "solid"] as const))
+          op.texture = o.texture;
+        if (oneOf(o.backdrop, ["sky", "grid", "plain"] as const)) op.backdrop = o.backdrop;
         if (Object.keys(op).length > 1) ops.push(op);
         break;
       }
@@ -625,7 +633,7 @@ export const EDIT_SYSTEM = `You change a lobby on Weered: its Home page (a colum
 You get the lobby as JSON: name, description, game, look, hero (the banner at the top: full, compact or hidden), blocks (the Home page in order: id, type, size, props) and door (the front door, or null).
 
 Operations:
-- look: any of preset, accent (#rrggbb), effect, font, entrance, intensity (0.2 to 1.5), sparkle (true or false), symbol (an emoji or up to 3 characters; used when effect is symbol), forced (keeps the effect on for people who turned animations off; only if they ask). A preset brings its own accent, effect and font unless you set them too.
+- look: any of preset, accent (#rrggbb), effect, font, entrance, intensity (0.2 to 1.5), sparkle (true or false), symbol (an emoji or up to 3 characters; used when effect is symbol), forced (keeps the effect on for people who turned animations off; only if they ask), and for the whole space (both sidebars and every room of the lobby, not just this page): shape (corners: round, soft, square or cut), texture (what the cards are made of: glass, grid, lines, dots or solid), backdrop (behind the glass: sky, grid or plain). A preset brings its own accent, effect and font unless you set them too.
 - add: a new block: type, size (s, m, l or full), props, and at: "start", "end", or the id of the block to put it after.
 - update: an existing block's size, or the props you're changing (give type too).
 - remove: a block, by id.
@@ -671,6 +679,9 @@ const LOOK_PROPS = {
   entrance: E(BUILD_ENTRANCES),
   intensity: { type: "number" },
   symbol: S("an emoji or up to 3 characters, for the symbol effect"),
+  shape: E(["round", "soft", "square", "cut"]),
+  texture: E(["glass", "grid", "lines", "dots", "solid"]),
+  backdrop: E(["sky", "grid", "plain"]),
 };
 export const DOOR_SCHEMA = {
   type: "object",

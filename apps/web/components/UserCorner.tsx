@@ -5,6 +5,7 @@ import { useWeered } from "./WeeredProvider";
 import { useOverlay } from "./overlays/OverlayProvider";
 import RoleIcon, { TierIcon } from "./RoleIcon";
 import { avatarBg } from "../lib/avatarColor";
+import { cornerFrameVars, nameFx } from "../lib/looks";
 import NotorietyBar from "./NotorietyBar";
 import { onActivate } from "@/lib/a11y";
 import { useLobbyLang, pick, type LobbyLang } from "../lib/lobbyLang";
@@ -242,14 +243,21 @@ export default function UserCorner() {
   const [avatarFrame, setAvatarFrame] = useState<string | null>(null);
 
   useEffect(() => {
+    const de = document.documentElement;
+    const clear = () => {
+      de.removeAttribute("data-uc-frame");
+      de.style.removeProperty("--uc-ffx");
+      de.style.removeProperty("--uc-fglow");
+    };
     if (!avatarFrame) {
-      document.documentElement.removeAttribute("data-uc-frame");
+      clear();
       return;
     }
-    document.documentElement.setAttribute("data-uc-frame", avatarFrame);
-    return () => {
-      document.documentElement.removeAttribute("data-uc-frame");
-    };
+    // Their own frame draws through the "custom" ring with their colours.
+    const own = cornerFrameVars(avatarFrame);
+    de.setAttribute("data-uc-frame", own ? "custom" : avatarFrame);
+    if (own) for (const [k, v] of Object.entries(own)) de.style.setProperty(k, v);
+    return clear;
   }, [avatarFrame]);
   const [bannerUrl, setBannerUrl] = useState<string | null>(null);
   const [status, setStatus] = useState<{ text: string; emoji: string }>({ text: "", emoji: "" });
@@ -1154,8 +1162,8 @@ function FittedName({ name, effect }: { name: string; effect?: string | null }) 
     >
       {effect ? (
         <span
-          className={"weered-name-" + effect}
-          style={{ display: "inline-block", lineHeight: "inherit" }}
+          className={nameFx(effect).className}
+          style={{ ...nameFx(effect).style, display: "inline-block", lineHeight: "inherit" }}
         >
           {name}
         </span>

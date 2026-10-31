@@ -24,6 +24,8 @@ const WEERED_THEMES: Record<WeeredThemeName, { bg: string; panel: string; panel2
 
 import SteamAchievementsPanel from "../../SteamAchievementsPanel";
 import { placeAddress, placeOf, type Place } from "../../../lib/place";
+import LookStudio from "../LookStudio";
+import { frameFx, nameFx } from "../../../lib/looks";
 
 function applyWeeredTheme(name: WeeredThemeName) {
   if (typeof document === "undefined") return;
@@ -516,6 +518,22 @@ export default function ProfileSheet({ userId }: { userId: string }) {
     } catch {}
   }, [token, apiBase]);
 
+  const saveLook = useCallback(async (patch: { nameEffect: string; avatarFrame: string }) => {
+    if (!token) throw new Error("signed out");
+    const r = await fetch(`${apiBase}/profile/me`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify(patch),
+    });
+    if (!r.ok) throw new Error("save failed");
+    setProfile(prev => prev ? ({
+      ...prev,
+      nameEffect: patch.nameEffect === "none" ? null : patch.nameEffect,
+      avatarFrame: patch.avatarFrame === "none" ? null : patch.avatarFrame,
+    } as any) : prev);
+    try { window.dispatchEvent(new CustomEvent("weered:profile:updated")); } catch {}
+  }, [token, apiBase]);
+
   const saveAvatar = useCallback(async (url: string) => {
     setAvatarUrl(url);
     setSavingAvatar(true);
@@ -661,8 +679,9 @@ export default function ProfileSheet({ userId }: { userId: string }) {
           onKeyDown={isMe ? onActivate(() => { setShowGallery(!showGallery); }) : undefined}
           tabIndex={0}
           role="button"
-          className={(profile as any).avatarFrame ? "weered-frame-" + (profile as any).avatarFrame : undefined}
+          className={frameFx((profile as any).avatarFrame).className}
           style={{
+            ...frameFx((profile as any).avatarFrame).style,
             width: 96, height: 96, borderRadius: "50%", flexShrink: 0,
             background: hasAvatar ? `${aColor}22` : aColor,
             border: `3px solid ${tier.color}`,
@@ -698,7 +717,7 @@ export default function ProfileSheet({ userId }: { userId: string }) {
 
         <div style={{ flex: 1, minWidth: 0, paddingBottom: 2 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-            <span className={(profile as any).nameEffect ? "weered-name-" + (profile as any).nameEffect : undefined} style={{ fontSize: 25, fontWeight: 900, letterSpacing: "-0.4px" }}>{profile.name}</span>
+            <span className={nameFx((profile as any).nameEffect).className} style={{ ...nameFx((profile as any).nameEffect).style, fontSize: 25, fontWeight: 900, letterSpacing: "-0.4px" }}>{profile.name}</span>
             <span style={{
               padding: "1px 8px", borderRadius: 999, fontSize: 10, fontWeight: 900,
               background: `${tier.color}12`, border: `1px solid ${tier.color}30`, color: tier.color,
@@ -1024,32 +1043,15 @@ export default function ProfileSheet({ userId }: { userId: string }) {
 
       {isMe && (
         <div style={{ ...section, marginTop: 10 }}>
-          <div style={sectionLabel}>Avatar Frame</div>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginTop: 8 }}>
-            {["none","gold","flames","crystal","neon","circuit"].map(key => (
-              <button key={key} type="button" onClick={() => saveFrame(key)} title={key}
-                style={{ background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex", flexDirection: "column", alignItems: "center", gap: 5 }}>
-                <div className={key === "none" ? undefined : "weered-frame-" + key}
-                  style={{ width: 30, height: 30, borderRadius: "50%", background: aColor, border: key === "none" ? "1px dashed rgba(255,255,255,.3)" : "none", outline: ((profile as any).avatarFrame || "none") === key ? "2px solid #fff" : "none", outlineOffset: 3 }} />
-                <span style={{ fontSize: 8, opacity: 0.5, textTransform: "uppercase", letterSpacing: ".5px" }}>{key}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {isMe && (
-        <div style={{ ...section, marginTop: 10 }}>
-          <div style={sectionLabel}>Name Effect</div>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginTop: 8 }}>
-            {["none","gold","fire","ice","toxic","royal","rainbow"].map(key => (
-              <button key={key} type="button" onClick={() => saveNameEffect(key)} title={key}
-                style={{ background: "none", border: "none", cursor: "pointer", padding: "3px 6px", display: "flex", flexDirection: "column", alignItems: "center", gap: 3, outline: ((profile as any).nameEffect || "none") === key ? "2px solid rgba(255,255,255,.5)" : "none", borderRadius: 4 }}>
-                <span className={key === "none" ? undefined : "weered-name-" + key} style={{ fontSize: 14, fontWeight: 900, color: key === "none" ? "rgba(255,255,255,.5)" : undefined }}>Name</span>
-                <span style={{ fontSize: 8, opacity: 0.5, textTransform: "uppercase", letterSpacing: ".5px" }}>{key}</span>
-              </button>
-            ))}
-          </div>
+          <div style={sectionLabel}>Your look</div>
+          <LookStudio
+            name={profile.name}
+            avatar={hasAvatar ? avatarUrl : null}
+            avatarColor={aColor}
+            nameEffect={(profile as any).nameEffect || null}
+            avatarFrame={(profile as any).avatarFrame || null}
+            onSave={saveLook}
+          />
         </div>
       )}
 
