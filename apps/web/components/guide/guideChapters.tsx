@@ -490,6 +490,29 @@ function Yours({ actions }: { actions: GuideActions }) {
         />
       </Section>
 
+      <Section title="Your place" note="Free, one each. Make it from Home's Change your drip card.">
+        <Facts
+          items={[
+            [
+              "A lobby of your own.",
+              "At weered.ca/u/yourname. People walk in and hang out: voice, chat, video.",
+            ],
+            [
+              "It's you.",
+              "Your card, rank, crew, games and stream sit on its Home, under Who lives here.",
+            ],
+            [
+              "Describe it.",
+              "“A neon arcade with a couch and my Twitch.” It opens in Design with Describe on.",
+            ],
+            [
+              "Off the directory.",
+              "Places don't show in Browse. Share the link, or it's on your profile.",
+            ],
+          ]}
+        />
+      </Section>
+
       <Section title="Layouts" note="Start from one, then make it your own.">
         <div className="wg-grid wg-grid-4">
           {SHELL_PRESETS.map((p) => (

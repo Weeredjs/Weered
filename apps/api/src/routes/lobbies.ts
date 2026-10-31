@@ -365,6 +365,13 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
       if (!u) return reply.code(401).send({ error: "Unauthorized" });
       const role = await getGlobalRole(u.id);
       const isStaff = canAccessStaff(role);
+      // "u-" ids are members' places (routes/places.ts), made there, never here.
+      if (String((req.body as any)?.id || "").startsWith("u-"))
+        return reply.code(403).send({
+          ok: false,
+          error: "name_reserved",
+          message: "Addresses starting with u- are for members' places.",
+        });
 
       if (!isStaff) {
         const dbUser = await prisma.user.findUnique({

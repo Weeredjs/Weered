@@ -3,11 +3,13 @@
 // the root of such a host sends the visitor to that lobby, on the same host. Every other path is the normal app
 // (sign-in, rooms, profiles), and /api + /ws are same-origin through Caddy.
 //
-// Weered's own hosts, the ECEB office hosts and dev never reach the lookup.
+// Weered's own hosts, the ECEB office hosts and dev never reach the lookup,
+// except <label>.weered.ca, which is someone's place (api routes/places.ts).
 import { NextResponse, type NextRequest } from "next/server";
 
 const OWN_HOST =
   /(^|\.)(weered\.ca|eastcoastemployeebenefits\.com|scotiablue\.com)$|^(localhost|127\.0\.0\.1)$|\.localhost$/i;
+const PLACE_HOST = /^(?!www\.)[a-z0-9](?:[a-z0-9-]{0,28}[a-z0-9])?\.weered\.ca$/i;
 const API_INTERNAL = process.env.WEERED_API_INTERNAL || "http://127.0.0.1:4000";
 const TTL_MS = 60_000;
 const cache = new Map<string, { id: string | null; at: number }>();
@@ -35,7 +37,7 @@ export async function middleware(req: NextRequest) {
     .trim()
     .toLowerCase()
     .replace(/:\d+$/, "");
-  if (!host || OWN_HOST.test(host)) return NextResponse.next();
+  if (!host || (OWN_HOST.test(host) && !PLACE_HOST.test(host))) return NextResponse.next();
   const id = await lobbyFor(host);
   if (!id) return NextResponse.next();
   // Redirect, not rewrite: the client app keys its shell and auth logic on the

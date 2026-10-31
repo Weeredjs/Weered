@@ -11,7 +11,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useOverlay } from "./overlays/OverlayProvider";
 import { startDesign } from "../lib/shellDesign";
-import { PALETTES, PALETTE_IDS } from "../lib/uiPrefs";
+import { PALETTES, PALETTE_IDS, paletteColours } from "../lib/uiPrefs";
+import { useShellLook } from "../lib/shellDesign";
+import { makePlace, myPlace, placeAddress, type Place } from "../lib/place";
+import { useWeered } from "./WeeredProvider";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "https://api.weered.ca";
 
@@ -58,6 +61,30 @@ export default function HomeBuild({
   const router = useRouter();
   const [mine, setMine] = useState<Lobby[]>([]);
   const [ask, setAsk] = useState("");
+  // Your place (lib/place.ts): undefined while loading, null when there isn't one.
+  const { me } = useWeered() as any;
+  const look = useShellLook();
+  const [place, setPlace] = useState<Place | null | undefined>(undefined);
+  const [making, setMaking] = useState<"" | "busy" | "failed">("");
+  useEffect(() => {
+    if (!signedIn || !canDesign) return;
+    let alive = true;
+    myPlace().then((p) => alive && setPlace(p));
+    return () => {
+      alive = false;
+    };
+  }, [signedIn, canDesign]);
+  const makeMine = async () => {
+    setMaking("busy");
+    try {
+      const accent =
+        look?.theme === "nebula" ? paletteColours(look.palette, look.accent).a : "#7c3aed";
+      const p = await makePlace(String(me?.name || "My"), accent);
+      router.push(`/lobby/${encodeURIComponent(p.id)}?design=1`);
+    } catch {
+      setMaking("failed");
+    }
+  };
 
   useEffect(() => {
     if (!signedIn) return;
@@ -180,7 +207,9 @@ export default function HomeBuild({
         </div>
 
         {canDesign && (
-          <div className="home-build-card home-build-shell">
+          <div
+            className={`home-build-card home-build-shell${place !== undefined ? " has-mine" : ""}`}
+          >
             <ShellSketch />
             <div className="home-build-body">
               <div className="home-build-eyebrow">Your Weered</div>
@@ -218,6 +247,42 @@ export default function HomeBuild({
                 </button>
               </div>
             </div>
+            {/* Your place: a lobby of your own, free (lib/place.ts). */}
+            {place !== undefined && (
+              <div className="home-build-mine">
+                <span className="home-build-mine-label">Your place</span>
+                {place ? (
+                  <span className="home-build-mine-item">
+                    <Link href={`/lobby/${encodeURIComponent(place.id)}`} title="Open your place">
+                      <span className="home-build-mine-dot" aria-hidden>
+                        🏠
+                      </span>
+                      <span className="home-build-mine-name">{placeAddress(place)}</span>
+                    </Link>
+                    <Link
+                      href={`/lobby/${encodeURIComponent(place.id)}?design=1`}
+                      className="home-build-mine-design"
+                    >
+                      Design
+                    </Link>
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    className="home-build-chip"
+                    onClick={makeMine}
+                    disabled={making === "busy"}
+                  >
+                    <span aria-hidden>🏠</span>
+                    {making === "busy"
+                      ? "Making it…"
+                      : making === "failed"
+                        ? "Didn't work. Try again"
+                        : "Make it, free"}
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>

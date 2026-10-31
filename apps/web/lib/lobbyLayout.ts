@@ -60,7 +60,8 @@ export type BlockType =
   | "requests"
   | "rules"
   | "web"
-  | "frontdesk";
+  | "frontdesk"
+  | "owner";
 
 export type Block = {
   id: string;
@@ -193,6 +194,7 @@ const BLOCK_TYPES: BlockType[] = [
   "rules",
   "web",
   "frontdesk",
+  "owner",
 ];
 const EFFECTS: EffectId[] = [
   "none",
@@ -438,6 +440,7 @@ const BLOCK_DEFAULTS: Partial<Record<BlockType, any>> = {
   links: { title: "Links", items: [] },
   countdown: { label: "Next big night" },
   frontdesk: { title: "Front desk", note: "Ring and someone will be right with you." },
+  owner: { title: "Who lives here" },
 };
 
 export type BlockMeta = {
@@ -475,6 +478,13 @@ export const BLOCK_CATALOG: BlockMeta[] = [
     name: "Front desk",
     blurb: "Visitors ring; your staff get a ping.",
     icon: "🛎",
+    group: "Essentials",
+  },
+  {
+    type: "owner",
+    name: "Who lives here",
+    blurb: "Whose place this is: their card, rank, crew, games and stream.",
+    icon: "🪪",
     group: "Essentials",
   },
   {

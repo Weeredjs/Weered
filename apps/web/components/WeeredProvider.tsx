@@ -14,14 +14,14 @@ const API    = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 const WS_URL = process.env.NEXT_PUBLIC_WS_URL   || "ws://127.0.0.1:4001";
 const SETTINGS_KEY = "weered:settings:v0";
 
-// White-label office domains talk same-origin: the edge proxies /ws to the WS
-// server, so the socket URL follows the page's own host there. Weered-family
-// hosts (and dev) keep the configured absolute WS_URL.
+// White-label office domains, lobby domains and places (<label>.weered.ca) talk
+// same-origin: the edge proxies /ws to the WS server, so the socket URL follows
+// the page's own host there. weered.ca itself (and dev) keeps the absolute WS_URL.
 function effectiveWsUrl(): string {
   if (typeof window === "undefined") return WS_URL;
   const h = window.location.hostname;
   const weeredFamily =
-    h === "weered.ca" || h.endsWith(".weered.ca") || h === "localhost" || h === "127.0.0.1";
+    h === "weered.ca" || h === "www.weered.ca" || h === "localhost" || h === "127.0.0.1";
   if (weeredFamily) return WS_URL;
   return `${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.host}/ws`;
 }

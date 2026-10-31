@@ -926,7 +926,8 @@ function FriendsEmptyDiscovery({ lobbyId }: { lobbyId: string }) {
               ↓ replace with real ones ↓
             </div>
             {others.slice(0, 5).map(u => (
-              <button key={u.id} type="button" onClick={() => openSheet("profile", { userId: String(u.id) })} style={{
+              // A div, not a button: the avatar inside is a button of its own.
+              <div key={u.id} role="button" tabIndex={0} onClick={() => openSheet("profile", { userId: String(u.id) })} onKeyDown={onActivate(() => openSheet("profile", { userId: String(u.id) }))} style={{
                 display: "flex", alignItems: "center", gap: 8,
                 padding: "5px 6px", borderRadius: 7,
                 border: "1px solid transparent", background: "transparent",
@@ -942,7 +943,7 @@ function FriendsEmptyDiscovery({ lobbyId }: { lobbyId: string }) {
                   </div>
                   {u.roomName && <div style={{ fontSize: 10, opacity: 0.45, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{u.roomName}</div>}
                 </div>
-              </button>
+              </div>
             ))}
           </>
         )}

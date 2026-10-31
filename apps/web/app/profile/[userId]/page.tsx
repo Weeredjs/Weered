@@ -6,6 +6,7 @@ import { useWeered } from "../../../components/WeeredProvider";
 import { weeredToast } from "../../../lib/toast";
 import FlairBadge from "../../../components/FlairBadge";
 import { useEquippedFlair } from "../../../lib/useEquippedFlair";
+import { placeOf, type Place } from "../../../lib/place";
 
 type GameAccount = {
   gameType: string;
@@ -123,6 +124,15 @@ export default function ProfilePage() {
   const [bio, setBio] = useState("");
   const [saving, setSaving] = useState(false);
   const equippedFlair = useEquippedFlair(profile?.id ?? "");
+  const [place, setPlace] = useState<Place | null>(null);
+  useEffect(() => {
+    if (!profile?.id) return;
+    let alive = true;
+    placeOf(profile.id).then((p) => alive && setPlace(p));
+    return () => {
+      alive = false;
+    };
+  }, [profile?.id]);
 
   useEffect(() => {
     if (!resolvedId) return;
@@ -293,6 +303,14 @@ export default function ProfilePage() {
                   Edit profile
                 </button>
               ))}
+            {place && (
+              <a
+                href={`/lobby/${encodeURIComponent(place.id)}`}
+                style={{ ...btnStyle, textDecoration: "none" }}
+              >
+                🏠 {profile.id === me?.id ? "Your place" : "Their place"}
+              </a>
+            )}
             {!isMe && (
               <button
                 onClick={() => {

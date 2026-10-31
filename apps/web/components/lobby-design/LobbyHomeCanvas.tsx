@@ -10,6 +10,7 @@ import type { Block, LobbyLayout, TabId } from "../../lib/lobbyLayout";
 import { SIZE_SPAN, BLOCK_CATALOG } from "../../lib/lobbyLayout";
 import WebpageEmbed from "../WebpageEmbed";
 import FrontDeskBlock from "./FrontDeskBlock";
+import OwnerBlock from "./OwnerBlock";
 
 const RequestBoard = dynamic(() => import("../RequestBoard"), { ssr: false });
 
@@ -710,6 +711,9 @@ function BlockBody({ block, rooms, ...p }: CanvasProps & { block: Block; rooms: 
           </div>
         </div>
       );
+
+    case "owner":
+      return <OwnerBlock lobbyId={p.lobbyId} props={pr} accent={accent} font={font} />;
 
     case "frontdesk":
       return (

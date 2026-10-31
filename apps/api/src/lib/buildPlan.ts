@@ -700,7 +700,7 @@ Operations:
 
 Blocks and their props:
 ${BUILD_BLOCKS.map((b) => `- ${b.type} (${b.name}: ${b.blurb})`).join("\n")}
-Props: welcome {title, body, cta, ctaTab: home|rooms|events|feed|requests, align: left|center}; rules {title, body: one rule per line}; links {title, items: [{label, url}]}; countdown {label, at: ISO 8601}; stream {channel}; video {url, title}; music {url, title}; image {url, caption, link}; web {url, title, height: s|m|l}; rooms, events, feed, requests {title, limit: 1 to 12}; game, stats {title}; frontdesk {title, note}.
+Props: welcome {title, body, cta, ctaTab: home|rooms|events|feed|requests, align: left|center}; rules {title, body: one rule per line}; links {title, items: [{label, url}]}; countdown {label, at: ISO 8601}; stream {channel}; video {url, title}; music {url, title}; image {url, caption, link}; web {url, title, height: s|m|l}; rooms, events, feed, requests {title, limit: 1 to 12}; game, stats, owner {title}; frontdesk {title, note}.
 Use only URLs, channels and dates they gave you or that are already on the lobby.
 
 summary: one short plain sentence (20 words at most) saying what you changed. If they asked for something Weered can't do yet, say so plainly and what you did instead.

@@ -50,7 +50,8 @@
 .home-build-lobby .home-build-body {
   max-width: 64%;
 }
-.home-build-lobby.has-mine .home-build-body {
+.home-build-lobby.has-mine .home-build-body,
+.home-build-shell.has-mine .home-build-body {
   padding-bottom: 54px;
 }
 .home-build-shell .home-build-body {

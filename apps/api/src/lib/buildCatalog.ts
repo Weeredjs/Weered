@@ -461,6 +461,12 @@ export const BUILD_BLOCKS = [
     blurb: "Visitors ring; your staff get a ping.",
     group: "Essentials",
   },
+  {
+    type: "owner",
+    name: "Who lives here",
+    blurb: "Whose place this is: their card, rank, crew, games and stream.",
+    group: "Essentials",
+  },
   { type: "stats", name: "Pulse", blurb: "Members, online now, rooms live.", group: "Essentials" },
   {
     type: "game",

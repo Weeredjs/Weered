@@ -3,6 +3,7 @@ import { promises as dns } from "dns";
 import { prisma } from "../lib/prisma";
 import { hasLobbyPerm } from "../lib/lobbyPerms";
 import { sendMail } from "../lib/email";
+import { placeForHost } from "./places";
 
 // Custom-build meeting requests go here, not on the public board.
 const MEETING_NOTIFY_TO = process.env.MEETING_NOTIFY_TO || "james@weered.ca";
@@ -224,6 +225,9 @@ export default async function lobbyDesignRoutes(app: FastifyInstance, opts: Opts
   // domains only, so nobody can point a random name at us and burn our
   // Let's Encrypt rate limit.
   app.get("/domains/check", async (req, reply) => {
+    // <label>.weered.ca is someone's place (routes/places.ts), when it exists.
+    const place = await placeForHost(String((req.query as any)?.domain || ""));
+    if (place) return reply.send("ok");
     const host = normalizeHost((req.query as any)?.domain);
     if (!host) return reply.code(404).send("no");
     const id = await lobbyForHost(host);
@@ -231,6 +235,11 @@ export default async function lobbyDesignRoutes(app: FastifyInstance, opts: Opts
   });
 
   app.get("/domains/resolve", async (req, reply) => {
+    const place = await placeForHost(String((req.query as any)?.host || ""));
+    if (place) {
+      reply.header("Cache-Control", "public, max-age=60");
+      return reply.send({ ok: true, lobbyId: place });
+    }
     const host = normalizeHost((req.query as any)?.host);
     if (!host) return reply.code(404).send({ ok: false });
     const id = await lobbyForHost(host);

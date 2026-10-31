@@ -224,6 +224,14 @@ export function Inspector({
           </div>
         </>
       )}
+      {block.type === "owner" && (
+        <>
+          {field("title", "Title", "Who lives here")}
+          <div style={{ fontSize: 11, opacity: 0.55, marginTop: 8, lineHeight: 1.45 }}>
+            Shows the lobby owner's card from their profile: change it there.
+          </div>
+        </>
+      )}
       {block.type === "frontdesk" && (
         <>
           {field("title", "Title", "Front desk")}
