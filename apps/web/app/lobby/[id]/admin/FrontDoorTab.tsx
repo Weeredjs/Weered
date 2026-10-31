@@ -9,6 +9,8 @@
 import React, { useMemo, useState } from "react";
 import { LobbyData, S, apiFetch } from "./shared";
 import LobbyDoor from "../../../../components/LobbyDoor";
+import DescribeBox from "../../../../components/build/DescribeBox";
+import { describeJob } from "../../../../lib/aiBuild";
 import {
   DOOR_MAX,
   emptyDoor,
@@ -165,6 +167,32 @@ export function FrontDoorTab({ lobby, onRefresh }: { lobby: LobbyData; onRefresh
         What someone gets through before they join: your welcome, the rules, a few questions, and
         who&apos;s allowed in. Members never see it again.
       </div>
+
+      <DescribeBox
+        kind="door"
+        accent="#7c3aed"
+        className="db-in-tab"
+        label="Describe your front door"
+        placeholder="Ask their main and their timezone, 18+ only"
+        onBuild={async (prompt) => {
+          const j = await describeJob<{ door: unknown }>("door", prompt, {
+            lobbyId: lobby.id,
+            extra: { door: built() },
+          });
+          const next = sanitizeDoor(j.result?.door) || emptyDoor();
+          const before = { d, optText };
+          setD({ ...next, on: true });
+          setOptText(Object.fromEntries(next.questions.map((q) => [q.id, q.options.join(", ")])));
+          setMsg("");
+          return {
+            summary: `${j.summary || "Here it is."} Save to put it up.`,
+            undo: () => {
+              setD(before.d);
+              setOptText(before.optText);
+            },
+          };
+        }}
+      />
 
       <Switch
         on={d.on}

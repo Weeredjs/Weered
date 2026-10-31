@@ -164,6 +164,7 @@ const VIEWS = [
   "brackets",
   "home",
   "requests",
+  "pages",
 ] as const;
 export type LobbyView = (typeof VIEWS)[number];
 

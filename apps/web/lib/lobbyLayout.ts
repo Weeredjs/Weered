@@ -15,7 +15,8 @@ export type TabId =
   | "lfg"
   | "reddit"
   | "brackets"
-  | "requests";
+  | "requests"
+  | "pages";
 
 export const TAB_DEFAULT_LABEL: Record<TabId, string> = {
   home: "Home",
@@ -27,6 +28,7 @@ export const TAB_DEFAULT_LABEL: Record<TabId, string> = {
   reddit: "Reddit",
   brackets: "Brackets",
   requests: "Requests",
+  pages: "Pages",
 };
 
 export const TAB_BLURB: Record<TabId, string> = {
@@ -39,6 +41,7 @@ export const TAB_BLURB: Record<TabId, string> = {
   reddit: "The game's subreddit, inline.",
   brackets: "Live start.gg brackets.",
   requests: "What your members want next.",
+  pages: "Your own pages: a wiki, guides, house rules (Admin → Pages).",
 };
 
 export type HeroMode = "full" | "compact" | "hidden";
@@ -61,7 +64,10 @@ export type BlockType =
   | "rules"
   | "web"
   | "frontdesk"
-  | "owner";
+  | "owner"
+  // A block or game the builder wrote (components/lobby-design/CustomBlockFrame.tsx):
+  // its code lives on Weered (api CustomBlock), the layout only points at it.
+  | "custom";
 
 export type Block = {
   id: string;
@@ -195,6 +201,7 @@ const BLOCK_TYPES: BlockType[] = [
   "web",
   "frontdesk",
   "owner",
+  "custom",
 ];
 const EFFECTS: EffectId[] = [
   "none",
@@ -224,12 +231,16 @@ export const STOCK_TABS: TabId[] = [
   "feed",
   "events",
   "requests",
+  "pages",
 ];
 
 export function stockLayout(): LobbyLayout {
   return {
     v: 1,
-    tabs: STOCK_TABS.map((id) => ({ id, hidden: id === "home" || id === "requests" })),
+    tabs: STOCK_TABS.map((id) => ({
+      id,
+      hidden: id === "home" || id === "requests" || id === "pages",
+    })),
     landing: "rooms",
     hero: "full",
     theme: {},
@@ -310,6 +321,14 @@ export function sanitizeProps(type: BlockType, p: any): Record<string, any> {
       return {
         title: str(p.title, 80) ?? "",
         limit: Math.max(1, Math.min(12, Number(p.limit) || 6)),
+      };
+    case "custom":
+      return {
+        // The saved block's id ("" until it's built and saved).
+        customId: (str(p.customId, 40) ?? "").replace(/[^A-Za-z0-9_-]/g, ""),
+        kind: p.kind === "game" ? "game" : "block",
+        title: str(p.title, 60) ?? "",
+        height: p.height === "s" || p.height === "l" ? p.height : "m",
       };
     default:
       return { title: str(p.title, 80) ?? "" };
@@ -441,6 +460,7 @@ const BLOCK_DEFAULTS: Partial<Record<BlockType, any>> = {
   countdown: { label: "Next big night" },
   frontdesk: { title: "Front desk", note: "Ring and someone will be right with you." },
   owner: { title: "Who lives here" },
+  custom: { kind: "block", height: "m" },
 };
 
 export type BlockMeta = {
@@ -448,10 +468,17 @@ export type BlockMeta = {
   name: string;
   blurb: string;
   icon: string;
-  group: "Essentials" | "Media" | "Community" | "Game";
+  group: "Make your own" | "Essentials" | "Media" | "Community" | "Game";
 };
 
 export const BLOCK_CATALOG: BlockMeta[] = [
+  {
+    type: "custom",
+    name: "Your own block or game",
+    blurb: "Describe it and it's built: a poll, a guestbook, a tier list, trivia night.",
+    icon: "✦",
+    group: "Make your own",
+  },
   {
     type: "welcome",
     name: "Welcome banner",

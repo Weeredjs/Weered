@@ -17,7 +17,17 @@ function models(): string[] {
 
 export async function runBuilder(
   ai: any,
-  args: { kind: string; system: string; tool: BuildTool; user: string; maxTokens: number },
+  args: {
+    kind: string;
+    system: string;
+    tool: BuildTool;
+    user: string;
+    maxTokens: number;
+    /** How long one model may take. Code (custom blocks, games) runs long, and
+     *  a retry of a timed-out call only doubles the wait, so those set this and
+     *  get no retry. */
+    timeoutMs?: number;
+  },
 ): Promise<{ input: any; model: string } | null> {
   for (const model of models()) {
     const t0 = Date.now();
@@ -31,7 +41,9 @@ export async function runBuilder(
           tool_choice: { type: "auto" },
           messages: [{ role: "user", content: args.user }],
         },
-        { timeout: 60_000, maxRetries: 1 },
+        args.timeoutMs
+          ? { timeout: args.timeoutMs, maxRetries: 0 }
+          : { timeout: 60_000, maxRetries: 1 },
       );
       const u = res?.usage || {};
       log.info(

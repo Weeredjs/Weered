@@ -11,6 +11,7 @@ import {
   type TabId,
 } from "../../lib/lobbyLayout";
 import { IconBtn, chip, input, label } from "./designerKit";
+import CustomBlockBuilder from "./CustomBlockBuilder";
 
 // ── Inspector ──────────────────────────────────────────────────────────────
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
@@ -177,6 +178,9 @@ export function Inspector({
             ))}
           </div>
         </>
+      )}
+      {block.type === "custom" && lobbyId && (
+        <CustomBlockBuilder lobbyId={lobbyId} accent={accent} block={block} onPatch={onPatch} />
       )}
       {block.type === "rules" && (
         <>

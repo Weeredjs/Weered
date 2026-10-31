@@ -200,6 +200,7 @@ const LobbyDesigner = dynamic(() => import("../../../components/lobby-design/Lob
   ssr: false,
 });
 const RequestBoard = dynamic(() => import("../../../components/RequestBoard"), { ssr: false });
+const LobbyPages = dynamic(() => import("../../../components/LobbyPages"), { ssr: false });
 const ForumPage = dynamic(() => import("../../../components/forum/ForumPage"), {
   loading: panelLoading,
   ssr: false,
@@ -481,6 +482,19 @@ export default function LobbyIdPage() {
   const hasModules = lobbyHasModules(lobbyId, lobbyInfo?.moduleType);
   const hasLfgBoard = LFG_BOARD_LOBBIES.has(lobbyId);
   const hasStartgg = !!(lobbyInfo?.moduleConfig as any)?.startgg?.ref;
+  // Its own pages (Admin → Pages): a lobby nobody designed shows the tab once
+  // it has one; a designed lobby shows it when its layout says so.
+  const [hasPages, setHasPages] = useState(false);
+  useEffect(() => {
+    let dead = false;
+    fetch(`${API}/lobbies/${encodeURIComponent(lobbyId)}/pages`, { credentials: "include" })
+      .then((r) => r.json())
+      .then((j) => !dead && setHasPages(Array.isArray(j?.pages) && j.pages.length > 0))
+      .catch(() => {});
+    return () => {
+      dead = true;
+    };
+  }, [lobbyId]);
   usePublishLobbyViews(lobbyId, hasModules, hasStartgg); // feeds the scoped rail
   const redditSub = REDDIT_TAB_LOBBIES[lobbyId];
   const KNOWN_ACCENTS: Record<string, string> = { gta6: "#e84393" };
@@ -687,11 +701,12 @@ export default function LobbyIdPage() {
     reddit: !!redditSub,
     brackets: hasStartgg,
     requests: true,
+    pages: !!L || hasPages,
   };
   const availableTabs = (Object.keys(tabAvailable) as TabId[]).filter((t) => tabAvailable[t]);
   const tabOrder: { id: TabId; label?: string; hidden?: boolean }[] = L
     ? L.tabs.filter((t) => tabAvailable[t.id] && (!t.hidden || design.designing))
-    : (["rooms", "lfg", "reddit", "modules", "feed", "events"] as TabId[])
+    : (["rooms", "lfg", "reddit", "modules", "feed", "events", "pages"] as TabId[])
         .filter((t) => tabAvailable[t])
         .map((id) => ({ id }));
 
@@ -1224,6 +1239,12 @@ export default function LobbyIdPage() {
                   <GtaLfgBoard lobbyId={lobbyId} accent={accent} currentUserId={me?.id} />
                 ) : view === "reddit" && redditSub ? (
                   <RedditFeedTab sub={redditSub} accent={accent} />
+                ) : view === "pages" ? (
+                  <LobbyPages
+                    lobbyId={lobbyId}
+                    accent={accent || "#7c3aed"}
+                    canEdit={isStaff || isOwner || (membership ? membership.roleLevel >= 4 : false)}
+                  />
                 ) : view === "events" ? (
                   <LobbyEvents
                     lobbyId={lobbyId}

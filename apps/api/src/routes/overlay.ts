@@ -1,6 +1,8 @@
 import type { FastifyInstance } from "fastify";
 import { randomBytes } from "node:crypto";
 import { prisma } from "../lib/prisma";
+import { cleanOverlay } from "../lib/build/jobs/people";
+import { isPlaceId } from "./places";
 
 type RoomEntry = { users: Map<string, any>; name?: string; lobbyId?: string; thumbnail?: string };
 
@@ -29,6 +31,23 @@ export default async function overlayRoutes(app: FastifyInstance, opts: Opts) {
     if (!userId) return reply.code(401).send({ error: "Unauthorized" });
     const u = await db.user.findUnique({ where: { id: userId }, select: { overlayToken: true } });
     return reply.send({ ok: true, token: u?.overlayToken || null });
+  });
+
+  // The overlay's look (position, size, style, what it shows): Settings, or
+  // described there (lib/build/jobs/people.ts overlayJob).
+  app.get("/me/overlay/config", async (req, reply) => {
+    const userId = authedUserId(req, verifyToken);
+    if (!userId) return reply.code(401).send({ error: "Unauthorized" });
+    const u = await db.user.findUnique({ where: { id: userId }, select: { overlayConfig: true } });
+    return reply.send({ ok: true, config: cleanOverlay(u?.overlayConfig) });
+  });
+
+  app.patch("/me/overlay/config", async (req, reply) => {
+    const userId = authedUserId(req, verifyToken);
+    if (!userId) return reply.code(401).send({ error: "Unauthorized" });
+    const config = cleanOverlay(((req as any).body || {}).config);
+    await db.user.update({ where: { id: userId }, data: { overlayConfig: config } });
+    return reply.send({ ok: true, config });
   });
 
   app.post("/me/overlay/token/rotate", async (req, reply) => {
@@ -68,9 +87,13 @@ export default async function overlayRoutes(app: FastifyInstance, opts: Opts) {
         tier: true,
         globalRole: true,
         banned: true,
+        overlayConfig: true,
       },
     });
     if (!user || user.banned) return reply.code(404).send({ ok: false, error: "Not found" });
+    // null until they've set a look: the overlay keeps its original card (in
+    // the lobby's colour) rather than the defaults' purple.
+    const config = user.overlayConfig ? cleanOverlay(user.overlayConfig) : null;
 
     let found: { roomId: string; room: RoomEntry; isAway: boolean } | null = null;
     for (const [rid, rs] of rooms) {
@@ -91,7 +114,7 @@ export default async function overlayRoutes(app: FastifyInstance, opts: Opts) {
     reply.header("Cache-Control", "no-store");
 
     if (!found) {
-      return reply.send({ ok: true, online: false, user: userOut });
+      return reply.send({ ok: true, online: false, user: userOut, config });
     }
 
     const { roomId, room, isAway } = found;
@@ -128,6 +151,32 @@ export default async function overlayRoutes(app: FastifyInstance, opts: Opts) {
     }
 
     const isLobbyRoot = !!lobby && (lobby.id === roomId || `lobby:${lobby.id}` === roomId);
+
+    // Their squad and the room's chat, when they've turned them on, and only
+    // from an open room: never a members-only or staff room, never someone's
+    // place, where the others didn't sign up to be on a stream.
+    const shareable =
+      !((room as any).minLevel > 0) && !isPlaceId(lobbyIdHint || roomId) && !roomId.startsWith("@");
+    const people =
+      config?.show.people && shareable
+        ? Array.from(room.users?.values?.() || [])
+            .filter((p: any) => p?.id !== user.id && !p?.isGuest)
+            .slice(0, 8)
+            .map((p: any) => ({
+              name: String(p.name || "").slice(0, 40),
+              avatarColor: p.avatarColor || null,
+            }))
+        : undefined;
+    const chat =
+      config?.show.chat && shareable
+        ? (((room as any).msgs || []) as any[])
+            .filter((m) => !m?.deletedAt && m?.body)
+            .slice(-5)
+            .map((m) => ({
+              name: String(m.user?.name || "").slice(0, 40),
+              body: String(m.body).slice(0, 140),
+            }))
+        : undefined;
     const joinUrl = lobby ? `https://weered.ca/lobby/${lobby.id}` : `https://weered.ca/`;
 
     return reply.send({
@@ -152,6 +201,9 @@ export default async function overlayRoutes(app: FastifyInstance, opts: Opts) {
         count: roomCount,
       },
       joinUrl,
+      config,
+      ...(people ? { people } : {}),
+      ...(chat ? { chat } : {}),
     });
   });
 }

@@ -625,6 +625,10 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
         blockedWords: canModerate ? lobby.blockedWords || [] : [],
         blockedDomains: canModerate ? lobby.blockedDomains || [] : [],
         newAccountChatHours: lobby.newAccountChatHours ?? 0,
+        newAccountLinkHours: (lobby as any).newAccountLinkHours ?? 0,
+        // Branding → member perks edits these; they were never sent, so the
+        // editor always opened empty and a save wiped the saved ones.
+        memberPerks: Array.isArray((lobby as any).memberPerks) ? (lobby as any).memberPerks : [],
       },
       members: doorAnswersFor(ctx, members),
       rooms: roomList.map((r: any) => ({
@@ -774,6 +778,10 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
       if (body.newAccountChatHours !== undefined) {
         const n = Math.max(0, Math.min(720, Number(body.newAccountChatHours) || 0));
         data.newAccountChatHours = n;
+      }
+      if (body.newAccountLinkHours !== undefined) {
+        const n = Math.max(0, Math.min(720, Number(body.newAccountLinkHours) || 0));
+        data.newAccountLinkHours = n;
       }
       if (Object.keys(data).length === 0)
         return reply.code(400).send({ ok: false, error: "no_changes" });

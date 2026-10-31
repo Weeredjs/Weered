@@ -1,5 +1,6 @@
 "use client";
 
+import CrewEditor from "../../../components/crew/CrewEditor";
 import React, { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { useWeered } from "../../../components/WeeredProvider";
@@ -56,6 +57,7 @@ type Crew = {
   logoUrl?: string | null;
   bannerUrl?: string | null;
   accentColor?: string | null;
+  tagShape?: string | null;
   homePort?: string | null;
   recruiting: boolean;
   recruitingNote: string;
@@ -559,6 +561,13 @@ export default function CrewView({ crewId, initial }: { crewId: string; initial:
                   {c.recruitingNote}
                 </div>
               </div>
+            )}
+
+            {!!meId && c.ownerId === meId && (
+              <CrewEditor
+                crew={c}
+                onSaved={(next) => setC((prev) => (prev ? { ...prev, ...next } : prev))}
+              />
             )}
 
             {(crewMods.length > 0 || canManageLoadout) && (

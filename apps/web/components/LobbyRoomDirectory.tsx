@@ -1,5 +1,7 @@
 "use client";
 
+import RoomDescribe from "./build/RoomDescribe";
+import AlertsPanel from "./build/AlertsPanel";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useWeered } from "./WeeredProvider";
@@ -283,6 +285,8 @@ export default function LobbyRoomDirectory({
   const [lobbyBanner, setLobbyBanner] = useState<string | null>(bannerUrl || null);
 
   const [showCreate, setShowCreate] = useState(false);
+  const [showAlerts, setShowAlerts] = useState(false);
+  const [lobbyName, setLobbyName] = useState("");
   const [newName, setNewName] = useState("");
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState("");
@@ -301,6 +305,7 @@ export default function LobbyRoomDirectory({
       .then((j) => {
         if (j.ok && j.lobby?.rooms) setRooms(j.lobby.rooms);
         if (j.ok && j.lobby?.bannerUrl) setLobbyBanner((prev) => prev || j.lobby.bannerUrl);
+        if (j.ok && j.lobby?.name) setLobbyName(String(j.lobby.name));
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -656,6 +661,17 @@ export default function LobbyRoomDirectory({
             </div>
 
             {createError && <div style={{ fontSize: 11, color: "#ef4444" }}>{createError}</div>}
+            <RoomDescribe
+              lobbyId={lobbyId}
+              accent={accent}
+              onMade={(id) => {
+                setShowCreate(false);
+                try {
+                  join?.(`room:${id}`);
+                } catch {}
+                router.push(`/room/${encodeURIComponent(id)}`);
+              }}
+            />
           </div>
         )}
       </div>
@@ -751,9 +767,37 @@ export default function LobbyRoomDirectory({
           />
 
           <button
+            type="button"
+            className="weered-rooms-create-btn"
+            onClick={() => {
+              setShowAlerts((v) => !v);
+              setShowCreate(false);
+            }}
+            title="Get pinged when a room fills up"
+            style={{
+              padding: "4px 12px",
+              borderRadius: 8,
+              cursor: "pointer",
+              border: `1px solid ${accent}33`,
+              background: showAlerts ? `${accent}22` : `${accent}0c`,
+              color: showAlerts ? "rgba(243,244,246,.9)" : "rgba(243,244,246,.55)",
+              fontSize: 11,
+              fontWeight: 700,
+              display: "flex",
+              alignItems: "center",
+              gap: 5,
+              flexShrink: 0,
+            }}
+          >
+            <span style={{ fontSize: 12 }}>{showAlerts ? "✕" : "🔔"}</span>
+            {showAlerts ? "Close" : "Alerts"}
+          </button>
+
+          <button
             className="weered-rooms-create-btn"
             onClick={() => {
               setShowCreate((v) => !v);
+              setShowAlerts(false);
               setCreateError("");
             }}
             style={{
@@ -789,6 +833,15 @@ export default function LobbyRoomDirectory({
             {showCreate ? "Cancel" : labels.btn}
           </button>
         </div>
+
+        {showAlerts && (
+          <AlertsPanel
+            lobbyId={lobbyId}
+            lobbyName={lobbyName || "This lobby"}
+            accent={accent}
+            rooms={rooms.map((r) => ({ id: r.id, name: r.name || r.id }))}
+          />
+        )}
 
         {showCreate && (
           <div
@@ -850,6 +903,17 @@ export default function LobbyRoomDirectory({
               </button>
             </div>
             {createError && <div style={{ fontSize: 11, color: "#ef4444" }}>{createError}</div>}
+            <RoomDescribe
+              lobbyId={lobbyId}
+              accent={accent}
+              onMade={(id) => {
+                setShowCreate(false);
+                try {
+                  join?.(`room:${id}`);
+                } catch {}
+                router.push(`/room/${encodeURIComponent(id)}`);
+              }}
+            />
           </div>
         )}
 

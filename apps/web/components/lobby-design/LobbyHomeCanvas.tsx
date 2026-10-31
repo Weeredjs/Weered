@@ -11,6 +11,7 @@ import { SIZE_SPAN, BLOCK_CATALOG } from "../../lib/lobbyLayout";
 import WebpageEmbed from "../WebpageEmbed";
 import FrontDeskBlock from "./FrontDeskBlock";
 import OwnerBlock from "./OwnerBlock";
+import CustomBlockFrame from "./CustomBlockFrame";
 
 const RequestBoard = dynamic(() => import("../RequestBoard"), { ssr: false });
 
@@ -79,7 +80,11 @@ export default function LobbyHomeCanvas(p: CanvasProps) {
     return [...rooms].sort((a, b) => rank(a.id) - rank(b.id));
   }, [rooms, layout.roomOrder]);
 
-  const blocks = layout.blocks;
+  // A custom block that was never built is a placeholder for its builder, not
+  // something visitors see.
+  const blocks = designing
+    ? layout.blocks
+    : layout.blocks.filter((b) => b.type !== "custom" || b.props?.customId);
 
   if (!blocks.length) {
     return (
@@ -805,6 +810,32 @@ function BlockBody({ block, rooms, ...p }: CanvasProps & { block: Block; rooms: 
           <div style={{ padding: pr.title ? "0 12px 12px" : 12 }}>
             <WebpageEmbed url={pr.url} height={pr.height} wide title={pr.title} />
           </div>
+        </div>
+      );
+
+    case "custom":
+      if (!pr.customId)
+        return (
+          <div style={{ ...pad, textAlign: "center", padding: "34px 18px" }}>
+            <div style={{ fontSize: 22, color: accent }}>✦</div>
+            <div style={{ fontWeight: 800, marginTop: 6 }}>
+              {pr.kind === "game" ? "Your own game" : "Your own block"}
+            </div>
+            <div style={{ fontSize: 12.5, opacity: 0.65, marginTop: 4 }}>
+              Describe it in the panel on the right and it gets built here.
+            </div>
+          </div>
+        );
+      // The block draws its own heading; the title names it for screen readers.
+      return (
+        <div>
+          <CustomBlockFrame
+            lobbyId={p.lobbyId}
+            blockId={pr.customId}
+            height={pr.height}
+            accent={accent}
+            title={pr.title}
+          />
         </div>
       );
 

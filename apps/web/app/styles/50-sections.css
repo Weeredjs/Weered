@@ -192,6 +192,22 @@
      but strip baseline decoration so we don't double up borders. */
   border-radius: 8px;
 }
+/* A clickable people row is a row, not a button. It's a role="button" div, so
+   the global button look (a box, a border, heavy type: 40-core-layout.css)
+   landed on every person in any lobby whose theme didn't reset it, Destiny's
+   among them (James 2026-10-31). Themes that style these rows still win:
+   theirs are scoped to the lobby and outrank this. */
+.weered-presence-row-link[role="button"] {
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  font-weight: inherit;
+}
+.weered-presence-row-link[role="button"]:hover {
+  background: transparent;
+  border-color: transparent;
+  filter: none;
+}
 .weered-presence-left {
   display: flex;
   align-items: center;

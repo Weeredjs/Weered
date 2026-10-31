@@ -1,5 +1,6 @@
 "use client";
 
+import OverlayLook from "../OverlayLook";
 import React from "react";
 import { Section, btnStyle } from "./SettingsSheet";
 
@@ -1020,6 +1021,7 @@ export default function PresenceSection() {
                 Disable
               </button>
             </div>
+            <OverlayLook />
           </>
         ) : (
           <div style={{ display: "flex", gap: 6, marginTop: 4 }}>

@@ -3,6 +3,11 @@ import { useState } from "react";
 import { LEVEL_COLORS, LobbyData, S, apiFetch } from "./shared";
 import RoleGlyph, { isRoleIconPath } from "@/components/RoleGlyph";
 import { VOCN_BADGE_ICONS, VOCN_LOBBY_ID } from "@/lib/vocnCopy";
+import DescribeBox from "@/components/build/DescribeBox";
+import Proposal from "@/components/build/Proposal";
+import { describeJob } from "@/lib/aiBuild";
+
+type RolesPlan = { names: Record<string, string>; icons: Record<string, string>; perks: string[] };
 
 export const DEFAULT_ROLE_NAMES: Record<string, string> = {
   "5": "Owner",
@@ -47,6 +52,23 @@ export function RolesTab({ lobby, onRefresh }: { lobby: LobbyData; onRefresh: ()
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState("");
   const [pickerFor, setPickerFor] = useState<string | null>(null);
+  // Perks a description came back with, waiting for a yes (they save apart).
+  const [perks, setPerks] = useState<string[] | null>(null);
+  const [perksMsg, setPerksMsg] = useState("");
+
+  async function savePerks() {
+    if (!perks) return;
+    const j = await apiFetch(`/lobbies/${encodeURIComponent(lobby.id)}/admin/perks`, {
+      method: "PATCH",
+      credentials: "include",
+      body: JSON.stringify({ memberPerks: perks }),
+    });
+    if (j.ok) {
+      setPerks(null);
+      setPerksMsg("Perks saved.");
+      onRefresh();
+    } else setPerksMsg("Couldn't save the perks.");
+  }
   // Image icons one click away: this lobby's own, plus vOCN's full badge set.
   const imageChoices = Array.from(
     new Set([
@@ -74,6 +96,47 @@ export function RolesTab({ lobby, onRefresh }: { lobby: LobbyData; onRefresh: ()
         Rename roles to match your community and give each one an icon that shows beside
         members&apos; names. Permissions are fixed per level.
       </div>
+      <DescribeBox
+        kind="roles"
+        accent="#7c3aed"
+        className="db-in-tab"
+        label="Describe your ranks"
+        placeholder="Military theme: Drill Sergeants run it, Recruits for newcomers"
+        onBuild={async (prompt) => {
+          const j = await describeJob<RolesPlan>("roles", prompt, { lobbyId: lobby.id });
+          const before = { names, icons };
+          setNames(j.result.names);
+          setIcons(j.result.icons);
+          setPerks(j.result.perks?.length ? j.result.perks : null);
+          setPerksMsg("");
+          setMsg("");
+          return {
+            summary: `${j.summary || "Here they are."} Save to keep them.`,
+            undo: () => {
+              setNames(before.names);
+              setIcons(before.icons);
+              setPerks(null);
+            },
+          };
+        }}
+      />
+      {perks && (
+        <Proposal
+          accent="#7c3aed"
+          title="Member perks"
+          action="Save these perks"
+          note="These replace the perks on your lobby's page."
+          onAction={savePerks}
+          onDismiss={() => setPerks(null)}
+        >
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            {perks.map((p) => (
+              <li key={p}>{p}</li>
+            ))}
+          </ul>
+        </Proposal>
+      )}
+      {perksMsg && <div style={{ fontSize: 12, opacity: 0.7, marginBottom: 12 }}>{perksMsg}</div>}
       <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 20 }}>
         {[5, 4, 3, 2, 1].map((lvl) => {
           const c = LEVEL_COLORS[lvl];

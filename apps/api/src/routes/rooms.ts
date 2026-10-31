@@ -231,6 +231,29 @@ export default async function roomsRoutes(app: FastifyInstance, opts: Opts) {
             .filter((m: string) => isValidRoomModule(m) && m !== defaultModule),
         ),
       );
+      // Who gets in, by lobby level (0 anyone, 1 members, 2 trusted, 3 mods,
+      // 4 admins): the lobby's moderators and up, and never above their own.
+      let minLevel = 0;
+      const wantLevel = Math.max(0, Math.min(5, Math.floor(Number(body.minLevel) || 0)));
+      if (wantLevel > 0) {
+        const myLevel = isStaff
+          ? 5
+          : lobby.ownerId === u.id
+            ? 5
+            : ((
+                await prisma.lobbyMember.findUnique({
+                  where: { lobbyId_userId: { lobbyId, userId: u.id } },
+                  select: { roleLevel: true },
+                })
+              )?.roleLevel ?? 1);
+        if (myLevel < 3)
+          return reply.code(403).send({
+            ok: false,
+            error: "level_forbidden",
+            message: "Only moderators and up can make a members-only room.",
+          });
+        minLevel = Math.min(wantLevel, myLevel);
+      }
       await prisma.room.create({
         data: {
           id,
@@ -241,6 +264,8 @@ export default async function roomsRoutes(app: FastifyInstance, opts: Opts) {
           isEvent,
           defaultModule,
           disabledModules,
+          minLevel,
+          passwordHash,
         } as any,
       });
 
@@ -257,6 +282,7 @@ export default async function roomsRoutes(app: FastifyInstance, opts: Opts) {
       r.isEvent = isEvent;
       if (ownerId) r.ownerId = ownerId;
       if (passwordHash) r.passwordHash = passwordHash;
+      (r as any).minLevel = minLevel;
       rooms.set(id, r);
       try {
         broadcastToLobby?.(lobbyId, {
@@ -281,6 +307,7 @@ export default async function roomsRoutes(app: FastifyInstance, opts: Opts) {
           isEvent,
           defaultModule,
           disabledModules,
+          minLevel,
         },
       });
     },

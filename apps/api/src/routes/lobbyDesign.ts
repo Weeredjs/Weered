@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { promises as dns } from "dns";
 import { prisma } from "../lib/prisma";
 import { hasLobbyPerm } from "../lib/lobbyPerms";
+import { logLobbyAudit } from "../lib/lobbyAudit";
 import { sendMail } from "../lib/email";
 import { isPlaceId, placeForHost } from "./places";
 
@@ -138,17 +139,13 @@ export default async function lobbyDesignRoutes(app: FastifyInstance, opts: Opts
     if (Object.keys(data).length === 0)
       return reply.code(400).send({ ok: false, error: "nothing_to_update" });
     await prisma.lobby.update({ where: { id: ctx.lobby.id }, data });
-    await prisma.lobbyAudit
-      .create({
-        data: {
-          lobbyId: ctx.lobby.id,
-          type: "design_publish",
-          actorId: ctx.user.id,
-          actorName: ctx.user.name || "",
-          note: Object.keys(data).join(", "),
-        } as any,
-      })
-      .catch(() => {});
+    await logLobbyAudit({
+      lobbyId: ctx.lobby.id,
+      type: "design_publish",
+      actorId: ctx.user.id,
+      actorName: ctx.user.name || "",
+      note: Object.keys(data).join(", "),
+    }).catch(() => {});
     return reply.send({ ok: true, updated: Object.keys(data) });
   });
 

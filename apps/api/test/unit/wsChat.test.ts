@@ -75,7 +75,7 @@ describe("ws handleChat - typing + pin gates", () => {
       baseOpts({ isModOrOwner: () => false }),
     );
     expect(broadcasts.length).toBe(0);
-    expect((room as any).pinned?.has?.("m1")).toBeFalsy();
+    expect((room as any).pinnedMsgs?.has?.("m1")).toBeFalsy();
   });
 
   it("chat:pin by a mod pins the message + broadcasts chat:pins", async () => {
@@ -86,13 +86,28 @@ describe("ws handleChat - typing + pin gates", () => {
       { type: "chat:pin", msgId: "m1" },
       baseOpts({ isModOrOwner: () => true }),
     );
-    expect((room as any).pinned.has("m1")).toBe(true);
+    expect((room as any).pinnedMsgs.has("m1")).toBe(true);
     expect(broadcasts.find((b) => b.type === "chat:pins")?.pinned).toContain("m1");
+    // The room itself stays unpinned: message pins have their own field.
+    expect((room as any).pinned).toBeFalsy();
+  });
+
+  it("chat:pin in a pinned room pins the message (it used to throw)", async () => {
+    const room = mkRoom("r1");
+    (room as any).pinned = true;
+    rooms.set("r1", room);
+    await handleChat(
+      mkWs("mod", "r1", "ADMIN"),
+      { type: "chat:pin", msgId: "m1" },
+      baseOpts({ isModOrOwner: () => true }),
+    );
+    expect((room as any).pinnedMsgs.has("m1")).toBe(true);
+    expect((room as any).pinned).toBe(true);
   });
 
   it("chat:pin enforces the 10-pin cap", async () => {
     const room = mkRoom("r1");
-    (room as any).pinned = new Set(["a", "b", "c", "d", "e", "f", "g", "h", "i", "j"]);
+    (room as any).pinnedMsgs = new Set(["a", "b", "c", "d", "e", "f", "g", "h", "i", "j"]);
     rooms.set("r1", room);
     await handleChat(
       mkWs("mod", "r1", "ADMIN"),
@@ -100,7 +115,7 @@ describe("ws handleChat - typing + pin gates", () => {
       baseOpts({ isModOrOwner: () => true }),
     );
     expect(sent.find((f) => f.payload.type === "chat:pin:error")).toBeTruthy();
-    expect((room as any).pinned.has("k")).toBe(false);
+    expect((room as any).pinnedMsgs.has("k")).toBe(false);
   });
 });
 

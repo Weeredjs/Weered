@@ -124,6 +124,10 @@ import lobbiesRoutes from "./routes/lobbies";
 import lobbyDesignRoutes from "./routes/lobbyDesign";
 import aiBuildRoutes from "./routes/aiBuild";
 import placesRoutes, { canEnterPlace, isPlaceId } from "./routes/places";
+import aiDescribeRoutes from "./routes/aiDescribe";
+import lobbyExtrasRoutes from "./routes/lobbyExtras";
+import { greetOnJoin } from "./lib/lobbyHost";
+import { runLobbyAutomations } from "./lib/lobbyAutomations";
 import uiPrefsRoutes from "./routes/uiPrefs";
 import embedCheckRoutes from "./routes/embedCheck";
 import staffRoutes from "./routes/staff";
@@ -139,6 +143,7 @@ import profileRoutes from "./routes/profile";
 import pokerRoutes from "./routes/poker";
 import setupTradingSocket from "./sockets/tradingWs";
 import { handleCanvas, handleCanvasRelay } from "./sockets/canvas";
+import { handleBlockRelay } from "./sockets/blockRelay";
 import { handleLaunch, handleYoutube } from "./sockets/roomMedia";
 import { handleVoice } from "./sockets/voiceWs";
 import { handlePresence } from "./sockets/presence";
@@ -708,6 +713,11 @@ async function doJoin(ws: Sock, roomId: string) {
     send(ws, { type: "youtube:state", roomId, ...room.ytState });
   }
 
+  // The lobby's host (lib/lobbyHost.ts) says hello to a new member in its chat.
+  if (room.lobbyId && room.roomId === room.lobbyId && ws.user && !(ws.user as any).guest) {
+    void greetOnJoin(room.lobbyId, ws.user as any).catch(swallow);
+  }
+
   return true;
 }
 
@@ -1177,6 +1187,8 @@ async function main() {
   // Virtual-airline Dispatch: templated landing and booking calls in the
   // airline's Dispatch room. Every minute; its first pass only primes.
   setInterval(() => void runVaDispatchWorker({ ensureRoomLoaded, broadcastToRoom }), 60_000);
+  // Lobby automations: scheduled posts, alerts, feeds (lib/lobbyAutomations.ts).
+  setInterval(() => void runLobbyAutomations(), 60_000);
 
   await app.register(forumRoutes, {
     authFromHeader,
@@ -1790,6 +1802,7 @@ async function main() {
         }
 
         if (handleCanvasRelay(ws, msg, { room, roomId }, { send })) return;
+        if (handleBlockRelay(ws, msg, { room, roomId }, { send })) return;
 
         if (
           msg.type === "poker:join" ||
@@ -1879,6 +1892,13 @@ async function main() {
   } as any);
   await app.register(aiBuildRoutes, { authFromHeader, getAI, lobbyAdminAccess } as any);
   await app.register(placesRoutes, { authFromHeader } as any);
+  await app.register(aiDescribeRoutes, { authFromHeader, getAI, lobbyAdminAccess } as any);
+  await app.register(lobbyExtrasRoutes, {
+    authFromHeader,
+    lobbyAdminAccess,
+    getGlobalRole,
+    canAccessStaff,
+  } as any);
 
   await app.register(eventsRoutes, {
     authFromHeader,
@@ -2246,6 +2266,26 @@ async function main() {
   }, 32_000);
   for (let i = 0; i < 5; i++) seedSyntheticActivity();
 
+  /** Was this lobby room made by the lobby's staff (its owner, level 3 and up,
+   *  or Weered staff)? Those rooms are the lobby's, and stay. */
+  async function madeByLobbyStaff(lobbyId: string, userId: string): Promise<boolean> {
+    try {
+      const lobby = await prisma.lobby.findUnique({
+        where: { id: lobbyId },
+        select: { ownerId: true },
+      });
+      if (lobby?.ownerId === userId) return true;
+      if (canAccessStaff(await getGlobalRole(userId))) return true;
+      const m = await prisma.lobbyMember.findUnique({
+        where: { lobbyId_userId: { lobbyId, userId } },
+        select: { roleLevel: true },
+      });
+      return (m?.roleLevel ?? 0) >= 3;
+    } catch {
+      return true; // when unsure, keep it
+    }
+  }
+
   setInterval(async () => {
     const now = Date.now();
     const toDelete: string[] = [];
@@ -2255,6 +2295,25 @@ async function main() {
       if (roomId.startsWith("lobby:") || roomId === "lobby" || roomId === "@ops") continue;
       if (room.users.size > 0 || room.sockets.size > 0) continue;
       if (now - room.lastActiveAt < ROOM_TTL_MS) continue;
+      // A lobby's own chat (its id is the lobby's), its staff chat and the rooms
+      // its staff made belong to the lobby: idle, they leave memory and keep
+      // their rows and history (ensureRoomLoaded brings them back). A room a
+      // member opened still dissolves an hour after it empties, as before.
+      // Every lobby's chat history was being deleted after an idle hour (found
+      // 2026-10-31: destiny2, division2, helldivers2, mlb and poe held no
+      // messages at all).
+      const lobbyChat = !!room.lobbyId && room.lobbyId === roomId;
+      const staffRoom =
+        !!room.lobbyId &&
+        !lobbyChat &&
+        !!room.ownerId &&
+        (await madeByLobbyStaff(room.lobbyId, room.ownerId));
+      if (lobbyChat || roomId.startsWith("@admin-") || staffRoom) {
+        rooms.delete(roomId);
+        articleRoomMeta.delete(roomId);
+        _lobbyActivityAt.delete(roomId);
+        continue;
+      }
 
       toDelete.push(roomId);
     }
@@ -2285,17 +2344,15 @@ async function main() {
       awardNotoriety,
       (userId, event) => {
         for (const sock of wss.clients) {
-          if ((sock as any).user?.id === userId) {
-            send(sock, event);
-            startChessWorker(prisma);
-            startChessChallengeWorker(prisma, awardNotoriety, awardPaper, broadcastToLobby);
-          }
+          if ((sock as any).user?.id === userId) send(sock, event);
         }
       },
       awardPaper,
       broadcastToLobby,
       createNotification,
     );
+    startChessWorker(prisma);
+    startChessChallengeWorker(prisma, awardNotoriety, awardPaper, broadcastToLobby);
 
     const autoDetect = startTournamentAutoDetect(prisma, {
       notify: (userId, event) => {

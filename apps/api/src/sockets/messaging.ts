@@ -3,6 +3,7 @@ import { prisma } from "../lib/prisma";
 import { randomUUID } from "crypto";
 import { takeAiBudget } from "../lib/aiBudget";
 import { answerOperatorDm } from "../lib/operatorDm";
+import { answerMention } from "../lib/lobbyHost";
 
 // Chat WS handlers extracted from the index.ts main message handler:
 // chat:pin/unpin/typing/send/edit/delete. Void async handler (dispatcher
@@ -16,6 +17,17 @@ import { answerOperatorDm } from "../lib/operatorDm";
 // fanned out to every occupant (audit 2026-09-26). Crew and DM messages are cut
 // at 2000; room chat allows more, and says so instead of silently truncating.
 export const CHAT_BODY_MAX = 4000;
+
+/** Does a message carry a link: a URL, a www. address, or a bare site name
+ *  like discord.gg/x (the new-account link wait, Lobby.newAccountLinkHours). */
+export function hasLink(body: string): boolean {
+  return (
+    /https?:\/\/|\bwww\.[a-z0-9-]/i.test(body) ||
+    /\b[a-z0-9-]{2,63}\.(com|net|org|gg|io|ly|tv|me|co|xyz|ca|uk|us|app|dev|link|site|shop|store|club|info|biz|to|sh)(\/|\b)/i.test(
+      body,
+    )
+  );
+}
 const CHAT_TOO_LONG = `Message too long: ${CHAT_BODY_MAX} characters at most.`;
 
 type Opts = {
@@ -61,20 +73,22 @@ export async function handleChat(ws: any, msg: any, opts: Opts): Promise<void> {
     if (!isModOrOwner(room, ws.user.id, ws.user.globalRole)) return;
     const msgId = String(msg.msgId || "");
     if (!msgId) return;
-    room.pinned = room.pinned || new Set<string>();
+    // Message pins have their own field: room.pinned says whether the ROOM is
+    // pinned, and sharing it broke both (2026-10-31).
+    room.pinnedMsgs = room.pinnedMsgs || new Set<string>();
     if (msg.type === "chat:pin") {
-      if (room.pinned.size >= 10) {
+      if (room.pinnedMsgs.size >= 10) {
         send(ws, { type: "chat:pin:error", reason: "Pinned limit is 10. Unpin one first." });
         return;
       }
-      room.pinned.add(msgId);
+      room.pinnedMsgs.add(msgId);
     } else {
-      room.pinned.delete(msgId);
+      room.pinnedMsgs.delete(msgId);
     }
     broadcast(room, {
       type: "chat:pins",
       roomId: room.roomId,
-      pinned: Array.from(room.pinned),
+      pinned: Array.from(room.pinnedMsgs),
     });
     return;
   }
@@ -121,6 +135,7 @@ export async function handleChat(ws: any, msg: any, opts: Opts): Promise<void> {
             blockedWords: string[];
             blockedDomains: string[];
             newAccountChatHours: number;
+            newAccountLinkHours: number;
             expiresAt: number;
           }
         | undefined;
@@ -129,12 +144,18 @@ export async function handleChat(ws: any, msg: any, opts: Opts): Promise<void> {
         try {
           const l: any = await prisma.lobby.findUnique({
             where: { id: room.lobbyId },
-            select: { blockedWords: true, blockedDomains: true, newAccountChatHours: true },
+            select: {
+              blockedWords: true,
+              blockedDomains: true,
+              newAccountChatHours: true,
+              newAccountLinkHours: true,
+            } as any,
           });
           policy = {
             blockedWords: Array.isArray(l?.blockedWords) ? l.blockedWords : [],
             blockedDomains: Array.isArray(l?.blockedDomains) ? l.blockedDomains : [],
             newAccountChatHours: Number(l?.newAccountChatHours || 0),
+            newAccountLinkHours: Number(l?.newAccountLinkHours || 0),
             expiresAt: Date.now() + 60_000,
           };
           room.modPolicy = policy;
@@ -143,22 +164,34 @@ export async function handleChat(ws: any, msg: any, opts: Opts): Promise<void> {
             blockedWords: [],
             blockedDomains: [],
             newAccountChatHours: 0,
+            newAccountLinkHours: 0,
             expiresAt: Date.now() + 60_000,
           };
         }
       }
-      if (policy.newAccountChatHours > 0) {
+      const linkWait = Number(policy.newAccountLinkHours || 0) > 0 && hasLink(body);
+      if (policy.newAccountChatHours > 0 || linkWait) {
         try {
           const u = await prisma.user.findUnique({
             where: { id: ws.user.id },
             select: { createdAt: true },
           });
-          if (u && Date.now() - u.createdAt.getTime() < policy.newAccountChatHours * 3600 * 1000) {
+          const age = u ? Date.now() - u.createdAt.getTime() : Infinity;
+          if (age < policy.newAccountChatHours * 3600 * 1000) {
             send(ws, {
               type: "chat:rejected",
               roomId,
               reason: "account_too_new",
               message: `New accounts must wait ${policy.newAccountChatHours}h before chatting in this lobby.`,
+            });
+            return;
+          }
+          if (linkWait && age < policy.newAccountLinkHours * 3600 * 1000) {
+            send(ws, {
+              type: "chat:rejected",
+              roomId,
+              reason: "account_too_new_links",
+              message: `New accounts can post links here after ${policy.newAccountLinkHours}h.`,
             });
             return;
           }
@@ -287,7 +320,22 @@ export async function handleChat(ws: any, msg: any, opts: Opts): Promise<void> {
         swallow(e);
       }
     })();
-    if (body.toLowerCase().includes("@operator") || body.toLowerCase().startsWith("/ask ")) {
+    // The lobby's own host (lib/lobbyHost.ts) answers "@<its name>" in the
+    // lobby's chat; a message it takes doesn't also summon the Operator.
+    const hostTook =
+      !!room.lobbyId &&
+      room.roomId === room.lobbyId &&
+      (await answerMention({
+        lobbyId: room.lobbyId,
+        user: ws.user as any,
+        body,
+        getAI,
+        refuse: (reason) => send(ws, { type: "chat:rejected", roomId, reason }),
+      }).catch(() => false));
+    if (
+      !hostTook &&
+      (body.toLowerCase().includes("@operator") || body.toLowerCase().startsWith("/ask "))
+    ) {
       const question = body
         .replaceAll(/@operator/gi, "")
         .replace(/^\/ask\s*/i, "")

@@ -456,6 +456,10 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
       if (msg.type === "poker:state") {
         try { window.dispatchEvent(new CustomEvent("weered:poker:state", { detail: msg })); } catch {}
       }
+      // Custom blocks and games talking live (components/lobby-design/CustomBlockFrame.tsx).
+      if (msg.type === "block:event") {
+        try { window.dispatchEvent(new CustomEvent("weered:block:event", { detail: msg })); } catch {}
+      }
       if (
         msg.type === "dnd:initiative" ||
         msg.type === "dnd:roll" ||

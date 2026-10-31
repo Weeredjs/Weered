@@ -160,6 +160,18 @@ export const editLobbyByWords = (
 export const dripByWords = (prompt: string, look: Record<string, unknown>) =>
   post<DripResult>("/ai/build/drip", { prompt, look });
 
+/** Any "describe it" job (api routes/aiDescribe.ts): the result is a proposal
+ *  the caller shows, then saves through the feature's own route. */
+export const describeJob = <T>(
+  job: string,
+  prompt: string,
+  opts: { lobbyId?: string; extra?: Record<string, unknown> } = {},
+) =>
+  post<{ result: T; summary: string }>(
+    `/ai/describe/${job}${opts.lobbyId ? `/${encodeURIComponent(opts.lobbyId)}` : ""}`,
+    { prompt, tz: tz(), ...(opts.extra || {}) },
+  );
+
 /** A plan's extras as Home blocks (the composer's buildLayout). */
 export function extraBlocks(extras: PlanExtra[]): Block[] {
   return extras.map((e) => {

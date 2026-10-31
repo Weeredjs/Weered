@@ -4,6 +4,14 @@ import { prisma } from "../lib/prisma";
 import { resolveUserNames, displayName } from "../lib/userNames";
 import { z } from "zod";
 
+/** An image link for a crew: https (or a Weered path), no quotes, brackets or spaces. */
+function imageUrl(v: string): string | null {
+  const s = v.trim().slice(0, 500);
+  if (!s) return null;
+  if (/[\s"'()<>\\]/.test(s)) return null;
+  return /^https:\/\/[^/]/i.test(s) || /^\/[a-z0-9]/i.test(s) ? s : null;
+}
+
 type Opts = {
   authFromHeader: (h?: string) => { id: string; name: string } | null;
   verifyToken: (token: string) => { id: string; name: string } | null;
@@ -525,10 +533,10 @@ export default async function crewsRoutes(app: FastifyInstance, opts: Opts) {
       if (typeof body.tag === "string") data.tag = body.tag.trim().slice(0, 8).toUpperCase();
       if (typeof body.description === "string")
         data.description = body.description.trim().slice(0, 800);
-      if (typeof body.logoUrl === "string")
-        data.logoUrl = body.logoUrl.trim().slice(0, 500) || null;
-      if (typeof body.bannerUrl === "string")
-        data.bannerUrl = body.bannerUrl.trim().slice(0, 500) || null;
+      // The crew page draws these inside CSS url(): a link only, nothing that
+      // could close the url() and add styles of its own.
+      if (typeof body.logoUrl === "string") data.logoUrl = imageUrl(body.logoUrl);
+      if (typeof body.bannerUrl === "string") data.bannerUrl = imageUrl(body.bannerUrl);
       if (typeof body.accentColor === "string")
         data.accentColor = /^#[0-9a-f]{6}$/i.test(body.accentColor) ? body.accentColor : null;
       if (typeof body.tagShape === "string" && /^(rounded|square|pill)$/.test(body.tagShape))

@@ -57,6 +57,7 @@ export type LobbyData = {
   blockedWords?: string[];
   blockedDomains?: string[];
   newAccountChatHours?: number;
+  newAccountLinkHours?: number;
   memberPerks?: string[];
 };
 
@@ -239,6 +240,9 @@ export const NAV_ITEMS = [
   { id: "branding", label: "Branding", icon: "🎨", minLevel: 4 },
   { id: "modules", label: "What's inside", icon: "🧩", minLevel: 4 },
   { id: "door", label: "Front door", icon: "🛎️", minLevel: 4 },
+  { id: "host", label: "Host", icon: "🎙️", minLevel: 4 },
+  { id: "automations", label: "Automations", icon: "⏰", minLevel: 4 },
+  { id: "pages", label: "Pages", icon: "📖", minLevel: 4 },
   { id: "moderation", label: "Moderation", icon: "🛡️", minLevel: 4 },
   { id: "rooms", label: "Rooms", icon: "🚪", minLevel: 3 },
   // moduleTypes: a tab only some lobbies can use. Challenges is authored per

@@ -5,6 +5,7 @@ import { swallow } from "./logger";
 import { isOfficeRoom } from "./officeRooms";
 import { randomUUID } from "node:crypto";
 import { type ReactionAgg } from "./chatHelpers";
+import { hostAvatar } from "./hostAvatar";
 
 // In-memory room/WS state engine extracted from index.ts. wss is injected
 // once from main() so the lobby-activity ping can still reach all clients.
@@ -153,6 +154,8 @@ export type RoomState = {
   ytState: { videoId: string; playing: boolean; position: number; updatedAt: number } | null;
   lastActiveAt: number;
   pinned: boolean;
+  /** Pinned chat messages (chat:pin), not to be confused with a pinned room. */
+  pinnedMsgs?: Set<string>;
   isEvent: boolean;
   passwordHash?: string;
   launch?: LaunchState;
@@ -163,6 +166,28 @@ export type RoomState = {
 };
 
 export const rooms = new Map<string, RoomState>();
+
+/** The lobby host's and Weered's posts (lib/lobbyPost.ts) come back from the
+ *  database in the shape they were broadcast in, not as a member. The host's
+ *  face is its current emoji (looked up once per load). */
+const isServerAuthor = (userId: string) => userId === "weered" || userId.startsWith("host:");
+function serverAuthorOf(userId: string, userName: string, hostFace?: string) {
+  return userId === "weered"
+    ? {
+        id: "weered",
+        name: "Weered",
+        role: "SYSTEM" as any,
+        avatar: "/brand/logo/weered-logo-128.png",
+        avatarColor: "#7c3aed",
+      }
+    : {
+        id: userId,
+        name: userName || "Host",
+        role: "SYSTEM" as any,
+        avatar: hostFace,
+        avatarColor: "#6d28d9",
+      };
+}
 export const articleRoomMeta = new Map<string, { name: string; thumbnail?: string }>();
 
 export function makeEmptyRoom(roomId: string): RoomState {
@@ -306,7 +331,7 @@ export async function ensureRoomLoaded(roomId: string): Promise<RoomState> {
     // the whole backlog, authors and reply targets together.
     const nameIds = new Set<string>();
     for (const m of dbRoom.messages) {
-      if (m.userId && m.userId !== "operator") nameIds.add(m.userId);
+      if (m.userId && m.userId !== "operator" && !isServerAuthor(m.userId)) nameIds.add(m.userId);
       const rid = (m as any).replyToUserId;
       if (rid) nameIds.add(String(rid));
     }
@@ -325,18 +350,32 @@ export async function ensureRoomLoaded(roomId: string): Promise<RoomState> {
       avatarColor: "#D4A017",
       avatar: "/brand/roles/operator.svg",
     };
+    // The host's face, when any of its messages are in the backlog.
+    let hostFace: string | undefined;
+    const hostMsg = dbRoom.messages.find((m) => String(m.userId || "").startsWith("host:"));
+    if (hostMsg) {
+      const hl = await prisma.lobby
+        .findUnique({
+          where: { id: String(hostMsg.userId).slice(5) },
+          select: { hostConfig: true } as any,
+        })
+        .catch(() => null);
+      hostFace = hostAvatar(String((hl as any)?.hostConfig?.emoji || ""));
+    }
     r.msgs = dbRoom.messages.map((m) => ({
       id: m.id,
       user:
         m.userId === "operator"
           ? OPERATOR_USER
-          : {
-              id: m.userId,
-              name: displayName(liveNames, m.userId, m.userName),
-              role: "member" as const,
-              avatar: liveProfiles.get(m.userId)?.avatar ?? undefined,
-              avatarColor: liveProfiles.get(m.userId)?.avatarColor ?? undefined,
-            },
+          : isServerAuthor(m.userId)
+            ? serverAuthorOf(m.userId, m.userName, hostFace)
+            : {
+                id: m.userId,
+                name: displayName(liveNames, m.userId, m.userName),
+                role: "member" as const,
+                avatar: liveProfiles.get(m.userId)?.avatar ?? undefined,
+                avatarColor: liveProfiles.get(m.userId)?.avatarColor ?? undefined,
+              },
       body: m.body,
       ts: new Date(m.ts).getTime(),
       editedAt: (m as any).editedAt ? new Date((m as any).editedAt).getTime() : undefined,
@@ -649,7 +688,7 @@ export function buildStatePayload(room: RoomState) {
     voiceQueue: Array.from(room.voiceQueue || []),
     voiceSpeakers: Array.from(room.voiceSpeakers || []),
     launch: room.launch ? serializeLaunch(room) : null,
-    pinned: Array.from(((room as any).pinned as Set<string> | undefined) || []),
+    pinned: Array.from(room.pinnedMsgs || []),
   };
 }
 

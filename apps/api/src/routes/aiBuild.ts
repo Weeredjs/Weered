@@ -1,6 +1,5 @@
 import type { FastifyInstance } from "fastify";
-import { prisma } from "../lib/prisma";
-import { takeAiBudget } from "../lib/aiBudget";
+import { allowBuild, nowLine, promptOf } from "../lib/build/allowance";
 import { hasLobbyPerm } from "../lib/lobbyPerms";
 import { runBuilder } from "../lib/buildAi";
 import {
@@ -36,9 +35,6 @@ type Opts = {
   lobbyAdminAccess: (req: any, reply: any, minLevel?: number) => Promise<any>;
 };
 
-const PAID_DAILY = 60;
-const FREE_DAILY = 10;
-const PROMPT_MAX = 600;
 const LOOK_KEYS = [
   "theme",
   "palette",
@@ -55,63 +51,8 @@ const LOOK_KEYS = [
   "density",
 ];
 
-let site = { day: "", n: 0 };
-function takeSite(): boolean {
-  const day = new Date().toISOString().slice(0, 10);
-  if (site.day !== day) site = { day, n: 0 };
-  if (site.n >= Number(process.env.AI_BUILD_SITE_DAILY || 3000)) return false;
-  site.n++;
-  return true;
-}
-
-/** "Now" in the person's own zone, so "Friday at 8" becomes a real time. */
-function nowLine(tz: unknown): string {
-  const zone =
-    typeof tz === "string" && /^[A-Za-z_]+(\/[A-Za-z0-9_+-]+){0,2}$/.test(tz) ? tz : "UTC";
-  try {
-    const d = new Date();
-    const local = d.toLocaleString("en-CA", {
-      timeZone: zone,
-      dateStyle: "full",
-      timeStyle: "short",
-    });
-    const off =
-      new Intl.DateTimeFormat("en-US", { timeZone: zone, timeZoneName: "longOffset" })
-        .formatToParts(d)
-        .find((p) => p.type === "timeZoneName")
-        ?.value.match(/[+-]\d{2}:\d{2}/)?.[0] || "+00:00";
-    return `Now: ${local} (${zone}, UTC${off}).`;
-  } catch {
-    return `Now: ${new Date().toISOString()} (UTC).`;
-  }
-}
-
-function promptOf(body: any): string {
-  return String(body?.prompt ?? "")
-    .replace(/[\u0000-\u0008\u000b-\u001f\u007f]/g, " ")
-    .trim()
-    .slice(0, PROMPT_MAX);
-}
-
 export default async function aiBuildRoutes(app: FastifyInstance, opts: Opts) {
   const { authFromHeader, getAI, lobbyAdminAccess } = opts;
-
-  /** One build from the person's allowance, and one from the site's. */
-  async function allow(userId: string, reply: any): Promise<boolean> {
-    const row = await prisma.user
-      .findUnique({ where: { id: userId }, select: { tier: true } })
-      .catch(() => null);
-    const paid = !!row?.tier && row.tier !== "INNOCENT";
-    if (!takeAiBudget(userId, "build", paid ? PAID_DAILY : FREE_DAILY)) {
-      reply.code(429).send({ ok: false, error: "ai_budget_reached", paid });
-      return false;
-    }
-    if (!takeSite()) {
-      reply.code(429).send({ ok: false, error: "builder_busy" });
-      return false;
-    }
-    return true;
-  }
 
   app.post(
     "/ai/build/lobby",
@@ -124,7 +65,7 @@ export default async function aiBuildRoutes(app: FastifyInstance, opts: Opts) {
       if (prompt.length < 3) return reply.code(400).send({ ok: false, error: "prompt_required" });
       const ai = await getAI();
       if (!ai) return reply.code(503).send({ ok: false, error: "ai_unavailable" });
-      if (!(await allow(u.id, reply))) return;
+      if (!(await allowBuild(u.id, reply))) return;
 
       const cur =
         body.current && typeof body.current === "object"
@@ -172,7 +113,7 @@ export default async function aiBuildRoutes(app: FastifyInstance, opts: Opts) {
         return reply.code(413).send({ ok: false, error: "layout_too_large" });
       const ai = await getAI();
       if (!ai) return reply.code(503).send({ ok: false, error: "ai_unavailable" });
-      if (!(await allow(ctx.user.id, reply))) return;
+      if (!(await allowBuild(ctx.user.id, reply))) return;
 
       const view = lobbyForModel(
         {
@@ -213,7 +154,7 @@ export default async function aiBuildRoutes(app: FastifyInstance, opts: Opts) {
       if (prompt.length < 3) return reply.code(400).send({ ok: false, error: "prompt_required" });
       const ai = await getAI();
       if (!ai) return reply.code(503).send({ ok: false, error: "ai_unavailable" });
-      if (!(await allow(u.id, reply))) return;
+      if (!(await allowBuild(u.id, reply))) return;
 
       const look: Record<string, unknown> = {};
       const raw = body.look && typeof body.look === "object" ? body.look : {};

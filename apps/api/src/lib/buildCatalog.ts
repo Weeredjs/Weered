@@ -438,6 +438,13 @@ export const BUILD_ROOM_PRESETS = [
 
 export const BUILD_BLOCKS = [
   {
+    type: "custom",
+    name: "Your own block or game",
+    blurb:
+      "Describe it and it's built: a poll, a guestbook, a tier list, trivia night. Adding one leaves an empty block they describe in its panel.",
+    group: "Make your own",
+  },
+  {
     type: "welcome",
     name: "Welcome banner",
     blurb: "A headline, a line of copy, a button.",

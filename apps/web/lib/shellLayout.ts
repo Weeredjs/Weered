@@ -41,8 +41,9 @@ export type CoreId = LeftCore | PanelCore | HomeCore;
 export const CORE_IDS: CoreId[] = [...LEFT_CORES, ...PANEL_CORES, ...HOME_CORES];
 
 /** Every lobby block but the game integration, which needs a lobby's module,
- *  and the front desk, which rings a lobby's staff. */
-export type ShellBlockType = Exclude<BlockType, "game" | "frontdesk">;
+ *  the front desk, which rings a lobby's staff, and custom blocks, whose code
+ *  and data belong to a lobby. */
+export type ShellBlockType = Exclude<BlockType, "game" | "frontdesk" | "custom">;
 export const SHELL_BLOCK_TYPES: ShellBlockType[] = [
   "welcome",
   "links",

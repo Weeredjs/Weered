@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { useWeered } from "../../../../components/WeeredProvider";
 import LobbyChatPanel from "../../../../components/LobbyChatPanel";
 import RoomStage from "../../../../components/room/RoomStage";
@@ -24,6 +24,9 @@ import { MembersTab } from "./MembersTab";
 import { ModerationTab } from "./ModerationTab";
 import { ModulesTab } from "./ModulesTab";
 import { FrontDoorTab } from "./FrontDoorTab";
+import { HostTab } from "./HostTab";
+import { AutomationsTab } from "./AutomationsTab";
+import { PagesTab } from "./PagesTab";
 import { DEFAULT_ROLE_NAMES, RolesTab } from "./RolesTab";
 import { RoomsTab } from "./RoomsTab";
 import { TiersTab } from "./TiersTab";
@@ -39,6 +42,11 @@ export default function LobbyAdminPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [nav, setNav] = useState<NavId>("branding");
+  // ?tab=pages and the like open that tab (links from the lobby, e.g. Pages).
+  const wantTab = useSearchParams()?.get("tab") || "";
+  useEffect(() => {
+    if (wantTab && NAV_ITEMS.some((n) => n.id === wantTab)) setNav(wantTab as NavId);
+  }, [wantTab]);
   const [voiceOpen, setVoiceOpen] = useState(false);
 
   const adminRoomId = `@admin-${lobbyId}`;
@@ -309,6 +317,9 @@ export default function LobbyAdminPage() {
             {nav === "branding" && <BrandingTab lobby={lobby} onRefresh={load} />}
             {nav === "modules" && <ModulesTab lobby={lobby} onRefresh={load} />}
             {nav === "door" && <FrontDoorTab lobby={lobby} onRefresh={load} />}
+            {nav === "host" && <HostTab lobby={lobby} />}
+            {nav === "automations" && <AutomationsTab lobby={lobby} />}
+            {nav === "pages" && <PagesTab lobby={lobby} onRefresh={load} />}
             {nav === "moderation" && <ModerationTab lobby={lobby} onRefresh={load} />}
             {nav === "rooms" && (
               <RoomsTab

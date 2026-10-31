@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from "react";
 import { S, apiFetch } from "./shared";
 import { EventStatusBadge } from "./ChallengesTab";
 import { LobbyEvent } from "./TiersTab";
+import EventDescribe from "../../../../components/build/EventDescribe";
 
 export function LobbyEventsTab({
   lobbyId,
@@ -135,6 +136,15 @@ export function LobbyEventsTab({
           {msg}
         </div>
       )}
+
+      <EventDescribe
+        lobbyId={lobbyId}
+        accent="#7c3aed"
+        onCreated={() => {
+          void load();
+          onRefresh();
+        }}
+      />
 
       <div>
         <div style={S.sectionTitle}>Create Event</div>

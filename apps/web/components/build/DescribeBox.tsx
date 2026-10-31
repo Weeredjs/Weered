@@ -7,10 +7,11 @@
 import React, { useEffect, useRef, useState } from "react";
 import { buildErrorText } from "../../lib/aiBuild";
 
-type Kind = "lobby" | "edit" | "drip";
 export type DescribeResult = { summary: string; undo?: () => void };
 
-const STEPS: Record<Kind, string[]> = {
+// What the line under the box says while it builds, by kind (the describe-it
+// job's id, api lib/build/jobs). Anything else gets the plain three steps.
+const STEPS: Record<string, string[]> = {
   lobby: [
     "Reading what you want…",
     "Picking the rooms…",
@@ -20,7 +21,28 @@ const STEPS: Record<Kind, string[]> = {
   ],
   edit: ["Reading the room…", "Making the change…", "Checking it fits…"],
   drip: ["Picking colours…", "Trying it on…"],
+  event: ["Reading the plan…", "Working out the time…", "Writing it up…"],
+  room: ["Reading what you want…", "Setting up the room…"],
+  roles: ["Reading the theme…", "Naming the ranks…"],
+  rules: ["Reading the rules…", "Setting the filters…"],
+  door: ["Reading who you want in…", "Writing the questions…"],
+  crew: ["Reading the vibe…", "Cutting the patch…", "Writing it up…"],
+  overlay: ["Reading the look…", "Laying it out…"],
+  host: ["Meeting your host…", "Writing their lines…"],
+  post: ["Reading the schedule…", "Writing the post…"],
+  alert: ["Finding the room…", "Setting the alert…"],
+  feed: ["Finding the channel…", "Hooking it up…"],
+  block: ["Reading what you want…", "Writing the code…", "Styling it…", "Checking it's safe…"],
+  game: [
+    "Reading the game…",
+    "Writing the rules…",
+    "Writing the questions…",
+    "Wiring up the players…",
+    "Checking it's safe…",
+  ],
+  page: ["Reading what you want…", "Writing the page…", "Tidying it up…"],
 };
+const PLAIN_STEPS = ["Reading what you want…", "Putting it together…", "Checking it…"];
 
 export default function DescribeBox({
   kind,
@@ -35,8 +57,9 @@ export default function DescribeBox({
   autoFocus = false,
   onBuild,
   onClose,
+  className = "",
 }: {
-  kind: Kind;
+  kind: string;
   accent: string;
   variant?: "panel" | "bar";
   label?: string;
@@ -50,6 +73,7 @@ export default function DescribeBox({
   autoFocus?: boolean;
   onBuild: (prompt: string) => Promise<DescribeResult>;
   onClose?: () => void;
+  className?: string;
 }) {
   const [text, setText] = useState(initial);
   const [busy, setBusy] = useState(false);
@@ -57,7 +81,7 @@ export default function DescribeBox({
   const [done, setDone] = useState<DescribeResult | null>(null);
   const [err, setErr] = useState("");
   const ran = useRef(false);
-  const steps = STEPS[kind];
+  const steps = STEPS[kind] || PLAIN_STEPS;
 
   useEffect(() => {
     if (!busy) return;
@@ -125,7 +149,7 @@ export default function DescribeBox({
 
   return (
     <div
-      className={`db is-${variant}${busy ? " is-busy" : ""}`}
+      className={`db is-${variant}${busy ? " is-busy" : ""}${className ? ` ${className}` : ""}`}
       style={{ "--db-accent": accent } as React.CSSProperties}
     >
       {label && (

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState, type CSSProperties } from "react";
 import EmptyState from "./EmptyState";
 import LoadingState from "./LoadingState";
+import EventDescribe from "./build/EventDescribe";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
@@ -107,129 +108,132 @@ export default function LobbyEvents({
   };
 
   const postBar = canPost && (
-    <div
-      style={{
-        border: "1px solid rgba(255,255,255,.08)",
-        borderRadius: 10,
-        padding: formOpen ? "12px 14px" : "8px 14px",
-        background: "rgba(255,255,255,.02)",
-      }}
-    >
-      {formOpen ? (
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          <input
-            style={inputStyle}
-            placeholder="Event title: Seed night on The Outpost"
-            value={fTitle}
-            maxLength={120}
-            onChange={(e) => setFTitle(e.target.value)}
-          />
-          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-            {Array.from({ length: 7 }, (_, i) => {
-              const d = new Date();
-              d.setDate(d.getDate() + i);
-              const label =
-                i === 0
-                  ? "Tonight"
-                  : i === 1
-                    ? "Tomorrow"
-                    : d.toLocaleDateString([], { weekday: "short", day: "numeric" });
-              const sel = fDay === i;
-              return (
-                <button
-                  key={i}
-                  onClick={() => setFDay(i)}
-                  style={{
-                    padding: "6px 12px",
-                    borderRadius: 999,
-                    border: `1px solid ${sel ? color : "rgba(255,255,255,.16)"}`,
-                    background: sel ? `${color}22` : "transparent",
-                    color: sel ? color : "rgba(226,232,240,.8)",
-                    fontSize: 12.5,
-                    fontWeight: 600,
-                    cursor: "pointer",
-                  }}
-                >
-                  {label}
-                </button>
-              );
-            })}
-            <select
-              value={fTime}
-              onChange={(e) => setFTime(Number(e.target.value))}
-              style={{ ...inputStyle, padding: "6px 10px" }}
-            >
-              {Array.from({ length: 48 }, (_, i) => {
-                const mins = i * 30;
+    <>
+      <EventDescribe lobbyId={lobbyId} accent={color} onCreated={() => void load()} />
+      <div
+        style={{
+          border: "1px solid rgba(255,255,255,.08)",
+          borderRadius: 10,
+          padding: formOpen ? "12px 14px" : "8px 14px",
+          background: "rgba(255,255,255,.02)",
+        }}
+      >
+        {formOpen ? (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <input
+              style={inputStyle}
+              placeholder="Event title: Seed night on The Outpost"
+              value={fTitle}
+              maxLength={120}
+              onChange={(e) => setFTitle(e.target.value)}
+            />
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+              {Array.from({ length: 7 }, (_, i) => {
                 const d = new Date();
-                d.setHours(Math.floor(mins / 60), mins % 60, 0, 0);
+                d.setDate(d.getDate() + i);
+                const label =
+                  i === 0
+                    ? "Tonight"
+                    : i === 1
+                      ? "Tomorrow"
+                      : d.toLocaleDateString([], { weekday: "short", day: "numeric" });
+                const sel = fDay === i;
                 return (
-                  <option key={mins} value={mins}>
-                    {d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
-                  </option>
+                  <button
+                    key={i}
+                    onClick={() => setFDay(i)}
+                    style={{
+                      padding: "6px 12px",
+                      borderRadius: 999,
+                      border: `1px solid ${sel ? color : "rgba(255,255,255,.16)"}`,
+                      background: sel ? `${color}22` : "transparent",
+                      color: sel ? color : "rgba(226,232,240,.8)",
+                      fontSize: 12.5,
+                      fontWeight: 600,
+                      cursor: "pointer",
+                    }}
+                  >
+                    {label}
+                  </button>
                 );
               })}
-            </select>
+              <select
+                value={fTime}
+                onChange={(e) => setFTime(Number(e.target.value))}
+                style={{ ...inputStyle, padding: "6px 10px" }}
+              >
+                {Array.from({ length: 48 }, (_, i) => {
+                  const mins = i * 30;
+                  const d = new Date();
+                  d.setHours(Math.floor(mins / 60), mins % 60, 0, 0);
+                  return (
+                    <option key={mins} value={mins}>
+                      {d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
+                    </option>
+                  );
+                })}
+              </select>
+            </div>
+            <input
+              style={inputStyle}
+              placeholder="Details (optional)"
+              value={fDesc}
+              maxLength={300}
+              onChange={(e) => setFDesc(e.target.value)}
+            />
+            <div style={{ display: "flex", gap: 8 }}>
+              <button
+                onClick={create}
+                disabled={busy || !fTitle.trim()}
+                style={{
+                  padding: "7px 16px",
+                  borderRadius: 6,
+                  border: `1px solid ${color}66`,
+                  background: `${color}22`,
+                  color: color,
+                  fontWeight: 700,
+                  fontSize: 12.5,
+                  cursor: "pointer",
+                  opacity: busy || !fTitle.trim() ? 0.55 : 1,
+                }}
+              >
+                {busy ? "Posting…" : "Post event"}
+              </button>
+              <button
+                onClick={() => setFormOpen(false)}
+                style={{
+                  padding: "7px 12px",
+                  borderRadius: 6,
+                  border: "1px solid rgba(255,255,255,.14)",
+                  background: "transparent",
+                  color: "rgba(226,232,240,.8)",
+                  fontSize: 12.5,
+                  cursor: "pointer",
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+            {err && <div style={{ fontSize: 12, color: "#E08A83" }}>{err}</div>}
           </div>
-          <input
-            style={inputStyle}
-            placeholder="Details (optional)"
-            value={fDesc}
-            maxLength={300}
-            onChange={(e) => setFDesc(e.target.value)}
-          />
-          <div style={{ display: "flex", gap: 8 }}>
-            <button
-              onClick={create}
-              disabled={busy || !fTitle.trim()}
-              style={{
-                padding: "7px 16px",
-                borderRadius: 6,
-                border: `1px solid ${color}66`,
-                background: `${color}22`,
-                color: color,
-                fontWeight: 700,
-                fontSize: 12.5,
-                cursor: "pointer",
-                opacity: busy || !fTitle.trim() ? 0.55 : 1,
-              }}
-            >
-              {busy ? "Posting…" : "Post event"}
-            </button>
-            <button
-              onClick={() => setFormOpen(false)}
-              style={{
-                padding: "7px 12px",
-                borderRadius: 6,
-                border: "1px solid rgba(255,255,255,.14)",
-                background: "transparent",
-                color: "rgba(226,232,240,.8)",
-                fontSize: 12.5,
-                cursor: "pointer",
-              }}
-            >
-              Cancel
-            </button>
-          </div>
-          {err && <div style={{ fontSize: 12, color: "#E08A83" }}>{err}</div>}
-        </div>
-      ) : (
-        <button
-          onClick={() => setFormOpen(true)}
-          style={{
-            background: "transparent",
-            border: "none",
-            color: color,
-            fontWeight: 700,
-            fontSize: 12.5,
-            cursor: "pointer",
-            padding: 0,
-          }}
-        >
-          + Post an event
-        </button>
-      )}
-    </div>
+        ) : (
+          <button
+            onClick={() => setFormOpen(true)}
+            style={{
+              background: "transparent",
+              border: "none",
+              color: color,
+              fontWeight: 700,
+              fontSize: 12.5,
+              cursor: "pointer",
+              padding: 0,
+            }}
+          >
+            + Post an event
+          </button>
+        )}
+      </div>
+    </>
   );
 
   if (events.length === 0)

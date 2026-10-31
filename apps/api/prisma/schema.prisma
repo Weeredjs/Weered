@@ -172,9 +172,13 @@ model Lobby {
   // - blockedDomains: substrings matched against any URL in the message.
   // - newAccountChatHours: messages from accounts younger than N hours are
   //   blocked. 0 = disabled.
+  // - newAccountLinkHours: links from accounts younger than N hours are
+  //   blocked; they can still chat. 0 = disabled. (James 2026-10-31: "no
+  //   links from brand-new accounts".)
   blockedWords        String[] @default([])
   blockedDomains      String[] @default([])
   newAccountChatHours Int      @default(0)
+  newAccountLinkHours Int      @default(0)
 
   rooms            Room[]
   members          LobbyMember[]
@@ -187,6 +191,14 @@ model Lobby {
   forumPosts       ForumPost[]
   joinRequests     LobbyJoinRequest[]
   communityServers CommunityServer[]
+  automations      LobbyAutomation[]
+  customBlocks     CustomBlock[]
+  pages            LobbyPage[]
+
+  // The lobby's AI host (routes/lobbyExtras.ts, lib/lobbyHost.ts): a character
+  // in the lobby chat who welcomes people and answers when mentioned.
+  // {on, name, emoji, persona, welcome, welcomeLines[]}
+  hostConfig       Json?
 }
 
 /// Community game servers registered against a lobby (e.g. WindrosePlus-enabled
@@ -547,6 +559,9 @@ model User {
   // Streamer overlay token — OBS browser-source URL is /overlay/<token>.
   // Anyone with the URL can render the user's public live state; rotate to revoke.
   overlayToken String? @unique
+  // The overlay's look (routes/overlay.ts): position, size, style, accent, what it
+  // shows, a tagline. Set in Settings, or described (lib/build/jobs/people.ts).
+  overlayConfig Json?
 
   // GPS location (opt-in only)
   locationOptIn     Boolean   @default(false)
@@ -3405,4 +3420,84 @@ model VaSlotClaim {
   @@unique([lobbyId, flightKey, slotKey])
   @@unique([lobbyId, flightKey, userId])
   @@index([lobbyId, flightKey])
+}
+
+/// A lobby's automations (routes/lobbyExtras.ts, lib/lobbyAutomations.ts):
+/// scheduled posts in its chat, alerts ("ping me when 4 are in War Room") and
+/// feeds from other sites (YouTube uploads, Twitch going live, any RSS).
+/// kind: post | alert | feed; spec is that kind's shape (lib/build/jobs/people.ts).
+/// Alerts belong to the member who set them (createdById); posts and feeds to
+/// the lobby's staff.
+model LobbyAutomation {
+  id          String    @id @default(cuid())
+  lobbyId     String
+  kind        String
+  spec        Json
+  active      Boolean   @default(true)
+  createdById String
+  nextRunAt   DateTime?
+  lastRunAt   DateTime?
+  lastResult  String?
+  // Feeds: what was already seen; alerts: whether the room is over its threshold.
+  state       Json?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  lobby       Lobby     @relation(fields: [lobbyId], references: [id], onDelete: Cascade)
+
+  @@index([lobbyId])
+  @@index([kind, active, nextRunAt])
+}
+
+/// A custom block or game (the real-code builder): a small page the AI wrote,
+/// run in the walled-off box (web lib/blockSandbox.ts). The Home layout points
+/// at it by id; the code lives here, out of the layout's 48k.
+model CustomBlock {
+  id          String      @id @default(cuid())
+  lobbyId     String
+  kind        String      @default("block") // block | game
+  title       String
+  height      String      @default("m")
+  code        String
+  prompt      String      @default("")
+  createdById String
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  lobby       Lobby       @relation(fields: [lobbyId], references: [id], onDelete: Cascade)
+  data        BlockData[]
+
+  @@index([lobbyId])
+}
+
+/// What a custom block keeps for everyone (weered.get/set/list): one row per key.
+model BlockData {
+  id          String      @id @default(cuid())
+  blockId     String
+  key         String
+  value       Json
+  updatedById String      @default("")
+  updatedBy   String      @default("")
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  block       CustomBlock @relation(fields: [blockId], references: [id], onDelete: Cascade)
+
+  @@unique([blockId, key])
+  @@index([blockId, createdAt])
+}
+
+/// A lobby's pages (the Pages tab): a clan wiki, a build guide, house rules, in
+/// markdown (web components/forum/Markdown.tsx renders it).
+model LobbyPage {
+  id          String   @id @default(cuid())
+  lobbyId     String
+  slug        String
+  title       String
+  body        String
+  order       Int      @default(0)
+  createdById String   @default("")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  lobby       Lobby    @relation(fields: [lobbyId], references: [id], onDelete: Cascade)
+
+  @@unique([lobbyId, slug])
+  @@index([lobbyId, order])
 }
