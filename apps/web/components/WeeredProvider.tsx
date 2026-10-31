@@ -491,6 +491,8 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
         if (u) {
           setMe(u);
           try { localStorage.setItem("weered_user", JSON.stringify(u)); } catch {}
+          // This device has an account: the login page opens on Sign in (app/login).
+          try { localStorage.setItem("weered:returning", String(u.username || "1")); } catch {}
           if (u.globalRole) setGlobalRole(String(u.globalRole));
         } else {
           try { const raw = localStorage.getItem("weered_user"); if (raw) setMe(JSON.parse(raw)); } catch {}

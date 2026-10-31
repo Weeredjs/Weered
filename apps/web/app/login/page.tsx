@@ -5,6 +5,20 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { onActivate } from "@/lib/a11y";
 
 const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || "";
+/** Set on this device by any sign-in (here, and the socket's auth:ok in
+ *  WeeredProvider); sign-out keeps it. Holds the username, or "1". */
+const RETURNING_KEY = "weered:returning";
+
+/** Hand a login to the browser's password manager (Chrome, Edge). The form is
+ *  sent by fetch, so the browser can't always tell that it worked. */
+function rememberLogin(id: string, password: string) {
+  try {
+    const PC = (window as any).PasswordCredential;
+    if (PC && navigator.credentials?.store) {
+      void navigator.credentials.store(new PC({ id, password, name: id })).catch(() => {});
+    }
+  } catch {}
+}
 
 function LoginForm() {
   const router = useRouter();
@@ -68,9 +82,45 @@ function LoginForm() {
     return n.startsWith("/") ? n : "/home";
   }, [sp]);
 
+  // A device that has signed in before opens on Sign in, with its name filled,
+  // even from "Get in" (James 2026-10-31: "Get In" opened Create account, so
+  // the browser never offered his saved logins). Create account is one tab away.
   React.useEffect(() => {
+    let returning = "";
+    try {
+      returning = localStorage.getItem(RETURNING_KEY) || "";
+    } catch {}
+    if (returning) {
+      if (returning !== "1") setUsername((u) => u || returning);
+      return;
+    }
     if (sp?.get("mode") === "register") setMode("register");
   }, [sp]);
+
+  // Saved logins, where the browser keeps them (Chrome, Edge): offered as soon
+  // as the page opens, and picking one signs straight in.
+  React.useEffect(() => {
+    try {
+      if (localStorage.getItem("weered_user")) return;
+    } catch {}
+    const PC = (window as any).PasswordCredential;
+    if (!PC || !navigator.credentials?.get) return;
+    let cancelled = false;
+    navigator.credentials
+      .get({ password: true, mediation: "optional" } as CredentialRequestOptions)
+      .then((c: any) => {
+        if (cancelled || c?.type !== "password" || !c.id || !c.password) return;
+        setMode("login");
+        setUsername(c.id);
+        setPassword(c.password);
+        void submit({ mode: "login", u: c.id, p: c.password });
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once, on open
+  }, []);
 
   React.useEffect(() => {
     try {
@@ -78,22 +128,23 @@ function LoginForm() {
     } catch {}
   }, [router, nextPath]);
 
-  async function submit() {
-    const u = username.trim();
-    const p = password.trim();
+  async function submit(over?: { mode: "login" | "register"; u: string; p: string }) {
+    const m = over?.mode ?? mode;
+    const u = (over?.u ?? username).trim();
+    const p = (over?.p ?? password).trim();
     const e = email.trim();
     setErr("");
     if (!u || !p) return setErr("Username and password required.");
-    if (mode === "register" && !e) return setErr("Email address required.");
-    if (mode === "register" && TURNSTILE_SITE_KEY && !captchaToken) {
+    if (m === "register" && !e) return setErr("Email address required.");
+    if (m === "register" && TURNSTILE_SITE_KEY && !captchaToken) {
       return setErr("Please complete the captcha.");
     }
     setBusy(true);
     try {
-      const url = mode === "register" ? `${API}/auth/register` : `${API}/auth/login`;
+      const url = m === "register" ? `${API}/auth/register` : `${API}/auth/login`;
       const body: any = { username: u, password: p };
-      if (mode === "register") body.email = e;
-      if (mode === "register" && captchaToken) body.captchaToken = captchaToken;
+      if (m === "register") body.email = e;
+      if (m === "register" && captchaToken) body.captchaToken = captchaToken;
       // credentials: the session is the httpOnly cookie this response sets.
       // Production's fetch wrapper (app/layout.tsx) adds it for api.weered.ca,
       // but a stack on another origin (the CI E2E job) needs it said here, or
@@ -111,6 +162,10 @@ function LoginForm() {
         document.documentElement.setAttribute("data-weered-authed", "1");
       } catch {}
       if (j?.user) localStorage.setItem("weered_user", JSON.stringify(j.user));
+      try {
+        localStorage.setItem(RETURNING_KEY, String(j?.user?.username || u));
+      } catch {}
+      rememberLogin(u, p);
       // Verification mail still goes out, but it gates nothing: no dead-end
       // "check your email" screen, straight in.
       router.replace(nextPath);
@@ -368,6 +423,7 @@ function LoginForm() {
 
           <div className="wl-tabs">
             <button
+              type="button"
               className={`wl-tab${mode === "login" ? " active" : ""}`}
               onClick={() => {
                 setMode("login");
@@ -377,6 +433,7 @@ function LoginForm() {
               Sign in
             </button>
             <button
+              type="button"
               className={`wl-tab${mode === "register" ? " active" : ""}`}
               onClick={() => {
                 setMode("register");
@@ -468,21 +525,40 @@ function LoginForm() {
               </button>
             </div>
           ) : (
-            <>
-              <label className="wl-label">username</label>
+            // A real form, so password managers know this is a login: they
+            // offer saved accounts on Sign in and offer to save on success.
+            <form
+              method="post"
+              noValidate
+              onSubmit={(e) => {
+                e.preventDefault();
+                void submit();
+              }}
+            >
+              <label className="wl-label" htmlFor="wl-username">
+                username
+              </label>
               <input
+                id="wl-username"
+                name="username"
                 className="wl-input"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 placeholder="your_handle"
                 autoComplete="username"
+                autoCapitalize="none"
+                spellCheck={false}
                 autoFocus
               />
 
               {mode === "register" && (
                 <>
-                  <label className="wl-label">email</label>
+                  <label className="wl-label" htmlFor="wl-email">
+                    email
+                  </label>
                   <input
+                    id="wl-email"
+                    name="email"
                     className="wl-input"
                     type="email"
                     value={email}
@@ -496,7 +572,9 @@ function LoginForm() {
               <div
                 style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}
               >
-                <label className="wl-label">password</label>
+                <label className="wl-label" htmlFor="wl-password">
+                  password
+                </label>
                 {mode === "login" && (
                   <a
                     href="/forgot-password"
@@ -513,15 +591,14 @@ function LoginForm() {
                 )}
               </div>
               <input
+                id="wl-password"
+                name="password"
                 className="wl-input"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••••"
                 autoComplete={mode === "login" ? "current-password" : "new-password"}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") void submit();
-                }}
               />
 
               {mode === "register" && TURNSTILE_SITE_KEY && (
@@ -533,10 +610,10 @@ function LoginForm() {
 
               {err && <div className="wl-error">{err}</div>}
 
-              <button className="wl-btn" disabled={busy} onClick={submit}>
+              <button type="submit" className="wl-btn" disabled={busy}>
                 {busy ? "One sec…" : mode === "login" ? "Sign in" : "Create account"}
               </button>
-            </>
+            </form>
           )}
 
           <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "18px 0 4px" }}>
@@ -555,6 +632,7 @@ function LoginForm() {
           </div>
 
           <button
+            type="button"
             onClick={googleLogin}
             disabled={busy}
             style={{
