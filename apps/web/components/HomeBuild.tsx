@@ -156,7 +156,8 @@ export default function HomeBuild({
             <ShellSketch />
             <div className="home-build-body">
               <div className="home-build-eyebrow">Your Weered</div>
-              <h2 className="home-build-title">Design your Weered</h2>
+              {/* James 2026-10-30: "Say change your drip." */}
+              <h2 className="home-build-title">Change your drip</h2>
               <p className="home-build-line">
                 Move every section, add blocks, pick a colourway, corners and effects.
               </p>

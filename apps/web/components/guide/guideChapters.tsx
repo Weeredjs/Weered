@@ -62,7 +62,7 @@ export const CHAPTERS: Chapter[] = [
   },
   {
     id: "yours",
-    name: "Your Weered",
+    name: "Change your drip",
     icon: "🎨",
     color: "#c084fc",
     blurb: "Move every section, add blocks, pick a colourway, corners and effects.",
@@ -300,7 +300,7 @@ function Start({ go, actions }: { go: (id: ChapterId) => void; actions: GuideAct
   ];
   if (actions.design)
     steps.push({
-      lead: "Arrange your Weered.",
+      lead: "Change your drip.",
       rest: "Move sections between your sidebars and Home, and add blocks.",
       btn: <Btn onClick={actions.design}>✦ Open Design</Btn>,
     });

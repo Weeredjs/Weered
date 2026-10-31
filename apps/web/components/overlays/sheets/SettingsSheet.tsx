@@ -520,7 +520,7 @@ function DesignBar() {
       >
         <span style={{ fontSize: 18, color: "var(--weered-accent-text, #c4b5fd)" }}>✦</span>
         <span style={{ minWidth: 0 }}>
-          <span style={{ display: "block", fontSize: 13.5, fontWeight: 800 }}>Design your Weered</span>
+          <span style={{ display: "block", fontSize: 13.5, fontWeight: 800 }}>Change your drip</span>
           <span style={{ display: "block", fontSize: 11.5, opacity: 0.65 }}>
             Move any section, put Friends where you want them, add blocks, pick your own colour.
           </span>

@@ -141,7 +141,7 @@ export const CORE_META: Record<CoreId, CoreMeta> = {
   },
   build: {
     name: "Build your own",
-    blurb: "Build a lobby, design your Weered, and the lobbies you run.",
+    blurb: "Build a lobby, change your drip, and the lobbies you run.",
     icon: "🛠",
     regions: ["home"],
   },

@@ -177,7 +177,7 @@ export default function ShellDesigner() {
             gap: 8,
           }}
         >
-          <span style={{ color: accent, fontSize: 16 }}>✦</span> Design your Weered
+          <span style={{ color: accent, fontSize: 16 }}>✦</span> Change your drip
         </span>
         <span
           style={{ width: 1, height: 20, background: "rgba(255,255,255,.12)", margin: "0 4px" }}

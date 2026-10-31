@@ -1227,7 +1227,7 @@ export default function HomePage() {
               type="button"
               onClick={() => startDesign()}
               className="home-topbar-design"
-              title="Design your Weered: move sections, add blocks, pick a look"
+              title="Change your drip: move sections, add blocks, pick a look"
             >
               <span aria-hidden>✦</span> Design
             </button>
