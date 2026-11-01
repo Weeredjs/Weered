@@ -16,7 +16,8 @@ export function BrandingTab({ lobby, onRefresh }: { lobby: LobbyData; onRefresh:
   const [msg, setMsg] = useState("");
 
   const [joinMode, setJoinMode] = useState(lobby.joinMode || "OPEN");
-  const [joinPassword, setJoinPassword] = useState(lobby.joinPassword || "");
+  // A saved password is kept hashed and never shown: type one to set or change it.
+  const [joinPassword, setJoinPassword] = useState("");
   const [joinSaving, setJoinSaving] = useState(false);
   const [joinMsg, setJoinMsg] = useState("");
 
@@ -28,8 +29,13 @@ export function BrandingTab({ lobby, onRefresh }: { lobby: LobbyData; onRefresh:
       body: JSON.stringify({ joinMode, password: joinPassword }),
     });
     setJoinSaving(false);
-    setJoinMsg(j.ok ? "Saved." : j.error || "Failed.");
-    if (j.ok) onRefresh();
+    setJoinMsg(
+      j.ok ? "Saved." : j.error === "password_required" ? "Type a password." : j.error || "Failed.",
+    );
+    if (j.ok) {
+      setJoinPassword("");
+      onRefresh();
+    }
   }
 
   async function save() {
@@ -183,7 +189,11 @@ export function BrandingTab({ lobby, onRefresh }: { lobby: LobbyData; onRefresh:
               type="text"
               value={joinPassword}
               onChange={(e) => setJoinPassword(e.target.value)}
-              placeholder="Enter password"
+              placeholder={
+                lobby.hasJoinPassword
+                  ? "A password is set. Type a new one to change it"
+                  : "Enter password"
+              }
             />
           </div>
         )}

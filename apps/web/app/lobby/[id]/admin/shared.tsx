@@ -53,7 +53,8 @@ export type LobbyData = {
   /** Per-level icon shown beside members at that level; blank means none. */
   roleIcons?: Record<string, string>;
   joinMode: string;
-  joinPassword?: string | null;
+  /** A join password is set (it's kept hashed, so never sent back). */
+  hasJoinPassword?: boolean;
   blockedWords?: string[];
   blockedDomains?: string[];
   newAccountChatHours?: number;

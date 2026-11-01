@@ -638,7 +638,8 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
         roleNames,
         roleIcons,
         joinMode: lobby.joinMode || "OPEN",
-        joinPassword: canModerate ? lobby.joinPassword || null : null,
+        // Hashed now (routes/lobbyJoin.ts), so only whether one is set.
+        hasJoinPassword: canModerate ? !!lobby.joinPassword : undefined,
         blockedWords: canModerate ? lobby.blockedWords || [] : [],
         blockedDomains: canModerate ? lobby.blockedDomains || [] : [],
         newAccountChatHours: lobby.newAccountChatHours ?? 0,

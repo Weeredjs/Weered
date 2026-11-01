@@ -10,6 +10,15 @@ import { passDoor, readDoor, type DoorEntry } from "../lib/lobbyDoor";
 import { areFriends, gateOf, isPlaceId } from "./places";
 import { usableInvite } from "../lib/invitePower";
 import { loginFailed, loginPaused, loginSucceeded } from "../lib/loginGuard";
+import bcrypt from "bcryptjs";
+
+/** Lobby passwords are kept like any other password: hashed, so nobody can
+ *  read one back (James 2026-11-01, red team finding 21). One saved before
+ *  that, still in the clear, is checked as it is. */
+async function joinPasswordMatches(given: string, stored: string | null | undefined) {
+  if (!given || !stored) return false;
+  return stored.startsWith("$2") ? bcrypt.compare(given, stored) : given === stored;
+}
 
 type Deps = {
   authFromHeader: (h?: string) => { id: string; name: string } | null;
@@ -111,9 +120,10 @@ export function registerLobbyJoin(
             message: "Too many wrong passwords. Try again in a few minutes.",
           });
         const pw = String(body.password || "").trim();
-        if (pw && pw === lobby.joinPassword) loginSucceeded(tries);
+        const right = await joinPasswordMatches(pw, lobby.joinPassword);
+        if (right) loginSucceeded(tries);
         else loginFailed(tries);
-        if (!pw || pw !== lobby.joinPassword) {
+        if (!right) {
           return reply
             .code(403)
             .send({ ok: false, error: "wrong_password", message: "Incorrect lobby password." });
@@ -390,8 +400,10 @@ export function registerLobbyJoin(
       const data: any = { joinMode: mode };
       if (mode === "PASSWORD") {
         const pw = String(body.password || "").trim();
-        if (!pw) return reply.code(400).send({ ok: false, error: "password_required" });
-        data.joinPassword = pw;
+        // Left empty with a password already set: keep it.
+        if (pw) data.joinPassword = await bcrypt.hash(pw, 10);
+        else if (!ctx.lobby.joinPassword)
+          return reply.code(400).send({ ok: false, error: "password_required" });
       } else {
         data.joinPassword = null;
       }
