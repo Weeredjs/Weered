@@ -73,7 +73,14 @@ export default function MicSettings() {
   const meterColor = level > 0.35 ? "#22c55e" : level > 0.12 ? "#eab308" : "#64748b";
 
   const popWidth = 280;
+  // Opens below its button, or above it when the button sits low on the
+  // screen (the voice panel's gear is at the bottom); it scrolls if it's
+  // still taller than the room it has.
+  const roomBelow = rect ? window.innerHeight - rect.bottom - 16 : 0;
+  const roomAbove = rect ? rect.top - 16 : 0;
+  const up = roomBelow < 380 && roomAbove > roomBelow;
   const popTop = rect ? rect.bottom + 8 : 0;
+  const popBottom = rect ? window.innerHeight - rect.top + 8 : 0;
   const popLeft = rect
     ? Math.max(8, Math.min(rect.right - popWidth, window.innerWidth - popWidth - 8))
     : 0;
@@ -119,7 +126,9 @@ export default function MicSettings() {
             ref={popRef}
             style={{
               position: "fixed",
-              top: popTop,
+              ...(up ? { bottom: popBottom } : { top: popTop }),
+              maxHeight: Math.max(160, up ? roomAbove : roomBelow),
+              overflowY: "auto",
               left: popLeft,
               zIndex: 2147483000,
               width: popWidth,
