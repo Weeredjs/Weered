@@ -136,6 +136,9 @@ describe("authRoutes - register + login", () => {
 
   it("the account cap: a full site turns new accounts away, 0 means no cap", async () => {
     // James 2026-10-31: "Cap registrations at 1000" (lib/registration.ts).
+    // At least one account, so "full" is a real cap: CI starts with an empty
+    // database, and a cap of 0 means no cap.
+    await prisma.user.create({ data: { usernameKey: uname("seed"), name: "seed" } });
     const fullApp = await makeApp({ registrationCap: String(await accountCount()) });
     const full = await fullApp.inject({
       method: "POST",
