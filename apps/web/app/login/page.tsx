@@ -59,7 +59,7 @@ function LoginForm() {
           logo: safeImage(l.logoUrl),
           banner: safeImage(l.bannerUrl),
           accent: safeAccent(l.accentColor, "#7c3aed"),
-          blurb: String(l.description || "").slice(0, 180),
+          blurb: shortBlurb(String(l.description || "")),
         });
       })
       .catch(() => {});
@@ -666,6 +666,19 @@ function LoginForm() {
       </div>
     </div>
   );
+}
+
+/** A lobby's description cut to a short paragraph: whole sentences when they
+ *  fit, else whole words and an ellipsis. A hard cut ended Helldivers 2's
+ *  mid-word ("built around how He") on the live sign-in, 2026-11-01. */
+function shortBlurb(s: string, max = 180): string {
+  const t = s.replace(/\s+/g, " ").trim();
+  if (t.length <= max) return t;
+  const cut = t.slice(0, max);
+  const stop = Math.max(cut.lastIndexOf(". "), cut.lastIndexOf("! "), cut.lastIndexOf("? "));
+  if (stop > 60) return cut.slice(0, stop + 1);
+  const space = cut.lastIndexOf(" ");
+  return (space > 0 ? cut.slice(0, space) : cut).replace(/[,;:\-–—]+$/, "") + "…";
 }
 
 export default function LoginPage() {

@@ -422,6 +422,7 @@ export default function LobbyHeaderBar({
 
         <div
           className="weered-lobby-tabs flex gap-1 rounded-xl border border-white/10 bg-white/5 p-0.5"
+          data-guest-hide
           style={{ flexShrink: 0 }}
         >
           {(["rooms", "people"] as Mode[]).map((m) => (
@@ -444,7 +445,7 @@ export default function LobbyHeaderBar({
           ))}
         </div>
 
-        <div style={{ position: "relative", flex: "1 1 120px", minWidth: 0 }}>
+        <div style={{ position: "relative", flex: "1 1 120px", minWidth: 0 }} data-guest-hide>
           <input
             className="weered-input w-full"
             placeholder={mode === "rooms" ? "Search rooms or lobbies…" : "Search people"}
@@ -814,7 +815,7 @@ export default function LobbyHeaderBar({
           className="weered-btn"
           data-guest-only
           title="You're a guest here. Leave and end the visit."
-          style={{ padding: "5px 10px", fontSize: 11 }}
+          style={{ padding: "5px 10px", fontSize: 11, marginLeft: "auto" }}
           onClick={async () => {
             // The session ends first, then a fresh page: nothing of the visit
             // (its socket, its voice) carries on.
