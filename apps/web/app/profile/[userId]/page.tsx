@@ -311,6 +311,12 @@ export default function ProfilePage() {
                 🏠 {profile.id === me?.id ? "Your place" : "Their place"}
               </a>
             )}
+            <a
+              href={`/rap/${encodeURIComponent(profile.id)}`}
+              style={{ ...btnStyle, textDecoration: "none" }}
+            >
+              {isMe ? "Your rap sheet" : "Rap sheet"}
+            </a>
             {!isMe && (
               <button
                 onClick={() => {

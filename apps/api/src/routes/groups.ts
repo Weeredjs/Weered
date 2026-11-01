@@ -2,6 +2,7 @@ import { log, swallow } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
 import { blockedWith } from "../lib/blocks";
+import { hideSpoilers } from "../lib/spoilers";
 import { checkChatRateLimit, checkUrlSpam } from "../lib/chatHelpers";
 import { z } from "zod";
 
@@ -128,7 +129,7 @@ export default async function groupRoutes(app: FastifyInstance, opts: Opts) {
             ? {
                 id: last.id,
                 senderId: last.senderId,
-                body: last.deletedAt ? "" : (last.body || "").slice(0, 200),
+                body: last.deletedAt ? "" : hideSpoilers(last.body || "").slice(0, 200),
                 createdAt: last.createdAt.toISOString(),
                 deleted: !!last.deletedAt,
               }

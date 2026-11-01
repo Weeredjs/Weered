@@ -101,7 +101,7 @@ export default function CrewEditor({
         setMsg(
           j?.error === "leader_only"
             ? "Only the crew's leader can change this."
-            : "Didn't save. Try again.",
+            : j?.message || "Didn't save. Try again.",
         );
     } catch {
       setMsg("Couldn't reach Weered.");

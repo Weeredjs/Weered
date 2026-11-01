@@ -2,7 +2,14 @@ import { log, swallow } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
 import { resolveUserNames, displayName } from "../lib/userNames";
+import { cleanCrewTag, isUniqueClash, looksLikeTag } from "../lib/crewTag";
 import { z } from "zod";
+
+const tagTaken = (tag: string) => ({
+  ok: false,
+  error: "tag_taken",
+  message: `[${tag}] is taken. Try another.`,
+});
 
 /** An image link for a crew: https (or a Weered path), no quotes, brackets or spaces. */
 function imageUrl(v: string): string | null {
@@ -159,22 +166,42 @@ export default async function crewsRoutes(app: FastifyInstance, opts: Opts) {
       if (!u) return reply.code(401).send({ error: "Unauthorized" });
       const { name, tag, description } = req.body as any;
       if (!name?.trim()) return reply.code(400).send({ error: "Name required" });
+      // One crew per tag (lib/crewTag.ts).
+      const t = cleanCrewTag(tag);
+      if (!t.ok) return reply.code(400).send(t);
       const db = prisma as any;
-      const crew = await db.crew.create({
-        data: {
-          name: String(name).trim().slice(0, 40),
-          tag: String(tag || "")
-            .trim()
-            .slice(0, 6)
-            .toUpperCase(),
-          description: String(description || "")
-            .trim()
-            .slice(0, 200),
-          ownerId: u.id,
-          members: { create: { userId: u.id, name: u.name, role: "LEADER" } },
-        },
-        include: { members: true },
-      });
+      if (t.key && (await db.crew.findUnique({ where: { tagKey: t.key }, select: { id: true } })))
+        return reply.code(409).send(tagTaken(t.tag));
+      // Founded while in a lobby, a crew shows in that lobby's crew list (GET
+      // /lobbies/:lobbyId/crews; the GTA 6 launch strip's "Crews here"). Not in
+      // a member's place, which is theirs.
+      const here = String((req.body as any)?.lobbyId || "").slice(0, 64);
+      const shownIn =
+        here &&
+        !here.startsWith("u-") &&
+        (await db.lobby.findUnique({ where: { id: here }, select: { id: true } }))
+          ? [here]
+          : [];
+      let crew;
+      try {
+        crew = await db.crew.create({
+          data: {
+            name: String(name).trim().slice(0, 40),
+            tag: t.tag,
+            tagKey: t.key,
+            publicInLobbies: shownIn,
+            description: String(description || "")
+              .trim()
+              .slice(0, 200),
+            ownerId: u.id,
+            members: { create: { userId: u.id, name: u.name, role: "LEADER" } },
+          },
+          include: { members: true },
+        });
+      } catch (e) {
+        if (isUniqueClash(e)) return reply.code(409).send(tagTaken(t.tag));
+        throw e;
+      }
       awardNotoriety(u.id, "CREW_CREATED").catch(swallow);
       return reply.send({ ok: true, crew });
     },
@@ -478,19 +505,42 @@ export default async function crewsRoutes(app: FastifyInstance, opts: Opts) {
     },
   );
 
+  // Is a tag free? For the crew editor as it's typed. crewId: the crew being
+  // edited, whose own tag counts as free.
+  app.get("/crews/tag-check", async (req, reply) => {
+    const q: any = (req as any).query || {};
+    const t = cleanCrewTag(q.tag);
+    if (!t.ok) return reply.send({ ok: true, available: false, message: t.message });
+    if (!t.key) return reply.send({ ok: true, available: true, tag: "" });
+    const held = await (prisma as any).crew.findUnique({
+      where: { tagKey: t.key },
+      select: { id: true },
+    });
+    const free = !held || held.id === String(q.crewId || "");
+    return reply.send({
+      ok: true,
+      available: free,
+      tag: t.tag,
+      ...(free ? {} : { message: tagTaken(t.tag).message }),
+    });
+  });
+
   app.get("/crews/:crewId", async (req, reply) => {
     const { crewId } = req.params as any;
     const db = prisma as any;
-    const crew = await db.crew.findUnique({
-      where: { id: crewId },
-      include: {
-        members: {
-          select: { userId: true, name: true, role: true, joinedAt: true },
-          orderBy: [{ role: "asc" }, { joinedAt: "asc" }],
-          take: 100,
-        },
+    const include = {
+      members: {
+        select: { userId: true, name: true, role: true, joinedAt: true },
+        orderBy: [{ role: "asc" }, { joinedAt: "asc" }],
+        take: 100,
       },
-    });
+    };
+    // weered.ca/crew/TAG: a tag is a crew's address too (lib/crewTag.ts).
+    const crew =
+      (await db.crew.findUnique({ where: { id: crewId }, include })) ||
+      (looksLikeTag(crewId)
+        ? await db.crew.findUnique({ where: { tagKey: crewId.toUpperCase() }, include })
+        : null);
     if (!crew) return reply.code(404).send({ ok: false, error: "not_found" });
     return reply.send({
       ok: true,
@@ -530,7 +580,18 @@ export default async function crewsRoutes(app: FastifyInstance, opts: Opts) {
       const body: any = (req as any).body || {};
       const data: any = {};
       if (typeof body.name === "string") data.name = body.name.trim().slice(0, 60);
-      if (typeof body.tag === "string") data.tag = body.tag.trim().slice(0, 8).toUpperCase();
+      // Checked only when it changes: a tag from before the rules (2026-11-01)
+      // mustn't stop its crew saving anything else.
+      if (typeof body.tag === "string" && body.tag.trim().toUpperCase() !== (crew.tag || "")) {
+        const t = cleanCrewTag(body.tag);
+        if (!t.ok) return reply.code(400).send(t);
+        if (t.key && t.key !== crew.tagKey) {
+          const held = await db.crew.findUnique({ where: { tagKey: t.key }, select: { id: true } });
+          if (held && held.id !== crew.id) return reply.code(409).send(tagTaken(t.tag));
+        }
+        data.tag = t.tag;
+        data.tagKey = t.key;
+      }
       if (typeof body.description === "string")
         data.description = body.description.trim().slice(0, 800);
       // The crew page draws these inside CSS url(): a link only, nothing that
@@ -555,6 +616,7 @@ export default async function crewsRoutes(app: FastifyInstance, opts: Opts) {
         const updated = await db.crew.update({ where: { id: crewId }, data });
         return reply.send({ ok: true, crew: updated });
       } catch (e) {
+        if (isUniqueClash(e)) return reply.code(409).send(tagTaken(data.tag || ""));
         log.error("[crews PATCH]", e);
         return reply.code(500).send({ ok: false, error: "update_failed" });
       }

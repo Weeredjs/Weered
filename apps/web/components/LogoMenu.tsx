@@ -137,6 +137,13 @@ export function LogoMenu() {
     close();
     openSheet?.("settings");
   };
+  // Your shareable card (app/rap, 2026-11-01).
+  const openRapSheet = () => {
+    close();
+    try {
+      window.location.assign("/rap");
+    } catch {}
+  };
   const toggleAway = () => {
     close();
     if (typeof setAway === "function") setAway(!isAway);
@@ -230,6 +237,27 @@ export function LogoMenu() {
                     <path d="M4 21c0-4.5 3.5-7 8-7s8 2.5 8 7" />
                   </svg>
                   <span className="weered-logo-menu-label">View profile</span>
+                </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="weered-logo-menu-item"
+                  onClick={openRapSheet}
+                >
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <rect x="4" y="3" width="16" height="18" rx="2" />
+                    <path d="M8 8h8M8 12h8M8 16h5" />
+                  </svg>
+                  <span className="weered-logo-menu-label">Rap sheet</span>
                 </button>
                 <button
                   type="button"

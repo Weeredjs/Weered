@@ -35,12 +35,17 @@ export function nameStyleFor(role?: string, tier?: string): React.CSSProperties 
 }
 
 export const URL_RE = /https?:\/\/[^\s<>"')\]]+/gi;
+
+/** A message's text for a preview (a DM or group list), its ||spoilers||
+ *  shown as [spoiler] (messageRender.tsx; api lib/spoilers.ts). */
+export const hideSpoilers = (text: string) =>
+  String(text || "").replace(/\|\|[^|\n]+?\|\|/g, "[spoiler]");
 export const IMG_EXT = /\.(png|jpe?g|gif|webp)(\?[^\s]*)?$/i;
 export const TENOR_RE = /https?:\/\/media\.tenor\.com\/[^\s]+/i;
 export const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
 export type InlineTok = {
-  kind: "url" | "mention" | "bold" | "italic" | "code" | "card";
+  kind: "url" | "mention" | "bold" | "italic" | "code" | "card" | "spoiler";
   start: number;
   end: number;
   value: string;

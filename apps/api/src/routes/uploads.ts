@@ -133,6 +133,23 @@ export default async function uploadsRoutes(app: FastifyInstance, opts: Opts) {
             : "image/jpeg";
 
     const { readFileSync } = await import("fs");
+    // ?format=png: a 256px PNG copy, made once and kept beside the original, for
+    // link previews (web app/rap/[name]/opengraph-image.tsx): their renderer
+    // reads PNG and JPEG, not the webp that uploads are kept in.
+    if (String((req as any).query?.format || "") === "png" && ext !== "png") {
+      const pngPath = `${filepath}.png`;
+      try {
+        if (!existsSync(pngPath)) {
+          const sharp = (await import("sharp")).default;
+          await sharp(filepath).resize(256, 256, { fit: "cover" }).png().toFile(pngPath);
+        }
+        reply.header("Content-Type", "image/png");
+        reply.header("Cache-Control", "public, max-age=31536000, immutable");
+        return reply.send(readFileSync(pngPath));
+      } catch (e) {
+        swallow(e);
+      }
+    }
     const data = readFileSync(filepath);
     reply.header("Content-Type", mime);
     reply.header("Cache-Control", "public, max-age=31536000, immutable");

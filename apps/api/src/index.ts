@@ -115,6 +115,7 @@ import socialRoutes from "./routes/social";
 import storeRoutes from "./routes/store";
 import notificationsRoutes from "./routes/notifications";
 import crewsRoutes from "./routes/crews";
+import rapSheetRoutes from "./routes/rapSheet";
 import forumRoutes from "./routes/forum";
 import forumModRoutes, { autoModTick } from "./routes/forum-mod";
 import eventsRoutes from "./routes/events";
@@ -1170,6 +1171,7 @@ async function main() {
     fetchReactionsForTargets,
     getNotorietyRank,
   } as any);
+  await app.register(rapSheetRoutes, { authFromHeader });
 
   await app.register(invitesRoutes, {
     authFromHeader,

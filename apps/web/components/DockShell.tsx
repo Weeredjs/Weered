@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useWeered } from "./WeeredProvider";
+import { hideSpoilers } from "./chat/chatShared";
 import EmptyState from "./EmptyState";
 import LoadingState from "./LoadingState";
 import GroupsTab from "./GroupsTab";
@@ -1418,7 +1419,7 @@ export default function DockShell(props: { forceMode?: "rail" | "floating" } = {
                           const isMyLastMsg = lastMsg && lastMsg.fromId === String(me?.id || "");
                           const preview = lastMsg
                             ? (isMyLastMsg ? "You: " : "") +
-                              lastMsg.body.slice(0, 40) +
+                              hideSpoilers(lastMsg.body).slice(0, 40) +
                               (lastMsg.body.length > 40 ? "..." : "")
                             : "Tap to start chatting";
                           const time = lastMsg ? fmtRelative(lastMsg.createdAt) : "";
@@ -1554,7 +1555,7 @@ export default function DockShell(props: { forceMode?: "rail" | "floating" } = {
                         const preview = last
                           ? last.deleted
                             ? "[deleted]"
-                            : `${last.senderId === String(me?.id || "") ? "You: " : senderFirst ? `${senderFirst}: ` : ""}${last.body.slice(0, 40)}${last.body.length > 40 ? "..." : ""}`
+                            : `${last.senderId === String(me?.id || "") ? "You: " : senderFirst ? `${senderFirst}: ` : ""}${hideSpoilers(last.body).slice(0, 40)}${last.body.length > 40 ? "..." : ""}`
                           : rosterLine;
                         const time = g.lastMessageAt ? fmtRelative(g.lastMessageAt) : "";
                         return (

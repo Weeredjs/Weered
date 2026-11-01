@@ -198,7 +198,7 @@ model Lobby {
   // The lobby's AI host (routes/lobbyExtras.ts, lib/lobbyHost.ts): a character
   // in the lobby chat who welcomes people and answers when mentioned.
   // {on, name, emoji, persona, welcome, welcomeLines[]}
-  hostConfig       Json?
+  hostConfig Json?
 }
 
 /// Community game servers registered against a lobby (e.g. WindrosePlus-enabled
@@ -563,7 +563,7 @@ model User {
 
   // Streamer overlay token — OBS browser-source URL is /overlay/<token>.
   // Anyone with the URL can render the user's public live state; rotate to revoke.
-  overlayToken String? @unique
+  overlayToken  String? @unique
   // The overlay's look (routes/overlay.ts): position, size, style, accent, what it
   // shows, a tagline. Set in Settings, or described (lib/build/jobs/people.ts).
   overlayConfig Json?
@@ -614,6 +614,25 @@ model User {
   windroseBuildComments WindroseBuildComment[]
   windroseBuildSaves    WindroseBuildSave[]
   windroseBuildReports  WindroseBuildReport[]
+  rapSheet              RapSheet?
+}
+
+// A player's rap sheet (2026-11-01, for the GTA VI launch): how they play and
+// when, on a card anyone can share (weered.ca/rap/<name>). Self-reported: no
+// game publisher offers an API for any of this. The handles (PSN, Xbox) stay
+// on User, and the priors are worked out from what's on Weered (routes/rapSheet.ts).
+model RapSheet {
+  userId     String   @id
+  playstyles String[] @default([])
+  hours      String[] @default([])
+  timezone   String   @default("")
+  mic        String   @default("")
+  lookingFor String   @default("")
+  motto      String   @default("")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 // —— Ban Court ——————————————————————————————————————————————————————————————
@@ -965,6 +984,9 @@ model Crew {
   id          String   @id @default(cuid())
   name        String
   tag         String   @default("")
+  // The tag in capitals: one crew per tag, so a tag can be claimed (and is an
+  // address, weered.ca/crew/TAG). Null while a crew has none. lib/crewTag.ts.
+  tagKey      String?  @unique
   description String   @default("")
   ownerId     String
   createdAt   DateTime @default(now())

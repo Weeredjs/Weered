@@ -29,6 +29,7 @@ export const NOTORIETY_ACTIONS: Record<
   CHALLENGE_COMPLETED: { points: 200, once: false, cooldown: 0 },
   FIRST_CHALLENGE: { points: 100, once: true },
   CREW_CREATED: { points: 100, once: true },
+  RAP_SHEET_FILED: { points: 50, once: true }, // routes/rapSheet.ts
   CREW_JOINED: { points: 25, once: false },
   FRIEND_ADDED: { points: 15, once: false },
   LOBBY_CREATED: { points: 200, once: false },

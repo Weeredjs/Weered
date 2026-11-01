@@ -76,6 +76,8 @@ export const NO_SHELL_ROUTES: string[] = [
   "/safety",
   "/features",
   "/blog",
+  // A rap sheet is a page people land on from a shared link (2026-11-01).
+  "/rap",
 ];
 
 /**

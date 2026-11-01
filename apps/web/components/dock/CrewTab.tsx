@@ -28,6 +28,27 @@ export function CrewTab({
   const [newDesc, setNewDesc] = React.useState("");
   const [creating, setCreating] = React.useState(false);
   const [note, setNote] = React.useState("");
+  // A tag is one crew's only (api lib/crewTag.ts): say so as it's typed.
+  const [tagCheck, setTagCheck] = React.useState<{ available: boolean; message?: string } | null>(
+    null,
+  );
+  React.useEffect(() => {
+    const t = newTag.trim();
+    if (!t) return setTagCheck(null);
+    let alive = true;
+    const timer = setTimeout(() => {
+      fetch(`${apiBase}/crews/tag-check?tag=${encodeURIComponent(t)}`)
+        .then((r) => r.json())
+        .then(
+          (j) => alive && j?.ok && setTagCheck({ available: !!j.available, message: j.message }),
+        )
+        .catch(() => {});
+    }, 350);
+    return () => {
+      alive = false;
+      clearTimeout(timer);
+    };
+  }, [newTag, apiBase]);
   const [expandedCrew, setExpandedCrew] = React.useState<string | null>(null);
   const [presenceToast, setPresenceToast] = React.useState<{
     name: string;
@@ -75,6 +96,11 @@ export function CrewTab({
           name: newName.trim(),
           tag: newTag.trim(),
           description: newDesc.trim(),
+          // Founded in a lobby, a crew is listed there (api routes/crews.ts).
+          lobbyId: (() => {
+            const m = /^\/lobby\/([^/?#]+)/.exec(window.location.pathname);
+            return m ? decodeURIComponent(m[1]) : undefined;
+          })(),
         }),
       }).then((r) => r.json());
       if (j.ok) {
@@ -83,7 +109,7 @@ export function CrewTab({
         setNewTag("");
         setNewDesc("");
         void load();
-      } else setNote(j.error || "Failed");
+      } else setNote(j.message || j.error || "Failed");
     } catch {
       setNote("Error");
     }
@@ -227,10 +253,22 @@ export function CrewTab({
             />
           </div>
         ))}
+        {newTag.trim() && tagCheck && (
+          <div
+            style={{
+              fontSize: 11,
+              color: tagCheck.available ? "rgba(134,239,172,.9)" : "rgba(252,165,165,.85)",
+            }}
+          >
+            {tagCheck.available
+              ? `[${newTag.trim().toUpperCase()}] is free. It's yours once you establish.`
+              : tagCheck.message || "That tag can't be used."}
+          </div>
+        )}
         {note && <div style={{ fontSize: 11, color: "rgba(252,165,165,.8)" }}>{note}</div>}
         <button
           onClick={createCrew}
-          disabled={creating || !newName.trim()}
+          disabled={creating || !newName.trim() || tagCheck?.available === false}
           style={{
             padding: "10px",
             borderRadius: 12,

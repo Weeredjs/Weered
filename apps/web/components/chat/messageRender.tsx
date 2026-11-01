@@ -19,6 +19,42 @@ const BOLD_RE = /\*\*([^*\n]+?)\*\*/g;
 const ITALIC_RE = /(^|[^*])\*([^*\n]+?)\*(?!\*)/g;
 const CODE_RE = /`([^`\n]+?)`/g;
 const CARD_RE = /\[\[([^\]\n]{1,80})\]\]/g;
+// ||like this||: hidden until tapped (2026-11-01, GTA VI's story launch). Matched
+// before everything else, so nothing inside one is a link, a preview or an
+// image that would give it away. api lib/spoilers.ts hides them in previews.
+const SPOILER_RE = /\|\|([^|\n]+?)\|\|/g;
+
+function Spoiler({ text }: { text: string }) {
+  const [shown, setShown] = React.useState(false);
+  const show = (e: React.SyntheticEvent) => {
+    e.stopPropagation();
+    setShown(true);
+  };
+  return shown ? (
+    <span style={{ padding: "0 3px", borderRadius: 4, background: "rgba(255,255,255,0.08)" }}>
+      {text}
+    </span>
+  ) : (
+    <span
+      role="button"
+      tabIndex={0}
+      aria-label="Spoiler. Tap to show."
+      title="Spoiler: tap to show"
+      onClick={show}
+      onKeyDown={onActivate(show)}
+      style={{
+        padding: "0 3px",
+        borderRadius: 4,
+        cursor: "pointer",
+        background: "rgba(255,255,255,0.22)",
+        color: "transparent",
+        userSelect: "none",
+      }}
+    >
+      {text}
+    </span>
+  );
+}
 
 export function daysLeft(iso?: string | null): number | null {
   if (!iso) return null;
@@ -217,6 +253,18 @@ export function renderInline(
   const toks: InlineTok[] = [];
   let m: RegExpExecArray | null;
 
+  // Spoilers first: whatever starts inside one is dropped below (it starts
+  // before them, so it wins the overlap), links and their previews included.
+  SPOILER_RE.lastIndex = 0;
+  while ((m = SPOILER_RE.exec(text)) !== null) {
+    toks.push({
+      kind: "spoiler",
+      start: m.index,
+      end: m.index + m[0].length,
+      value: m[1],
+      raw: m[0],
+    });
+  }
   URL_RE.lastIndex = 0;
   while ((m = URL_RE.exec(text)) !== null) {
     toks.push({ kind: "url", start: m.index, end: m.index + m[0].length, value: m[0], raw: m[0] });
@@ -373,6 +421,8 @@ export function renderInline(
       );
     } else if (t.kind === "card") {
       parts.push(<MtgCardChip key={key++} name={t.value} />);
+    } else if (t.kind === "spoiler") {
+      parts.push(<Spoiler key={key++} text={t.value} />);
     }
     cursor = t.end;
   }

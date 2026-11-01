@@ -4,6 +4,7 @@ import { prisma } from "../lib/prisma";
 import { z } from "zod";
 import { checkChatRateLimit, checkUrlSpam } from "../lib/chatHelpers";
 import { answerOperatorDm } from "../lib/operatorDm";
+import { hideSpoilers } from "../lib/spoilers";
 
 type Opts = {
   authFromHeader: (h?: string) => { id: string; name: string } | null;
@@ -42,7 +43,12 @@ export default async function dmRoutes(app: FastifyInstance, opts: Opts) {
     for (const m of msgs) {
       const peerId = m.fromId === viewer.id ? m.toId : m.fromId;
       if (!peers.has(peerId))
-        peers.set(peerId, { peerId, lastMessage: m.body, lastAt: m.createdAt, unread: 0 });
+        peers.set(peerId, {
+          peerId,
+          lastMessage: hideSpoilers(m.body),
+          lastAt: m.createdAt,
+          unread: 0,
+        });
       if (m.toId === viewer.id && !m.readAt) peers.get(peerId).unread++;
     }
     const peerIds = Array.from(peers.keys());
@@ -93,7 +99,7 @@ export default async function dmRoutes(app: FastifyInstance, opts: Opts) {
       if (!byPeer.has(peerId)) {
         byPeer.set(peerId, {
           peerId,
-          lastMessage: dm.body?.slice(0, 100),
+          lastMessage: hideSpoilers(dm.body || "").slice(0, 100),
           lastTs: dm.createdAt,
           isFromMe: dm.fromId === u.id,
           unread: dm.toId === u.id && !dm.readAt,

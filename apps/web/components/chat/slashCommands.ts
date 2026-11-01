@@ -42,6 +42,15 @@ export function runSlashCommand(
       opts.clear();
       return true;
     }
+    case "spoiler":
+      // Hidden until tapped (components/chat/messageRender.tsx).
+      if (!args.trim()) {
+        weeredToast.error("Usage: /spoiler <what happens>");
+        return true;
+      }
+      opts.send(`||${args.trim().replaceAll("||", "|")}||`);
+      opts.clear();
+      return true;
     case "shrug":
       opts.send(`${args ? args + " " : ""}¯\\_(ツ)_/¯`);
       opts.clear();
@@ -114,6 +123,7 @@ export function runSlashCommand(
         "Slash commands:",
         "/me <action> — action emote",
         "/tip @user <amount> [note] — send Paper",
+        "/spoiler <text> — hidden until tapped (or wrap it: ||like this||)",
         "/shrug · /tableflip · /unflip · /flip — classics",
         "/roll 2d20 — dice roll (modifiers: /roll 1d20+3)",
         "/giphy <query> — opens GIF picker",

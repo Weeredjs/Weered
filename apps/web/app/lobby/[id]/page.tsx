@@ -209,6 +209,9 @@ const TradingFeed = dynamic(() => import("../../../components/TradingFeed"), {
   loading: panelLoading,
   ssr: false,
 });
+const GtaLaunchStrip = dynamic(() => import("../../../components/gta/GtaLaunchStrip"), {
+  ssr: false,
+});
 const GtaLfgBoard = dynamic(() => import("../../../components/GtaLfgBoard"), {
   loading: panelLoading,
   ssr: false,
@@ -1193,6 +1196,9 @@ export default function LobbyIdPage() {
                   zIndex: 1,
                 }}
               >
+                {lobbyId === "gta6" && view === "rooms" && (
+                  <GtaLaunchStrip lobbyId={lobbyId} accent={accent} />
+                )}
                 {view === "home" && L ? (
                   <LobbyHomeCanvas
                     lobbyId={lobbyId}

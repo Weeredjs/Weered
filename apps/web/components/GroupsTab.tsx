@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import EmptyState from "./EmptyState";
+import { hideSpoilers } from "./chat/chatShared";
 import LoadingState from "./LoadingState";
 import { weeredConfirm } from "../lib/confirm";
 
@@ -481,7 +482,7 @@ export default function GroupsTab({
           {threads.map(t => {
             const title = threadDisplayName(t, meId);
             const last = t.lastMessage;
-            const preview = last ? (last.deleted ? "[deleted]" : (last.body || "").slice(0, 60) + (last.body.length > 60 ? "..." : "")) : "No messages yet";
+            const preview = last ? (last.deleted ? "[deleted]" : hideSpoilers(last.body || "").slice(0, 60) + (last.body.length > 60 ? "..." : "")) : "No messages yet";
             const time = last ? fmtRel(last.createdAt) : fmtRel(t.createdAt);
             return (
               <button key={t.id} onClick={() => { setActiveId(t.id); setView("thread"); }} style={{ width: "100%", textAlign: "left", padding: "12px 14px", border: "none", borderBottom: "1px solid rgba(255,255,255,.04)", background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", gap: 12, fontFamily: "inherit" }}

@@ -6,6 +6,7 @@ import { takeAiBudget } from "../lib/aiBudget";
 import { answerOperatorDm } from "../lib/operatorDm";
 import { answerMention } from "../lib/lobbyHost";
 import { isLobbyGuest } from "../lib/guestScope";
+import { hideSpoilers } from "../lib/spoilers";
 
 // Chat WS handlers extracted from the index.ts main message handler:
 // chat:pin/unpin/typing/send/edit/delete. Void async handler (dispatcher
@@ -337,7 +338,7 @@ export async function handleChat(ws: any, msg: any, opts: Opts): Promise<void> {
             userId: u.id,
             type: "MENTION",
             title: `${ws.user!.name} mentioned you in ${room.name || "a lobby"}`,
-            body: body.slice(0, 120),
+            body: hideSpoilers(body).slice(0, 120),
             actorId: ws.user!.id,
             actorName: ws.user!.name,
             actionUrl: roomPath,
@@ -632,7 +633,7 @@ export async function handleCrewDm(
         if (!isUserOnline(m.userId)) {
           sendPush(m.userId, {
             title: `Crew message from ${ws.user?.name}`,
-            body: body.slice(0, 120),
+            body: hideSpoilers(body).slice(0, 120),
             url: "/home",
             tag: `crew:${crewId}`,
           }).catch(swallow);
@@ -656,7 +657,7 @@ export async function handleCrewDm(
               userId: u.id,
               type: "MENTION",
               title: `${ws.user?.name || "Someone"} mentioned you in crew chat`,
-              body: body.slice(0, 120),
+              body: hideSpoilers(body).slice(0, 120),
               actorId: fromId,
               actorName: ws.user?.name || undefined,
               actionUrl: "/home",
@@ -896,7 +897,7 @@ export async function handleCrewDm(
       dmDeliver(toId, payload);
       sendPush(toId, {
         title: `DM from ${ws.user?.name || "Someone"}`,
-        body: body.slice(0, 120),
+        body: hideSpoilers(body).slice(0, 120),
         url: "/home",
         tag: `dm:${fromId}`,
       }).catch(swallow);
@@ -904,7 +905,7 @@ export async function handleCrewDm(
         userId: toId,
         type: "DM_RECEIVED",
         title: `${ws.user?.name || "Someone"} sent you a message`,
-        body: body.slice(0, 120),
+        body: hideSpoilers(body).slice(0, 120),
         actorId: fromId,
         actorName: ws.user?.name || undefined,
         actionUrl: "/home",
