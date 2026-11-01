@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { isGuestSession } from "../lib/guestSession";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
@@ -26,7 +27,7 @@ export default function PushPrompt() {
     if (Notification.permission !== "granted") return;
     const loggedIn = (() => {
       try {
-        return !!localStorage.getItem("weered_user");
+        return !!localStorage.getItem("weered_user") && !isGuestSession();
       } catch {
         return false;
       }
@@ -70,7 +71,7 @@ export default function PushPrompt() {
 
     const loggedIn = (() => {
       try {
-        return !!localStorage.getItem("weered_user");
+        return !!localStorage.getItem("weered_user") && !isGuestSession();
       } catch {
         return false;
       }

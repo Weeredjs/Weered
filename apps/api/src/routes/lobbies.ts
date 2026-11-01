@@ -322,7 +322,12 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
     let membership: any = null;
     let joinRequest: any = null;
     const u = authFromHeader((req as any).headers?.authorization);
-    if (u) {
+    if (u && (u as any).guest) {
+      // A guest of this lobby, in on its guest link (routes/guestJoin.ts), is in
+      // for the visit: a member's view at the first rank, so the page opens the
+      // lobby rather than a join button a guest can't press. No other lobby.
+      if ((u as any).scope?.lobby === id) membership = { role: "GUEST", roleLevel: 1, guest: true };
+    } else if (u) {
       const member = await prisma.lobbyMember.findUnique({
         where: { lobbyId_userId: { lobbyId: id, userId: u.id } },
         select: { role: true, roleLevel: true },

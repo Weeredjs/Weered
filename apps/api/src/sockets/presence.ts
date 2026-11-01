@@ -1,7 +1,8 @@
 import { prisma } from "../lib/prisma";
 import { canEnterGatedRoom, lobbyLevelOf } from "../lib/lobbyAccess";
 import { banExempt } from "../lib/roomState";
-import { isOfficeRoom, scopeAllows } from "../lib/officeRooms";
+import { isOfficeRoom } from "../lib/officeRooms";
+import { guestMayEnter } from "../lib/guestScope";
 import bcrypt from "bcryptjs";
 
 // Presence WS handlers extracted from the index.ts main message handler:
@@ -121,8 +122,8 @@ export async function handlePresence(ws: any, msg: any, opts: Opts): Promise<voi
     {
       const _u = ws.user as any;
       if (_u?.guest || _u?.host) {
-        const office = String(_u.scope?.office || "");
-        const inScope = scopeAllows(office, roomId);
+        // Before the room is loaded, so a guest can't create one by naming it.
+        const inScope = await guestMayEnter(_u, roomId);
         if (!inScope) {
           send(ws, { type: "room:denied", roomId, reason: "out_of_scope" });
           return;

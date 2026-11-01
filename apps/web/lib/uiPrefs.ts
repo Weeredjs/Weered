@@ -4,6 +4,7 @@
 // (GET/PATCH /profile/me/ui) so the browser and the desktop app agree.
 // The API whitelists the same fields: apps/api/src/lib/uiPrefs.ts.
 import type { ShellLayout } from "./shellLayout";
+import { isGuestSession } from "./guestSession";
 
 /** Every site theme id. The boot script, ThemeRestore, the dock and the
  *  settings sheets all validate against this one list. */
@@ -394,6 +395,8 @@ export function applyUiPrefs(p: UiPrefs) {
 export type AccountSave = "ok" | "too_large" | "failed";
 
 function pushToAccount(patch: UiPrefs): Promise<AccountSave> {
+  // A guest has no account to save to: their look stays in this browser.
+  if (isGuestSession()) return Promise.resolve("ok");
   return fetch(`${API}/profile/me/ui`, {
     credentials: "include",
     method: "PATCH",
@@ -438,7 +441,7 @@ export async function pullUiPrefs(): Promise<UiPrefs | null> {
     const local = readUiPrefs();
     if (!j?.prefs) {
       // Nothing on the account yet: seed it from this browser, if anything.
-      if (Object.keys(local).length) {
+      if (Object.keys(local).length && !isGuestSession()) {
         fetch(`${API}/profile/me/ui`, {
           credentials: "include",
           method: "PATCH",

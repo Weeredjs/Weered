@@ -43,6 +43,7 @@ const TYPE_LABEL: Record<string, string> = {
   ROOM: "Room",
   LOBBY: "Lobby",
   CREW: "Crew",
+  GUEST: "Guest",
 };
 
 const TYPE_ICON: Record<string, string> = {
@@ -50,6 +51,7 @@ const TYPE_ICON: Record<string, string> = {
   ROOM: "🚪",
   LOBBY: "🏛️",
   CREW: "⚔️",
+  GUEST: "👋",
 };
 
 export default function InvitePage() {
@@ -75,6 +77,9 @@ export default function InvitePage() {
     router.push(
       `/login?next=${encodeURIComponent(`/invite/${token}`)}${brand ? `&lobby=${encodeURIComponent(brand.id)}` : ""}`,
     );
+  // A lobby's guest link (api routes/guestJoin.ts): no account, just a name.
+  const [guestName, setGuestName] = useState("");
+  const [guestErr, setGuestErr] = useState("");
 
   useEffect(() => {
     if (!token) {
@@ -86,9 +91,17 @@ export default function InvitePage() {
       .then((r) => r.json())
       .then((j) => {
         if (j.ok) {
+          // The ECEB office's guest links open its foyer, not this page.
+          if (
+            j.invite?.type === "GUEST" &&
+            /^mtg-eceb(-|$)/.test(String(j.invite.targetId || ""))
+          ) {
+            router.replace(`/foyer?invite=${encodeURIComponent(token)}`);
+            return;
+          }
           setInvite(j.invite);
           setState("ready");
-          if (j.invite?.type === "LOBBY" && j.invite.targetId)
+          if ((j.invite?.type === "LOBBY" || j.invite?.type === "GUEST") && j.invite.targetId)
             fetch(`${API}/lobbies/${encodeURIComponent(j.invite.targetId)}`)
               .then((r) => (r.ok ? r.json() : null))
               .then((x) => {
@@ -113,12 +126,17 @@ export default function InvitePage() {
         setState("error");
         setErrMsg("Could not load invite.");
       });
-  }, [token]);
+  }, [token, router]);
 
   async function accept() {
     setState("accepting");
     if (!hasCachedUser()) {
       signIn();
+      return;
+    }
+    // Signed in already: a guest link just opens the lobby, as yourself.
+    if (invite?.type === "GUEST" && invite.targetId) {
+      router.push(`/lobby/${encodeURIComponent(invite.targetId)}`);
       return;
     }
     const r = await fetch(`${API}/invites/${token}/accept`, {
@@ -151,6 +169,37 @@ export default function InvitePage() {
             : j.message || j.error || "Failed.",
       );
     }
+  }
+
+  async function joinAsGuest() {
+    if (guestName.trim().length < 2 || state === "accepting") return;
+    setState("accepting");
+    setGuestErr("");
+    const r = await fetch(`${API}/auth/guest-lobby`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ inviteToken: token, name: guestName.trim() }),
+    }).catch(() => null);
+    const j = r ? await r.json().catch(() => null) : null;
+    if (j?.ok && j.lobbyId) {
+      try {
+        localStorage.setItem("weered_user", JSON.stringify(j.user));
+      } catch {
+        // A private window: the session cookie still carries them in.
+      }
+      router.replace(`/lobby/${encodeURIComponent(j.lobbyId)}`);
+      return;
+    }
+    if (j?.error === "expired") {
+      setState("expired");
+      return;
+    }
+    if (j?.error === "exhausted") {
+      setState("exhausted");
+      return;
+    }
+    setState("ready");
+    setGuestErr(j?.message || "That didn't work. Try again in a moment.");
   }
 
   const containerStyle: React.CSSProperties = {
@@ -342,6 +391,22 @@ export default function InvitePage() {
 
   const usesLeft = invite.maxUses - invite.uses;
   const expiry = invite.expiresAt ? new Date(invite.expiresAt) : null;
+  // No account yet and a guest link: a name is all it takes.
+  const asGuest = invite.type === "GUEST" && !hasCachedUser();
+  const place = brand?.name || invite.targetName || "the lobby";
+  const joinBtn: React.CSSProperties = {
+    width: "100%",
+    padding: "13px 0",
+    borderRadius: 12,
+    border: brand ? `1px solid ${brand.accent}` : "1px solid rgba(124,58,237,.40)",
+    background: brand ? brand.accent : "rgba(124,58,237,.18)",
+    color: brand ? onAccent(brand.accent) : "rgb(216,180,254)",
+    fontWeight: 800,
+    fontSize: 16,
+    cursor: "pointer",
+    transition: "background .15s",
+    letterSpacing: "-.2px",
+  };
 
   return (
     <div style={containerStyle}>
@@ -367,7 +432,7 @@ export default function InvitePage() {
           <div style={{ fontWeight: 900, fontSize: 22, letterSpacing: "-.3px", marginBottom: 4 }}>
             {invite.type === "PLATFORM"
               ? "Join Weered"
-              : invite.targetName || invite.targetId || "Unknown"}
+              : brand?.name || invite.targetName || invite.targetId || "Unknown"}
           </div>
           <div style={{ fontSize: 13, opacity: 0.5 }}>
             Invited by <span style={{ fontWeight: 700, opacity: 0.85 }}>{invite.creatorName}</span>
@@ -399,39 +464,98 @@ export default function InvitePage() {
           {expiry && <span>Expires {expiry.toLocaleDateString()}</span>}
         </div>
 
-        <button
-          onClick={accept}
-          disabled={state === "accepting"}
-          style={{
-            width: "100%",
-            padding: "13px 0",
-            borderRadius: 12,
-            border: brand ? `1px solid ${brand.accent}` : "1px solid rgba(124,58,237,.40)",
-            background: brand ? brand.accent : "rgba(124,58,237,.18)",
-            color: brand ? onAccent(brand.accent) : "rgb(216,180,254)",
-            fontWeight: 800,
-            fontSize: 16,
-            cursor: "pointer",
-            transition: "background .15s",
-            letterSpacing: "-.2px",
-          }}
-        >
-          {state === "accepting"
-            ? "Joining…"
-            : invite.type === "PLATFORM"
-              ? "Join Weered"
-              : brand
-                ? `Join ${brand.name}`
-                : `Join ${TYPE_LABEL[invite.type] || ""}`}
-        </button>
+        {asGuest ? (
+          <>
+            <input
+              value={guestName}
+              onChange={(e) => {
+                setGuestName(e.target.value);
+                setGuestErr("");
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") void joinAsGuest();
+              }}
+              placeholder="Your name"
+              aria-label="Your name"
+              maxLength={32}
+              autoComplete="name"
+              autoFocus
+              style={{
+                width: "100%",
+                boxSizing: "border-box",
+                padding: "12px 14px",
+                borderRadius: 12,
+                border: "1px solid rgba(255,255,255,.16)",
+                background: "rgba(0,0,0,.25)",
+                color: "inherit",
+                fontSize: 15,
+                outline: "none",
+              }}
+            />
+            <button
+              onClick={joinAsGuest}
+              disabled={state === "accepting" || guestName.trim().length < 2}
+              style={{
+                ...joinBtn,
+                opacity: guestName.trim().length < 2 ? 0.55 : 1,
+                cursor: guestName.trim().length < 2 ? "default" : "pointer",
+              }}
+            >
+              {state === "accepting" ? "Joining…" : "Join as a guest"}
+            </button>
+            {guestErr && (
+              <div role="alert" style={{ fontSize: 13, color: "#fca5a5", textAlign: "center" }}>
+                {guestErr}
+              </div>
+            )}
+            <div style={{ fontSize: 11, opacity: 0.4, textAlign: "center", lineHeight: 1.5 }}>
+              No account needed. You&apos;re a guest of {place} while this link lasts, up to 12
+              hours.
+            </div>
+            <button
+              onClick={() =>
+                router.push(
+                  `/login?lobby=${encodeURIComponent(invite.targetId || "")}&next=${encodeURIComponent(`/lobby/${invite.targetId || ""}`)}`,
+                )
+              }
+              style={{
+                background: "none",
+                border: "none",
+                color: "inherit",
+                opacity: 0.65,
+                fontSize: 12,
+                cursor: "pointer",
+                textDecoration: "underline",
+              }}
+            >
+              Have a Weered account? Sign in
+            </button>
+          </>
+        ) : (
+          <>
+            <button onClick={accept} disabled={state === "accepting"} style={joinBtn}>
+              {state === "accepting"
+                ? "Joining…"
+                : invite.type === "PLATFORM"
+                  ? "Join Weered"
+                  : brand
+                    ? `Join ${brand.name}`
+                    : invite.type === "GUEST"
+                      ? `Join ${place}`
+                      : `Join ${TYPE_LABEL[invite.type] || ""}`}
+            </button>
 
-        <div style={{ fontSize: 11, opacity: 0.3 }}>
-          {invite.type === "PLATFORM"
-            ? "You'll be asked to create an account if you don't have one."
-            : brand
-              ? "With a free Weered account. You land right in."
-              : "You'll need to be logged in to accept."}
-        </div>
+            <div style={{ fontSize: 11, opacity: 0.3 }}>
+              {invite.type === "PLATFORM"
+                ? "You'll be asked to create an account if you don't have one."
+                : invite.type === "GUEST"
+                  ? "You're signed in, so you go in as yourself."
+                  : brand
+                    ? "With a free Weered account. You land right in."
+                    : "You'll need to be logged in to accept."}
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

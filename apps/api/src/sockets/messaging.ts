@@ -5,6 +5,7 @@ import { mayAct } from "../lib/roomGate";
 import { takeAiBudget } from "../lib/aiBudget";
 import { answerOperatorDm } from "../lib/operatorDm";
 import { answerMention } from "../lib/lobbyHost";
+import { isLobbyGuest } from "../lib/guestScope";
 
 // Chat WS handlers extracted from the index.ts main message handler:
 // chat:pin/unpin/typing/send/edit/delete. Void async handler (dispatcher
@@ -784,6 +785,13 @@ export async function handleCrewDm(
     } catch (e) {
       log.error("[crew:react]", e);
     }
+    return;
+  }
+
+  // A lobby's guest (routes/guestJoin.ts) talks in that lobby, and only there:
+  // a throwaway name must not be a way to message anyone on Weered.
+  if (String(msg.type || "").startsWith("dm:") && isLobbyGuest(ws.user)) {
+    send(ws, { type: "dm:rejected", reason: "Guests talk in the lobby they were invited to." });
     return;
   }
 

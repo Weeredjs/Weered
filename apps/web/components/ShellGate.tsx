@@ -8,6 +8,7 @@ import { onActivate } from "@/lib/a11y";
 import { NO_SHELL_ROUTES } from "../lib/lobbyThemes";
 import { useShellDesign } from "../lib/shellDesign";
 import { useWeered } from "./WeeredProvider";
+import { isGuestSession } from "../lib/guestSession";
 
 function LeftRailScroll({ children }: { children: React.ReactNode }) {
   const [hovered, setHovered] = useState(false);
@@ -407,6 +408,9 @@ export default function ShellGate({
   const bare = NO_SHELL_ROUTES.some(
     (r) => pathname === r || pathname.startsWith(r + "/") || pathname.startsWith(r + "?"),
   );
+  // A guest (a lobby's guest link) sees the lobby alone: no rails, no footer.
+  const [guest, setGuest] = useState(false);
+  useEffect(() => setGuest(isGuestSession()), [pathname]);
 
   useEffect(() => {
     const parts = pathname.split("/").filter(Boolean);
@@ -503,13 +507,13 @@ export default function ShellGate({
     });
   };
 
-  if (bare) {
+  if (bare || guest) {
     const isOverlay = pathname.startsWith("/overlay");
     return (
       <>
         <div className="legal-root" aria-hidden="true" style={{ display: "none" }} />
         {children}
-        {!isOverlay && <SiteFooter />}
+        {!isOverlay && !guest && <SiteFooter />}
       </>
     );
   }

@@ -522,3 +522,13 @@
   line-height: 1.5;
   color: rgba(226, 232, 240, 0.78);
 }
+
+/* A guest (a lobby's guest link, lib/guestSession.ts) sees the lobby alone:
+   what they could only press to be refused stays out of their way, and their
+   own way out shows to them alone. */
+html[data-weered-guest] [data-guest-hide] {
+  display: none !important;
+}
+html:not([data-weered-guest]) [data-guest-only] {
+  display: none !important;
+}

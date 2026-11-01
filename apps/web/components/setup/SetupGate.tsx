@@ -14,7 +14,9 @@ export default function SetupGate() {
   useEffect(() => {
     let authed = false;
     try {
-      authed = !!JSON.parse(localStorage.getItem("weered_user") || "null")?.id;
+      const cached = JSON.parse(localStorage.getItem("weered_user") || "null");
+      // A guest (a lobby's guest link) is visiting, not setting up a Weered.
+      authed = !!cached?.id && !cached?.isGuest;
     } catch {}
     // The office host is a client-facing desk with a fixed look.
     if (!authed || document.documentElement.hasAttribute("data-pro-host")) return;

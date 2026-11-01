@@ -793,6 +793,7 @@ export default function LobbyHeaderBar({
         <button
           type="button"
           className="weered-btn"
+          data-guest-hide
           style={{ padding: "5px 10px", fontSize: 11 }}
           onClick={openBrowse}
         >
@@ -801,15 +802,39 @@ export default function LobbyHeaderBar({
         <button
           type="button"
           className="weered-btn"
+          data-guest-hide
           style={{ padding: "5px 10px", fontSize: 11 }}
           onClick={() => setShowLobbyInvite(true)}
         >
           Invite
         </button>
+        {/* A guest has no account menu: this is their way out. */}
+        <button
+          type="button"
+          className="weered-btn"
+          data-guest-only
+          title="You're a guest here. Leave and end the visit."
+          style={{ padding: "5px 10px", fontSize: 11 }}
+          onClick={async () => {
+            // The session ends first, then a fresh page: nothing of the visit
+            // (its socket, its voice) carries on.
+            await fetch(
+              `${process.env.NEXT_PUBLIC_API_BASE || "https://api.weered.ca"}/auth/logout`,
+              { method: "POST", credentials: "include" },
+            ).catch(() => {});
+            try {
+              localStorage.removeItem("weered_user");
+            } catch {}
+            window.location.assign("/");
+          }}
+        >
+          Leave
+        </button>
         {lobbyId && lobbyId !== "lobby" && (
           <button
             type="button"
             className="weered-btn"
+            data-guest-hide
             title="Report this lobby"
             aria-label="Report this lobby"
             style={{ padding: "5px 8px", fontSize: 11, opacity: 0.6 }}

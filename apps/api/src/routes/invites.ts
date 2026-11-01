@@ -46,7 +46,13 @@ export default async function invitesRoutes(app: FastifyInstance, opts: Opts) {
           select: { ownerId: true },
         });
         if (!lob || lob.ownerId !== u.id) {
-          return reply.code(403).send({ ok: false, error: "not_lobby_owner" });
+          return reply
+            .code(403)
+            .send({
+              ok: false,
+              error: "not_lobby_owner",
+              message: "Only the lobby's owner can make a guest link.",
+            });
         }
       }
       // Making a lobby, room or crew invite takes the power to let people in
@@ -103,7 +109,7 @@ export default async function invitesRoutes(app: FastifyInstance, opts: Opts) {
           .findUnique({ where: { id: invite.targetId }, select: { name: true } })
           .catch(() => null);
         targetName = r?.name || invite.targetId;
-      } else if (invite.type === "LOBBY") {
+      } else if (invite.type === "LOBBY" || invite.type === "GUEST") {
         const l = await prisma.lobby
           .findUnique({ where: { id: invite.targetId }, select: { name: true } })
           .catch(() => null);
@@ -265,7 +271,13 @@ export default async function invitesRoutes(app: FastifyInstance, opts: Opts) {
           select: { ownerId: true },
         });
         if (!lob || lob.ownerId !== u.id) {
-          return reply.code(403).send({ ok: false, error: "not_lobby_owner" });
+          return reply
+            .code(403)
+            .send({
+              ok: false,
+              error: "not_lobby_owner",
+              message: "Only the lobby's owner can make a guest link.",
+            });
         }
       }
       // Making a lobby, room or crew invite takes the power to let people in

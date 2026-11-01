@@ -100,6 +100,8 @@ import gameServerRoutes from "./routes/gameServers";
 import paperRoutes from "./routes/paper";
 import invitesRoutes from "./routes/invites";
 import discordAuthRoutes from "./routes/discordAuth";
+import guestJoinRoutes from "./routes/guestJoin";
+import { guestMayEnter, isLobbyGuest } from "./lib/guestScope";
 import chessRoutes from "./routes/chess";
 import barRoutes from "./routes/bar";
 import startggRoutes from "./routes/startgg";
@@ -274,7 +276,7 @@ import { startNexusPoller } from "./nexusPoller";
 
 import { prisma } from "./lib/prisma";
 import { canEnterGatedRoom } from "./lib/lobbyAccess";
-import { isOfficeRoom, scopeAllows } from "./lib/officeRooms";
+import { isOfficeRoom } from "./lib/officeRooms";
 import { issuedBeforeCutoff } from "./lib/sessionCutoff";
 import { sessionHook } from "./lib/sessionHook";
 import { withinBudget } from "./lib/roomGate";
@@ -553,8 +555,7 @@ async function doJoin(ws: Sock, roomId: string) {
   {
     const _u = ws.user as any;
     if (_u?.guest || _u?.host) {
-      const office = String(_u.scope?.office || "");
-      const inScope = scopeAllows(office, roomId);
+      const inScope = await guestMayEnter(_u, roomId, room.lobbyId ?? null);
       if (!inScope) {
         send(ws, { type: "room:denied", roomId, reason: "out_of_scope" });
         return false;
@@ -795,7 +796,8 @@ async function main() {
     }
     if (!decoded?.guest) return;
     const path = String(req.url || "").split("?")[0];
-    if (!GUEST_ALLOWED_PATHS.has(path)) {
+    const lobbyGuestRead = isLobbyGuest(decoded) && req.method === "GET";
+    if (!GUEST_ALLOWED_PATHS.has(path) && !lobbyGuestRead) {
       return reply.code(403).send({ ok: false, error: "guest_forbidden" });
     }
     const gu = await prisma.user
@@ -996,6 +998,7 @@ async function main() {
     isOfficeStaff,
   });
   await app.register(discordAuthRoutes, { JWT_SECRET, getSiteConfig, seedWelcomeDM });
+  await app.register(guestJoinRoutes, { JWT_SECRET });
 
   const WEB_URL = process.env.APP_URL || "https://weered.ca";
 

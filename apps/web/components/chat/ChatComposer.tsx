@@ -440,6 +440,7 @@ export function ChatComposer({
               void onAttachClick();
             }}
             disabled={!canType || attBusy}
+            data-guest-hide
             title="Attach image"
             style={{
               borderRadius: 8,

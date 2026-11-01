@@ -4,7 +4,8 @@ import { AccessToken } from "livekit-server-sdk";
 import { prisma } from "../lib/prisma";
 import { canEnterGatedRoom } from "../lib/lobbyAccess";
 import { isPlaceId } from "./places";
-import { isOfficeRoom, scopeAllows } from "../lib/officeRooms";
+import { isOfficeRoom } from "../lib/officeRooms";
+import { guestMayEnter } from "../lib/guestScope";
 
 // LiveKit voice token minting (extracted from index.ts). The LIVEKIT_* config
 // and the AccessToken SDK are voice-exclusive and live here. Room state + the
@@ -58,8 +59,7 @@ export default async function voiceRoutes(app: FastifyInstance, opts: Opts) {
       {
         const _u = u as any;
         if (_u.guest || _u.host) {
-          const office = String(_u.scope?.office || "");
-          if (!scopeAllows(office, lookup))
+          if (!(await guestMayEnter(_u, lookup)))
             return reply.code(403).send({ ok: false, error: "out_of_scope" });
         } else if (isOfficeRoom(lookup)) {
           // office staff (GOD / allowlist) get voice in the meeting namespace

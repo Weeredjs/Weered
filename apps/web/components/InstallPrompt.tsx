@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
+import { isGuestSession } from "../lib/guestSession";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>;
@@ -18,7 +19,7 @@ export default function InstallPrompt() {
     // Members only, and never on the front door or the login page.
     if (window.location.pathname === "/" || window.location.pathname.startsWith("/login")) return;
     try {
-      if (!localStorage.getItem("weered_user")) return;
+      if (!localStorage.getItem("weered_user") || isGuestSession()) return;
     } catch {
       return;
     }

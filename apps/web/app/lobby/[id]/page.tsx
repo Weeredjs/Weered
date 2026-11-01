@@ -268,7 +268,8 @@ const MODULE_GAME_NAMES: Record<string, string> = {
   COWORK: "Co-Work",
 };
 
-type Membership = { role: string; roleLevel: number } | null;
+// guest: in on the lobby's guest link for the visit (api routes/guestJoin.ts).
+type Membership = { role: string; roleLevel: number; guest?: boolean } | null;
 type JoinRequestStatus = { status: string; createdAt: string; denyReason?: string | null } | null;
 
 export default function LobbyIdPage() {
@@ -1076,7 +1077,7 @@ export default function LobbyIdPage() {
                     </button>
                   )}
 
-                {membership && membership.roleLevel < 5 && (
+                {membership && !membership.guest && membership.roleLevel < 5 && (
                   <button
                     onClick={async () => {
                       const ok = await weeredConfirm({

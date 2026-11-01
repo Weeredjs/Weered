@@ -787,6 +787,7 @@ export default function LobbyRoomDirectory({
           <button
             type="button"
             className="weered-rooms-create-btn"
+            data-guest-hide
             onClick={() => {
               setShowAlerts((v) => !v);
               setShowCreate(false);
@@ -813,6 +814,7 @@ export default function LobbyRoomDirectory({
 
           <button
             className="weered-rooms-create-btn"
+            data-guest-hide
             onClick={() => {
               setShowCreate((v) => !v);
               setShowAlerts(false);

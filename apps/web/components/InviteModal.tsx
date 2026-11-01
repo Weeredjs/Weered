@@ -46,6 +46,9 @@ export default function InviteModal({ type, targetId, targetName, onClose }: Pro
   const [tab, setTab] = useState<"link" | "send">("link");
   const [link, setLink] = useState("");
   const [maxUses, setMaxUses] = useState(1);
+  // A lobby's link can be for guests: anyone with it types a name and is in,
+  // no account (api routes/guestJoin.ts). Only the lobby's owner can make one.
+  const [forGuests, setForGuests] = useState(false);
   const [ttl, setTtl] = useState(24);
   const [note, setNote] = useState("");
   const [username, setUsername] = useState("");
@@ -60,7 +63,7 @@ export default function InviteModal({ type, targetId, targetName, onClose }: Pro
     const j = await apiFetch("/invites", {
       method: "POST",
       body: JSON.stringify({
-        type,
+        type: type === "LOBBY" && forGuests ? "GUEST" : type,
         targetId,
         maxUses,
         ttlHours: ttl || 0,
@@ -214,6 +217,34 @@ export default function InviteModal({ type, targetId, targetName, onClose }: Pro
 
         {tab === "link" && (
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            {type === "LOBBY" && (
+              <label
+                style={{
+                  display: "flex",
+                  gap: 8,
+                  alignItems: "flex-start",
+                  fontSize: 13,
+                  cursor: "pointer",
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={forGuests}
+                  onChange={(e) => {
+                    setForGuests(e.target.checked);
+                    setLink("");
+                  }}
+                  style={{ marginTop: 2 }}
+                />
+                <span>
+                  <b>For guests.</b>{" "}
+                  <span style={{ opacity: 0.6 }}>
+                    No account needed: they type a name and come in, for this lobby only, for up to
+                    12 hours. Only the owner can make these.
+                  </span>
+                </span>
+              </label>
+            )}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
               <div>
                 <div

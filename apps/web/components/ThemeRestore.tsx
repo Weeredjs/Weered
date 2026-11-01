@@ -4,6 +4,7 @@ import { useLayoutEffect } from "react";
 import { usePathname } from "next/navigation";
 import { applyChrome, currentChrome } from "../lib/lobbyThemes";
 import { isSiteTheme, readUiPrefs } from "../lib/uiPrefs";
+import { markGuest } from "../lib/guestSession";
 
 export default function ThemeRestore() {
   const pathname = usePathname();
@@ -26,6 +27,7 @@ export default function ThemeRestore() {
       if (s && s.density) d.setAttribute("data-weered-density", s.density);
       if (s && s.reduceMotion) d.setAttribute("data-weered-reduce-motion", "1");
       if (localStorage.getItem("weered_user")) d.setAttribute("data-weered-authed", "1");
+      markGuest();
       // Skin + chrome from the same rule as the pre-paint script, so this never
       // fights it; the lobby page and the room refine it once they know more.
       const [skin, min] = currentChrome(location.pathname, location.search);

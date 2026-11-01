@@ -11,6 +11,7 @@ import { OAuth2Client } from "google-auth-library";
 import { prisma } from "../lib/prisma";
 import { registrationBlock } from "../lib/registration";
 import { cutoffNow } from "../lib/sessionCutoff";
+import { isOfficeRoom } from "../lib/officeRooms";
 import { accountForGoogle } from "../lib/googleLink";
 import { loginFailed, loginPaused, loginSucceeded } from "../lib/loginGuard";
 import { setAuthCookie, clearAuthCookie, isWebClient, readCookie } from "../lib/authCookie";
@@ -459,7 +460,13 @@ export default async function authRoutes(app: FastifyInstance, opts: Opts) {
       if (!inviteToken) return reply.code(400).send({ ok: false, error: "missing_invite" });
 
       const invite = await prisma.invite.findUnique({ where: { token: inviteToken } });
-      if (!invite || invite.type !== "GUEST" || !invite.targetId) {
+      // The office's own links only: a lobby's guest link is routes/guestJoin.ts.
+      if (
+        !invite ||
+        invite.type !== "GUEST" ||
+        !invite.targetId ||
+        !isOfficeRoom(invite.targetId)
+      ) {
         return reply.code(404).send({ ok: false, error: "invalid_invite" });
       }
       if (invite.expiresAt && invite.expiresAt.getTime() < Date.now()) {

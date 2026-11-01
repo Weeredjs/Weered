@@ -193,6 +193,8 @@ try {
   // SEO slab gate: hide the server-rendered lobby slab for authenticated users
   // before paint (no FOUC). The slab stays in the DOM for crawlers.
   if (localStorage.getItem('weered_user')) d.setAttribute('data-weered-authed', '1');
+  // A guest (a lobby's guest link) sees the lobby alone: lib/guestSession.ts.
+  try { var wu = JSON.parse(localStorage.getItem('weered_user') || 'null'); if (wu && wu.isGuest) d.setAttribute('data-weered-guest', '1'); } catch (e) {}
   // Streamer overlay route: strip chrome + transparent body before paint
   // so OBS browser-source captures a clean composite over the game capture.
   if (location.pathname.indexOf('/overlay/') === 0 || location.pathname === '/overlay') {
