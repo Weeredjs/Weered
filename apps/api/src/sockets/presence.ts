@@ -1,5 +1,6 @@
 import { prisma } from "../lib/prisma";
 import { canEnterGatedRoom, lobbyLevelOf } from "../lib/lobbyAccess";
+import { banExempt } from "../lib/roomState";
 import { isOfficeRoom, scopeAllows } from "../lib/officeRooms";
 import bcrypt from "bcryptjs";
 
@@ -142,7 +143,7 @@ export async function handlePresence(ws: any, msg: any, opts: Opts): Promise<voi
       return;
     }
     const room = await ensureRoomLoaded(roomId);
-    if (room.banned.has(ws.user.id)) {
+    if (room.banned.has(ws.user.id) && !(await banExempt(room, ws.user.id))) {
       send(ws, { type: "room:banned", roomId });
       return;
     }

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useOverlay } from "../../components/overlays/OverlayProvider";
+import { safeAccent, safeImage } from "../../lib/brandSafe";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 function authHeaders(): Record<string, string> {
@@ -196,7 +197,7 @@ export default function MapContent() {
 
         polygon.bindPopup(
           `<div style="font-family:monospace;font-size:13px;color:#e2e8f0;background:#0a0a12;padding:8px 12px;border-radius:8px;border:1px solid rgba(212,146,10,0.3)">` +
-            `<strong style="color:#d4920a">${hex.count}</strong> user${hex.count !== 1 ? "s" : ""} in this area</div>`,
+            `<strong style="color:#d4920a">${Number(hex.count) || 0}</strong> user${hex.count !== 1 ? "s" : ""} in this area</div>`,
           { className: "weered-popup", closeButton: false },
         );
 
@@ -229,30 +230,46 @@ export default function MapContent() {
       for (const lobby of lobbyPins) {
         if (gameFilter !== "all" && lobby.moduleType.toLowerCase() !== gameFilter.toLowerCase())
           continue;
-        const accent = lobby.accentColor || "#d4920a";
+        // Built as elements, never as HTML text: a lobby's name, logo and colour
+        // are its owner's words (red team 2026-11-01, finding 5).
+        const accent = safeAccent(lobby.accentColor);
+        const logo = safeImage(lobby.logoUrl);
+        const pin = document.createElement("div");
+        pin.style.cssText =
+          "width:32px;height:32px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;background-size:cover;background-position:center";
+        if (logo) pin.style.backgroundImage = `url("${logo}")`;
+        else {
+          pin.style.backgroundColor = accent + "33";
+          pin.textContent = String(lobby.name || "")
+            .charAt(0)
+            .toUpperCase();
+        }
+        pin.style.border = `2px solid ${accent}88`;
+        pin.style.boxShadow = `0 0 12px ${accent}44`;
+        pin.style.color = accent;
 
         const icon = L.divIcon({
           className: "lobby-pin-icon",
-          html: `<div style="
-            width:32px;height:32px;border-radius:10px;
-            background:${lobby.logoUrl ? `url(${lobby.logoUrl}) center/cover` : accent + "33"};
-            border:2px solid ${accent}88;
-            box-shadow:0 0 12px ${accent}44;
-            display:flex;align-items:center;justify-content:center;
-            font-size:14px;font-weight:900;color:${accent};
-          ">${lobby.logoUrl ? "" : lobby.name.charAt(0).toUpperCase()}</div>`,
+          html: pin,
           iconSize: [32, 32],
           iconAnchor: [16, 16],
         });
 
+        const pop = document.createElement("div");
+        pop.style.cssText =
+          "font-family:monospace;font-size:12px;color:#e2e8f0;background:#0a0a12;padding:10px 14px;border-radius:8px;min-width:140px";
+        pop.style.border = `1px solid ${accent}44`;
+        const title = document.createElement("div");
+        title.style.cssText = "font-weight:800;font-size:13px;margin-bottom:4px";
+        title.style.color = accent;
+        title.textContent = String(lobby.name || "");
+        const meta = document.createElement("div");
+        meta.style.cssText = "color:rgba(148,163,184,0.6);font-size:10px";
+        meta.textContent = `${lobby.moduleType} · ${lobby.memberCount} member${lobby.memberCount !== 1 ? "s" : ""}`;
+        pop.append(title, meta);
+
         const marker = L.marker([lobby.lat, lobby.lng], { icon });
-        marker.bindPopup(
-          `<div style="font-family:monospace;font-size:12px;color:#e2e8f0;background:#0a0a12;padding:10px 14px;border-radius:8px;border:1px solid ${accent}44;min-width:140px">` +
-            `<div style="font-weight:800;font-size:13px;margin-bottom:4px;color:${accent}">${lobby.name}</div>` +
-            `<div style="color:rgba(148,163,184,0.6);font-size:10px">${lobby.moduleType} · ${lobby.memberCount} member${lobby.memberCount !== 1 ? "s" : ""}</div>` +
-            `</div>`,
-          { className: "weered-popup", closeButton: false },
-        );
+        marker.bindPopup(pop, { className: "weered-popup", closeButton: false });
 
         lobbyLayer.current.addLayer(marker);
       }

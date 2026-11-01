@@ -2,7 +2,7 @@ import { swallow } from "../lib/logger";
 import { prisma } from "../lib/prisma";
 import { RoomRole } from "@prisma/client";
 import { removeFromVoice } from "../lib/livekitAdmin";
-import { rankIn, roleOf } from "../lib/roomState";
+import { rankIn, rankOf, roleOf } from "../lib/roomState";
 
 /** How long a kick keeps someone out of the room. */
 export const KICK_MS = 10 * 60_000;
@@ -285,8 +285,9 @@ export async function handleRoomMod(
     rankIn(room, actorId, ws.user?.globalRole),
     actorIsOwner ? 4 : actorIsMod ? 2 : 1,
   );
-  const outranks = (targetId: string) => {
-    const targetRank = Math.max(rankIn(room, targetId), isOwner(room, targetId) ? 4 : 1);
+  // An absent target is ranked from the database (lib/roomState.ts rankOf).
+  const outranks = async (targetId: string) => {
+    const targetRank = Math.max(await rankOf(room, targetId), isOwner(room, targetId) ? 4 : 1);
     if (targetRank < actorRank) return true;
     send(ws, { type: "mod:error", roomId, reason: "They're at or above your rank here." });
     return false;
@@ -318,7 +319,7 @@ export async function handleRoomMod(
   if (msg.type === "mod:mute") {
     if (!actorIsMod) return;
     const targetId = String(msg.userId || "");
-    if (!targetId || targetId === actorId || !outranks(targetId)) return;
+    if (!targetId || targetId === actorId || !(await outranks(targetId))) return;
     room.muted.add(targetId);
     for (const s of findSocketsByUser(room, targetId)) send(s, { type: "mod:muted", ...where });
     audit(room, { type: "mod:mute", actorId, actorName, targetId });
@@ -340,7 +341,7 @@ export async function handleRoomMod(
   if (msg.type === "mod:kick") {
     if (!actorIsMod) return;
     const targetId = String(msg.userId || "");
-    if (!targetId || targetId === actorId || !outranks(targetId)) return;
+    if (!targetId || targetId === actorId || !(await outranks(targetId))) return;
     // A kick holds for a while: a refresh used to walk them straight back in
     // without ever knowing (James 2026-10-31). doJoin refuses until then.
     (room.kickedUntil ||= new Map()).set(targetId, Date.now() + KICK_MS);
@@ -377,7 +378,7 @@ export async function handleRoomMod(
   if (msg.type === "mod:ban") {
     if (!actorIsMod) return;
     const targetId = String(msg.userId || "");
-    if (!targetId || targetId === actorId || !outranks(targetId)) return;
+    if (!targetId || targetId === actorId || !(await outranks(targetId))) return;
     room.banned.add(targetId);
     room.users.delete(targetId);
     room.mods.delete(targetId);
@@ -428,7 +429,7 @@ export async function handleRoomMod(
   if (msg.type === "mod:promote") {
     if (!actorIsOwner) return;
     const targetId = String(msg.userId || "");
-    if (!targetId || targetId === actorId || !outranks(targetId)) return;
+    if (!targetId || targetId === actorId || !(await outranks(targetId))) return;
     room.mods.add(targetId);
     if (room.roomId !== "lobby") {
       void prisma.roomMember
@@ -454,7 +455,7 @@ export async function handleRoomMod(
   if (msg.type === "mod:demote") {
     if (!actorIsOwner) return;
     const targetId = String(msg.userId || "");
-    if (!targetId || targetId === actorId || !outranks(targetId)) return;
+    if (!targetId || targetId === actorId || !(await outranks(targetId))) return;
     room.mods.delete(targetId);
     if (room.roomId !== "lobby") {
       void prisma.roomMember

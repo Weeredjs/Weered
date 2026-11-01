@@ -72,7 +72,15 @@ export default function LobbyDoor({
   const [sent, setSent] = useState(pending);
   useEffect(() => setSent(pending), [pending]);
 
-  const mode = (joinMode || "OPEN").toUpperCase();
+  // Arriving on an invite (routes/invites.ts): the server skips the lobby's
+  // lock for it, so ask for no password or note. The door still asks.
+  const [invite, setInvite] = useState("");
+  useEffect(() => {
+    try {
+      setInvite(new URLSearchParams(window.location.search).get("invite") || "");
+    } catch {}
+  }, []);
+  const mode = invite ? "OPEN" : (joinMode || "OPEN").toUpperCase();
   // An Open lobby can be looked round first, unless the owner locked it; any
   // other join mode keeps the door up (the lobby is closed to them anyway)
   // until they're in or have asked.
@@ -121,6 +129,7 @@ export default function LobbyDoor({
         age18: door.age18 ? adult : undefined,
         answers,
       };
+      if (invite) body.invite = invite;
       if (mode === "PASSWORD") body.password = password;
       if (mode === "APPROVAL") body.message = note;
       const r = await fetch(`${API}/lobbies/${encodeURIComponent(lobbyId)}/join`, {

@@ -8,6 +8,7 @@ import { prisma } from "../lib/prisma";
 import { logLobbyAudit } from "../lib/lobbyAudit";
 import { passDoor, readDoor, type DoorEntry } from "../lib/lobbyDoor";
 import { areFriends, gateOf, isPlaceId } from "./places";
+import { usableInvite } from "../lib/invitePower";
 
 type Deps = {
   authFromHeader: (h?: string) => { id: string; name: string } | null;
@@ -63,9 +64,17 @@ export function registerLobbyJoin(
 
       const body = (req.body || {}) as any;
       let mode = lobby.joinMode || "OPEN";
+      // An invite from someone who may let people in (lib/invitePower.ts) skips
+      // the lock: a password, approval, or a place's gate. Never a ban (checked
+      // above) and never the front door (below).
+      const invited =
+        typeof body.invite === "string" && body.invite
+          ? await usableInvite(body.invite, "LOBBY", lobbyId)
+          : null;
 
       // A member's place (routes/places.ts): its owner's gate decides.
-      if (isPlaceId(lobbyId)) {
+      if (invited) mode = "OPEN";
+      else if (isPlaceId(lobbyId)) {
         const gate = gateOf(lobby);
         if (gate === "me")
           return reply
@@ -162,12 +171,17 @@ export function registerLobbyJoin(
         },
       });
 
+      if (invited)
+        await prisma.invite
+          .update({ where: { token: invited.token }, data: { uses: { increment: 1 } } })
+          .catch(() => {});
+
       await logLobbyAudit({
         lobbyId,
         type: "member_join",
         actorId: u.id,
         actorName: user?.name || "Unknown",
-        note: `Joined lobby (${mode})`,
+        note: `Joined lobby (${invited ? "invite" : mode})`,
       });
 
       return reply.send({ ok: true, role: member.role, roleLevel: member.roleLevel });

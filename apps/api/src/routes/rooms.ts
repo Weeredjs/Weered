@@ -192,8 +192,18 @@ export default async function roomsRoutes(app: FastifyInstance, opts: Opts) {
           message: `A room named "${name}" already exists in this lobby.`,
         });
 
-      let wanted = (typeof body.roomId === "string" ? body.roomId : "").trim();
+      // Only staff choose a room's id, and never a lobby's: a lobby's chat is
+      // the Room whose id IS the lobby id, so a member who picked one took over
+      // that lobby's chat (red team 2026-11-01, finding 3).
+      let wanted = isStaff && typeof body.roomId === "string" ? body.roomId.trim() : "";
       if (wanted) wanted = wanted.replaceAll(/[^a-zA-Z0-9_-]/g, "").slice(0, 32);
+      if (
+        wanted &&
+        (await prisma.lobby.findUnique({ where: { id: wanted }, select: { id: true } }))
+      )
+        return reply
+          .code(409)
+          .send({ ok: false, error: "room_id_taken", message: "That id belongs to a lobby." });
       let id = wanted || shortRoomId(6);
       let tries = 0;
       while (tries < 10) {

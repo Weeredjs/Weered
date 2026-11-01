@@ -7,6 +7,8 @@ import { designCreateExtras } from "./lobbyDesign";
 import { registerLobbyJoin } from "./lobbyJoin";
 import { registerFrontDesk } from "./frontDesk";
 import { isPlaceId } from "./places";
+import { lobbyIdFree } from "../lib/lobbyAccess";
+import { brandProblem } from "../lib/brandValues";
 import { z } from "zod";
 import { LobbyRole } from "@prisma/client";
 import { lastMessageMap } from "../lib/roomRecency";
@@ -421,6 +423,10 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
         enabledModules,
       } = req.body as any;
       if (!id || !name) return reply.code(400).send({ ok: false, error: "id and name required" });
+      // Colours and links land in other people's pages (lib/brandValues.ts).
+      const badBrand = brandProblem({ accentColor, logoUrl, bannerUrl, websiteUrl });
+      if (badBrand)
+        return reply.code(400).send({ ok: false, error: "bad_branding", message: badBrand });
 
       if (!isStaff) {
         const reserved = await isNameReserved(String(id), "LOBBY");
@@ -441,18 +447,24 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
       // existing lobby goes through the admin routes, which check the caller's
       // level. Staff keep the upsert (seeding and ops tools use it). The only web
       // caller is app/lobby/create, which checks the slug is free first.
-      if (!isStaff) {
-        const existing = await prisma.lobby.findUnique({
-          where: { id: String(id) },
-          select: { id: true },
+      const existing = await prisma.lobby.findUnique({
+        where: { id: String(id) },
+        select: { id: true },
+      });
+      if (!isStaff && existing)
+        return reply.code(409).send({
+          ok: false,
+          error: "lobby_exists",
+          message: "A lobby with that id already exists.",
         });
-        if (existing)
-          return reply.code(409).send({
-            ok: false,
-            error: "lobby_exists",
-            message: "A lobby with that id already exists.",
-          });
-      }
+      // A room already holding a new lobby's id would be that lobby's chat,
+      // owned by whoever made the room (lib/lobbyAccess.ts lobbyIdFree).
+      if (!existing && !(await lobbyIdFree(String(id))))
+        return reply.code(409).send({
+          ok: false,
+          error: "lobby_exists",
+          message: "That name is taken. Try another.",
+        });
       // moduleConfig drives server-side behaviour (workers, integrations, the
       // virtual-airline Dispatch voice), so only staff set it through here. The
       // create page never sends it.
@@ -670,6 +682,14 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
         return reply.code(403).send({ ok: false, error: "no_permission" });
       }
       const body: any = (req as any).body || {};
+      const badBrand = brandProblem({
+        accentColor: body.accentColor,
+        logoUrl: body.logoUrl,
+        bannerUrl: body.bannerUrl,
+        websiteUrl: body.websiteUrl,
+      });
+      if (badBrand)
+        return reply.code(400).send({ ok: false, error: "bad_branding", message: badBrand });
       const data: any = {};
       if (typeof body.name === "string") data.name = body.name.slice(0, 100);
       if (typeof body.description === "string") data.description = body.description.slice(0, 500);

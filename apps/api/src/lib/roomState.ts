@@ -6,6 +6,7 @@ import { isOfficeRoom } from "./officeRooms";
 import { randomUUID } from "node:crypto";
 import { type ReactionAgg } from "./chatHelpers";
 import { hostAvatar } from "./hostAvatar";
+import { lobbyLevelOf } from "./lobbyAccess";
 
 // In-memory room/WS state engine extracted from index.ts. wss is injected
 // once from main() so the lobby-activity ping can still reach all clients.
@@ -621,6 +622,46 @@ export function rankIn(room: RoomState, userId: string, globalRole?: string): nu
   if (g === "SUPPORT") return 3;
   if (role === "mod") return 2;
   return 1;
+}
+
+/**
+ * rankIn for anyone, here or not. Someone who isn't in the room has no entry in
+ * room.users, so their site role and lobby level come from the database; before
+ * this they ranked as a plain member, and a moderator could ban a lobby's owner
+ * or Weered's staff from a room while they were away (red team 2026-11-01,
+ * finding 7). Someone with a socket in the room counts as here. A failed lookup
+ * answers `ifUnknown`: out of reach (6) when deciding whether a moderator may
+ * act on them, and a plain member (1) when deciding whether a ban holds.
+ */
+export async function rankOf(room: RoomState, userId: string, ifUnknown = 6): Promise<number> {
+  let here = room.users.has(userId);
+  if (!here) for (const s of room.sockets as Set<any>) if (s?.user?.id === userId) here = true;
+  if (here) return rankIn(room, userId);
+  let g = "";
+  let level = 0;
+  try {
+    const [u, l] = await Promise.all([
+      prisma.user.findUnique({ where: { id: userId }, select: { globalRole: true } }),
+      room.lobbyId ? lobbyLevelOf(userId, room.lobbyId) : Promise.resolve(0),
+    ]);
+    g = String(u?.globalRole || "").toUpperCase();
+    level = l;
+  } catch (e) {
+    swallow(e);
+    return ifUnknown;
+  }
+  if (g === "GOD") return 6;
+  if (g === "ADMIN" || g === "STAFF") return 5;
+  if (isOwner(room, userId) || level >= 5) return 4;
+  if (g === "SUPPORT") return 3;
+  if (isMod(room, userId) || level >= 3) return 2;
+  return 1;
+}
+
+/** A room ban never keeps out the people above the moderators who set it:
+ *  Weered's staff and the room's or lobby's owner (finding 7). */
+export async function banExempt(room: RoomState, userId: string): Promise<boolean> {
+  return (await rankOf(room, userId, 1)) >= 4;
 }
 
 export function ensureLaunch(room: RoomState): LaunchState {

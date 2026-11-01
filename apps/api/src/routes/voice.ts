@@ -119,6 +119,25 @@ export default async function voiceRoutes(app: FastifyInstance, opts: Opts) {
             .findUnique({ where: { id: u.id }, select: { globalRole: true } })
             .then((r) => r?.globalRole ?? null)
             .catch(() => null);
+      // A lobby ban and a running kick hold for voice as they do at the room's
+      // door (index.ts doJoin, same staff exemptions): a banned or just-kicked
+      // person used to get a fresh token and be back in the call, able to speak
+      // (red team 2026-11-01, finding 8).
+      {
+        const g = String(globalRole || "").toUpperCase();
+        if (!(u as any).guest && !["STAFF", "ADMIN", "GOD"].includes(g)) {
+          const ban = await prisma.lobbyBan
+            .findUnique({
+              where: { lobbyId_userId: { lobbyId: room.lobbyId || room.roomId, userId: u.id } },
+              select: { id: true },
+            })
+            .catch(() => null);
+          if (ban) return reply.code(403).send({ ok: false, error: "lobby_banned" });
+        }
+        const until = room.kickedUntil?.get(u.id);
+        if (until && until > Date.now() && !["GOD", "STAFF", "SUPPORT", "ADMIN"].includes(g))
+          return reply.code(403).send({ ok: false, error: "kicked" });
+      }
       const isOwnerOrMod = isModOrOwner(room, u.id, globalRole ?? undefined);
       if ((room.locked || room.passwordHash) && !isOwnerOrMod && !room.users?.has(u.id)) {
         return reply.code(403).send({ ok: false, error: "not_admitted" });

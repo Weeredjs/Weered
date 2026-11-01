@@ -105,6 +105,11 @@ export default function InvitePage() {
       return;
     }
     const j = await r.json();
+    // A lobby with a front door: its door takes the invite from here.
+    if (j.error === "door_required" && j.redirect) {
+      router.push(j.redirect);
+      return;
+    }
     if (j.ok) {
       setRedirect(j.redirect || "/lobby");
       setState("done");
@@ -116,7 +121,7 @@ export default function InvitePage() {
           ? "This invite has expired."
           : j.error === "exhausted"
             ? "This invite is full."
-            : j.error || "Failed.",
+            : j.message || j.error || "Failed.",
       );
     }
   }

@@ -2,6 +2,8 @@ import { swallow } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
 import { z } from "zod";
+import { canInvite } from "../lib/invitePower";
+import { readDoor } from "../lib/lobbyDoor";
 
 type Opts = {
   authFromHeader: (h?: string) => { id: string; name: string } | null;
@@ -46,6 +48,14 @@ export default async function invitesRoutes(app: FastifyInstance, opts: Opts) {
           return reply.code(403).send({ ok: false, error: "not_lobby_owner" });
         }
       }
+      // Making a lobby, room or crew invite takes the power to let people in
+      // (lib/invitePower.ts).
+      if (["LOBBY", "ROOM", "CREW"].includes(type) && !(await canInvite(type, targetId, u.id)))
+        return reply.code(403).send({
+          ok: false,
+          error: "not_allowed",
+          message: "Only someone who can let people in can invite them.",
+        });
       const invite = await prisma.invite.create({
         data: { type: type as any, targetId, createdBy: u.id, note, maxUses, expiresAt },
       });
@@ -133,10 +143,33 @@ export default async function invitesRoutes(app: FastifyInstance, opts: Opts) {
       if (invite.maxUses > 0 && invite.uses >= invite.maxUses)
         return reply.code(410).send({ ok: false, error: "exhausted" });
 
-      await prisma.invite.update({ where: { token }, data: { uses: { increment: 1 } } });
+      // An invite works only while its maker may still make it, and never gets
+      // a banned person back in or past a lobby's front door.
+      if (
+        ["LOBBY", "ROOM", "CREW"].includes(invite.type) &&
+        !(await canInvite(invite.type, invite.targetId, invite.createdBy))
+      )
+        return reply
+          .code(403)
+          .send({ ok: false, error: "invite_revoked", message: "This invite no longer works." });
+      const banned = (message: string) =>
+        reply.code(403).send({ ok: false, error: "banned", message });
 
       let redirect = "/lobby";
       if (invite.type === "ROOM" && invite.targetId) {
+        const room = await prisma.room.findUnique({
+          where: { id: invite.targetId },
+          select: { lobbyId: true },
+        });
+        const roomBan = await prisma.roomBan
+          .findUnique({ where: { roomId_userId: { roomId: invite.targetId, userId: u.id } } })
+          .catch(() => null);
+        const lobbyBan = room?.lobbyId
+          ? await prisma.lobbyBan
+              .findUnique({ where: { lobbyId_userId: { lobbyId: room.lobbyId, userId: u.id } } })
+              .catch(() => null)
+          : null;
+        if (roomBan || lobbyBan) return banned("You are banned from this room.");
         await prisma.roomMember
           .upsert({
             where: { roomId_userId: { roomId: invite.targetId, userId: u.id } },
@@ -146,6 +179,29 @@ export default async function invitesRoutes(app: FastifyInstance, opts: Opts) {
           .catch(swallow);
         redirect = `/room/${encodeURIComponent(invite.targetId)}`;
       } else if (invite.type === "LOBBY" && invite.targetId) {
+        const lobbyId = invite.targetId;
+        if (
+          await prisma.lobbyBan.findUnique({
+            where: { lobbyId_userId: { lobbyId, userId: u.id } },
+          })
+        )
+          return banned("You are banned from this lobby.");
+        const lobby = await prisma.lobby.findUnique({
+          where: { id: lobbyId },
+          select: { layout: true },
+        });
+        if (!lobby) return reply.code(404).send({ ok: false, error: "not_found" });
+        const already = await prisma.lobbyMember.findUnique({
+          where: { lobbyId_userId: { lobbyId, userId: u.id } },
+        });
+        // The front door still asks its questions: the lobby's own join takes
+        // the invite from there and skips only the lock (routes/lobbyJoin.ts).
+        if (!already && readDoor(lobby.layout))
+          return reply.code(409).send({
+            ok: false,
+            error: "door_required",
+            redirect: `/lobby/${encodeURIComponent(lobbyId)}?invite=${encodeURIComponent(token)}`,
+          });
         await prisma.lobbyMember
           .upsert({
             where: { lobbyId_userId: { lobbyId: invite.targetId, userId: u.id } },
@@ -165,6 +221,7 @@ export default async function invitesRoutes(app: FastifyInstance, opts: Opts) {
         awardNotoriety(u.id, "CREW_JOINED").catch(swallow);
         redirect = "/lobby";
       }
+      await prisma.invite.update({ where: { token }, data: { uses: { increment: 1 } } });
 
       if (invite.createdBy !== u.id) {
         const msg =
@@ -210,6 +267,14 @@ export default async function invitesRoutes(app: FastifyInstance, opts: Opts) {
           return reply.code(403).send({ ok: false, error: "not_lobby_owner" });
         }
       }
+      // Making a lobby, room or crew invite takes the power to let people in
+      // (lib/invitePower.ts).
+      if (["LOBBY", "ROOM", "CREW"].includes(type) && !(await canInvite(type, targetId, u.id)))
+        return reply.code(403).send({
+          ok: false,
+          error: "not_allowed",
+          message: "Only someone who can let people in can invite them.",
+        });
       const target = await prisma.user.findFirst({
         where: {
           OR: [{ usernameKey: username }, { name: { equals: username, mode: "insensitive" } }],

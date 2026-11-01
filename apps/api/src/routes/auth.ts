@@ -11,6 +11,7 @@ import { OAuth2Client } from "google-auth-library";
 import { prisma } from "../lib/prisma";
 import { registrationBlock } from "../lib/registration";
 import { cutoffNow } from "../lib/sessionCutoff";
+import { accountForGoogle } from "../lib/googleLink";
 import { setAuthCookie, clearAuthCookie, isWebClient } from "../lib/authCookie";
 
 // Web auth lives in the httpOnly cookie (set via setAuthCookie); only non-web
@@ -197,9 +198,13 @@ export default async function authRoutes(app: FastifyInstance, opts: Opts) {
       const existing = await prisma.localAuth.findUnique({ where: { username } }).catch(() => null);
       if (existing) return reply.code(409).send({ error: "Username already exists" });
       if (email) {
-        const emailTaken = await prisma.localAuth
-          .findUnique({ where: { email } })
-          .catch(() => null);
+        // A Google account holds its address on User alone; without this check
+        // the create below hit the unique index and answered 500.
+        const emailTaken =
+          (await prisma.localAuth.findUnique({ where: { email } }).catch(() => null)) ||
+          (await prisma.user
+            .findFirst({ where: { email }, select: { id: true } })
+            .catch(() => null));
         if (emailTaken) return reply.code(409).send({ error: "Email already in use" });
       }
       const reserved = await isNameReserved(username, "USERNAME");
@@ -545,17 +550,13 @@ export default async function authRoutes(app: FastifyInstance, opts: Opts) {
       const avatar = payload.picture || null;
       const displayName = payload.name || `g_${googleId.slice(0, 12)}`;
 
-      let user = await prisma.user.findFirst({ where: { googleId } });
-
-      if (!user && email) {
-        user = await prisma.user.findFirst({ where: { email } });
-        if (user) {
-          await prisma.user.update({
-            where: { id: user.id },
-            data: { googleId, avatar: avatar || undefined },
-          });
-        }
-      }
+      // An email match links only when it's safe (lib/googleLink.ts).
+      const found = await accountForGoogle(
+        prisma,
+        { googleId, email, emailVerified: payload.email_verified === true },
+        avatar,
+      );
+      let user = found.user;
 
       const isNew = !user;
       if (!user) {
@@ -568,7 +569,7 @@ export default async function authRoutes(app: FastifyInstance, opts: Opts) {
           );
         const tempName = `g_${googleId.slice(0, 12)}`;
         user = await prisma.user.create({
-          data: { name: displayName, usernameKey: tempName, googleId, email, avatar },
+          data: { name: displayName, usernameKey: tempName, googleId, email: found.email, avatar },
         });
         seedWelcomeDM(user.id).catch(swallow);
       }

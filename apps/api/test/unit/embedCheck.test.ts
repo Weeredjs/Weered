@@ -84,6 +84,16 @@ describe("link cards", () => {
     expect(m.icon).toBe("https://www.example.org/favicon.ico");
   });
 
+  it("stays quick on a head built to stall the parser (red team 2026-11-01, finding 6)", () => {
+    const evil =
+      `<head><meta ${"a".repeat(40_000)}><meta ${"b ".repeat(20_000)}>` +
+      `<meta property="og:title" content="Still here"></head>`;
+    const t = performance.now();
+    const m = parseMeta(evil, new URL("https://x.example/"));
+    expect(performance.now() - t).toBeLessThan(150);
+    expect(m.title).toBe("Still here");
+  });
+
   it("refuses anything but https without fetching", async () => {
     expect(await checkEmbed("http://example.com")).toEqual({ ok: false, error: "https_only" });
     expect(await checkEmbed("javascript:alert(1)")).toEqual({ ok: false, error: "https_only" });

@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
 import { swallow } from "../lib/logger";
+import { lobbyIdFree } from "../lib/lobbyAccess";
 
 // Your place (James 2026-10-30: "like a vibe coded my space ... People walk in
 // and just exist ... weered at subdomains everywhere"). Every member can have
@@ -246,7 +247,7 @@ export default async function placesRoutes(app: FastifyInstance, opts: Opts) {
       // A label already taken (two names that clean up the same): number it.
       let id = PLACE_PREFIX + label;
       for (let i = 2; i < 60; i++) {
-        if (!(await prisma.lobby.findUnique({ where: { id }, select: { id: true } }))) break;
+        if (await lobbyIdFree(id)) break;
         id = `${PLACE_PREFIX}${label.slice(0, 26)}-${i}`;
       }
 

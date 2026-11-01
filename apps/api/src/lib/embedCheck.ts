@@ -83,11 +83,49 @@ export function knownEmbed(u: URL): string | null {
   return null;
 }
 
+const NAME_CH = /[a-zA-Z_:.-]/;
+const SPACE_CH = /\s/;
+const TAG_MAX = 8192;
+
+/**
+ * A tag's attributes, read in one pass. The regex this replaced backtracked on
+ * a long run of name characters with no "=", so one page built for it held the
+ * API's event loop for tens of seconds per request (red team 2026-11-01,
+ * finding 6). Each character is now looked at a fixed number of times, and a
+ * tag is cut at 8 KB, far past any real meta or link tag.
+ */
 function tagAttrs(tag: string): Record<string, string> {
   const out: Record<string, string> = {};
-  const re = /([a-zA-Z_:.-]+)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'>]+))/g;
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(tag))) out[m[1].toLowerCase()] = m[2] ?? m[3] ?? m[4] ?? "";
+  const s = tag.length > TAG_MAX ? tag.slice(0, TAG_MAX) : tag;
+  let i = 1;
+  while (i < s.length && !SPACE_CH.test(s[i]) && s[i] !== ">" && s[i] !== "/") i++;
+  while (i < s.length) {
+    while (i < s.length && !NAME_CH.test(s[i])) {
+      if (s[i] === ">") return out;
+      i++;
+    }
+    const start = i;
+    while (i < s.length && NAME_CH.test(s[i])) i++;
+    const name = s.slice(start, i).toLowerCase();
+    let j = i;
+    while (j < s.length && SPACE_CH.test(s[j])) j++;
+    if (s[j] !== "=") continue;
+    j++;
+    while (j < s.length && SPACE_CH.test(s[j])) j++;
+    const q = s[j];
+    if (q === '"' || q === "'") {
+      const close = s.indexOf(q, j + 1);
+      if (close < 0) return out;
+      out[name] = s.slice(j + 1, close);
+      i = close + 1;
+    } else {
+      const v = j;
+      while (j < s.length && !SPACE_CH.test(s[j]) && s[j] !== '"' && s[j] !== "'" && s[j] !== ">")
+        j++;
+      if (j > v) out[name] = s.slice(v, j);
+      i = Math.max(j, i);
+    }
+  }
   return out;
 }
 

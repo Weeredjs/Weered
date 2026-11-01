@@ -203,6 +203,7 @@ import {
   isElevatedGlobal,
   isModOrOwner,
   roleOf,
+  banExempt,
   ensureLaunch,
   broadcastLaunch,
   audit,
@@ -613,9 +614,18 @@ async function doJoin(ws: Sock, roomId: string) {
 
   // Banned first: the ownership claim below used to run BEFORE this check, so a
   // room-banned user could become the owner of an ownerless room on the way out.
+  // Staff and the owner walk through a ban set below them, and it's lifted
+  // (lib/roomState.ts banExempt, red team 2026-11-01 finding 7).
   if (ws.user && room.banned.has(ws.user.id)) {
-    send(ws, { type: "room:banned", roomId, roomName: room.name || "" });
-    return false;
+    if (await banExempt(room, ws.user.id)) {
+      room.banned.delete(ws.user.id);
+      void prisma.roomBan
+        .deleteMany({ where: { roomId: room.roomId, userId: ws.user.id } })
+        .catch(swallow);
+    } else {
+      send(ws, { type: "room:banned", roomId, roomName: room.name || "" });
+      return false;
+    }
   }
 
   // Kicked: out until the kick runs out (sockets/roomMod.ts KICK_MS). A refresh

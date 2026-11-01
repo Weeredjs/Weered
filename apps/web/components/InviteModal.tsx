@@ -70,7 +70,7 @@ export default function InviteModal({ type, targetId, targetName, onClose }: Pro
     setLoading(false);
     if (j.ok) {
       setLink(j.invite.url);
-    } else setMsg(j.error || "Failed.");
+    } else setMsg(j.message || j.error || "Failed.");
   }
 
   async function sendToUser() {
@@ -85,7 +85,8 @@ export default function InviteModal({ type, targetId, targetName, onClose }: Pro
     if (j.ok) {
       setMsg(`Invite sent to ${j.sentTo} via DM ✓`);
       setUsername("");
-    } else setMsg(j.error === "user_not_found" ? "User not found." : j.error || "Failed.");
+    } else
+      setMsg(j.error === "user_not_found" ? "User not found." : j.message || j.error || "Failed.");
   }
 
   function copy() {

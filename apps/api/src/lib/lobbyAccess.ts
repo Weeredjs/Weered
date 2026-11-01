@@ -24,6 +24,20 @@ export async function lobbyLevelOf(userId: string, lobbyId: string): Promise<num
 }
 
 /**
+ * Is this id free for a new lobby or place? A lobby's chat is the Room whose id
+ * is the lobby's own, so an id a room already holds would hand the new lobby's
+ * chat (its password, its gate, its bans) to that room's owner (red team
+ * 2026-11-01, finding 3).
+ */
+export async function lobbyIdFree(id: string): Promise<boolean> {
+  const [lobby, room] = await Promise.all([
+    prisma.lobby.findUnique({ where: { id }, select: { id: true } }),
+    prisma.room.findUnique({ where: { id }, select: { id: true } }),
+  ]);
+  return !lobby && !room;
+}
+
+/**
  * May this user enter a room gated at `minLevel` (Room.minLevel)?
  *
  * Fails CLOSED: a guest, a room with no lobby, or any lookup error is a no.
