@@ -194,27 +194,44 @@ export default function CustomBlockFrame({
   if (!doc)
     return <div style={{ height: px, display: "grid", placeItems: "center", opacity: 0.4 }}>…</div>;
 
+  // Who made it, always on show: a block is this lobby's own code, and while
+  // the frame can't reach Weered, nothing can stop it sending itself (and what
+  // someone typed into it) to another site (red team 2026-11-01, finding 19).
   return (
-    <iframe
-      key={mount}
-      ref={frame}
-      title={title || "Custom block"}
-      // Scripts only: no same-origin (no cookies, storage or Weered pages), no
-      // forms, popups, top navigation or downloads.
-      sandbox="allow-scripts"
-      allow=""
-      referrerPolicy="no-referrer"
-      srcDoc={doc}
-      onLoad={() => {
-        // The box's own page loads once. A second load means it sent itself
-        // somewhere else: put the block back, and after twice, stop it.
-        loads.current += 1;
-        if (loads.current < 2) return;
-        loads.current = 0;
-        if (mount >= 2) setStopped(true);
-        else setMount((n) => n + 1);
-      }}
-      style={{ display: "block", width: "100%", height: px, border: 0, background: "transparent" }}
-    />
+    <div>
+      <iframe
+        key={mount}
+        ref={frame}
+        title={title || "Custom block"}
+        // Scripts only: no same-origin (no cookies, storage or Weered pages), no
+        // forms, popups, top navigation or downloads.
+        sandbox="allow-scripts"
+        allow=""
+        referrerPolicy="no-referrer"
+        srcDoc={doc}
+        onLoad={() => {
+          // The box's own page loads once. A second load means it sent itself
+          // somewhere else: put the block back, and after twice, stop it.
+          loads.current += 1;
+          if (loads.current < 2) return;
+          loads.current = 0;
+          if (mount >= 2) setStopped(true);
+          else setMount((n) => n + 1);
+        }}
+        style={{
+          display: "block",
+          width: "100%",
+          height: px,
+          border: 0,
+          background: "transparent",
+        }}
+      />
+      <div
+        title="Weered didn't write this block. Never type a password into one."
+        style={{ fontSize: 10, letterSpacing: ".04em", opacity: 0.5, padding: "4px 2px 0" }}
+      >
+        Made by this lobby, not Weered
+      </div>
+    </div>
   );
 }
