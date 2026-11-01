@@ -275,7 +275,7 @@ import { prisma } from "./lib/prisma";
 import { canEnterGatedRoom } from "./lib/lobbyAccess";
 import { isOfficeRoom, scopeAllows } from "./lib/officeRooms";
 import { issuedBeforeCutoff } from "./lib/sessionCutoff";
-import { readCookieToken } from "./lib/authCookie";
+import { sessionHook } from "./lib/sessionHook";
 import { awardPaper } from "./lib/economy";
 
 const JWT_SECRET = (() => {
@@ -765,12 +765,9 @@ async function main() {
   if (process.env.ENABLE_CORS === "1") {
     await app.register(cors, { origin: true, credentials: true });
   }
-  app.addHook("onRequest", async (req: any) => {
-    if (!req.headers.authorization) {
-      const c = readCookieToken(req);
-      if (c) req.headers.authorization = "Bearer " + c;
-    }
-  });
+  // Cookie to Authorization, and no session on a lobby's own domain
+  // (lib/sessionHook.ts).
+  app.addHook("onRequest", sessionHook);
 
   // Guest deny-by-default: a guest token is valid ONLY on this tiny allowlist; every
   // other HTTP route returns 403. Also enforces revocation -- a deleted/expired/banned

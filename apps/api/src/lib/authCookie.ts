@@ -2,6 +2,8 @@
 // and the global onRequest hook in index.ts (which reads it). Keeping the cookie
 // name + attributes in ONE place guarantees they stay byte-identical across that
 // boundary — any mismatch silently breaks every web session.
+import { hostOfRequest, isTenantHost } from "./siteHost";
+
 export const AUTH_COOKIE = "weered_token";
 
 // Weered-family hosts share one session across subdomains (Domain=.weered.ca).
@@ -16,6 +18,8 @@ function cookieDomainAttr(reply: any): string {
 }
 
 export function setAuthCookie(reply: any, token: string) {
+  // Never on a lobby's own domain (lib/siteHost.ts).
+  if (isTenantHost(hostOfRequest(reply?.request))) return;
   reply.header(
     "Set-Cookie",
     AUTH_COOKIE +

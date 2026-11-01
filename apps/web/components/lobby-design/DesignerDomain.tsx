@@ -23,6 +23,8 @@ export function DomainModal({
   const [msg, setMsg] = useState<string | null>(null);
   const [removeArmed, setRemoveArmed] = useState(false);
   const [dnsRec, setDnsRec] = useState<{ type: string; name: string; value: string } | null>(null);
+  // The TXT record that proves the domain is theirs (api routes/lobbyDesign.ts).
+  const [txtRec, setTxtRec] = useState<{ type: string; name: string; value: string } | null>(null);
   const base = `${API}/lobbies/${encodeURIComponent(lobbyId)}/admin/domain`;
 
   const call = async (method: string, url: string, body?: any) => {
@@ -45,6 +47,23 @@ export function DomainModal({
       setBusy(false);
     }
   };
+
+  useEffect(() => {
+    // An existing domain: fetch both records (the proof is the server's to make).
+    if (!domain.host || txtRec) return;
+    let alive = true;
+    void fetch(base, { credentials: "include" })
+      .then((r) => r.json())
+      .then((j) => {
+        if (!alive || !j?.ok || !j.domain) return;
+        if (j.dns) setDnsRec(j.dns);
+        if (j.txt) setTxtRec(j.txt);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [domain.host, txtRec, base]);
 
   useEffect(() => {
     // Re-derive the DNS record for an existing domain.
@@ -99,8 +118,8 @@ export function DomainModal({
           Put this lobby on your own address.
         </div>
         <p style={{ fontSize: 13, opacity: 0.7, lineHeight: 1.5 }}>
-          Members type your domain and land right here, with a secure certificate. The lobby stays
-          listed in the Weered network.
+          People type your domain and land on this lobby, with a secure certificate. They sign in
+          and take part on weered.ca, where the lobby stays listed in the Weered network.
         </p>
         <div style={{ display: "flex", gap: 8 }}>
           <input
@@ -117,6 +136,7 @@ export function DomainModal({
               if (j) {
                 onChange({ host: j.domain, status: j.status });
                 setDnsRec(j.dns);
+                setTxtRec(j.txt || null);
                 setValue(j.domain);
               }
             }}
@@ -159,7 +179,7 @@ export function DomainModal({
               </span>
             </div>
             <div style={{ fontSize: 12, opacity: 0.7, margin: "10px 0 6px" }}>
-              Add this record where your domain's DNS is managed:
+              Add these records where your domain's DNS is managed:
             </div>
             <div
               style={{
@@ -176,6 +196,13 @@ export function DomainModal({
               <span>{dnsRec.type}</span>
               <span>{dnsRec.name}</span>
               <span>{dnsRec.value}</span>
+              {txtRec && (
+                <>
+                  <span>{txtRec.type}</span>
+                  <span>{txtRec.name}</span>
+                  <span style={{ wordBreak: "break-all" }}>{txtRec.value}</span>
+                </>
+              )}
             </div>
             <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
               <button
@@ -184,10 +211,13 @@ export function DomainModal({
                   const j = await call("POST", `${base}/verify`);
                   if (j) {
                     onChange({ host: j.domain, status: j.status });
+                    if (j.txt) setTxtRec(j.txt);
                     setMsg(
                       j.status === "live"
                         ? "Live. Your domain points here."
-                        : "Not pointing here yet. DNS can take a few minutes to an hour.",
+                        : j.pointing && !j.owned
+                          ? "It points here. Now add the TXT record, which proves the domain is yours."
+                          : "Not pointing here yet. DNS can take a few minutes to an hour.",
                     );
                   }
                 }}

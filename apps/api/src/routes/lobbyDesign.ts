@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { promises as dns } from "dns";
+import { createHmac } from "crypto";
 import { prisma } from "../lib/prisma";
 import { hasLobbyPerm } from "../lib/lobbyPerms";
 import { logLobbyAudit } from "../lib/lobbyAudit";
@@ -75,6 +76,38 @@ export function designCreateExtras(layout: unknown, enabledModules: unknown): Re
   return out;
 }
 
+/**
+ * The TXT record that proves a lobby's admin runs a domain. Its value is tied to
+ * the lobby and the name, so nobody can claim a domain they don't control, or
+ * one that already points here for someone else. Pointing a name here was the
+ * only check before, and a pending name already passed Caddy's gate and the
+ * middleware (red team 2026-11-01, finding 18).
+ */
+export function domainProof(lobbyId: string, host: string): string {
+  const key = process.env.JWT_SECRET || "weered-domain-proof";
+  const mac = createHmac("sha256", key).update(`domain:${lobbyId}:${host}`).digest("hex");
+  return `weered-verify=${mac.slice(0, 32)}`;
+}
+
+function proofRecord(lobbyId: string, host: string) {
+  const labels = host.split(".");
+  return {
+    type: "TXT",
+    name: labels.length === 2 ? "_weered" : `_weered.${labels[0]}`,
+    value: domainProof(lobbyId, host),
+    note: `Proves ${host} is yours.`,
+  };
+}
+
+async function owns(lobbyId: string, host: string): Promise<boolean> {
+  try {
+    const want = domainProof(lobbyId, host);
+    return (await dns.resolveTxt(`_weered.${host}`)).some((r) => r.join("") === want);
+  } catch {
+    return false;
+  }
+}
+
 async function addressesOf(host: string): Promise<string[]> {
   try {
     return await dns.resolve4(host);
@@ -90,8 +123,9 @@ const HOST_TTL_MS = 60_000;
 async function lobbyForHost(host: string): Promise<string | null> {
   const hit = hostCache.get(host);
   if (hit && Date.now() - hit.at < HOST_TTL_MS) return hit.lobbyId;
-  const row = await prisma.lobby.findUnique({
-    where: { customDomain: host },
+  // Live domains only: a pending one has proved nothing yet.
+  const row = await prisma.lobby.findFirst({
+    where: { customDomain: host, domainStatus: "live" },
     select: { id: true },
   });
   hostCache.set(host, { lobbyId: row?.id ?? null, at: Date.now() });
@@ -180,6 +214,23 @@ export default async function lobbyDesignRoutes(app: FastifyInstance, opts: Opts
       domain: host,
       status: "pending",
       dns: dnsInstructions(host, origin[0] || ""),
+      txt: proofRecord(ctx.lobby.id, host),
+    });
+  });
+
+  // The domain as it stands, with both records to add (the panel shows them).
+  app.get("/lobbies/:id/admin/domain", async (req, reply) => {
+    const ctx = await designer(req, reply);
+    if (!ctx) return;
+    const host = ctx.lobby.customDomain as string | null;
+    if (!host) return reply.send({ ok: true, domain: null, status: null });
+    const origin = await addressesOf(ORIGIN_HOST);
+    return reply.send({
+      ok: true,
+      domain: host,
+      status: ctx.lobby.domainStatus || "pending",
+      dns: dnsInstructions(host, origin[0] || ""),
+      txt: proofRecord(ctx.lobby.id, host),
     });
   });
 
@@ -188,8 +239,14 @@ export default async function lobbyDesignRoutes(app: FastifyInstance, opts: Opts
     if (!ctx) return;
     const host = ctx.lobby.customDomain as string | null;
     if (!host) return reply.code(400).send({ ok: false, error: "no_domain" });
-    const [mine, theirs] = await Promise.all([addressesOf(ORIGIN_HOST), addressesOf(host)]);
-    const live = theirs.length > 0 && theirs.every((a) => mine.includes(a));
+    const [mine, theirs, owned] = await Promise.all([
+      addressesOf(ORIGIN_HOST),
+      addressesOf(host),
+      owns(ctx.lobby.id, host),
+    ]);
+    // Live takes both: the name points here, and the TXT record proves it's theirs.
+    const pointing = theirs.length > 0 && theirs.every((a) => mine.includes(a));
+    const live = pointing && owned;
     await prisma.lobby.update({
       where: { id: ctx.lobby.id },
       data: live
@@ -201,9 +258,12 @@ export default async function lobbyDesignRoutes(app: FastifyInstance, opts: Opts
       ok: true,
       domain: host,
       status: live ? "live" : "pending",
+      pointing,
+      owned,
       resolvesTo: theirs,
       expected: mine,
       dns: dnsInstructions(host, mine[0] || ""),
+      txt: proofRecord(ctx.lobby.id, host),
     });
   });
 

@@ -1,7 +1,9 @@
 // A lobby on its own domain (2026-10-29). Caddy issues the certificate on
-// demand for hosts registered as a lobby's customDomain and proxies them here;
-// the root of such a host sends the visitor to that lobby, on the same host. Every other path is the normal app
-// (sign-in, rooms, profiles), and /api + /ws are same-origin through Caddy.
+// demand for a lobby's live customDomain and proxies it here; the root sends the
+// visitor to that lobby, on the same host, and /api + /ws are same-origin
+// through Caddy. That lobby and its rooms are all such a host serves: signing in
+// and the rest of Weered are on weered.ca, because a session can't be kept on a
+// name its owner controls (red team 2026-11-01, finding 4; API lib/siteHost.ts).
 //
 // Weered's own hosts, the ECEB office hosts and dev never reach the lookup,
 // except <label>.weered.ca, which is someone's place (api routes/places.ts).
@@ -38,13 +40,37 @@ export async function middleware(req: NextRequest) {
     .toLowerCase()
     .replace(/:\d+$/, "");
   if (!host || (OWN_HOST.test(host) && !PLACE_HOST.test(host))) return NextResponse.next();
+  const path = req.nextUrl.pathname;
+  const place = PLACE_HOST.test(host);
+  // A place (<label>.weered.ca) is Weered's own: only its root is taken over.
+  if (place && path !== "/") return NextResponse.next();
   const id = await lobbyFor(host);
-  if (!id) return NextResponse.next();
+  if (!id) return place ? NextResponse.next() : toWeered(req);
   // Redirect, not rewrite: the client app keys its shell and auth logic on the
   // browser path, and at "/" it took a rewritten lobby for the home page (blank
   // screen, bounce to /?next=/). The visitor stays on the club's own domain.
-  return NextResponse.redirect(new URL(`/lobby/${encodeURIComponent(id)}`, `https://${host}`), 307);
+  if (path === "/")
+    return NextResponse.redirect(
+      new URL(`/lobby/${encodeURIComponent(id)}`, `https://${host}`),
+      307,
+    );
+  const seg = path.split("/");
+  let lobby = "";
+  try {
+    lobby = decodeURIComponent(seg[2] || "");
+  } catch {}
+  if ((seg[1] === "lobby" && lobby === id) || seg[1] === "room") return NextResponse.next();
+  return toWeered(req);
 }
 
-// Only the root of a custom host is rewritten; deeper paths are the app itself.
-export const config = { matcher: ["/"] };
+/** The same path on weered.ca: sign-in, Home and everything but this lobby. */
+function toWeered(req: NextRequest) {
+  return NextResponse.redirect(
+    new URL(req.nextUrl.pathname + req.nextUrl.search, "https://weered.ca"),
+    307,
+  );
+}
+
+// Every page path (not assets, files, /api or /ws). Weered's own hosts return
+// at the first check, so this costs them one regex.
+export const config = { matcher: ["/((?!_next/|api/|ws|.*\\..*).*)"] };
