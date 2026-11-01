@@ -499,6 +499,8 @@ model User {
   nameEffect       String? // username color/gradient effect key (none|gold|fire|ice|toxic|royal|rainbow)
   email            String?  @unique
   googleId         String?  @unique
+  /// Sign in with Discord (routes/discordAuth.ts), 2026-11-01.
+  discordId        String?  @unique
   avatar           String?
   avatarColor      String?
   bannerUrl        String? // wide banner image for the right-rail ID card

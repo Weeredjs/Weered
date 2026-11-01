@@ -20,7 +20,8 @@ function OnboardingForm() {
     try {
       const t = sp?.get("token") || "";
       const userRaw = sp?.get("user") || "";
-      if (t) {
+      // Discord's sign-in sends only who you are: the session is the cookie.
+      if (t || userRaw) {
         setToken(t);
         void 0;
         if (userRaw) {
@@ -70,7 +71,7 @@ function OnboardingForm() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({ username }),
       });

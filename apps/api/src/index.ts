@@ -99,6 +99,7 @@ import { runGameServerWorker } from "./gameServerWorker";
 import gameServerRoutes from "./routes/gameServers";
 import paperRoutes from "./routes/paper";
 import invitesRoutes from "./routes/invites";
+import discordAuthRoutes from "./routes/discordAuth";
 import chessRoutes from "./routes/chess";
 import barRoutes from "./routes/bar";
 import startggRoutes from "./routes/startgg";
@@ -993,6 +994,7 @@ async function main() {
     rooms,
     isOfficeStaff,
   });
+  await app.register(discordAuthRoutes, { JWT_SECRET, getSiteConfig, seedWelcomeDM });
 
   const WEB_URL = process.env.APP_URL || "https://weered.ca";
 
