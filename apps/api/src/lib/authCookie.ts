@@ -49,6 +49,15 @@ export function isWebClient(req: any): boolean {
   return String(req.headers["x-client"] || "").toLowerCase() === "web";
 }
 
+/** Any cookie's value by name ("" when absent). */
+export function readCookie(req: any, name: string): string {
+  for (const part of String(req?.headers?.cookie || "").split(";")) {
+    const i = part.indexOf("=");
+    if (i > 0 && part.slice(0, i).trim() === name) return part.slice(i + 1).trim();
+  }
+  return "";
+}
+
 export function readCookieToken(req: any): string | null {
   const raw = req.headers.cookie;
   if (!raw) return null;

@@ -12,7 +12,7 @@ import { prisma } from "../lib/prisma";
 import { registrationBlock } from "../lib/registration";
 import { cutoffNow } from "../lib/sessionCutoff";
 import { accountForGoogle } from "../lib/googleLink";
-import { setAuthCookie, clearAuthCookie, isWebClient } from "../lib/authCookie";
+import { setAuthCookie, clearAuthCookie, isWebClient, readCookie } from "../lib/authCookie";
 
 // Web auth lives in the httpOnly cookie (set via setAuthCookie); only non-web
 // clients (mobile/desktop, which don't use cookies) get the token in the body.
@@ -84,6 +84,7 @@ export default async function authRoutes(app: FastifyInstance, opts: Opts) {
     /^exp:\/\/[0-9a-z.\-:]+\/--\/[^\s]*$/i,
   ];
   const isAllowedRedirect = (u: string) => REDIRECT_ALLOW.some((re) => re.test(u));
+  const GOOGLE_STATE_COOKIE = "weered_oauth_g";
 
   async function verifyCaptcha(
     token: unknown,
@@ -498,15 +499,25 @@ export default async function authRoutes(app: FastifyInstance, opts: Opts) {
   app.get("/auth/google", async (req, reply) => {
     const { redirect } = (req as any).query as { redirect?: string };
     const client = new OAuth2Client(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_CALLBACK_URL);
-    let state: string | undefined;
-    if (redirect && isAllowedRedirect(redirect)) {
-      state = jwt.sign({ r: redirect }, JWT_SECRET, { expiresIn: "10m" });
-    }
+    // The state always carries a nonce that must come back with this browser's
+    // cookie, so a sign-in only finishes where it started: nobody can hand a
+    // visitor a callback that signs them into an account of theirs (red team
+    // 2026-11-01, finding 10). Same as Discord's (routes/discordAuth.ts).
+    const nonce = randomBytes(16).toString("hex");
+    const state = jwt.sign(
+      { n: nonce, ...(redirect && isAllowedRedirect(redirect) ? { r: redirect } : {}) },
+      JWT_SECRET,
+      { expiresIn: "10m" },
+    );
+    reply.header(
+      "Set-Cookie",
+      `${GOOGLE_STATE_COOKIE}=${nonce}; HttpOnly; Secure; SameSite=Lax; Path=/auth/google; Max-Age=600`,
+    );
     const url = client.generateAuthUrl({
       access_type: "offline",
       scope: ["profile", "email"],
       prompt: "select_account",
-      ...(state ? { state } : {}),
+      state,
     });
     return reply.redirect(url);
   });
@@ -514,14 +525,18 @@ export default async function authRoutes(app: FastifyInstance, opts: Opts) {
   app.get("/auth/google/callback", async (req, reply) => {
     const { code, state } = (req as any).query as { code?: string; state?: string };
     let customRedirect: string | null = null;
+    let nonce = "";
     if (state) {
       try {
-        const decoded = jwt.verify(state, JWT_SECRET) as { r?: string };
+        const decoded = jwt.verify(state, JWT_SECRET) as { r?: string; n?: string };
+        nonce = String(decoded?.n || "");
         if (decoded?.r && isAllowedRedirect(decoded.r)) customRedirect = decoded.r;
       } catch (e) {
         swallow(e);
       }
     }
+    if (!nonce || readCookie(req, GOOGLE_STATE_COOKIE) !== nonce)
+      return reply.redirect(`${WEB_URL}/login?error=oauth_state`);
     const finishUrl = (path: string, qs: string) => {
       if (customRedirect) {
         const sep = customRedirect.includes("?") ? "&" : "?";

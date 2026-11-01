@@ -4,7 +4,7 @@ import { randomBytes } from "crypto";
 import { prisma } from "../lib/prisma";
 import { log, swallow } from "../lib/logger";
 import { registrationBlock } from "../lib/registration";
-import { setAuthCookie } from "../lib/authCookie";
+import { readCookie, setAuthCookie } from "../lib/authCookie";
 import { accountForIdentity } from "../lib/googleLink";
 
 // Sign in with Discord (2026-11-01): the people trying Weered mostly come from
@@ -28,14 +28,6 @@ type Opts = {
 };
 
 const STATE_COOKIE = "weered_oauth";
-
-function readCookie(req: any, name: string): string {
-  for (const part of String(req.headers?.cookie || "").split(";")) {
-    const i = part.indexOf("=");
-    if (i > 0 && part.slice(0, i).trim() === name) return part.slice(i + 1).trim();
-  }
-  return "";
-}
 
 export default async function discordAuthRoutes(app: FastifyInstance, opts: Opts) {
   const { JWT_SECRET, getSiteConfig, seedWelcomeDM } = opts;

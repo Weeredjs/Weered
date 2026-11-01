@@ -10,6 +10,9 @@ import { issuedBeforeCutoff } from "../../src/lib/sessionCutoff";
 const g = vi.hoisted(() => ({ payload: null as any }));
 vi.mock("google-auth-library", () => ({
   OAuth2Client: class {
+    generateAuthUrl(o: any) {
+      return `https://accounts.google.com/o/oauth2/auth?state=${encodeURIComponent(o.state)}`;
+    }
     async getToken() {
       return { tokens: { id_token: "stub" } };
     }
@@ -52,9 +55,18 @@ async function register(app: any, email: string) {
   return { username, userId: la!.userId };
 }
 
-async function googleSignIn(app: any, payload: any) {
+async function googleSignIn(app: any, payload: any, opts: { cookie?: boolean } = {}) {
   g.payload = payload;
-  const r = await app.inject({ method: "GET", url: "/auth/google/callback?code=stub" });
+  // Out to Google and back in the same browser: the state's nonce and cookie.
+  const out = await app.inject({ method: "GET", url: "/auth/google" });
+  const state = new URL(String(out.headers.location)).searchParams.get("state") || "";
+  const nonce = /weered_oauth_g=([^;]+)/.exec(String(out.headers["set-cookie"]))?.[1] || "";
+  const r = await app.inject({
+    method: "GET",
+    url: `/auth/google/callback?code=stub&state=${encodeURIComponent(state)}`,
+    headers: opts.cookie === false ? {} : { cookie: `weered_oauth_g=${nonce}` },
+  });
+  if (opts.cookie === false) return String(r.headers.location);
   expect(r.statusCode).toBe(302);
   const url = new URL(String(r.headers.location));
   expect(url.searchParams.get("error")).toBeNull();
@@ -159,6 +171,17 @@ describe("Google sign-in and an existing address", () => {
       payload: { username: fresh("u"), password: "squatter-pass-1", email },
     });
     expect(r.statusCode).toBe(409);
+    await app.close();
+  });
+
+  it("only finishes in the browser that started it", async () => {
+    const app = await makeApp();
+    const to = await googleSignIn(
+      app,
+      { sub: `7g${stamp}`, email: null, email_verified: false },
+      { cookie: false },
+    );
+    expect(String(to)).toContain("error=oauth_state");
     await app.close();
   });
 
