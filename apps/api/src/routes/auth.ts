@@ -12,6 +12,7 @@ import { prisma } from "../lib/prisma";
 import { registrationBlock } from "../lib/registration";
 import { cutoffNow } from "../lib/sessionCutoff";
 import { accountForGoogle } from "../lib/googleLink";
+import { loginFailed, loginPaused, loginSucceeded } from "../lib/loginGuard";
 import { setAuthCookie, clearAuthCookie, isWebClient, readCookie } from "../lib/authCookie";
 
 // Web auth lives in the httpOnly cookie (set via setAuthCookie); only non-web
@@ -397,10 +398,23 @@ export default async function authRoutes(app: FastifyInstance, opts: Opts) {
       const password = (rawP || "").trim();
       if (!username || !password)
         return reply.code(400).send({ error: "Missing username/password" });
+      // Ten wrong tries on one name pause it for 15 minutes (lib/loginGuard.ts).
+      if (loginPaused(username))
+        return reply.code(429).send({
+          error: "too_many_tries",
+          message: "Too many tries for this name. Wait a few minutes, or reset your password.",
+        });
       const la = await prisma.localAuth.findUnique({ where: { username } }).catch(() => null);
-      if (!la) return reply.code(401).send({ error: "Invalid credentials" });
+      if (!la) {
+        loginFailed(username);
+        return reply.code(401).send({ error: "Invalid credentials" });
+      }
       const ok = await bcrypt.compare(password, la.passwordHash);
-      if (!ok) return reply.code(401).send({ error: "Invalid credentials" });
+      if (!ok) {
+        loginFailed(username);
+        return reply.code(401).send({ error: "Invalid credentials" });
+      }
+      loginSucceeded(username);
       const user = await prisma.user.findUnique({ where: { id: la.userId } });
       if (!user) return reply.code(401).send({ error: "Invalid credentials" });
       if (user.banned)
@@ -597,7 +611,10 @@ export default async function authRoutes(app: FastifyInstance, opts: Opts) {
       const token = jwt.sign({ sub: user.id, name: user.name }, JWT_SECRET, { expiresIn: "7d" });
       setAuthCookie(reply, token);
       const userParam = encodeURIComponent(JSON.stringify({ id: user.id, name: user.name }));
-      const qs = `token=${token}&user=${userParam}${isNew ? "&new=1" : ""}`;
+      // The web has the cookie, so its address carries only who signed in; an
+      // app (weered:// or exp://) still needs the token (red team finding 23).
+      const appReturn = !!customRedirect && !/^https:\/\//i.test(customRedirect);
+      const qs = `${appReturn ? `token=${token}&` : ""}user=${userParam}${isNew ? "&new=1" : ""}`;
       return reply.redirect(finishUrl(isNew ? "/onboarding" : "/auth/google/finish", qs));
     } catch (e) {
       log.error("[google callback]", e);
@@ -644,7 +661,9 @@ export default async function authRoutes(app: FastifyInstance, opts: Opts) {
     const token = jwt.sign({ sub: updated.id, name: updated.name }, JWT_SECRET, {
       expiresIn: "7d",
     });
-    return reply.send({ token, user: { id: updated.id, name: updated.name } });
+    // A new session for the new name: the cookie for the web, the body for apps.
+    setAuthCookie(reply, token);
+    return authedSend(req, reply, token, { user: { id: updated.id, name: updated.name } });
   });
 
   // --- OFFICE HOURS (ECEB walk-in office) ---

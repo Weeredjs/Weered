@@ -43,6 +43,21 @@ export async function handleRoomClose(
     const room = rooms.get(roomId);
     if (!room) return;
     if (!isModOrOwner(room, ws.user.id, ws.user?.globalRole)) return;
+    // Closing deletes the room and its history: its owner or staff, never a
+    // moderator, and never a lobby's own chat (red team 2026-11-01, finding 20).
+    if (!room.pinned) {
+      if (rankIn(room, ws.user.id, ws.user?.globalRole) < 4) {
+        send(ws, { type: "mod:error", roomId, reason: "Only the owner can close this room." });
+        return;
+      }
+      const lobbyChat = await prisma.lobby
+        .findUnique({ where: { id: roomId }, select: { id: true } })
+        .catch(() => null);
+      if (lobbyChat) {
+        send(ws, { type: "mod:error", roomId, reason: "A lobby's own chat can't be closed." });
+        return;
+      }
+    }
 
     if (room.pinned) {
       for (const s of room.sockets) {

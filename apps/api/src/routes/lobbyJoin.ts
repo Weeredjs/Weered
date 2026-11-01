@@ -9,6 +9,7 @@ import { logLobbyAudit } from "../lib/lobbyAudit";
 import { passDoor, readDoor, type DoorEntry } from "../lib/lobbyDoor";
 import { areFriends, gateOf, isPlaceId } from "./places";
 import { usableInvite } from "../lib/invitePower";
+import { loginFailed, loginPaused, loginSucceeded } from "../lib/loginGuard";
 
 type Deps = {
   authFromHeader: (h?: string) => { id: string; name: string } | null;
@@ -100,7 +101,18 @@ export function registerLobbyJoin(
       }
 
       if (mode === "PASSWORD") {
+        // Ten wrong passwords for this lobby pause this account's tries for 15
+        // minutes (lib/loginGuard.ts, red team finding 21).
+        const tries = `join:${lobbyId}:${u.id}`;
+        if (loginPaused(tries))
+          return reply.code(429).send({
+            ok: false,
+            error: "too_many_tries",
+            message: "Too many wrong passwords. Try again in a few minutes.",
+          });
         const pw = String(body.password || "").trim();
+        if (pw && pw === lobby.joinPassword) loginSucceeded(tries);
+        else loginFailed(tries);
         if (!pw || pw !== lobby.joinPassword) {
           return reply
             .code(403)

@@ -23,7 +23,7 @@ import OfficeRail from "./OfficeRail";
 import MeetingFaceStrip from "./MeetingFaceStrip";
 import { weeredToast } from "../../lib/toast";
 import { onActivate } from "@/lib/a11y";
-import { safeUrl } from "@/lib/safeUrl";
+import { safeImgSrc, safeUrl } from "@/lib/safeUrl";
 import {
   isThemeableLobby,
   useKeepDefaultTheme,
@@ -848,7 +848,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
               return (
                 <iframe
                   key={embedUrl}
-                  src={embedUrl}
+                  src={safeImgSrc(embedUrl) || "about:blank"}
                   style={{ flex: 1, border: "none", display: "block", width: "100%", background: "#fff" }}
                   sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-presentation"
                   title="Browser"

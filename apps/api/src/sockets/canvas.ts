@@ -39,9 +39,17 @@ export function handleCanvas(ws: any, msg: any, opts: Opts): boolean {
       return true;
     }
     if (mode !== "youtube") room.ytState = null;
+    // A shared page is an http(s) address and nothing else (red team finding 26).
+    let url: string | undefined;
+    if (typeof msg.url === "string" && msg.url.length <= 2000) {
+      try {
+        const u = new URL(msg.url);
+        if (u.protocol === "https:" || u.protocol === "http:") url = u.href;
+      } catch {}
+    }
     const moduleState = {
       mode,
-      url: typeof msg.url === "string" ? msg.url.slice(0, 2000) : undefined,
+      url,
       channel:
         typeof msg.channel === "string" ? msg.channel.slice(0, 100).toLowerCase() : undefined,
       setBy: ws.user.id,

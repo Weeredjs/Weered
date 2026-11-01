@@ -88,7 +88,8 @@ function LoginForm() {
 
   const nextPath = React.useMemo(() => {
     const n = sp?.get("next") || "";
-    return n.startsWith("/") ? n : "/home";
+    // A path on this site only: "//elsewhere" is another site (red team finding 22).
+    return n.startsWith("/") && !n.startsWith("//") && !n.startsWith("/\\") ? n : "/home";
   }, [sp]);
 
   // A device that has signed in before opens on Sign in, with its name filled,

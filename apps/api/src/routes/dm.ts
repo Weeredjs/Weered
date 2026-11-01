@@ -30,9 +30,12 @@ export default async function dmRoutes(app: FastifyInstance, opts: Opts) {
   app.get("/dm/conversations", async (req, reply) => {
     const viewer = authFromHeader((req.headers as any).authorization);
     if (!viewer) return reply.code(401).send({ error: "Unauthorized" });
+    // The latest 2,000 are plenty for a conversation list; it used to read
+    // every message ever exchanged (red team 2026-11-01, finding 27).
     const msgs = await prisma.directMessage.findMany({
       where: { OR: [{ fromId: viewer.id }, { toId: viewer.id }] },
       orderBy: { createdAt: "desc" },
+      take: 2000,
       select: { fromId: true, toId: true, body: true, createdAt: true, readAt: true },
     });
     const peers = new Map<string, any>();

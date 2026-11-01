@@ -10,7 +10,7 @@ function AuthRouter({ onUnauthed }: { onUnauthed: (next: string) => void }) {
 
   useEffect(() => {
     const n = sp?.get("next") || "";
-    const next = n && n.startsWith("/") ? n : "/home";
+    const next = n.startsWith("/") && !n.startsWith("//") && !n.startsWith("/\\") ? n : "/home";
     try {
       const tok = localStorage.getItem("weered_user") || "";
       if (tok) router.replace(next);
