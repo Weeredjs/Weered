@@ -516,10 +516,14 @@ export default async function staffRoutes(app: FastifyInstance, opts: Opts) {
   app.post("/staff/rooms/:roomId/close", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    // Closing deletes the room and its history: the same guard as DELETE below
+    // (staff, not support), and never the Home Lobby (finding 9).
     const role = await getGlobalRole(u.id);
-    if (!canAccessStaff(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
+    if (!canAssignRoles(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
 
     const roomId = String((req as any).params?.roomId || "");
+    if (!roomId || roomId === "lobby")
+      return reply.code(400).send({ ok: false, error: "cannot_close_lobby" });
     const room = rooms.get(roomId);
 
     if (room) {

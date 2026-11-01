@@ -1030,7 +1030,10 @@ async function main() {
       return null;
     }
     const gr = await getGlobalRole(u.id);
-    if (canAccessStaff(gr))
+    // Weered's staff run any lobby as its owner would; SUPPORT doesn't. It used
+    // to, so a support account held every lobby's design, domain, roles, bans
+    // and revenue share (red team 2026-11-01, finding 9).
+    if (canAssignRoles(gr))
       return { user: u, lobby, member: null, globalRole: gr, overrideRole: gr };
     const member = await prisma.lobbyMember.findUnique({
       where: { lobbyId_userId: { lobbyId, userId: u.id } },
