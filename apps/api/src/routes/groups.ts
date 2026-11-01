@@ -1,6 +1,8 @@
 import { log, swallow } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
+import { blockedWith } from "../lib/blocks";
+import { checkChatRateLimit, checkUrlSpam } from "../lib/chatHelpers";
 import { z } from "zod";
 
 type Opts = {
@@ -171,7 +173,12 @@ export default async function groupRoutes(app: FastifyInstance, opts: Opts) {
           where: { id: { in: memberIds } },
           select: { id: true },
         });
-        const validIds = users.map((u: any) => u.id);
+        // Nobody with a block either way (lib/blocks.ts, red team finding 13).
+        const blocked = await blockedWith(
+          viewer.id,
+          users.map((u: any) => u.id),
+        );
+        const validIds = users.map((u: any) => u.id).filter((x: string) => !blocked.has(x));
         if (validIds.length === 0) return reply.code(400).send({ error: "No valid members" });
 
         const thread = await prisma.groupThread.create({
@@ -287,6 +294,11 @@ export default async function groupRoutes(app: FastifyInstance, opts: Opts) {
 
       const m = await requireMember(id, viewer.id);
       if (!m) return reply.code(403).send({ error: "Not a member" });
+      // The checks a direct message runs (sockets/messaging.ts dm:send).
+      const spam = checkUrlSpam(text);
+      if (!spam.ok) return reply.code(400).send({ error: spam.reason || "Message not sent" });
+      const pace = checkChatRateLimit(viewer.id);
+      if (!pace.ok) return reply.code(429).send({ error: pace.reason || "Slow down" });
 
       let replyData: any = {};
       const rawReplyToId = typeof body.replyToId === "string" ? body.replyToId : "";
@@ -348,8 +360,9 @@ export default async function groupRoutes(app: FastifyInstance, opts: Opts) {
         };
         deliverToMembers(memberIds, payload);
 
+        const blockedHere = await blockedWith(viewer.id, memberIds);
         const offlinePushes = memberIds
-          .filter((uid) => uid !== viewer.id && !isUserOnline(uid))
+          .filter((uid) => uid !== viewer.id && !isUserOnline(uid) && !blockedHere.has(uid))
           .map((uid) =>
             sendPush(uid, {
               title: `Group from ${viewer.name}`,
@@ -564,7 +577,9 @@ export default async function groupRoutes(app: FastifyInstance, opts: Opts) {
       if (m.role !== "OWNER") return reply.code(403).send({ error: "Owner only" });
       const body: any = (req as any).body || {};
       const ids: string[] = Array.isArray(body.memberIds) ? body.memberIds : [];
-      const cleaned = Array.from(new Set(ids.filter((x) => typeof x === "string" && x)));
+      const asked = Array.from(new Set(ids.filter((x) => typeof x === "string" && x)));
+      const blocked = await blockedWith(viewer.id, asked);
+      const cleaned = asked.filter((x) => !blocked.has(x));
       if (cleaned.length === 0) return reply.code(400).send({ error: "No members to add" });
 
       try {

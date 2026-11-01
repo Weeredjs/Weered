@@ -4,6 +4,7 @@ import { prisma } from "../lib/prisma";
 import { z } from "zod";
 import { canInvite } from "../lib/invitePower";
 import { readDoor } from "../lib/lobbyDoor";
+import { blockedEitherWay } from "../lib/blocks";
 
 type Opts = {
   authFromHeader: (h?: string) => { id: string; name: string } | null;
@@ -223,7 +224,7 @@ export default async function invitesRoutes(app: FastifyInstance, opts: Opts) {
       }
       await prisma.invite.update({ where: { token }, data: { uses: { increment: 1 } } });
 
-      if (invite.createdBy !== u.id) {
+      if (invite.createdBy !== u.id && !(await blockedEitherWay(u.id, invite.createdBy))) {
         const msg =
           invite.type === "PLATFORM"
             ? `${u.name} joined Weered using your invite!`
@@ -284,6 +285,11 @@ export default async function invitesRoutes(app: FastifyInstance, opts: Opts) {
       if (!target) return reply.code(404).send({ ok: false, error: "user_not_found" });
       if (target.id === u.id)
         return reply.code(400).send({ ok: false, error: "cannot_invite_self" });
+      // A block either way: no invite, and no message (lib/blocks.ts).
+      if (await blockedEitherWay(u.id, target.id))
+        return reply
+          .code(403)
+          .send({ ok: false, error: "not_delivered", message: "Invite not delivered." });
       const invite = await prisma.invite.create({
         data: {
           type: type as any,
