@@ -49,6 +49,10 @@ export type StaffLobby = {
 export type SiteConfig = {
   featuredLobbyId: string;
   registrationOpen: boolean;
+  /** Most real accounts (0 = no cap); accounts and waitlist are read-only. */
+  registrationCap: number;
+  accounts?: number;
+  waitlist?: number;
   maintenanceMode: boolean;
   aiEnabled: boolean;
   defaultTier: UserTier;

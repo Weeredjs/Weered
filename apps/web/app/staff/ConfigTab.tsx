@@ -31,6 +31,18 @@ export function ConfigTab() {
   if (loading) return <div style={{ opacity: 0.4 }}>Loading…</div>;
   if (!config) return <div style={{ opacity: 0.4 }}>Config unavailable.</div>;
 
+  // The people the cap turned away who asked to hear when there's room.
+  async function copyWaitlist() {
+    const j = await apiFetch("/staff/waitlist");
+    const list: string[] = (j?.entries || []).map((e: any) => String(e.email));
+    try {
+      await navigator.clipboard.writeText(list.join("\n"));
+      setMsg(`Copied ${list.length} address${list.length === 1 ? "" : "es"}.`);
+    } catch {
+      setMsg("Couldn't copy.");
+    }
+  }
+
   const toggle = (key: keyof SiteConfig) => setConfig((c) => (c ? { ...c, [key]: !c[key] } : c));
   const num = (key: keyof SiteConfig, val: string) =>
     setConfig((c) => (c ? { ...c, [key]: Number(val) } : c));
@@ -100,6 +112,25 @@ export function ConfigTab() {
       </Row>
       <Row label="Registration Open">
         <Toggle on={config.registrationOpen} onClick={() => toggle("registrationOpen")} />
+      </Row>
+      <Row label="Account cap (0 = none)">
+        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+          <input
+            type="number"
+            min={0}
+            style={{ ...S.input, width: 90 }}
+            value={config.registrationCap}
+            onChange={(e) => num("registrationCap", e.target.value)}
+          />
+          <span style={{ fontSize: 12, opacity: 0.7 }}>
+            {config.accounts ?? 0} accounts · {config.waitlist ?? 0} waiting
+          </span>
+          {(config.waitlist ?? 0) > 0 && (
+            <button style={S.btn} onClick={copyWaitlist}>
+              Copy waitlist
+            </button>
+          )}
+        </div>
       </Row>
       <Row label="Maintenance Mode">
         <Toggle on={config.maintenanceMode} onClick={() => toggle("maintenanceMode")} />

@@ -2,6 +2,7 @@ import { describe, it, expect, afterEach, afterAll } from "vitest";
 import authRoutes from "../../src/routes/auth";
 import { buildTestApp, testAuthFromHeader } from "../helpers/buildTestApp";
 import { prisma } from "../../src/lib/prisma";
+import { accountCount } from "../../src/lib/registration";
 
 // Must match buildTestApp's TEST_JWT_SECRET so issued tokens verify.
 const JWT_SECRET = "weered-integration-test-secret";
@@ -13,14 +14,22 @@ delete process.env.TURNSTILE_SECRET;
 // Exercises the REAL authRoutes (register + login) against the test DB: bcrypt
 // hashing, username/email dedup, reserved-name + registration-gate, and the
 // login credential check. No TURNSTILE_SECRET in test => captcha is a no-op.
-async function makeApp(o?: { reserved?: boolean; registrationOpen?: string | null }) {
+async function makeApp(o?: {
+  reserved?: boolean;
+  registrationOpen?: string | null;
+  registrationCap?: string | null;
+}) {
   return buildTestApp((app: any) =>
     authRoutes(app, {
       authFromHeader: testAuthFromHeader,
       JWT_SECRET,
       isNameReserved: async () => Boolean(o?.reserved),
       getSiteConfig: async (k: string) =>
-        k === "registrationOpen" ? (o?.registrationOpen ?? null) : null,
+        k === "registrationOpen"
+          ? (o?.registrationOpen ?? null)
+          : k === "registrationCap"
+            ? (o?.registrationCap ?? null)
+            : null,
       seedWelcomeDM: async () => {},
     } as any),
   );
@@ -123,6 +132,37 @@ describe("authRoutes - register + login", () => {
     });
     expect(r2.statusCode).toBe(403);
     await closedApp.close();
+  });
+
+  it("the account cap: a full site turns new accounts away, 0 means no cap", async () => {
+    // James 2026-10-31: "Cap registrations at 1000" (lib/registration.ts).
+    const fullApp = await makeApp({ registrationCap: String(await accountCount()) });
+    const full = await fullApp.inject({
+      method: "POST",
+      url: "/auth/register",
+      payload: { username: uname("full"), password: "secret123" },
+    });
+    expect(full.statusCode).toBe(403);
+    expect(full.json().error).toBe("registration_full");
+    await fullApp.close();
+
+    const roomApp = await makeApp({ registrationCap: String((await accountCount()) + 5) });
+    const room = await roomApp.inject({
+      method: "POST",
+      url: "/auth/register",
+      payload: { username: uname("room"), password: "secret123" },
+    });
+    expect(room.statusCode).toBe(200);
+    await roomApp.close();
+
+    const openApp = await makeApp({ registrationCap: "0" });
+    const open = await openApp.inject({
+      method: "POST",
+      url: "/auth/register",
+      payload: { username: uname("nocap"), password: "secret123" },
+    });
+    expect(open.statusCode).toBe(200);
+    await openApp.close();
   });
 
   it("login: correct password 200, wrong password 401, unknown user 401", async () => {

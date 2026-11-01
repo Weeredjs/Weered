@@ -25,6 +25,8 @@ export async function getAllSiteConfig(): Promise<Record<string, string>> {
 export const SITE_CONFIG_DEFAULTS: Record<string, string> = {
   featuredLobbyId: "",
   registrationOpen: "true",
+  // Most real accounts there can be (0 = no cap); lib/registration.ts.
+  registrationCap: "1000",
   maintenanceMode: "false",
   aiEnabled: "true",
   defaultTier: "INNOCENT",

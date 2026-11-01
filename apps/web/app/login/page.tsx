@@ -34,6 +34,11 @@ function LoginForm() {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  // Full: the account cap is reached (api lib/registration.ts). They can leave
+  // an email to hear when there's room instead of meeting a closed door.
+  const [full, setFull] = useState(false);
+  const [waitEmail, setWaitEmail] = useState("");
+  const [waitState, setWaitState] = useState<"" | "busy" | "done" | "error">("");
   const [showPw, setShowPw] = useState(false);
   const [captchaToken, setCaptchaToken] = useState("");
   const captchaRef = React.useRef<HTMLDivElement | null>(null);
@@ -174,7 +179,17 @@ function LoginForm() {
       // "check your email" screen, straight in.
       router.replace(nextPath);
     } catch (e: any) {
-      setErr(String(e?.message || "Something went wrong."));
+      const code = String(e?.message || "");
+      if (code === "registration_full") {
+        setFull(true);
+        setWaitEmail(email.trim());
+        return;
+      }
+      setErr(
+        code === "registration_closed"
+          ? "New accounts are closed right now. Try again soon."
+          : code || "Something went wrong.",
+      );
     } finally {
       setBusy(false);
     }
@@ -216,10 +231,28 @@ function LoginForm() {
     const e = sp?.get("error") || "";
     if (sp?.get("deleted") === "1") return "Your account is deleted. Thanks for being here.";
     if (e === "registration_closed") return "New accounts are closed right now. Try again soon.";
+    if (e === "registration_full") return ""; // the full panel says it
     if (e === "account_suspended") return "This account is suspended.";
     if (e) return "That sign-in didn't finish. Try again.";
     return "";
   }, [sp]);
+  const isFull = full || sp?.get("error") === "registration_full";
+  async function joinWaitlist(ev: React.FormEvent) {
+    ev.preventDefault();
+    const addr = waitEmail.trim();
+    if (!addr) return;
+    setWaitState("busy");
+    try {
+      const r = await fetch(`${API}/waitlist`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: addr }),
+      });
+      setWaitState(r.ok ? "done" : "error");
+    } catch {
+      setWaitState("error");
+    }
+  }
   const isDev = process.env.NODE_ENV === "development";
   const switchMode = (m: "login" | "register") => {
     setMode(m);
@@ -279,7 +312,9 @@ function LoginForm() {
           <p className="wa-sub">
             {mode === "login"
               ? "Sign in and pick up where you left off."
-              : "Thirty seconds and you're in."}
+              : isFull
+                ? "We'll tell you when there's room."
+                : "Thirty seconds and you're in."}
           </p>
 
           <div className="wa-tabs" role="group" aria-label="Sign in or create an account">
@@ -304,6 +339,42 @@ function LoginForm() {
           {notice && (
             <div className="wa-notice" role="status">
               {notice}
+            </div>
+          )}
+
+          {isFull && (
+            <div className="wa-notice" role="status">
+              <strong>Weered is full for now.</strong> We&apos;re letting people in as we make room.
+              {waitState === "done" ? (
+                <div style={{ marginTop: 8 }}>
+                  You&apos;re on the list. One email when there&apos;s room, nothing else.
+                </div>
+              ) : (
+                <form onSubmit={joinWaitlist} style={{ marginTop: 10 }}>
+                  <input
+                    className="wa-input"
+                    type="email"
+                    required
+                    value={waitEmail}
+                    onChange={(ev) => setWaitEmail(ev.target.value)}
+                    placeholder="you@example.com"
+                    aria-label="Your email, to hear when there's room"
+                  />
+                  <button
+                    type="submit"
+                    className="wl-btn wa-go"
+                    style={{ marginTop: 10, fontSize: 15, padding: 11 }}
+                    disabled={waitState === "busy"}
+                  >
+                    {waitState === "busy" ? "One sec…" : "Tell me when there's room"}
+                  </button>
+                </form>
+              )}
+              {waitState === "error" && (
+                <div style={{ marginTop: 6 }}>
+                  That didn&apos;t go through. Check the address and try again.
+                </div>
+              )}
             </div>
           )}
 
@@ -332,108 +403,114 @@ function LoginForm() {
             </button>
           </div>
 
-          <div className="wa-or">
-            <span>{mode === "login" ? "or sign in with your username" : "or make a username"}</span>
-          </div>
+          {!(isFull && mode === "register") && (
+            <>
+              <div className="wa-or">
+                <span>
+                  {mode === "login" ? "or sign in with your username" : "or make a username"}
+                </span>
+              </div>
 
-          {/* A real form, so password managers know this is a login: they
+              {/* A real form, so password managers know this is a login: they
               offer saved accounts on Sign in and offer to save on success. */}
-          <form
-            method="post"
-            noValidate
-            onSubmit={(e) => {
-              e.preventDefault();
-              void submit();
-            }}
-          >
-            <label className="wa-label" htmlFor="wl-username">
-              Username
-            </label>
-            <input
-              id="wl-username"
-              name="username"
-              className="wa-input"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder="your_handle"
-              autoComplete="username"
-              autoCapitalize="none"
-              spellCheck={false}
-              autoFocus
-            />
-
-            {mode === "register" && (
-              <>
-                <label className="wa-label" htmlFor="wl-email">
-                  Email
+              <form
+                method="post"
+                noValidate
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  void submit();
+                }}
+              >
+                <label className="wa-label" htmlFor="wl-username">
+                  Username
                 </label>
                 <input
-                  id="wl-email"
-                  name="email"
+                  id="wl-username"
+                  name="username"
                   className="wa-input"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@example.com"
-                  autoComplete="email"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="your_handle"
+                  autoComplete="username"
+                  autoCapitalize="none"
+                  spellCheck={false}
+                  autoFocus
                 />
-              </>
-            )}
 
-            <div className="wa-label-row">
-              <label className="wa-label" htmlFor="wl-password">
-                Password
-              </label>
-              {mode === "login" && (
-                <a href="/forgot-password" className="wa-forgot">
-                  Forgot it?
-                </a>
-              )}
-            </div>
-            <div className="wa-pw">
-              <input
-                id="wl-password"
-                name="password"
-                className="wa-input"
-                type={showPw ? "text" : "password"}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••••"
-                autoComplete={mode === "login" ? "current-password" : "new-password"}
-              />
-              <button
-                type="button"
-                className="wa-eye"
-                onClick={() => setShowPw((v) => !v)}
-                aria-label={showPw ? "Hide password" : "Show password"}
-                aria-pressed={showPw}
-              >
-                {showPw ? "Hide" : "Show"}
-              </button>
-            </div>
+                {mode === "register" && (
+                  <>
+                    <label className="wa-label" htmlFor="wl-email">
+                      Email
+                    </label>
+                    <input
+                      id="wl-email"
+                      name="email"
+                      className="wa-input"
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="you@example.com"
+                      autoComplete="email"
+                    />
+                  </>
+                )}
 
-            {/* Cloudflare's check: it shows only when it needs a click. */}
-            {mode === "register" && TURNSTILE_SITE_KEY && (
-              <div ref={captchaRef} className="wa-captcha" />
-            )}
+                <div className="wa-label-row">
+                  <label className="wa-label" htmlFor="wl-password">
+                    Password
+                  </label>
+                  {mode === "login" && (
+                    <a href="/forgot-password" className="wa-forgot">
+                      Forgot it?
+                    </a>
+                  )}
+                </div>
+                <div className="wa-pw">
+                  <input
+                    id="wl-password"
+                    name="password"
+                    className="wa-input"
+                    type={showPw ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••••"
+                    autoComplete={mode === "login" ? "current-password" : "new-password"}
+                  />
+                  <button
+                    type="button"
+                    className="wa-eye"
+                    onClick={() => setShowPw((v) => !v)}
+                    aria-label={showPw ? "Hide password" : "Show password"}
+                    aria-pressed={showPw}
+                  >
+                    {showPw ? "Hide" : "Show"}
+                  </button>
+                </div>
 
-            {err && (
-              <div className="wa-error" role="alert">
-                {err}
-              </div>
-            )}
+                {/* Cloudflare's check: it shows only when it needs a click. */}
+                {mode === "register" && TURNSTILE_SITE_KEY && (
+                  <div ref={captchaRef} className="wa-captcha" />
+                )}
 
-            <button type="submit" className="wl-btn wa-go" disabled={busy}>
-              {busy ? "One sec…" : mode === "login" ? "Sign in" : "Create account"}
-            </button>
+                {err && (
+                  <div className="wa-error" role="alert">
+                    {err}
+                  </div>
+                )}
 
-            {mode === "register" && (
-              <p className="wa-legal">
-                By creating an account you agree to the <a href="/terms">Terms</a> and{" "}
-                <a href="/privacy">Privacy Policy</a>.
-              </p>
-            )}
-          </form>
+                <button type="submit" className="wl-btn wa-go" disabled={busy}>
+                  {busy ? "One sec…" : mode === "login" ? "Sign in" : "Create account"}
+                </button>
+
+                {mode === "register" && (
+                  <p className="wa-legal">
+                    By creating an account you agree to the <a href="/terms">Terms</a> and{" "}
+                    <a href="/privacy">Privacy Policy</a>.
+                  </p>
+                )}
+              </form>
+            </>
+          )}
 
           <div className="wa-switch">
             {mode === "login" ? "New here?" : "Have an account?"}{" "}

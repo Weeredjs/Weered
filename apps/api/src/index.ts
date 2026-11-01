@@ -127,6 +127,7 @@ import aiBuildRoutes from "./routes/aiBuild";
 import placesRoutes, { canEnterPlace, isPlaceId } from "./routes/places";
 import aiDescribeRoutes from "./routes/aiDescribe";
 import lobbyExtrasRoutes from "./routes/lobbyExtras";
+import waitlistRoutes from "./routes/waitlist";
 import { greetOnJoin } from "./lib/lobbyHost";
 import { runLobbyAutomations } from "./lib/lobbyAutomations";
 import uiPrefsRoutes from "./routes/uiPrefs";
@@ -1922,6 +1923,7 @@ async function main() {
     getGlobalRole,
     canAccessStaff,
   } as any);
+  await app.register(waitlistRoutes, { authFromHeader, getGlobalRole } as any);
 
   await app.register(eventsRoutes, {
     authFromHeader,

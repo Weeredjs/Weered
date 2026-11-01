@@ -1,6 +1,7 @@
 import { log, swallow } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
+import { accountCount } from "../lib/registration";
 import { cutoffNow } from "../lib/sessionCutoff";
 import { GlobalRole, ReportStatus, SubTier } from "@prisma/client";
 
@@ -676,6 +677,10 @@ export default async function staffRoutes(app: FastifyInstance, opts: Opts) {
       config: {
         featuredLobbyId: config.featuredLobbyId || "",
         registrationOpen: config.registrationOpen !== "false",
+        // The cap, and where things stand against it (lib/registration.ts).
+        registrationCap: Number(config.registrationCap) || 0,
+        accounts: await accountCount().catch(() => 0),
+        waitlist: await prisma.waitlistEntry.count().catch(() => 0),
         maintenanceMode: config.maintenanceMode === "true",
         aiEnabled: config.aiEnabled !== "false",
         defaultTier: config.defaultTier || "INNOCENT",
@@ -698,6 +703,14 @@ export default async function staffRoutes(app: FastifyInstance, opts: Opts) {
       updates.push({ key: "featuredLobbyId", value: String(body.featuredLobbyId) });
     if (body.registrationOpen !== undefined)
       updates.push({ key: "registrationOpen", value: String(body.registrationOpen) });
+    if (body.registrationCap !== undefined) {
+      const cap = Math.floor(Number(body.registrationCap));
+      if (!Number.isFinite(cap) || cap < 0)
+        return reply
+          .code(400)
+          .send({ ok: false, error: "The account cap is a whole number, 0 for none." });
+      updates.push({ key: "registrationCap", value: String(cap) });
+    }
     if (body.maintenanceMode !== undefined)
       updates.push({ key: "maintenanceMode", value: String(body.maintenanceMode) });
     if (body.aiEnabled !== undefined)

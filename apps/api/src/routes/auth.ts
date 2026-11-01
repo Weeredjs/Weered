@@ -9,6 +9,7 @@ import { readFileSync, writeFileSync } from "fs";
 import { sendPush } from "../lib/notifications";
 import { OAuth2Client } from "google-auth-library";
 import { prisma } from "../lib/prisma";
+import { registrationBlock } from "../lib/registration";
 import { cutoffNow } from "../lib/sessionCutoff";
 import { setAuthCookie, clearAuthCookie, isWebClient } from "../lib/authCookie";
 
@@ -191,8 +192,8 @@ export default async function authRoutes(app: FastifyInstance, opts: Opts) {
         return reply.code(400).send({ error: "Invalid email" });
       const cap = await verifyCaptcha(captchaToken, req.ip);
       if (!cap.ok) return reply.code(400).send({ error: "captcha_required", reason: cap.reason });
-      if ((await getSiteConfig("registrationOpen")) === "false")
-        return reply.code(403).send({ error: "registration_closed" });
+      const blocked = await registrationBlock(getSiteConfig);
+      if (blocked) return reply.code(403).send({ error: blocked });
       const existing = await prisma.localAuth.findUnique({ where: { username } }).catch(() => null);
       if (existing) return reply.code(409).send({ error: "Username already exists" });
       if (email) {
@@ -558,11 +559,12 @@ export default async function authRoutes(app: FastifyInstance, opts: Opts) {
 
       const isNew = !user;
       if (!user) {
-        if ((await getSiteConfig("registrationOpen")) === "false")
+        const blocked = await registrationBlock(getSiteConfig);
+        if (blocked)
           return reply.redirect(
             customRedirect
-              ? `${customRedirect}${customRedirect.includes("?") ? "&" : "?"}error=registration_closed`
-              : `${WEB_URL}/login?error=registration_closed`,
+              ? `${customRedirect}${customRedirect.includes("?") ? "&" : "?"}error=${blocked}`
+              : `${WEB_URL}/login?error=${blocked}`,
           );
         const tempName = `g_${googleId.slice(0, 12)}`;
         user = await prisma.user.create({

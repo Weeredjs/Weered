@@ -664,6 +664,14 @@ model BugReport {
 // Stores platform-wide settings: featuredLobbyId, registrationOpen, etc.
 // Staff-managed via /staff/config endpoints.
 
+/// People the registration cap turned away who asked to hear when there's
+/// room (James 2026-10-31: "Cap registrations at 1000"). One address each.
+model WaitlistEntry {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  createdAt DateTime @default(now())
+}
+
 model SiteConfig {
   key       String   @id // e.g. "featuredLobbyId", "registrationOpen"
   value     String   @default("") // stored as string, parsed by consumer
