@@ -16,7 +16,9 @@ const API_INTERNAL = process.env.WEERED_API_INTERNAL || "http://127.0.0.1:4000";
 const TTL_MS = 60_000;
 const cache = new Map<string, { id: string | null; at: number }>();
 
-async function lobbyFor(host: string): Promise<string | null> {
+/** The lobby behind a host: its id, null when there is none, undefined when the
+ *  API can't say (down or failing). Only the API's 404 means "none". */
+async function lobbyFor(host: string): Promise<string | null | undefined> {
   const hit = cache.get(host);
   if (hit && Date.now() - hit.at < TTL_MS) return hit.id;
   let id: string | null = null;
@@ -25,9 +27,9 @@ async function lobbyFor(host: string): Promise<string | null> {
       cache: "no-store",
     });
     if (r.ok) id = ((await r.json()) as any)?.lobbyId || null;
+    else if (r.status !== 404) return hit ? hit.id : undefined;
   } catch {
-    // API down: fall through to the normal app rather than an error page.
-    return hit?.id ?? null;
+    return hit ? hit.id : undefined;
   }
   cache.set(host, { id, at: Date.now() });
   return id;
@@ -42,11 +44,17 @@ export async function middleware(req: NextRequest) {
   if (!host || (OWN_HOST.test(host) && !PLACE_HOST.test(host))) return NextResponse.next();
   const path = req.nextUrl.pathname;
   const place = PLACE_HOST.test(host);
+  const id = await lobbyFor(host);
+  // The API can't say: a place falls through to the app rather than an error
+  // page; a club's domain still serves nothing but its lobby.
+  if (id === undefined) return place ? NextResponse.next() : toWeered(req);
+  // Nothing behind this name: a domain that isn't live, or a <label>.weered.ca
+  // that is nobody's place (the *.weered.ca certificate covers every name,
+  // 2026-11-01). It goes to weered.ca, whatever the path.
+  if (!id) return toWeered(req);
   // A place (<label>.weered.ca) is Weered's own: only its root, and its sign-in
   // (which wears the place's brand), are taken over.
   if (place && path !== "/" && path !== "/login") return NextResponse.next();
-  const id = await lobbyFor(host);
-  if (!id) return place ? NextResponse.next() : toWeered(req);
   // Sign-in for this lobby wears its brand (app/login ?lobby=): on a place's own
   // subdomain, or on weered.ca for a lobby's own domain, which never hosts a
   // password box (James 2026-11-01).
