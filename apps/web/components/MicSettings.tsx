@@ -4,9 +4,38 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useVoice } from "./VoiceContext";
 import { VOICE_FX } from "../lib/voiceFx";
+import { keyLabel, usableCode } from "../lib/voicePrefs";
 
 export default function MicSettings() {
-  const { mics, micId, inputLevel, setMic, refreshMics, muted, voiceFx, setVoiceFx } = useVoice();
+  const { mics, micId, inputLevel, setMic, refreshMics, muted, voiceFx, setVoiceFx, ptt, setPtt } =
+    useVoice();
+  // Waiting for the key (or mouse side button) to use for push to talk.
+  const [listening, setListening] = useState(false);
+  useEffect(() => {
+    if (!listening) return;
+    const take = (code: string, label: string) => {
+      setPtt({ on: true, code, label });
+      setListening(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (e.code === "Escape") return setListening(false);
+      if (usableCode(e.code)) take(e.code, keyLabel(e));
+    };
+    const onMouse = (e: MouseEvent) => {
+      if (e.button < 3) return;
+      e.preventDefault();
+      const code = `Mouse${e.button + 1}`;
+      take(code, keyLabel({ code }));
+    };
+    window.addEventListener("keydown", onKey, true);
+    window.addEventListener("mousedown", onMouse, true);
+    return () => {
+      window.removeEventListener("keydown", onKey, true);
+      window.removeEventListener("mousedown", onMouse, true);
+    };
+  }, [listening, setPtt]);
   const [open, setOpen] = useState(false);
   const [rect, setRect] = useState<DOMRect | null>(null);
   const btnRef = useRef<HTMLButtonElement | null>(null);
@@ -240,6 +269,79 @@ export default function MicSettings() {
               {voiceFx === "off"
                 ? "Everyone in the room hears the effect you pick. It stays on this device."
                 : `${VOICE_FX.find((f) => f.id === voiceFx)?.blurb}. Everyone in the room hears it.`}
+            </div>
+
+            <div
+              style={{
+                fontSize: 10,
+                fontWeight: 800,
+                letterSpacing: "1px",
+                textTransform: "uppercase",
+                color: "#a78bfad9",
+                margin: "14px 0 8px",
+              }}
+            >
+              Push to talk
+            </div>
+            <div style={{ display: "flex", gap: 6 }}>
+              {[false, true].map((on) => {
+                const sel = ptt.on === on;
+                return (
+                  <button
+                    key={String(on)}
+                    type="button"
+                    aria-pressed={sel}
+                    onClick={() => setPtt({ ...ptt, on })}
+                    style={{
+                      flex: 1,
+                      padding: "6px 2px",
+                      borderRadius: 8,
+                      cursor: "pointer",
+                      fontFamily: "inherit",
+                      fontSize: 11,
+                      fontWeight: 800,
+                      color: sel ? "#fff" : "#e2e8f0bf",
+                      border: `1px solid ${sel ? "#a78bfacc" : "#ffffff1a"}`,
+                      background: sel ? "#7c3aed59" : "#ffffff0a",
+                    }}
+                  >
+                    {on ? "Push to talk" : "Open mic"}
+                  </button>
+                );
+              })}
+              <button
+                type="button"
+                onClick={() => setListening((v) => !v)}
+                title="Pick the key or mouse side button"
+                style={{
+                  flex: 1,
+                  padding: "6px 2px",
+                  borderRadius: 8,
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                  fontSize: 11,
+                  fontWeight: 800,
+                  color: listening ? "#fff" : "#e2e8f0bf",
+                  border: `1px solid ${listening ? "#a78bfacc" : "#ffffff1a"}`,
+                  background: listening ? "#7c3aed59" : "#ffffff0a",
+                }}
+              >
+                {listening ? "Press it…" : `Key: ${ptt.label}`}
+              </button>
+            </div>
+            <div
+              style={{
+                fontSize: 10,
+                color: "#94a3b88c",
+                marginTop: 7,
+                lineHeight: 1.4,
+              }}
+            >
+              {listening
+                ? "Press a key or a mouse side button. Escape cancels."
+                : ptt.on
+                  ? `Hold ${ptt.label} to talk while Weered is open in front. Muted still wins.`
+                  : "Your mic is open whenever you're unmuted."}
             </div>
           </div>,
           document.body,

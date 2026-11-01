@@ -3,6 +3,15 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { Room, RoomEvent, Track, TrackPublication, type LocalAudioTrack } from "livekit-client";
 import { VOICE_FX_KEY, savedVoiceFx, voiceFxProcessor, type VoiceFx } from "../lib/voiceFx";
+import {
+  DEFAULT_PTT,
+  isTypingTarget,
+  readPtt,
+  readVolumes,
+  writePtt,
+  writeVolume,
+  type Ptt,
+} from "../lib/voicePrefs";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
@@ -58,6 +67,13 @@ interface VoiceContextValue {
   /** The voice effect everyone hears (lib/voiceFx.ts); kept on this device. */
   voiceFx: VoiceFx;
   setVoiceFx: (fx: VoiceFx) => void;
+  /** How loud each person is to you, by identity (lib/voicePrefs.ts); 1 is full. */
+  volumes: Record<string, number>;
+  setVolume: (identity: string, v: number) => void;
+  /** Push to talk, and whether its key is held right now. */
+  ptt: Ptt;
+  setPtt: (p: Ptt) => void;
+  talking: boolean;
 }
 
 const VoiceContext = createContext<VoiceContextValue | null>(null);
@@ -74,6 +90,30 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
   const [deafened, setDeafened] = useState(false);
   const deafenedRef = useRef(false);
   const mutedBeforeDeafenRef = useRef(false);
+  const mutedRef = useRef(false);
+  useEffect(() => {
+    mutedRef.current = muted;
+  }, [muted]);
+
+  // Per-person volume and push to talk, kept on this device (lib/voicePrefs.ts).
+  const [volumes, setVolumes] = useState<Record<string, number>>({});
+  const volumesRef = useRef<Record<string, number>>({});
+  /** Which person each remote audio track belongs to. */
+  const ownerRef = useRef<Map<string, string>>(new Map());
+  const [ptt, setPttState] = useState<Ptt>(DEFAULT_PTT);
+  const pttRef = useRef<Ptt>(DEFAULT_PTT);
+  const heldRef = useRef(false);
+  const [talking, setTalking] = useState(false);
+  useEffect(() => {
+    const v = readVolumes();
+    volumesRef.current = v;
+    setVolumes(v);
+    const p = readPtt();
+    pttRef.current = p;
+    setPttState(p);
+  }, []);
+  /** With push to talk on, the mic opens only while its key is held. */
+  const pttAllows = () => !pttRef.current.on || heldRef.current;
   const [cameraOn, setCameraOn] = useState(false);
   const [screenShareOn, setScreenShareOn] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
@@ -274,12 +314,14 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
         });
         roomRef.current = room;
 
-        room.on(RoomEvent.TrackSubscribed, (track) => {
+        room.on(RoomEvent.TrackSubscribed, (track, _pub, participant) => {
           if (!track.sid) return;
           if (track.kind === Track.Kind.Audio) {
             const el = track.attach();
             el.autoplay = true;
-            el.volume = 1;
+            const who = participant?.identity || "";
+            ownerRef.current.set(track.sid, who);
+            el.volume = volumesRef.current[who] ?? 1;
             el.muted = deafenedRef.current;
             document.body.appendChild(el);
             audioRefs.current.set(track.sid, el);
@@ -296,6 +338,7 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
         room.on(RoomEvent.TrackUnsubscribed, (track) => {
           if (!track.sid) return;
           if (track.kind === Track.Kind.Audio) {
+            ownerRef.current.delete(track.sid);
             const el = audioRefs.current.get(track.sid);
             if (el) {
               el.remove();
@@ -368,6 +411,9 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
         if (enableMic) {
           try {
             await room.localParticipant.setMicrophoneEnabled(true);
+            // Push to talk: the mic is ready (and permitted) but closed until
+            // the key is held.
+            if (!pttAllows()) await room.localParticipant.setMicrophoneEnabled(false);
             let pref: string | null = null;
             try {
               pref = localStorage.getItem("weered:micId");
@@ -438,7 +484,8 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
     const room = roomRef.current;
     if (!room) return;
     const next = !muted;
-    void room.localParticipant.setMicrophoneEnabled(!next);
+    mutedRef.current = next;
+    void room.localParticipant.setMicrophoneEnabled(!next && pttAllows());
     setMuted(next);
     rebuildTiles(room);
     if (next) stopLevelMeter();
@@ -468,12 +515,14 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
       mutedBeforeDeafenRef.current = muted;
       if (room && !muted) {
         void room.localParticipant.setMicrophoneEnabled(false);
+        mutedRef.current = true;
         setMuted(true);
         stopLevelMeter();
         rebuildTiles(room);
       }
     } else if (room && !mutedBeforeDeafenRef.current && muted) {
-      void room.localParticipant.setMicrophoneEnabled(true);
+      void room.localParticipant.setMicrophoneEnabled(pttAllows());
+      mutedRef.current = false;
       setMuted(false);
       setTimeout(() => startLevelMeter(room), 200);
       rebuildTiles(room);
@@ -539,6 +588,88 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
     [stopLevelMeter],
   );
 
+  const setVolume = useCallback((identity: string, v: number) => {
+    const all = writeVolume(identity, v);
+    volumesRef.current = all;
+    setVolumes(all);
+    const level = all[identity] ?? 1;
+    audioRefs.current.forEach((el, sid) => {
+      if (ownerRef.current.get(sid) === identity) el.volume = level;
+    });
+  }, []);
+
+  const setPtt = useCallback((p: Ptt) => {
+    writePtt(p);
+    pttRef.current = p;
+    setPttState(p);
+  }, []);
+
+  // Push to talk: while connected, the key (or a mouse side button) opens the
+  // mic for as long as it's held, unless they muted or deafened. It works while
+  // Weered has focus; typing in a field never counts. Turning it off opens the
+  // mic again for anyone not muted.
+  useEffect(() => {
+    if (connState !== "connected" || !ptt.on) return;
+    const room = roomRef.current;
+    const open = (on: boolean) => {
+      heldRef.current = on;
+      setTalking(on);
+      const r = roomRef.current;
+      if (r)
+        void r.localParticipant
+          .setMicrophoneEnabled(on && !mutedRef.current && !deafenedRef.current)
+          .catch(() => {});
+    };
+    let release: ReturnType<typeof setTimeout> | undefined;
+    const press = (code: string, target: EventTarget | null) => {
+      if (code !== pttRef.current.code || isTypingTarget(target)) return false;
+      if (release) clearTimeout(release);
+      if (!heldRef.current) open(true);
+      return true;
+    };
+    // A short tail, so the end of a word isn't clipped.
+    const lift = (code: string) => {
+      if (code !== pttRef.current.code) return false;
+      if (release) clearTimeout(release);
+      release = setTimeout(() => open(false), 150);
+      return true;
+    };
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (!e.repeat) press(e.code, e.target);
+    };
+    const onKeyUp = (e: KeyboardEvent) => void lift(e.code);
+    // Side buttons are 3 and 4; the browser would go back or forward on them.
+    const onMouseDown = (e: MouseEvent) => {
+      if (e.button >= 3 && press(`Mouse${e.button + 1}`, e.target)) e.preventDefault();
+    };
+    const onMouseUp = (e: MouseEvent) => {
+      if (e.button >= 3 && lift(`Mouse${e.button + 1}`)) e.preventDefault();
+    };
+    const onBlur = () => heldRef.current && open(false);
+    if (room && !heldRef.current)
+      void room.localParticipant.setMicrophoneEnabled(false).catch(() => {});
+    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("keyup", onKeyUp);
+    window.addEventListener("mousedown", onMouseDown);
+    window.addEventListener("mouseup", onMouseUp);
+    window.addEventListener("blur", onBlur);
+    return () => {
+      if (release) clearTimeout(release);
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keyup", onKeyUp);
+      window.removeEventListener("mousedown", onMouseDown);
+      window.removeEventListener("mouseup", onMouseUp);
+      window.removeEventListener("blur", onBlur);
+      heldRef.current = false;
+      setTalking(false);
+      const r = roomRef.current;
+      if (r && r.state === "connected")
+        void r.localParticipant
+          .setMicrophoneEnabled(!mutedRef.current && !deafenedRef.current && !pttRef.current.on)
+          .catch(() => {});
+    };
+  }, [connState, ptt.on, ptt.code]);
+
   return (
     <VoiceContext.Provider
       value={{
@@ -564,6 +695,11 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
         getVideoElement,
         voiceFx,
         setVoiceFx,
+        volumes,
+        setVolume,
+        ptt,
+        setPtt,
+        talking,
       }}
     >
       {children}

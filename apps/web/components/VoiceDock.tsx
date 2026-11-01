@@ -1,5 +1,6 @@
 "use client";
 
+import React, { useState } from "react";
 import { useVoice } from "./VoiceContext";
 import MicSettings from "./MicSettings";
 
@@ -102,8 +103,22 @@ const LeaveIcon = () => (
 );
 
 export default function VoiceDock({ roomMeta }: { roomMeta?: Record<string, { name?: string }> }) {
-  const { connState, activeRoomId, tiles, muted, deafened, toggleMute, toggleDeafen, disconnect } =
-    useVoice();
+  const {
+    connState,
+    activeRoomId,
+    tiles,
+    muted,
+    deafened,
+    toggleMute,
+    toggleDeafen,
+    disconnect,
+    volumes,
+    setVolume,
+    ptt,
+    talking,
+  } = useVoice();
+  // Whose volume slider is open (click a person in the list).
+  const [adjusting, setAdjusting] = useState<string | null>(null);
 
   if (connState !== "connected" && connState !== "connecting") return null;
 
@@ -145,6 +160,12 @@ export default function VoiceDock({ roomMeta }: { roomMeta?: Record<string, { na
         .weered-voicedock .wvd-name { font-size: 13px; color: rgba(237,233,255,.92); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
         .weered-voicedock .wvd-mic { font-size: 11px; opacity: .8; flex-shrink: 0; }
         .weered-voicedock .wvd-empty { font-size: 12px; color: rgba(255,255,255,.4); padding: 8px 6px; }
+        .weered-voicedock .wvd-row.other { cursor: pointer; }
+        .weered-voicedock .wvd-vol { font-size: 10px; color: rgba(226,232,240,.55); flex-shrink: 0; }
+        .weered-voicedock .wvd-volrow { display: flex; align-items: center; gap: 8px; padding: 2px 8px 6px 40px; font-size: 11px; color: rgba(226,232,240,.7); }
+        .weered-voicedock .wvd-volrow input { flex: 1; accent-color: #8b5cf6; }
+        .weered-voicedock .wvd-ptt { font-size: 11px; padding: 6px 12px; color: rgba(226,232,240,.6); border-top: 1px solid rgba(255,255,255,.06); }
+        .weered-voicedock .wvd-ptt.on { color: #86efac; }
         .weered-voicedock .wvd-controls { display: flex; align-items: center; gap: 4px; padding: 8px 10px; border-top: 1px solid rgba(255,255,255,.06); background: rgba(255,255,255,.02); }
         .weered-voicedock .wvd-btn {
           width: 34px; height: 30px; border: 0; border-radius: 8px; background: transparent;
@@ -168,27 +189,77 @@ export default function VoiceDock({ roomMeta }: { roomMeta?: Record<string, { na
         {tiles.length === 0 ? (
           <div className="wvd-empty">No one here yet.</div>
         ) : (
-          tiles.map((t) => (
-            <div key={t.sid} className="wvd-row">
-              <span
-                className={`wvd-av${t.isSpeaking ? " speaking" : ""}`}
-                style={{ background: avColor(t.identity || t.name || "?") }}
-              >
-                {(t.name || "?").slice(0, 1).toUpperCase()}
-              </span>
-              <span className="wvd-name">
-                {t.name || "Guest"}
-                {t.isLocal ? " (you)" : ""}
-              </span>
-              {t.isMuted && (
-                <span className="wvd-mic" title="Muted">
-                  🔇
-                </span>
-              )}
-            </div>
-          ))
+          tiles.map((t) => {
+            const vol = volumes[t.identity] ?? 1;
+            const open = !t.isLocal && adjusting === t.identity;
+            const toggle = () => !t.isLocal && setAdjusting(open ? null : t.identity);
+            return (
+              <div key={t.sid}>
+                <div
+                  className={`wvd-row${t.isLocal ? "" : " other"}`}
+                  {...(t.isLocal
+                    ? {}
+                    : {
+                        role: "button",
+                        tabIndex: 0,
+                        title: "Their volume",
+                        "aria-expanded": open,
+                        onClick: toggle,
+                        onKeyDown: (e: React.KeyboardEvent) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            toggle();
+                          }
+                        },
+                      })}
+                >
+                  <span
+                    className={`wvd-av${t.isSpeaking ? " speaking" : ""}`}
+                    style={{ background: avColor(t.identity || t.name || "?") }}
+                  >
+                    {(t.name || "?").slice(0, 1).toUpperCase()}
+                  </span>
+                  <span className="wvd-name">
+                    {t.name || "Guest"}
+                    {t.isLocal ? " (you)" : ""}
+                  </span>
+                  {!t.isLocal && vol < 1 && (
+                    <span className="wvd-vol">{Math.round(vol * 100)}%</span>
+                  )}
+                  {t.isMuted && (
+                    <span className="wvd-mic" title="Muted">
+                      🔇
+                    </span>
+                  )}
+                </div>
+                {open && (
+                  <div className="wvd-volrow">
+                    <input
+                      type="range"
+                      min={0}
+                      max={100}
+                      value={Math.round(vol * 100)}
+                      aria-label={`Volume for ${t.name || "Guest"}`}
+                      onChange={(e) => setVolume(t.identity, Number(e.target.value) / 100)}
+                    />
+                    <span>{Math.round(vol * 100)}%</span>
+                  </div>
+                )}
+              </div>
+            );
+          })
         )}
       </div>
+
+      {ptt.on && live && (
+        <div className={`wvd-ptt${talking ? " on" : ""}`} aria-live="polite">
+          {muted
+            ? `Muted. Unmute to use ${ptt.label}.`
+            : talking
+              ? "Talking"
+              : `Hold ${ptt.label} to talk`}
+        </div>
+      )}
 
       <div className="wvd-controls">
         <button
