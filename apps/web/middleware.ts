@@ -42,10 +42,23 @@ export async function middleware(req: NextRequest) {
   if (!host || (OWN_HOST.test(host) && !PLACE_HOST.test(host))) return NextResponse.next();
   const path = req.nextUrl.pathname;
   const place = PLACE_HOST.test(host);
-  // A place (<label>.weered.ca) is Weered's own: only its root is taken over.
-  if (place && path !== "/") return NextResponse.next();
+  // A place (<label>.weered.ca) is Weered's own: only its root, and its sign-in
+  // (which wears the place's brand), are taken over.
+  if (place && path !== "/" && path !== "/login") return NextResponse.next();
   const id = await lobbyFor(host);
   if (!id) return place ? NextResponse.next() : toWeered(req);
+  // Sign-in for this lobby wears its brand (app/login ?lobby=): on a place's own
+  // subdomain, or on weered.ca for a lobby's own domain, which never hosts a
+  // password box (James 2026-11-01).
+  if (path === "/login") {
+    if (place && req.nextUrl.searchParams.get("lobby")) return NextResponse.next();
+    const to = new URL(place ? `https://${host}/login` : "https://weered.ca/login");
+    req.nextUrl.searchParams.forEach((v, k) => to.searchParams.set(k, v));
+    to.searchParams.set("lobby", id);
+    if (!to.searchParams.get("next"))
+      to.searchParams.set("next", `/lobby/${encodeURIComponent(id)}`);
+    return NextResponse.redirect(to, 307);
+  }
   // Redirect, not rewrite: the client app keys its shell and auth logic on the
   // browser path, and at "/" it took a rewritten lobby for the home page (blank
   // screen, bounce to /?next=/). The visitor stays on the club's own domain.

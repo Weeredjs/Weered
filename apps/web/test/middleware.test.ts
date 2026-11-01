@@ -42,9 +42,12 @@ describe("hosts in the web middleware", () => {
     expect((await visit("https://club.example.com/room/abc123")).next).toBe(true);
   });
 
-  it("sends sign-in and everything else there to weered.ca", async () => {
+  it("sends sign-in to weered.ca wearing the lobby's brand, and everything else there", async () => {
     expect((await visit("https://club.example.com/login?next=/lobby/club")).to).toBe(
-      "https://weered.ca/login?next=/lobby/club",
+      "https://weered.ca/login?next=%2Flobby%2Fclub&lobby=club",
+    );
+    expect((await visit("https://club.example.com/login")).to).toBe(
+      "https://weered.ca/login?lobby=club&next=%2Flobby%2Fclub",
     );
     expect((await visit("https://club.example.com/lobby/someone-else")).to).toBe(
       "https://weered.ca/lobby/someone-else",
@@ -59,5 +62,12 @@ describe("hosts in the web middleware", () => {
   it("keeps a place's subdomain as Weered's own beyond its root", async () => {
     expect((await visit("https://joe.weered.ca/")).to).toBe("https://joe.weered.ca/lobby/u-joe");
     expect((await visit("https://joe.weered.ca/home")).next).toBe(true);
+  });
+
+  it("gives a place's sign-in its brand, on its own subdomain", async () => {
+    expect((await visit("https://joe.weered.ca/login")).to).toBe(
+      "https://joe.weered.ca/login?lobby=u-joe&next=%2Flobby%2Fu-joe",
+    );
+    expect((await visit("https://joe.weered.ca/login?lobby=u-joe")).next).toBe(true);
   });
 });

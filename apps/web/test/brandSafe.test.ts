@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { safeAccent, safeImage } from "../lib/brandSafe";
+import { onAccent, safeAccent, safeImage } from "../lib/brandSafe";
 
 describe("owner-supplied colours and pictures (red team 2026-11-01, finding 5)", () => {
   it("keeps a real colour and replaces anything else", () => {
@@ -15,6 +15,12 @@ describe("owner-supplied colours and pictures (red team 2026-11-01, finding 5)",
     expect(safeImage("/brand/eceb.png")).toBe("/brand/eceb.png");
     expect(safeImage('https://x.example/a.png")<img src=x onerror=alert(1)>')).not.toContain('"');
     expect(safeImage('/a.png" onmouseover="alert(1)')).not.toContain('"');
+  });
+
+  it("picks text that reads on the accent", () => {
+    expect(onAccent("#FFD700")).toBe("#0b0b0f");
+    expect(onAccent("#7c3aed")).toBe("#fff");
+    expect(onAccent("nope")).toBe("#fff");
   });
 
   it("drops scripts, data and protocol-relative addresses", () => {

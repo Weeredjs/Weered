@@ -6,6 +6,17 @@
 // understand.
 import React, { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { onAccent, safeAccent, safeImage } from "../../lib/brandSafe";
+
+/** The lobby a sign-in is for (?lobby=), as its page shows it. */
+type Brand = {
+  id: string;
+  name: string;
+  logo: string;
+  banner: string;
+  accent: string;
+  blurb: string;
+};
 
 const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || "";
 /** Set on this device by any sign-in (here, and the socket's auth:ok in
@@ -27,6 +38,35 @@ function LoginForm() {
   const router = useRouter();
   const sp = useSearchParams();
   const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
+
+  // Signing in to one lobby (?lobby=, from its invite, its own domain or its
+  // place): the page wears that lobby's name, logo and colour. It stays on
+  // weered.ca, so a lobby's own domain never hosts a password box that whoever
+  // runs the name could swap out (James 2026-11-01: "a branded login page").
+  const brandId = (sp?.get("lobby") || "").trim().slice(0, 64);
+  const [brand, setBrand] = useState<Brand | null>(null);
+  useEffect(() => {
+    if (!brandId) return;
+    let alive = true;
+    fetch(`${API}/lobbies/${encodeURIComponent(brandId)}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => {
+        const l = j?.lobby;
+        if (!alive || !l?.id) return;
+        setBrand({
+          id: String(l.id),
+          name: String(l.name || "").slice(0, 60),
+          logo: safeImage(l.logoUrl),
+          banner: safeImage(l.bannerUrl),
+          accent: safeAccent(l.accentColor, "#7c3aed"),
+          blurb: String(l.description || "").slice(0, 180),
+        });
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [API, brandId]);
 
   const [mode, setMode] = useState<"login" | "register">("login");
   const [username, setUsername] = useState("");
@@ -89,8 +129,10 @@ function LoginForm() {
   const nextPath = React.useMemo(() => {
     const n = sp?.get("next") || "";
     // A path on this site only: "//elsewhere" is another site (red team finding 22).
-    return n.startsWith("/") && !n.startsWith("//") && !n.startsWith("/\\") ? n : "/home";
-  }, [sp]);
+    if (n.startsWith("/") && !n.startsWith("//") && !n.startsWith("/\\")) return n;
+    // Signing in for a lobby lands in it.
+    return brandId ? `/lobby/${encodeURIComponent(brandId)}` : "/home";
+  }, [sp, brandId]);
 
   // A device that has signed in before opens on Sign in, with its name filled,
   // even from "Get in" (James 2026-10-31: "Get In" opened Create account, so
@@ -279,61 +321,119 @@ function LoginForm() {
   };
 
   return (
-    <div className="wa">
+    <div
+      className="wa"
+      data-brand={brand ? "1" : undefined}
+      style={
+        brand
+          ? ({
+              "--wa-accent": brand.accent,
+              "--wa-on-accent": onAccent(brand.accent),
+            } as React.CSSProperties)
+          : undefined
+      }
+    >
       <div className="wa-aura" aria-hidden />
       <div className="wa-grid" aria-hidden />
       <div className="wa-shell">
         {/* ── The pitch, beside the card on wide screens ── */}
-        <section className="wa-pitch" aria-label="What Weered is">
-          <a href="/" className="wa-brand">
-            {/* eslint-disable-next-line @next/next/no-img-element -- the brand mark */}
-            <img src="/brand/logo/weered-logo-128.png" alt="" />
-            Weered
-          </a>
-          <h1 className="wa-headline">A place for anything.</h1>
-          <ul className="wa-points">
-            <li>
-              <span aria-hidden>✦</span>
-              <span>
-                <b>Vibe code your own lobby.</b> Say what you want and it builds.
-              </span>
-            </li>
-            <li>
-              <span aria-hidden>🏠</span>
-              <span>
-                <b>A place of your own</b> at yourname.weered.ca.
-              </span>
-            </li>
-            <li>
-              <span aria-hidden>🎙</span>
-              <span>
-                <b>Rooms that are live</b> the moment you walk in: voice, video, watch parties.
-              </span>
-            </li>
-            <li>
-              <span aria-hidden>🎮</span>
-              <span>
-                <b>Your games and your crew,</b> together in one spot.
-              </span>
-            </li>
-          </ul>
-          <div className="wa-fine">Free to join. Your own lobby is $6 a month.</div>
-        </section>
+        {brand ? (
+          <section className="wa-pitch" aria-label={brand.name}>
+            <span className="wa-brand">
+              {brand.logo && (
+                // eslint-disable-next-line @next/next/no-img-element -- the lobby's own mark
+                <img
+                  src={brand.logo}
+                  alt=""
+                  onError={(e) => (e.currentTarget.style.display = "none")}
+                />
+              )}
+              {brand.name}
+            </span>
+            {brand.banner && (
+              // eslint-disable-next-line @next/next/no-img-element -- the lobby's banner
+              <img className="wa-brand-banner" src={brand.banner} alt="" />
+            )}
+            <h1 className="wa-headline">{brand.name}</h1>
+            {brand.blurb && <p className="wa-brand-blurb">{brand.blurb}</p>}
+            <div className="wa-fine">On Weered. Free to join.</div>
+          </section>
+        ) : (
+          <section className="wa-pitch" aria-label="What Weered is">
+            <a href="/" className="wa-brand">
+              {/* eslint-disable-next-line @next/next/no-img-element -- the brand mark */}
+              <img src="/brand/logo/weered-logo-128.png" alt="" />
+              Weered
+            </a>
+            <h1 className="wa-headline">A place for anything.</h1>
+            <ul className="wa-points">
+              <li>
+                <span aria-hidden>✦</span>
+                <span>
+                  <b>Vibe code your own lobby.</b> Say what you want and it builds.
+                </span>
+              </li>
+              <li>
+                <span aria-hidden>🏠</span>
+                <span>
+                  <b>A place of your own</b> at yourname.weered.ca.
+                </span>
+              </li>
+              <li>
+                <span aria-hidden>🎙</span>
+                <span>
+                  <b>Rooms that are live</b> the moment you walk in: voice, video, watch parties.
+                </span>
+              </li>
+              <li>
+                <span aria-hidden>🎮</span>
+                <span>
+                  <b>Your games and your crew,</b> together in one spot.
+                </span>
+              </li>
+            </ul>
+            <div className="wa-fine">Free to join. Your own lobby is $6 a month.</div>
+          </section>
+        )}
 
         {/* ── The card ── */}
         <main className="wa-card">
-          <a href="/" className="wa-brand wa-brand-small">
-            {/* eslint-disable-next-line @next/next/no-img-element -- the brand mark */}
-            <img src="/brand/logo/weered-logo-128.png" alt="" />
-            Weered
-          </a>
-          <h2 className="wa-title">{mode === "login" ? "Welcome back" : "Create your account"}</h2>
+          {brand ? (
+            <span className="wa-brand wa-brand-small">
+              {brand.logo && (
+                // eslint-disable-next-line @next/next/no-img-element -- the lobby's own mark
+                <img
+                  src={brand.logo}
+                  alt=""
+                  onError={(e) => (e.currentTarget.style.display = "none")}
+                />
+              )}
+              {brand.name}
+            </span>
+          ) : (
+            <a href="/" className="wa-brand wa-brand-small">
+              {/* eslint-disable-next-line @next/next/no-img-element -- the brand mark */}
+              <img src="/brand/logo/weered-logo-128.png" alt="" />
+              Weered
+            </a>
+          )}
+          <h2 className="wa-title">
+            {brand
+              ? mode === "login"
+                ? `Sign in to ${brand.name}`
+                : `Join ${brand.name}`
+              : mode === "login"
+                ? "Welcome back"
+                : "Create your account"}
+          </h2>
           <p className="wa-sub">
-            {mode === "login"
-              ? "Sign in and pick up where you left off."
-              : isFull
-                ? "We'll tell you when there's room."
-                : "Thirty seconds and you're in."}
+            {brand && !isFull
+              ? "With a free Weered account. You land right in."
+              : mode === "login"
+                ? "Sign in and pick up where you left off."
+                : isFull
+                  ? "We'll tell you when there's room."
+                  : "Thirty seconds and you're in."}
           </p>
 
           <div className="wa-tabs" role="group" aria-label="Sign in or create an account">

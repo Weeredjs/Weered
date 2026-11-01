@@ -471,3 +471,54 @@
     animation: none !important;
   }
 }
+
+/* A sign-in for one lobby (app/login ?lobby=): its own colour where the page
+   uses Weered's violet, its banner beside the card. */
+.wa[data-brand] .wa-aura {
+  background:
+    radial-gradient(
+      40% 40% at 22% 18%,
+      color-mix(in srgb, var(--wa-accent) 42%, transparent) 0%,
+      transparent 70%
+    ),
+    radial-gradient(
+      36% 36% at 80% 85%,
+      color-mix(in srgb, var(--wa-accent) 18%, transparent) 0%,
+      transparent 70%
+    );
+}
+.wa[data-brand] .wa-go,
+.wa[data-brand] .wa-go:hover:not(:disabled) {
+  background: var(--wa-accent);
+  color: var(--wa-on-accent, #fff);
+  border-color: color-mix(in srgb, var(--wa-accent) 60%, #fff);
+  box-shadow: 0 6px 26px color-mix(in srgb, var(--wa-accent) 35%, transparent);
+}
+.wa[data-brand] .wa-tab.is-on {
+  background: color-mix(in srgb, var(--wa-accent) 22%, transparent);
+  border-color: color-mix(in srgb, var(--wa-accent) 45%, transparent);
+}
+.wa[data-brand] .wa-headline {
+  text-shadow: 0 0 40px color-mix(in srgb, var(--wa-accent) 35%, transparent);
+}
+.wa[data-brand] .wa-brand img {
+  border-radius: 10px;
+  filter: none;
+}
+.wa-brand-banner {
+  display: block;
+  width: 100%;
+  max-width: 460px;
+  aspect-ratio: 16 / 7;
+  object-fit: cover;
+  margin-top: 24px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+.wa-brand-blurb {
+  max-width: 460px;
+  margin: 0 0 18px;
+  font-size: 17px;
+  line-height: 1.5;
+  color: rgba(226, 232, 240, 0.78);
+}

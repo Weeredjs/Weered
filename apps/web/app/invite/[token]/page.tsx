@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { onAccent, safeAccent, safeImage } from "../../../lib/brandSafe";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
@@ -62,6 +63,18 @@ export default function InvitePage() {
   >("loading");
   const [errMsg, setErrMsg] = useState("");
   const [_redirect, setRedirect] = useState("/lobby");
+  // An invite into a lobby wears that lobby's name, mark and colour, and its
+  // sign-in does too (app/login ?lobby=). James 2026-11-01.
+  const [brand, setBrand] = useState<{
+    id: string;
+    name: string;
+    logo: string;
+    accent: string;
+  } | null>(null);
+  const signIn = () =>
+    router.push(
+      `/login?next=${encodeURIComponent(`/invite/${token}`)}${brand ? `&lobby=${encodeURIComponent(brand.id)}` : ""}`,
+    );
 
   useEffect(() => {
     if (!token) {
@@ -75,6 +88,20 @@ export default function InvitePage() {
         if (j.ok) {
           setInvite(j.invite);
           setState("ready");
+          if (j.invite?.type === "LOBBY" && j.invite.targetId)
+            fetch(`${API}/lobbies/${encodeURIComponent(j.invite.targetId)}`)
+              .then((r) => (r.ok ? r.json() : null))
+              .then((x) => {
+                const l = x?.lobby;
+                if (l?.id)
+                  setBrand({
+                    id: String(l.id),
+                    name: String(l.name || "").slice(0, 60),
+                    logo: safeImage(l.logoUrl),
+                    accent: safeAccent(l.accentColor, "#7c3aed"),
+                  });
+              })
+              .catch(() => {});
         } else if (j.error === "expired") setState("expired");
         else if (j.error === "exhausted") setState("exhausted");
         else {
@@ -91,7 +118,7 @@ export default function InvitePage() {
   async function accept() {
     setState("accepting");
     if (!hasCachedUser()) {
-      router.push(`/login?next=/invite/${token}`);
+      signIn();
       return;
     }
     const r = await fetch(`${API}/invites/${token}/accept`, {
@@ -101,7 +128,7 @@ export default function InvitePage() {
     });
     // A stale cached user with an expired cookie session: send them to sign in.
     if (r.status === 401) {
-      router.push(`/login?next=/invite/${token}`);
+      signIn();
       return;
     }
     const j = await r.json();
@@ -151,27 +178,58 @@ export default function InvitePage() {
     boxShadow: "0 24px 80px rgba(0,0,0,.6)",
   };
 
-  const Logo = () => (
-    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
-      <div
-        style={{
-          width: 36,
-          height: 36,
-          borderRadius: 10,
-          background: "rgba(124,58,237,.30)",
-          border: "1px solid rgba(124,58,237,.40)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          fontSize: 18,
-          fontWeight: 900,
-        }}
-      >
-        w
+  const Logo = () =>
+    brand ? (
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
+        {brand.logo ? (
+          // eslint-disable-next-line @next/next/no-img-element -- the lobby's own mark
+          <img
+            src={brand.logo}
+            alt=""
+            onError={(e) => (e.currentTarget.style.display = "none")}
+            style={{ width: 36, height: 36, borderRadius: 10, objectFit: "cover" }}
+          />
+        ) : (
+          <div
+            style={{
+              width: 36,
+              height: 36,
+              borderRadius: 10,
+              background: brand.accent,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: 18,
+              fontWeight: 900,
+              color: "#fff",
+            }}
+          >
+            {brand.name.slice(0, 1).toUpperCase()}
+          </div>
+        )}
+        <span style={{ fontWeight: 900, fontSize: 20, letterSpacing: "-.5px" }}>{brand.name}</span>
       </div>
-      <span style={{ fontWeight: 900, fontSize: 20, letterSpacing: "-.5px" }}>weered</span>
-    </div>
-  );
+    ) : (
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
+        <div
+          style={{
+            width: 36,
+            height: 36,
+            borderRadius: 10,
+            background: "rgba(124,58,237,.30)",
+            border: "1px solid rgba(124,58,237,.40)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: 18,
+            fontWeight: 900,
+          }}
+        >
+          w
+        </div>
+        <span style={{ fontWeight: 900, fontSize: 20, letterSpacing: "-.5px" }}>weered</span>
+      </div>
+    );
 
   if (state === "loading")
     return (
@@ -348,9 +406,9 @@ export default function InvitePage() {
             width: "100%",
             padding: "13px 0",
             borderRadius: 12,
-            border: "1px solid rgba(124,58,237,.40)",
-            background: "rgba(124,58,237,.18)",
-            color: "rgb(216,180,254)",
+            border: brand ? `1px solid ${brand.accent}` : "1px solid rgba(124,58,237,.40)",
+            background: brand ? brand.accent : "rgba(124,58,237,.18)",
+            color: brand ? onAccent(brand.accent) : "rgb(216,180,254)",
             fontWeight: 800,
             fontSize: 16,
             cursor: "pointer",
@@ -362,13 +420,17 @@ export default function InvitePage() {
             ? "Joining…"
             : invite.type === "PLATFORM"
               ? "Join Weered"
-              : `Join ${TYPE_LABEL[invite.type] || ""}`}
+              : brand
+                ? `Join ${brand.name}`
+                : `Join ${TYPE_LABEL[invite.type] || ""}`}
         </button>
 
         <div style={{ fontSize: 11, opacity: 0.3 }}>
           {invite.type === "PLATFORM"
             ? "You'll be asked to create an account if you don't have one."
-            : "You'll need to be logged in to accept."}
+            : brand
+              ? "With a free Weered account. You land right in."
+              : "You'll need to be logged in to accept."}
         </div>
       </div>
     </div>
