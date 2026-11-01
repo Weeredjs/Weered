@@ -190,7 +190,11 @@ export async function handlePresence(ws: any, msg: any, opts: Opts): Promise<voi
 
     if (isLobby) room.locked = false;
     if (room.locked && !isLobby && !(await passes())) {
-      if (!room.knocks.some((k: any) => k.userId === uid)) {
+      // A knock already at the door isn't announced again: repeats used to send
+      // every moderator a knock and every occupant the full state each time
+      // (red team 2026-11-01, finding 14).
+      const knocked = room.knocks.some((k: any) => k.userId === uid);
+      if (!knocked) {
         room.knocks.push({ userId: uid, name: ws.user.name, ts: Date.now() });
         if (room.knocks.length > 200) room.knocks.splice(0, room.knocks.length - 200);
       }
@@ -202,6 +206,7 @@ export async function handlePresence(ws: any, msg: any, opts: Opts): Promise<voi
       p.add(ws);
       ws.pendingRoomId = roomId;
       send(ws, { type: "room:knock:queued", roomId });
+      if (knocked) return;
       for (const s of room.sockets) {
         const sid = s.user?.id;
         if (!sid || !isModOrOwner(room, sid)) continue;

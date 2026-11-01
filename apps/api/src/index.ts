@@ -277,6 +277,7 @@ import { canEnterGatedRoom } from "./lib/lobbyAccess";
 import { isOfficeRoom, scopeAllows } from "./lib/officeRooms";
 import { issuedBeforeCutoff } from "./lib/sessionCutoff";
 import { sessionHook } from "./lib/sessionHook";
+import { withinBudget } from "./lib/roomGate";
 import { awardPaper } from "./lib/economy";
 
 const JWT_SECRET = (() => {
@@ -1652,6 +1653,22 @@ async function main() {
             if (!ws.roomId) return;
             if (msg.roomId && normalizeRoomId(String(msg.roomId)) !== ws.roomId) return;
           }
+        }
+
+        // What makes the server work or fans out to a whole room gets a per-socket
+        // allowance (lib/roomGate.ts): joins, leaves and idles, room lists and
+        // admin state were unthrottled (red team 2026-11-01, finding 14).
+        {
+          const t = msg.type;
+          const family =
+            t === "presence:join" || t === "presence:idle" || t === "presence:leave"
+              ? "presence"
+              : t === "rooms:list" || t === "lobby:rooms" || t === "room:list"
+                ? "lists"
+                : t === "room:getAdminState"
+                  ? "admin"
+                  : "";
+          if (family && !withinBudget(ws, family, family === "presence" ? 20 : 10, 10_000)) return;
         }
 
         if (

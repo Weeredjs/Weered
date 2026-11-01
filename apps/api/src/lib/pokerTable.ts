@@ -80,7 +80,41 @@ export function determineWinners(seats: (PokerSeat | null)[], communityCards: Ca
   return winnerIndices;
 }
 
+/**
+ * Tables are kept in memory, one per room. Any id used to make one and none
+ * was ever removed, so one socket could grow memory without end (red team
+ * 2026-11-01, finding 15). Now an id must look like a room's and there's a
+ * ceiling; an empty table idle for half an hour is swept.
+ */
+export const POKER_TABLE_MAX = 300;
+const POKER_IDLE_MS = 30 * 60_000;
+export const pokerTableIdOk = (id: string) => /^[a-zA-Z0-9_:-]{1,64}$/.test(id);
+const lastUsed = new Map<string, number>();
+
+/** May this id get a table: a good id, and an existing table or room below the ceiling. */
+export function pokerTableAllowed(tableId: string): boolean {
+  if (!pokerTableIdOk(tableId)) return false;
+  return pokerTables.has(tableId) || pokerTables.size < POKER_TABLE_MAX;
+}
+
+/** Remove empty tables nobody has touched for a while. Returns how many went. */
+export function sweepPokerTables(now = Date.now()): number {
+  let n = 0;
+  for (const [id, t] of pokerTables) {
+    const idle = now - (lastUsed.get(id) || 0) > POKER_IDLE_MS;
+    if (idle && !t.handInProgress && t.seats.every((s) => s === null)) {
+      if (t.autoStartTimer) clearTimeout(t.autoStartTimer);
+      pokerTables.delete(id);
+      lastUsed.delete(id);
+      n++;
+    }
+  }
+  return n;
+}
+setInterval(() => sweepPokerTables(), 10 * 60_000).unref?.();
+
 export function getOrCreatePokerTable(tableId: string): PokerTable {
+  lastUsed.set(tableId, Date.now());
   let table = pokerTables.get(tableId);
   if (!table) {
     table = {

@@ -1,4 +1,5 @@
 import { log } from "../lib/logger";
+import { pokerTableAllowed } from "../lib/pokerTable";
 // Poker WS handlers extracted from the index.ts main message handler:
 // poker:join/spectate/leave/start/action. The poker engine helpers + the
 // pokerTables Map + the PokerTable types remain in index.ts (shared with the
@@ -63,6 +64,8 @@ export async function handlePoker(ws: any, msg: any, opts: Opts): Promise<void> 
     const tableId = String(msg.tableId || "").trim();
     const buyin = Number(msg.buyin || 0);
     if (!ws.user || !tableId || !buyin) return;
+    // A real id, under the ceiling (lib/pokerTable.ts, red team finding 15).
+    if (!pokerTableAllowed(tableId)) return;
 
     const table = getOrCreatePokerTable(tableId);
 
@@ -145,6 +148,10 @@ export async function handlePoker(ws: any, msg: any, opts: Opts): Promise<void> 
   if (msg.type === "poker:spectate") {
     const tableId = String(msg.tableId || "").trim();
     if (!ws.user || !tableId) return;
+    // Watching never makes a table that isn't there already.
+    if (!pokerTables.has(tableId)) {
+      if (!pokerTableAllowed(tableId) || tableId !== ws.roomId) return;
+    }
     const table = getOrCreatePokerTable(tableId);
     if (!table.seats.some((s: any) => s && s.userId === ws.user!.id)) {
       table.spectators.add(ws.user.id);
