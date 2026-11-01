@@ -14,6 +14,7 @@ function mkRoom(roomId = "r1", over: any = {}) {
   return {
     roomId,
     banned: new Set<string>(),
+    mods: new Set<string>(),
     passwordHash: null as string | null,
     locked: false,
     knocks: [] as any[],

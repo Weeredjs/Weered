@@ -637,25 +637,22 @@ export async function rankOf(room: RoomState, userId: string, ifUnknown = 6): Pr
   let here = room.users.has(userId);
   if (!here) for (const s of room.sockets as Set<any>) if (s?.user?.id === userId) here = true;
   if (here) return rankIn(room, userId);
-  let g = "";
-  let level = 0;
   try {
-    const [u, l] = await Promise.all([
+    const [u, level] = await Promise.all([
       prisma.user.findUnique({ where: { id: userId }, select: { globalRole: true } }),
       room.lobbyId ? lobbyLevelOf(userId, room.lobbyId) : Promise.resolve(0),
     ]);
-    g = String(u?.globalRole || "").toUpperCase();
-    level = l;
+    const g = String(u?.globalRole || "").toUpperCase();
+    if (g === "GOD") return 6;
+    if (g === "ADMIN" || g === "STAFF") return 5;
+    if (isOwner(room, userId) || level >= 5) return 4;
+    if (g === "SUPPORT") return 3;
+    if (isMod(room, userId) || level >= 3) return 2;
+    return 1;
   } catch (e) {
     swallow(e);
     return ifUnknown;
   }
-  if (g === "GOD") return 6;
-  if (g === "ADMIN" || g === "STAFF") return 5;
-  if (isOwner(room, userId) || level >= 5) return 4;
-  if (g === "SUPPORT") return 3;
-  if (isMod(room, userId) || level >= 3) return 2;
-  return 1;
 }
 
 /** A room ban never keeps out the people above the moderators who set it:
