@@ -84,6 +84,9 @@ export type ShellDesignState = {
   saved: ShellLayout;
   /** The saved look (null before the browser has read it). */
   savedLook: ShellLook | null;
+  /** A layout shown for a moment and never saved: the start prompt draws
+   *  each choice behind itself as it's pointed at. */
+  preview: ShellLayout | null;
 };
 
 /** The unsaved draft, per account in this browser, so a second account on
@@ -107,6 +110,7 @@ const INITIAL: ShellDesignState = {
   canRedo: false,
   saved: stockShell(),
   savedLook: null,
+  preview: null,
 };
 let state: ShellDesignState = INITIAL;
 const listeners = new Set<() => void>();
@@ -159,7 +163,13 @@ export function useShellDesign(): ShellDesignState {
  *  the saved one. */
 export function useShellLayout(): ShellLayout {
   const s = useShellDesign();
-  return s.designing && s.draft ? s.draft.layout : s.saved;
+  return s.preview ?? (s.designing && s.draft ? s.draft.layout : s.saved);
+}
+
+/** Show a layout without saving it, or stop (null). */
+export function previewShellLayout(layout: ShellLayout | null) {
+  ensureStarted();
+  set({ preview: layout });
 }
 
 /** The look right now: the draft's while designing, else the saved one. */

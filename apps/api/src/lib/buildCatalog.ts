@@ -552,6 +552,11 @@ export const DRIP_FONTS: Record<string, string> = {
 export const DRIP_PRESETS = [
   { id: "weered", name: "Weered", blurb: "The standard. Places on the left, people in the panel." },
   {
+    id: "clean",
+    name: "Clean",
+    blurb: "Your places, your people, and a way to build. Nothing else.",
+  },
+  {
     id: "social",
     name: "Social",
     blurb: "Friends and crew up in your sidebar, next to your places.",

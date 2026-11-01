@@ -667,6 +667,19 @@ export const SHELL_PRESETS: ShellPreset[] = [
     build: () => ({ left: [...STOCK.left], right: [...STOCK.right], home: [...STOCK.home] }),
   },
   {
+    // The start prompt's "Keep it clean" (components/setup/StartPrompt.tsx):
+    // your places, your people and a way to build; the rest a click away.
+    id: "clean",
+    name: "Clean",
+    blurb: "Your places, your people, and a way to build. Nothing else.",
+    setup: true,
+    build: () => ({
+      left: ["card", "nav", "favs", "friends"],
+      right: ["rooms", "whoshere"],
+      home: ["build", "pulse", "popular"],
+    }),
+  },
+  {
     id: "social",
     name: "Social",
     blurb: "Friends and crew up in your sidebar, next to your places.",

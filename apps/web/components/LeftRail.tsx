@@ -660,9 +660,7 @@ export default function LeftRail() {
   const stock = useMemo(() => stockShell(), []);
   const layout: ShellLayout = office
     ? stock
-    : design.designing && design.draft
-      ? design.draft.layout
-      : design.saved;
+    : (design.preview ?? (design.designing && design.draft ? design.draft.layout : design.saved));
   const scope = useRailScope();
   const isLeftCore = (v: unknown): v is LeftCore =>
     typeof v === "string" && (LEFT_CORES as readonly string[]).includes(v);

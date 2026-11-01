@@ -1482,28 +1482,9 @@ async function main() {
 
   await app.register(newsRoutes);
 
-  const annDb = prisma as any;
-
-  void (async () => {
-    try {
-      const count = await annDb.announcement.count();
-      if (count === 0) {
-        await annDb.announcement.create({
-          data: {
-            message:
-              "Early access build — things may break. Report bugs in the Forum. New features ship daily. Type @operator in any chat for help.",
-            level: "info",
-            pinned: true,
-            sticky: true,
-            createdById: "system",
-            createdByName: "Weered",
-          },
-        });
-      }
-    } catch (e) {
-      log.warn("[announcements] seed:", e);
-    }
-  })();
+  // No announcement is seeded: an empty board stays empty. The old seed put
+  // "Early access build, things may break" in front of every newcomer
+  // (James 2026-11-01, the newcomer path). Staff post through BroadcastTab.
 
   await app.register(desktopRoutes, {} as any);
 

@@ -1,15 +1,14 @@
 "use client";
 
-// Opens first-run setup once per account: on Home, for a signed-in viewer
-// whose account has neither finished nor skipped it. The account is asked,
-// not just this browser, so setting up in the browser covers the desktop app.
+// Asks a new account its one question once (StartPrompt): on Home, for a
+// signed-in viewer whose account has neither answered nor skipped it. The
+// account is asked, not just this browser, so answering in the browser covers
+// the desktop app. The full setup (SetupFlow) is at /setup.
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import SetupFlow from "./SetupFlow";
+import StartPrompt from "./StartPrompt";
 import { pullUiPrefs, readUiPrefs } from "../../lib/uiPrefs";
 
 export default function SetupGate() {
-  const router = useRouter();
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -30,13 +29,5 @@ export default function SetupGate() {
   }, []);
 
   if (!open) return null;
-  return (
-    <SetupFlow
-      mode="first"
-      onClose={(next) => {
-        setOpen(false);
-        if (next && next !== window.location.pathname) router.push(next);
-      }}
-    />
-  );
+  return <StartPrompt onDone={() => setOpen(false)} />;
 }
