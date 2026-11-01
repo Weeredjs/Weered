@@ -1,4 +1,5 @@
 import { swallow } from "../lib/logger";
+import { mayAct } from "../lib/roomGate";
 // Canvas/tabletop WS handlers extracted from the index.ts main message handler.
 // Pure in-memory room-module relays. Deps injected by reference (rooms is the
 // SAME live Map the rest of the WS layer mutates). Returns true if it consumed
@@ -101,7 +102,7 @@ export function handleCanvasRelay(
     msg.type === "map:fog-clear"
   ) {
     const { room, roomId } = snap;
-    if (!room.users.has(ws.user.id)) return true;
+    if (!mayAct(room, ws.user)) return true;
     if (!relayAllowed(ws)) return true;
     if (JSON.stringify(msg).length > RELAY_MAX_CHARS) return true;
     for (const s of room.sockets) {

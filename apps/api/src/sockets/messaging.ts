@@ -1,6 +1,7 @@
 import { log, swallow } from "../lib/logger";
 import { prisma } from "../lib/prisma";
 import { randomUUID } from "crypto";
+import { mayAct } from "../lib/roomGate";
 import { takeAiBudget } from "../lib/aiBudget";
 import { answerOperatorDm } from "../lib/operatorDm";
 import { answerMention } from "../lib/lobbyHost";
@@ -96,7 +97,8 @@ export async function handleChat(ws: any, msg: any, opts: Opts): Promise<void> {
   if (msg.type === "chat:typing") {
     if (!ws.user?.id || !ws.roomId) return;
     const room = rooms.get(ws.roomId);
-    if (!room || !room.users.has(ws.user.id)) return;
+    // Muted or locked out: no typing line either (lib/roomGate.ts).
+    if (!room || !mayAct(room, ws.user, { chat: true })) return;
     broadcast(room, {
       type: "chat:typing",
       roomId: room.roomId,
@@ -436,7 +438,8 @@ export async function handleChat(ws: any, msg: any, opts: Opts): Promise<void> {
     if (!rId || !msgId || !newBody) return;
     const room = await loadExistingRoom(rId);
     if (!room) return;
-    if (room.banned.has(ws.user.id)) return;
+    // Here, not banned, not muted, chat not locked (lib/roomGate.ts).
+    if (!mayAct(room, ws.user, { chat: true })) return;
     const target = room.msgs.find((m: any) => m.id === msgId);
     if (!target) return;
     if (target.deletedAt) return;
@@ -1047,8 +1050,7 @@ export async function handleReactionToggle(
     if (!rId || !msgId || !emoji) return;
     const room = await loadExistingRoom(rId);
     if (!room) return;
-    if (room.banned.has(ws.user.id)) return;
-    if (!room.users.has(ws.user.id)) return;
+    if (!mayAct(room, ws.user, { chat: true })) return;
     const target = room.msgs.find((m: any) => m.id === msgId);
     if (!target || target.deletedAt) return;
 

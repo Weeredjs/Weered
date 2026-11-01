@@ -1,5 +1,6 @@
 import { prisma } from "../lib/prisma";
 import { swallow } from "../lib/logger";
+import { mayAct } from "../lib/roomGate";
 
 // Custom blocks and games talking live (web lib/blockSandbox.ts weered.send /
 // weered.on): "block:send" {blockId, data} from one viewer reaches everyone
@@ -46,7 +47,7 @@ export function handleBlockRelay(
   const { room, roomId } = snap;
   const blockId = String(msg.blockId || "").slice(0, 40);
   if (!blockId || !room?.lobbyId || room.lobbyId !== roomId) return true;
-  if (!room.users.has(ws.user.id) || !allowed(ws)) return true;
+  if (!mayAct(room, ws.user) || !allowed(ws)) return true;
   let data: string;
   try {
     data = JSON.stringify(msg.data ?? null);

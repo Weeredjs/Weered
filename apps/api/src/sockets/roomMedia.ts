@@ -1,4 +1,5 @@
 import { parseBarLaunch } from "../lib/barLaunch";
+import { mayAct, withinBudget } from "../lib/roomGate";
 
 // Room-media WS handlers extracted from the index.ts main message handler.
 // launch:* (the synchronized "launch" mini-game). Void handler: the dispatcher
@@ -132,35 +133,50 @@ export function handleYoutube(
 ): void {
   const { room, roomId } = snap;
   const { send } = opts;
-  if (!room.users.has(ws.user.id)) return;
-  if (msg.type === "youtube:load" && msg.videoId) {
+  // The four watch-together moves only, from someone allowed to act, at most
+  // 12 every 2 seconds, and relayed as their own small frame. It used to pass
+  // any youtube:* message on whole, up to 256 KB, to everyone, unthrottled
+  // (red team 2026-11-01, findings 11 and 12).
+  if (!["youtube:load", "youtube:play", "youtube:pause", "youtube:stop"].includes(msg.type)) return;
+  if (!mayAct(room, ws.user) || !withinBudget(ws, "youtube", 12, 2000)) return;
+  const videoId = typeof msg.videoId === "string" ? msg.videoId.slice(0, 64) : undefined;
+  const position = Number.isFinite(Number(msg.position)) ? Number(msg.position) : 0;
+  if (msg.type === "youtube:load" && !videoId) return;
+  if (msg.type === "youtube:load" && videoId) {
     room.ytState = {
-      videoId: String(msg.videoId),
+      videoId,
       playing: false,
       position: 0,
       updatedAt: Date.now(),
     };
     if (room.activeModule && room.activeModule.mode === "youtube") {
-      room.activeModule.url = String(msg.videoId);
+      room.activeModule.url = videoId;
     }
   } else if (msg.type === "youtube:play") {
     if (room.ytState) {
       room.ytState.playing = true;
-      room.ytState.position = Number(msg.position ?? 0);
+      room.ytState.position = position;
       room.ytState.updatedAt = Date.now();
     }
   } else if (msg.type === "youtube:pause") {
     if (room.ytState) {
       room.ytState.playing = false;
-      room.ytState.position = Number(msg.position ?? 0);
+      room.ytState.position = position;
       room.ytState.updatedAt = Date.now();
     }
   } else if (msg.type === "youtube:stop") {
     room.ytState = null;
   }
+  const frame = {
+    type: msg.type,
+    roomId,
+    _from: ws.user.id,
+    ...(videoId ? { videoId } : {}),
+    ...(msg.type === "youtube:play" || msg.type === "youtube:pause" ? { position } : {}),
+  };
   for (const s of room.sockets) {
     if (s === ws) continue;
-    send(s, { ...msg, roomId, _from: ws.user.id });
+    send(s, frame);
   }
   return;
 }
