@@ -1,3 +1,4 @@
+import { isStaffRole } from "../lib/lobbyAuth";
 import { swallow } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
@@ -63,7 +64,7 @@ export default async function staffContentRoutes(app: FastifyInstance, opts: Opt
   app.get("/staff/announcements", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false });
-    if (!canAccessStaff(await getGlobalRole(u.id))) return reply.code(403).send({ ok: false });
+    if (!isStaffRole(await getGlobalRole(u.id))) return reply.code(403).send({ ok: false });
     const items = await annDb.announcement.findMany({ orderBy: { createdAt: "desc" }, take: 100 });
     return reply.send({
       ok: true,
@@ -74,7 +75,7 @@ export default async function staffContentRoutes(app: FastifyInstance, opts: Opt
   app.post("/staff/announcements", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false });
-    if (!canAccessStaff(await getGlobalRole(u.id))) return reply.code(403).send({ ok: false });
+    if (!isStaffRole(await getGlobalRole(u.id))) return reply.code(403).send({ ok: false });
     const b: any = (req as any).body || {};
     const message = String(b.message || "")
       .trim()
@@ -105,7 +106,7 @@ export default async function staffContentRoutes(app: FastifyInstance, opts: Opt
   app.patch("/staff/announcements/:id", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false });
-    if (!canAccessStaff(await getGlobalRole(u.id))) return reply.code(403).send({ ok: false });
+    if (!isStaffRole(await getGlobalRole(u.id))) return reply.code(403).send({ ok: false });
     const id = String((req as any).params?.id || "");
     const b: any = (req as any).body || {};
     const data: any = {};
@@ -123,7 +124,7 @@ export default async function staffContentRoutes(app: FastifyInstance, opts: Opt
   app.delete("/staff/announcements/:id", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false });
-    if (!canAccessStaff(await getGlobalRole(u.id))) return reply.code(403).send({ ok: false });
+    if (!isStaffRole(await getGlobalRole(u.id))) return reply.code(403).send({ ok: false });
     const id = String((req as any).params?.id || "");
     await annDb.announcement.delete({ where: { id } }).catch(swallow);
     await globalAudit(u.id, u.name, "announcement_delete", id);
@@ -133,7 +134,7 @@ export default async function staffContentRoutes(app: FastifyInstance, opts: Opt
   app.post("/staff/banner", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false });
-    if (!canAccessStaff(await getGlobalRole(u.id))) return reply.code(403).send({ ok: false });
+    if (!isStaffRole(await getGlobalRole(u.id))) return reply.code(403).send({ ok: false });
     const { message, level, clear } = (req as any).body || {};
     if (clear) {
       await annDb.announcement.updateMany({

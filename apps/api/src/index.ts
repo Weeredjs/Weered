@@ -1036,6 +1036,17 @@ async function main() {
     // and revenue share (red team 2026-11-01, finding 9).
     if (canAssignRoles(gr))
       return { user: u, lobby, member: null, globalRole: gr, overrideRole: gr };
+    // Support moderates every lobby as one of its moderators would: bans,
+    // kicks, clearing and locking chat. Never the owner's design, domain,
+    // roles or money (James 2026-11-01: "just help and support").
+    if (String(gr) === "SUPPORT" && minLevel <= 3)
+      return {
+        user: u,
+        lobby,
+        member: { roleLevel: 3, role: "MOD", userId: u.id, name: u.name } as any,
+        globalRole: gr,
+        overrideRole: null,
+      };
     const member = await prisma.lobbyMember.findUnique({
       where: { lobbyId_userId: { lobbyId, userId: u.id } },
     });

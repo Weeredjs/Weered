@@ -1,3 +1,4 @@
+import { isStaffRole } from "../lib/lobbyAuth";
 import { log, swallow } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
@@ -214,7 +215,7 @@ export default async function uploadsRoutes(app: FastifyInstance, opts: Opts) {
         select: { tier: true, globalRole: true, mediaBannedUntil: true },
       });
       const tier = String(dbUser?.tier ?? "INNOCENT").toUpperCase();
-      const isStaff = canAccessStaff(dbUser?.globalRole as any);
+      const isStaff = isStaffRole(dbUser?.globalRole);
       if (tier === "INNOCENT" && !isStaff) {
         return reply.code(403).send({
           error: "tier_required",

@@ -1,3 +1,4 @@
+import { isStaffRole } from "../lib/lobbyAuth";
 import { log, swallow } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 import { PrismaClient } from "@prisma/client";
@@ -568,7 +569,7 @@ export default async function windroseBuildsRoutes(app: FastifyInstance, opts: O
     if (!getGlobalRole || !canAccessStaff)
       return reply.code(500).send({ ok: false, error: "staff_check_unavailable" });
     const role = await getGlobalRole(u.id);
-    if (!canAccessStaff(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
+    if (!isStaffRole(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
 
     const slug = String((req as any).params?.slug || "");
     const body: any = (req as any).body || {};

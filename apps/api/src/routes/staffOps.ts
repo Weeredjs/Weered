@@ -1,3 +1,4 @@
+import { isStaffRole } from "../lib/lobbyAuth";
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
 import { z } from "zod";
@@ -16,7 +17,7 @@ export default async function staffOpsRoutes(app: FastifyInstance, opts: Opts) {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const role = await getGlobalRole(u.id);
-    if (!canAccessStaff(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
+    if (!isStaffRole(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
 
     const status = (req as any).query?.status || undefined;
     const category = (req as any).query?.category || undefined;
@@ -58,7 +59,7 @@ export default async function staffOpsRoutes(app: FastifyInstance, opts: Opts) {
       const u = authFromHeader((req as any).headers?.authorization);
       if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
       const role = await getGlobalRole(u.id);
-      if (!canAccessStaff(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
+      if (!isStaffRole(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
 
       const b = (req as any).body || {};
       if (!b.name || !b.company)
@@ -110,7 +111,7 @@ export default async function staffOpsRoutes(app: FastifyInstance, opts: Opts) {
       const u = authFromHeader((req as any).headers?.authorization);
       if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
       const role = await getGlobalRole(u.id);
-      if (!canAccessStaff(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
+      if (!isStaffRole(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
 
       const id = (req as any).params.id;
       const b = (req as any).body || {};
@@ -150,7 +151,7 @@ export default async function staffOpsRoutes(app: FastifyInstance, opts: Opts) {
       const u = authFromHeader((req as any).headers?.authorization);
       if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
       const role = await getGlobalRole(u.id);
-      if (!canAccessStaff(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
+      if (!isStaffRole(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
 
       try {
         await prisma.outreachContact.delete({ where: { id: (req as any).params.id } });
@@ -165,7 +166,7 @@ export default async function staffOpsRoutes(app: FastifyInstance, opts: Opts) {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const role = await getGlobalRole(u.id);
-    if (!canAccessStaff(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
+    if (!isStaffRole(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
 
     const now = Date.now();
     const todayStart = new Date(now - 1 * 86400000);

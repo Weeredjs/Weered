@@ -1,3 +1,4 @@
+import { isStaffRole } from "../lib/lobbyAuth";
 import type { FastifyInstance } from "fastify";
 import { promises as dns } from "dns";
 import { createHmac } from "crypto";
@@ -318,7 +319,7 @@ export default async function lobbyDesignRoutes(app: FastifyInstance, opts: Opts
     const sort = q.sort === "new" ? "new" : "top";
     const where: any = {};
     // Meeting requests are private: staff only, never on the public board.
-    const staff = !!u && canAccessStaff(await getGlobalRole(u.id));
+    const staff = !!u && isStaffRole(await getGlobalRole(u.id));
     if (q.kind === "game" || q.kind === "feature") where.kind = q.kind;
     else if (q.kind === "meeting" && staff) where.kind = "meeting";
     else where.kind = { not: "meeting" };
@@ -444,7 +445,7 @@ export default async function lobbyDesignRoutes(app: FastifyInstance, opts: Opts
   app.patch("/requests/:id", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false });
-    if (!canAccessStaff(await getGlobalRole(u.id))) return reply.code(403).send({ ok: false });
+    if (!isStaffRole(await getGlobalRole(u.id))) return reply.code(403).send({ ok: false });
     const b: any = (req as any).body || {};
     const data: any = {};
     if (typeof b.status === "string" && STATUSES.has(b.status)) data.status = b.status;

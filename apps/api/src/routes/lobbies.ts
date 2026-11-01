@@ -1,3 +1,4 @@
+import { isStaffRole } from "../lib/lobbyAuth";
 import { log, swallow } from "../lib/logger";
 import { publicModuleConfig } from "../lib/publicModuleConfig";
 import { logLobbyAudit } from "../lib/lobbyAudit";
@@ -371,7 +372,7 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
       const u = verifyToken(token);
       if (!u) return reply.code(401).send({ error: "Unauthorized" });
       const role = await getGlobalRole(u.id);
-      const isStaff = canAccessStaff(role);
+      const isStaff = isStaffRole(role);
       // "u-" ids are members' places (routes/places.ts), made there, never here.
       if (String((req.body as any)?.id || "").startsWith("u-"))
         return reply.code(403).send({

@@ -91,6 +91,9 @@ export default async function staffRoutes(app: FastifyInstance, opts: Opts) {
       orderBy: { createdAt: "desc" },
       take: 50,
     });
+    // Support sees who people are, not their email addresses.
+    if (!canAssignRoles(role))
+      return reply.send({ ok: true, users: users.map(({ email: _e, ...rest }: any) => rest) });
     return reply.send({ ok: true, users });
   });
 
@@ -469,7 +472,7 @@ export default async function staffRoutes(app: FastifyInstance, opts: Opts) {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const role = await getGlobalRole(u.id);
-    if (!canAccessStaff(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
+    if (!canAssignRoles(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
 
     const roomId = String((req as any).params?.roomId || "");
     const body: any = (req as any).body || {};
@@ -494,7 +497,7 @@ export default async function staffRoutes(app: FastifyInstance, opts: Opts) {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const role = await getGlobalRole(u.id);
-    if (!canAccessStaff(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
+    if (!canAssignRoles(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
 
     const roomId = String((req as any).params?.roomId || "");
     const body: any = (req as any).body || {};
@@ -616,7 +619,7 @@ export default async function staffRoutes(app: FastifyInstance, opts: Opts) {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const role = await getGlobalRole(u.id);
-    if (!canAccessStaff(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
+    if (!canAssignRoles(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
     const list = await prisma.reservedName.findMany({ orderBy: { name: "asc" } });
     return reply.send({ ok: true, reserved: list });
   });
@@ -740,7 +743,7 @@ export default async function staffRoutes(app: FastifyInstance, opts: Opts) {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const role = await getGlobalRole(u.id);
-    if (!canAccessStaff(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
+    if (!canAssignRoles(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
 
     const body: any = (req as any).body || {};
     const lobbyId = String(body.lobbyId || "").trim();
@@ -765,7 +768,7 @@ export default async function staffRoutes(app: FastifyInstance, opts: Opts) {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const role = await getGlobalRole(u.id);
-    if (!canAccessStaff(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
+    if (!canAssignRoles(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
 
     const featuredId = await getSiteConfig("featuredLobbyId");
     return reply.send({ ok: true, featuredLobbyId: featuredId || "" });
@@ -809,7 +812,7 @@ export default async function staffRoutes(app: FastifyInstance, opts: Opts) {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const role = await getGlobalRole(u.id);
-    if (!canAccessStaff(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
+    if (!canAssignRoles(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
     const lobbyId = (req.params as any).id;
     const { pinned } = req.body as any;
     await prisma.lobby.update({

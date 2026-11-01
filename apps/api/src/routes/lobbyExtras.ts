@@ -1,3 +1,4 @@
+import { isStaffRole } from "../lib/lobbyAuth";
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
 import { swallow } from "../lib/logger";
@@ -328,7 +329,7 @@ export default async function lobbyExtrasRoutes(app: FastifyInstance, opts: Opts
   async function mayWriteCode(userId: string) {
     if (process.env.CUSTOM_BLOCKS_OPEN === "1") return true;
     const gr = await getGlobalRole(userId).catch(() => "USER");
-    if (canAccessStaff(gr)) return true;
+    if (isStaffRole(gr)) return true;
     const u = await prisma.user
       .findUnique({ where: { id: userId }, select: { tier: true } })
       .catch(() => null);
@@ -530,7 +531,7 @@ export default async function lobbyExtrasRoutes(app: FastifyInstance, opts: Opts
       if (!KEY_RE.test(key)) return reply.code(400).send({ ok: false, error: "bad_key" });
       if (key.startsWith("staff:")) {
         const gr = await getGlobalRole(u.id).catch(() => "USER");
-        const m = canAccessStaff(gr)
+        const m = isStaffRole(gr)
           ? { roleLevel: 5 }
           : await prisma.lobbyMember.findUnique({
               where: { lobbyId_userId: { lobbyId: b.lobbyId, userId: u.id } },

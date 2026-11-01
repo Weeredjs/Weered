@@ -1,3 +1,4 @@
+import { isStaffRole } from "../lib/lobbyAuth";
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
 import { z } from "zod";
@@ -168,7 +169,7 @@ export default async function challengesRoutes(app: FastifyInstance, opts: Opts)
 
       const body = req.body as any;
       const role = await getGlobalRole(u.id);
-      const isStaff = canAccessStaff(role);
+      const isStaff = isStaffRole(role);
       if (!isStaff) {
         if (!body.lobbyId) return reply.code(403).send({ ok: false, error: "forbidden" });
         const lr = await getLobbyRole(u.id, body.lobbyId);
@@ -228,7 +229,7 @@ export default async function challengesRoutes(app: FastifyInstance, opts: Opts)
         });
 
       const role = await getGlobalRole(u.id);
-      const isStaff = canAccessStaff(role);
+      const isStaff = isStaffRole(role);
       if (!isStaff) {
         const lobby = await prisma.lobby.findUnique({
           where: { id: lobbyId },

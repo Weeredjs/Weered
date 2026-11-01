@@ -15,7 +15,7 @@ const RARITY_RANK: Record<string, number> = { LEGENDARY: 4, EPIC: 3, RARE: 2, CO
 export default async function flairRoutes(app: FastifyInstance, opts: Opts) {
   const { authFromHeader, getGlobalRole, canAccessStaff } = opts;
 
-  const isStaff = (userId: string) => isStaffUser(userId, getGlobalRole, canAccessStaff);
+  const isStaff = (userId: string) => isStaffUser(userId);
 
   app.get("/flair/inventory", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);

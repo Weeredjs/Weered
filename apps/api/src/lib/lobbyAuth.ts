@@ -46,6 +46,13 @@ export async function getGlobalRole(userId: string): Promise<GlobalRole> {
   }
 }
 
+/** Weered's staff: STAFF, ADMIN or GOD, from any string. SUPPORT is the
+ *  moderation role: it moderates everywhere but doesn't curate, configure or
+ *  delete (James 2026-11-01: "only mod tools through the entire platform"). */
+export function isStaffRole(role: unknown): boolean {
+  return ["STAFF", "ADMIN", "GOD"].includes(String(role || "").toUpperCase());
+}
+
 export function canAssignRoles(role: GlobalRole) {
   return role === GlobalRole.STAFF || role === GlobalRole.ADMIN || role === GlobalRole.GOD;
 }

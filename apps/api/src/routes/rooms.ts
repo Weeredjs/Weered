@@ -1,3 +1,4 @@
+import { isStaffRole } from "../lib/lobbyAuth";
 import { log, swallow } from "../lib/logger";
 import { isPlaceId } from "./places";
 import type { FastifyInstance } from "fastify";
@@ -121,7 +122,7 @@ export default async function roomsRoutes(app: FastifyInstance, opts: Opts) {
       if (!lobbyId) return reply.code(400).send({ ok: false, error: "lobbyId_required" });
 
       const actorRole = await getGlobalRole(u.id);
-      const isStaff = canAccessStaff(actorRole);
+      const isStaff = isStaffRole(actorRole);
 
       if (!isStaff) {
         const now = Date.now();
@@ -220,7 +221,7 @@ export default async function roomsRoutes(app: FastifyInstance, opts: Opts) {
       let isEvent = Boolean(body.isEvent);
       if (isEvent) {
         const actorRole = u ? await getGlobalRole(u.id) : "USER";
-        const isStaff = canAccessStaff(actorRole);
+        const isStaff = isStaffRole(actorRole);
         const isLobbyOwner = !!u && !!lobby.ownerId && lobby.ownerId === u.id;
         if (!isStaff && !isLobbyOwner) isEvent = false;
       }
@@ -372,7 +373,7 @@ export default async function roomsRoutes(app: FastifyInstance, opts: Opts) {
 
       const isOwner = r.ownerId && r.ownerId === u.id;
       const globalRole = String((await getGlobalRole(u.id)) || "USER").toUpperCase();
-      const isStaff = ["GOD", "STAFF", "SUPPORT"].includes(globalRole);
+      const isStaff = ["GOD", "ADMIN", "STAFF", "SUPPORT"].includes(globalRole);
       if (!isOwner && !isStaff) return reply.code(403).send({ ok: false, error: "not_authorized" });
 
       const body: any = (req as any).body || {};

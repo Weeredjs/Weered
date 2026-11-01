@@ -988,7 +988,7 @@ export default async function billingRoutes(app: FastifyInstance, opts: Opts) {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const role = await getGlobalRole(u.id);
-    if (!canAccessStaff(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
+    if (!canAssignRoles(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
     const subs = await prisma.subscription.findMany({
       orderBy: { updatedAt: "desc" },
       take: 200,
