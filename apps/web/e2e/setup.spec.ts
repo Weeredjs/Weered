@@ -21,7 +21,12 @@ test.describe("first-run start prompt", () => {
     });
 
     await page.goto("/home");
+    // One question at a time: the cookie question first, then the start prompt.
+    const cookies = page.getByRole("dialog", { name: /cookie consent/i });
     const prompt = page.getByRole("dialog", { name: /how much do you want on screen/i });
+    await expect(cookies.or(prompt).first()).toBeVisible({ timeout: 20000 });
+    if (await cookies.isVisible())
+      await cookies.getByRole("button", { name: /essentials only/i }).click();
     await expect(prompt).toBeVisible({ timeout: 20000 });
     await expect(page.getByRole("button", { name: /show me everything/i })).toBeVisible();
 

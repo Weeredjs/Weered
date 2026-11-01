@@ -20,11 +20,25 @@ export default function SetupGate() {
     if (!authed || document.documentElement.hasAttribute("data-pro-host")) return;
     if (readUiPrefs().setup) return;
     let alive = true;
-    void pullUiPrefs().then((p) => {
-      if (alive && p && !p.setup) setOpen(true);
-    });
+    // One question at a time: the cookie question (components/CookieConsent.tsx)
+    // sits at the bottom of the screen too, so this waits until it's answered.
+    const consented = () => {
+      try {
+        return !!localStorage.getItem("weered_cookie_consent");
+      } catch {
+        return true;
+      }
+    };
+    const ask = () =>
+      void pullUiPrefs().then((p) => {
+        if (alive && p && !p.setup) setOpen(true);
+      });
+    const onConsent = () => ask();
+    if (consented()) ask();
+    else window.addEventListener("weered:cookie:consent", onConsent, { once: true });
     return () => {
       alive = false;
+      window.removeEventListener("weered:cookie:consent", onConsent);
     };
   }, []);
 
