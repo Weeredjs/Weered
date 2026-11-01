@@ -3,6 +3,7 @@ import type { FastifyInstance } from "fastify";
 import { cleanFrame, cleanNameEffect } from "../lib/looks";
 import { fetchWithTimeout } from "../lib/fetchWithTimeout";
 import { prisma } from "../lib/prisma";
+import { ownImageOk } from "../lib/ownImages";
 import { cutoffNow } from "../lib/sessionCutoff";
 import { Prisma } from "@prisma/client";
 
@@ -249,6 +250,24 @@ export default async function profileRoutes(app: FastifyInstance, opts: Opts) {
       const avatar = typeof body.avatar === "string" ? body.avatar.slice(0, 500) : undefined;
       const bannerUrl =
         typeof body.bannerUrl === "string" ? body.bannerUrl.slice(0, 500) : undefined;
+      // An avatar or banner by address: their own upload, one of ours, what they
+      // have, or nothing (lib/ownImages.ts).
+      if (avatar || bannerUrl) {
+        const cur = await prisma.user.findUnique({
+          where: { id: viewer.id },
+          select: { avatar: true, bannerUrl: true },
+        });
+        if (avatar && !ownImageOk("avatars", avatar, viewer.id, cur?.avatar))
+          return reply.code(400).send({
+            error: "bad_picture",
+            message: "Upload a picture, or pick one of Weered's.",
+          });
+        if (bannerUrl && !ownImageOk("banners", bannerUrl, viewer.id, cur?.bannerUrl))
+          return reply.code(400).send({
+            error: "bad_picture",
+            message: "Upload a banner, or pick one of Weered's.",
+          });
+      }
       const statusText =
         typeof body.statusText === "string" ? body.statusText.trim().slice(0, 80) : undefined;
       const statusEmoji =

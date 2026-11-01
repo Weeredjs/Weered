@@ -1,6 +1,7 @@
 import { log, swallow } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
+import { ownsUploadName } from "../lib/ownImages";
 import { join } from "path";
 import { existsSync, mkdirSync, writeFileSync, unlinkSync } from "fs";
 import { moderateProfileImage } from "../lib/imageModeration";
@@ -31,13 +32,11 @@ export default async function uploadsRoutes(app: FastifyInstance, opts: Opts) {
   ): string => {
     const filename = `${uid}-${Date.now()}.webp`;
     writeFileSync(join(dir, filename), webp);
+    // Only ever their own previous file (lib/ownImages.ts): the old address
+    // used to be whatever they'd saved, so it could name someone else's.
     if (prevUrl.startsWith(`${SITE_BASE}/${subpath}/`)) {
       const prevName = prevUrl.split("/").pop() || "";
-      if (
-        prevName &&
-        prevName !== filename &&
-        /^[a-zA-Z0-9._-]+\.(webp|png|jpe?g|gif)$/.test(prevName)
-      ) {
+      if (prevName && prevName !== filename && ownsUploadName(prevName, uid)) {
         try {
           unlinkSync(join(dir, prevName));
         } catch (e) {
