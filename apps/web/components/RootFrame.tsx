@@ -23,6 +23,7 @@ import NebulaSky from "./NebulaSky";
 import ShellAmbient from "./shell/ShellAmbient";
 import BlizzardGuard from "./shell/BlizzardGuard";
 import UpdateNotice from "./UpdateNotice";
+import ChunkRecovery from "./ChunkRecovery";
 import DesktopTitleBar from "./DesktopTitleBar";
 import LobbyBrowser from "./LobbyBrowser";
 import ServiceWorkerRegister from "./ServiceWorkerRegister";
@@ -194,13 +195,23 @@ export default function RootFrame({ children }: { children: React.ReactNode }) {
 
   if (pathname === "/foyer" || (pathname && pathname.startsWith("/foyer/"))) {
     // White-label: no Weered providers, chrome, footer, JSON-LD, titlebar, or service worker.
-    return <>{children}</>;
+    return (
+      <>
+        <ChunkRecovery />
+        {children}
+      </>
+    );
   }
   if (pathname && pathname.startsWith("/overlay/")) {
     // The stream overlay is an OBS browser source: just the card on a
     // transparent page. The sky, the announcement bar and the prompts that
     // came later were painting over people's streams.
-    return <>{children}</>;
+    return (
+      <>
+        <ChunkRecovery />
+        {children}
+      </>
+    );
   }
   // Full Weered chrome everywhere (no branch swap â†’ no remount â†’ the office recolor
   // stays put). The office room is recolored in place via the injected stylesheet.
@@ -215,6 +226,7 @@ export default function RootFrame({ children }: { children: React.ReactNode }) {
       <ShellAmbient />
       <BlizzardGuard />
       <UpdateNotice />
+      <ChunkRecovery />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(jsonLd) }} />
       <script
         type="application/ld+json"
