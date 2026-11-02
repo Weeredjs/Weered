@@ -124,6 +124,7 @@ import groupRoutes from "./routes/groups";
 import billingRoutes from "./routes/billing";
 import activityRoutes from "./routes/activity";
 import staffOpsRoutes from "./routes/staffOps";
+import staffTodayRoutes from "./routes/staffToday";
 import roomsRoutes from "./routes/rooms";
 import lobbiesRoutes from "./routes/lobbies";
 import lobbyDesignRoutes from "./routes/lobbyDesign";
@@ -1976,6 +1977,12 @@ async function main() {
   await app.register(activityRoutes, { authFromHeader });
 
   await app.register(staffOpsRoutes, {
+    authFromHeader,
+    getGlobalRole,
+    canAccessStaff,
+    rooms,
+  } as any);
+  await app.register(staffTodayRoutes, {
     authFromHeader,
     getGlobalRole,
     canAccessStaff,

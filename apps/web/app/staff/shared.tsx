@@ -2,6 +2,26 @@
 import { API, authHeaders, apiFetch } from "../../lib/apiClient";
 export { API, authHeaders, apiFetch };
 import React from "react";
+import {
+  Bug,
+  ChartColumn,
+  CreditCard,
+  DoorOpen,
+  Flag,
+  IdCard,
+  KeyRound,
+  Landmark,
+  Mail,
+  Megaphone,
+  Puzzle,
+  Scale,
+  ScrollText,
+  Settings,
+  StickyNote,
+  Sun,
+  Users,
+  type LucideIcon,
+} from "lucide-react";
 
 export type GlobalRole = "USER" | "SUPPORT" | "STAFF" | "ADMIN" | "GOD";
 export type UserTier = "INNOCENT" | "INDICTED" | "FELON" | "KINGPIN";
@@ -184,116 +204,233 @@ export function BannedBadge() {
   );
 }
 
+// Inline styles for every ops tab, in the ops palette (57-ops.css sets the
+// --o-* channels from the viewer's colourway; violet if none).
+const BTN: React.CSSProperties = {
+  padding: "6px 13px",
+  borderRadius: 999,
+  border: "1px solid rgb(255 255 255 / .10)",
+  background: "rgb(255 255 255 / .04)",
+  fontSize: 12,
+  fontWeight: 600,
+  cursor: "pointer",
+  color: "var(--o-text, rgba(243,244,246,.9))",
+};
+const tone = (rgb: string, color: string): React.CSSProperties => ({
+  ...BTN,
+  border: `1px solid rgb(${rgb} / .32)`,
+  background: `rgb(${rgb} / .09)`,
+  color,
+});
+
 export const S = {
   card: {
-    borderRadius: 10,
-    border: "1px solid rgba(255,255,255,.08)",
-    background: "rgba(255,255,255,.03)",
+    borderRadius: 12,
+    border: "1px solid rgb(255 255 255 / .08)",
+    background: "var(--o-glass, rgba(255,255,255,.03))",
     padding: "11px 14px",
   } as React.CSSProperties,
   cardHov: {
-    borderRadius: 10,
-    border: "1px solid rgba(124,58,237,.35)",
-    background: "rgba(124,58,237,.07)",
+    borderRadius: 12,
+    border: "1px solid rgb(var(--o-a) / .38)",
+    background: "rgb(var(--o-a) / .08)",
     padding: "11px 14px",
   } as React.CSSProperties,
-  btn: {
-    padding: "6px 12px",
-    borderRadius: 8,
-    border: "1px solid rgba(255,255,255,.10)",
-    background: "rgba(255,255,255,.05)",
-    fontSize: 12,
-    cursor: "pointer",
-    color: "rgba(243,244,246,.88)",
-  } as React.CSSProperties,
+  btn: BTN,
   btnPri: {
-    padding: "6px 12px",
-    borderRadius: 8,
-    border: "1px solid rgba(124,58,237,.35)",
-    background: "rgba(124,58,237,.12)",
-    fontSize: 12,
-    cursor: "pointer",
-    color: "rgb(216,180,254)",
-    fontWeight: 600,
+    ...BTN,
+    border: "1px solid rgb(var(--o-a) / .42)",
+    background: "rgb(var(--o-a) / .14)",
+    color: "var(--o-hi, rgb(216,180,254))",
   } as React.CSSProperties,
-  danger: {
-    padding: "6px 12px",
-    borderRadius: 8,
-    border: "1px solid rgba(239,68,68,.30)",
-    background: "rgba(239,68,68,.08)",
-    fontSize: 12,
-    cursor: "pointer",
-    color: "rgba(252,165,165,.90)",
-  } as React.CSSProperties,
-  warn: {
-    padding: "6px 12px",
-    borderRadius: 8,
-    border: "1px solid rgba(245,158,11,.30)",
-    background: "rgba(245,158,11,.08)",
-    fontSize: 12,
-    cursor: "pointer",
-    color: "rgb(253,230,138)",
-  } as React.CSSProperties,
-  success: {
-    padding: "6px 12px",
-    borderRadius: 8,
-    border: "1px solid rgba(16,185,129,.30)",
-    background: "rgba(16,185,129,.08)",
-    fontSize: 12,
-    cursor: "pointer",
-    color: "rgb(110,231,183)",
-  } as React.CSSProperties,
+  danger: tone("var(--o-bad)", "rgb(252 165 165)"),
+  warn: tone("var(--o-warn)", "rgb(253 230 138)"),
+  success: tone("var(--o-ok)", "rgb(110 231 183)"),
   input: {
     width: "100%",
     padding: "8px 12px",
-    borderRadius: 8,
-    border: "1px solid rgba(255,255,255,.10)",
-    background: "rgba(0,0,0,.30)",
+    borderRadius: 10,
+    border: "1px solid rgb(255 255 255 / .10)",
+    background: "rgb(0 0 0 / .28)",
     fontSize: 13,
-    color: "rgba(243,244,246,.92)",
+    color: "var(--o-text, rgba(243,244,246,.92))",
     outline: "none",
     boxSizing: "border-box" as const,
   },
   label: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: 700,
-    opacity: 0.45,
-    letterSpacing: ".7px",
+    color: "var(--o-dim, rgba(203,200,230,.66))",
+    letterSpacing: ".12em",
     textTransform: "uppercase" as const,
     marginBottom: 6,
   },
   sectionTitle: {
     fontSize: 12,
     fontWeight: 700,
-    opacity: 0.6,
-    letterSpacing: ".5px",
+    color: "var(--o-dim, rgba(203,200,230,.66))",
+    letterSpacing: ".12em",
     textTransform: "uppercase" as const,
     marginBottom: 12,
     paddingBottom: 8,
-    borderBottom: "1px solid rgba(255,255,255,.07)",
+    borderBottom: "1px solid var(--o-line, rgba(255,255,255,.07))",
   },
 };
 
+export type NavItem = {
+  id: string;
+  label: string;
+  icon: LucideIcon;
+  minRole: GlobalRole;
+  /** The heading it sits under; Today and Board sit above the groups. */
+  group: "" | "People" | "Places" | "Safety" | "Outreach" | "System";
+  /** One line under the page title. */
+  blurb: string;
+};
+
+// The ops navigation (2026-11-02 rebuild): Today and the staff board, then
+// five groups. Events and Files were cut the same day (James: events never
+// showed on the site; Files was a placeholder).
 export const NAV_ITEMS = [
-  { id: "analytics", label: "Analytics", icon: "📊", minRole: "STAFF" },
-  { id: "users", label: "Users", icon: "👤", minRole: "SUPPORT" },
-  { id: "board", label: "Board", icon: "📌", minRole: "SUPPORT" },
-  { id: "roster", label: "Roster", icon: "🪪", minRole: "SUPPORT" },
-  { id: "subs", label: "Subscriptions", icon: "💳", minRole: "STAFF" },
-  { id: "rooms", label: "Rooms", icon: "🚪", minRole: "STAFF" },
-  { id: "lobbies", label: "Lobbies", icon: "🏛️", minRole: "STAFF" },
-  { id: "events", label: "Events", icon: "📅", minRole: "STAFF" },
-  { id: "broadcast", label: "Broadcast", icon: "📢", minRole: "STAFF" },
-  { id: "reports", label: "Reports", icon: "🚩", minRole: "SUPPORT" },
-  { id: "appeals", label: "Ban Appeals", icon: "⚖️", minRole: "SUPPORT" },
-  { id: "bugs", label: "Bug Reports", icon: "🐛", minRole: "SUPPORT" },
-  { id: "audit", label: "Audit Log", icon: "📋", minRole: "STAFF" },
-  { id: "outreach", label: "Outreach", icon: "📧", minRole: "STAFF" },
-  { id: "mods", label: "Mods", icon: "🪝", minRole: "SUPPORT" },
-  { id: "permissions", label: "Permissions", icon: "🔑", minRole: "SUPPORT" },
-  { id: "files", label: "Files", icon: "🗂️", minRole: "GOD" },
-  { id: "config", label: "Config", icon: "⚙️", minRole: "GOD" },
-] as const;
+  {
+    id: "today",
+    label: "Today",
+    icon: Sun,
+    minRole: "SUPPORT",
+    group: "",
+    blurb: "What needs a person now, and how Weered is doing.",
+  },
+  {
+    id: "board",
+    label: "Board",
+    icon: StickyNote,
+    minRole: "SUPPORT",
+    group: "",
+    blurb: "Notes for the staff team.",
+  },
+  {
+    id: "users",
+    label: "Users",
+    icon: Users,
+    minRole: "SUPPORT",
+    group: "People",
+    blurb: "Find anyone: roles, bans, notes.",
+  },
+  {
+    id: "roster",
+    label: "Roster",
+    icon: IdCard,
+    minRole: "SUPPORT",
+    group: "People",
+    blurb: "Weered's staff.",
+  },
+  {
+    id: "subs",
+    label: "Subscriptions",
+    icon: CreditCard,
+    minRole: "STAFF",
+    group: "People",
+    blurb: "Everyone who holds a tier, paid or given by staff.",
+  },
+  {
+    id: "permissions",
+    label: "Permissions",
+    icon: KeyRound,
+    minRole: "SUPPORT",
+    group: "People",
+    blurb: "Who can do what.",
+  },
+  {
+    id: "lobbies",
+    label: "Lobbies",
+    icon: Landmark,
+    minRole: "STAFF",
+    group: "Places",
+    blurb: "Every lobby: feature, pin, lock.",
+  },
+  {
+    id: "rooms",
+    label: "Rooms",
+    icon: DoorOpen,
+    minRole: "STAFF",
+    group: "Places",
+    blurb: "Rooms across Weered.",
+  },
+  {
+    id: "mods",
+    label: "Mods",
+    icon: Puzzle,
+    minRole: "SUPPORT",
+    group: "Places",
+    blurb: "Community mods: review and hide.",
+  },
+  {
+    id: "reports",
+    label: "Reports",
+    icon: Flag,
+    minRole: "SUPPORT",
+    group: "Safety",
+    blurb: "What members have reported.",
+  },
+  {
+    id: "appeals",
+    label: "Ban Appeals",
+    icon: Scale,
+    minRole: "SUPPORT",
+    group: "Safety",
+    blurb: "Banned members asking to come back.",
+  },
+  {
+    id: "bugs",
+    label: "Bug Reports",
+    icon: Bug,
+    minRole: "SUPPORT",
+    group: "Safety",
+    blurb: "Bugs, requests and feedback from members.",
+  },
+  {
+    id: "audit",
+    label: "Audit Log",
+    icon: ScrollText,
+    minRole: "STAFF",
+    group: "Safety",
+    blurb: "What staff have done.",
+  },
+  {
+    id: "outreach",
+    label: "Outreach",
+    icon: Mail,
+    minRole: "STAFF",
+    group: "Outreach",
+    blurb: "Contacts and follow-ups.",
+  },
+  {
+    id: "broadcast",
+    label: "Broadcast",
+    icon: Megaphone,
+    minRole: "STAFF",
+    group: "Outreach",
+    blurb: "Announcements and site-wide messages.",
+  },
+  {
+    id: "analytics",
+    label: "Analytics",
+    icon: ChartColumn,
+    minRole: "STAFF",
+    group: "System",
+    blurb: "Accounts, activity and lobbies.",
+  },
+  {
+    id: "config",
+    label: "Config",
+    icon: Settings,
+    minRole: "GOD",
+    group: "System",
+    blurb: "Site switches.",
+  },
+] as const satisfies readonly NavItem[];
+
+export const NAV_GROUPS = ["", "People", "Places", "Safety", "Outreach", "System"] as const;
 
 export type NavId = (typeof NAV_ITEMS)[number]["id"];
 
@@ -319,7 +456,7 @@ export const PERM_SCOPES: PermBlockData[] = [
       },
       {
         name: "STAFF",
-        can: "All Support powers + assign roles, manage rooms/lobbies/events/subscriptions, broadcast, view audit + analytics + outreach.",
+        can: "All Support powers + assign roles, manage rooms/lobbies/subscriptions, broadcast, view audit + analytics + outreach.",
       },
       {
         name: "ADMIN",
@@ -327,7 +464,7 @@ export const PERM_SCOPES: PermBlockData[] = [
       },
       {
         name: "GOD",
-        can: "Unrestricted. Files + Config sections. Protected from moderation actions by others.",
+        can: "Unrestricted. The Config section. Protected from moderation actions by others.",
       },
     ],
   },

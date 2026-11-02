@@ -1,117 +1,186 @@
 "use client";
-import { useState, useEffect } from "react";
-import { S, StaffUser, TierBadge, UserTier, apiFetch, tierColor } from "./shared";
+import { useCallback, useEffect, useState } from "react";
+import { ExternalLink, Search } from "lucide-react";
+import { UserTier, apiFetch } from "./shared";
 
+/** GET /staff/subscriptions: everyone who holds a tier, or ?q= any account. */
+type Member = {
+  id: string;
+  name: string;
+  usernameKey: string;
+  tier: UserTier;
+  paying: boolean;
+  status: string | null;
+  renews: string | null;
+  cancelAtPeriodEnd: boolean;
+  stripeUrl: string | null;
+};
+
+const TIERS: UserTier[] = ["INNOCENT", "INDICTED", "FELON", "KINGPIN"];
+const TIER_LABEL: Record<UserTier, string> = {
+  INNOCENT: "Free",
+  INDICTED: "Indicted",
+  FELON: "Felon",
+  KINGPIN: "Kingpin",
+};
+const ERRORS: Record<string, string> = {
+  paid_through_stripe: "They pay through Stripe. Change the plan in Stripe and the tier follows.",
+  user_not_found: "That account is gone.",
+  forbidden: "Your role can't change tiers.",
+};
+
+// The tier list for every account (ops audit 2026-11-01: it read a key the
+// server never sent, so it had never shown anyone; it listed Stripe rows only;
+// its buttons sent the subscription's id, not the person's). A paying member's
+// tier is Stripe's to change: Stripe's next update would undo a hand change.
 export function SubsTab() {
-  const [users, setUsers] = useState<StaffUser[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [msg, setMsg] = useState("");
-  const [filter, setFilter] = useState<UserTier | "ALL">("ALL");
+  const [members, setMembers] = useState<Member[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [q, setQ] = useState("");
+  const [searched, setSearched] = useState("");
+  const [flash, setFlash] = useState<{ text: string; bad?: boolean } | null>(null);
+  const [busy, setBusy] = useState("");
 
-  useEffect(() => {
+  const load = useCallback(async (query: string) => {
     setLoading(true);
-    void apiFetch("/staff/subscriptions").then((j) => {
-      setUsers(j.users || []);
-      setLoading(false);
-    });
+    const j = await apiFetch(
+      `/staff/subscriptions${query ? `?q=${encodeURIComponent(query)}` : ""}`,
+    );
+    if (j.ok) setMembers(j.members || []);
+    else setFlash({ text: ERRORS[j.error] || j.error || "Couldn't load.", bad: true });
+    setSearched(query);
+    setLoading(false);
   }, []);
 
-  async function setTier(userId: string, tier: UserTier) {
-    const j = await apiFetch(`/staff/users/${userId}/tier`, {
+  useEffect(() => {
+    void load("");
+  }, [load]);
+
+  async function setTier(m: Member, tier: UserTier) {
+    if (tier === m.tier || busy) return;
+    setBusy(m.id);
+    setFlash(null);
+    const j = await apiFetch(`/staff/users/${encodeURIComponent(m.id)}/tier`, {
       method: "POST",
       body: JSON.stringify({ tier }),
     });
-    if (j.ok) {
-      setMsg(`Tier updated to ${tier}`);
-      setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, tier } : u)));
-    } else setMsg(j.error || "Failed.");
+    setBusy("");
+    if (!j.ok) {
+      setFlash({ text: ERRORS[j.error] || j.error || "That didn't save.", bad: true });
+      return;
+    }
+    setMembers((prev) => prev.map((x) => (x.id === m.id ? { ...x, tier } : x)));
+    setFlash({ text: `${m.name || m.usernameKey} is now ${TIER_LABEL[tier]}.` });
   }
 
-  const TIERS: UserTier[] = ["INNOCENT", "INDICTED", "FELON", "KINGPIN"];
-  const filtered = filter === "ALL" ? users : users.filter((u) => u.tier === filter);
-
-  const counts = TIERS.reduce(
-    (acc, t) => ({ ...acc, [t]: users.filter((u) => u.tier === t).length }),
-    {} as Record<string, number>,
-  );
+  const paying = members.filter((m) => m.paying).length;
+  const given = members.filter((m) => !m.paying && m.tier !== "INNOCENT").length;
 
   return (
-    <div>
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(4, 1fr)",
-          gap: 10,
-          marginBottom: 20,
+    <div style={{ maxWidth: 920 }}>
+      <form
+        className="wops-tool"
+        onSubmit={(e) => {
+          e.preventDefault();
+          void load(q.trim());
         }}
       >
-        {TIERS.map((t) => {
-          const c = tierColor(t);
-          return (
-            <div
-              key={t}
-              style={{
-                padding: "14px",
-                borderRadius: 10,
-                border: `1px solid ${c.border}`,
-                background: c.bg,
-                textAlign: "center",
-              }}
-            >
-              <div style={{ fontSize: 22, fontWeight: 800, color: c.color }}>{counts[t] || 0}</div>
-              <div style={{ fontSize: 11, opacity: 0.7, marginTop: 2 }}>{t}</div>
-            </div>
-          );
-        })}
-      </div>
-
-      <div style={{ display: "flex", gap: 6, marginBottom: 14 }}>
-        {(["ALL", ...TIERS] as const).map((t) => (
+        <input
+          className="wops-input"
+          placeholder="Find anyone by name to give them a tier"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          aria-label="Find an account"
+        />
+        <button type="submit" className="wops-btn">
+          <Search size={14} /> Find
+        </button>
+        {searched && (
           <button
-            key={t}
-            onClick={() => setFilter(t)}
-            style={{
-              ...S.btn,
-              background: filter === t ? "rgba(124,58,237,.15)" : "rgba(255,255,255,.04)",
-              borderColor: filter === t ? "rgba(124,58,237,.35)" : "rgba(255,255,255,.10)",
-              color: filter === t ? "rgb(216,180,254)" : "rgba(243,244,246,.65)",
+            type="button"
+            className="wops-btn"
+            onClick={() => {
+              setQ("");
+              void load("");
             }}
           >
-            {t}
+            Show tier holders
           </button>
-        ))}
-      </div>
-
-      {msg && <div style={{ marginBottom: 10, fontSize: 12, opacity: 0.7 }}>{msg}</div>}
-
-      {loading && <div style={{ opacity: 0.4 }}>Loading…</div>}
-      <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-        {filtered.map((u) => (
-          <div key={u.id} style={{ ...S.card, display: "flex", alignItems: "center", gap: 12 }}>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontWeight: 700, fontSize: 13 }}>{u.name || u.usernameKey}</div>
-              <div style={{ fontSize: 11, opacity: 0.45, marginTop: 1 }}>
-                @{u.usernameKey} · {u.notoriety} notoriety
-              </div>
-            </div>
-            <TierBadge tier={u.tier} />
-            <div style={{ display: "flex", gap: 5, flexShrink: 0 }}>
-              {TIERS.filter((t) => t !== u.tier).map((t) => (
-                <button
-                  key={t}
-                  style={{ ...S.btn, fontSize: 11, padding: "4px 8px" }}
-                  onClick={() => setTier(u.id, t)}
-                >
-                  → {t}
-                </button>
-              ))}
-            </div>
-          </div>
-        ))}
-        {!filtered.length && !loading && (
-          <div style={{ opacity: 0.4, fontSize: 13 }}>No users.</div>
         )}
+      </form>
+
+      <div className="wops-note" style={{ marginBottom: 12 }}>
+        {searched
+          ? `Accounts matching “${searched}”.`
+          : `${paying} paying through Stripe · ${given} given a tier by staff.`}{" "}
+        A paying member&apos;s tier changes in Stripe.
       </div>
+
+      {flash && (
+        <div className="wops-flash" data-tone={flash.bad ? "bad" : undefined} role="status">
+          {flash.text}
+        </div>
+      )}
+
+      {loading ? (
+        <div className="wops-muted">Loading…</div>
+      ) : members.length === 0 ? (
+        <div className="wops-muted">
+          {searched ? "No one by that name." : "No one holds a tier yet."}
+        </div>
+      ) : (
+        <div className="wops-rows">
+          {members.map((m) => (
+            <div key={m.id} className="wops-row">
+              <div className="wops-row-who">
+                <b>{m.name || m.usernameKey}</b>
+                <span>@{m.usernameKey}</span>
+              </div>
+              {m.paying ? (
+                <>
+                  <span className="wops-tag">Pays · {TIER_LABEL[m.tier]}</span>
+                  <span className="wops-note">
+                    {m.status !== "active" && `${m.status} · `}
+                    {m.renews &&
+                      `${m.cancelAtPeriodEnd ? "ends" : "renews"} ${new Date(m.renews).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}`}
+                  </span>
+                  {m.stripeUrl && (
+                    <a
+                      className="wops-btn"
+                      href={m.stripeUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Stripe <ExternalLink size={13} />
+                    </a>
+                  )}
+                </>
+              ) : (
+                <>
+                  {m.tier !== "INNOCENT" && (
+                    <span className="wops-tag" data-tone="staff">
+                      Given by staff
+                    </span>
+                  )}
+                  <div className="wops-seg" role="group" aria-label={`Tier for ${m.name}`}>
+                    {TIERS.map((t) => (
+                      <button
+                        key={t}
+                        type="button"
+                        aria-pressed={m.tier === t}
+                        disabled={busy === m.id}
+                        onClick={() => void setTier(m, t)}
+                      >
+                        {TIER_LABEL[t]}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

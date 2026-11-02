@@ -1,10 +1,12 @@
 "use client";
-import { useState, useEffect } from "react";
+import { Fragment, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { ArrowLeft, MessageSquare } from "lucide-react";
 import { useWeered } from "../../components/WeeredProvider";
 import LobbyChatPanel from "../../components/LobbyChatPanel";
 import AnalyticsTab from "../../components/AnalyticsTab";
-import { GlobalRole, NAV_ITEMS, NavId, RoleBadge, S, apiFetch, canSeeNav } from "./shared";
+import { GlobalRole, NAV_GROUPS, NAV_ITEMS, NavId, apiFetch, canSeeNav } from "./shared";
+import { TodayTab, type TodayData } from "./TodayTab";
 import { PermissionsTab } from "./PermissionsTab";
 import { OpsPresence } from "./OpsPresence";
 import { UsersTab } from "./UsersTab";
@@ -16,21 +18,42 @@ import { BugsTab } from "./BugsTab";
 import { ReportsTab } from "./ReportsTab";
 import { AuditTab } from "./AuditTab";
 import { BroadcastTab } from "./BroadcastTab";
-import { EventsTab } from "./EventsTab";
 import { RosterTab } from "./RosterTab";
 import { BoardTab } from "./BoardTab";
-import { FilesTab } from "./FilesTab";
 import { ModsAdminTab } from "./ModsAdminTab";
 import { ConfigTab } from "./ConfigTab";
 import { OutreachTab } from "./OutreachTab";
 
+/** Per viewer: is the ops chat column open ("off" closes it). */
+const CHAT_KEY = "weered:ops:chat";
+const NARROW = "(max-width: 900px)";
+type Item = (typeof NAV_ITEMS)[number];
+
+function tabFromUrl(): NavId | null {
+  try {
+    const t = new URLSearchParams(window.location.search).get("tab");
+    return NAV_ITEMS.some((n) => n.id === t) ? (t as NavId) : null;
+  } catch {
+    return null;
+  }
+}
+
+// The ops area (rebuilt 2026-11-02): Today first, then grouped tabs, with ops
+// chat beside them. The tab lives in the address (?tab=), so a reload keeps
+// your place and Back walks the tabs. The queue counts badge the navigation.
 export default function StaffPage() {
   const router = useRouter();
   const ctx = useWeered();
 
   const [myRole, setMyRole] = useState<GlobalRole | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [nav, setNav] = useState<NavId>("users");
+  const [nav, setNav] = useState<NavId>("today");
+  const [today, setToday] = useState<TodayData | null>(null);
+  const [todayErr, setTodayErr] = useState("");
+  const [todayAt, setTodayAt] = useState(0);
+  const [chatOn, setChatOn] = useState(true);
+  const [narrow, setNarrow] = useState(false);
+  // On a narrow screen chat has no column; it takes the page instead.
+  const [chatView, setChatView] = useState(false);
 
   useEffect(() => {
     try {
@@ -47,262 +70,238 @@ export default function StaffPage() {
           return;
         }
         setMyRole(j.globalRole);
-        setLoading(false);
       })
       .catch(() => router.replace("/lobby"));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  if (loading)
+  useEffect(() => {
+    const t = tabFromUrl();
+    if (t) setNav(t);
+    const onPop = () => setNav(tabFromUrl() || "today");
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
+
+  useEffect(() => {
+    try {
+      if (localStorage.getItem(CHAT_KEY) === "off") setChatOn(false);
+    } catch {}
+    const mq = window.matchMedia(NARROW);
+    const update = () => setNarrow(mq.matches);
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, []);
+
+  const loadToday = useCallback(async () => {
+    const j = await apiFetch("/staff/today").catch(() => null);
+    if (j?.ok) {
+      setToday(j);
+      setTodayErr("");
+      setTodayAt(Date.now());
+    } else setTodayErr("Couldn't load today's summary.");
+  }, []);
+
+  useEffect(() => {
+    if (!myRole) return;
+    void loadToday();
+    const t = window.setInterval(() => void loadToday(), 60_000);
+    return () => window.clearInterval(t);
+  }, [myRole, loadToday]);
+
+  const visible = myRole ? NAV_ITEMS.filter((n) => canSeeNav(myRole, n.minRole)) : [];
+  const current = visible.find((n) => n.id === nav) || visible[0];
+
+  // After the site's own title has settled, or it wins on a first load.
+  useEffect(() => {
+    if (!current) return;
+    const t = window.setTimeout(() => (document.title = `${current.label} · Weered ops`), 300);
+    return () => window.clearTimeout(t);
+  }, [current]);
+
+  if (!myRole || !current)
     return (
-      <div
-        style={{
-          minHeight: "100vh",
-          display: "grid",
-          placeItems: "center",
-          background: "var(--weered-bg, #080810)",
-          color: "rgba(243,244,246,.4)",
-          fontFamily: "monospace",
-          fontSize: 13,
-        }}
-      >
-        Checking access…
+      <div className="wops" style={{ display: "grid", placeItems: "center" }}>
+        <span className="wops-muted">Checking access…</span>
       </div>
     );
 
-  if (!myRole) return null;
+  function open(id: NavId) {
+    setChatView(false);
+    if (id === current.id) return;
+    setNav(id);
+    if (id === "today") void loadToday();
+    try {
+      const u = new URL(window.location.href);
+      if (id === "today") u.searchParams.delete("tab");
+      else u.searchParams.set("tab", id);
+      window.history.pushState(null, "", u);
+    } catch {}
+  }
 
-  const visibleNav = NAV_ITEMS.filter((n) => canSeeNav(myRole, n.minRole));
+  function toggleChat() {
+    if (narrow) {
+      setChatView((v) => !v);
+      return;
+    }
+    setChatOn((v) => {
+      try {
+        localStorage.setItem(CHAT_KEY, v ? "off" : "on");
+      } catch {}
+      return !v;
+    });
+  }
 
-  return (
-    <div
-      style={{
-        height: "100vh",
-        display: "flex",
-        flexDirection: "column",
-        background: "var(--weered-bg, #080810)",
-        color: "rgba(243,244,246,.92)",
-        fontFamily: "system-ui, sans-serif",
-        overflow: "hidden",
-      }}
-    >
-      <div
-        style={{
-          borderBottom: "1px solid rgba(255,255,255,.08)",
-          padding: "12px 20px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          flexShrink: 0,
-        }}
+  const counts: Partial<Record<NavId, number>> = today
+    ? {
+        reports: today.queue.reports.open,
+        appeals: today.queue.appeals.pending,
+        bugs: today.queue.bugs.open,
+        outreach: today.outreach?.due ?? 0,
+      }
+    : {};
+  const waiting = visible.reduce((n, i) => n + (counts[i.id] || 0), 0);
+
+  const navButton = (item: Item) => {
+    const Icon = item.icon;
+    const c = item.id === "today" ? waiting : counts[item.id];
+    return (
+      <button
+        key={item.id}
+        type="button"
+        className="wops-nav-item"
+        aria-current={current.id === item.id && !chatView ? "page" : undefined}
+        onClick={() => open(item.id)}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div
-            style={{
-              width: 8,
-              height: 8,
-              borderRadius: 999,
-              background: "rgba(16,185,129,.85)",
-              boxShadow: "0 0 6px rgba(16,185,129,.5)",
-            }}
-          />
+        <Icon size={16} aria-hidden />
+        {item.label}
+        {c ? <span className="wops-count">{c}</span> : null}
+      </button>
+    );
+  };
+
+  const chat = (
+    <section className="wops-chat" aria-label="Ops chat">
+      <div className="wops-chat-head">
+        <b>Ops chat</b>
+        <span>Staff only</span>
+      </div>
+      <div className="wops-chat-body">
+        <LobbyChatPanel
+          roomId="@ops"
+          embedded
+          style={{ height: "100%", display: "flex", flexDirection: "column" }}
+        />
+      </div>
+    </section>
+  );
+
+  const id = current.id;
+  return (
+    <div className="wops">
+      <header className="wops-top">
+        <div className="wops-brand">
+          <span className="wops-mark" aria-hidden>
+            W
+          </span>
           <div>
-            <span style={{ fontWeight: 800, fontSize: 16, letterSpacing: "-.3px" }}>
-              weered ops
-            </span>
-            <span style={{ fontSize: 11, opacity: 0.4, marginLeft: 10 }}>
-              staff area · {myRole}
-            </span>
+            <div className="wops-title">Weered ops</div>
+            <div className="wops-sub">Staff only</div>
           </div>
         </div>
-        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          <RoleBadge role={myRole} />
+        <div className="wops-top-actions">
+          <span className="wops-role">{myRole}</span>
           <button
+            type="button"
+            className="wops-btn"
+            aria-pressed={narrow ? chatView : chatOn}
+            onClick={toggleChat}
+          >
+            <MessageSquare size={14} aria-hidden /> Chat
+          </button>
+          <button
+            type="button"
+            className="wops-btn wops-hide-narrow"
             onClick={() => window.dispatchEvent(new CustomEvent("weered:dock:toggle"))}
-            style={{
-              fontSize: 12,
-              opacity: 0.55,
-              padding: "5px 12px",
-              borderRadius: 8,
-              border: "1px solid rgba(255,255,255,.10)",
-              background: "rgba(255,255,255,.04)",
-              cursor: "pointer",
-              color: "inherit",
-            }}
           >
             DMs
           </button>
-          <a
-            href="/lobby"
-            style={{
-              fontSize: 12,
-              opacity: 0.55,
-              textDecoration: "none",
-              padding: "5px 12px",
-              borderRadius: 8,
-              border: "1px solid rgba(255,255,255,.10)",
-              background: "rgba(255,255,255,.04)",
-            }}
-          >
-            ← Lobby
+          <a className="wops-btn" href="/lobby">
+            <ArrowLeft size={14} aria-hidden /> Weered
           </a>
         </div>
-      </div>
+      </header>
 
-      <div
-        className="weered-ops-mobile-nav"
-        style={{
-          display: "none",
-          overflowX: "auto",
-          gap: 4,
-          padding: "8px 10px",
-          borderBottom: "1px solid rgba(255,255,255,.07)",
-          scrollbarWidth: "none",
-          flexShrink: 0,
-        }}
-      >
-        {visibleNav.map((item) => (
-          <button
-            key={item.id}
-            onClick={() => setNav(item.id)}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 5,
-              padding: "6px 12px",
-              borderRadius: 8,
-              border: "none",
-              cursor: "pointer",
-              whiteSpace: "nowrap",
-              background: nav === item.id ? "rgba(124,58,237,.18)" : "transparent",
-              color: nav === item.id ? "rgba(216,180,254,.95)" : "rgba(148,163,184,.6)",
-              fontWeight: nav === item.id ? 700 : 500,
-              fontSize: 12,
-              fontFamily: "inherit",
-              transition: "all .12s",
-            }}
-          >
-            <span style={{ fontSize: 12 }}>{item.icon}</span>
-            {item.label}
-          </button>
+      <nav className="wops-strip" aria-label="Ops sections">
+        {visible.map((item, i) => (
+          <Fragment key={item.id}>
+            {item.group && item.group !== visible[i - 1]?.group && (
+              <span className="wops-strip-sep">{item.group}</span>
+            )}
+            {navButton(item)}
+          </Fragment>
         ))}
-      </div>
+      </nav>
 
-      <div
-        className="weered-ops-body"
-        style={{ flex: 1, minHeight: 0, display: "grid", gridTemplateColumns: "200px 1fr 280px" }}
-      >
-        <div
-          className="weered-ops-sidebar"
-          style={{
-            borderRight: "1px solid rgba(255,255,255,.07)",
-            padding: "14px 10px",
-            overflowY: "auto",
-            display: "flex",
-            flexDirection: "column",
-            gap: 2,
-          }}
-        >
-          <div style={{ ...S.label, marginBottom: 8 }}>Navigation</div>
-          {visibleNav.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => setNav(item.id)}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 9,
-                padding: "8px 10px",
-                borderRadius: 9,
-                border: "none",
-                cursor: "pointer",
-                textAlign: "left",
-                width: "100%",
-                background: nav === item.id ? "rgba(124,58,237,.15)" : "transparent",
-                color: nav === item.id ? "rgba(216,180,254,.95)" : "rgba(148,163,184,.75)",
-                fontWeight: nav === item.id ? 700 : 400,
-                fontSize: 13,
-                fontFamily: "inherit",
-                transition: "background .1s",
-              }}
-            >
-              <span style={{ fontSize: 14 }}>{item.icon}</span>
-              {item.label}
-            </button>
-          ))}
-
-          <div
-            style={{
-              marginTop: "auto",
-              paddingTop: 16,
-              borderTop: "1px solid rgba(255,255,255,.06)",
-            }}
-          >
+      <div className="wops-body" data-chat={!narrow && chatOn ? "on" : "off"}>
+        <nav className="wops-nav" aria-label="Ops sections">
+          {NAV_GROUPS.map((g) => {
+            const items = visible.filter((i) => i.group === g);
+            if (!items.length) return null;
+            return (
+              <div key={g || "top"}>
+                {g && <div className="wops-nav-group">{g}</div>}
+                {items.map(navButton)}
+              </div>
+            );
+          })}
+          <div className="wops-nav-foot">
             <OpsPresence />
           </div>
-        </div>
+        </nav>
 
-        <div style={{ display: "flex", flexDirection: "column", minHeight: 0, overflow: "hidden" }}>
-          <div
-            style={{
-              padding: "14px 20px 12px",
-              borderBottom: "1px solid rgba(255,255,255,.07)",
-              flexShrink: 0,
-            }}
-          >
-            <div style={{ fontWeight: 800, fontSize: 15 }}>
-              {visibleNav.find((n) => n.id === nav)?.icon}{" "}
-              {visibleNav.find((n) => n.id === nav)?.label}
-            </div>
-          </div>
-          <div style={{ flex: 1, overflowY: "auto", padding: "20px" }}>
-            {nav === "users" && <UsersTab myRole={myRole} />}
-            {nav === "board" && <BoardTab myRole={myRole} />}
-            {nav === "analytics" && <AnalyticsTab />}
-            {nav === "roster" && <RosterTab />}
-            {nav === "subs" && <SubsTab />}
-            {nav === "rooms" && <RoomsTab myRole={myRole} />}
-            {nav === "lobbies" && <LobbiesTab myRole={myRole} />}
-            {nav === "events" && <EventsTab />}
-            {nav === "audit" && <AuditTab />}
-            {nav === "broadcast" && <BroadcastTab />}
-            {nav === "reports" && <ReportsTab />}
-            {nav === "appeals" && <AppealsTab />}
-            {nav === "bugs" && <BugsTab />}
-            {nav === "outreach" && <OutreachTab />}
-            {nav === "mods" && <ModsAdminTab />}
-            {nav === "permissions" && <PermissionsTab />}
-            {nav === "files" && <FilesTab />}
-            {nav === "config" && <ConfigTab />}
-          </div>
-        </div>
+        <main className="wops-main">
+          {narrow && chatView ? (
+            chat
+          ) : (
+            <>
+              <div className="wops-head">
+                <h1>{current.label}</h1>
+                <p>{current.blurb}</p>
+              </div>
+              <div className="wops-page">
+                {id === "today" && (
+                  <TodayTab
+                    data={today}
+                    error={todayErr}
+                    onOpen={open}
+                    onRefresh={() => void loadToday()}
+                    updatedAt={todayAt}
+                  />
+                )}
+                {id === "users" && <UsersTab myRole={myRole} />}
+                {id === "board" && <BoardTab myRole={myRole} />}
+                {id === "analytics" && <AnalyticsTab />}
+                {id === "roster" && <RosterTab />}
+                {id === "subs" && <SubsTab />}
+                {id === "rooms" && <RoomsTab myRole={myRole} />}
+                {id === "lobbies" && <LobbiesTab myRole={myRole} />}
+                {id === "audit" && <AuditTab />}
+                {id === "broadcast" && <BroadcastTab />}
+                {id === "reports" && <ReportsTab />}
+                {id === "appeals" && <AppealsTab />}
+                {id === "bugs" && <BugsTab />}
+                {id === "outreach" && <OutreachTab />}
+                {id === "mods" && <ModsAdminTab />}
+                {id === "permissions" && <PermissionsTab />}
+                {id === "config" && <ConfigTab />}
+              </div>
+            </>
+          )}
+        </main>
 
-        <div
-          className="weered-ops-chat"
-          style={{
-            borderLeft: "1px solid rgba(255,255,255,.07)",
-            display: "flex",
-            flexDirection: "column",
-            minHeight: 0,
-          }}
-        >
-          <div
-            style={{
-              padding: "14px 14px 10px",
-              borderBottom: "1px solid rgba(255,255,255,.07)",
-              flexShrink: 0,
-            }}
-          >
-            <div style={{ fontWeight: 700, fontSize: 13 }}>Ops Chat</div>
-            <div style={{ fontSize: 11, opacity: 0.4, marginTop: 2 }}>#ops · staff only</div>
-          </div>
-          <div style={{ flex: 1, minHeight: 0, padding: "0 10px 10px" }}>
-            <LobbyChatPanel
-              roomId="@ops"
-              embedded
-              style={{ height: "100%", display: "flex", flexDirection: "column" }}
-            />
-          </div>
-        </div>
+        {!narrow && chatOn && chat}
       </div>
     </div>
   );

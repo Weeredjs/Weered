@@ -2,6 +2,7 @@ import { log, swallow } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
 import { accountCount } from "../lib/registration";
+import { paidThroughStripe } from "../lib/stripeTier";
 import { cutoffNow } from "../lib/sessionCutoff";
 import { GlobalRole, ReportStatus, SubTier } from "@prisma/client";
 
@@ -936,6 +937,10 @@ export default async function staffRoutes(app: FastifyInstance, opts: Opts) {
     if (!["INNOCENT", "INDICTED", "FELON", "KINGPIN"].includes(tier)) {
       return reply.code(400).send({ ok: false, error: "invalid_tier" });
     }
+    const target = await prisma.user.findUnique({ where: { id: targetId }, select: { id: true } });
+    if (!target) return reply.code(404).send({ ok: false, error: "user_not_found" });
+    if (await paidThroughStripe(targetId))
+      return reply.code(409).send({ ok: false, error: "paid_through_stripe" });
 
     const userTier = tier as "INNOCENT" | "INDICTED" | "FELON" | "KINGPIN";
     await prisma.user.update({ where: { id: targetId }, data: { tier: userTier } });

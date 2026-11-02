@@ -5,17 +5,7 @@ import { EventStatusBadge } from "./ChallengesTab";
 import { LobbyEvent } from "./TiersTab";
 import EventDescribe from "../../../../components/build/EventDescribe";
 
-export function LobbyEventsTab({
-  lobbyId,
-  myLevel,
-  overrideRole,
-  onRefresh,
-}: {
-  lobbyId: string;
-  myLevel: number;
-  overrideRole: string | null;
-  onRefresh: () => void;
-}) {
+export function LobbyEventsTab({ lobbyId, onRefresh }: { lobbyId: string; onRefresh: () => void }) {
   const [events, setEvents] = useState<LobbyEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [msg, setMsg] = useState("");
@@ -28,8 +18,6 @@ export function LobbyEventsTab({
     endsAt: "",
     status: "DRAFT",
   });
-  const [promoNote, setPromoNote] = useState("");
-  const [promoEventId, setPromoEventId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     const j = await apiFetch(`/lobbies/${encodeURIComponent(lobbyId)}/events`);
@@ -96,20 +84,6 @@ export function LobbyEventsTab({
     } else setMsg(j.error || "Failed.");
   }
 
-  async function requestPromotion(id: string) {
-    const j = await apiFetch(`/lobbies/${encodeURIComponent(lobbyId)}/events/${id}/promote`, {
-      method: "POST",
-      body: JSON.stringify({ note: promoNote }),
-    });
-    if (j.ok) {
-      setMsg("Promotion requested.");
-      setPromoEventId(null);
-      setPromoNote("");
-      void load();
-    } else setMsg(j.error || "Failed.");
-  }
-
-  const isOwner = overrideRole || myLevel >= 5;
   const fmtDate = (s: string) => {
     try {
       return new Date(s).toLocaleString();
@@ -227,42 +201,9 @@ export function LobbyEventsTab({
                   </div>
                 </div>
                 <EventStatusBadge status={ev.status} />
-                {ev.promotionStatus !== "NONE" && (
-                  <span
-                    style={{
-                      fontSize: 10,
-                      padding: "2px 7px",
-                      borderRadius: 999,
-                      background:
-                        ev.promotionStatus === "APPROVED"
-                          ? "rgba(16,185,129,.10)"
-                          : ev.promotionStatus === "DENIED"
-                            ? "rgba(239,68,68,.10)"
-                            : "rgba(245,158,11,.10)",
-                      border: `1px solid ${ev.promotionStatus === "APPROVED" ? "rgba(16,185,129,.30)" : ev.promotionStatus === "DENIED" ? "rgba(239,68,68,.30)" : "rgba(245,158,11,.30)"}`,
-                      color:
-                        ev.promotionStatus === "APPROVED"
-                          ? "rgb(167,243,208)"
-                          : ev.promotionStatus === "DENIED"
-                            ? "rgb(252,165,165)"
-                            : "rgb(253,230,138)",
-                      fontWeight: 700,
-                      letterSpacing: ".4px",
-                    }}
-                  >
-                    {ev.promotionStatus}
-                  </span>
-                )}
               </div>
               {ev.description && (
                 <div style={{ fontSize: 12, opacity: 0.6, marginTop: 6 }}>{ev.description}</div>
-              )}
-              {ev.promotionStatus === "DENIED" && ev.promotionDenyReason && (
-                <div
-                  style={{ fontSize: 11, opacity: 0.6, marginTop: 4, color: "rgb(252,165,165)" }}
-                >
-                  Denied: {ev.promotionDenyReason}
-                </div>
               )}
               <div style={{ display: "flex", gap: 6, marginTop: 8, flexWrap: "wrap" }}>
                 {ev.status === "DRAFT" && (
@@ -286,29 +227,6 @@ export function LobbyEventsTab({
                 <button style={S.danger} onClick={() => deleteEvent(ev.id)}>
                   Delete
                 </button>
-                {isOwner &&
-                  ev.status === "PUBLISHED" &&
-                  ev.promotionStatus === "NONE" &&
-                  (promoEventId === ev.id ? (
-                    <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                      <input
-                        style={{ ...S.input, width: 180, fontSize: 11 }}
-                        placeholder="Pitch to staff (optional)"
-                        value={promoNote}
-                        onChange={(e) => setPromoNote(e.target.value)}
-                      />
-                      <button style={S.btnPri} onClick={() => requestPromotion(ev.id)}>
-                        Send
-                      </button>
-                      <button style={S.btn} onClick={() => setPromoEventId(null)}>
-                        X
-                      </button>
-                    </div>
-                  ) : (
-                    <button style={S.btnPri} onClick={() => setPromoEventId(ev.id)}>
-                      Request Promotion
-                    </button>
-                  ))}
               </div>
             </div>
           ))}

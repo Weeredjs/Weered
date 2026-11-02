@@ -4,6 +4,7 @@ import type { FastifyInstance } from "fastify";
 import { fetchWithTimeout } from "../lib/fetchWithTimeout";
 import { z } from "zod";
 import { prisma } from "../lib/prisma";
+import { STRIPE_LIVE_STATUSES, paidThroughStripe } from "../lib/stripeTier";
 import { createHmac, timingSafeEqual, randomUUID } from "crypto";
 
 type Opts = {
@@ -961,6 +962,8 @@ export default async function billingRoutes(app: FastifyInstance, opts: Opts) {
       if (!targetId || !["FREE", "INDICTED", "FELON", "KINGPIN"].includes(tier)) {
         return reply.code(400).send({ ok: false, error: "invalid" });
       }
+      if (await paidThroughStripe(targetId))
+        return reply.code(409).send({ ok: false, error: "paid_through_stripe" });
       await prisma.subscription.upsert({
         where: { userId: targetId },
         update: { tier: tier as SubTier, status: tier === "FREE" ? "inactive" : "active" },
@@ -984,30 +987,76 @@ export default async function billingRoutes(app: FastifyInstance, opts: Opts) {
     },
   );
 
+  // Everyone who holds a tier, paid through Stripe or set by staff; with ?q=,
+  // any account by name, to give one a tier. It used to list Stripe rows only
+  // under a key the page never read, so it had never shown anyone (ops audit
+  // 2026-11-01).
   app.get("/staff/subscriptions", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const role = await getGlobalRole(u.id);
     if (!canAssignRoles(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
+    const q = String((req.query as any)?.q || "")
+      .trim()
+      .slice(0, 60);
+    const real = { isGuest: false, deletedAt: null };
+    const select = { id: true, name: true, usernameKey: true, tier: true } as const;
+    let users;
+    if (q) {
+      users = await prisma.user.findMany({
+        where: {
+          ...real,
+          OR: [
+            { name: { contains: q, mode: "insensitive" } },
+            { usernameKey: { contains: q.toLowerCase() } },
+          ],
+        },
+        orderBy: { name: "asc" },
+        take: 25,
+        select,
+      });
+    } else {
+      const billed = await prisma.subscription.findMany({
+        where: { stripeSubId: { not: null } },
+        select: { userId: true },
+      });
+      users = await prisma.user.findMany({
+        where: {
+          ...real,
+          OR: [{ tier: { not: "INNOCENT" } }, { id: { in: billed.map((b) => b.userId) } }],
+        },
+        select,
+      });
+    }
     const subs = await prisma.subscription.findMany({
-      orderBy: { updatedAt: "desc" },
-      take: 200,
+      where: { userId: { in: users.map((x) => x.id) } },
     });
-    const userIds = subs.map((s: any) => s.userId);
-    const users = await prisma.user.findMany({
-      where: { id: { in: userIds } },
-      select: { id: true, name: true, usernameKey: true, tier: true, notoriety: true },
+    const subOf = new Map(subs.map((x) => [x.userId, x]));
+    const dash = `https://dashboard.stripe.com${STRIPE_SK.startsWith("sk_test_") ? "/test" : ""}`;
+    const RANK: Record<string, number> = { KINGPIN: 3, FELON: 2, INDICTED: 1, INNOCENT: 0 };
+    const members = users.map((m) => {
+      const sub = subOf.get(m.id);
+      const paying = !!(sub?.stripeSubId && STRIPE_LIVE_STATUSES.includes(sub.status));
+      return {
+        id: m.id,
+        name: m.name,
+        usernameKey: m.usernameKey,
+        tier: m.tier,
+        paying,
+        status: sub?.stripeSubId ? sub.status : null,
+        renews: paying ? sub?.currentPeriodEnd?.toISOString() || null : null,
+        cancelAtPeriodEnd: paying && !!sub?.cancelAtPeriodEnd,
+        stripeUrl:
+          paying && sub?.stripeCustomerId ? `${dash}/customers/${sub.stripeCustomerId}` : null,
+      };
     });
-    const userMap = new Map(users.map((u) => [u.id, u]));
-    const enriched = subs.map((s: any) => ({
-      ...s,
-      userName: userMap.get(s.userId)?.name || "",
-      usernameKey: userMap.get(s.userId)?.usernameKey || "",
-      userTier: userMap.get(s.userId)?.tier || "INNOCENT",
-      currentPeriodEnd: s.currentPeriodEnd?.toISOString() || null,
-      createdAt: s.createdAt?.toISOString() || null,
-      updatedAt: s.updatedAt?.toISOString() || null,
-    }));
-    return reply.send({ ok: true, subscriptions: enriched });
+    if (!q)
+      members.sort(
+        (a, b) =>
+          Number(b.paying) - Number(a.paying) ||
+          RANK[b.tier] - RANK[a.tier] ||
+          a.name.localeCompare(b.name),
+      );
+    return reply.send({ ok: true, members });
   });
 }

@@ -336,14 +336,7 @@ export default function LobbyAdminPage() {
               <TiersTab lobbyId={lobbyId} roleNames={roleNames} onRefresh={load} />
             )}
             {nav === "join-requests" && <JoinRequestsTab lobbyId={lobbyId} />}
-            {nav === "events" && (
-              <LobbyEventsTab
-                lobbyId={lobbyId}
-                myLevel={myLevel}
-                overrideRole={overrideRole}
-                onRefresh={load}
-              />
-            )}
+            {nav === "events" && <LobbyEventsTab lobbyId={lobbyId} onRefresh={load} />}
             {nav === "members" && (
               <MembersTab
                 lobbyId={lobbyId}

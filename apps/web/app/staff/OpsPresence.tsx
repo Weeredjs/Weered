@@ -1,74 +1,22 @@
 "use client";
 import { useWeered, useRoomUsers } from "../../components/WeeredProvider";
-import { S, roleColor } from "./shared";
 
+/** Who else has the ops area open (the @ops room's presence). */
 export function OpsPresence() {
   const ctx = useWeered();
   const users: any[] = useRoomUsers(ctx?.activeRoomId);
   return (
     <div>
-      <div style={S.label}>Online in Ops</div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-        {users.length === 0 && <div style={{ fontSize: 11, opacity: 0.35 }}>No one else here.</div>}
+      <div className="wops-here-label">In ops now</div>
+      <div className="wops-here">
+        {users.length === 0 && <span className="wops-muted">No one else here.</span>}
         {users.map((u: any, i: number) => {
           const name = String(u?.name ?? "?");
-          const rc = roleColor(String(u?.globalRole ?? u?.role ?? "USER").toUpperCase());
           return (
-            <div
-              key={u?.id ?? i}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 7,
-                padding: "6px 8px",
-                borderRadius: 8,
-                background: "rgba(255,255,255,.03)",
-                border: "1px solid rgba(255,255,255,.06)",
-              }}
-            >
-              <div
-                style={{
-                  width: 24,
-                  height: 24,
-                  borderRadius: 999,
-                  background: "rgba(124,58,237,.25)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: 10,
-                  fontWeight: 700,
-                  flexShrink: 0,
-                }}
-              >
-                {name.slice(0, 1).toUpperCase()}
-              </div>
-              <div
-                style={{
-                  minWidth: 0,
-                  flex: 1,
-                  fontSize: 12,
-                  fontWeight: 600,
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  whiteSpace: "nowrap",
-                }}
-              >
-                {name}
-              </div>
-              <span
-                style={{
-                  fontSize: 9,
-                  padding: "1px 5px",
-                  borderRadius: 999,
-                  background: rc.bg,
-                  border: `1px solid ${rc.border}`,
-                  color: rc.color,
-                  flexShrink: 0,
-                }}
-              >
-                {String(u?.globalRole ?? u?.role ?? "")}
-              </span>
-            </div>
+            <span key={u?.id ?? i} className="wops-here-who" title={String(u?.globalRole ?? "")}>
+              <i>{name.slice(0, 1).toUpperCase()}</i>
+              <span>{name}</span>
+            </span>
           );
         })}
       </div>
