@@ -144,8 +144,10 @@ export default function CustomBlockFrame({
     }
 
     function onMessage(e: MessageEvent) {
-      // Only this frame's own page; its origin is opaque ("null"), so the
-      // window itself is the check.
+      // Only this frame's own page. A sandboxed page's origin is always opaque
+      // ("null"), so the origin rules out every real site and the window itself
+      // is the check that counts.
+      if (e.origin !== "null") return;
       if (!frame.current || e.source !== frame.current.contentWindow) return;
       const m = e.data as BridgeMsg;
       if (!m || (m as any).weered !== 1) return;

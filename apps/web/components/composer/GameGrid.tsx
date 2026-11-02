@@ -338,7 +338,7 @@ export default function GameGrid({
             onKeyDown={(e) => {
               if (e.key === "Enter") {
                 e.preventDefault();
-                submitRequest();
+                void submitRequest();
               }
             }}
             placeholder={

@@ -297,7 +297,7 @@ export default function UserHoverCard({
     const id = (profile as any)?.id;
     if (!id) return;
     let alive = true;
-    placeOf(String(id)).then((p) => alive && setPlace(p));
+    void placeOf(String(id)).then((p) => alive && setPlace(p));
     return () => {
       alive = false;
     };

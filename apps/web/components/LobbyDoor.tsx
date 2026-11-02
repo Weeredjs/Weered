@@ -8,6 +8,7 @@
 // Only asks: POST /lobbies/:id/join checks everything again on the server.
 import React, { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
+import { onActivate } from "../lib/a11y";
 import LobbyTierCards from "./LobbyTierCards";
 import type { LobbyDoor as Door } from "../lib/lobbyLayout";
 
@@ -203,6 +204,7 @@ export default function LobbyDoor({
       onClick={(e) => {
         if (canClose && e.target === e.currentTarget) close();
       }}
+      onKeyDown={onActivate(() => canClose && close())}
       style={{
         position: "fixed",
         inset: 0,

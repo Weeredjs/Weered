@@ -393,7 +393,7 @@ export default function ProfileSheet({ userId }: { userId: string }) {
   useEffect(() => {
     if (!profile?.id) return;
     let alive = true;
-    placeOf(String(profile.id)).then((p) => { if (alive) setPlace(p); });
+    void placeOf(String(profile.id)).then((p) => { if (alive) setPlace(p); });
     return () => { alive = false; };
   }, [profile?.id]);
 

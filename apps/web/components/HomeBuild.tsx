@@ -70,7 +70,7 @@ export default function HomeBuild({
   useEffect(() => {
     if (!signedIn || !canDesign) return;
     let alive = true;
-    myPlace().then((p) => alive && setPlace(p));
+    void myPlace().then((p) => alive && setPlace(p));
     return () => {
       alive = false;
     };

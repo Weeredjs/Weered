@@ -216,7 +216,15 @@ export default function CustomBlockBuilder({
         typeof document !== "undefined" &&
         createPortal(
           <div
-            onClick={() => setBig(false)}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (e.target === e.currentTarget) setBig(false);
+            }}
+            onKeyDown={(e) => {
+              if (e.key !== "Escape") return;
+              e.stopPropagation();
+              setBig(false);
+            }}
             style={{
               position: "fixed",
               inset: 0,
@@ -228,7 +236,6 @@ export default function CustomBlockBuilder({
             }}
           >
             <div
-              onClick={(e) => e.stopPropagation()}
               style={{
                 width: "min(820px, 100%)",
                 maxHeight: "90vh",

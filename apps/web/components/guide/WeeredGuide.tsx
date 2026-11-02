@@ -12,6 +12,7 @@
 // under the pointer. Styles: app/styles/53-guide.css.
 import React, { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { onActivate } from "../../lib/a11y";
 import { CHAPTERS, ChapterBody, type ChapterId, type GuideActions } from "./guideChapters";
 
 export default function WeeredGuide({
@@ -85,7 +86,12 @@ export default function WeeredGuide({
   };
 
   return createPortal(
-    <div className="wg-overlay" onClick={onClose} role="presentation">
+    <div
+      className="wg-overlay"
+      onClick={onClose}
+      onKeyDown={onActivate(() => onClose())}
+      role="presentation"
+    >
       <div
         ref={dialogRef}
         className="wg"

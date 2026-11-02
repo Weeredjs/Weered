@@ -3,6 +3,7 @@
 // Design mode's domain dialog and the publish confetti.
 import React, { useEffect, useState } from "react";
 import { API, chip, input, panel } from "./designerKit";
+import { onActivate } from "../../lib/a11y";
 
 // ── Domain ─────────────────────────────────────────────────────────────────
 export function DomainModal({
@@ -88,7 +89,11 @@ export function DomainModal({
       role="dialog"
       aria-modal
       aria-label="Your domain"
-      onClick={onClose}
+      onClick={(e) => {
+        e.stopPropagation();
+        if (e.target === e.currentTarget) onClose();
+      }}
+      onKeyDown={onActivate(() => onClose())}
       style={{
         position: "fixed",
         inset: 0,
@@ -99,10 +104,7 @@ export function DomainModal({
         padding: 16,
       }}
     >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        style={{ ...panel, position: "relative", width: "min(520px, 100%)", padding: 24 }}
-      >
+      <div style={{ ...panel, position: "relative", width: "min(520px, 100%)", padding: 24 }}>
         <div
           style={{
             fontSize: 10,

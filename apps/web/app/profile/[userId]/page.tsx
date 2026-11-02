@@ -128,7 +128,7 @@ export default function ProfilePage() {
   useEffect(() => {
     if (!profile?.id) return;
     let alive = true;
-    placeOf(profile.id).then((p) => alive && setPlace(p));
+    void placeOf(profile.id).then((p) => alive && setPlace(p));
     return () => {
       alive = false;
     };

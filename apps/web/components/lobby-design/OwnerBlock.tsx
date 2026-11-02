@@ -57,7 +57,7 @@ export default function OwnerBlock({
   useEffect(() => {
     if (!p?.id || !lobbyId.startsWith("u-")) return;
     let alive = true;
-    placeOf(p.id).then((x) => alive && setPlace(x && x.id === lobbyId ? x : null));
+    void placeOf(p.id).then((x) => alive && setPlace(x && x.id === lobbyId ? x : null));
     return () => {
       alive = false;
     };
@@ -65,7 +65,7 @@ export default function OwnerBlock({
 
   useEffect(() => {
     let alive = true;
-    (async () => {
+    void (async () => {
       try {
         const l = await fetch(`${API}/lobbies/${encodeURIComponent(lobbyId)}`, {
           credentials: "include",

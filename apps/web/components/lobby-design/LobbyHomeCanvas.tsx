@@ -8,6 +8,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import type { Block, LobbyLayout, TabId } from "../../lib/lobbyLayout";
 import { SIZE_SPAN, BLOCK_CATALOG } from "../../lib/lobbyLayout";
+import { onActivate } from "../../lib/a11y";
 import WebpageEmbed from "../WebpageEmbed";
 import FrontDeskBlock from "./FrontDeskBlock";
 import OwnerBlock from "./OwnerBlock";
@@ -36,7 +37,7 @@ function useJson<T>(url: string | null, pick: (j: any) => T, fallback: T, refres
         .then((r) => r.json())
         .then((j) => !dead && setV(pick(j)))
         .catch(() => {});
-    load();
+    void load();
     const t = refreshMs ? setInterval(load, refreshMs) : null;
     return () => {
       dead = true;
@@ -118,6 +119,13 @@ export default function LobbyHomeCanvas(p: CanvasProps) {
       onDragOver={designing ? (e) => e.preventDefault() : undefined}
       onDrop={designing ? (e) => drop(e, null) : undefined}
       onClick={designing ? () => p.onSelect?.(null) : undefined}
+      onKeyDown={
+        designing
+          ? (e) => {
+              if (e.key === "Escape") p.onSelect?.(null);
+            }
+          : undefined
+      }
       style={{
         display: "grid",
         gridTemplateColumns: "repeat(12, minmax(0, 1fr))",
@@ -168,6 +176,8 @@ export default function LobbyHomeCanvas(p: CanvasProps) {
                   }
                 : undefined
             }
+            onKeyDown={designing ? onActivate(() => p.onSelect?.(b.id)) : undefined}
+            tabIndex={designing ? 0 : undefined}
             className={`weered-block weered-block-${b.type}`}
             style={{
               gridColumn: `span ${SIZE_SPAN[b.size]}`,

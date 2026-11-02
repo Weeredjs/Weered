@@ -24,7 +24,7 @@ function useJson<T>(url: string | null, pick: (j: any) => T, fallback: T, refres
         .then((r) => r.json())
         .then((j) => !dead && setV(pick(j)))
         .catch(() => {});
-    load();
+    void load();
     const t = refreshMs ? setInterval(load, refreshMs) : null;
     return () => {
       dead = true;
