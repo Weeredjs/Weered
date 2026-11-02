@@ -118,4 +118,36 @@ describe("profile - PATCH /profile/me", () => {
     expect(await color()).toBeNull();
     await app.close();
   });
+
+  it("brings their messages in rooms' memory up to date with the new colour", async () => {
+    const uid = await newUser("u5");
+    const room = {
+      users: new Map(),
+      msgs: [
+        { id: "m1", user: { id: uid, name: "u5", avatarColor: "#14b8a6" }, body: "hi", ts: 1 },
+        { id: "m2", user: { id: "someone", name: "x", avatarColor: "#22c55e" }, body: "yo", ts: 2 },
+      ],
+    };
+    const app = await buildTestApp((a: any) =>
+      profileRoutes(a, {
+        authFromHeader: testAuthFromHeader,
+        getNotorietyRank: () => ({ title: "Innocent", min: 0, next: null }),
+        awardNotoriety: async () => null,
+        rooms: new Map([["r1", room]]),
+        publishState: () => {},
+        getWss: () => ({ clients: new Set() }),
+      } as any),
+    );
+    const r = await app.inject({
+      method: "PATCH",
+      url: "/profile/me",
+      headers: { authorization: `Bearer ${testToken(uid)}` },
+      payload: { avatarColor: "" },
+    });
+    expect(r.statusCode).toBe(200);
+    // A reload is served from here: theirs has no colour now; others' are untouched.
+    expect(room.msgs[0].user.avatarColor).toBeUndefined();
+    expect(room.msgs[1].user.avatarColor).toBe("#22c55e");
+    await app.close();
+  });
 });

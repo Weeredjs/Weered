@@ -18,6 +18,7 @@ import DockDrawer from "./DockDrawer";
 import ShellGate from "./ShellGate";
 import ThemeRestore from "./ThemeRestore";
 import UiPrefsSync from "./UiPrefsSync";
+import MyLookSync from "./MyLookSync";
 import NebulaSky from "./NebulaSky";
 import ShellAmbient from "./shell/ShellAmbient";
 import BlizzardGuard from "./shell/BlizzardGuard";
@@ -209,6 +210,7 @@ export default function RootFrame({ children }: { children: React.ReactNode }) {
       <DesktopTitleBar />
       <ThemeRestore />
       <UiPrefsSync />
+      <MyLookSync />
       <NebulaSky />
       <ShellAmbient />
       <BlizzardGuard />

@@ -4,7 +4,7 @@ import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "re
 import { useWeered } from "./WeeredProvider";
 import { useOverlay } from "./overlays/OverlayProvider";
 import RoleIcon, { TierIcon } from "./RoleIcon";
-import { avatarFill } from "../lib/avatarColor";
+import { MY_COLOR_KEY, avatarFill } from "../lib/avatarColor";
 import { cornerFrameVars, nameFx } from "../lib/looks";
 import NotorietyBar from "./NotorietyBar";
 import { onActivate } from "@/lib/a11y";
@@ -308,7 +308,14 @@ export default function UserCorner() {
               ? null
               : undefined,
         );
-        setProfileColor(typeof j?.avatarColor === "string" && j.avatarColor ? j.avatarColor : null);
+        const color = typeof j?.avatarColor === "string" && j.avatarColor ? j.avatarColor : null;
+        setProfileColor(color);
+        // This browser's copy of your colour follows the account, so a colour
+        // you dropped elsewhere doesn't linger here (lib/avatarColor.ts).
+        try {
+          if (color) localStorage.setItem(MY_COLOR_KEY, color);
+          else localStorage.removeItem(MY_COLOR_KEY);
+        } catch {}
       })
       .catch(() => {});
     return () => {
@@ -333,13 +340,19 @@ export default function UserCorner() {
     };
   }, [loadProfile]);
 
-  const liveAvatarColor = profileColor || (me?.avatarColor as string | undefined);
+  // Once the profile has answered it decides, "none" included; until then the
+  // signed-in account's own copy stands in.
+  const liveAvatarColor =
+    profileColor !== undefined ? profileColor : (me?.avatarColor as string | undefined);
   const [stickyAvatarColor, setStickyAvatarColor] = useState<string | undefined>(undefined);
   useEffect(() => {
     if (typeof liveAvatarColor === "string" && /^#[0-9a-f]{6}$/i.test(liveAvatarColor)) {
       setStickyAvatarColor(liveAvatarColor);
+    } else if (profileColor === null) {
+      // Background: None. No colour, not the last one there was.
+      setStickyAvatarColor(undefined);
     }
-  }, [liveAvatarColor]);
+  }, [liveAvatarColor, profileColor]);
 
   const rawPanelAccent = colorOverrides.panelAccentColor || me?.panelAccentColor;
   const rawPanelBg = colorOverrides.panelBgColor || me?.panelBgColor;
@@ -666,8 +679,11 @@ export default function UserCorner() {
                 width: 56,
                 height: 56,
                 borderRadius: "50%",
-                ["--wa-bg" as any]: avatarFill(!!avatarUrl, name, true, stickyAvatarColor),
-                background: avatarFill(!!avatarUrl, name, true, stickyAvatarColor),
+                // Not this browser's stored colour (isMe false): the server
+                // drew this without it, and a first paint that differs from the
+                // server's is never repainted (it stuck on gold, 2026-11-01).
+                ["--wa-bg" as any]: avatarFill(!!avatarUrl, name, false, stickyAvatarColor),
+                background: avatarFill(!!avatarUrl, name, false, stickyAvatarColor),
                 boxShadow: `
                 0 0 0 3px rgba(10,10,18,.95),
                 0 0 0 4px ${cardAccent}80,

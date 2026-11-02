@@ -395,6 +395,19 @@ export default async function profileRoutes(app: FastifyInstance, opts: Opts) {
               }
             }
           }
+          // Each room's chat in memory carries its authors' looks as they were
+          // sent: bring theirs up to date, so a reload or a rejoin shows the new
+          // picture and colour (2026-11-01: James's messages kept the colour he
+          // had dropped). The DB copy is rebuilt with live looks on load.
+          if (avatarColor !== undefined || avatar !== undefined) {
+            for (const room of rooms.values()) {
+              for (const m of room?.msgs || []) {
+                if (m?.user?.id !== viewer.id) continue;
+                if (avatarColor !== undefined) m.user.avatarColor = avatarColor || undefined;
+                if (avatar !== undefined) m.user.avatar = avatar || undefined;
+              }
+            }
+          }
         }
 
         return reply.send({

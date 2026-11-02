@@ -159,7 +159,7 @@ type HotMaps = {
 const EMPTY_USERS: RoomUser[] = [];
 const EMPTY_MSGS: ChatMsg[] = [];
 const EMPTY_TYPING: { userId: string; name: string; ts: number }[] = [];
-const hotStore = {
+export const hotStore = {
   state: { usersByRoom: {}, msgsByRoom: {}, typingByRoom: {} } as HotMaps,
   subs: new Set<() => void>(),
   set<K extends keyof HotMaps>(key: K, updater: React.SetStateAction<HotMaps[K]>) {
