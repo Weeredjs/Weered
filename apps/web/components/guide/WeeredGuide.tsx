@@ -88,7 +88,11 @@ export default function WeeredGuide({
   return createPortal(
     <div
       className="wg-overlay"
-      onClick={onClose}
+      onClick={(e) => {
+        // Only a click on the backdrop itself; none from inside goes further.
+        e.stopPropagation();
+        if (e.target === e.currentTarget) onClose();
+      }}
       onKeyDown={onActivate(() => onClose())}
       role="presentation"
     >
@@ -99,7 +103,6 @@ export default function WeeredGuide({
         aria-modal="true"
         aria-labelledby="wg-title"
         tabIndex={-1}
-        onClick={(e) => e.stopPropagation()}
       >
         <nav className="wg-nav" aria-label="Guide chapters">
           <div className="wg-brand">
