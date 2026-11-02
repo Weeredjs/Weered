@@ -150,12 +150,12 @@ packages/
                        └──────────────┘     └──────────────┘
 
    Edge: Caddy (TLS for weered.ca, *.weered.ca and lobbies' own domains · CORS allowlist)
-   Process mgmt: PM2 · Errors: Sentry · AI: Anthropic API (proposals only)
+   Process mgmt: PM2 · Errors: Sentry · AI: Anthropic API
 ```
 
 **The architectural rule:** business logic lives in the API. Permissions, scoring, the paper economy, friend logic, lobby joining, notoriety. Every rule is server-side, decomposed across `apps/api/src/routes/*`. Clients render and submit; they never decide.
 
-The AI is held to the same rule. Describe it returns a proposal, the API checks it against the catalog (known values only, lengths clipped, and links, channels and dates kept only when the person typed them), and it is saved through the feature's ordinary route. Nothing a model says is trusted.
+The AI is held to the same rule: it never decides anything. Describe it returns a proposal, the API checks it against the catalog (known values only, lengths clipped, and links, channels and dates kept only when the person typed them), and the person saves it through the feature's ordinary route, with the same permission checks as a change made by hand.
 
 See [`DEVELOPMENT.md`](./DEVELOPMENT.md) for the full repo guide: per-client release cadence, deploy procedures, and gotchas.
 
