@@ -10,13 +10,13 @@
   },
   "dependencies": {
     "@fontsource/dm-mono": "^5.2.7",
-    "@sentry/nextjs": "^10.49.0",
+    "@sentry/nextjs": "^10.78.0",
     "@weered/shared": "workspace:*",
     "leaflet": "^1.9.4",
     "lightweight-charts": "^5.1.0",
     "livekit-client": "^2.7.5",
     "lucide-react": "^0.575.0",
-    "next": "^15.5.25",
+    "next": "^15.5.28",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
   },
@@ -30,12 +30,13 @@
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
     "@vitejs/plugin-react": "^6.0.2",
-    "@vitest/coverage-v8": "4.1.5",
+    "@vitest/coverage-v8": "4.1.12",
     "autoprefixer": "^10.4.24",
     "jsdom": "^29.1.1",
     "postcss": "^8.5.6",
     "tailwindcss": "^4.1.18",
     "typescript": "^5.9.3",
-    "vitest": "4.1.5"
+    "vite": "^8.3.5",
+    "vitest": "4.1.12"
   }
 }
