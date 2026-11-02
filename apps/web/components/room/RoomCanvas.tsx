@@ -16,6 +16,7 @@ import {
   OFFICE_MODULE_SKIN,
 } from "./roomModules";
 import LaunchPad from "./LaunchPad";
+import { dialedInHere, setDialedIn } from "../../lib/chatDialIn";
 import { useOverlay } from "../overlays/OverlayProvider";
 import { useVoice } from "../VoiceContext";
 import ArticleReader from "./ArticleReader";
@@ -293,16 +294,25 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
   const [chessInput, setChessInput]   = useState<string>("");
 
   const [chatOpen, setChatOpen]         = useState(() => typeof window !== "undefined" ? window.innerWidth > 767 : true);
-  const [chatFullscreen, setChatFullscreen] = useState(() => {
-    try { return typeof window !== "undefined" && localStorage.getItem("weered_chat_fullscreen") === "1"; } catch { return false; }
-  });
+  // Dial In belongs to this room: leaving it, or moving to another, collapses
+  // the chat (lib/chatDialIn.ts).
+  const dialId = String(roomId || "").replace(/^room:/, "");
+  const [chatFullscreen, setChatFullscreen] = useState(() => typeof window !== "undefined" && dialedInHere(dialId));
   const toggleChatFullscreen = () => {
     setChatFullscreen(v => {
-      try { localStorage.setItem("weered_chat_fullscreen", v ? "0" : "1"); } catch {}
+      setDialedIn(dialId, !v);
       return !v;
     });
     setChatOpen(true);
   };
+  const dialRoom = useRef(dialId);
+  useEffect(() => {
+    if (dialRoom.current === dialId) return;
+    setDialedIn(dialRoom.current, false);
+    dialRoom.current = dialId;
+    setChatFullscreen(false);
+  }, [dialId]);
+  useEffect(() => () => setDialedIn(dialRoom.current, false), []);
   useEffect(() => {
     if (!chatFullscreen) return;
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") toggleChatFullscreen(); };
@@ -1174,7 +1184,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
           className={chatFullscreen ? "weered-chat-fullscreen" : ""}
           style={(chatFullscreen ? {
               position: "fixed",
-              top: 0, right: 0, bottom: 0,
+              top: "var(--wtb-h, 0px)", right: 0, bottom: 0,
               width: "auto",
               height: "auto",
               borderLeft: "1px solid color-mix(in srgb, var(--weered-room-accent, #7c3aed) 22%, transparent)",

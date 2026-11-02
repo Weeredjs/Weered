@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useWeered } from "./WeeredProvider";
 import LobbyChatPanel from "./LobbyChatPanel";
 import { onActivate } from "@/lib/a11y";
+import { dialedInHere, setDialedIn } from "@/lib/chatDialIn";
 
 interface Props {
   roomId: string;
@@ -33,24 +34,25 @@ export default function LobbyChatDrawer({
   );
   const [mounted, setMounted] = useState(false);
   const [unread, setUnread] = useState(0);
-  const [fullscreen, setFullscreen] = useState(() => {
+  const effectiveRoomId = (() => {
+    let rid = String(roomId || "").trim();
+    if (rid.startsWith("room:")) rid = rid.slice(5);
     try {
-      return (
-        typeof window !== "undefined" && localStorage.getItem("weered_chat_fullscreen") === "1"
-      );
-    } catch {
-      return false;
-    }
-  });
+      rid = decodeURIComponent(rid);
+    } catch {}
+    return rid;
+  })();
+  // Dialed in on this lobby or room, not just anywhere (lib/chatDialIn.ts).
+  const [fullscreen, setFullscreen] = useState(
+    () => typeof window !== "undefined" && dialedInHere(effectiveRoomId),
+  );
   const openRef = useRef(false);
 
   const ctx = useWeered() as any;
 
   const toggleFullscreen = () => {
     setFullscreen((v) => {
-      try {
-        localStorage.setItem("weered_chat_fullscreen", v ? "0" : "1");
-      } catch {}
+      setDialedIn(effectiveRoomId, !v);
       return !v;
     });
     setOpen(true);
@@ -70,14 +72,15 @@ export default function LobbyChatDrawer({
   const acDim = `${ac}33`;
   const acMid = `${ac}55`;
 
-  const effectiveRoomId = (() => {
-    let rid = String(roomId || "").trim();
-    if (rid.startsWith("room:")) rid = rid.slice(5);
-    try {
-      rid = decodeURIComponent(rid);
-    } catch {}
-    return rid;
-  })();
+  // Leaving the lobby or room, or moving to another, collapses it.
+  const dialRoom = useRef(effectiveRoomId);
+  useEffect(() => {
+    if (dialRoom.current === effectiveRoomId) return;
+    setDialedIn(dialRoom.current, false);
+    dialRoom.current = effectiveRoomId;
+    setFullscreen(false);
+  }, [effectiveRoomId]);
+  useEffect(() => () => setDialedIn(dialRoom.current, false), []);
 
   useEffect(() => {
     openRef.current = open;
@@ -93,17 +96,18 @@ export default function LobbyChatDrawer({
   // "Dial In" from the inline lobby chat: open the drawer straight into
   // fullscreen — the chat takes the whole stage.
   useEffect(() => {
-    const onDialIn = () => {
-      try {
-        localStorage.setItem("weered_chat_fullscreen", "1");
-      } catch {}
+    const onDialIn = (e: Event) => {
+      // Only this chat's own Dial In, when it says whose it is.
+      const want = (e as CustomEvent).detail?.roomId;
+      if (want && String(want) !== effectiveRoomId) return;
+      setDialedIn(effectiveRoomId, true);
       setFullscreen(true);
       setOpen(true);
       setUnread(0);
     };
     window.addEventListener("weered:chat:dialin", onDialIn);
     return () => window.removeEventListener("weered:chat:dialin", onDialIn);
-  }, []);
+  }, [effectiveRoomId]);
 
   useEffect(() => {
     function onChatNew(e: Event) {
@@ -164,7 +168,7 @@ export default function LobbyChatDrawer({
         }
         .lobby-chat-drawer.weered-chat-fullscreen {
           position: fixed !important;
-          top: 0 !important;
+          top: var(--wtb-h, 0px) !important;
           right: 0 !important;
           bottom: 0 !important;
           width: auto !important;

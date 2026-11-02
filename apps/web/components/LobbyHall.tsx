@@ -78,7 +78,7 @@ export default function LobbyHall({
 
   function dialIn() {
     try {
-      window.dispatchEvent(new CustomEvent("weered:chat:dialin"));
+      window.dispatchEvent(new CustomEvent("weered:chat:dialin", { detail: { roomId: lobbyId } }));
     } catch {}
   }
 
