@@ -49,21 +49,26 @@ interface AnalyticsPayload {
     signupsLast30d: number;
     returnedAfter1d: number;
     returnedAfter7d: number;
+    /** Sign-ups old enough to have come back after a day, and after a week. */
+    eligible1d?: number;
+    eligible7d?: number;
   };
   topUsers: TopUser[];
 }
 
+// The ops palette (57-ops.css --o-*), so Analytics follows the viewer's
+// colourway like the rest of ops; the fallbacks are the old violet.
 const C = {
-  purple: "#5800E5",
-  purpleDim: "rgba(88,0,229,.15)",
-  green: "#22c55e",
+  purple: "rgb(var(--o-a, 139 92 246))",
+  purpleDim: "rgb(var(--o-a, 139 92 246) / .15)",
+  green: "#34d399",
   gold: "#D4A017",
   red: "#ef4444",
-  text: "rgba(243,244,246,.95)",
-  dim: "rgba(243,244,246,.55)",
-  muted: "rgba(243,244,246,.25)",
-  border: "rgba(255,255,255,.06)",
-  mono: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace",
+  text: "var(--o-text, rgba(243,244,246,.95))",
+  dim: "var(--o-dim, rgba(243,244,246,.55))",
+  muted: "rgba(243,244,246,.3)",
+  border: "rgba(255,255,255,.07)",
+  mono: "var(--font-rajdhani), 'Rajdhani', system-ui, sans-serif",
 };
 
 function pct(num: number, den: number) {
@@ -299,17 +304,6 @@ export default function AnalyticsTab() {
         }}
       >
         <div>
-          <div
-            style={{
-              fontFamily: C.mono,
-              fontSize: 18,
-              fontWeight: 700,
-              color: C.text,
-              letterSpacing: ".04em",
-            }}
-          >
-            ANALYTICS
-          </div>
           {lastUpdated > 0 && (
             <div style={{ fontFamily: C.mono, fontSize: 11, color: C.muted, marginTop: 2 }}>
               Last updated: {elapsed(lastUpdated)}
@@ -374,18 +368,18 @@ export default function AnalyticsTab() {
         >
           <div style={{ ...labelStyle, display: "flex", alignItems: "center", gap: 6 }}>
             <GreenDot pulse size={7} />
-            Online Now
+            In a room now
           </div>
           <div style={{ ...bigNum, color: C.green }}>{fmtNum(live.onlineNow)}</div>
         </div>
 
         <div style={cardBase}>
-          <div style={labelStyle}>Users Total</div>
+          <div style={labelStyle}>Accounts</div>
           <div style={bigNum}>{fmtNum(users.total)}</div>
         </div>
 
         <div style={cardBase}>
-          <div style={labelStyle}>Signups Today</div>
+          <div style={labelStyle}>Sign-ups, last 24h</div>
           <div style={bigNum}>{fmtNum(users.today)}</div>
         </div>
 
@@ -443,9 +437,9 @@ export default function AnalyticsTab() {
       >
         {(
           [
-            ["DMs Today", messages.dmToday],
+            ["DMs, last 24h", messages.dmToday],
             ["DMs This Week", messages.dmThisWeek],
-            ["Chat Today", messages.chatToday],
+            ["Chat, last 24h", messages.chatToday],
             ["Chat This Week", messages.chatThisWeek],
           ] as [string, number][]
         ).map(([label, val]) => (
@@ -559,8 +553,8 @@ export default function AnalyticsTab() {
         {(
           [
             ["LFG Posts This Week", engagement.lfgPostsThisWeek, C.purple],
-            ["Notoriety Events Today", engagement.notorietyEventsToday, C.gold],
-            ["Notifications Today", engagement.notificationsToday, C.text],
+            ["Notoriety events, last 24h", engagement.notorietyEventsToday, C.gold],
+            ["Notifications, last 24h", engagement.notificationsToday, C.text],
           ] as [string, number, string][]
         ).map(([label, val, color]) => (
           <div key={label} style={{ ...cardBase, padding: "12px 14px" }}>
@@ -597,7 +591,7 @@ export default function AnalyticsTab() {
                   color: C.green,
                 }}
               >
-                {pct(retention.returnedAfter1d, retention.signupsLast30d)}
+                {pct(retention.returnedAfter1d, retention.eligible1d ?? retention.signupsLast30d)}
               </span>
             </div>
             <div
@@ -614,7 +608,7 @@ export default function AnalyticsTab() {
                   height: "100%",
                   borderRadius: 2,
                   width: retention.signupsLast30d
-                    ? `${Math.min(100, (retention.returnedAfter1d / retention.signupsLast30d) * 100)}%`
+                    ? `${Math.min(100, (retention.returnedAfter1d / (retention.eligible1d || retention.signupsLast30d)) * 100)}%`
                     : "0%",
                   background: C.green,
                   transition: "width .6s ease",
@@ -642,7 +636,7 @@ export default function AnalyticsTab() {
                   color: C.green,
                 }}
               >
-                {pct(retention.returnedAfter7d, retention.signupsLast30d)}
+                {pct(retention.returnedAfter7d, retention.eligible7d ?? retention.signupsLast30d)}
               </span>
             </div>
             <div
@@ -659,7 +653,7 @@ export default function AnalyticsTab() {
                   height: "100%",
                   borderRadius: 2,
                   width: retention.signupsLast30d
-                    ? `${Math.min(100, (retention.returnedAfter7d / retention.signupsLast30d) * 100)}%`
+                    ? `${Math.min(100, (retention.returnedAfter7d / (retention.eligible7d || retention.signupsLast30d)) * 100)}%`
                     : "0%",
                   background: C.purple,
                   transition: "width .6s ease",

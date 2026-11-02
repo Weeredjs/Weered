@@ -2,6 +2,8 @@ import { isStaffRole } from "../lib/lobbyAuth";
 import { swallow } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
+import { roomKind } from "../lib/roomKinds";
+import { sendToEveryone } from "../lib/notifications";
 
 // Staff content management (extracted from index.ts): room dashboard +
 // announcement/banner CRUD. Staff-gated. rooms is injected by reference
@@ -32,28 +34,49 @@ export default async function staffContentRoutes(app: FastifyInstance, opts: Opt
     const role = await getGlobalRole(u.id);
     if (!canAccessStaff(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
 
-    const list = await prisma.room.findMany({
-      orderBy: { createdAt: "desc" },
-      select: {
-        id: true,
-        name: true,
-        locked: true,
-        createdAt: true,
-        lobbyId: true,
-        _count: { select: { members: true } },
-      },
-    });
-    const roomsMem = new Map(rooms.entries());
+    const [list, lobbies] = await Promise.all([
+      prisma.room.findMany({
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          name: true,
+          locked: true,
+          pinned: true,
+          createdAt: true,
+          lobbyId: true,
+          _count: { select: { members: true } },
+        },
+      }),
+      prisma.lobby.findMany({ select: { id: true, name: true } }),
+    ]);
+    const lobbyName = new Map(lobbies.map((l) => [l.id, l.name]));
     const enriched = list.map((r) => {
-      const mem = roomsMem.get(r.id);
+      const mem = rooms.get(r.id);
+      // A lobby's own chat and its admin chat have no name of their own: say
+      // whose they are (they listed as "(unnamed)").
+      const kind = roomKind(r.id, lobbyName.has(r.id));
+      const owner = r.id.replace(/^@admin-/, "").replace(/\/admin$/, "");
+      const name =
+        r.name ||
+        (kind === "ops"
+          ? "Ops chat"
+          : kind === "admin"
+            ? `${lobbyName.get(owner) || owner}: admin chat`
+            : kind === "lobby"
+              ? `${lobbyName.get(r.id) || r.id}: lobby chat`
+              : "");
       return {
         id: r.id,
-        name: r.name || "",
+        name,
+        kind,
         locked: Boolean(r.locked),
         members: r._count.members,
         createdAt: r.createdAt.toISOString(),
-        lobbyId: r.lobbyId || null,
-        pinned: mem?.pinned || false,
+        lobbyId: r.lobbyId || (kind === "lobby" ? r.id : null),
+        lobbyName: lobbyName.get(r.lobbyId || "") || null,
+        // The database's pin, not the in-memory copy: after a restart every
+        // room showed as unpinned (ops audit 2026-11-01).
+        pinned: Boolean(r.pinned),
         liveUsers: mem?.users.size || 0,
         lastActiveAt: mem?.lastActiveAt || null,
       };
@@ -97,6 +120,18 @@ export default async function staffContentRoutes(app: FastifyInstance, opts: Opt
       level,
       pinned: !!b.pinned,
     });
+    // A pinned banner appears now, for everyone signed in; it showed only on
+    // their next page load (components/SystemBroadcast.tsx).
+    if (a.pinned)
+      sendToEveryone({
+        type: "system:broadcast",
+        id: a.id,
+        message,
+        level,
+        sticky: !!a.sticky,
+        from: u.name,
+        ts: a.createdAt?.getTime?.() ?? Date.now(),
+      });
     return reply.send({
       ok: true,
       announcement: { ...a, createdAt: a.createdAt?.toISOString?.() },

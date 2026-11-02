@@ -48,13 +48,16 @@ export type StaffNote = { id: string; authorName: string; body: string; createdA
 export type StaffRoom = {
   id: string;
   name: string;
+  /** A lobby's own chat, an admin chat, ops chat, or an ordinary room (lib/roomKinds.ts). */
+  kind?: "ops" | "admin" | "lobby" | "room";
   locked: boolean;
   members: number;
-  lobbyId?: string;
+  lobbyId?: string | null;
+  lobbyName?: string | null;
   createdAt: string;
   pinned?: boolean;
   liveUsers?: number;
-  lastActiveAt?: number;
+  lastActiveAt?: number | null;
 };
 export type StaffLobby = {
   id: string;
@@ -63,7 +66,11 @@ export type StaffLobby = {
   verified: boolean;
   pinned: boolean;
   moduleType: string;
+  /** Who is in the lobby's rooms now (it used to be the member count). */
   onlineCount: number;
+  members?: number;
+  locked?: boolean;
+  unlisted?: boolean;
 };
 export type SiteConfig = {
   featuredLobbyId: string;
@@ -75,8 +82,6 @@ export type SiteConfig = {
   maintenanceMode: boolean;
   aiEnabled: boolean;
   defaultTier: UserTier;
-  maxRoomsPerLobby: number;
-  chatRateLimit: number;
 };
 
 export function fmtDate(s: string) {

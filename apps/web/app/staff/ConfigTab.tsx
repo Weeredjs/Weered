@@ -138,22 +138,9 @@ export function ConfigTab() {
       <Row label="Operator AI Enabled">
         <Toggle on={config.aiEnabled} onClick={() => toggle("aiEnabled")} />
       </Row>
-      <Row label="Chat Rate Limit (msg/min)">
-        <input
-          type="number"
-          style={{ ...S.input, width: 80 }}
-          value={config.chatRateLimit}
-          onChange={(e) => num("chatRateLimit", e.target.value)}
-        />
-      </Row>
-      <Row label="Max Rooms per Lobby">
-        <input
-          type="number"
-          style={{ ...S.input, width: 80 }}
-          value={config.maxRoomsPerLobby}
-          onChange={(e) => num("maxRoomsPerLobby", e.target.value)}
-        />
-      </Row>
+      {/* "Chat rate limit" and "Max rooms per lobby" were cut 2026-11-02: nothing
+          read them (chat is held at 6 messages per 10 seconds and rooms at 500 in
+          the code). */}
       <div style={{ display: "flex", gap: 10, alignItems: "center", marginTop: 16 }}>
         <button style={{ ...S.btnPri, padding: "8px 20px" }} onClick={save} disabled={saving}>
           {saving ? "Saving…" : "Save Config"}

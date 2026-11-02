@@ -182,6 +182,7 @@ export default async function staffOpsRoutes(app: FastifyInstance, opts: Opts) {
     if (!isStaffRole(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
 
     const now = Date.now();
+    const real = { isGuest: false, deletedAt: null };
     const todayStart = new Date(now - 1 * 86400000);
     const weekStart = new Date(now - 7 * 86400000);
     const monthStart = new Date(now - 30 * 86400000);
@@ -214,10 +215,12 @@ export default async function staffOpsRoutes(app: FastifyInstance, opts: Opts) {
       recentSignups,
       topUsersByNotoriety,
     ] = await Promise.all([
-      prisma.user.count(),
-      prisma.user.count({ where: { createdAt: { gte: todayStart } } }),
-      prisma.user.count({ where: { createdAt: { gte: weekStart } } }),
-      prisma.user.count({ where: { createdAt: { gte: monthStart } } }),
+      // Real accounts: not invite guests, not deleted (it counted both: 136
+      // against 124 real, ops audit 2026-11-01).
+      prisma.user.count({ where: real }),
+      prisma.user.count({ where: { ...real, createdAt: { gte: todayStart } } }),
+      prisma.user.count({ where: { ...real, createdAt: { gte: weekStart } } }),
+      prisma.user.count({ where: { ...real, createdAt: { gte: monthStart } } }),
       prisma.directMessage.count({ where: { createdAt: { gte: todayStart } } }),
       prisma.directMessage.count({ where: { createdAt: { gte: weekStart } } }),
       prisma.roomMessage.count({ where: { ts: { gte: todayStart } } }),
@@ -230,7 +233,7 @@ export default async function staffOpsRoutes(app: FastifyInstance, opts: Opts) {
         select: { id: true, name: true, _count: { select: { members: true } } },
       }),
       prisma.user.findMany({
-        where: { createdAt: { gte: monthStart } },
+        where: { ...real, createdAt: { gte: monthStart } },
         select: { id: true, createdAt: true },
       }),
       prisma.user.findMany({
@@ -295,6 +298,15 @@ export default async function staffOpsRoutes(app: FastifyInstance, opts: Opts) {
       returnedAfter1d = returned1d.size;
       returnedAfter7d = returned7d.size;
     }
+    // Out of those who've had the time: someone who joined yesterday can't
+    // have come back a week later yet, which read retention low.
+    const signups = recentSignups as any[];
+    const eligible1d = signups.filter(
+      (s) => now - new Date(s.createdAt).getTime() > 86400000,
+    ).length;
+    const eligible7d = signups.filter(
+      (s) => now - new Date(s.createdAt).getTime() > 7 * 86400000,
+    ).length;
 
     const topUserIds = (topUsersByNotoriety as any[]).map((u: any) => u.id);
     const dmCounts = await prisma.directMessage.groupBy({
@@ -304,6 +316,14 @@ export default async function staffOpsRoutes(app: FastifyInstance, opts: Opts) {
     });
     const dmCountMap = new Map<string, number>();
     for (const row of dmCounts as any[]) dmCountMap.set(row.fromId, row._count.id);
+    // Chat counts too: "messages this week" was DMs only.
+    const chatCounts = await prisma.roomMessage.groupBy({
+      by: ["userId"],
+      where: { userId: { in: topUserIds }, ts: { gte: weekStart } },
+      _count: { id: true },
+    });
+    for (const row of chatCounts as any[])
+      dmCountMap.set(row.userId, (dmCountMap.get(row.userId) || 0) + row._count.id);
 
     const topUsers = (topUsersByNotoriety as any[]).map((u: any) => ({
       id: u.id,
@@ -338,6 +358,8 @@ export default async function staffOpsRoutes(app: FastifyInstance, opts: Opts) {
         signupsLast30d,
         returnedAfter1d,
         returnedAfter7d,
+        eligible1d,
+        eligible7d,
       },
       topUsers,
     });

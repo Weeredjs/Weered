@@ -1109,7 +1109,7 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (msg.type === "system:broadcast") {
-        try { window.dispatchEvent(new CustomEvent("weered:system:broadcast", { detail: { message: msg.message, level: msg.level, from: msg.from, ts: msg.ts } })); } catch {}
+        try { window.dispatchEvent(new CustomEvent("weered:system:broadcast", { detail: { message: msg.message, level: msg.level, from: msg.from, ts: msg.ts, id: msg.id, sticky: msg.sticky } })); } catch {}
         return;
       }
 

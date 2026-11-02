@@ -82,15 +82,27 @@ export default function SystemBroadcast() {
     function onBroadcast(ev: any) {
       const detail = ev?.detail;
       if (!detail?.message) return;
+      // A pinned announcement arrives live with its id (staff Broadcast), so a
+      // dismissal sticks the same as for one loaded with the page.
+      if (detail.id) {
+        try {
+          const gone: string[] = JSON.parse(
+            localStorage.getItem("weered:banner:dismissedIds") || "[]",
+          );
+          if (gone.includes(detail.id)) return;
+        } catch {}
+      }
       setMsgs((prev) => {
-        if (prev.some((m) => m.ts === detail.ts)) return prev;
+        if (prev.some((m) => m.ts === detail.ts || (detail.id && m.id === detail.id))) return prev;
         return [
           ...prev,
           {
+            id: detail.id,
             message: detail.message,
             level: detail.level || "info",
             from: detail.from || "System",
             ts: detail.ts || Date.now(),
+            sticky: !!detail.sticky,
           },
         ];
       });

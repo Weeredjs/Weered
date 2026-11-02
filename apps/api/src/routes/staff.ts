@@ -4,6 +4,8 @@ import { prisma } from "../lib/prisma";
 import { accountCount } from "../lib/registration";
 import { paidThroughStripe } from "../lib/stripeTier";
 import { mayActOn, mayGiveRole } from "../lib/roleLadder";
+import { isProtectedRoom } from "../lib/roomKinds";
+import { sendToEveryone } from "../lib/notifications";
 import { cutoffNow } from "../lib/sessionCutoff";
 import { GlobalRole, ReportStatus, SubTier } from "@prisma/client";
 
@@ -211,6 +213,12 @@ export default async function staffRoutes(app: FastifyInstance, opts: Opts) {
     const lid = String((req.body as any)?.lobbyId || "lobby");
     if (!(await lobbyModerator(u.id, lid)))
       return reply.code(403).send({ ok: false, error: "forbidden" });
+    // It said it locked lobbies that don't exist.
+    if (
+      lid !== "lobby" &&
+      !(await prisma.lobby.findUnique({ where: { id: lid }, select: { id: true } }))
+    )
+      return reply.code(404).send({ ok: false, error: "lobby_not_found" });
     await prisma.room
       .updateMany({ where: { id: lid }, data: { chatLocked: locked } as any })
       .catch(swallow);
@@ -275,17 +283,13 @@ export default async function staffRoutes(app: FastifyInstance, opts: Opts) {
     const level = ["info", "warning", "urgent"].includes(body.level) ? body.level : "info";
     if (!message) return reply.code(400).send({ ok: false, error: "message required" });
     const payload = { type: "system:broadcast", message, level, from: u.name, ts: Date.now() };
-    const sent = new Set<string>();
-    for (const room of rooms.values()) {
-      for (const s of room.sockets) {
-        const sid = s.user?.id;
-        if (!sid || sent.has(sid)) continue;
-        sent.add(sid);
-        send(s, payload);
-      }
-    }
-    await globalAudit(u.id, u.name, "system_broadcast", undefined, undefined, { message, level });
-    return reply.send({ ok: true, sent: sent.size });
+    const sent = sendToEveryone(payload);
+    await globalAudit(u.id, u.name, "system_broadcast", undefined, undefined, {
+      message,
+      level,
+      sent,
+    });
+    return reply.send({ ok: true, sent });
   });
 
   app.post("/staff/users/:userId/kick", async (req, reply) => {
@@ -426,6 +430,10 @@ export default async function staffRoutes(app: FastifyInstance, opts: Opts) {
     const roomId = String((req as any).params?.roomId || "");
     if (!roomId || roomId === "lobby")
       return reply.code(400).send({ ok: false, error: "invalid_room" });
+    // A lobby's own chat, its admin chat and ops chat go with their lobby,
+    // never one at a time from here: one click erased a lobby's history.
+    if (await isProtectedRoom(roomId))
+      return reply.code(400).send({ ok: false, error: "protected_room" });
 
     const room = await prisma.room.findUnique({ where: { id: roomId }, select: { name: true } });
     if (!room) return reply.code(404).send({ ok: false, error: "not_found" });
@@ -486,15 +494,14 @@ export default async function staffRoutes(app: FastifyInstance, opts: Opts) {
     const body: any = (req as any).body || {};
     const pinned = body.pinned !== false;
 
+    // A room that isn't there can't be pinned (it said it was).
+    const saved = await prisma.room
+      .update({ where: { id: roomId }, data: { pinned } })
+      .catch(() => null);
+    if (!saved) return reply.code(404).send({ ok: false, error: "not_found" });
     const room = rooms.get(roomId);
     if (room) {
       room.pinned = pinned;
-    }
-
-    try {
-      await prisma.room.update({ where: { id: roomId }, data: { pinned } });
-    } catch (e) {
-      log.error("[staff pin] db update failed", e);
     }
 
     await globalAudit(u.id, u.name, pinned ? "room_pin" : "room_unpin", roomId);
@@ -535,6 +542,8 @@ export default async function staffRoutes(app: FastifyInstance, opts: Opts) {
     const roomId = String((req as any).params?.roomId || "");
     if (!roomId || roomId === "lobby")
       return reply.code(400).send({ ok: false, error: "cannot_close_lobby" });
+    if (await isProtectedRoom(roomId))
+      return reply.code(400).send({ ok: false, error: "protected_room" });
     const room = rooms.get(roomId);
 
     if (room) {
@@ -633,6 +642,15 @@ export default async function staffRoutes(app: FastifyInstance, opts: Opts) {
       select: { id: true, usernameKey: true, globalRole: true, banned: true },
     });
     const authorOf = new Map(authors.map((a) => [a.id, a]));
+    // A lobby's own chat is the room keyed by the lobby's id: link to the lobby.
+    const chatLobbies = new Set(
+      (
+        await prisma.lobby.findMany({
+          where: { id: { in: [...msgs.map((m) => m.roomId), ...ids("ROOM")] } },
+          select: { id: true },
+        })
+      ).map((l) => l.id),
+    );
     const msgOf = new Map(msgs.map((m) => [m.id, m]));
     const personOf = new Map(people.map((p) => [p.id, p]));
     const lobbyOf = new Map(lobbies.map((l) => [l.id, l]));
@@ -649,6 +667,7 @@ export default async function staffRoutes(app: FastifyInstance, opts: Opts) {
                 exists: true,
                 name: m.userName,
                 roomId: m.roomId,
+                lobbyId: chatLobbies.has(m.roomId) ? m.roomId : null,
                 deleted: !!m.deletedAt,
                 person: a
                   ? { id: a.id, usernameKey: a.usernameKey, role: a.globalRole, banned: a.banned }
@@ -686,7 +705,7 @@ export default async function staffRoutes(app: FastifyInstance, opts: Opts) {
                 exists: true,
                 name: x?.name || live?.name || r.targetId,
                 roomId: r.targetId,
-                lobbyId: x?.lobbyId ?? null,
+                lobbyId: chatLobbies.has(r.targetId) ? r.targetId : (x?.lobbyId ?? null),
               }
             : { exists: false },
         );
@@ -827,8 +846,6 @@ export default async function staffRoutes(app: FastifyInstance, opts: Opts) {
         maintenanceMode: config.maintenanceMode === "true",
         aiEnabled: config.aiEnabled !== "false",
         defaultTier: config.defaultTier || "INNOCENT",
-        maxRoomsPerLobby: Number(config.maxRoomsPerLobby) || 50,
-        chatRateLimit: Number(config.chatRateLimit) || 30,
       },
     });
   });
@@ -860,10 +877,6 @@ export default async function staffRoutes(app: FastifyInstance, opts: Opts) {
       updates.push({ key: "aiEnabled", value: String(body.aiEnabled) });
     if (body.defaultTier !== undefined)
       updates.push({ key: "defaultTier", value: String(body.defaultTier) });
-    if (body.maxRoomsPerLobby !== undefined)
-      updates.push({ key: "maxRoomsPerLobby", value: String(body.maxRoomsPerLobby) });
-    if (body.chatRateLimit !== undefined)
-      updates.push({ key: "chatRateLimit", value: String(body.chatRateLimit) });
 
     for (const { key, value } of updates) {
       await setSiteConfig(key, value);
@@ -887,9 +900,11 @@ export default async function staffRoutes(app: FastifyInstance, opts: Opts) {
     if (lobbyId) {
       const lobby = await prisma.lobby.findUnique({
         where: { id: lobbyId },
-        select: { id: true, name: true },
+        select: { id: true, name: true, unlisted: true },
       });
       if (!lobby) return reply.code(404).send({ ok: false, error: "lobby_not_found" });
+      // Unlisted means kept off every listing; featuring it would list it on Home.
+      if (lobby.unlisted) return reply.code(400).send({ ok: false, error: "lobby_unlisted" });
       await setSiteConfig("featuredLobbyId", lobbyId);
       await globalAudit(u.id, u.name, "set_featured", lobbyId, lobby.name);
       return reply.send({ ok: true, featuredLobbyId: lobbyId });
@@ -926,10 +941,26 @@ export default async function staffRoutes(app: FastifyInstance, opts: Opts) {
         moduleType: true,
         accentColor: true,
         logoUrl: true,
+        unlisted: true,
         _count: { select: { rooms: true, members: true } },
       },
       orderBy: [{ pinned: "desc" }, { name: "asc" }],
     });
+    // A lobby's chat lock lives on its own room (keyed by the lobby's id).
+    const lockedRooms = await prisma.room.findMany({
+      where: { id: { in: list.map((l: any) => l.id) }, chatLocked: true },
+      select: { id: true },
+    });
+    const locked = new Set(lockedRooms.map((r) => r.id));
+    // Online is who is in the lobby's rooms now; it reported the member count.
+    const online = new Map<string, Set<string>>();
+    for (const [rid, room] of rooms) {
+      const lid = room.lobbyId || rid;
+      if (!room.users?.size) continue;
+      const set = online.get(lid) || new Set<string>();
+      for (const uid of room.users.keys()) set.add(uid);
+      online.set(lid, set);
+    }
 
     const lobbies = list.map((l: any) => ({
       id: l.id,
@@ -938,7 +969,10 @@ export default async function staffRoutes(app: FastifyInstance, opts: Opts) {
       verified: l.verified,
       pinned: l.pinned,
       moduleType: l.moduleType,
-      onlineCount: l._count.members,
+      members: l._count.members,
+      onlineCount: online.get(l.id)?.size || 0,
+      locked: locked.has(l.id),
+      unlisted: l.unlisted,
     }));
 
     return reply.send({ ok: true, lobbies });

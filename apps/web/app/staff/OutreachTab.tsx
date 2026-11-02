@@ -3,6 +3,17 @@ import { useState, useEffect, useCallback } from "react";
 import { S, apiFetch } from "./shared";
 import { onActivate } from "@/lib/a11y";
 
+/** A follow-up is a calendar date saved as midnight UTC: read its day as local.
+ *  new Date() on it showed Nov 19 for Nov 20 in Halifax (ops audit 2026-11-01). */
+function calendarDay(iso: string) {
+  const [y, m, d] = iso.slice(0, 10).split("-").map(Number);
+  return new Date(y, m - 1, d);
+}
+function startOfToday() {
+  const t = new Date();
+  t.setHours(0, 0, 0, 0);
+  return t;
+}
 export const OUTREACH_STATUSES = [
   "LEAD",
   "CONTACTED",
@@ -395,7 +406,7 @@ export function OutreachTab() {
 
         {displayContacts.map((c) => {
           const sColor = STATUS_COLORS[c.status] || "rgba(255,255,255,.5)";
-          const overdue = c.nextFollowUp && new Date(c.nextFollowUp) < new Date();
+          const overdue = c.nextFollowUp && calendarDay(c.nextFollowUp) < startOfToday();
           const isExpanded = expandedContact === c.id;
           return (
             <div key={c.id}>
@@ -562,7 +573,7 @@ export function OutreachTab() {
                           marginBottom: 3,
                         }}
                       >
-                        Follow-up: {new Date(c.nextFollowUp).toLocaleDateString()}
+                        Follow-up: {calendarDay(c.nextFollowUp).toLocaleDateString()}
                         {overdue ? " (overdue)" : ""}
                       </div>
                     )}

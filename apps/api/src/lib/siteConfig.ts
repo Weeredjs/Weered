@@ -30,6 +30,4 @@ export const SITE_CONFIG_DEFAULTS: Record<string, string> = {
   maintenanceMode: "false",
   aiEnabled: "true",
   defaultTier: "INNOCENT",
-  maxRoomsPerLobby: "50",
-  chatRateLimit: "30",
 };

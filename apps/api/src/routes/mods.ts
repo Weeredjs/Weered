@@ -100,8 +100,10 @@ export default async function modsRoutes(app: FastifyInstance, opts: Opts) {
   app.get("/users/:userId/mods", async (req, reply) => {
     const userId = String((req.params as any).userId || "");
     if (!userId) return reply.code(400).send({ error: "missing_userId" });
+    // A mod hidden at its author's request (staff Mods tab) drops out of every
+    // list and can't be installed (ops audit 2026-11-01: it still could).
     const installs = await prisma.userModInstall.findMany({
-      where: { userId },
+      where: { userId, mod: { excluded: false } },
       include: {
         mod: {
           select: { id: true, name: true, thumbnailUrl: true, sourceUrl: true, endorsements: true },
@@ -118,7 +120,7 @@ export default async function modsRoutes(app: FastifyInstance, opts: Opts) {
     if (!crewId) return reply.code(400).send({ error: "missing_crewId" });
     const [crewMods, loadouts] = await Promise.all([
       prisma.crewMod.findMany({
-        where: { crewId },
+        where: { crewId, mod: { excluded: false } },
         include: {
           mod: {
             select: {
@@ -146,7 +148,7 @@ export default async function modsRoutes(app: FastifyInstance, opts: Opts) {
     const b: any = (req as any).body || {};
     const version = String(b.version || "").slice(0, 64);
     const mod = await prisma.mod.findUnique({ where: { id } });
-    if (!mod) return reply.code(404).send({ error: "not_found" });
+    if (!mod || mod.excluded) return reply.code(404).send({ error: "not_found" });
     await prisma.userModInstall.upsert({
       where: { userId_modId: { userId: u.id, modId: mod.id } },
       update: { version, installedAt: new Date() },
@@ -189,7 +191,7 @@ export default async function modsRoutes(app: FastifyInstance, opts: Opts) {
       return reply.code(400).send({ error: "bad_role" });
     }
     const mod = await prisma.mod.findUnique({ where: { id: modId } });
-    if (!mod) return reply.code(404).send({ error: "mod_not_found" });
+    if (!mod || mod.excluded) return reply.code(404).send({ error: "mod_not_found" });
 
     await prisma.crewMod.upsert({
       where: { crewId_modId: { crewId, modId } },

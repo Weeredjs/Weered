@@ -151,6 +151,22 @@ export async function sendPush(
   await Promise.all([sendWebPush(userId, data), sendExpoPush(userId, data)]);
 }
 
+/**
+ * Every signed-in socket, in or out of a room: site-wide broadcasts and live
+ * banners. Returns how many people it reached. Broadcast used to go only to
+ * sockets in a room and reported them as everyone (ops audit 2026-11-01).
+ */
+export function sendToEveryone(payload: any): number {
+  const people = new Set<string>();
+  for (const sock of (_wss as any)?.clients ?? []) {
+    const id = sock.user?.id;
+    if (!id) continue;
+    people.add(id);
+    send(sock as Sock, payload);
+  }
+  return people.size;
+}
+
 export async function createNotification(opts: {
   userId: string;
   type: string;

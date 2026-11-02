@@ -43,20 +43,15 @@ export function LobbiesTab({ myRole }: { myRole: GlobalRole }) {
     } else setMsg(j.error || "Failed.");
   }
 
-  async function lockLobby(id: string) {
-    const j = await apiFetch("/staff/lobby/lock", {
+  // One switch, showing the lobby chat's real state (you couldn't see which
+  // lobbies were locked: ops audit 2026-11-01).
+  async function setLocked(id: string, locked: boolean) {
+    const j = await apiFetch(`/staff/lobby/${locked ? "lock" : "unlock"}`, {
       method: "POST",
       body: JSON.stringify({ lobbyId: id }),
     });
-    setMsg(j.ok ? `Locked ${id}` : j.error || "Failed.");
-  }
-
-  async function unlockLobby(id: string) {
-    const j = await apiFetch("/staff/lobby/unlock", {
-      method: "POST",
-      body: JSON.stringify({ lobbyId: id }),
-    });
-    setMsg(j.ok ? `Unlocked ${id}` : j.error || "Failed.");
+    if (j.ok) setLobbies((prev) => prev.map((x) => (x.id === id ? { ...x, locked } : x)));
+    setMsg(j.ok ? `${locked ? "Locked" : "Unlocked"} ${id}'s chat` : j.error || "Failed.");
   }
 
   async function clearChat(id: string) {
@@ -177,7 +172,10 @@ export function LobbiesTab({ myRole }: { myRole: GlobalRole }) {
                   <div
                     style={{ fontSize: 11, opacity: 0.4, marginTop: 1, fontFamily: "monospace" }}
                   >
-                    {l.id} · {l.moduleType} · {l.onlineCount} online
+                    {l.id} · {l.moduleType} · {l.members ?? 0} member{l.members === 1 ? "" : "s"} ·{" "}
+                    {l.onlineCount} in now
+                    {l.locked ? " · chat locked" : ""}
+                    {l.unlisted ? " · unlisted" : ""}
                   </div>
                 </div>
               </div>
@@ -196,6 +194,8 @@ export function LobbiesTab({ myRole }: { myRole: GlobalRole }) {
                           }
                     }
                     onClick={() => setFeatured(l.id)}
+                    disabled={l.unlisted && !isFeatured}
+                    title={l.unlisted ? "Unlisted lobbies stay off Home" : undefined}
                   >
                     {isFeatured ? "★ Unfeature" : "☆ Set Featured"}
                   </button>
@@ -206,28 +206,10 @@ export function LobbiesTab({ myRole }: { myRole: GlobalRole }) {
                     {l.pinned ? "Unpin" : "Pin"}
                   </button>
                   <button
-                    style={{
-                      ...S.btn,
-                      fontSize: 11,
-                      padding: "4px 8px",
-                      borderColor: "rgba(245,158,11,.25)",
-                      color: "rgb(253,230,138)",
-                    }}
-                    onClick={() => lockLobby(l.id)}
+                    style={{ ...(l.locked ? S.success : S.warn), fontSize: 11, padding: "4px 8px" }}
+                    onClick={() => void setLocked(l.id, !l.locked)}
                   >
-                    Lock Chat
-                  </button>
-                  <button
-                    style={{
-                      ...S.btn,
-                      fontSize: 11,
-                      padding: "4px 8px",
-                      borderColor: "rgba(16,185,129,.25)",
-                      color: "rgb(110,231,183)",
-                    }}
-                    onClick={() => unlockLobby(l.id)}
-                  >
-                    Unlock Chat
+                    {l.locked ? "Unlock chat" : "Lock chat"}
                   </button>
                   <button
                     style={{ ...S.danger, fontSize: 11, padding: "4px 8px" }}
