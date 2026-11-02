@@ -3,6 +3,7 @@ import { canEnterGatedRoom, lobbyLevelOf } from "../lib/lobbyAccess";
 import { banExempt } from "../lib/roomState";
 import { isOfficeRoom } from "../lib/officeRooms";
 import { guestMayEnter } from "../lib/guestScope";
+import { isStaffRoomId, mayEnterStaffRoom } from "../lib/staffRooms";
 import bcrypt from "bcryptjs";
 
 // Presence WS handlers extracted from the index.ts main message handler:
@@ -95,7 +96,12 @@ export async function handlePresence(ws: any, msg: any, opts: Opts): Promise<voi
       locked: false,
     }));
     const roomOut = roomList
-      .filter((r) => !r.id.includes("%") && !lobbyIds.has(r.id) && !isOfficeRoom(r.id))
+      // Staff chat stays off the public list: staff reach it from the ops and
+      // lobby admin pages.
+      .filter(
+        (r) =>
+          !r.id.includes("%") && !lobbyIds.has(r.id) && !isOfficeRoom(r.id) && !isStaffRoomId(r.id),
+      )
       .map((r: any) => ({
         id: r.id,
         roomId: r.id,
@@ -141,6 +147,11 @@ export async function handlePresence(ws: any, msg: any, opts: Opts): Promise<voi
     // rooms is applied here, before that happens (doJoin applies it too).
     if (roomCreationAllowed && !(await roomCreationAllowed(ws, roomId))) {
       send(ws, { type: "room:denied", roomId, reason: "rate_limited" });
+      return;
+    }
+    // Staff chat: staff only (lib/staffRooms.ts; doJoin checks again).
+    if (!(await mayEnterStaffRoom(ws.user?.id, roomId))) {
+      send(ws, { type: "room:denied", roomId, reason: "staff_only" });
       return;
     }
     const room = await ensureRoomLoaded(roomId);

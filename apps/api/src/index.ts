@@ -281,6 +281,7 @@ import { isOfficeRoom } from "./lib/officeRooms";
 import { issuedBeforeCutoff } from "./lib/sessionCutoff";
 import { sessionHook } from "./lib/sessionHook";
 import { allowEmptyJsonBody } from "./lib/emptyJson";
+import { mayEnterStaffRoom } from "./lib/staffRooms";
 import { withinBudget } from "./lib/roomGate";
 import { awardPaper } from "./lib/economy";
 
@@ -549,6 +550,12 @@ async function doJoin(ws: Sock, roomId: string) {
   if (!roomId) return false;
   if (!(await roomCreationAllowed(ws, roomId))) {
     send(ws, { type: "room:denied", roomId, reason: "rate_limited" });
+    return false;
+  }
+  // Staff chat (@ops, @admin-<lobby>): staff only, before the room is even
+  // loaded, so nobody else can read its history or create it (lib/staffRooms.ts).
+  if (!(await mayEnterStaffRoom((ws.user as any)?.id, roomId))) {
+    send(ws, { type: "room:denied", roomId, reason: "staff_only" });
     return false;
   }
   const room = await ensureRoomLoaded(roomId);
