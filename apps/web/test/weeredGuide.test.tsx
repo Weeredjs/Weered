@@ -19,7 +19,11 @@ describe("WeeredGuide", () => {
     const outside = vi.fn();
     render(
       <div onClick={outside}>
-        <WeeredGuide open onClose={onClose} actions={{ href: () => {} }} />
+        <WeeredGuide
+          open
+          onClose={onClose}
+          actions={{ look: () => {}, build: () => {}, href: () => {} }}
+        />
       </div>,
     );
     const overlay = document.querySelector(".wg-overlay") as HTMLElement;
