@@ -1,7 +1,7 @@
 import webpush from "web-push";
 import { WebSocketServer } from "ws";
 import { prisma } from "./prisma";
-import { send, type Sock } from "./roomState";
+import { OPERATOR_FACE, send, type Sock } from "./roomState";
 import { NotificationType } from "@prisma/client";
 import { log, swallow } from "./logger";
 
@@ -45,12 +45,12 @@ export async function getOperatorUserId(): Promise<string> {
   try {
     const op = await prisma.user.upsert({
       where: { usernameKey: "operator" },
-      update: {},
+      // Its face is the system's to set, so the profile and hover card follow it.
+      update: { ...OPERATOR_FACE },
       create: {
         usernameKey: "operator",
         name: "The Operator",
-        avatar: "/brand/roles/operator.svg",
-        avatarColor: "#D4A017",
+        ...OPERATOR_FACE,
         bio: "I'm the system. Type /help anywhere if you need a hand.",
       },
     });

@@ -1,4 +1,5 @@
 import { log, swallow } from "../lib/logger";
+import { OPERATOR_FACE } from "../lib/roomState";
 import { prisma } from "../lib/prisma";
 import { randomUUID } from "crypto";
 import { mayAct } from "../lib/roomGate";
@@ -399,8 +400,7 @@ export async function handleChat(ws: any, msg: any, opts: Opts): Promise<void> {
                   id: "operator",
                   name: "The Operator",
                   role: "SYSTEM" as any,
-                  avatarColor: "#D4A017",
-                  avatar: "/brand/roles/operator.svg",
+                  ...OPERATOR_FACE,
                 },
                 body: reply,
                 ts: Date.now(),

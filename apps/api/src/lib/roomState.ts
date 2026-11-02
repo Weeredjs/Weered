@@ -22,6 +22,14 @@ export function isAIAvailable(): boolean {
   return _isAIAvailable();
 }
 
+// The Operator's face: a gold robot drawn on a transparent ground, on a dark
+// disc. Since 2026-11-01 avatarColor is the disc behind a picture, and its old
+// gold hid the gold robot (James 11-02: "fix the poor operator's face").
+export const OPERATOR_FACE = {
+  avatar: "/brand/roles/operator.svg",
+  avatarColor: "#2a2110",
+} as const;
+
 // The Operator's presence shape — shared by the WS presence:state and the HTTP
 // lobby-presence snapshot so anon and authed viewers see the same entry.
 export const OPERATOR_PRESENCE = {
@@ -30,8 +38,7 @@ export const OPERATOR_PRESENCE = {
   usernameKey: "operator",
   role: "SYSTEM",
   globalRole: "GOD",
-  avatarColor: "#D4A017",
-  avatar: "/brand/roles/operator.svg",
+  ...OPERATOR_FACE,
 } as const;
 
 export type AuthedUser = {
@@ -372,8 +379,7 @@ async function loadRoom(roomId: string): Promise<RoomState> {
       id: "operator",
       name: "The Operator",
       role: "SYSTEM" as any,
-      avatarColor: "#D4A017",
-      avatar: "/brand/roles/operator.svg",
+      ...OPERATOR_FACE,
     };
     // The host's face, when any of its messages are in the backlog.
     let hostFace: string | undefined;
@@ -751,8 +757,7 @@ export function buildStatePayload(room: RoomState) {
       usernameKey: "operator",
       role: "SYSTEM",
       globalRole: "GOD",
-      avatarColor: "#D4A017",
-      avatar: "/brand/roles/operator.svg",
+      ...OPERATOR_FACE,
     } as any);
   }
   return {

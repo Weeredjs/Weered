@@ -228,6 +228,7 @@ import {
   createNotification,
   VAPID_PUBLIC,
   setNotificationsWss,
+  getOperatorUserId,
 } from "./lib/notifications";
 import {
   subscribeBinanceSymbol,
@@ -1553,6 +1554,9 @@ async function main() {
   setPokerTableDeps({ wss, broadcastToLobby });
   setNotorietyDeps({ wss, createNotification });
   setNotificationsWss(wss);
+  // The Operator's account row carries its face for profiles and hover cards;
+  // write it at boot, not only on the first Operator DM.
+  void getOperatorUserId();
   setPresenceWss(wss);
   startPresencePolling();
   app.log.info(`WS listening on ws://127.0.0.1:${WS_PORT}`);

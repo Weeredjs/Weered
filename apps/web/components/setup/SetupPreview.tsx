@@ -402,9 +402,15 @@ export default function SetupPreview(p: Props) {
           Search users…
         </div>
         {[
-          { n: display, s: p.statusText || "online", c: p.avatarColor, me: true },
+          { n: display, s: p.statusText || "online", c: p.avatarColor, me: true, img: p.avatar },
           { n: "timbo_demo", s: "lying low", c: "#14b8a6" },
-          { n: "The Operator", s: "AI · @operator", c: "#eab308" },
+          // The Operator's real face (api lib/roomState.ts OPERATOR_FACE).
+          {
+            n: "The Operator",
+            s: "AI · @operator",
+            c: "#2a2110",
+            img: "/brand/roles/operator.svg",
+          },
         ].map((u) => (
           <div
             key={u.n + (u.me ? "-me" : "")}
@@ -415,7 +421,7 @@ export default function SetupPreview(p: Props) {
                 width: 18,
                 height: 18,
                 borderRadius: "50%",
-                background: u.me && p.avatar ? `url("${p.avatar}") center/cover` : u.c,
+                background: u.img ? `url("${u.img}") center/cover, ${u.c || "transparent"}` : u.c,
                 display: "grid",
                 placeItems: "center",
                 fontSize: 8,
@@ -424,7 +430,7 @@ export default function SetupPreview(p: Props) {
                 position: "relative",
               }}
             >
-              {u.me && p.avatar ? null : u.n.slice(0, 1).toUpperCase()}
+              {u.img ? null : u.n.slice(0, 1).toUpperCase()}
               <span
                 style={{
                   position: "absolute",
