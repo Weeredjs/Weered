@@ -5,24 +5,10 @@ import { openConsentBanner } from "../../CookieConsent";
 import PresenceSection from "./PresenceSection";
 import { onActivate } from "@/lib/a11y";
 import { useRouter } from "next/navigation";
-import {
-  NEBULA_FONTS,
-  NEBULA_FONT_IDS,
-  PALETTES,
-  PALETTE_IDS,
-  customPalette,
-  isHexColour,
-  paletteColours,
-  readUiPrefs,
-  saveUiPrefs,
-  type NebulaFont,
-  type Palette,
-  type UiPrefs,
-} from "../../../lib/uiPrefs";
+
+
 import { useOverlay } from "../OverlayProvider";
-import { lookFromPrefs, startDesign, type ShellLook } from "../../../lib/shellDesign";
-import { cleanSymbol } from "../../../lib/lobbyLayout";
-import { EffectControls, StructureControls } from "../../shell/ShellLookControls";
+import { startDesign } from "../../../lib/shellDesign";
 
 
 // Web sessions are an httpOnly cookie (Domain=.weered.ca); mobile/desktop send a
@@ -31,7 +17,7 @@ import { EffectControls, StructureControls } from "../../shell/ShellLookControls
 // retries on the cookie alone and discards that token. The previous code gated
 // every save on the localStorage token, which web logins stopped writing when
 // auth moved to the cookie, so the sheet silently saved nothing.
-async function settingsFetch(url: string, init: RequestInit = {}): Promise<Response> {
+export async function settingsFetch(url: string, init: RequestInit = {}): Promise<Response> {
   let tok = "";
   try { tok = localStorage.getItem("weered_token") || ""; } catch {}
   const withAuth = (t: string): RequestInit => ({
@@ -111,7 +97,7 @@ function saveSettings(s: Settings) {
   } catch {}
 }
 
-function Row({
+export function Row({
   label,
   hint,
   children,
@@ -174,16 +160,6 @@ function Toggle({
   );
 }
 
-const THEME_OPTIONS: { id: Settings["theme"]; name: string; sw: string }[] = [
-  { id: "nebula",    name: "Nebula",    sw: "#8b5cf6" },
-  { id: "press",     name: "Press",     sw: "#7C3AED" },
-  { id: "ishimura",  name: "Ishimura",  sw: "#22d3ee" },
-  { id: "broadcast", name: "Broadcast", sw: "#22c55e" },
-  { id: "slate",     name: "Slate",     sw: "#64748b" },
-  { id: "stone",     name: "Stone",     sw: "#78716c" },
-  { id: "zinc",      name: "Zinc",      sw: "#71717a" },
-  { id: "gray",      name: "Gray",      sw: "#6b7280" },
-];
 
 function JoinPolicyRow({ field = "joinPolicy", label = "Who can join your session", hint = "Controls the Join button others see on your profile and in their friends list." }: { field?: string; label?: string; hint?: string } = {}) {
   const [policy, setPolicy] = React.useState<string>("FRIENDS");
@@ -294,7 +270,6 @@ export default function SettingsSheet({ initialTab }: { initialTab?: string } = 
         How Weered behaves and how you appear.
       </div>
 
-      <DesignBar />
 
       <div className="weered-settings-shell" style={{ display: "flex", gap: 16, alignItems: "flex-start" }}>
         <nav className="weered-settings-nav" style={{ display: "flex", flexDirection: "column", gap: 2, flexShrink: 0, width: 150 }}>
@@ -337,51 +312,7 @@ export default function SettingsSheet({ initialTab }: { initialTab?: string } = 
 
           {tab === "appearance" && (
             <>
-              <Section title="Look" onReset={() => { patch({ theme: DEFAULTS.theme }); saveUiPrefs({ theme: DEFAULTS.theme }); }}>
-                <div style={{ fontSize: 11, opacity: 0.55, marginBottom: 9 }}>The platform skin. Applies everywhere except lobbies running their own theme.</div>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(108px, 1fr))", gap: 8 }}>
-                  {THEME_OPTIONS.map(t => {
-                    const active = s.theme === t.id;
-                    return (
-                      <button
-                        key={t.id}
-                        type="button"
-                        className="weered-theme-option"
-                        onClick={() => { patch({ theme: t.id }); saveUiPrefs({ theme: t.id }); }}
-                        style={{
-                          display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", cursor: "pointer",
-                          borderRadius: 3, fontFamily: "inherit", fontSize: 12, fontWeight: 700, textAlign: "left",
-                          color: active ? "#fff" : "rgba(226,232,240,.72)",
-                          background: active ? "var(--weered-accent-bg, rgba(124,58,237,.16))" : "rgba(255,255,255,.03)",
-                          border: active ? "1px solid var(--weered-accent-ring, rgba(167,139,250,.7))" : "1px solid rgba(255,255,255,.08)",
-                          transition: "background .12s, border-color .12s, color .12s",
-                        }}
-                      >
-                        <span style={{ width: 14, height: 14, borderRadius: "50%", flexShrink: 0, ...(t.id === "nebula" ? { background: "rgb(var(--nb-a, 139 92 246))", boxShadow: "0 0 8px rgb(var(--nb-a, 139 92 246) / .6)" } : { background: t.sw, boxShadow: `0 0 8px ${t.sw}99` }) }} />
-                        {t.name}
-                      </button>
-                    );
-                  })}
-                </div>
-                {s.theme === "nebula" && <NebulaOptions />}
-              </Section>
-
-              <Section title="Display" onReset={() => patch({ density: DEFAULTS.density, reduceMotion: DEFAULTS.reduceMotion, keepDefaultTheme: DEFAULTS.keepDefaultTheme })}>
-                <Row label="Density" hint="Compact tightens rails and lists.">
-                  <select style={selectStyle} value={s.density} onChange={(e) => patch({ density: e.target.value as any })}>
-                    <option value="comfortable">Comfortable</option>
-                    <option value="compact">Compact</option>
-                  </select>
-                </Row>
-                <Row label="Turn off all animations" hint="No effects, no moving starfield, no transitions, here or in lobbies. A lobby that makes its effect part of the room still shows it.">
-                  <Toggle checked={s.reduceMotion} onChange={(v) => patch({ reduceMotion: v })} />
-                </Row>
-                <Row label="Keep default theme in themed lobbies" hint="Lobbies with their own look (vOCN, Windrose, Timbo's, D&D and others) show the standard Weered theme instead, rooms included.">
-                  <Toggle checked={s.keepDefaultTheme} onChange={(v) => patch({ keepDefaultTheme: v })} />
-                </Row>
-              </Section>
-
-              <ProfileCustomizationSection nebula={s.theme === "nebula"} />
+              <AppearancePointers />
             </>
           )}
 
@@ -499,170 +430,64 @@ function DesktopNotifyToggle({ enabled, onChange }: { enabled: boolean; onChange
 // Top of Settings, above every tab (James 2026-10-30: "I find I use it the
 // most"). Design your Weered (components/shell/ShellDesigner.tsx) runs on
 // Home: from Home it opens in place, from anywhere else it goes there first.
-function DesignBar() {
-  const { clearSheets } = useOverlay();
+// Appearance in Settings points at the two places that own it: Change your
+// drip (how Weered looks to you: theme, colourway, type, effects, compact rows,
+// animations) and your profile's Your look (how you look to others). Each
+// setting used to sit in two places, and density saved in one only came back
+// overwritten by the other (James 2026-11-02).
+function AppearancePointers() {
+  const { clearSheets, openSheet } = useOverlay() as any;
   const router = useRouter();
+  const card = (title: string, blurb: string, label: string, go: () => void) => (
+    <button
+      type="button"
+      onClick={go}
+      style={{
+        display: "flex", alignItems: "center", gap: 12, width: "100%", marginTop: 8, padding: "12px 14px",
+        borderRadius: 12, cursor: "pointer", textAlign: "left", fontFamily: "inherit", color: "#fff",
+        border: "1px solid var(--weered-border, rgba(255,255,255,.12))", background: "rgba(255,255,255,.03)",
+      }}
+    >
+      <span style={{ flex: 1, minWidth: 0 }}>
+        <span style={{ display: "block", fontSize: 13.5, fontWeight: 800 }}>{title}</span>
+        <span style={{ display: "block", fontSize: 11.5, opacity: 0.65, marginTop: 2 }}>{blurb}</span>
+      </span>
+      <span style={{ fontSize: 12, fontWeight: 800, color: "var(--weered-accent-text, #c4b5fd)", whiteSpace: "nowrap" }}>{label} →</span>
+    </button>
+  );
   return (
-    <div className="weered-settings-designbar" style={{ display: "flex", gap: 8, marginBottom: 6, flexWrap: "wrap" }}>
-      <button
-        type="button"
-        onClick={() => {
+    <Section title="Appearance">
+      {card(
+        "How Weered looks to you",
+        "Theme, colourway, layout, type, effects, compact rows, animations.",
+        "Change your drip",
+        () => {
           clearSheets();
           if (window.location.pathname === "/home") startDesign();
           else router.push("/home?design=1");
-        }}
-        style={{
-          flex: "1 1 260px", display: "flex", alignItems: "center", gap: 10, padding: "11px 14px",
-          borderRadius: 12, cursor: "pointer", textAlign: "left", fontFamily: "inherit", color: "#fff",
-          border: "1px solid var(--weered-accent-ring, #a78bfa88)",
-          background: "linear-gradient(135deg, var(--weered-accent-bg, #7c3aed33), transparent)",
-        }}
-      >
-        <span style={{ fontSize: 18, color: "var(--weered-accent-text, #c4b5fd)" }}>✦</span>
-        <span style={{ minWidth: 0 }}>
-          <span style={{ display: "block", fontSize: 13.5, fontWeight: 800 }}>Change your drip</span>
-          <span style={{ display: "block", fontSize: 11.5, opacity: 0.65 }}>
-            Move any section, put Friends where you want them, add blocks, pick your own colour.
-          </span>
-        </span>
-      </button>
+        },
+      )}
+      {card(
+        "How you look to others",
+        "Your picture, frame, background, name effects, ID card colours and banner.",
+        "Your look",
+        () => {
+          let me = "";
+          try {
+            me = JSON.parse(localStorage.getItem("weered_user") || "{}")?.id || "";
+          } catch {}
+          clearSheets();
+          if (me) openSheet?.("profile", { userId: me });
+        },
+      )}
       <a
         href="/setup"
         onClick={() => clearSheets()}
-        style={{
-          flex: "0 1 auto", display: "flex", flexDirection: "column", justifyContent: "center", gap: 2, padding: "9px 14px",
-          borderRadius: 12, border: "1px solid var(--weered-border, rgba(255,255,255,.12))", background: "rgba(255,255,255,.03)",
-          color: "#fff", fontSize: 12.5, fontWeight: 800, textDecoration: "none",
-        }}
+        style={{ display: "inline-block", marginTop: 10, fontSize: 12, color: "var(--weered-accent-text, #c4b5fd)" }}
       >
-        Run setup again
-        <span style={{ fontWeight: 500, fontSize: 11.5, opacity: 0.6 }}>Look and layout</span>
+        Run setup again →
       </a>
-    </div>
-  );
-}
-
-// Nebula's own knobs: colourway, type, starfield, and the same structure and
-// effect controls as Design → Look. Saved with the account's UI prefs
-// (lib/uiPrefs), the same place setup and Design write them.
-function NebulaOptions() {
-  const [palette, setPalette] = React.useState<Palette>("violet");
-  const [accent, setAccent] = React.useState("#8b5cf6");
-  const [font, setFont] = React.useState<NebulaFont>("default");
-  const [stars, setStars] = React.useState(true);
-  const [look, setLook] = React.useState<ShellLook | null>(null);
-  const accentTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
-  React.useEffect(() => {
-    const p = readUiPrefs();
-    setPalette(p.palette || "violet");
-    if (isHexColour(p.accent)) setAccent(p.accent);
-    setFont(p.font || "default");
-    setStars(p.stars !== false);
-    setLook(lookFromPrefs(p));
-  }, []);
-  // Typing (the symbol) and dragging (intensity) save once they settle; a
-  // click saves at once, taking anything still pending with it.
-  const pending = React.useRef<UiPrefs>({});
-  const lookTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
-  const flush = React.useCallback(() => {
-    if (lookTimer.current) clearTimeout(lookTimer.current);
-    lookTimer.current = null;
-    const p = pending.current;
-    pending.current = {};
-    if ("fxSymbol" in p) p.fxSymbol = cleanSymbol(p.fxSymbol) || "✦";
-    if (Object.keys(p).length) saveUiPrefs(p);
-  }, []);
-  React.useEffect(() => flush, [flush]);
-  const onLook = (patch: Partial<ShellLook>, merge?: string) => {
-    setLook((l) => (l ? { ...l, ...patch } : l));
-    pending.current = { ...pending.current, ...(patch as UiPrefs) };
-    if (!merge) return flush();
-    if (lookTimer.current) clearTimeout(lookTimer.current);
-    lookTimer.current = setTimeout(flush, 400);
-  };
-  const mine = customPalette(accent);
-  const colours = paletteColours(palette, accent);
-  return (
-    <div className="weered-settings-nebula" style={{ marginTop: 14 }}>
-      <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 8, color: "var(--weered-text, rgba(243,244,246,.95))" }}>Colourway</div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 8 }}>
-        {PALETTE_IDS.map((id) => {
-          const pl = PALETTES[id];
-          const on = palette === id;
-          return (
-            <button
-              key={id}
-              type="button"
-              aria-pressed={on}
-              onClick={() => { setPalette(id); saveUiPrefs({ palette: id }); }}
-              style={{
-                position: "relative", height: 64, padding: "0 10px 8px", borderRadius: 12, cursor: "pointer",
-                display: "flex", alignItems: "flex-end", fontFamily: "inherit", fontSize: 12.5, fontWeight: 800, color: pl.light ? "#0f172a" : "#fff",
-                border: on ? `2px solid ${pl.a}` : "1px solid rgba(255,255,255,.12)",
-                boxShadow: on ? `0 0 0 3px ${pl.a}44, 0 10px 24px -12px ${pl.a}` : "none",
-                background: pl.light ? `linear-gradient(180deg, #ffffff, ${pl.bg})` : `radial-gradient(120% 90% at 0% 0%, ${pl.b}bb, transparent 60%), radial-gradient(90% 90% at 100% 100%, ${pl.c}ee, transparent 65%), ${pl.bg}`,
-              }}
-            >
-              {pl.name}
-            </button>
-          );
-        })}
-        <label
-          title="Pick any colour; Weered builds the rest around it"
-          style={{
-            position: "relative", height: 64, padding: "0 10px 8px", borderRadius: 12, cursor: "pointer",
-            display: "flex", alignItems: "flex-end", fontSize: 12.5, fontWeight: 800, color: "#fff",
-            border: palette === "custom" ? `2px solid ${mine.a}` : "1px solid rgba(255,255,255,.12)",
-            boxShadow: palette === "custom" ? `0 0 0 3px ${mine.a}44, 0 10px 24px -12px ${mine.a}` : "none",
-            background: `radial-gradient(120% 90% at 0% 0%, ${mine.b}bb, transparent 60%), radial-gradient(90% 90% at 100% 100%, ${mine.c}ee, transparent 65%), ${mine.bg}`,
-          }}
-        >
-          Your colour ✎
-          <input
-            type="color"
-            value={accent}
-            aria-label="Pick your own colour"
-            onChange={(e) => {
-              const v = e.target.value;
-              setAccent(v);
-              setPalette("custom");
-              // A colour picker fires on every drag step; save once it settles.
-              if (accentTimer.current) clearTimeout(accentTimer.current);
-              accentTimer.current = setTimeout(() => saveUiPrefs({ palette: "custom", accent: v }), 350);
-            }}
-            style={{ position: "absolute", inset: 0, opacity: 0, cursor: "pointer" }}
-          />
-        </label>
-      </div>
-      <div style={{ fontSize: 12, fontWeight: 700, margin: "14px 0 8px", color: "var(--weered-text, rgba(243,244,246,.95))" }}>Type</div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 6 }}>
-        {NEBULA_FONT_IDS.map((f) => (
-          <button
-            key={f}
-            type="button"
-            aria-pressed={font === f}
-            onClick={() => { setFont(f); saveUiPrefs({ font: f }); }}
-            style={{
-              padding: "8px 6px", borderRadius: 10, cursor: "pointer", fontSize: 13, color: "#fff",
-              fontFamily: NEBULA_FONTS[f].stack,
-              border: font === f ? "1px solid var(--weered-accent-ring, #a78bfa)" : "1px solid rgba(255,255,255,.1)",
-              background: font === f ? "var(--weered-accent-bg, #7c3aed33)" : "rgba(255,255,255,.03)",
-            }}
-          >
-            {NEBULA_FONTS[f].name}
-          </button>
-        ))}
-      </div>
-      <Row label="Starfield" hint="Drifting stars, twinkles and the odd shooting star behind everything.">
-        <Toggle checked={stars} onChange={(v) => { setStars(v); saveUiPrefs({ stars: v }); }} />
-      </Row>
-      {look && (
-        <div className="weered-settings-structure">
-          <StructureControls accent={colours.a} look={look} c={colours} onLook={onLook} />
-          <EffectControls accent={colours.a} look={look} c={colours} onLook={onLook} />
-        </div>
-      )}
-    </div>
+    </Section>
   );
 }
 
@@ -741,390 +566,6 @@ export function Section({ title, children, onReset }: { title: string; children:
       </div>
       {children}
     </div>
-  );
-}
-
-// Under Nebula these colours sit out: the colourway paints your own Weered,
-// and people rows carry no tint or stripe there. They still dress your ID card
-// and row inside lobbies with their own theme, and on Classic.
-function ProfileCustomizationSection({ nebula = false }: { nebula?: boolean }) {
-  const apiBase = (process.env.NEXT_PUBLIC_API_BASE as string) || "https://api.weered.ca";
-  const [panelBgColor, setPanelBgColor] = React.useState<string>("");
-  const [panelAccentColor, setPanelAccentColor] = React.useState<string>("");
-  const [pillBgColor, setPillBgColor] = React.useState<string>("");
-  const [pillAccentColor, setPillAccentColor] = React.useState<string>("");
-  const [savedMsg, setSavedMsg] = React.useState<string>("");
-
-  React.useEffect(() => {
-    try {
-      const raw = localStorage.getItem("weered_user");
-      if (raw) {
-        const u = JSON.parse(raw);
-        if (u?.panelBgColor) setPanelBgColor(u.panelBgColor);
-        if (u?.panelAccentColor) setPanelAccentColor(u.panelAccentColor);
-        if (u?.pillBgColor) setPillBgColor(u.pillBgColor);
-        if (u?.pillAccentColor) setPillAccentColor(u.pillAccentColor);
-      }
-    } catch {}
-  }, []);
-
-  const saveTimer = React.useRef<any>(null);
-  function scheduleSave(field: "panelBgColor" | "panelAccentColor" | "pillBgColor" | "pillAccentColor", value: string) {
-    if (saveTimer.current) clearTimeout(saveTimer.current);
-    saveTimer.current = setTimeout(async () => {
-      try {
-        const r = await settingsFetch(`${apiBase}/profile/me`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ [field]: value }),
-        });
-        if (r.ok) {
-          try {
-            const raw = localStorage.getItem("weered_user");
-            if (raw) {
-              const u = JSON.parse(raw);
-              u[field] = value || null;
-              localStorage.setItem("weered_user", JSON.stringify(u));
-            }
-          } catch {}
-          try { window.dispatchEvent(new CustomEvent("weered:profileColors", { detail: { field, value } })); } catch {}
-          try { window.dispatchEvent(new CustomEvent("weered:profile:updated")); } catch {}
-          setSavedMsg("Saved");
-          setTimeout(() => setSavedMsg(""), 1200);
-        } else {
-          setSavedMsg(r.status === 401 ? "Not saved: sign in again" : "Not saved (" + r.status + ")");
-          setTimeout(() => setSavedMsg(""), 4000);
-        }
-      } catch {
-        setSavedMsg("Not saved: no connection");
-        setTimeout(() => setSavedMsg(""), 4000);
-      }
-    }, 400);
-  }
-
-  function clearField(field: "panelBgColor" | "panelAccentColor" | "pillBgColor" | "pillAccentColor", setter: (v: string) => void) {
-    setter("");
-    scheduleSave(field, "");
-  }
-
-  function resetColors() {
-    clearField("panelBgColor", setPanelBgColor);
-    clearField("panelAccentColor", setPanelAccentColor);
-    clearField("pillBgColor", setPillBgColor);
-    clearField("pillAccentColor", setPillAccentColor);
-  }
-
-  const ACCENT_PRESETS: { label: string; value: string }[] = [
-    { label: "Purple", value: "#5b21b6" },
-    { label: "Gold",   value: "#b8860b" },
-    { label: "Crimson", value: "#9f1239" },
-    { label: "Teal",   value: "#0d7a6f" },
-    { label: "Slate",  value: "#3b4a6b" },
-  ];
-
-  return (
-    <Section title={nebula ? "Your colors in themed lobbies" : "Your colors"} onReset={resetColors}>
-      <div style={{ fontSize: 11, color: "var(--weered-muted, rgba(148,163,184,.7))", marginBottom: 10 }}>
-        {nebula
-          ? "Nebula paints your own Weered from the colourway above. These colours dress your ID card and your row inside lobbies with their own theme, and for anyone on Classic. Changes save automatically."
-          : "Personalize how you appear in lobbies and on your ID card. Changes save automatically."}
-      </div>
-
-      <ColorPreview
-        accent={panelAccentColor || "#5b21b6"}
-        panelBg={panelBgColor || "#14161A"}
-        pillBg={pillBgColor}
-        pillStripe={pillAccentColor}
-      />
-
-      <div style={{ margin: "12px 0 4px", fontSize: 11, fontWeight: 700, color: "var(--weered-muted, rgba(148,163,184,.8))" }}>Quick accent</div>
-      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
-        {ACCENT_PRESETS.map(p => {
-          const active = panelAccentColor.toLowerCase() === p.value.toLowerCase();
-          return (
-            <button
-              key={p.value}
-              type="button"
-              onClick={() => { setPanelAccentColor(p.value); scheduleSave("panelAccentColor", p.value); }}
-              title={p.label}
-              style={{
-                display: "flex", alignItems: "center", gap: 6,
-                padding: "5px 10px", borderRadius: 999, cursor: "pointer",
-                fontFamily: "inherit", fontSize: 11, fontWeight: 700,
-                border: active ? `1px solid ${p.value}` : "1px solid var(--weered-border, rgba(255,255,255,.12))",
-                background: active ? `${p.value}22` : "transparent",
-                color: "var(--weered-text, rgba(243,244,246,.9))",
-              }}
-            >
-              <span style={{ width: 12, height: 12, borderRadius: 999, background: p.value, border: "1px solid rgba(255,255,255,.2)" }} />
-              {p.label}
-            </button>
-          );
-        })}
-      </div>
-
-      <ColorPickerRow
-        label="Accent color"
-        hint="Your accent on the ID card and rail — the crew tag, brackets and avatar ring. Applies inside themed lobbies, where it sits against that community's own skin; the default theme keeps the platform accent."
-        value={panelAccentColor}
-        onChange={(v) => { setPanelAccentColor(v); scheduleSave("panelAccentColor", v); }}
-        onClear={() => clearField("panelAccentColor", setPanelAccentColor)}
-      />
-      <ColorPickerRow
-        label="Panel background"
-        hint="Tints the grey surfaces behind your rail sections and ID card body."
-        value={panelBgColor}
-        onChange={(v) => { setPanelBgColor(v); scheduleSave("panelBgColor", v); }}
-        onClear={() => clearField("panelBgColor", setPanelBgColor)}
-      />
-      <ColorPickerRow
-        label="Your row tint"
-        hint="The background color of your name-row as it appears in other people's friends lists and rails."
-        value={pillBgColor}
-        onChange={(v) => { setPillBgColor(v); scheduleSave("pillBgColor", v); }}
-        onClear={() => clearField("pillBgColor", setPillBgColor)}
-      />
-      <ColorPickerRow
-        label="Row stripe"
-        hint="The vertical bar on the left edge of your row. Leave default to use your role/tier color."
-        value={pillAccentColor}
-        onChange={(v) => { setPillAccentColor(v); scheduleSave("pillAccentColor", v); }}
-        onClear={() => clearField("pillAccentColor", setPillAccentColor)}
-      />
-      <PillIntensityRow />
-      <BannerUploadRow />
-      {savedMsg && (
-        <div style={{ fontSize: 11, color: "var(--weered-accent-text, rgba(167,139,250,.85))", marginTop: 4, textAlign: "right" }}>
-          {savedMsg}
-        </div>
-      )}
-    </Section>
-  );
-}
-
-function ColorPreview({ accent, panelBg, pillBg, pillStripe }: { accent: string; panelBg: string; pillBg: string; pillStripe: string }) {
-  const stripe = pillStripe || accent;
-  return (
-    <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-      <div style={{ flex: "1 1 180px", minWidth: 160, borderRadius: 8, overflow: "hidden", border: "1px solid rgba(255,255,255,.08)", background: panelBg }}>
-        <div style={{
-          height: 26, background: accent,
-          clipPath: "polygon(0 0, 100% 0, calc(100% - 12px) 100%, 0 100%)",
-          display: "flex", alignItems: "center", padding: "0 10px",
-          fontSize: 9, fontWeight: 800, letterSpacing: "0.12em", textTransform: "uppercase", color: "#fff",
-        }}>Your ID card</div>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px" }}>
-          <div style={{ width: 26, height: 26, borderRadius: 999, border: `2px solid ${accent}`, background: "rgba(255,255,255,.08)", flexShrink: 0 }} />
-          <div style={{ fontSize: 12, fontWeight: 700 }}>You</div>
-        </div>
-      </div>
-      <div style={{ flex: "1 1 180px", minWidth: 160, display: "flex", flexDirection: "column", justifyContent: "center" }}>
-        <div style={{ fontSize: 9, opacity: 0.5, marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.08em" }}>In a friends list</div>
-        <div style={{ position: "relative", display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", borderRadius: 8, overflow: "hidden",
-          background: pillBg ? `linear-gradient(90deg, ${pillBg}99, ${pillBg}33 60%, transparent)` : "rgba(255,255,255,.03)",
-          border: "1px solid rgba(255,255,255,.06)" }}>
-          <span style={{ position: "absolute", left: 0, top: 4, bottom: 4, width: 3, borderRadius: "0 2px 2px 0", background: stripe }} />
-          <div style={{ width: 24, height: 24, borderRadius: 999, background: "rgba(255,255,255,.1)", flexShrink: 0, marginLeft: 2 }} />
-          <div style={{ fontSize: 12, fontWeight: 700 }}>You</div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function BannerUploadRow() {
-  const apiBase = (process.env.NEXT_PUBLIC_API_BASE as string) || "https://api.weered.ca";
-  const [bannerUrl, setBannerUrl] = React.useState<string>("");
-  const [busy, setBusy] = React.useState(false);
-  const [err, setErr] = React.useState<string>("");
-  const fileRef = React.useRef<HTMLInputElement>(null);
-
-  React.useEffect(() => {
-    try {
-      const raw = localStorage.getItem("weered_user");
-      if (raw) {
-        const u = JSON.parse(raw);
-        if (u?.id) {
-          settingsFetch(`${apiBase}/profile/${encodeURIComponent(u.id)}`, {
-            headers: {},
-          }).then(r => r.json()).then(j => {
-            if (j?.bannerUrl) setBannerUrl(String(j.bannerUrl));
-          }).catch(() => {});
-        }
-      }
-    } catch {}
-  }, [apiBase]);
-
-  async function onPick(e: React.ChangeEvent<HTMLInputElement>) {
-    setErr("");
-    const f = e.target.files?.[0];
-    if (!f) return;
-    if (f.size > 4 * 1024 * 1024) { setErr("Image must be under 4 MB."); return; }
-    if (!/^image\/(png|jpeg|jpg|webp|gif)$/.test(f.type)) { setErr("Use PNG, JPEG, WebP, or GIF."); return; }
-    setBusy(true);
-    try {
-      const dataUrl: string = await new Promise((res, rej) => {
-        const r = new FileReader();
-        r.onload = () => res(String(r.result || ""));
-        r.onerror = () => rej(new Error("read_failed"));
-        r.readAsDataURL(f);
-      });
-      const r = await settingsFetch(`${apiBase}/profile/banner/upload`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image: dataUrl }),
-      });
-      const j = await r.json();
-      if (!r.ok || !j?.ok) {
-        setErr(j?.message || j?.error || "Upload failed.");
-      } else {
-        setBannerUrl(String(j.bannerUrl));
-        try { window.dispatchEvent(new CustomEvent("weered:profileColors", { detail: { bannerUrl: j.bannerUrl } })); } catch {}
-        try { window.dispatchEvent(new CustomEvent("weered:profile:updated")); } catch {}
-      }
-    } catch (ex: any) {
-      setErr(ex?.message || "Upload failed.");
-    } finally {
-      setBusy(false);
-      if (fileRef.current) fileRef.current.value = "";
-    }
-  }
-
-  async function clear() {
-    setBusy(true); setErr("");
-    try {
-      const r = await settingsFetch(`${apiBase}/profile/me`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ bannerUrl: "" }),
-      });
-      if (r.ok) {
-        setBannerUrl("");
-        try { window.dispatchEvent(new CustomEvent("weered:profileColors", { detail: { bannerUrl: null } })); } catch {}
-        try { window.dispatchEvent(new CustomEvent("weered:profile:updated")); } catch {}
-      }
-    } finally { setBusy(false); }
-  }
-
-  return (
-    <Row label="ID card banner" hint="Wide image across the top of your ID card. PNG/JPEG/WebP/GIF, up to 4 MB.">
-      <div style={{ display: "flex", flexDirection: "column", gap: 8, alignItems: "stretch", minWidth: 240 }}>
-        {bannerUrl && (
-          <div style={{
-            width: "100%", height: 56, borderRadius: 6, overflow: "hidden",
-            background: `url(${bannerUrl}) center / cover no-repeat`,
-            border: "1px solid rgba(255,255,255,.08)",
-          }} />
-        )}
-        <div style={{ display: "flex", gap: 6 }}>
-          <button
-            type="button"
-            onClick={() => fileRef.current?.click()}
-            disabled={busy}
-            style={{
-              flex: 1, padding: "6px 10px", fontSize: 12, fontWeight: 700,
-              borderRadius: 4, cursor: busy ? "default" : "pointer",
-              background: "rgba(167,139,250,.14)",
-              border: "1px solid rgba(167,139,250,.4)",
-              color: "rgba(216,180,254,.95)",
-              opacity: busy ? 0.5 : 1,
-            }}
-          >{busy ? "Uploading…" : (bannerUrl ? "Replace" : "Upload banner")}</button>
-          {bannerUrl && (
-            <button
-              type="button"
-              onClick={clear}
-              disabled={busy}
-              style={{
-                padding: "6px 10px", fontSize: 12, fontWeight: 700,
-                borderRadius: 4, cursor: busy ? "default" : "pointer",
-                background: "transparent",
-                border: "1px solid rgba(148,163,184,.3)",
-                color: "rgba(148,163,184,.9)",
-              }}
-            >Clear</button>
-          )}
-        </div>
-        <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={onPick} style={{ display: "none" }} />
-        {err && <div style={{ fontSize: 11, color: "rgba(252,165,165,.95)" }}>{err}</div>}
-      </div>
-    </Row>
-  );
-}
-
-function PillIntensityRow() {
-  const [val, setVal] = React.useState<number>(60);
-  React.useEffect(() => {
-    try {
-      const raw = localStorage.getItem("weered:pillBgIntensity");
-      const n = raw == null ? 60 : Math.max(0, Math.min(100, Number(raw)));
-      if (Number.isFinite(n)) setVal(n);
-    } catch {}
-  }, []);
-  function update(n: number) {
-    const clamped = Math.max(0, Math.min(100, Math.round(n)));
-    setVal(clamped);
-    try { localStorage.setItem("weered:pillBgIntensity", String(clamped)); } catch {}
-    try { window.dispatchEvent(new CustomEvent("weered:pillBgIntensity", { detail: clamped })); } catch {}
-  }
-  return (
-    <Row label="Pill intensity" hint="How strongly tinted pills render. 0 turns the tint off entirely.">
-      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        <input
-          type="range"
-          min={0} max={100} step={5}
-          value={val}
-          onChange={(e) => update(Number(e.target.value))}
-          style={{ width: 120, accentColor: "var(--weered-accent-text, rgba(167,139,250,.85))" }}
-        />
-        <span style={{ fontFamily: "ui-monospace, 'JetBrains Mono', monospace", fontSize: 11, color: "var(--weered-muted, rgba(148,163,184,.75))", minWidth: 32, textAlign: "right" }}>
-          {val}%
-        </span>
-      </div>
-    </Row>
-  );
-}
-
-function ColorPickerRow({
-  label, hint, value, onChange, onClear,
-}: {
-  label: string; hint?: string; value: string;
-  onChange: (v: string) => void; onClear: () => void;
-}) {
-  const safeValue = /^#[0-9a-f]{6}$/i.test(value) ? value : "#5800E5";
-  return (
-    <Row label={label} hint={hint}>
-      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-        <input
-          type="color"
-          value={safeValue}
-          onChange={(e) => onChange(e.target.value)}
-          style={{
-            width: 36, height: 28, borderRadius: 6,
-            border: "1px solid var(--weered-border, rgba(255,255,255,.12))",
-            background: "transparent", padding: 2, cursor: "pointer",
-          }}
-        />
-        <span style={{ fontFamily: "ui-monospace, 'JetBrains Mono', monospace", fontSize: 11, color: "var(--weered-muted, rgba(148,163,184,.75))", minWidth: 64 }}>
-          {value || "default"}
-        </span>
-        {value && (
-          <button
-            type="button"
-            onClick={onClear}
-            style={{
-              padding: "3px 8px", borderRadius: 6, fontSize: 10, fontWeight: 700,
-              border: "1px solid var(--weered-border, rgba(255,255,255,.12))",
-              background: "transparent", color: "var(--weered-muted, rgba(148,163,184,.85))",
-              cursor: "pointer", fontFamily: "inherit",
-            }}
-            title="Reset to default"
-          >
-            Reset
-          </button>
-        )}
-      </div>
-    </Row>
   );
 }
 

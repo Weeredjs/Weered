@@ -25,6 +25,7 @@ const WEERED_THEMES: Record<WeeredThemeName, { bg: string; panel: string; panel2
 import SteamAchievementsPanel from "../../SteamAchievementsPanel";
 import { placeAddress, placeOf, type Place } from "../../../lib/place";
 import LookStudio from "../LookStudio";
+import { YourColours } from "../YourColours";
 import { frameFx, nameFx } from "../../../lib/looks";
 
 function applyWeeredTheme(name: WeeredThemeName) {
@@ -371,6 +372,10 @@ export default function ProfileSheet({ userId }: { userId: string }) {
   const apiBase = w?.apiBase || "";
 
   const isMe = !!me && (String(me?.id || "") === String(userId) || userId === "@me");
+  // Your colours explain themselves differently under Nebula (components/overlays/YourColours.tsx).
+  const nebulaOn =
+    typeof document !== "undefined" &&
+    document.documentElement.getAttribute("data-weered-theme") === "nebula";
   const resolvedId = isMe ? me?.id : userId;
 
   const [profile,     setProfile    ] = useState<Profile | null>(null);
@@ -1065,6 +1070,7 @@ export default function ProfileSheet({ userId }: { userId: string }) {
             avatarFrame={(profile as any).avatarFrame || null}
             onSave={saveLook}
           />
+          <YourColours nebula={nebulaOn} />
         </div>
       )}
 

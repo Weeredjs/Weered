@@ -3,7 +3,7 @@
 // Design your Weered, the left panel's three tabs: Sections (blocks to add,
 // switched-off sections to bring back), Layouts (presets) and Look (theme,
 // colourway, type, starfield, density).
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { chip, input, label } from "../lobby-design/designerKit";
 import { alpha } from "../composer/ui";
 import {
@@ -37,6 +37,7 @@ import {
 import { editLayout, editLook, selectItem, type ShellLook } from "../../lib/shellDesign";
 import { beginLibraryDrag, justDragged } from "./ShellDesignOverlay";
 import { EffectControls, StructureControls } from "./ShellLookControls";
+import { readDisplay, setDisplay, type DisplaySwitches } from "../../lib/displaySettings";
 
 // ── Sections ──────────────────────────────────────────────────────────────
 export function SectionsTab({
@@ -345,6 +346,31 @@ const CLASSIC_SKINS: { id: SiteThemeId; name: string; sw: string }[] = [
   { id: "gray", name: "Gray", sw: "#6b7280" },
 ];
 
+/** This device's two display switches (lib/displaySettings.ts): they apply at
+ *  once, outside the draft, as they did in Settings. */
+function DeviceSwitches({ accent }: { accent: string }) {
+  const [d, setD] = useState<DisplaySwitches>({ reduceMotion: false, keepDefaultTheme: false });
+  useEffect(() => setD(readDisplay()), []);
+  return (
+    <>
+      <Toggle
+        on={d.reduceMotion}
+        accent={accent}
+        onClick={() => setD(setDisplay({ reduceMotion: !d.reduceMotion }))}
+        title="Turn off all animations"
+        blurb="No effects, starfield or transitions, here or in lobbies. On this device, right away."
+      />
+      <Toggle
+        on={d.keepDefaultTheme}
+        accent={accent}
+        onClick={() => setD(setDisplay({ keepDefaultTheme: !d.keepDefaultTheme }))}
+        title="Your look in themed lobbies too"
+        blurb="Lobbies with their own theme (vOCN, Windrose, D&D and others) show yours instead."
+      />
+    </>
+  );
+}
+
 function Toggle({
   on,
   accent,
@@ -580,8 +606,10 @@ export function LookTab({ accent, look }: { accent: string; look: ShellLook }) {
         title="Compact"
         blurb="Tighter rows, more on screen."
       />
+      <DeviceSwitches accent={accent} />
       <div style={{ fontSize: 11, opacity: 0.5, marginTop: 12, lineHeight: 1.45 }}>
-        Lobbies with their own theme keep it. Your layout comes with you everywhere.
+        Lobbies with their own theme keep it, unless you switch that off above. Your layout comes
+        with you everywhere.
       </div>
     </div>
   );
