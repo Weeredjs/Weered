@@ -15,7 +15,7 @@ import { cutoffNow } from "../lib/sessionCutoff";
 import { isOfficeRoom } from "../lib/officeRooms";
 import { accountForGoogle } from "../lib/googleLink";
 import { cleanDisplayName } from "../lib/displayName";
-import { loginFailed, loginPaused, loginSucceeded } from "../lib/loginGuard";
+import { loginFailed, loginPaused, loginSucceeded, noAccountDelay } from "../lib/loginGuard";
 import { setAuthCookie, clearAuthCookie, isWebClient, readCookie } from "../lib/authCookie";
 
 // Web auth lives in the httpOnly cookie (set via setAuthCookie); only non-web
@@ -25,10 +25,6 @@ function authedSend(req: any, reply: any, token: string, extra: Record<string, a
   return reply.send(isWebClient(req) ? extra : { token, ...extra });
 }
 import { sendMail, buildVerifyEmail, buildResetEmail } from "../lib/email";
-
-// What a sign-in for a name with no password account checks against: the same
-// bcrypt cost as a real one, and nothing typed can match it.
-const NO_ACCOUNT_HASH = bcrypt.hashSync(randomBytes(24).toString("hex"), 10);
 
 // Auth routes (extracted from index.ts): local register/login/logout, email
 // verification + password reset, Google OAuth, dev-login, username-check,
@@ -423,9 +419,7 @@ export default async function authRoutes(app: FastifyInstance, opts: Opts) {
         });
       const la = await prisma.localAuth.findUnique({ where: { username } }).catch(() => null);
       if (!la) {
-        // As slow as a wrong password, so the answer's timing doesn't say
-        // which names have a password account (red team finding 24).
-        await bcrypt.compare(password, NO_ACCOUNT_HASH);
+        await noAccountDelay(password);
         loginFailed(username);
         return reply.code(401).send({ error: "Invalid credentials" });
       }

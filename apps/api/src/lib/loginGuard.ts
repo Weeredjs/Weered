@@ -5,6 +5,9 @@
  * sign-in for that name until the window passes; a right one clears the count.
  * Google, Discord and the reset email still work while it's paused.
  */
+import bcrypt from "bcryptjs";
+import { randomBytes } from "crypto";
+
 const WINDOW_MS = 15 * 60_000;
 export const LOGIN_FAILS_MAX = 10;
 const fails = new Map<string, { n: number; start: number }>();
@@ -28,4 +31,12 @@ export function loginFailed(username: string, now = Date.now()) {
 
 export function loginSucceeded(username: string) {
   fails.delete(username);
+}
+
+/** A sign-in for a name with no password account takes as long as a wrong
+ *  password, so the answer's timing doesn't say which names have one (red
+ *  team finding 24). Nothing typed can match this hash. */
+const NO_ACCOUNT_HASH = bcrypt.hashSync(randomBytes(24).toString("hex"), 10);
+export async function noAccountDelay(password: string): Promise<void> {
+  await bcrypt.compare(password, NO_ACCOUNT_HASH);
 }
