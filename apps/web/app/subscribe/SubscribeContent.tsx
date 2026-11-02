@@ -38,11 +38,11 @@ const TIERS = [
     glow: "rgba(148,163,184,0.15)",
     border: "rgba(148,163,184,0.2)",
     features: [
-      "Your own lobbies, up to three",
+      "Up to three lobbies of your own",
       "Your own place to hang out",
       "Voice, video, and screen share",
-      "Join fireteams (LFG)",
-      "The feed. All of it.",
+      "All the flair: frames, name effects, your drip",
+      "Describe it: 10 AI builds a day",
     ],
     ctaStyle: "ghost",
   },
@@ -58,11 +58,11 @@ const TIERS = [
     badge: "most popular",
     features: [
       "Everything in Innocent",
+      "yourname.weered.ca for your place",
+      "The full build suite: 60 AI builds a day",
       "Your new lobbies show in Explore right away",
-      "60 AI builds a day (free: 10)",
       "Pictures in chat right away, kept for good",
-      "Coloured name and tier icon",
-      "Early access to new features",
+      "The Indicted icon and name colour",
     ],
     ctaStyle: "primary",
   },
@@ -77,8 +77,27 @@ const TIERS = [
     border: "rgba(249,115,22,0.3)",
     features: [
       "Everything in Indicted",
-      "The Felon name colour and icon",
-      "Direct line to platform support",
+      "One lobby at yourlobby.weered.ca",
+      "AI-built blocks and games in your lobbies",
+      "The Felon icon and name colour",
+    ],
+    ctaStyle: "orange",
+  },
+  {
+    id: "CONDEMNED",
+    name: "Condemned",
+    price: "$25",
+    sub: "/ month",
+    monthly: 25,
+    color: "#f87171",
+    glow: "rgba(239,68,68,0.16)",
+    border: "rgba(239,68,68,0.32)",
+    features: [
+      "Everything in Felon",
+      "Three lobbies at their own weered.ca addresses",
+      "A lobby on a domain of your own",
+      "The Condemned icon and name colour",
+      "More than three? Talk to us.",
     ],
     ctaStyle: "orange",
   },
@@ -214,7 +233,7 @@ export default function SubscribeContent() {
         }
         .sub-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+          grid-template-columns: repeat(auto-fit, minmax(168px, 1fr));
           gap: 16px;
           margin-bottom: 48px;
         }
@@ -396,9 +415,11 @@ export default function SubscribeContent() {
           <div className="sub-grid">
             {TIERS.map((tier, _i) => {
               const isCurrent = currentTier === tier.id;
+              // Any plan above the one you're on (a paying member switches in
+              // the billing portal; api routes/billing.ts sends them there).
               const isUpgrade =
                 tier.monthly > 0 &&
-                (currentTier === "FREE" || (currentTier === "INDICTED" && tier.id === "FELON"));
+                tier.monthly > (TIERS.find((t) => t.id === currentTier)?.monthly ?? 0);
               const isKingpin = tier.id === "KINGPIN";
 
               return (

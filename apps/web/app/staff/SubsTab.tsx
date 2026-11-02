@@ -16,11 +16,12 @@ type Member = {
   stripeUrl: string | null;
 };
 
-const TIERS: UserTier[] = ["INNOCENT", "INDICTED", "FELON", "KINGPIN"];
+const TIERS: UserTier[] = ["INNOCENT", "INDICTED", "FELON", "CONDEMNED", "KINGPIN"];
 const TIER_LABEL: Record<UserTier, string> = {
   INNOCENT: "Free",
   INDICTED: "Indicted",
   FELON: "Felon",
+  CONDEMNED: "Condemned",
   KINGPIN: "Kingpin",
 };
 const ERRORS: Record<string, string> = {

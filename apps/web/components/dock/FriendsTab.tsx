@@ -313,6 +313,7 @@ export function FriendsTab({
 
 export const FRIEND_TIER_LABEL: Record<string, { label: string; color: string; bg: string }> = {
   KINGPIN: { label: "KINGPIN", color: "#fde68a", bg: "rgba(252,211,77,.15)" },
+  CONDEMNED: { label: "CONDEMNED", color: "#fca5a5", bg: "rgba(239,68,68,.15)" },
   FELON: { label: "FELON", color: "#fdba74", bg: "rgba(249,115,22,.15)" },
   INDICTED: { label: "INDICTED", color: "rgba(243,244,246,.85)", bg: "rgba(88,0,229,.15)" },
 };

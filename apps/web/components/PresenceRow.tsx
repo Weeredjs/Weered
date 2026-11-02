@@ -299,11 +299,13 @@ export default function PresenceRow({
             ? "#34d399"
             : tier === "KINGPIN"
               ? "#fcd34d"
-              : tier === "FELON"
-                ? "#f97316"
-                : tier === "INDICTED"
-                  ? "#a78bfa"
-                  : null;
+              : tier === "CONDEMNED"
+                ? "#ef4444"
+                : tier === "FELON"
+                  ? "#f97316"
+                  : tier === "INDICTED"
+                    ? "#a78bfa"
+                    : null;
 
   const inner = (
     <div

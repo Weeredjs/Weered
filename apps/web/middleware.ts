@@ -6,7 +6,8 @@
 // name its owner controls (red team 2026-11-01, finding 4; API lib/siteHost.ts).
 //
 // Weered's own hosts, the ECEB office hosts and dev never reach the lookup,
-// except <label>.weered.ca, which is someone's place (api routes/places.ts).
+// except <label>.weered.ca: someone's place, a lobby's own weered.ca address
+// or a paying member's name (api lib/weeredHosts.ts).
 import { NextResponse, type NextRequest } from "next/server";
 
 const OWN_HOST =

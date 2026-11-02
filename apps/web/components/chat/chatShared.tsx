@@ -29,6 +29,7 @@ export function nameStyleFor(role?: string, tier?: string): React.CSSProperties 
   if (r === "SUPPORT") return { color: "#c4b5fd", textShadow: "0 0 8px rgba(196,181,253,0.35)" };
   if (r === "MOD") return { color: "#34d399", textShadow: "0 0 6px rgba(52,211,153,0.30)" };
   if (t === "KINGPIN") return { color: "#fcd34d", textShadow: "0 0 6px rgba(252,211,77,0.35)" };
+  if (t === "CONDEMNED") return { color: "#f87171", textShadow: "0 0 6px rgba(248,113,113,0.35)" };
   if (t === "FELON") return { color: "#fb923c", textShadow: "0 0 5px rgba(251,146,60,0.30)" };
   if (t === "INDICTED") return { color: "#a78bfa" };
   return {};

@@ -3,10 +3,17 @@ import type { FastifyInstance } from "fastify";
 import { promises as dns } from "dns";
 import { createHmac } from "crypto";
 import { prisma } from "../lib/prisma";
+import { canOwnDomain } from "../lib/tiers";
+import {
+  addressAllowance,
+  addressProblem,
+  forgetWeeredHosts,
+  weeredHostLobby,
+} from "../lib/weeredHosts";
 import { hasLobbyPerm } from "../lib/lobbyPerms";
 import { logLobbyAudit } from "../lib/lobbyAudit";
 import { sendMail } from "../lib/email";
-import { isPlaceId, placeForHost } from "./places";
+import { isPlaceId } from "./places";
 
 // Custom-build meeting requests go here, not on the public board.
 const MEETING_NOTIFY_TO = process.env.MEETING_NOTIFY_TO || "james@weered.ca";
@@ -184,6 +191,76 @@ export default async function lobbyDesignRoutes(app: FastifyInstance, opts: Opts
     return reply.send({ ok: true, updated: Object.keys(data) });
   });
 
+  /** The lobby owner's plan, which is what pays for its addresses. */
+  async function ownerPlan(lobby: { ownerId?: string | null }) {
+    if (!lobby.ownerId) return null;
+    return prisma.user
+      .findUnique({ where: { id: lobby.ownerId }, select: { tier: true, globalRole: true } })
+      .catch(() => null);
+  }
+
+  // ── <id>.weered.ca ────────────────────────────────────────────────────────
+  // A lobby's own weered.ca address (2026-11-02 pricing): Felon covers one of
+  // the owner's lobbies, Condemned three, Kingpin and staff any number. It
+  // answers only while the owner's plan covers it (lib/weeredHosts.ts).
+  const ADDRESS_PROBLEMS: Record<string, string> = {
+    bad_label: "This lobby's name can't be a web address.",
+    taken: "That address belongs to someone's place.",
+  };
+  async function addressState(lobby: any) {
+    const allowance = addressAllowance(await ownerPlan(lobby));
+    const used = lobby.ownerId
+      ? await prisma.lobby.count({ where: { ownerId: lobby.ownerId, subdomain: true } })
+      : 0;
+    const host = `${lobby.id}.weered.ca`;
+    return {
+      host,
+      on: !!lobby.subdomain,
+      live: !!lobby.subdomain && (await weeredHostLobby(host)) === lobby.id,
+      allowance: allowance === Infinity ? null : allowance,
+      used,
+      problem: await addressProblem(lobby.id, lobby.ownerId ?? null),
+    };
+  }
+
+  app.get("/lobbies/:id/admin/subdomain", async (req, reply) => {
+    const ctx = await designer(req, reply);
+    if (!ctx) return;
+    return reply.send({ ok: true, ...(await addressState(ctx.lobby)) });
+  });
+
+  app.put("/lobbies/:id/admin/subdomain", async (req, reply) => {
+    const ctx = await designer(req, reply);
+    if (!ctx) return;
+    const on = ((req as any).body || {}).on === true;
+    if (on && !ctx.lobby.subdomain) {
+      const state = await addressState(ctx.lobby);
+      if (state.problem)
+        return reply
+          .code(400)
+          .send({ ok: false, error: state.problem, message: ADDRESS_PROBLEMS[state.problem] });
+      if (state.allowance !== null && state.used >= state.allowance)
+        return reply.code(402).send({
+          ok: false,
+          error: "plan_required",
+          message:
+            state.allowance === 0
+              ? "A weered.ca address comes with Felon ($14 a month) for one lobby, or Condemned ($25) for three."
+              : "Your plan's weered.ca addresses are all in use. Turn one off, or move up a plan.",
+        });
+    }
+    await prisma.lobby.update({ where: { id: ctx.lobby.id }, data: { subdomain: on } });
+    forgetWeeredHosts();
+    await logLobbyAudit({
+      lobbyId: ctx.lobby.id,
+      type: on ? "address_on" : "address_off",
+      actorId: ctx.user.id,
+      actorName: ctx.user.name || "",
+      note: `${ctx.lobby.id}.weered.ca`,
+    }).catch(() => {});
+    return reply.send({ ok: true, ...(await addressState({ ...ctx.lobby, subdomain: on })) });
+  });
+
   // ── Custom domain ─────────────────────────────────────────────────────────
   app.put("/lobbies/:id/admin/domain", async (req, reply) => {
     const ctx = await designer(req, reply);
@@ -194,6 +271,20 @@ export default async function lobbyDesignRoutes(app: FastifyInstance, opts: Opts
         ok: false,
         error: "bad_domain",
         message: "Enter a domain you own, like club.example.com.",
+      });
+    // A domain of your own is the Condemned plan's (lib/tiers.ts). A lobby that
+    // already has one keeps it; staff can set one for anyone.
+    const owner = await ownerPlan(ctx.lobby);
+    const allowed =
+      canOwnDomain(owner?.tier) ||
+      isStaffRole(owner?.globalRole) ||
+      isStaffRole(await getGlobalRole(ctx.user.id).catch(() => null)) ||
+      ctx.lobby.customDomain === host;
+    if (!allowed)
+      return reply.code(402).send({
+        ok: false,
+        error: "plan_required",
+        message: "A domain of your own comes with the Condemned plan ($25 a month).",
       });
     const taken = await prisma.lobby.findUnique({
       where: { customDomain: host },
@@ -283,8 +374,8 @@ export default async function lobbyDesignRoutes(app: FastifyInstance, opts: Opts
   // domains only, so nobody can point a random name at us and burn our
   // Let's Encrypt rate limit.
   app.get("/domains/check", async (req, reply) => {
-    // <label>.weered.ca is someone's place (routes/places.ts), when it exists.
-    const place = await placeForHost(String((req.query as any)?.domain || ""));
+    // <label>.weered.ca: a place, a lobby's address or a member's name (lib/weeredHosts.ts).
+    const place = await weeredHostLobby(String((req.query as any)?.domain || ""));
     if (place) return reply.send("ok");
     const host = normalizeHost((req.query as any)?.domain);
     if (!host) return reply.code(404).send("no");
@@ -293,7 +384,7 @@ export default async function lobbyDesignRoutes(app: FastifyInstance, opts: Opts
   });
 
   app.get("/domains/resolve", async (req, reply) => {
-    const place = await placeForHost(String((req.query as any)?.host || ""));
+    const place = await weeredHostLobby(String((req.query as any)?.host || ""));
     if (place) {
       reply.header("Cache-Control", "public, max-age=60");
       return reply.send({ ok: true, lobbyId: place });

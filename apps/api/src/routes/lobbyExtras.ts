@@ -1,6 +1,7 @@
 import { isStaffRole } from "../lib/lobbyAuth";
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
+import { ownerBuildsModules } from "../lib/moduleGate";
 import { swallow } from "../lib/logger";
 import { hasLobbyPerm } from "../lib/lobbyPerms";
 import { logLobbyAudit } from "../lib/lobbyAudit";
@@ -326,14 +327,13 @@ export default async function lobbyExtrasRoutes(app: FastifyInstance, opts: Opts
 
   /** Code that runs for visitors is saved by paid accounts and staff: someone
    *  accountable stands behind it. CUSTOM_BLOCKS_OPEN=1 opens it to everyone. */
-  async function mayWriteCode(userId: string) {
+  // AI-built blocks and games are the lobby's custom modules: Felon ($14) and
+  // up, on the lobby owner's plan (James 2026-11-02: "whatever they build with
+  // AI would yes be premium under tier 2 and 3"). Staff can always.
+  async function mayWriteCode(ctx: { user: { id: string }; lobby: { ownerId?: string | null } }) {
     if (process.env.CUSTOM_BLOCKS_OPEN === "1") return true;
-    const gr = await getGlobalRole(userId).catch(() => "USER");
-    if (isStaffRole(gr)) return true;
-    const u = await prisma.user
-      .findUnique({ where: { id: userId }, select: { tier: true } })
-      .catch(() => null);
-    return !!u?.tier && u.tier !== "INNOCENT";
+    if (isStaffRole(await getGlobalRole(ctx.user.id).catch(() => "USER"))) return true;
+    return ownerBuildsModules(ctx.lobby.ownerId);
   }
 
   app.get("/lobbies/:id/blocks/:bid", async (req, reply) => {
@@ -365,13 +365,13 @@ export default async function lobbyExtrasRoutes(app: FastifyInstance, opts: Opts
         updatedAt: true,
       },
     });
-    return reply.send({ ok: true, blocks: rows, canWrite: await mayWriteCode(ctx.user.id) });
+    return reply.send({ ok: true, blocks: rows, canWrite: await mayWriteCode(ctx) });
   });
 
   app.post("/lobbies/:id/admin/blocks", async (req, reply) => {
     const ctx = await staff(req, reply);
     if (!ctx) return;
-    if (!(await mayWriteCode(ctx.user.id)))
+    if (!(await mayWriteCode(ctx)))
       return reply.code(402).send({ ok: false, error: "paid_feature" });
     const body: any = (req as any).body || {};
     const kind = body.kind === "game" ? "game" : "block";
@@ -418,7 +418,7 @@ export default async function lobbyExtrasRoutes(app: FastifyInstance, opts: Opts
   app.patch("/lobbies/:id/admin/blocks/:bid", async (req, reply) => {
     const ctx = await staff(req, reply);
     if (!ctx) return;
-    if (!(await mayWriteCode(ctx.user.id)))
+    if (!(await mayWriteCode(ctx)))
       return reply.code(402).send({ ok: false, error: "paid_feature" });
     const row = await prisma.customBlock.findFirst({
       where: { id: String((req.params as any).bid), lobbyId: ctx.lobby.id },

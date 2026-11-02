@@ -17,6 +17,7 @@ const ROLE_MAP: Record<string, { file: string; color: string }> = {
 
 const TIER_MAP: Record<string, { file: string; color: string }> = {
   KINGPIN: { file: "kingpin", color: "#D4A017" },
+  CONDEMNED: { file: "condemned", color: "#E24B4A" },
   FELON: { file: "felon", color: "#F97316" },
   INDICTED: { file: "indicted", color: "#A78BFA" },
 };

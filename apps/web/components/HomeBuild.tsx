@@ -295,6 +295,12 @@ export default function HomeBuild({
                         </option>
                       ))}
                     </select>
+                    {/* A code address: yourname.weered.ca is the $6 plan's (lib/place.ts). */}
+                    {!place.host && (
+                      <Link href="/subscribe" className="home-build-mine-design" title="Plans">
+                        Get yourname.weered.ca
+                      </Link>
+                    )}
                   </span>
                 ) : (
                   <button

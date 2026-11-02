@@ -142,7 +142,7 @@ export function RosterTab() {
         <h2 className="wops-section-title">Tiers and notoriety</h2>
         <div className="wops-card wops-muted" style={{ lineHeight: 1.55 }}>
           Two separate things that share crime names. The <b>tier</b> is paid: Free, Indicted ($6 a
-          month), Felon ($14 a month), or Kingpin, which only staff give (Subscriptions).{" "}
+          month), Felon ($14), Condemned ($25), or Kingpin, which only staff give (Subscriptions).{" "}
           <b>Notoriety</b> is earned by taking part and climbs from Street Rat to Kingpin. One never
           changes the other.
         </div>

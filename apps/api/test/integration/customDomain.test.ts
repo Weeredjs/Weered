@@ -27,7 +27,8 @@ let app: any;
 beforeAll(async () => {
   owner = (
     await prisma.user.create({
-      data: { usernameKey: `itest_dom_${stamp}`, name: "owner" },
+      // A domain of your own is the Condemned plan's (lib/tiers.ts, 2026-11-02).
+      data: { usernameKey: `itest_dom_${stamp}`, name: "owner", tier: "CONDEMNED" },
       select: { id: true },
     })
   ).id;

@@ -5,6 +5,7 @@ import { fetchWithTimeout } from "../lib/fetchWithTimeout";
 import { z } from "zod";
 import { prisma } from "../lib/prisma";
 import { STRIPE_LIVE_STATUSES, paidThroughStripe } from "../lib/stripeTier";
+import { SOLD_TIERS } from "../lib/tiers";
 import { createHmac, timingSafeEqual, randomUUID } from "crypto";
 
 type Opts = {
@@ -242,10 +243,15 @@ export default async function billingRoutes(app: FastifyInstance, opts: Opts) {
   const STRIPE_WH_SEC = process.env.STRIPE_WEBHOOK_SECRET || "";
   const SITE_URL = process.env.SITE_URL || "https://weered.ca";
 
+  // The three tiers Stripe sells (lib/tiers.ts): $6, $14, $25.
   const STRIPE_PRICES: Record<string, string> = {
     INDICTED: process.env.STRIPE_PRICE_INDICTED || "",
     FELON: process.env.STRIPE_PRICE_FELON || "",
+    CONDEMNED: process.env.STRIPE_PRICE_CONDEMNED || "",
   };
+  type SoldTier = (typeof SOLD_TIERS)[number];
+  const asSold = (t: unknown): SoldTier | null =>
+    (SOLD_TIERS as readonly string[]).includes(String(t)) ? (t as SoldTier) : null;
 
   async function stripeReq(method: string, path: string, body?: any) {
     const url = `https://api.stripe.com/v1${path}`;
@@ -284,11 +290,9 @@ export default async function billingRoutes(app: FastifyInstance, opts: Opts) {
   }
 
   /** The Weered tier a Stripe price sells, if it is one of ours. */
-  function tierForPrice(priceId: string): "INDICTED" | "FELON" | null {
+  function tierForPrice(priceId: string): SoldTier | null {
     if (!priceId) return null;
-    if (priceId === STRIPE_PRICES.FELON) return "FELON";
-    if (priceId === STRIPE_PRICES.INDICTED) return "INDICTED";
-    return null;
+    return SOLD_TIERS.find((t) => STRIPE_PRICES[t] && STRIPE_PRICES[t] === priceId) ?? null;
   }
 
   app.get("/subscribe/config", async (_req, reply) => {
@@ -298,6 +302,7 @@ export default async function billingRoutes(app: FastifyInstance, opts: Opts) {
       prices: {
         INDICTED: { id: STRIPE_PRICES.INDICTED, amount: 600, label: "Indicted — $6/mo" },
         FELON: { id: STRIPE_PRICES.FELON, amount: 1400, label: "Felon — $14/mo" },
+        CONDEMNED: { id: STRIPE_PRICES.CONDEMNED, amount: 2500, label: "Condemned — $25/mo" },
       },
     });
   });
@@ -609,8 +614,7 @@ export default async function billingRoutes(app: FastifyInstance, opts: Opts) {
 
   /** Payment recovered (unpaid -> active): the tier comes back. */
   async function restorePlatformSub(dbSub: { userId: string; tier: string }) {
-    const userTier =
-      dbSub.tier === "FELON" ? "FELON" : dbSub.tier === "INDICTED" ? "INDICTED" : null;
+    const userTier = asSold(dbSub.tier);
     if (!userTier) return;
     await prisma.user.update({ where: { id: dbSub.userId }, data: { tier: userTier } });
     await globalAudit("system", "Stripe", "subscription_restored", dbSub.userId, undefined, {
@@ -773,9 +777,13 @@ export default async function billingRoutes(app: FastifyInstance, opts: Opts) {
             });
           }
         } else {
-          const tier = session?.metadata?.tier || "INDICTED";
           if (userId && subId) {
             const stripeSub = await stripeReq("GET", `/subscriptions/${subId}`);
+            // The tier the price sells, then the one the checkout asked for.
+            const tier =
+              tierForPrice(String(stripeSub?.items?.data?.[0]?.price?.id || "")) ??
+              asSold(session?.metadata?.tier) ??
+              "INDICTED";
             await prisma.subscription.upsert({
               where: { userId },
               update: {
@@ -799,8 +807,7 @@ export default async function billingRoutes(app: FastifyInstance, opts: Opts) {
                   : null,
               },
             });
-            const userTier = tier === "FELON" ? "FELON" : "INDICTED";
-            await prisma.user.update({ where: { id: userId }, data: { tier: userTier } });
+            await prisma.user.update({ where: { id: userId }, data: { tier } });
             await globalAudit("system", "Stripe", "subscription_activated", userId, undefined, {
               tier,
               subId,
@@ -959,7 +966,7 @@ export default async function billingRoutes(app: FastifyInstance, opts: Opts) {
       const body: any = (req as any).body || {};
       const targetId = String(body.userId || "");
       const tier = String(body.tier || "").toUpperCase();
-      if (!targetId || !["FREE", "INDICTED", "FELON", "KINGPIN"].includes(tier)) {
+      if (!targetId || !["FREE", "INDICTED", "FELON", "CONDEMNED", "KINGPIN"].includes(tier)) {
         return reply.code(400).send({ ok: false, error: "invalid" });
       }
       if (await paidThroughStripe(targetId))
@@ -973,14 +980,7 @@ export default async function billingRoutes(app: FastifyInstance, opts: Opts) {
           status: tier === "FREE" ? "inactive" : "active",
         },
       });
-      const userTier =
-        tier === "KINGPIN"
-          ? "KINGPIN"
-          : tier === "FELON"
-            ? "FELON"
-            : tier === "INDICTED"
-              ? "INDICTED"
-              : "INNOCENT";
+      const userTier = tier === "FREE" ? "INNOCENT" : (tier as Exclude<SubTier, "FREE">);
       await prisma.user.update({ where: { id: targetId }, data: { tier: userTier } });
       await globalAudit(u.id, u.name, "subscription_grant", targetId, undefined, { tier });
       return reply.send({ ok: true, tier });
@@ -1033,7 +1033,13 @@ export default async function billingRoutes(app: FastifyInstance, opts: Opts) {
     });
     const subOf = new Map(subs.map((x) => [x.userId, x]));
     const dash = `https://dashboard.stripe.com${STRIPE_SK.startsWith("sk_test_") ? "/test" : ""}`;
-    const RANK: Record<string, number> = { KINGPIN: 3, FELON: 2, INDICTED: 1, INNOCENT: 0 };
+    const RANK: Record<string, number> = {
+      KINGPIN: 4,
+      CONDEMNED: 3,
+      FELON: 2,
+      INDICTED: 1,
+      INNOCENT: 0,
+    };
     const members = users.map((m) => {
       const sub = subOf.get(m.id);
       const paying = !!(sub?.stripeSubId && STRIPE_LIVE_STATUSES.includes(sub.status));

@@ -41,6 +41,7 @@ export function ChatMembers({ ctx, liveRoomUsers, openHover, hoverClose }: ChatM
           if (r === "SUPPORT") return 2;
           if (r === "MOD" || here === "mod") return 3;
           if (t === "KINGPIN") return 4;
+          if (t === "CONDEMNED") return 4.5;
           if (t === "FELON") return 5;
           if (t === "INDICTED") return 6;
           return 7;

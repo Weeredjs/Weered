@@ -593,11 +593,13 @@ export default function UserCorner() {
             const tierColor =
               tier === "KINGPIN"
                 ? "#fde68a"
-                : tier === "FELON"
-                  ? "#fdba74"
-                  : tier === "INDICTED"
-                    ? "rgba(216,180,254,.95)"
-                    : "rgba(243,244,246,.85)";
+                : tier === "CONDEMNED"
+                  ? "#fca5a5"
+                  : tier === "FELON"
+                    ? "#fdba74"
+                    : tier === "INDICTED"
+                      ? "rgba(216,180,254,.95)"
+                      : "rgba(243,244,246,.85)";
             return (
               <span
                 className="weered-uc-banner-tier"
@@ -803,11 +805,13 @@ export default function UserCorner() {
                 ? "#fde68a"
                 : tierU === "MADE_MAN" || tierU === "MADEMAN"
                   ? "#f0abfc"
-                  : tierU === "FELON"
-                    ? "#fdba74"
-                    : tierU === "INDICTED"
-                      ? "rgba(216,180,254,.95)"
-                      : "rgba(243,244,246,.85)";
+                  : tierU === "CONDEMNED"
+                    ? "#fca5a5"
+                    : tierU === "FELON"
+                      ? "#fdba74"
+                      : tierU === "INDICTED"
+                        ? "rgba(216,180,254,.95)"
+                        : "rgba(243,244,246,.85)";
             return (
               <div
                 style={{

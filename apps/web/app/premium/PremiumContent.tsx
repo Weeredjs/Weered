@@ -15,12 +15,11 @@ const tiers = [
     // effects or avatar frames — so they are listed here, where they belong,
     // rather than being sold a tier up.
     features: [
-      "Your own lobbies, up to three",
+      "Up to three lobbies of your own",
       "Your own place to hang out",
-      "Join and create rooms",
       "Voice, video, and screen share",
-      "Username effects, avatar frames, your own drip",
-      "The feed. All of it.",
+      "All the flair: frames, name effects, your drip",
+      "Describe it: 10 AI builds a day",
     ],
     cta: "You\u2019re already here.",
     ctaLink: "/subscribe",
@@ -35,17 +34,14 @@ const tiers = [
     glow: "rgba(88,0,229,0.2)",
     border: "rgba(88,0,229,0.35)",
     badge: "most popular",
-    // Lobbies became free 2026-11-02 (routes/lobbies.ts, lib/listingHold.ts).
-    // Only what the code does for a paid account is listed: a new lobby lists
-    // at once, the builder allowance (lib/build/allowance.ts), chat pictures
-    // (routes/chatMedia.ts), and the name colour and icon.
+    // What each plan does is api lib/tiers.ts (2026-11-02); lobbies are free.
     features: [
       "Everything in Innocent",
+      "yourname.weered.ca for your place",
+      "The full build suite: 60 AI builds a day",
       "Your new lobbies show in Explore right away",
-      "60 AI builds a day (free: 10)",
       "Pictures in chat right away, kept for good",
-      "Coloured name and tier icon",
-      "Early access to new features",
+      "The Indicted icon and name colour",
     ],
     cta: "Get Indicted",
     ctaLink: "/subscribe",
@@ -61,10 +57,30 @@ const tiers = [
     border: "rgba(249,115,22,0.3)",
     features: [
       "Everything in Indicted",
-      "The Felon name colour and icon",
-      "Direct line to platform support",
+      "One lobby at yourlobby.weered.ca",
+      "AI-built blocks and games in your lobbies",
+      "The Felon icon and name colour",
     ],
     cta: "Become a Felon",
+    ctaLink: "/subscribe",
+    ctaStyle: "orange",
+  },
+  {
+    id: "condemned",
+    name: "Condemned",
+    price: "$25",
+    sub: "/ month",
+    color: "#f87171",
+    glow: "rgba(239,68,68,0.15)",
+    border: "rgba(239,68,68,0.3)",
+    features: [
+      "Everything in Felon",
+      "Three lobbies at their own weered.ca addresses",
+      "A lobby on a domain of your own",
+      "The Condemned icon and name colour",
+      "More than three? Talk to us.",
+    ],
+    cta: "Be Condemned",
     ctaLink: "/subscribe",
     ctaStyle: "orange",
   },
@@ -167,7 +183,7 @@ export default function PremiumContent() {
         }
         .prem-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+          grid-template-columns: repeat(auto-fit, minmax(168px, 1fr));
           gap: 16px;
           margin-bottom: 48px;
         }

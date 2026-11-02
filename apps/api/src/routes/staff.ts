@@ -1122,7 +1122,7 @@ export default async function staffRoutes(app: FastifyInstance, opts: Opts) {
     const body: any = (req as any).body || {};
     const tier = String(body.tier || "").toUpperCase();
 
-    if (!["INNOCENT", "INDICTED", "FELON", "KINGPIN"].includes(tier)) {
+    if (!["INNOCENT", "INDICTED", "FELON", "CONDEMNED", "KINGPIN"].includes(tier)) {
       return reply.code(400).send({ ok: false, error: "invalid_tier" });
     }
     const target = await prisma.user.findUnique({ where: { id: targetId }, select: { id: true } });
@@ -1130,7 +1130,7 @@ export default async function staffRoutes(app: FastifyInstance, opts: Opts) {
     if (await paidThroughStripe(targetId))
       return reply.code(409).send({ ok: false, error: "paid_through_stripe" });
 
-    const userTier = tier as "INNOCENT" | "INDICTED" | "FELON" | "KINGPIN";
+    const userTier = tier as "INNOCENT" | "INDICTED" | "FELON" | "CONDEMNED" | "KINGPIN";
     await prisma.user.update({ where: { id: targetId }, data: { tier: userTier } });
 
     const subTier = tier === "INNOCENT" ? "FREE" : tier;

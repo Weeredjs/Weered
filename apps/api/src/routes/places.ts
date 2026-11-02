@@ -196,6 +196,15 @@ function view(l: { id: string; name: string; moduleConfig?: unknown }) {
   };
 }
 
+/** A place as its owner and visitors see it: a code place shows its owner's
+ *  yourname.weered.ca when their plan gives them one (lib/weeredHosts.ts). */
+async function shown(l: { id: string; name: string; moduleConfig?: unknown }, ownerId: string) {
+  const v = view(l);
+  if (v.host) return v;
+  const { vanityHostFor } = await import("../lib/weeredHosts");
+  return { ...v, host: await vanityHostFor(ownerId, l.id) };
+}
+
 async function placeOf(userId: string) {
   return prisma.lobby.findFirst({
     where: { ownerId: userId, id: { startsWith: PLACE_PREFIX } },
@@ -213,7 +222,7 @@ export default async function placesRoutes(app: FastifyInstance, opts: Opts) {
     const u = authFromHeader((req.headers as any).authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const p = await placeOf(u.id);
-    return reply.send({ ok: true, place: p ? view(p) : null });
+    return reply.send({ ok: true, place: p ? await shown(p, u.id) : null });
   });
 
   // Who can come in: the owner's one switch (components/PlaceGate.tsx).
@@ -242,7 +251,7 @@ export default async function placesRoutes(app: FastifyInstance, opts: Opts) {
     const userId = String((req.params as any).userId || "").slice(0, 64);
     const p = userId ? await placeOf(userId) : null;
     reply.header("Cache-Control", "public, max-age=60");
-    return reply.send({ ok: true, place: p ? view(p) : null });
+    return reply.send({ ok: true, place: p ? await shown(p, userId) : null });
   });
 
   app.post(
@@ -252,7 +261,7 @@ export default async function placesRoutes(app: FastifyInstance, opts: Opts) {
       const u = authFromHeader((req.headers as any).authorization);
       if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
       const have = await placeOf(u.id);
-      if (have) return reply.send({ ok: true, place: view(have), created: false });
+      if (have) return reply.send({ ok: true, place: await shown(have, u.id), created: false });
 
       const me = await prisma.user.findUnique({
         where: { id: u.id },
@@ -307,12 +316,12 @@ export default async function placesRoutes(app: FastifyInstance, opts: Opts) {
           })
           .catch(swallow);
         placeCache.delete(lobby.id);
-        return reply.send({ ok: true, place: view(lobby), created: true });
+        return reply.send({ ok: true, place: await shown(lobby, u.id), created: true });
       } catch (e) {
         swallow(e);
         // Two tabs at once: the other one made it.
         const again = await placeOf(u.id);
-        if (again) return reply.send({ ok: true, place: view(again), created: false });
+        if (again) return reply.send({ ok: true, place: await shown(again, u.id), created: false });
         return reply.code(500).send({ ok: false, error: "place_failed" });
       }
     },

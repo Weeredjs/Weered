@@ -5,6 +5,7 @@ import { allowBuild, nowLine, promptOf } from "../lib/build/allowance";
 import { clip } from "../lib/build/common";
 import type { BuildJob, JobCtx } from "../lib/build/job";
 import { DESCRIBE_JOBS } from "../lib/build/jobs";
+import { ownerBuildsModules } from "../lib/moduleGate";
 
 // Describe anything (James 2026-10-31: "Do everything."). One route for every
 // "describe it" job in lib/build/jobs: events, rooms, roles, chat rules, the
@@ -24,6 +25,8 @@ type Opts = {
   lobbyAdminAccess: (req: any, reply: any, minLevel?: number) => Promise<any>;
 };
 
+const CODE_JOBS = new Set(["block", "game"]);
+
 export default async function aiDescribeRoutes(app: FastifyInstance, opts: Opts) {
   const { authFromHeader, getAI, lobbyAdminAccess } = opts;
   const jobs = new Map<string, BuildJob<any>>(DESCRIBE_JOBS.map((j) => [j.id, j]));
@@ -40,6 +43,14 @@ export default async function aiDescribeRoutes(app: FastifyInstance, opts: Opts)
       const level = access.member?.roleLevel ?? (access.overrideRole ? 5 : 1);
       if (job.perm && !hasLobbyPerm(level, job.perm, access.overrideRole))
         return reply.code(403).send({ ok: false, error: "no_permission" });
+      // Blocks and games are the lobby's custom modules, on its owner's plan
+      // (lib/moduleGate.ts); no build is spent on code that couldn't be saved.
+      if (
+        CODE_JOBS.has(job.id) &&
+        !access.overrideRole &&
+        !(await ownerBuildsModules(access.lobby?.ownerId))
+      )
+        return reply.code(402).send({ ok: false, error: "paid_feature" });
       ctx = { user: access.user, body, prompt: "", lobby: access.lobby, level };
     } else {
       const u = authFromHeader(req.headers?.authorization);

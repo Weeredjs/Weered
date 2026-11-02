@@ -14,6 +14,9 @@ import type { Block } from "../../lib/lobbyLayout";
 import CustomBlockFrame from "./CustomBlockFrame";
 import { chip, input, label } from "./designerKit";
 
+const PLAN_NOTE =
+  "AI-built blocks and games come with the lobby owner's Felon plan ($14 a month) and up.";
+
 type Built = { title: string; height: "s" | "m" | "l"; code: string };
 
 const EXAMPLES = {
@@ -114,7 +117,14 @@ export default function CustomBlockBuilder({
         ))}
       </div>
 
-      <div style={{ marginTop: 12 }}>
+      {/* AI-built blocks and games are custom modules: the lobby owner's Felon
+          plan and up (api lib/moduleGate.ts, 2026-11-02). */}
+      {!canWrite && !pr.customId && (
+        <div style={{ fontSize: 12.5, opacity: 0.8, marginTop: 12, lineHeight: 1.5 }}>
+          {PLAN_NOTE}
+        </div>
+      )}
+      <div style={{ marginTop: 12, display: canWrite || pr.customId ? undefined : "none" }}>
         <DescribeBox
           kind={kind}
           accent={accent}
@@ -159,9 +169,7 @@ export default function CustomBlockBuilder({
               style={{ ...chip(true, accent), flex: 1 }}
               onClick={save}
               disabled={busy || !canWrite}
-              title={
-                canWrite ? "Save it to this lobby" : "Custom blocks and games are for paid accounts"
-              }
+              title={canWrite ? "Save it to this lobby" : PLAN_NOTE}
             >
               {busy ? "Saving…" : pr.customId ? "Save the change" : "Save it to the lobby"}
             </button>
@@ -173,9 +181,7 @@ export default function CustomBlockBuilder({
             </button>
           </div>
           {!canWrite && (
-            <div style={{ fontSize: 11.5, opacity: 0.7, marginTop: 6 }}>
-              Custom blocks and games are for paid accounts.
-            </div>
+            <div style={{ fontSize: 11.5, opacity: 0.7, marginTop: 6 }}>{PLAN_NOTE}</div>
           )}
         </>
       )}

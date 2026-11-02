@@ -21,7 +21,7 @@ const THUMB_DIM = 640;
 const MIN_NOTORIETY = Number(process.env.MEDIA_MIN_NOTORIETY || 100);
 const TRUST_NOTORIETY = Number(process.env.MEDIA_TRUST_NOTORIETY || 1000);
 const FREE_TTL_DAYS = Number(process.env.MEDIA_FREE_TTL_DAYS || 7);
-const PAID_TIERS = new Set(["INDICTED", "FELON", "KINGPIN"]);
+const PAID_TIERS = new Set(["INDICTED", "FELON", "CONDEMNED", "KINGPIN"]);
 const AUTO_HIDE_REPORTS = 3;
 
 function ensureDir() {

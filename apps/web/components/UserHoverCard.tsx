@@ -54,6 +54,7 @@ const TIER_CONFIG: Record<string, { color: string; label: string }> = {
   INNOCENT: { color: "#94a3b8", label: "Innocent" },
   INDICTED: { color: "#a78bfa", label: "Indicted" },
   FELON: { color: "#f97316", label: "Felon" },
+  CONDEMNED: { color: "#ef4444", label: "Condemned" },
   KINGPIN: { color: "#eab308", label: "Kingpin" },
 };
 

@@ -11,7 +11,7 @@ export type RapSheet = {
   avatarColor: string | null;
   caseNo: string;
   onFileSince: string;
-  tier: "INNOCENT" | "INDICTED" | "FELON" | "KINGPIN" | string;
+  tier: "INNOCENT" | "INDICTED" | "FELON" | "CONDEMNED" | "KINGPIN" | string;
   rank: { title: string; stars: number; notoriety: number };
   handles: { psn: string | null; xbox: string | null };
   crew: { id: string; name: string; tag: string; accentColor: string | null; boss: boolean } | null;
@@ -42,6 +42,7 @@ export const STATUS: Record<string, string> = {
   INNOCENT: "Innocent",
   INDICTED: "Indicted",
   FELON: "Felon",
+  CONDEMNED: "Condemned",
   KINGPIN: "Kingpin",
 };
 

@@ -5,6 +5,117 @@ import React, { useEffect, useState } from "react";
 import { API, chip, input, panel } from "./designerKit";
 import { onActivate } from "../../lib/a11y";
 
+// ── <id>.weered.ca ─────────────────────────────────────────────────────────
+// The lobby's own weered.ca address (api routes/lobbyDesign.ts, 2026-11-02):
+// Felon covers one of the owner's lobbies, Condemned three.
+type Address = {
+  host: string;
+  on: boolean;
+  live: boolean;
+  allowance: number | null;
+  used: number;
+  problem: string | null;
+};
+
+function WeeredAddress({ lobbyId, accent }: { lobbyId: string; accent: string }) {
+  const [a, setA] = useState<Address | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  const url = `${API}/lobbies/${encodeURIComponent(lobbyId)}/admin/subdomain`;
+
+  useEffect(() => {
+    let alive = true;
+    void fetch(url, { credentials: "include" })
+      .then((r) => r.json())
+      .then((j) => alive && j?.ok && setA(j))
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [url]);
+
+  if (!a) return null;
+  const toggle = async () => {
+    setBusy(true);
+    setMsg(null);
+    try {
+      const r = await fetch(url, {
+        credentials: "include",
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ on: !a.on }),
+      });
+      const j = await r.json().catch(() => ({}));
+      if (j?.ok) setA(j);
+      else setMsg(j?.message || "That didn't work.");
+    } finally {
+      setBusy(false);
+    }
+  };
+  const note = a.problem
+    ? a.problem === "taken"
+      ? "That address belongs to someone's place."
+      : "This lobby's name can't be a web address."
+    : a.on
+      ? a.live
+        ? "Live."
+        : "On, but the owner's plan doesn't cover it right now."
+      : a.allowance === 0
+        ? "Comes with Felon ($14 a month) for one lobby, or Condemned ($25) for three."
+        : "";
+
+  return (
+    <div
+      style={{
+        marginBottom: 20,
+        paddingBottom: 18,
+        borderBottom: "1px solid rgba(255,255,255,.08)",
+      }}
+    >
+      <div
+        style={{
+          fontSize: 10,
+          fontWeight: 800,
+          letterSpacing: ".12em",
+          textTransform: "uppercase",
+          color: accent,
+        }}
+      >
+        Your weered.ca address
+      </div>
+      <div
+        style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 8, flexWrap: "wrap" }}
+      >
+        <strong style={{ fontSize: 17 }}>{a.host}</strong>
+        <button
+          type="button"
+          disabled={busy || (!a.on && !!a.problem)}
+          onClick={() => void toggle()}
+          style={chip(a.on, accent)}
+          aria-pressed={a.on}
+        >
+          {a.on ? "On" : "Off"}
+        </button>
+        {a.on && a.live && (
+          <a
+            href={`https://${a.host}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ fontSize: 12, color: accent }}
+          >
+            Open ↗
+          </a>
+        )}
+      </div>
+      {(msg || note) && (
+        <div style={{ fontSize: 12, opacity: 0.7, marginTop: 6, lineHeight: 1.45 }}>
+          {msg || note}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Domain ─────────────────────────────────────────────────────────────────
 export function DomainModal({
   lobbyId,
@@ -105,6 +216,7 @@ export function DomainModal({
       }}
     >
       <div style={{ ...panel, position: "relative", width: "min(520px, 100%)", padding: 24 }}>
+        <WeeredAddress lobbyId={lobbyId} accent={accent} />
         <div
           style={{
             fontSize: 10,
@@ -121,7 +233,8 @@ export function DomainModal({
         </div>
         <p style={{ fontSize: 13, opacity: 0.7, lineHeight: 1.5 }}>
           People type your domain and land on this lobby, with a secure certificate. They sign in
-          and take part on weered.ca, where the lobby stays listed in the Weered network.
+          and take part on weered.ca, where the lobby stays listed in the Weered network. A domain
+          of your own comes with the Condemned plan ($25 a month).
         </p>
         <div style={{ display: "flex", gap: 8 }}>
           <input

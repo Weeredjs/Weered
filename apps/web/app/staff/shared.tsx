@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 
 export type GlobalRole = "USER" | "SUPPORT" | "STAFF" | "ADMIN" | "GOD";
-export type UserTier = "INNOCENT" | "INDICTED" | "FELON" | "KINGPIN";
+export type UserTier = "INNOCENT" | "INDICTED" | "FELON" | "CONDEMNED" | "KINGPIN";
 export type StaffUser = {
   id: string;
   name: string;
@@ -131,8 +131,14 @@ export function tierColor(t: string) {
       border: "rgba(245,158,11,.30)",
       color: "rgb(253,230,138)",
     };
+  if (t === "CONDEMNED")
+    return { bg: "rgba(239,68,68,.14)", border: "rgba(239,68,68,.36)", color: "rgb(252,165,165)" };
   if (t === "FELON")
-    return { bg: "rgba(239,68,68,.10)", border: "rgba(239,68,68,.28)", color: "rgb(252,165,165)" };
+    return {
+      bg: "rgba(249,115,22,.10)",
+      border: "rgba(249,115,22,.28)",
+      color: "rgb(253,186,116)",
+    };
   if (t === "INDICTED")
     return {
       bg: "rgba(124,58,237,.12)",

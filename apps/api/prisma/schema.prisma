@@ -112,6 +112,9 @@ model Lobby {
   // three people besides the owner have joined (lib/listingHold.ts). Lobbies
   // became free for everyone 2026-11-02; this keeps empty ones out of Explore.
   listingHeld  Boolean    @default(false)
+  // <id>.weered.ca, switched on by the owner; it answers while the owner's
+  // plan covers it (Felon one lobby, Condemned three: lib/weeredHosts.ts).
+  subdomain    Boolean    @default(false)
   moduleType   ModuleType @default(FEED)
   moduleConfig Json?
 
@@ -766,6 +769,7 @@ enum UserTier {
   INNOCENT
   INDICTED
   FELON
+  CONDEMNED // $25, 2026-11-02 (lib/tiers.ts)
   KINGPIN
 }
 
@@ -1183,6 +1187,7 @@ enum SubTier {
   FREE // Innocent ΓÇö default
   INDICTED // $6/mo ΓÇö colored username, video streaming, custom fonts
   FELON // $14/mo ΓÇö above + own up to 3 lobbies
+  CONDEMNED // $25: three lobbies at <lobby>.weered.ca, your own domain
   KINGPIN // Staff-granted ΓÇö unlimited lobbies, all modules
 }
 

@@ -40,7 +40,7 @@ type Profile = {
   name: string;
   bio: string;
   notoriety: number;
-  tier: "INNOCENT" | "INDICTED" | "FELON" | "KINGPIN";
+  tier: "INNOCENT" | "INDICTED" | "FELON" | "CONDEMNED" | "KINGPIN";
   globalRole: string;
   joinedAt: string;
   lastSeen: string;
@@ -53,6 +53,7 @@ const TIERS = {
   INNOCENT: { label: "Innocent", color: "#94a3b8", glow: "rgba(148,163,184,.20)", accent: "#64748b" },
   INDICTED: { label: "Indicted", color: "#a78bfa", glow: "rgba(167,139,250,.25)", accent: "#7c3aed" },
   FELON:    { label: "Felon",    color: "#f97316", glow: "rgba(249,115,22,.25)",  accent: "#ea580c" },
+  CONDEMNED: { label: "Condemned", color: "#ef4444", glow: "rgba(239,68,68,.28)", accent: "#dc2626" },
   KINGPIN:  { label: "Kingpin",  color: "#eab308", glow: "rgba(234,179,8,.30)",  accent: "#ca8a04" },
 };
 

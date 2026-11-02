@@ -49,6 +49,7 @@ export const TIER_COLORS: Record<string, string> = {
   INNOCENT: "#94a3b8",
   INDICTED: "#a78bfa",
   FELON: "#f97316",
+  CONDEMNED: "#ef4444",
   KINGPIN: "#eab308",
 };
 
