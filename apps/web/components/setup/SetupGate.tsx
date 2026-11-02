@@ -6,7 +6,7 @@
 // the desktop app. The full setup (SetupFlow) is at /setup.
 import { useEffect, useState } from "react";
 import StartPrompt from "./StartPrompt";
-import { pullUiPrefs, readUiPrefs } from "../../lib/uiPrefs";
+import { prefsAreMine, pullUiPrefs, readUiPrefs } from "../../lib/uiPrefs";
 
 export default function SetupGate() {
   const [open, setOpen] = useState(false);
@@ -20,7 +20,9 @@ export default function SetupGate() {
     } catch {}
     // The office host is a client-facing desk with a fixed look.
     if (!authed || document.documentElement.hasAttribute("data-pro-host")) return;
-    if (readUiPrefs().setup) return;
+    // This browser's answer counts only if it was this account's: a new
+    // account here is asked even after another one answered (2026-11-01).
+    if (readUiPrefs().setup && prefsAreMine()) return;
     let alive = true;
     // One question at a time: the cookie question (components/CookieConsent.tsx)
     // sits at the bottom of the screen too, so this waits until it's answered.

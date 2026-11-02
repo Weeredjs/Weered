@@ -5,6 +5,7 @@
 // The API whitelists the same fields: apps/api/src/lib/uiPrefs.ts.
 import type { ShellLayout } from "./shellLayout";
 import { isGuestSession } from "./guestSession";
+import { MY_COLOR_KEY } from "./avatarColor";
 
 /** Every site theme id. The boot script, ThemeRestore, the dock and the
  *  settings sheets all validate against this one list. */
@@ -431,27 +432,86 @@ export async function saveUiPrefsToAccount(patch: UiPrefs): Promise<AccountSave>
   return res;
 }
 
-/** Pull the account's prefs and lay them over this browser's. Returns the
- *  merged prefs, or null when signed out or offline. */
+/** Whose prefs these are: the account they were last pulled for. Another
+ *  account's look, layout and answered setup must not become a new account's
+ *  (2026-11-01: an account made in James's browser skipped the start prompt,
+ *  because his own setup state was still here). */
+export const PREFS_OWNER_KEY = "weered:ui-prefs:owner";
+
+/** The account signed in to this browser, if any. */
+function signedInId(): string | null {
+  try {
+    return JSON.parse(localStorage.getItem("weered_user") || "null")?.id || null;
+  } catch {
+    return null;
+  }
+}
+
+/** True when the prefs here were pulled for the account signed in now. */
+export function prefsAreMine(): boolean {
+  const me = signedInId();
+  try {
+    return !!me && localStorage.getItem(PREFS_OWNER_KEY) === me;
+  } catch {
+    return false;
+  }
+}
+
+/** The setup state belongs to the account alone: it is never taken from a
+ *  browser, which may have answered it for someone else. */
+function withoutSetup(p: UiPrefs): UiPrefs {
+  const rest = { ...p };
+  delete rest.setup;
+  delete rest.setupAt;
+  return rest;
+}
+
+/** Store these as the whole of this browser's prefs, paint them, tell listeners. */
+function replaceUiPrefs(next: UiPrefs): UiPrefs {
+  try {
+    localStorage.setItem(PREFS_KEY, JSON.stringify(next));
+  } catch {}
+  applyUiPrefs(next);
+  try {
+    window.dispatchEvent(new CustomEvent(PREFS_EVENT, { detail: next }));
+  } catch {}
+  return next;
+}
+
+/** Pull the account's prefs and lay them over this browser's. Prefs another
+ *  account left here are dropped first: this one starts from Weered's look,
+ *  with none of their layout, colour or setup. Returns the result, or null
+ *  when signed out or offline. */
 export async function pullUiPrefs(): Promise<UiPrefs | null> {
+  // A guest has no account prefs: their look stays in this browser, and so
+  // does the owner of the prefs here.
+  if (isGuestSession()) return null;
   try {
     const r = await fetch(`${API}/profile/me/ui`, { credentials: "include" });
     if (!r.ok) return null;
     const j = await r.json();
-    const local = readUiPrefs();
-    if (!j?.prefs) {
-      // Nothing on the account yet: seed it from this browser, if anything.
-      if (Object.keys(local).length && !isGuestSession()) {
-        fetch(`${API}/profile/me/ui`, {
-          credentials: "include",
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ prefs: local }),
-        }).catch(() => {});
-      }
-      return local;
+    const me = signedInId();
+    let owner: string | null = null;
+    try {
+      owner = localStorage.getItem(PREFS_OWNER_KEY);
+    } catch {}
+    const foreign = !!owner && !!me && owner !== me;
+    const local = foreign ? { ...DEFAULT_LOOK } : withoutSetup(readUiPrefs());
+    if (!j?.prefs && !foreign && Object.keys(local).length) {
+      // Nothing on the account yet: seed it from this browser's look.
+      fetch(`${API}/profile/me/ui`, {
+        credentials: "include",
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prefs: local }),
+      }).catch(() => {});
     }
-    return saveUiPrefs(j.prefs as UiPrefs, { local: true });
+    const next = replaceUiPrefs(j?.prefs ? { ...local, ...(j.prefs as UiPrefs) } : local);
+    try {
+      if (foreign) localStorage.removeItem(MY_COLOR_KEY);
+      if (me) localStorage.setItem(PREFS_OWNER_KEY, me);
+    } catch {}
+    return next;
   } catch {
     return null;
   }
