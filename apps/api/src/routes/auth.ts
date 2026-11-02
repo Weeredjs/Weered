@@ -14,6 +14,7 @@ import { registrationBlock } from "../lib/registration";
 import { cutoffNow } from "../lib/sessionCutoff";
 import { isOfficeRoom } from "../lib/officeRooms";
 import { accountForGoogle } from "../lib/googleLink";
+import { cleanDisplayName } from "../lib/displayName";
 import { loginFailed, loginPaused, loginSucceeded } from "../lib/loginGuard";
 import { setAuthCookie, clearAuthCookie, isWebClient, readCookie } from "../lib/authCookie";
 
@@ -602,7 +603,8 @@ export default async function authRoutes(app: FastifyInstance, opts: Opts) {
       const googleId = payload.sub;
       const email = payload.email || null;
       const avatar = payload.picture || null;
-      const displayName = payload.name || `g_${googleId.slice(0, 12)}`;
+      // The profile's name, unless it would pass for Weered (lib/displayName.ts).
+      const displayName = (await cleanDisplayName(payload.name)) || `g_${googleId.slice(0, 12)}`;
 
       // An email match links only when it's safe (lib/googleLink.ts).
       const found = await accountForGoogle(

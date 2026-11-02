@@ -17,6 +17,13 @@ import { PLACE_PREFIX, placeForHost, placeIdForHost, placeLabel } from "../route
 
 type Owner = { tier: string | null; globalRole: string | null };
 
+/** A label that reads as Weered's own (weered-support, myweered) is kept for
+ *  Weered's staff, so a paid address can't pass for the platform on a page
+ *  made to look like a sign-in (hardening 2026-11-02). The plain words
+ *  (support, billing, login, verify…) are refused for everyone, in
+ *  routes/places.ts SYSTEM_LABELS. Older named places keep their names. */
+export const looksOfficial = (label: string) => label.includes("weered");
+
 async function ownerOf(userId: string | null | undefined): Promise<Owner | null> {
   if (!userId) return null;
   return prisma.user
@@ -39,6 +46,7 @@ export async function subdomainLobby(label: string): Promise<string | null> {
   const allowed = addressAllowance(await ownerOf(l.ownerId));
   if (!allowed) return null;
   if (allowed === Infinity) return l.id;
+  if (looksOfficial(label)) return null;
   const first = await prisma.lobby.findMany({
     where: { ownerId: l.ownerId, subdomain: true },
     orderBy: { createdAt: "asc" },
@@ -62,6 +70,7 @@ async function memberNamed(label: string) {
 export async function vanityPlace(label: string): Promise<string | null> {
   const u = await memberNamed(label);
   if (!u || !(hasVanityName(u.tier) || isStaffRole(u.globalRole))) return null;
+  if (looksOfficial(label) && !isStaffRole(u.globalRole)) return null;
   const p = await prisma.lobby
     .findFirst({
       where: { ownerId: u.id, id: { startsWith: PLACE_PREFIX } },
@@ -99,6 +108,8 @@ export async function addressProblem(
 ): Promise<string | null> {
   const host = `${lobbyId}.weered.ca`;
   if (!placeIdForHost(host) || placeLabel(lobbyId) !== lobbyId) return "bad_label";
+  if (looksOfficial(lobbyId) && !isStaffRole((await ownerOf(ownerId))?.globalRole))
+    return "official";
   if (await placeForHost(host)) return "taken";
   const member = await memberNamed(lobbyId);
   if (

@@ -5,6 +5,7 @@ import { prisma } from "../lib/prisma";
 import { setAuthCookie } from "../lib/authCookie";
 import { isOfficeRoom } from "../lib/officeRooms";
 import { isStaffRole } from "../lib/lobbyAuth";
+import { cleanDisplayName } from "../lib/displayName";
 
 // A lobby's guest link (James 2026-11-01: "a very nice Microsoft Teams/Zoom"):
 // someone without an account types a name and is in, as a guest of that one
@@ -28,11 +29,15 @@ export default async function guestJoinRoutes(app: FastifyInstance, opts: { JWT_
     async (req, reply) => {
       const body: any = (req as any).body || {};
       const inviteToken = String(body.inviteToken || "").trim();
-      const name = String(body.name || "")
-        .replace(/\s+/g, " ")
-        .trim()
-        .slice(0, 32);
       if (!inviteToken) return reply.code(400).send({ ok: false, error: "missing_invite" });
+      // A guest can't come in as the Operator or as Weered (lib/displayName.ts).
+      const name = await cleanDisplayName(body.name);
+      if (name === null)
+        return reply.code(400).send({
+          ok: false,
+          error: "name_reserved",
+          message: "That name is kept for Weered. Type your own.",
+        });
       if (name.length < 2)
         return reply
           .code(400)

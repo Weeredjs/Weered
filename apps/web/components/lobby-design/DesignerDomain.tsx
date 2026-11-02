@@ -55,7 +55,9 @@ function WeeredAddress({ lobbyId, accent }: { lobbyId: string; accent: string })
   const note = a.problem
     ? a.problem === "taken"
       ? "That address belongs to someone's place."
-      : "This lobby's name can't be a web address."
+      : a.problem === "official"
+        ? "Addresses with Weered in them are kept for Weered's own pages."
+        : "This lobby's name can't be a web address."
     : a.on
       ? a.live
         ? "Live."

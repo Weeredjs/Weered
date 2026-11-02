@@ -6,6 +6,7 @@ import { log, swallow } from "../lib/logger";
 import { registrationBlock } from "../lib/registration";
 import { readCookie, setAuthCookie } from "../lib/authCookie";
 import { accountForIdentity } from "../lib/googleLink";
+import { cleanDisplayName } from "../lib/displayName";
 
 // Sign in with Discord (2026-11-01): the people trying Weered mostly come from
 // Discord, and their members can sign in with the account they already have.
@@ -98,10 +99,9 @@ export default async function discordAuthRoutes(app: FastifyInstance, opts: Opts
       const avatar = /^[a-z0-9_]{1,64}$/i.test(String(me.avatar || ""))
         ? `https://cdn.discordapp.com/avatars/${discordId}/${me.avatar}.png?size=256`
         : null;
-      const displayName = String(me.global_name || me.username || `d_${discordId.slice(-8)}`).slice(
-        0,
-        32,
-      );
+      // The profile's name, unless it would pass for Weered (lib/displayName.ts).
+      const displayName =
+        (await cleanDisplayName(me.global_name || me.username)) || `d_${discordId.slice(-8)}`;
 
       const found = await accountForIdentity(
         prisma,

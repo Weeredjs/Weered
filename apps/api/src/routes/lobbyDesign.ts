@@ -206,6 +206,7 @@ export default async function lobbyDesignRoutes(app: FastifyInstance, opts: Opts
   const ADDRESS_PROBLEMS: Record<string, string> = {
     bad_label: "This lobby's name can't be a web address.",
     taken: "That address belongs to someone's place.",
+    official: "Addresses with Weered in them are kept for Weered's own pages.",
   };
   async function addressState(lobby: any) {
     const allowance = addressAllowance(await ownerPlan(lobby));
