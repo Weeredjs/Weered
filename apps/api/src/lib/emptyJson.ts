@@ -9,14 +9,25 @@ import type { FastifyInstance } from "fastify";
  * web is fixed too; this covers every other client (phone, desktop, old tabs).
  * Anything with a body still goes through Fastify's own JSON parser, with its
  * prototype-poisoning guards.
+ *
+ * Fastify lets a plugin replace only its built-in JSON parser; once this has
+ * replaced it, a plugin that wants its own (maps: a bigger body limit for
+ * uploads) must call this too, with its limit, rather than add one.
  */
 // Any server/logger flavour: the API's app carries its own pino logger type.
-export function allowEmptyJsonBody(app: FastifyInstance<any, any, any, any, any>) {
+export function allowEmptyJsonBody(
+  app: FastifyInstance<any, any, any, any, any>,
+  opts: { bodyLimit?: number } = {},
+) {
   const parse = app.getDefaultJsonParser("error", "error");
   app.removeContentTypeParser("application/json");
-  app.addContentTypeParser("application/json", { parseAs: "string" }, (req, body, done) => {
-    const text = String(body);
-    if (text.trim() === "") return done(null, {});
-    parse(req, text, done);
-  });
+  app.addContentTypeParser(
+    "application/json",
+    { parseAs: "string", ...(opts.bodyLimit ? { bodyLimit: opts.bodyLimit } : {}) },
+    (req, body, done) => {
+      const text = String(body);
+      if (text.trim() === "") return done(null, {});
+      parse(req, text, done);
+    },
+  );
 }

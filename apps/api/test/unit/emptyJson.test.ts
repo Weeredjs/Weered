@@ -50,4 +50,20 @@ describe("allowEmptyJsonBody", () => {
     expect(proto.statusCode).toBe(400);
     await a.close();
   });
+
+  // routes/maps.ts reads JSON with its own, larger limit. Adding a parser on top
+  // of a replaced one throws "already present" and the API never started
+  // (caught by E2E, 2026-11-02); a plugin calls this helper instead.
+  it("lets a plugin set its own body limit on top, as maps does", async () => {
+    const a = Fastify();
+    allowEmptyJsonBody(a);
+    await a.register(async (child) => {
+      allowEmptyJsonBody(child, { bodyLimit: 12 * 1024 * 1024 });
+      child.post("/maps", async (req) => ({ got: req.body }));
+    });
+    await a.ready();
+    const r = await a.inject({ method: "POST", url: "/maps", headers: JSON_HEADERS, payload: "" });
+    expect(r.json()).toEqual({ got: {} });
+    await a.close();
+  });
 });

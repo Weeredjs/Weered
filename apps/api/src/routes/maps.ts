@@ -1,4 +1,5 @@
 import { log, swallow } from "../lib/logger";
+import { allowEmptyJsonBody } from "../lib/emptyJson";
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
 import { existsSync, mkdirSync, writeFileSync, unlinkSync } from "node:fs";
@@ -36,18 +37,10 @@ async function isRoomMember(roomId: string, userId: string): Promise<boolean> {
 export default async function mapsRoutes(app: FastifyInstance, opts: Opts) {
   const { authFromHeader, broadcastToRoom } = opts;
 
-  app.addContentTypeParser(
-    "application/json",
-    { bodyLimit: 12 * 1024 * 1024 },
-    (_req: any, body: any, done: any) => {
-      try {
-        const txt = typeof body === "string" ? body : body.toString("utf8");
-        done(null, txt ? JSON.parse(txt) : {});
-      } catch (e) {
-        done(e, undefined);
-      }
-    },
-  );
+  // Map uploads are big: this scope reads JSON up to 12 MB. The root parser
+  // is already replaced (lib/emptyJson.ts), so it is replaced here the same
+  // way, keeping Fastify's prototype-poisoning guards the old copy lacked.
+  allowEmptyJsonBody(app, { bodyLimit: 12 * 1024 * 1024 });
 
   app.post("/maps/:roomId/upload", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
