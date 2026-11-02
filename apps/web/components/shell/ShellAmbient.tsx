@@ -35,7 +35,7 @@ export default function ShellAmbient() {
   if (!look || !look.fx || look.fx === "none") return null;
   if (html["data-weered-theme"] !== "nebula" || html["data-weered-lobby"]) return null;
   if (html["data-weered-reduce-motion"] === "1") return null;
-  const c = paletteColours(look.palette, look.accent);
+  const c = paletteColours(look.palette, look.accent, look.accent2);
   return createPortal(
     <LobbyAmbient
       effect={look.fx}

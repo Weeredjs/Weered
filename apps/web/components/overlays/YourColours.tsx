@@ -107,7 +107,7 @@ export function YourColours({ nebula = false }: { nebula?: boolean }) {
         }}
       >
         {nebula
-          ? "Nebula paints your own Weered from the colourway above. These colours dress your ID card and your row inside lobbies with their own theme, and for anyone on Classic. Changes save automatically."
+          ? "Nebula paints your own Weered from your colourway in Change your drip. These colours dress your ID card and your row inside lobbies with their own theme, and for anyone on Classic. Changes save automatically."
           : "Personalize how you appear in lobbies and on your ID card. Changes save automatically."}
       </div>
 

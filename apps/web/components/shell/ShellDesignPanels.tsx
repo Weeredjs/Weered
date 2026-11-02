@@ -346,6 +346,134 @@ const CLASSIC_SKINS: { id: SiteThemeId; name: string; sw: string }[] = [
   { id: "gray", name: "Gray", sw: "#6b7280" },
 ];
 
+const dot = (bg: string) => (
+  <i
+    style={{
+      width: 14,
+      height: 14,
+      borderRadius: 99,
+      background: bg,
+      flexShrink: 0,
+      boxShadow: "0 0 0 1px rgba(255,255,255,.2)",
+    }}
+  />
+);
+const colourInput: React.CSSProperties = {
+  position: "absolute",
+  inset: 0,
+  opacity: 0,
+  cursor: "pointer",
+};
+
+/** Your colour's second colour (2026-11-02, James: "should we allow 2 colors
+ *  for the gradient"): gradients and the sky run between the two. */
+function SecondColour({ accent, look }: { accent: string; look: ShellLook }) {
+  const on = !!look.accent2;
+  return (
+    <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
+      <label
+        style={{
+          ...chip(on, accent),
+          flex: 1,
+          position: "relative",
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+        }}
+      >
+        {dot(on ? `linear-gradient(135deg, ${look.accent}, ${look.accent2})` : look.accent)}
+        {on ? "Two colours ✎" : "Add a second colour"}
+        <input
+          type="color"
+          value={look.accent2 || look.accent}
+          onChange={(e) => editLook({ accent2: e.target.value }, "accent2")}
+          aria-label="Your second colour"
+          style={colourInput}
+        />
+      </label>
+      {on && (
+        <button type="button" style={chip(false, accent)} onClick={() => editLook({ accent2: "" })}>
+          One colour
+        </button>
+      )}
+    </div>
+  );
+}
+
+/** Section bars (99-nebula-bars.css): a bar behind every rail section's title
+ *  and a band across your ID card, in the colourway or a colour of your own.
+ *  James 2026-11-02: Nebula was "a lot of one color". */
+function SectionBars({ accent, look, deep }: { accent: string; look: ShellLook; deep: string }) {
+  const kinds: [ShellLook["bars"], string][] = [
+    ["off", "None"],
+    ["solid", "Solid"],
+    ["slant", "Slanted"],
+  ];
+  return (
+    <>
+      <div style={label}>Section bars</div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6 }}>
+        {kinds.map(([id, name]) => (
+          <button
+            key={id}
+            type="button"
+            aria-pressed={look.bars === id}
+            onClick={() => editLook({ bars: id })}
+            style={chip(look.bars === id, accent)}
+          >
+            {name}
+          </button>
+        ))}
+      </div>
+      {look.bars !== "off" && (
+        <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
+          <button
+            type="button"
+            aria-pressed={!look.barColor}
+            onClick={() => editLook({ barColor: "" })}
+            style={{
+              ...chip(!look.barColor, accent),
+              flex: 1,
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+            }}
+          >
+            {dot(deep)}
+            Colourway
+          </button>
+          <label
+            style={{
+              ...chip(!!look.barColor, accent),
+              flex: 1,
+              position: "relative",
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+            }}
+          >
+            {dot(
+              look.barColor ||
+                "conic-gradient(#f43f5e, #f59e0b, #22c55e, #0ea5e9, #a855f7, #f43f5e)",
+            )}
+            Your own ✎
+            <input
+              type="color"
+              value={look.barColor || deep}
+              onChange={(e) => editLook({ barColor: e.target.value }, "barColor")}
+              aria-label="Section bar colour"
+              style={colourInput}
+            />
+          </label>
+        </div>
+      )}
+      <div style={{ fontSize: 11, opacity: 0.5, marginTop: 6, lineHeight: 1.4 }}>
+        A bar behind every section&apos;s title, and a band across the top of your ID card.
+      </div>
+    </>
+  );
+}
+
 /** This device's two display switches (lib/displaySettings.ts): they apply at
  *  once, outside the draft, as they did in Settings. */
 function DeviceSwitches({ accent }: { accent: string }) {
@@ -439,7 +567,7 @@ function Toggle({
 
 export function LookTab({ accent, look }: { accent: string; look: ShellLook }) {
   const neb = look.theme === "nebula";
-  const custom = customPalette(look.accent);
+  const custom = customPalette(look.accent, look.accent2);
   const colours = look.palette === "custom" ? custom : PALETTES[look.palette];
   const swatch = (c: { a: string; b: string; c: string; bg: string }) =>
     `radial-gradient(120% 120% at 0% 0%, ${alpha(c.b, 0.85)}, transparent 60%), radial-gradient(120% 120% at 100% 100%, ${alpha(c.c, 0.9)}, transparent 60%), ${c.bg}`;
@@ -535,6 +663,8 @@ export function LookTab({ accent, look }: { accent: string; look: ShellLook }) {
               />
             </label>
           </div>
+          {look.palette === "custom" && <SecondColour accent={accent} look={look} />}
+          <SectionBars accent={accent} look={look} deep={colours.b} />
 
           <div style={label}>Type</div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6 }}>

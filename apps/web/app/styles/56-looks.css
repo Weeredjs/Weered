@@ -289,3 +289,78 @@ html[data-weered-chrome="min"][data-uc-frame="custom"]
     animation: none !important;
   }
 }
+
+/* Your ID card banner (Profile → Your look). The rail's minimal-chrome sheet
+   sets every background inside .weered-left to transparent !important, so an
+   uploaded banner never showed, on any theme. UserCorner hands it over as
+   --uc-banner; this one class outranks that wildcard. */
+html .weered-left .weered-uc-banner[style*="--uc-banner"] {
+  background: var(--uc-banner) !important;
+}
+
+/* Classic skins colour the flat layout (2026-11-02). Each skin set only the
+   page tints; the minimal-chrome sheet pinned the bars and accents purple, so
+   every skin looked the same (James: "Clicking through all of those doesn't
+   do anything"). Each now carries its own bar colour (--skin-bar) and accent
+   (--skin-a, as "r g b"). Press stays purple. Your own accent from Profile →
+   Your look still wins: UserCorner sets --weered-user-panel-accent on the
+   page itself, which outranks these. */
+html[data-weered-theme="ishimura"] {
+  --skin-bar: #0e4a57;
+  --skin-a: 34 211 238;
+  --skin-text: #a5f3fc;
+}
+html[data-weered-theme="broadcast"] {
+  --skin-bar: #14532d;
+  --skin-a: 34 197 94;
+  --skin-text: #bbf7d0;
+}
+html[data-weered-theme="slate"] {
+  --skin-bar: #1e3a5f;
+  --skin-a: 14 165 233;
+  --skin-text: #bae6fd;
+}
+html[data-weered-theme="stone"] {
+  --skin-bar: #5a3a12;
+  --skin-a: 245 158 11;
+  --skin-text: #fde68a;
+}
+html[data-weered-theme="zinc"] {
+  --skin-bar: #3f3f46;
+  --skin-a: 212 212 216;
+  --skin-text: #f4f4f5;
+}
+html[data-weered-theme="gray"] {
+  --skin-bar: #134e4a;
+  --skin-a: 20 184 166;
+  --skin-text: #99f6e4;
+}
+
+html[data-weered-chrome="min"]:is(
+    [data-weered-theme="ishimura"],
+    [data-weered-theme="broadcast"],
+    [data-weered-theme="slate"],
+    [data-weered-theme="stone"],
+    [data-weered-theme="zinc"],
+    [data-weered-theme="gray"]
+  ) {
+  --weered-user-panel-accent: var(--skin-bar);
+  --weered-accent: rgb(var(--skin-a)) !important;
+  --weered-accent-bg: rgb(var(--skin-a) / 0.16) !important;
+  --weered-accent-ring: rgb(var(--skin-a) / 0.45) !important;
+  --weered-accent-text: var(--skin-text) !important;
+}
+/* The dock and its tab strip pin the purple accents again on themselves. */
+html[data-weered-chrome="min"]:is(
+    [data-weered-theme="ishimura"],
+    [data-weered-theme="broadcast"],
+    [data-weered-theme="slate"],
+    [data-weered-theme="stone"],
+    [data-weered-theme="zinc"],
+    [data-weered-theme="gray"]
+  )
+  :is(.weered-dock, .weered-dock-tabs) {
+  --weered-accent-bg: rgb(var(--skin-a) / 0.16) !important;
+  --weered-accent-ring: rgb(var(--skin-a) / 0.45) !important;
+  --weered-accent-text: var(--skin-text) !important;
+}

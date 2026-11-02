@@ -28,6 +28,8 @@ export const UI_FONTS = ["default", "condensed", "serif", "stencil", "clean", "m
 // The look's structure and motion (apps/web/lib/uiPrefs.ts): corners, line
 // weight, card texture, what's behind the glass, and a moving effect.
 export const UI_SHAPES = ["round", "soft", "square", "cut"] as const;
+/** Section bars under Nebula (2026-11-02): none, a solid bar, or Classic's slant. */
+export const UI_BARS = ["off", "solid", "slant"] as const;
 export const UI_LINES = ["soft", "hard"] as const;
 export const UI_TEXTURES = ["glass", "grid", "lines", "dots", "solid"] as const;
 export const UI_BACKDROPS = ["sky", "grid", "plain"] as const;
@@ -111,6 +113,11 @@ export type UiPrefs = {
   theme?: (typeof UI_THEMES)[number];
   palette?: (typeof UI_PALETTES)[number];
   accent?: string;
+  /** Your colour's second colour, for a two-colour gradient; "none" clears it. */
+  accent2?: string;
+  bars?: (typeof UI_BARS)[number];
+  /** The bars' own colour; "none" follows the colourway. */
+  barColor?: string;
   font?: (typeof UI_FONTS)[number];
   shape?: (typeof UI_SHAPES)[number];
   lines?: (typeof UI_LINES)[number];
@@ -235,6 +242,15 @@ export function sanitizeUiPrefs(raw: unknown): UiPrefs {
   const palette = oneOf(UI_PALETTES, src.palette);
   if (palette) out.palette = palette;
   if (typeof src.accent === "string" && /^#[0-9a-f]{6}$/i.test(src.accent)) out.accent = src.accent;
+  // A merge keeps what a patch leaves out, so clearing is an explicit "none".
+  const hexOrNone = (v: unknown) =>
+    typeof v === "string" && (/^#[0-9a-f]{6}$/i.test(v) || v === "none") ? v : undefined;
+  const accent2 = hexOrNone(src.accent2);
+  if (accent2) out.accent2 = accent2;
+  const bars = oneOf(UI_BARS, src.bars);
+  if (bars) out.bars = bars;
+  const barColor = hexOrNone(src.barColor);
+  if (barColor) out.barColor = barColor;
   const font = oneOf(UI_FONTS, src.font);
   if (font) out.font = font;
   const shape = oneOf(UI_SHAPES, src.shape);

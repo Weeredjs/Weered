@@ -438,52 +438,67 @@ function DesktopNotifyToggle({ enabled, onChange }: { enabled: boolean; onChange
 function AppearancePointers() {
   const { clearSheets, openSheet } = useOverlay() as any;
   const router = useRouter();
-  const card = (title: string, blurb: string, label: string, go: () => void) => (
+  // Big doors with a look at what's behind them (James 2026-11-02: "bigger
+  // blocks with some screen shot clips"). The pictures are public/brand/settings.
+  const door = (o: { title: string; blurb: string; has: string[]; img: string; label: string; go: () => void }) => (
     <button
       type="button"
-      onClick={go}
+      onClick={o.go}
+      className="weered-appearance-door"
       style={{
-        display: "flex", alignItems: "center", gap: 12, width: "100%", marginTop: 8, padding: "12px 14px",
-        borderRadius: 12, cursor: "pointer", textAlign: "left", fontFamily: "inherit", color: "#fff",
+        display: "flex", flexDirection: "column", width: "100%", padding: 0, overflow: "hidden",
+        borderRadius: 14, cursor: "pointer", textAlign: "left", fontFamily: "inherit", color: "#fff",
         border: "1px solid var(--weered-border, rgba(255,255,255,.12))", background: "rgba(255,255,255,.03)",
       }}
     >
-      <span style={{ flex: 1, minWidth: 0 }}>
-        <span style={{ display: "block", fontSize: 13.5, fontWeight: 800 }}>{title}</span>
-        <span style={{ display: "block", fontSize: 11.5, opacity: 0.65, marginTop: 2 }}>{blurb}</span>
+      <span style={{ display: "block", height: 190, background: `#0b0a14 url(${o.img}) top left / cover no-repeat`, borderBottom: "1px solid rgba(255,255,255,.08)" }} />
+      <span style={{ display: "block", padding: "14px 16px 16px" }}>
+        <span style={{ display: "block", fontSize: 16, fontWeight: 800 }}>{o.title}</span>
+        <span style={{ display: "block", fontSize: 12.5, opacity: 0.7, marginTop: 4, lineHeight: 1.45 }}>{o.blurb}</span>
+        <span style={{ display: "flex", flexWrap: "wrap", gap: 5, marginTop: 10 }}>
+          {o.has.map((h) => (
+            <span key={h} style={{ fontSize: 11, padding: "3px 8px", borderRadius: 999, background: "rgba(255,255,255,.06)", border: "1px solid rgba(255,255,255,.08)" }}>{h}</span>
+          ))}
+        </span>
+        <span style={{ display: "inline-block", marginTop: 14, padding: "8px 14px", borderRadius: 999, fontSize: 13, fontWeight: 800, background: "var(--weered-accent-bg, rgba(124,58,237,.18))", border: "1px solid var(--weered-accent-ring, rgba(167,139,250,.5))", color: "var(--weered-accent-text, #c4b5fd)" }}>{o.label} →</span>
       </span>
-      <span style={{ fontSize: 12, fontWeight: 800, color: "var(--weered-accent-text, #c4b5fd)", whiteSpace: "nowrap" }}>{label} →</span>
     </button>
   );
   return (
     <Section title="Appearance">
-      {card(
-        "How Weered looks to you",
-        "Theme, colourway, layout, type, effects, compact rows, animations.",
-        "Change your drip",
-        () => {
-          clearSheets();
-          if (window.location.pathname === "/home") startDesign();
-          else router.push("/home?design=1");
-        },
-      )}
-      {card(
-        "How you look to others",
-        "Your picture, frame, background, name effects, ID card colours and banner.",
-        "Your look",
-        () => {
-          let me = "";
-          try {
-            me = JSON.parse(localStorage.getItem("weered_user") || "{}")?.id || "";
-          } catch {}
-          clearSheets();
-          if (me) openSheet?.("profile", { userId: me });
-        },
-      )}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: 12, marginTop: 4 }}>
+        {door({
+          title: "How Weered looks to you",
+          blurb: "Your whole Weered: move any section, pick a colourway or two colours of your own, and dress it.",
+          has: ["Theme", "Colourway", "Two colours", "Section bars", "Type", "Effects", "Corners", "Compact", "Animations"],
+          img: "/brand/settings/drip-preview.webp",
+          label: "Change your drip",
+          go: () => {
+            clearSheets();
+            if (window.location.pathname === "/home") startDesign();
+            else router.push("/home?design=1");
+          },
+        })}
+        {door({
+          title: "How you look to others",
+          blurb: "What people see of you: in chat, in lists, on your ID card and your profile.",
+          has: ["Picture", "Frame", "Background", "Name effect", "ID card colours", "Banner"],
+          img: "/brand/settings/look-preview.webp",
+          label: "Your look",
+          go: () => {
+            let me = "";
+            try {
+              me = JSON.parse(localStorage.getItem("weered_user") || "{}")?.id || "";
+            } catch {}
+            clearSheets();
+            if (me) openSheet?.("profile", { userId: me });
+          },
+        })}
+      </div>
       <a
         href="/setup"
         onClick={() => clearSheets()}
-        style={{ display: "inline-block", marginTop: 10, fontSize: 12, color: "var(--weered-accent-text, #c4b5fd)" }}
+        style={{ display: "inline-block", marginTop: 14, fontSize: 12, color: "var(--weered-accent-text, #c4b5fd)" }}
       >
         Run setup again →
       </a>

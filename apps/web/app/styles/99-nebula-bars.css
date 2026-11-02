@@ -1,0 +1,85 @@
+/* =====================================================================
+   NEBULA SECTION BARS (2026-11-02)
+   =====================================================================
+   James: Nebula is "a lot of one color"; Classic's flat bars gave each
+   section a header you could see. Change your drip → Look → Section bars:
+     solid   a filled bar behind every rail section's title, and a band
+             across the top of your ID card
+     slant   the same with Classic's slanted end (square corners)
+   The colour is --nb-bar (Section bars → your own colour), or the
+   colourway's deep accent. lib/uiPrefs.ts paintUiPrefs sets the
+   attribute and the variables; the boot script in app/layout.tsx sets them
+   before first paint. Rules outrank 95-nebula.css's (one more attribute). */
+
+html[data-weered-theme="nebula"][data-weered-bars]:not([data-weered-lobby]):not(#nb) {
+  --nb-bar-fill: var(--nb-bar, rgb(var(--nb-b)));
+  --nb-bar-text: var(--nb-bar-on, var(--nb-on));
+}
+
+/* Every rail section's title: left rail, presence, right rail. */
+html[data-weered-theme="nebula"][data-weered-bars]:not([data-weered-lobby]):not(#nb)
+  .weered-left-section
+  > .weered-left-title,
+html[data-weered-theme="nebula"][data-weered-bars]:not([data-weered-lobby]):not(#nb)
+  .weered-presence
+  > .weered-presence-head,
+html[data-weered-theme="nebula"][data-weered-bars]:not([data-weered-lobby]):not(#nb)
+  .weered-rr-section
+  > div:first-child {
+  background: var(--nb-bar-fill) !important;
+  color: var(--nb-bar-text) !important;
+  margin: 0 0 8px !important;
+  padding: 8px 14px !important;
+  border-radius: 10px 10px 4px 4px !important;
+  box-shadow: 0 8px 22px -14px var(--nb-bar-fill) !important;
+}
+html[data-weered-theme="nebula"][data-weered-bars]:not([data-weered-lobby]):not(#nb)
+  .weered-rr-section
+  > div:first-child
+  * {
+  color: inherit !important;
+}
+html[data-weered-theme="nebula"][data-weered-bars]:not([data-weered-lobby]):not(#nb)
+  .weered-presence-head
+  .weered-presence-sub {
+  color: inherit !important;
+  opacity: 0.7;
+}
+
+/* Slant: Classic's cut end, square corners. */
+html[data-weered-theme="nebula"][data-weered-bars="slant"]:not([data-weered-lobby]):not(#nb)
+  .weered-left-section
+  > .weered-left-title,
+html[data-weered-theme="nebula"][data-weered-bars="slant"]:not([data-weered-lobby]):not(#nb)
+  .weered-presence
+  > .weered-presence-head,
+html[data-weered-theme="nebula"][data-weered-bars="slant"]:not([data-weered-lobby]):not(#nb)
+  .weered-rr-section
+  > div:first-child {
+  border-radius: 0 !important;
+  padding-right: 28px !important;
+  clip-path: polygon(0 0, 100% 0, calc(100% - 16px) 100%, 0 100%) !important;
+}
+
+/* Your ID card: a band of the bar colour across its top. */
+html[data-weered-theme="nebula"][data-weered-bars]:not([data-weered-lobby]):not(#nb)
+  .weered-usercorner::before {
+  content: "" !important;
+  display: block !important;
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  height: 44px !important;
+  background: var(--nb-bar-fill) !important;
+  clip-path: none !important;
+  border-radius: 0 !important;
+  z-index: 0 !important;
+  pointer-events: none !important;
+  opacity: 0.95 !important;
+}
+html[data-weered-theme="nebula"][data-weered-bars="slant"]:not([data-weered-lobby]):not(#nb)
+  .weered-usercorner::before {
+  right: 10px !important;
+  clip-path: polygon(0 0, 100% 0, calc(100% - 30px) 100%, 0 100%) !important;
+}

@@ -552,6 +552,12 @@ export default function UserCorner() {
                       : "/brand/tiers/innocent.svg";
             return `url(${tierBanner}) center / cover no-repeat, linear-gradient(135deg, ${cardAccent}55 0%, ${cardAccent}15 60%, rgba(0,0,0,.45) 100%)`;
           })(),
+          // An uploaded banner, again through a variable: the rail's own
+          // stylesheet clears every background in it with !important, which
+          // hid it on every theme (James 2026-11-02); 56-looks.css paints it.
+          ...(bannerUrl
+            ? { ["--uc-banner" as any]: `url(${bannerUrl}) center / cover no-repeat` }
+            : {}),
           zIndex: 1,
         }}
       >

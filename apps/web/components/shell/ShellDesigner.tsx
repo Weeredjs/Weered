@@ -134,7 +134,7 @@ export default function ShellDesigner() {
 
   if (!mounted || !s.designing || !s.draft) return null;
   const d = s.draft;
-  const colours = paletteColours(d.look.palette, d.look.accent);
+  const colours = paletteColours(d.look.palette, d.look.accent, d.look.accent2);
   const accent = d.look.theme === "nebula" ? colours.a : "#8b5cf6";
   const hi = d.look.theme === "nebula" ? colours.hi : "#c4b5fd";
   const dirty = isDirty(s);

@@ -41,6 +41,12 @@ export type ShellLook = {
   theme: SiteThemeId;
   palette: Palette;
   accent: string;
+  /** Your colour's second colour ("" for none): a two-colour gradient. */
+  accent2: string;
+  /** Section bars under Nebula (99-nebula-bars.css). */
+  bars: "off" | "solid" | "slant";
+  /** The bars' colour ("" follows the colourway). */
+  barColor: string;
   font: NebulaFont;
   stars: boolean;
   density: "comfortable" | "compact";
@@ -189,6 +195,9 @@ export function lookFromPrefs(p: UiPrefs): ShellLook {
     theme,
     palette: p.palette || "custom",
     accent: isHexColour(p.accent) ? p.accent : "#8b5cf6",
+    accent2: isHexColour(p.accent2) ? p.accent2 : "",
+    bars: p.bars === "solid" || p.bars === "slant" ? p.bars : "off",
+    barColor: isHexColour(p.barColor) ? p.barColor : "",
     font: p.font || "default",
     stars: p.stars !== false,
     shape: p.shape || "soft",
@@ -218,6 +227,9 @@ function cleanLook(raw: any, base: ShellLook): ShellLook {
         ? r.palette
         : base.palette,
     accent: isHexColour(r.accent) ? r.accent : base.accent,
+    accent2: r.accent2 === "" || isHexColour(r.accent2) ? r.accent2 : base.accent2,
+    bars: r.bars === "off" || r.bars === "solid" || r.bars === "slant" ? r.bars : base.bars,
+    barColor: r.barColor === "" || isHexColour(r.barColor) ? r.barColor : base.barColor,
     font: (NEBULA_FONT_IDS as string[]).includes(r.font) ? r.font : base.font,
     stars: typeof r.stars === "boolean" ? r.stars : base.stars,
     density: r.density === "compact" || r.density === "comfortable" ? r.density : base.density,
@@ -355,6 +367,10 @@ export async function saveDesign(): Promise<AccountSave> {
     theme: d.look.theme,
     palette: d.look.palette,
     accent: d.look.accent,
+    // Cleared ones go as "none": the account merges, so a missing key would keep the old one.
+    accent2: d.look.accent2 || "none",
+    bars: d.look.bars,
+    barColor: d.look.barColor || "none",
     font: d.look.font,
     stars: d.look.stars,
     density: d.look.density,

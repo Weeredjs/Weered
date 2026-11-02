@@ -190,6 +190,8 @@ try {
   if (up && up.texture && up.texture !== 'glass') d.setAttribute('data-weered-texture', up.texture);
   if (up && up.backdrop && up.backdrop !== 'sky') d.setAttribute('data-weered-backdrop', up.backdrop);
   if (up && up.stars === false) d.setAttribute('data-weered-stars', 'off');
+  if (up && (up.bars === 'solid' || up.bars === 'slant')) d.setAttribute('data-weered-bars', up.bars);
+  if (up && /^#[0-9a-f]{6}$/i.test(up.barColor || '')) d.style.setProperty('--nb-bar', up.barColor);
   if (s && s.density) d.setAttribute('data-weered-density', s.density);
   if (s && s.reduceMotion) d.setAttribute('data-weered-reduce-motion', '1');
   // SEO slab gate: hide the server-rendered lobby slab for authenticated users

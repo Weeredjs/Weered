@@ -67,6 +67,12 @@ export type UiPrefs = {
   shell?: ShellLayout;
   /** The custom colourway's colour, when palette is "custom". */
   accent?: string;
+  /** Your colour's second colour, for a two-colour gradient ("none" clears it). */
+  accent2?: string;
+  /** Section bars under Nebula: none, solid, or Classic's slant (2026-11-02). */
+  bars?: "off" | "solid" | "slant";
+  /** The bars' own colour ("none" follows the colourway). */
+  barColor?: string;
   font?: NebulaFont;
   shape?: ShellShape;
   lines?: ShellLines;
@@ -273,16 +279,21 @@ function luminance(hex: string): number {
 }
 
 /** A whole colourway from one colour: deep accent, second glow, light tint,
- *  and a near-black sky tinted with the same hue. */
-export function customPalette(accent: string): PaletteColours {
+ *  and a near-black sky tinted with the same hue. A second colour (accent2,
+ *  2026-11-02) takes over the deep accent and the second glow, so gradients
+ *  and the sky run between the two. */
+export function customPalette(accent: string, accent2?: string | null): PaletteColours {
   const [h, s, l] = rgbHsl(...hexRgb(isHexColour(accent) ? accent : "#8b5cf6"));
   const a = hslHex(h, s, Math.min(0.74, Math.max(0.52, l)));
+  const two = isHexColour(accent2) ? rgbHsl(...hexRgb(accent2 as string)) : null;
   return {
     name: "Custom",
     tagline: "Your own colour.",
     a,
-    b: hslHex(h, Math.min(1, s * 1.05), Math.max(0.3, Math.min(0.62, l) - 0.12)),
-    c: hslHex((h + 330) % 360, s * 0.75, 0.22),
+    b: two
+      ? hslHex(two[0], Math.min(1, two[1] * 1.05), Math.max(0.36, Math.min(0.58, two[2])))
+      : hslHex(h, Math.min(1, s * 1.05), Math.max(0.3, Math.min(0.62, l) - 0.12)),
+    c: two ? hslHex(two[0], two[1] * 0.75, 0.24) : hslHex((h + 330) % 360, s * 0.75, 0.22),
     hi: hslHex(h, Math.min(1, s * 0.9 + 0.1), 0.86),
     bg: hslHex(h, s * 0.45, 0.035),
     ink: hslHex(h, s * 0.4, 0.075),
@@ -291,8 +302,12 @@ export function customPalette(accent: string): PaletteColours {
 }
 
 /** The colours for any colourway, custom included. */
-export function paletteColours(palette?: Palette | null, accent?: string | null): PaletteColours {
-  if (palette === "custom") return customPalette(accent || "");
+export function paletteColours(
+  palette?: Palette | null,
+  accent?: string | null,
+  accent2?: string | null,
+): PaletteColours {
+  if (palette === "custom") return customPalette(accent || "", accent2);
   return PALETTES[(palette && palette in PALETTES ? palette : "violet") as NamedPalette];
 }
 
@@ -347,8 +362,21 @@ export function paintUiPrefs(p: UiPrefs) {
   d.setAttribute("data-weered-palette", p.palette || "violet");
   for (const k of NB_VARS) d.style.removeProperty(k);
   if (p.palette === "custom") {
-    const vars = nebulaVars(customPalette(p.accent || ""));
+    const vars = nebulaVars(customPalette(p.accent || "", p.accent2));
     for (const [k, v] of Object.entries(vars)) d.style.setProperty(k, v);
+  }
+  // Section bars (99-nebula-bars.css): their colour, and readable text on it.
+  if (p.bars === "solid" || p.bars === "slant") d.setAttribute("data-weered-bars", p.bars);
+  else d.removeAttribute("data-weered-bars");
+  if (isHexColour(p.barColor)) {
+    d.style.setProperty("--nb-bar", p.barColor as string);
+    d.style.setProperty(
+      "--nb-bar-on",
+      luminance(p.barColor as string) > 0.5 ? "#111114" : "#ffffff",
+    );
+  } else {
+    d.style.removeProperty("--nb-bar");
+    d.style.removeProperty("--nb-bar-on");
   }
   if (p.font && p.font !== "default") d.setAttribute("data-weered-font", p.font);
   else d.removeAttribute("data-weered-font");
@@ -375,7 +403,7 @@ export function applyUiPrefs(p: UiPrefs) {
     if (p.palette === "custom")
       localStorage.setItem(
         NB_CUSTOM_KEY,
-        JSON.stringify(nebulaVars(customPalette(p.accent || ""))),
+        JSON.stringify(nebulaVars(customPalette(p.accent || "", p.accent2))),
       );
     else localStorage.removeItem(NB_CUSTOM_KEY);
   } catch {}
