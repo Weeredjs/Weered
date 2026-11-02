@@ -24,6 +24,7 @@ import ShellAmbient from "./shell/ShellAmbient";
 import BlizzardGuard from "./shell/BlizzardGuard";
 import UpdateNotice from "./UpdateNotice";
 import ChunkRecovery from "./ChunkRecovery";
+import UsernameStep from "./UsernameStep";
 import DesktopTitleBar from "./DesktopTitleBar";
 import LobbyBrowser from "./LobbyBrowser";
 import ServiceWorkerRegister from "./ServiceWorkerRegister";
@@ -240,6 +241,7 @@ export default function RootFrame({ children }: { children: React.ReactNode }) {
         <WeeredProvider>
           {/* A designed lobby's look across its whole space (after ThemeRestore). */}
           <SpaceTheme />
+          <UsernameStep />
           <ShellGate left={<LeftRail />} right={<RightRailSwitch />}>
             {children}
           </ShellGate>

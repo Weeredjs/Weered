@@ -7,6 +7,7 @@ import { registrationBlock } from "../lib/registration";
 import { readCookie, setAuthCookie } from "../lib/authCookie";
 import { accountForIdentity } from "../lib/googleLink";
 import { cleanDisplayName } from "../lib/displayName";
+import { discordStandIn } from "../lib/standInName";
 
 // Sign in with Discord (2026-11-01): the people trying Weered mostly come from
 // Discord, and their members can sign in with the account they already have.
@@ -117,7 +118,7 @@ export default async function discordAuthRoutes(app: FastifyInstance, opts: Opts
         user = await prisma.user.create({
           data: {
             name: displayName,
-            usernameKey: `d_${discordId}`,
+            usernameKey: discordStandIn(discordId),
             discordId,
             email: found.email,
             avatar,

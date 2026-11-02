@@ -129,6 +129,9 @@ export async function handleAuthHello(
         panelAccentColor: ws.user.panelAccentColor,
         pillBgColor: ws.user.pillBgColor,
         pillAccentColor: ws.user.pillAccentColor,
+        // Skipped the username step after a Google or Discord sign-up
+        // (lib/standInName.ts): the web sends them back to it.
+        ...((ws.user as any).needsUsername ? { needsUsername: true } : {}),
       },
     });
     awardNotoriety(ws.user.id, "DAILY_ACTIVE").catch(swallow);

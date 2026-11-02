@@ -1,6 +1,7 @@
 import { prisma } from "./prisma";
 import { GlobalRole, LobbyRole } from "@prisma/client";
 import { type AuthedUser } from "./roomState";
+import { onStandInName } from "./standInName";
 
 // Role/permission helpers (staff + lobby owner/mod). Extracted from
 // index.ts so the authorization logic is importable + unit-testable.
@@ -102,11 +103,14 @@ export async function hydrateGlobalRole(user: AuthedUser): Promise<AuthedUser> {
         statusEmoji: true,
         nameEffect: true,
         avatarFrame: true,
+        googleId: true,
+        discordId: true,
       } as any,
     });
     return {
       ...user,
       usernameKey: (u as any)?.usernameKey ?? undefined,
+      needsUsername: u ? onStandInName(u as any) : false,
       globalRole: String(u?.globalRole ?? "USER"),
       tier: String(u?.tier ?? "INNOCENT"),
       avatarColor: u?.avatarColor ?? undefined,

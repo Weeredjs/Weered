@@ -2,6 +2,7 @@
 
 import { Suspense, useState, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { afterUsernameStep } from "../../lib/usernameStep";
 
 function OnboardingForm() {
   const router = useRouter();
@@ -23,12 +24,13 @@ function OnboardingForm() {
       // Discord's sign-in sends only who you are: the session is the cookie.
       if (t || userRaw) {
         setToken(t);
-        void 0;
         if (userRaw) {
           const user = JSON.parse(decodeURIComponent(userRaw));
           localStorage.setItem("weered_user", JSON.stringify(user));
         }
-      } else {
+      } else if (!localStorage.getItem("weered_user")) {
+        // Sent back here later by components/UsernameStep.tsx, the session
+        // cookie still carries them; nobody signed in goes to sign in.
         router.replace("/login");
       }
     } catch {}
@@ -77,9 +79,10 @@ function OnboardingForm() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || `Error ${res.status}`);
-      void 0;
       if (data.user) localStorage.setItem("weered_user", JSON.stringify(data.user));
-      router.replace("/home");
+      // A fresh load: the socket signs in again under the new name, which also
+      // clears the send-back (lib/usernameStep.ts).
+      window.location.replace(afterUsernameStep(sp?.get("next")));
     } catch (e: any) {
       setErr(String(e?.message || "Something went wrong."));
     } finally {
