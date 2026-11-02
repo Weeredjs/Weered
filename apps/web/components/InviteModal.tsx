@@ -18,7 +18,11 @@ async function apiFetch(path: string, opts?: RequestInit) {
   try {
     const r = await fetch(`${API}${path}`, {
       ...opts,
-      headers: { "Content-Type": "application/json", ...authHeaders(), ...(opts?.headers || {}) },
+      headers: {
+        ...(typeof opts?.body === "string" ? { "Content-Type": "application/json" } : {}),
+        ...authHeaders(),
+        ...(opts?.headers || {}),
+      },
     });
     return await r.json();
   } catch {

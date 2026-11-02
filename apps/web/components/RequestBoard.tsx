@@ -45,7 +45,11 @@ async function apiFetch(
   const r = await fetch(`${API}${path}`, {
     credentials: "include",
     ...opts,
-    headers: { "Content-Type": "application/json", ...authHeaders(), ...(opts?.headers || {}) },
+    headers: {
+      ...(typeof opts?.body === "string" ? { "Content-Type": "application/json" } : {}),
+      ...authHeaders(),
+      ...(opts?.headers || {}),
+    },
   });
   let body: ApiBody = null;
   try {

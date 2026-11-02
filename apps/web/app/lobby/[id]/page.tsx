@@ -1089,9 +1089,12 @@ export default function LobbyIdPage() {
                         confirmLabel: "Leave",
                       });
                       if (!ok) return;
+                      // An empty JSON body: the API refuses a JSON POST with none,
+                      // and leaving silently failed (2026-11-01 ops audit).
                       await fetch(`${API}/lobbies/${encodeURIComponent(lobbyId)}/leave`, {
                         method: "POST",
                         headers: { "Content-Type": "application/json", ...authHeaders() },
+                        body: "{}",
                       });
                       setMembership(null);
                       setMemberChecked(true);

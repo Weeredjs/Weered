@@ -16,9 +16,19 @@ export function authHeaders(): Record<string, string> {
 }
 
 export async function apiFetch(path: string, opts?: RequestInit) {
+  // Say JSON only when there is JSON. The API refuses a POST or DELETE that
+  // says application/json and sends nothing (400 "Body cannot be empty"), so
+  // every bodiless action through here failed: kick, unban, delete a post, a
+  // room, an event, an announcement (2026-11-01 ops audit). Sentry is told to
+  // ignore that error, which is why nobody saw it.
+  const json = typeof opts?.body === "string";
   const r = await fetch(`${API}${path}`, {
     ...opts,
-    headers: { "Content-Type": "application/json", ...authHeaders(), ...(opts?.headers || {}) },
+    headers: {
+      ...(json ? { "Content-Type": "application/json" } : {}),
+      ...authHeaders(),
+      ...(opts?.headers || {}),
+    },
   });
   return r.json();
 }

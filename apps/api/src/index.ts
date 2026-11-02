@@ -280,6 +280,7 @@ import { canEnterGatedRoom } from "./lib/lobbyAccess";
 import { isOfficeRoom } from "./lib/officeRooms";
 import { issuedBeforeCutoff } from "./lib/sessionCutoff";
 import { sessionHook } from "./lib/sessionHook";
+import { allowEmptyJsonBody } from "./lib/emptyJson";
 import { withinBudget } from "./lib/roomGate";
 import { awardPaper } from "./lib/economy";
 
@@ -761,6 +762,8 @@ async function main() {
   // which the client writes itself. With loopback trusted, req.ip is the address
   // Caddy saw, whether Caddy appends to or replaces a forged header.
   const app = Fastify({ loggerInstance: logger, trustProxy: ["127.0.0.1", "::1"] });
+  // A bodiless request labelled JSON reads as {} rather than failing (lib/emptyJson.ts).
+  allowEmptyJsonBody(app);
 
   // CORS is normally added at the Caddy edge in production. Non-prod stacks
   // with no edge (e.g. the E2E CI job, where the browser calls the API

@@ -82,7 +82,11 @@ async function apiFetch(path: string, opts?: RequestInit): Promise<ApiResult> {
     const r = await fetch(`${API}${path}`, {
       credentials: "include",
       ...opts,
-      headers: { "Content-Type": "application/json", ...authHeaders(), ...(opts?.headers || {}) },
+      headers: {
+        ...(typeof opts?.body === "string" ? { "Content-Type": "application/json" } : {}),
+        ...authHeaders(),
+        ...(opts?.headers || {}),
+      },
     });
     return await r.json().catch(() => ({ ok: false, error: `http_${r.status}` }));
   } catch {

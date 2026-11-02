@@ -1090,6 +1090,8 @@ export function ChatMessage(props: ChatMessageProps) {
                               "Content-Type": "application/json",
                             }
                           : { "Content-Type": "application/json" },
+                        // The API refuses a JSON POST with no body.
+                        body: "{}",
                       },
                     );
                     const j = await r.json().catch(() => ({}));

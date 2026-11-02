@@ -17,7 +17,11 @@ function authHeaders(): Record<string, string> {
 async function apiFetch(path: string, opts?: RequestInit) {
   const r = await fetch(`${API}${path}`, {
     ...opts,
-    headers: { "Content-Type": "application/json", ...authHeaders(), ...(opts?.headers || {}) },
+    headers: {
+      ...(typeof opts?.body === "string" ? { "Content-Type": "application/json" } : {}),
+      ...authHeaders(),
+      ...(opts?.headers || {}),
+    },
   });
   return r.json();
 }

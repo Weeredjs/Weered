@@ -14,7 +14,7 @@ function authHeaders(): Record<string, string> {
   try { const t = localStorage.getItem("weered_token") || ""; return t ? { Authorization: `Bearer ${t}` } : {}; } catch { return {}; }
 }
 async function apiFetch(path: string, opts?: RequestInit) {
-  const r = await fetch(`${API}${path}`, { ...opts, headers: { "Content-Type": "application/json", ...authHeaders(), ...(opts?.headers || {}) } });
+  const r = await fetch(`${API}${path}`, { ...opts, headers: { ...(typeof opts?.body === "string" ? { "Content-Type": "application/json" } : {}), ...authHeaders(), ...(opts?.headers || {}) } });
   return r.json();
 }
 
