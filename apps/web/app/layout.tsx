@@ -81,7 +81,7 @@ export const metadata = {
     icon: [{ url: "/brand/logo/weered-logo-32.png", sizes: "32x32", type: "image/png" }],
     // Padded on the dark: iOS fills transparency with black and rounds the
     // corners, which clipped the full-width logo.
-    apple: "/brand/logo/weered-apple-touch-180.png",
+    apple: "/brand/logo/weered-apple-touch-180.png?v=2",
     shortcut: "/brand/logo/weered-logo-32.png",
   },
   manifest: "/manifest.json",

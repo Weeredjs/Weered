@@ -1,17 +1,20 @@
 """Weered app icons (2026-11-01): the brand W + crown (purple, as everywhere on
 the site), centred inside Android's safe zone so the launcher's mask never
-crops it, on a deep violet glow. Writes the web app's maskable and Apple icons
-and the phone app's icon and adaptive foreground."""
-from PIL import Image, ImageFilter
+crops it, crisp on a dark violet ground. Writes the web app's maskable and
+Apple icons and the phone app's icon and adaptive foreground.
+
+2026-11-02: no glow. A soft accent halo round the W read as a blur on the
+phone (James: "the app icon updated to this blurr?"); the ground is a shade
+lighter instead, so the purple W stands off it with clean edges."""
+from PIL import Image
 
 WEB = "E:/Weered-harden/apps/web/public/brand/logo"
 MOB = "E:/Weered-harden/apps/mobile/assets"
 SRC = Image.open(f"{WEB}/weered-logo-512.png").convert("RGBA")
 LOGO = SRC.crop(SRC.getbbox())
 
-CENTRE = (24, 11, 48)  # a hint of violet behind the W
-EDGE = (7, 6, 12)  # near-black at the rim
-GLOW = (139, 92, 246)  # the site accent, as the logo glows on the site
+CENTRE = (38, 24, 74)  # violet behind the W, light enough to set it off
+EDGE = (14, 10, 28)  # deep violet at the rim
 
 
 def backdrop(n):
@@ -28,13 +31,6 @@ def place(canvas, frac):
     s = frac * n / max(w, h)
     logo = LOGO.resize((round(w * s), round(h * s)), Image.LANCZOS)
     at = ((n - logo.size[0]) // 2, (n - logo.size[1]) // 2)
-    # A soft glow in the accent colour lifts the purple W off the dark.
-    halo = Image.new("RGBA", canvas.size, GLOW + (0,))
-    a = Image.new("L", canvas.size, 0)
-    a.paste(logo.split()[3], at)
-    a = a.filter(ImageFilter.GaussianBlur(n * 0.045)).point(lambda v: int(v * 0.75))
-    halo.putalpha(a)
-    canvas.alpha_composite(halo)
     canvas.alpha_composite(logo, at)
     return canvas
 
