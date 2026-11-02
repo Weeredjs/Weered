@@ -72,7 +72,7 @@ const faqLd = {
       name: "A Weered é gratuita?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "Usar a Weered é gratuito: lobbies, salas, voz, vídeo e presença. Criar e administrar o seu próprio lobby é um plano pago de 6 dólares por mês. Ter um lobby construído sob medida, com os seus bots virando recurso nativo, a sua marca e o seu domínio, é orçado pelo tamanho da comunidade.",
+        text: "Usar a Weered é gratuito: lobbies, salas, voz, vídeo e presença. Criar e administrar o seu próprio lobby também é gratuito, até três por conta. Ter um lobby construído sob medida, com os seus bots virando recurso nativo, a sua marca e o seu domínio, é orçado pelo tamanho da comunidade.",
       },
     },
     {
@@ -264,7 +264,7 @@ export default function DiscordBrasilPage() {
             <h2 className="mkt-h2">Usar é grátis. Ter um feito sob medida, não.</h2>
             <p className="mkt-p">
               Lobbies, salas, voz, vídeo e presença não custam nada para usar. Criar e administrar o
-              seu próprio lobby é um plano de 6 dólares por mês. E, se você quiser,{" "}
+              seu próprio lobby também é grátis, até três por conta. E, se você quiser,{" "}
               <strong>a gente constrói o lobby da sua comunidade</strong>: seus bots virando recurso
               nativo, sua marca, suas regras, seu domínio — orçado pelo tamanho da comunidade, nunca
               por membro e nunca por impulso.

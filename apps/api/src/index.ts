@@ -125,6 +125,7 @@ import billingRoutes from "./routes/billing";
 import activityRoutes from "./routes/activity";
 import staffOpsRoutes from "./routes/staffOps";
 import staffTodayRoutes from "./routes/staffToday";
+import { startListingSweep } from "./lib/listingHold";
 import roomsRoutes from "./routes/rooms";
 import lobbiesRoutes from "./routes/lobbies";
 import lobbyDesignRoutes from "./routes/lobbyDesign";
@@ -1559,6 +1560,7 @@ async function main() {
   void getOperatorUserId();
   setPresenceWss(wss);
   startPresencePolling();
+  startListingSweep();
   app.log.info(`WS listening on ws://127.0.0.1:${WS_PORT}`);
 
   // Guest liveness sweep (60s): WS path mirrors the HTTP revocation hook, so a

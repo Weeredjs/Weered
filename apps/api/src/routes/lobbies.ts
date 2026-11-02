@@ -4,6 +4,7 @@ import { publicModuleConfig } from "../lib/publicModuleConfig";
 import { logLobbyAudit } from "../lib/lobbyAudit";
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
+import { FREE_LOBBIES } from "../lib/listingHold";
 import { designCreateExtras } from "./lobbyDesign";
 import { registerLobbyJoin } from "./lobbyJoin";
 import { registerFrontDesk } from "./frontDesk";
@@ -386,31 +387,28 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
           message: "Addresses starting with u- are for members' places.",
         });
 
+      // Lobbies are free for everyone, up to three each (James 2026-11-02);
+      // Kingpin and staff have no limit. A free account's new lobby is held
+      // off the listings until people join it (lib/listingHold.ts).
+      let held = false;
       if (!isStaff) {
         const dbUser = await prisma.user.findUnique({
           where: { id: u.id },
           select: { tier: true },
         });
         const tier = String(dbUser?.tier ?? "INNOCENT");
-        if (tier === "INNOCENT") {
-          return reply.code(403).send({
-            ok: false,
-            error: "tier_required",
-            message: "Indicted tier or higher required to create lobbies.",
-          });
-        }
-        // A member's place (routes/places.ts) is free and never counts toward the limit.
+        // A member's place (routes/places.ts) never counts toward the limit.
         const ownedCount = await prisma.lobby.count({
           where: { ownerId: u.id, NOT: { id: { startsWith: "u-" } } },
         });
-        const maxLobbies = tier === "KINGPIN" ? 999 : tier === "FELON" ? 3 : 1;
-        if (ownedCount >= maxLobbies) {
+        if (tier !== "KINGPIN" && ownedCount >= FREE_LOBBIES) {
           return reply.code(403).send({
             ok: false,
             error: "lobby_limit",
-            message: `You can own up to ${maxLobbies} lobbies on the ${tier} tier.`,
+            message: `You have ${FREE_LOBBIES} lobbies already, the most one account can have.`,
           });
         }
+        held = tier === "INNOCENT";
       }
 
       const {
@@ -507,6 +505,7 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
           logoUrl: logoUrl ?? null,
           bannerUrl: bannerUrl ?? null,
           websiteUrl: websiteUrl ?? null,
+          ...(held ? { unlisted: true, listingHeld: true } : {}),
           ...createExtras,
         },
       });

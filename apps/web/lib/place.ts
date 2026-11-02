@@ -1,5 +1,6 @@
 // Your place (api routes/places.ts): a lobby of your own, free, at
-// weered.ca/u/<label> and <label>.weered.ca. Made once; it opens in Design
+// weered.ca/u/<code> (made from 2026-11-02; older ones keep <label>.weered.ca,
+// and yourname.weered.ca becomes the $6 tier). Made once; it opens in Design
 // mode with Describe, so "a neon arcade with my stream and a couch" builds it.
 import { newBlock, stockLayout, type LobbyLayout } from "./lobbyLayout";
 
@@ -10,7 +11,8 @@ export type Place = {
   name: string;
   label: string;
   path: string;
-  host: string;
+  /** <label>.weered.ca, or null for a place on a code address. */
+  host: string | null;
   /** Who can come in (components/PlaceGate.tsx); the owner sees it. */
   gate?: "anyone" | "friends" | "ask" | "me";
 };
@@ -19,7 +21,8 @@ export type Place = {
  *  donkey.weered.ca was checked end to end (padlock, redirect, page, API).
  *  false shows the weered.ca/u/<label> path instead. */
 export const PLACE_SUBDOMAINS = true;
-export const placeAddress = (p: Place) => (PLACE_SUBDOMAINS ? p.host : `weered.ca${p.path}`);
+export const placeAddress = (p: Place) =>
+  PLACE_SUBDOMAINS && p.host ? p.host : `weered.ca${p.path}`;
 
 async function getJson(path: string): Promise<any> {
   try {

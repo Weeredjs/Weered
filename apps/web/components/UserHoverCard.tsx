@@ -6,7 +6,7 @@ import { avatarBg, avatarFill } from "../lib/avatarColor";
 import RoleIcon, { TierIcon, getRoleDisplayName, getRoleColor } from "./RoleIcon";
 import { SteamIcon, TwitchIcon, XboxIcon } from "./PresenceRow";
 import { onActivate } from "@/lib/a11y";
-import { placeOf, type Place } from "../lib/place";
+import { placeAddress, placeOf, type Place } from "../lib/place";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 const FONT =
@@ -155,7 +155,7 @@ function HoverFriendRow({
     <a
       href={`/lobby/${encodeURIComponent(place.id)}`}
       onClick={(e) => e.stopPropagation()}
-      title={place.host}
+      title={placeAddress(place)}
       style={{
         ...chip,
         border: "1px solid rgba(245,183,0,.3)",

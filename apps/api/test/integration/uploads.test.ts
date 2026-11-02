@@ -7,7 +7,8 @@ import { prisma } from "../../src/lib/prisma";
 const created: string[] = [];
 
 async function newUser(tag: string, extra: any = {}): Promise<string> {
-  const stamp = Date.now() + "_" + Math.floor(performance.now()) + "_" + Math.floor(Math.random() * 1e6);
+  const stamp =
+    Date.now() + "_" + Math.floor(performance.now()) + "_" + Math.floor(Math.random() * 1e6);
   const u = await prisma.user.create({
     data: { usernameKey: "itest_up_" + tag + "_" + stamp, name: tag, ...extra },
     select: { id: true },
@@ -131,24 +132,15 @@ describe("uploads - POST /profile/avatar/upload (free tier + moderation)", () =>
   });
 });
 
-describe("uploads - POST /profile/banner/upload (tier-gated + moderation)", () => {
-  it("blocks INNOCENT but allows INDICTED (and stores webp)", async () => {
+describe("uploads - POST /profile/banner/upload (moderated)", () => {
+  // A banner is account flair, free for everyone since 2026-11-02 (was Indicted+).
+  it("lets a free account upload one (and stores webp)", async () => {
     const app = await makeApp();
     const innocent = await newUser("binno");
-    const gated = await app.inject({
-      method: "POST",
-      url: "/profile/banner/upload",
-      headers: { authorization: "Bearer " + testToken(innocent) },
-      payload: { image: await pngDataUrl() },
-    });
-    expect(gated.statusCode).toBe(403);
-    expect(gated.json().error).toBe("tier_required");
-
-    const indicted = await newUser("bind", { tier: "INDICTED" });
     const ok = await app.inject({
       method: "POST",
       url: "/profile/banner/upload",
-      headers: { authorization: "Bearer " + testToken(indicted) },
+      headers: { authorization: "Bearer " + testToken(innocent) },
       payload: { image: await pngDataUrl() },
     });
     expect(ok.statusCode).toBe(200);

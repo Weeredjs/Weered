@@ -48,7 +48,7 @@ const faqLd = {
       name: "Is Weered free like Guilded was?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "Using Weered is free: lobbies, rooms, voice, video and presence. Running your own lobby is a paid tier at $6 a month. Having one built for you, with your bots rebuilt as native features, your branding and your own domain, is quoted by community size. Guilded was free because Roblox was paying for it, and then Roblox stopped. We would rather charge for the build and still be here next year.",
+        text: "Using Weered is free: lobbies, rooms, voice, video and presence. Running your own lobby is free too, up to three per account. Having one built for you, with your bots rebuilt as native features, your branding and your own domain, is quoted by community size. Guilded was free because Roblox was paying for it, and then Roblox stopped. We would rather charge for the build and still be here next year.",
       },
     },
     {
@@ -253,8 +253,8 @@ export default function AlternativesGuildedPage() {
             <h2 className="mkt-h2">Using Weered is free. Having one built is not.</h2>
             <p className="mkt-p">
               Lobbies, rooms, voice, video and presence cost nothing to use, and that is not going
-              to change. Running your own lobby is $6 a month. What a community pays a build fee for
-              is a lobby <strong>made for it</strong>: your bots rebuilt as native features, your
+              to change. Running your own lobby is free. What a community pays a build fee for is a
+              lobby <strong>made for it</strong>: your bots rebuilt as native features, your
               branding, your rules, your own domain.
             </p>
             <p className="mkt-p">

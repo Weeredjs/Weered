@@ -26,7 +26,7 @@ import {
 // Nothing is saved here: the composer, Design mode and Change your drip apply
 // the result to their drafts, and the person launches or saves it as before.
 // One daily allowance covers all three: paid accounts 60, free ones 10 (a free
-// account can describe and preview a lobby; launching one still needs a plan).
+// account can describe, preview and launch a lobby: lobbies are free since 2026-11-02).
 // The site has its own daily ceiling too, AI_BUILD_SITE_DAILY.
 
 type Opts = {

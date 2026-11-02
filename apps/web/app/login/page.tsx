@@ -394,7 +394,7 @@ function LoginForm() {
                 </span>
               </li>
             </ul>
-            <div className="wa-fine">Free to join. Your own lobby is $6 a month.</div>
+            <div className="wa-fine">Free to join. Your own lobby is free too.</div>
           </section>
         )}
 

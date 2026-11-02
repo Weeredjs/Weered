@@ -49,7 +49,7 @@ const faqLd = {
       name: "Is it free?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "Yes. The PoE lobby, voice rooms, ladder, economy and crew tools are all free to use. Running your own lobby is a paid tier at $6 a month, but nothing PoE-specific sits behind it.",
+        text: "Yes. The PoE lobby, voice rooms, ladder, economy and crew tools are all free to use. Running your own lobby is free too, up to three per account.",
       },
     },
   ],

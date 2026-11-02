@@ -1,4 +1,3 @@
-import { isStaffRole } from "../lib/lobbyAuth";
 import { log, swallow } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
@@ -167,19 +166,12 @@ export default async function uploadsRoutes(app: FastifyInstance, opts: Opts) {
       const u = authFromHeader((req as any).headers?.authorization);
       if (!u) return reply.code(401).send({ error: "unauthorized" });
 
-      // Banner stays a tier perk (Indicted+), but now gets the same moderation
-      // as avatars — it was previously an unmoderated hole.
+      // A profile banner is account flair, free for everyone since 2026-11-02
+      // (it was Indicted+). It gets the same moderation as avatars.
       const dbUser: any = await prisma.user.findUnique({
         where: { id: u.id },
-        select: { tier: true, bannerUrl: true, mediaBannedUntil: true } as any,
+        select: { bannerUrl: true, mediaBannedUntil: true } as any,
       });
-      const tier = String(dbUser?.tier ?? "INNOCENT").toUpperCase();
-      if (tier === "INNOCENT") {
-        return reply.code(403).send({
-          error: "tier_required",
-          message: "Custom banner uploads require Indicted tier or higher.",
-        });
-      }
       if (dbUser?.mediaBannedUntil && new Date(dbUser.mediaBannedUntil).getTime() > Date.now()) {
         return reply
           .code(403)
@@ -227,18 +219,12 @@ export default async function uploadsRoutes(app: FastifyInstance, opts: Opts) {
     async (req, reply) => {
       const u = authFromHeader((req as any).headers?.authorization);
       if (!u) return reply.code(401).send({ error: "unauthorized" });
+      // Lobbies are free since 2026-11-02, so their branding is too (it was
+      // Indicted+). Same moderation and upload bans as every other picture.
       const dbUser = await prisma.user.findUnique({
         where: { id: u.id },
-        select: { tier: true, globalRole: true, mediaBannedUntil: true },
+        select: { mediaBannedUntil: true },
       });
-      const tier = String(dbUser?.tier ?? "INNOCENT").toUpperCase();
-      const isStaff = isStaffRole(dbUser?.globalRole);
-      if (tier === "INNOCENT" && !isStaff) {
-        return reply.code(403).send({
-          error: "tier_required",
-          message: "Lobby branding requires Indicted tier or higher.",
-        });
-      }
       if (dbUser?.mediaBannedUntil && new Date(dbUser.mediaBannedUntil).getTime() > Date.now()) {
         return reply
           .code(403)

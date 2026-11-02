@@ -165,7 +165,7 @@ export default async function LobbyAboutPage(props: { params: Promise<{ id: stri
         name: `Is the ${lobby.name} lobby free to use?`,
         acceptedAnswer: {
           "@type": "Answer",
-          text: `Yes. Joining and using the ${lobby.name} lobby on Weered is free, including voice, chat, presence, the forum and tournaments. Creating and running your own lobby is a paid tier at $6 a month.`,
+          text: `Yes. Joining and using the ${lobby.name} lobby on Weered is free, including voice, chat, presence, the forum and tournaments. Creating your own lobby is free too, up to three per account.`,
         },
       },
       {

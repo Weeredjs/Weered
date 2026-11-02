@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
 import { swallow } from "../lib/logger";
 import { lobbyIdFree } from "../lib/lobbyAccess";
+import { randomInt } from "node:crypto";
 
 // Your place (James 2026-10-30: "like a vibe coded my space ... People walk in
 // and just exist ... weered at subdomains everywhere"). Every member can have
@@ -68,6 +69,20 @@ const SYSTEM_LABELS = new Set([
   "security",
 ]);
 
+// A place made from 2026-11-02 lives at weered.ca/u/<code>: no name in the
+// address and no <label>.weered.ca of its own (James: "Everyone gets a space
+// but it is just a u/<hash of sorts>"; yourname.weered.ca is the $6 tier).
+// Places made before keep their names and subdomains. moduleConfig.code marks
+// a code place.
+const CODE_ALPHABET = "abcdefghjkmnpqrstuvwxyz23456789";
+export function placeCode(): string {
+  let c = "";
+  for (let i = 0; i < 8; i++) c += CODE_ALPHABET[randomInt(CODE_ALPHABET.length)];
+  return c;
+}
+export const isCodePlace = (l: { moduleConfig?: unknown } | null | undefined): boolean =>
+  (l?.moduleConfig as any)?.code === true;
+
 /** A name as a place's label: lowercase letters, digits and hyphens, 2–30 long. */
 export function placeLabel(name: string): string {
   return String(name || "")
@@ -95,10 +110,15 @@ export async function placeForHost(host: string): Promise<string | null> {
   if (!id) return null;
   const hit = placeCache.get(id);
   if (hit && Date.now() - hit.at < 60_000) return hit.ok ? id : null;
-  const row = await prisma.lobby.findUnique({ where: { id }, select: { id: true } });
-  placeCache.set(id, { ok: !!row, at: Date.now() });
+  const row = await prisma.lobby.findUnique({
+    where: { id },
+    select: { id: true, moduleConfig: true },
+  });
+  // A code place has no subdomain: it's reached at weered.ca/u/<code> only.
+  const ok = !!row && !isCodePlace(row);
+  placeCache.set(id, { ok, at: Date.now() });
   if (placeCache.size > 5000) placeCache.clear();
-  return row ? id : null;
+  return ok ? id : null;
 }
 
 // ── Who can come in ─────────────────────────────────────────────────────
@@ -171,7 +191,7 @@ function view(l: { id: string; name: string; moduleConfig?: unknown }) {
     name: l.name,
     label,
     path: `/u/${label}`,
-    host: `${label}.weered.ca`,
+    host: isCodePlace(l) ? null : `${label}.weered.ca`,
     gate: gateOf(l),
   };
 }
@@ -241,15 +261,8 @@ export default async function placesRoutes(app: FastifyInstance, opts: Opts) {
       if (!me || (me as any).isGuest)
         return reply.code(403).send({ ok: false, error: "members_only" });
 
-      let label = placeLabel(me.usernameKey || me.name);
-      if (label.length < 2) label = `member-${u.id.slice(-6).toLowerCase()}`;
-      if (SYSTEM_LABELS.has(label)) label = `${label}-place`;
-      // A label already taken (two names that clean up the same): number it.
-      let id = PLACE_PREFIX + label;
-      for (let i = 2; i < 60; i++) {
-        if (await lobbyIdFree(id)) break;
-        id = `${PLACE_PREFIX}${label.slice(0, 26)}-${i}`;
-      }
+      let id = PLACE_PREFIX + placeCode();
+      for (let i = 0; i < 8 && !(await lobbyIdFree(id)); i++) id = PLACE_PREFIX + placeCode();
 
       const body: any = (req as any).body || {};
       let layout: any = undefined;
@@ -272,12 +285,13 @@ export default async function placesRoutes(app: FastifyInstance, opts: Opts) {
             moduleType: "NONE",
             verified: false,
             unlisted: true,
+            moduleConfig: { code: true },
             accentColor: accent,
             // Text only: talking happens in lobbies (isPlaceId, below).
             enabledModules: [],
             ...(layout ? { layout } : {}),
           } as any,
-          select: { id: true, name: true },
+          select: { id: true, name: true, moduleConfig: true },
         });
         await prisma.lobbyMember
           .upsert({

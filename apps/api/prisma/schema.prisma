@@ -108,6 +108,10 @@ model Lobby {
   // be handed to a specific audience (a client preview, a private community)
   // without appearing to everyone else first.
   unlisted     Boolean    @default(false)
+  // Held = made by a free account and kept unlisted until it earns its place:
+  // three people besides the owner have joined (lib/listingHold.ts). Lobbies
+  // became free for everyone 2026-11-02; this keeps empty ones out of Explore.
+  listingHeld  Boolean    @default(false)
   moduleType   ModuleType @default(FEED)
   moduleConfig Json?
 

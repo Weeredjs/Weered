@@ -795,18 +795,18 @@ export default function CreateLobbyPage() {
               letterSpacing: "-0.5px",
             }}
           >
-            {limit ? "You've hit your lobby cap" : "Upgrade to build a lobby"}
+            {limit ? "You have three lobbies" : "Upgrade to build a lobby"}
           </h1>
           <p style={{ fontSize: 14, color: MUTED, margin: "0 0 24px", lineHeight: 1.5 }}>
             {limit
-              ? blocked?.message ||
-                "Your plan's lobbies are all in use. Upgrade for more, or reuse one you own."
+              ? // Lobbies are free, three each (api routes/lobbies.ts, 2026-11-02).
+                "That's the most one account can have. Reuse one you own, or talk to us about more."
               : `Lobbies come with an Indicted subscription or higher: your own address, theme, rooms and game integration.${blocked?.message ? ` ${blocked.message}` : ""}`}
           </p>
           <button
             type="button"
             className="cz-btn"
-            onClick={() => router.push("/subscribe")}
+            onClick={() => router.push(limit ? "/contact" : "/subscribe")}
             style={{
               width: "100%",
               padding: "13px 28px",
@@ -821,7 +821,7 @@ export default function CreateLobbyPage() {
               fontFamily: "inherit",
             }}
           >
-            View plans
+            {limit ? "Talk to us" : "View plans"}
           </button>
           <button
             type="button"
@@ -1306,7 +1306,8 @@ export default function CreateLobbyPage() {
             id="cz-launch"
             n={6}
             title="Launch"
-            kicker="Doors open the moment you hit it."
+            // A free account's new lobby lists once people join it (api lib/listingHold.ts).
+            kicker="Doors open the moment you hit it. Share the link: it shows in Explore once three people have joined."
             accent={accent}
           >
             <div

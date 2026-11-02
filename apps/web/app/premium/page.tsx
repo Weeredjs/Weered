@@ -4,7 +4,7 @@ import PremiumContent from "./PremiumContent";
 export const metadata: Metadata = {
   title: "Weered Premium | Innocent, Indicted, Felon, Kingpin",
   description:
-    "Choose your access level on Weered. Free lobbies and rooms for everyone, or unlock branded lobbies, custom styling, verified badges, and more starting at $6/month.",
+    "Choose your access level on Weered. Lobbies are free for everyone, up to three each. Paid plans start at $6 a month.",
   openGraph: {
     title: "Weered Premium | Choose Your Status",
     description:

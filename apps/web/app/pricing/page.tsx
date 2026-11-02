@@ -5,7 +5,7 @@ import { safeJsonLd } from "@/lib/jsonLd";
 
 const TITLE = "Pricing | Weered — free to use, built for you when you want it";
 const DESC =
-  "Using Weered is free. Running your own lobby is $6 a month. A lobby built for your community — your bots as native features, your branding, your own domain — is priced by community size, never by seat. The first ten builds are on founding terms.";
+  "Using Weered is free, and so is running your own lobby. A lobby built for your community — your bots as native features, your branding, your own domain — is priced by community size, never by seat. The first ten builds are on founding terms.";
 const URL = "https://weered.ca/pricing";
 
 export const metadata: Metadata = {
@@ -37,7 +37,7 @@ export const metadata: Metadata = {
  * trust none of them:
  *
  *   free   -- to USE: lobbies, rooms, voice, video, presence
- *   $6/mo  -- to RUN your own lobby (Indicted; free accounts cannot create one)
+ *   free   -- to RUN your own lobby too, three each (2026-11-02; was $6/mo)
  *   quoted -- to have one BUILT for you, by community size
  *
  * Build tiers carry no dollar figure on purpose. A build is quoted, and the
@@ -57,7 +57,7 @@ const faqLd = {
       name: "Is Weered free?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "Using Weered is free: lobbies, rooms, voice, video and presence, with no seat limits and no boosts. Running your own lobby is a paid tier at $6 a month. Having a lobby built for your community is quoted by community size.",
+        text: "Using Weered is free: lobbies, rooms, voice, video and presence, with no seat limits and no boosts. Running your own lobby is free too, up to three per account. Having a lobby built for your community is quoted by community size.",
       },
     },
     {
@@ -121,8 +121,8 @@ export default function PricingPage() {
               Free to use. <span className="accent">Built for you</span> when you want it.
             </h1>
             <p className="mkt-sub">
-              Three honest rungs. Using Weered costs nothing. Running your own lobby is six dollars
-              a month. Having one built around your community — your bots, your brand, your domain —
+              Three honest rungs. Using Weered costs nothing, and neither does running your own
+              lobby. Having one built around your community — your bots, your brand, your domain —
               is priced by what your community is, never by seat and never by boost.
             </p>
             <div className="mkt-cta-row">
@@ -149,12 +149,12 @@ export default function PricingPage() {
                 </p>
               </div>
               <div className="mkt-card">
-                <h3>Run your own — $6 / month</h3>
+                <h3>Run your own — free</h3>
                 <p>
-                  Free accounts can join any lobby but cannot create one. Six dollars a month lets
-                  you stand one up yourself: your rooms, your roles and role icons, your name,
-                  banner and accent, forum moderation.{" "}
-                  <Link href="/premium">The tiers, in full.</Link>
+                  Anyone can stand up a lobby, up to three each: your rooms, your roles and role
+                  icons, your name, banner and accent, forum moderation. A new lobby shows in
+                  Explore once three people have joined it. Paid plans from $6 a month add more.{" "}
+                  <Link href="/premium">The plans, in full.</Link>
                 </p>
               </div>
               <div className="mkt-card">

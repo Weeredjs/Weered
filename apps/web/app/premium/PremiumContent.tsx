@@ -15,10 +15,11 @@ const tiers = [
     // effects or avatar frames — so they are listed here, where they belong,
     // rather than being sold a tier up.
     features: [
-      "Full access to all public lobbies",
+      "Your own lobbies, up to three",
+      "Your own place to hang out",
       "Join and create rooms",
       "Voice, video, and screen share",
-      "Username effects and avatar frames",
+      "Username effects, avatar frames, your own drip",
       "The feed. All of it.",
     ],
     cta: "You\u2019re already here.",
@@ -34,15 +35,16 @@ const tiers = [
     glow: "rgba(88,0,229,0.2)",
     border: "rgba(88,0,229,0.35)",
     badge: "most popular",
-    // The one thing this tier actually unlocks is creating a lobby at all:
-    // routes/lobbies.ts refuses lobby creation for INNOCENT with tier_required.
-    // Everything else here follows from owning that lobby.
+    // Lobbies became free 2026-11-02 (routes/lobbies.ts, lib/listingHold.ts).
+    // Only what the code does for a paid account is listed: a new lobby lists
+    // at once, the builder allowance (lib/build/allowance.ts), chat pictures
+    // (routes/chatMedia.ts), and the name colour and icon.
     features: [
       "Everything in Innocent",
-      "Run your own lobby — free accounts can't",
-      "Your own rooms, roles, and role icons",
-      "Branding: name, banner, logo, accent colour",
-      "Forum moderation for your lobby",
+      "Your new lobbies show in Explore right away",
+      "60 AI builds a day (free: 10)",
+      "Pictures in chat right away, kept for good",
+      "Coloured name and tier icon",
       "Early access to new features",
     ],
     cta: "Get Indicted",
@@ -59,12 +61,8 @@ const tiers = [
     border: "rgba(249,115,22,0.3)",
     features: [
       "Everything in Indicted",
-      "Own up to 3 verified lobbies",
-      "Full forum moderation: pin, lock, delete",
-      "Lobby mod tools + custom modules",
-      "Verified badge on your lobbies",
+      "The Felon name colour and icon",
       "Direct line to platform support",
-      "Your lobbies surface on Home",
     ],
     cta: "Become a Felon",
     ctaLink: "/subscribe",

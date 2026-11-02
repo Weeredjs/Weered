@@ -495,7 +495,7 @@ function Yours({ actions }: { actions: GuideActions }) {
           items={[
             [
               "A lobby of your own.",
-              "At weered.ca/u/yourname. People walk in and hang out: voice, chat, video.",
+              "At its own address on weered.ca that you share. Friends drop in and chat.",
             ],
             [
               "It's you.",
@@ -623,7 +623,7 @@ function Lobbies({ go, actions }: { go: (id: ChapterId) => void; actions: GuideA
       <Head
         id="lobbies"
         title="Your lobby, built in a minute."
-        intro="Pick what it's for, name it, choose a look, say what's inside and which rooms it opens with. Then it's live, and Design opens on it. Running your own lobby is $6 a month."
+        intro="Pick what it's for, name it, choose a look, say what's inside and which rooms it opens with. Then it's live, and Design opens on it. Lobbies are free, three each. A new one shows in Explore once three people have joined it."
       />
       <div className="wg-actions">
         <Btn primary onClick={actions.build}>
