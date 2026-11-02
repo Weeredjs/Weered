@@ -47,7 +47,7 @@ const join = (name: string) =>
 
 describe("names nobody chose through the username rules", () => {
   it("a guest can't come in as Weered or the Operator", async () => {
-    for (const name of ["Weered Support", "the weered team", "Op​erator", "OPERATOR"]) {
+    for (const name of ["Weered Support", "the weered team", "Op\u200Berator", "OPERATOR"]) {
       const r = await join(name);
       expect(r.statusCode).toBe(400);
       expect(r.json().error).toBe("name_reserved");
@@ -55,7 +55,7 @@ describe("names nobody chose through the username rules", () => {
   });
 
   it("invisible and direction-flipping characters come out", async () => {
-    const r = await join("‮Quinn​ Gname⁦");
+    const r = await join("\u202EQuinn\u200B Gname\u2066");
     expect(r.statusCode).toBe(200);
     expect(r.json().user.name).toBe("Quinn Gname");
   });
@@ -63,7 +63,7 @@ describe("names nobody chose through the username rules", () => {
   it("a Google or Discord profile name follows the same rule", async () => {
     expect(await cleanDisplayName("Weered Staff")).toBeNull();
     expect(await cleanDisplayName("Operator")).toBeNull();
-    expect(await cleanDisplayName("Ann​  Lee")).toBe("Ann Lee");
+    expect(await cleanDisplayName("Ann\u200B  Lee")).toBe("Ann Lee");
     expect(await cleanDisplayName(undefined)).toBe("");
   });
 });
