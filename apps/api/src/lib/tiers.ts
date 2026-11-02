@@ -44,3 +44,18 @@ export function subdomainAllowance(tier: unknown): number {
   if (t === "FELON") return 1;
   return 0;
 }
+
+/**
+ * Video quality a lobby's calls get, from its owner's plan. Cams and screen
+ * share run through Weered's own server (LiveKit on the droplet), so they're
+ * the one thing that costs per use; Twitch and YouTube embeds cost nothing.
+ *   standard  free: cams 640x480, screen share 720p at 15 fps
+ *   hd        Felon: cams 720p, screen share 1080p at 30 fps
+ *   max       Condemned, Kingpin, staff: cams 1080p, screen share 1080p at 60 fps
+ */
+export type StreamQuality = "standard" | "hd" | "max";
+export function streamQuality(tier: unknown, staff = false): StreamQuality {
+  if (staff || tierAtLeast(tier, "CONDEMNED")) return "max";
+  if (tierAtLeast(tier, "FELON")) return "hd";
+  return "standard";
+}

@@ -3,6 +3,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { Room, RoomEvent, Track, TrackPublication, type LocalAudioTrack } from "livekit-client";
 import { VOICE_FX_KEY, savedVoiceFx, voiceFxProcessor, type VoiceFx } from "../lib/voiceFx";
+import { streamSettings } from "../lib/streamQuality";
 import {
   DEFAULT_PTT,
   isTypingTarget,
@@ -80,6 +81,8 @@ const VoiceContext = createContext<VoiceContextValue | null>(null);
 
 export function VoiceProvider({ children }: { children: React.ReactNode }) {
   const roomRef = useRef<Room | null>(null);
+  /** This call's cam and screen-share quality, from its voice pass (lib/streamQuality.ts). */
+  const qualityRef = useRef(streamSettings("standard"));
   const audioRefs = useRef<Map<string, HTMLAudioElement>>(new Map());
   const videoRefs = useRef<Map<string, HTMLVideoElement>>(new Map());
 
@@ -304,13 +307,19 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
           body: JSON.stringify({ roomId }),
         });
         if (!res.ok) throw new Error(`Token error ${res.status}`);
-        const { url, token } = await res.json();
+        const { url, token, quality } = await res.json();
         if (!token) throw new Error("No token returned");
+        const q = streamSettings(quality);
+        qualityRef.current = q;
 
         const room = new Room({
           adaptiveStream: true,
           dynacast: true,
-          videoCaptureDefaults: { resolution: { width: 640, height: 480, frameRate: 24 } },
+          videoCaptureDefaults: { resolution: q.camera },
+          publishDefaults: {
+            ...(q.cameraEncoding ? { videoEncoding: q.cameraEncoding } : {}),
+            screenShareEncoding: q.screenEncoding,
+          },
         });
         roomRef.current = room;
 
@@ -566,7 +575,10 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
     if (!room) return;
     try {
       const next = !screenShareOn;
-      await room.localParticipant.setScreenShareEnabled(next);
+      await room.localParticipant.setScreenShareEnabled(
+        next,
+        next ? { resolution: qualityRef.current.screen } : undefined,
+      );
       setScreenShareOn(next);
       rebuildTiles(room);
     } catch (e: any) {

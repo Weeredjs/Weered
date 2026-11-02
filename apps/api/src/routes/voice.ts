@@ -6,6 +6,8 @@ import { canEnterGatedRoom } from "../lib/lobbyAccess";
 import { isPlaceId } from "./places";
 import { isOfficeRoom } from "../lib/officeRooms";
 import { guestMayEnter } from "../lib/guestScope";
+import { streamQuality } from "../lib/tiers";
+import { isStaffRole } from "../lib/lobbyAuth";
 
 // LiveKit voice token minting (extracted from index.ts). The LIVEKIT_* config
 // and the AccessToken SDK are voice-exclusive and live here. Room state + the
@@ -170,7 +172,24 @@ export default async function voiceRoutes(app: FastifyInstance, opts: Opts) {
       });
       const token = await at.toJwt();
       if (!(u as any).guest) awardNotoriety(u.id, "VOICE_JOINED").catch(swallow);
-      return reply.send({ ok: true, url: LIVEKIT_URL, token, canPublish });
+      // Cams and screen share at the quality the lobby owner's plan pays for
+      // (lib/tiers.ts streamQuality); the app sets its capture to match.
+      const owner = await prisma.lobby
+        .findUnique({
+          where: { id: room.lobbyId || room.roomId },
+          select: { ownerId: true },
+        })
+        .then((l) =>
+          l?.ownerId
+            ? prisma.user.findUnique({
+                where: { id: l.ownerId },
+                select: { tier: true, globalRole: true },
+              })
+            : null,
+        )
+        .catch(() => null);
+      const quality = streamQuality(owner?.tier, isStaffRole(owner?.globalRole));
+      return reply.send({ ok: true, url: LIVEKIT_URL, token, canPublish, quality });
     },
   );
 }
