@@ -8,10 +8,18 @@ type Opts = {
   getGlobalRole: (userId: string) => Promise<string | null>;
   canAccessStaff: (role: string | null) => boolean;
   rooms: Map<string, { name?: string; lobbyId?: string | null; users: Map<string, any> }>;
+  globalAudit: (
+    actorId: string,
+    actorName: string,
+    action: string,
+    targetId?: string,
+    targetName?: string,
+    meta?: any,
+  ) => Promise<void>;
 };
 
 export default async function staffOpsRoutes(app: FastifyInstance, opts: Opts) {
-  const { authFromHeader, getGlobalRole, canAccessStaff, rooms } = opts;
+  const { authFromHeader, getGlobalRole, canAccessStaff, rooms, globalAudit } = opts;
 
   app.get("/staff/outreach", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
@@ -80,6 +88,7 @@ export default async function staffOpsRoutes(app: FastifyInstance, opts: Opts) {
           createdById: u.id,
         },
       });
+      await globalAudit(u.id, u.name, "outreach_add", contact.id, contact.name);
       return reply.send({ ok: true, contact });
     },
   );
@@ -131,6 +140,9 @@ export default async function staffOpsRoutes(app: FastifyInstance, opts: Opts) {
 
       try {
         const contact = await prisma.outreachContact.update({ where: { id }, data });
+        await globalAudit(u.id, u.name, "outreach_update", id, contact.name, {
+          fields: Object.keys(data),
+        });
         return reply.send({ ok: true, contact });
       } catch {
         return reply.code(404).send({ ok: false, error: "not_found" });
@@ -154,7 +166,8 @@ export default async function staffOpsRoutes(app: FastifyInstance, opts: Opts) {
       if (!isStaffRole(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
 
       try {
-        await prisma.outreachContact.delete({ where: { id: (req as any).params.id } });
+        const gone = await prisma.outreachContact.delete({ where: { id: (req as any).params.id } });
+        await globalAudit(u.id, u.name, "outreach_delete", gone.id, gone.name);
       } catch {
         return reply.code(404).send({ ok: false, error: "not_found" });
       }

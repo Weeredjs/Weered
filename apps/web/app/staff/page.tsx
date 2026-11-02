@@ -7,7 +7,6 @@ import LobbyChatPanel from "../../components/LobbyChatPanel";
 import AnalyticsTab from "../../components/AnalyticsTab";
 import { GlobalRole, NAV_GROUPS, NAV_ITEMS, NavId, apiFetch, canSeeNav } from "./shared";
 import { TodayTab, type TodayData } from "./TodayTab";
-import { PermissionsTab } from "./PermissionsTab";
 import { OpsPresence } from "./OpsPresence";
 import { UsersTab } from "./UsersTab";
 import { SubsTab } from "./SubsTab";
@@ -289,12 +288,11 @@ export default function StaffPage() {
                 {id === "lobbies" && <LobbiesTab myRole={myRole} />}
                 {id === "audit" && <AuditTab />}
                 {id === "broadcast" && <BroadcastTab />}
-                {id === "reports" && <ReportsTab />}
+                {id === "reports" && <ReportsTab myRole={myRole} />}
                 {id === "appeals" && <AppealsTab />}
                 {id === "bugs" && <BugsTab />}
                 {id === "outreach" && <OutreachTab />}
                 {id === "mods" && <ModsAdminTab />}
-                {id === "permissions" && <PermissionsTab />}
                 {id === "config" && <ConfigTab />}
               </div>
             </>

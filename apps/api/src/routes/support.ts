@@ -1,15 +1,25 @@
 import type { FastifyInstance } from "fastify";
 import bcrypt from "bcryptjs";
 import { prisma } from "../lib/prisma";
+import { APPEAL_COOLDOWN_MS } from "../lib/banAppeal";
+import { createNotification } from "../lib/notifications";
 
 type Opts = {
   authFromHeader: (h: any) => any;
   getGlobalRole: (id: string) => Promise<string>;
   canAccessStaff: (role: string) => boolean;
+  globalAudit: (
+    actorId: string,
+    actorName: string,
+    action: string,
+    targetId?: string,
+    targetName?: string,
+    meta?: any,
+  ) => Promise<void>;
 };
 
 export default async function supportRoutes(app: FastifyInstance, opts: Opts) {
-  const { authFromHeader, getGlobalRole, canAccessStaff } = opts;
+  const { authFromHeader, getGlobalRole, canAccessStaff, globalAudit } = opts;
 
   app.get<{ Querystring: { take?: string; skip?: string } }>("/bans/public", async (req, reply) => {
     const take = Math.min(Math.max(Number(req.query?.take || 50), 1), 100);
@@ -55,7 +65,7 @@ export default async function supportRoutes(app: FastifyInstance, opts: Opts) {
 
       const user = await prisma.user.findUnique({
         where: { id: la.userId },
-        select: { id: true, banned: true },
+        select: { id: true, banned: true, banReason: true },
       });
       if (!user) return reply.code(401).send({ ok: false, error: "invalid_credentials" });
       if (!user.banned)
@@ -75,8 +85,29 @@ export default async function supportRoutes(app: FastifyInstance, opts: Opts) {
           submittedAt: open.createdAt,
         });
 
+      // A denied appeal waits 30 days before the next (it could be refiled at once).
+      const denied = await prisma.banAppeal.findFirst({
+        where: {
+          userId: user.id,
+          status: "DENIED",
+          reviewedAt: { gt: new Date(Date.now() - APPEAL_COOLDOWN_MS) },
+        },
+        orderBy: { reviewedAt: "desc" },
+        select: { reviewedAt: true },
+      });
+      if (denied?.reviewedAt) {
+        const after = new Date(denied.reviewedAt.getTime() + APPEAL_COOLDOWN_MS);
+        return reply.code(429).send({
+          ok: false,
+          error: "recently_denied",
+          retryAfter: after.toISOString(),
+          message: `Your last appeal was denied. You can appeal again after ${after.toDateString()}.`,
+        });
+      }
+
       const created = await prisma.banAppeal.create({
-        data: { userId: user.id, reason, status: "PENDING" },
+        // The ban's reason as it stood, so the history keeps it after an unban.
+        data: { userId: user.id, reason, status: "PENDING", banReason: user.banReason },
         select: { id: true, createdAt: true },
       });
       return reply.send({ ok: true, appealId: created.id, submittedAt: created.createdAt });
@@ -128,7 +159,10 @@ export default async function supportRoutes(app: FastifyInstance, opts: Opts) {
     const note = (req.body?.note || "").slice(0, 1000);
     const appealId = req.params.id;
 
-    const appeal = await prisma.banAppeal.findUnique({ where: { id: appealId } });
+    const appeal = await prisma.banAppeal.findUnique({
+      where: { id: appealId },
+      include: { user: { select: { name: true, banReason: true } } },
+    });
     if (!appeal) return reply.code(404).send({ ok: false, error: "not_found" });
     if (appeal.status !== "PENDING")
       return reply.code(400).send({ ok: false, error: "already_reviewed" });
@@ -141,6 +175,7 @@ export default async function supportRoutes(app: FastifyInstance, opts: Opts) {
           reviewedBy: u.id,
           reviewerNote: note || null,
           reviewedAt: new Date(),
+          banReason: appeal.banReason ?? appeal.user?.banReason ?? null,
         },
       });
       if (decision === "APPROVED") {
@@ -150,6 +185,23 @@ export default async function supportRoutes(app: FastifyInstance, opts: Opts) {
         });
       }
     });
+    await globalAudit(
+      u.id,
+      u.name,
+      decision === "APPROVED" ? "appeal_approved" : "appeal_denied",
+      appeal.userId,
+      appeal.user?.name,
+      { note: note || undefined, banReason: appeal.banReason ?? appeal.user?.banReason },
+    );
+    // The person is told: a denial at their next sign-in (lib/banAppeal.ts),
+    // an approval here, with the note "shown to the user" that never was.
+    if (decision === "APPROVED")
+      await createNotification({
+        userId: appeal.userId,
+        type: "SYSTEM",
+        title: "Your appeal was approved. Welcome back.",
+        body: note,
+      });
     return reply.send({ ok: true });
   });
 
@@ -225,6 +277,25 @@ export default async function supportRoutes(app: FastifyInstance, opts: Opts) {
       where: { id },
       data: { status: "CLOSED", closedAt: new Date(), closedBy: u.id, staffNote: note || null },
     });
+    await globalAudit(u.id, u.name, "bug_close", id, existing.body.slice(0, 80), {
+      note: note || undefined,
+    });
+    return reply.send({ ok: true });
+  });
+
+  // A closed report could never be reopened (ops audit 2026-11-01).
+  app.post<{ Params: { id: string } }>("/staff/bugs/:id/reopen", async (req, reply) => {
+    const u = authFromHeader(req.headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const role = await getGlobalRole(u.id);
+    if (!canAccessStaff(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
+    const existing = await prisma.bugReport.findUnique({ where: { id: req.params.id } });
+    if (!existing) return reply.code(404).send({ ok: false, error: "not_found" });
+    await prisma.bugReport.update({
+      where: { id: existing.id },
+      data: { status: "OPEN", closedAt: null, closedBy: null },
+    });
+    await globalAudit(u.id, u.name, "bug_reopen", existing.id, existing.body.slice(0, 80));
     return reply.send({ ok: true });
   });
 }

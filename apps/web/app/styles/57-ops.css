@@ -117,6 +117,20 @@
   border-color: rgb(var(--o-a) / 0.45);
   background: rgb(var(--o-a) / 0.1);
 }
+/* A link styled as a button keeps the button's shape: the site-wide room-link
+   card (50-sections.css, a[href^="/room/"]) otherwise pads and squares it. */
+.wops a.wops-btn {
+  display: inline-flex;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid rgb(255 255 255 / 0.1);
+  background: rgb(255 255 255 / 0.04);
+}
+.wops a.wops-btn:hover {
+  border-color: rgb(var(--o-a) / 0.45);
+  background: rgb(var(--o-a) / 0.1);
+}
 .wops-btn:focus-visible,
 .wops-nav-item:focus-visible,
 .wops-card-link:focus-visible {

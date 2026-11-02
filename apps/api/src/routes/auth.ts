@@ -9,6 +9,7 @@ import { readFileSync, writeFileSync } from "fs";
 import { sendPush } from "../lib/notifications";
 import { OAuth2Client } from "google-auth-library";
 import { prisma } from "../lib/prisma";
+import { bannedMessage } from "../lib/banAppeal";
 import { registrationBlock } from "../lib/registration";
 import { cutoffNow } from "../lib/sessionCutoff";
 import { isOfficeRoom } from "../lib/officeRooms";
@@ -273,7 +274,10 @@ export default async function authRoutes(app: FastifyInstance, opts: Opts) {
       });
       const user = await prisma.user.findUnique({ where: { id: la.userId } });
       if (!user) return reply.code(500).send({ error: "Account record missing" });
-      if (user.banned) return reply.code(403).send({ ok: false, error: "banned" });
+      if (user.banned)
+        return reply
+          .code(403)
+          .send({ ok: false, error: "banned", message: await bannedMessage(user.id) });
       const sessionToken = jwt.sign({ sub: user.id, name: user.name }, JWT_SECRET, {
         expiresIn: "7d",
       });
@@ -421,7 +425,7 @@ export default async function authRoutes(app: FastifyInstance, opts: Opts) {
       if (user.banned)
         return reply
           .code(403)
-          .send({ ok: false, error: "banned", message: "Your account has been suspended." });
+          .send({ ok: false, error: "banned", message: await bannedMessage(user.id) });
       const token = jwt.sign({ sub: user.id, name: user.name }, JWT_SECRET, { expiresIn: "7d" });
       setAuthCookie(reply, token);
       return authedSend(req, reply, token, { user });

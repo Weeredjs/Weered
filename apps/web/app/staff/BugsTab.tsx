@@ -11,21 +11,30 @@ export const CATEGORY_BADGE: Record<string, { label: string; color: string; bg: 
 
 export function BugsTab() {
   const [rows, setRows] = useState<BugRow[]>([]);
-  const [filter, setFilter] = useState<"OPEN" | "ALL">("OPEN");
+  const [filter, setFilter] = useState<"OPEN" | "CLOSED" | "ALL">("OPEN");
+  // By kind: bugs, module requests, feedback (ops audit: there was no way to).
+  const [kind, setKind] = useState("");
   const [loading, setLoading] = useState(true);
   const [msg, setMsg] = useState("");
   const [noteFor, setNoteFor] = useState<Record<string, string>>({});
 
   async function load() {
     setLoading(true);
-    const j = await apiFetch(`/staff/bugs?status=${filter}`);
+    const j = await apiFetch(`/staff/bugs?status=${filter}${kind ? `&category=${kind}` : ""}`);
     setLoading(false);
     if (j.ok) setRows(j.rows || []);
   }
 
   useEffect(() => {
     void load();
-  }, [filter]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filter, kind]);
+
+  async function reopen(id: string) {
+    const j = await apiFetch(`/staff/bugs/${encodeURIComponent(id)}/reopen`, { method: "POST" });
+    setMsg(j.ok ? "Reopened." : j.message || j.error || "Failed.");
+    if (j.ok) void load();
+  }
 
   async function close(id: string) {
     const note = (noteFor[id] || "").trim();
@@ -50,28 +59,30 @@ export function BugsTab() {
         style={{
           display: "flex",
           alignItems: "center",
-          justifyContent: "space-between",
+          flexWrap: "wrap",
           marginBottom: 16,
           gap: 12,
         }}
       >
-        <div style={{ display: "flex", gap: 6 }}>
-          {(["OPEN", "ALL"] as const).map((f) => (
+        <div className="wops-seg" role="group" aria-label="Status">
+          {(["OPEN", "CLOSED", "ALL"] as const).map((f) => (
+            <button key={f} type="button" aria-pressed={filter === f} onClick={() => setFilter(f)}>
+              {f === "OPEN" ? "Open" : f === "CLOSED" ? "Closed" : "All"}
+            </button>
+          ))}
+        </div>
+        <div className="wops-seg" role="group" aria-label="Kind">
+          {[
+            ["", "Every kind"],
+            ...Object.entries(CATEGORY_BADGE).map(([k, v]) => [k, v.label]),
+          ].map(([k, label]) => (
             <button
-              key={f}
-              onClick={() => setFilter(f)}
-              style={{
-                padding: "6px 12px",
-                borderRadius: 8,
-                border: "1px solid rgba(255,255,255,.10)",
-                background: filter === f ? "rgba(124,58,237,.20)" : "transparent",
-                color: filter === f ? "rgba(216,180,254,.95)" : "rgba(148,163,184,.7)",
-                fontSize: 12,
-                fontWeight: 700,
-                cursor: "pointer",
-              }}
+              key={k || "all"}
+              type="button"
+              aria-pressed={kind === k}
+              onClick={() => setKind(k)}
             >
-              {f}
+              {label}
             </button>
           ))}
         </div>
@@ -189,6 +200,9 @@ export function BugsTab() {
                 {r.staffNote && (
                   <div style={{ marginTop: 6, fontStyle: "italic" }}>note: {r.staffNote}</div>
                 )}
+                <button style={{ ...S.btn, marginTop: 8 }} onClick={() => void reopen(r.id)}>
+                  Reopen
+                </button>
               </div>
             )}
           </div>

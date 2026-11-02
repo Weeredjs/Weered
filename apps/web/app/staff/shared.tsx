@@ -9,7 +9,6 @@ import {
   DoorOpen,
   Flag,
   IdCard,
-  KeyRound,
   Landmark,
   Mail,
   Megaphone,
@@ -322,7 +321,7 @@ export const NAV_ITEMS = [
     icon: IdCard,
     minRole: "SUPPORT",
     group: "People",
-    blurb: "Weered's staff.",
+    blurb: "Weered's staff, and who can do what.",
   },
   {
     id: "subs",
@@ -331,14 +330,6 @@ export const NAV_ITEMS = [
     minRole: "STAFF",
     group: "People",
     blurb: "Everyone who holds a tier, paid or given by staff.",
-  },
-  {
-    id: "permissions",
-    label: "Permissions",
-    icon: KeyRound,
-    minRole: "SUPPORT",
-    group: "People",
-    blurb: "Who can do what.",
   },
   {
     id: "lobbies",
@@ -440,159 +431,30 @@ export function canSeeNav(myRole: GlobalRole, minRole: string) {
   return (ROLE_RANK[myRole] || 0) >= (ROLE_RANK[minRole] || 99);
 }
 
-export type PermRow = { name: string; can: string };
-export type PermBlockData = { title: string; subtitle: string; accent: string; rows: PermRow[] };
+// Weered's staff ladder, the same rule as apps/api/src/lib/roleLadder.ts: you
+// act only on people below you, and give only roles below your own. STAFF and
+// ADMIN share a rung; only GOD makes or removes staff.
+const LADDER: Record<string, number> = { USER: 0, SUPPORT: 1, STAFF: 2, ADMIN: 2, GOD: 3 };
+const ALL_ROLES: GlobalRole[] = ["USER", "SUPPORT", "STAFF", "ADMIN", "GOD"];
 
-export const PERM_SCOPES: PermBlockData[] = [
-  {
-    title: "Global Roles",
-    subtitle: "Platform-wide authority",
-    accent: "#a78bfa",
-    rows: [
-      { name: "USER", can: "Baseline. Join lobbies, chat, voice, DMs, crews." },
-      {
-        name: "SUPPORT",
-        can: "View the Ops console (read). Handle reports, ban appeals, bug reports, mods.",
-      },
-      {
-        name: "STAFF",
-        can: "All Support powers + assign roles, manage rooms/lobbies/subscriptions, broadcast, view audit + analytics + outreach.",
-      },
-      {
-        name: "ADMIN",
-        can: "Same authority tier as Staff (assigns roles + all Staff sections). Reserved for senior operators.",
-      },
-      {
-        name: "GOD",
-        can: "Unrestricted. The Config section. Protected from moderation actions by others.",
-      },
-    ],
-  },
-  {
-    title: "Lobby Roles",
-    subtitle: "Per-lobby · 5-level ladder",
-    accent: "#34d399",
-    rows: [
-      { name: "1 · Member", can: "Participate in the lobby and its rooms." },
-      { name: "2 · Trusted", can: "View lobby admin panels (read)." },
-      { name: "3 · Moderator", can: "Moderate: kick, mute, clear chat within the lobby." },
-      { name: "4 · Admin", can: "Manage the lobby: rename, settings, rooms, events, modules." },
-      {
-        name: "5 · Owner",
-        can: "Full control: billing + paid tiers, transfer, destructive actions.",
-      },
-    ],
-  },
-  {
-    title: "Room Roles",
-    subtitle: "Per-room",
-    accent: "#60a5fa",
-    rows: [
-      { name: "MEMBER", can: "Chat + voice in the room." },
-      { name: "MOD", can: "Kick, clear messages, lock the room." },
-      { name: "OWNER", can: "Full room control. (Global Staff+ overrides.)" },
-    ],
-  },
-  {
-    title: "Crew Roles",
-    subtitle: "Per-crew",
-    accent: "#fbbf24",
-    rows: [
-      { name: "MEMBER", can: "Crew member." },
-      { name: "OFFICER", can: "Help run the crew." },
-      { name: "LEADER", can: "Full crew control." },
-    ],
-  },
-];
-
-export const PERM_TIERS: PermBlockData[] = [
-  {
-    title: "Reputation Tier",
-    subtitle: "Earned — standing / notoriety",
-    accent: "#d4a017",
-    rows: [
-      { name: "INNOCENT", can: "Starting standing." },
-      { name: "INDICTED", can: "Rising notoriety." },
-      { name: "FELON", can: "Established." },
-      { name: "KINGPIN", can: "Top reputation." },
-    ],
-  },
-  {
-    title: "Paid Tier",
-    subtitle: "Billing — perks",
-    accent: "#ec4899",
-    rows: [
-      { name: "FREE", can: "Default. (Reputation: Innocent.)" },
-      { name: "INDICTED · $6/mo", can: "Colored username, video streaming, custom fonts." },
-      { name: "FELON · $14/mo", can: "Above + own up to 3 lobbies." },
-      { name: "KINGPIN · staff-granted", can: "Unlimited lobbies + all modules." },
-    ],
-  },
-];
-
-export function PermBlock({ s }: { s: PermBlockData }) {
-  return (
-    <div
-      style={{
-        background: "rgba(255,255,255,.02)",
-        border: "1px solid rgba(255,255,255,.07)",
-        borderRadius: 12,
-        overflow: "hidden",
-        marginBottom: 14,
-      }}
-    >
-      <div
-        style={{
-          padding: "10px 14px",
-          borderLeft: `3px solid ${s.accent}`,
-          background: `${s.accent}10`,
-        }}
-      >
-        <div
-          style={{
-            fontSize: 13,
-            fontWeight: 800,
-            color: "rgba(243,244,246,.95)",
-            letterSpacing: ".3px",
-          }}
-        >
-          {s.title}
-        </div>
-        <div style={{ fontSize: 11, color: "rgba(148,163,184,.7)", marginTop: 1 }}>
-          {s.subtitle}
-        </div>
-      </div>
-      <div>
-        {s.rows.map((r, i) => (
-          <div
-            key={r.name}
-            style={{
-              display: "flex",
-              gap: 12,
-              padding: "9px 14px",
-              borderTop: i ? "1px solid rgba(255,255,255,.04)" : "none",
-              alignItems: "baseline",
-            }}
-          >
-            <div
-              style={{
-                flex: "0 0 158px",
-                fontSize: 12,
-                fontWeight: 700,
-                color: s.accent,
-                fontFamily: "ui-monospace, monospace",
-              }}
-            >
-              {r.name}
-            </div>
-            <div
-              style={{ flex: 1, fontSize: 12, color: "rgba(203,213,225,.85)", lineHeight: 1.45 }}
-            >
-              {r.can}
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
+export function rolesToGive(actor: GlobalRole): GlobalRole[] {
+  if (actor === "GOD") return ALL_ROLES;
+  if (actor === "STAFF" || actor === "ADMIN")
+    return ALL_ROLES.filter((r) => LADDER[r] < LADDER[actor]);
+  return [];
 }
+
+export function mayActOn(actor: GlobalRole, target: string): boolean {
+  return actor === "GOD" || (LADDER[target] ?? 0) < LADDER[actor];
+}
+
+/** What the server's refusals mean, for people. */
+export const STAFF_ERRORS: Record<string, string> = {
+  insufficient_rank: "Your role can't do that to this person.",
+  cannot_change_self: "You can't change your own role.",
+  cannot_kick_self: "You can't kick yourself.",
+  cannot_ban_self: "You can't ban yourself.",
+  cannot_kick_god: "God accounts can't be kicked.",
+  cannot_ban_god: "God accounts can't be banned.",
+  forbidden: "Your role can't do that.",
+};

@@ -809,6 +809,18 @@ export default async function socialRoutes(app: FastifyInstance, opts: Opts) {
         }
       }
 
+      // A report must name something that exists (ops audit 2026-11-01: reports
+      // against nothing were accepted and sat in the queue).
+      const exists =
+        targetType === "MESSAGE"
+          ? !!bodySnapshot
+          : targetType === "USER"
+            ? !!(await prisma.user.findUnique({ where: { id: targetId }, select: { id: true } }))
+            : targetType === "LOBBY"
+              ? !!(await prisma.lobby.findUnique({ where: { id: targetId }, select: { id: true } }))
+              : !!(await prisma.room.findUnique({ where: { id: targetId }, select: { id: true } }));
+      if (!exists) return reply.code(404).send({ ok: false, error: "target_not_found" });
+
       const row = await prisma.report.create({
         data: {
           reporterId: u.id,

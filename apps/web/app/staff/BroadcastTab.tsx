@@ -1,7 +1,16 @@
 "use client";
-import { Announcement } from "./AuditTab";
 import React, { useState, useEffect, useCallback } from "react";
 import { S, apiFetch } from "./shared";
+
+export type Announcement = {
+  id: string;
+  message: string;
+  level: string;
+  pinned: boolean;
+  sticky: boolean;
+  createdByName: string;
+  createdAt: string;
+};
 
 export const ANN_PRESETS: {
   label: string;

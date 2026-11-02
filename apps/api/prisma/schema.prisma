@@ -596,7 +596,6 @@ model User {
   reactions             Reaction[]             @relation("ReactionsFrom")
   LocalAuth             LocalAuth?
   staffNotes            StaffNote[]            @relation("StaffNoteTarget")
-  auditLogs             GlobalAudit[]          @relation("GlobalAuditTarget")
   staffPosts            StaffPost[]            @relation("StaffPostAuthor")
   notorietyEvents       NotorietyEvent[]
   gameAccounts          UserGameAccount[]
@@ -648,6 +647,9 @@ model BanAppeal {
   reviewedBy   String? // staff userId
   reviewerNote String? // optional note shown back to the appellant
   reviewedAt   DateTime?
+  // The ban's reason when the appeal was made: an approval clears it from the
+  // user, and the history lost it (ops audit 2026-11-01).
+  banReason    String?
 
   user User @relation("BanAppealUser", fields: [userId], references: [id], onDelete: Cascade)
 
@@ -749,7 +751,9 @@ model GlobalAudit {
   meta       Json?
   createdAt  DateTime @default(now())
 
-  target User? @relation("GlobalAuditTarget", fields: [targetId], references: [id], onDelete: SetNull)
+  // Any kind of target: a person, room, lobby, report, mod. It was a foreign key
+  // to User, so every action on anything else failed to save, silently (ops
+  // audit 2026-11-01). Dropped 2026-11-02.
 
   @@index([createdAt])
 }

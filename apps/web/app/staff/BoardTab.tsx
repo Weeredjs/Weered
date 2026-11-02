@@ -8,6 +8,13 @@ export function BoardTab({ myRole }: { myRole: GlobalRole }) {
   const [body, setBody] = useState("");
   const [posting, setPosting] = useState(false);
   const [msg, setMsg] = useState("");
+  const [meId, setMeId] = useState("");
+
+  useEffect(() => {
+    try {
+      setMeId(JSON.parse(localStorage.getItem("weered_user") || "{}")?.id || "");
+    } catch {}
+  }, []);
 
   const load = useCallback(() => {
     apiFetch("/staff/board")
@@ -135,14 +142,17 @@ export function BoardTab({ myRole }: { myRole: GlobalRole }) {
             <div style={{ fontSize: 13, lineHeight: 1.6, whiteSpace: "pre-wrap", opacity: 0.85 }}>
               {p.body}
             </div>
-            {canManage && (
+            {/* Staff manage the board; anyone deletes their own post (the server's rule). */}
+            {(canManage || p.authorId === meId) && (
               <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
-                <button
-                  style={{ ...S.btn, fontSize: 10, padding: "3px 8px" }}
-                  onClick={() => togglePin(p.id)}
-                >
-                  {p.pinned ? "Unpin" : "Pin"}
-                </button>
+                {canManage && (
+                  <button
+                    style={{ ...S.btn, fontSize: 10, padding: "3px 8px" }}
+                    onClick={() => togglePin(p.id)}
+                  >
+                    {p.pinned ? "Unpin" : "Pin"}
+                  </button>
+                )}
                 <button
                   style={{ ...S.danger, fontSize: 10, padding: "3px 8px" }}
                   onClick={() => remove(p.id)}

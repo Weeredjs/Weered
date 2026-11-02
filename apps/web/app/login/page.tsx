@@ -208,6 +208,8 @@ function LoginForm() {
         body: JSON.stringify(body),
       });
       const j = await r.json().catch(() => ({}) as any);
+      // A ban says where the person's appeal stands (lib/banAppeal.ts on the API).
+      if (r.status === 403 && j?.error === "banned" && j?.message) throw new Error(j.message);
       if (!r.ok) throw new Error(j?.error || j?.message || `Error ${r.status}`);
       // Web auth is the httpOnly cookie set by the server; no token in body.
       try {

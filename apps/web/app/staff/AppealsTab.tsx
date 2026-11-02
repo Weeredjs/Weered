@@ -22,6 +22,8 @@ export type AppealRow = {
   createdAt: string;
   reviewerNote: string | null;
   reviewedAt: string | null;
+  /** The ban's reason when they appealed; kept after an approval clears it. */
+  banReason?: string | null;
   user: {
     id: string;
     name: string;
@@ -146,7 +148,7 @@ export function AppealsTab() {
                   borderRadius: 6,
                 }}
               >
-                {r.user.banReason || (
+                {r.banReason || r.user.banReason || (
                   <span style={{ opacity: 0.5, fontStyle: "italic" }}>none recorded</span>
                 )}
               </div>
@@ -173,7 +175,7 @@ export function AppealsTab() {
                 <input
                   value={noteFor[r.id] || ""}
                   onChange={(e) => setNoteFor((p) => ({ ...p, [r.id]: e.target.value }))}
-                  placeholder="Optional note (shown to user with the decision)"
+                  placeholder="Optional note to them: sent if approved, shown at sign-in if denied"
                   style={{ ...S.input, marginBottom: 8 }}
                 />
                 <div style={{ display: "flex", gap: 8 }}>

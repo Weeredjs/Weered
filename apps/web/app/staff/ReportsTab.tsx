@@ -1,308 +1,337 @@
 "use client";
-import { ReportRow } from "./LobbiesTab";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { ExternalLink } from "lucide-react";
 import { REASON_LABELS } from "./AppealsTab";
-import { useState, useEffect } from "react";
-import { apiFetch } from "./shared";
+import { GlobalRole, STAFF_ERRORS, apiFetch, mayActOn } from "./shared";
+import { ago } from "./TodayTab";
 
-export function ReportsTab() {
+/** GET /staff/reports, with what each report is about (routes/staff.ts reportTargets). */
+type Person = { id: string; usernameKey: string; role: string; banned: boolean };
+type Target = {
+  exists: boolean;
+  name?: string;
+  roomId?: string;
+  lobbyId?: string | null;
+  deleted?: boolean;
+  person?: Person | null;
+};
+export type ReportRow = {
+  id: string;
+  reporterName: string;
+  targetType: "MESSAGE" | "USER" | "ROOM" | "LOBBY";
+  targetId: string;
+  targetName: string | null;
+  context: string | null;
+  reason: string;
+  note: string | null;
+  status: string;
+  bodySnapshot: string | null;
+  createdAt: string;
+  reviewedAt: string | null;
+  reviewerName: string | null;
+  target: Target | null;
+};
+
+const FILTERS = ["OPEN", "ACTIONED", "REVIEWED", "DISMISSED", "ALL"] as const;
+const FILTER_LABEL: Record<string, string> = {
+  OPEN: "Open",
+  ACTIONED: "Acted on",
+  REVIEWED: "No action",
+  DISMISSED: "Dismissed",
+  ALL: "All",
+};
+const KIND: Record<string, string> = {
+  MESSAGE: "a message",
+  USER: "a person",
+  ROOM: "a room",
+  LOBBY: "a lobby",
+};
+const roomHref = (t: Target) =>
+  t.lobbyId && t.lobbyId === t.roomId ? `/lobby/${t.lobbyId}` : `/room/${t.roomId}`;
+
+// The Reports desk (2026-11-02): each report links to what it's about and
+// offers the tool for its kind. "Acted on" is set by using a tool and records
+// what was done; it used to be a label anyone could click (ops audit).
+export function ReportsTab({ myRole }: { myRole: GlobalRole }) {
   const [reports, setReports] = useState<ReportRow[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [filter, setFilter] = useState<"OPEN" | "REVIEWED" | "ACTIONED" | "DISMISSED" | "ALL">(
-    "OPEN",
-  );
-  const [busyId, setBusyId] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState<(typeof FILTERS)[number]>("OPEN");
+  const [busy, setBusy] = useState("");
+  const [flash, setFlash] = useState<{ text: string; bad?: boolean } | null>(null);
+  const staff = myRole !== "SUPPORT";
 
-  async function load() {
+  const load = useCallback(async () => {
     setLoading(true);
-    try {
-      const j = await apiFetch(`/staff/reports?status=${filter}`);
-      setReports(Array.isArray(j?.reports) ? j.reports : []);
-    } catch {}
+    const j = await apiFetch(`/staff/reports?status=${filter}`).catch(() => null);
+    setReports(Array.isArray(j?.reports) ? j.reports : []);
     setLoading(false);
-  }
+  }, [filter]);
 
   useEffect(() => {
     void load();
-  }, [filter]);
+  }, [load]);
 
-  async function action(id: string, status: "REVIEWED" | "ACTIONED" | "DISMISSED") {
-    setBusyId(id);
-    try {
-      const j = await apiFetch(`/staff/reports/${id}/action`, {
-        method: "POST",
-        body: JSON.stringify({ status }),
-      });
-      if (j?.ok) setReports((cur) => cur.filter((r) => r.id !== id));
-    } catch {}
-    setBusyId("");
+  async function close(r: ReportRow, status: "ACTIONED" | "REVIEWED" | "DISMISSED", did?: string) {
+    const j = await apiFetch(`/staff/reports/${r.id}/action`, {
+      method: "POST",
+      body: JSON.stringify({ status, did }),
+    });
+    if (j?.ok) setReports((cur) => cur.filter((x) => x.id !== r.id || filter === "ALL"));
+    return !!j?.ok;
   }
 
-  async function clearBranding(lobbyId: string, reportId: string) {
-    setBusyId(reportId);
-    try {
-      const j = await apiFetch(`/staff/lobbies/${encodeURIComponent(lobbyId)}/clear-branding`, {
-        method: "POST",
-      });
-      if (j?.ok) {
-        await apiFetch(`/staff/reports/${reportId}/action`, {
-          method: "POST",
-          body: JSON.stringify({ status: "ACTIONED" }),
-        });
-        setReports((cur) => cur.filter((r) => r.id !== reportId));
-      }
-    } catch {}
-    setBusyId("");
+  /** Use a tool, then mark the report acted on with what was done. */
+  async function act(r: ReportRow, did: string, label: string, run: () => Promise<any>) {
+    setBusy(r.id);
+    setFlash(null);
+    const j = await run().catch(() => null);
+    if (j?.ok) {
+      await close(r, "ACTIONED", did);
+      setFlash({ text: label });
+    } else setFlash({ text: STAFF_ERRORS[j?.error] || j?.error || "That didn't work.", bad: true });
+    setBusy("");
+    if (filter === "ALL") void load();
+  }
+
+  const post = (url: string, body?: any) =>
+    apiFetch(url, { method: "POST", body: JSON.stringify(body || {}) });
+
+  function tools(r: ReportRow) {
+    const t = r.target;
+    if (!t?.exists) return <span className="wops-note">It no longer exists.</span>;
+    const p = t.person;
+    const out: ReactNode[] = [];
+    if (r.targetType === "MESSAGE" && !t.deleted)
+      out.push(
+        <button
+          key="rm"
+          type="button"
+          className="wops-btn"
+          disabled={busy === r.id}
+          onClick={() =>
+            void act(r, "message_removed", "Message removed.", () =>
+              post(`/staff/messages/${r.targetId}/delete`),
+            )
+          }
+        >
+          Remove message
+        </button>,
+      );
+    if (p && mayActOn(myRole, p.role) && p.role !== "GOD") {
+      out.push(
+        <button
+          key="kick"
+          type="button"
+          className="wops-btn"
+          disabled={busy === r.id}
+          onClick={() =>
+            void act(r, "kicked", `${t.name || p.usernameKey} kicked for ten minutes.`, () =>
+              post(`/staff/users/${p.id}/kick`),
+            )
+          }
+        >
+          Kick {r.targetType === "MESSAGE" ? "the author" : ""}
+        </button>,
+      );
+      if (staff && !p.banned)
+        out.push(
+          <button
+            key="ban"
+            type="button"
+            className="wops-btn"
+            style={{ borderColor: "rgb(248 113 113 / .4)" }}
+            disabled={busy === r.id}
+            onClick={() => {
+              if (!confirm(`Ban ${t.name || p.usernameKey} from Weered?`)) return;
+              void act(r, "banned", `${t.name || p.usernameKey} is banned.`, () =>
+                post(`/staff/users/${p.id}/ban`, {
+                  reason: `Reported: ${REASON_LABELS[r.reason] || r.reason}`,
+                }),
+              );
+            }}
+          >
+            Ban {r.targetType === "MESSAGE" ? "the author" : ""}
+          </button>,
+        );
+    }
+    if (r.targetType === "LOBBY" && staff)
+      out.push(
+        <button
+          key="brand"
+          type="button"
+          className="wops-btn"
+          disabled={busy === r.id}
+          onClick={() =>
+            void act(r, "branding_cleared", "Lobby branding cleared.", () =>
+              post(`/staff/lobbies/${encodeURIComponent(r.targetId)}/clear-branding`),
+            )
+          }
+        >
+          Clear branding
+        </button>,
+      );
+    if (r.targetType === "ROOM" && staff && t.roomId !== t.lobbyId)
+      out.push(
+        <button
+          key="close"
+          type="button"
+          className="wops-btn"
+          disabled={busy === r.id}
+          onClick={() => {
+            if (!confirm(`Close ${t.name}? This deletes the room and its history.`)) return;
+            void act(r, "room_closed", "Room closed.", () =>
+              post(`/staff/rooms/${encodeURIComponent(r.targetId)}/close`),
+            );
+          }}
+        >
+          Close room
+        </button>,
+      );
+    if (p)
+      out.push(
+        <a
+          key="who"
+          className="wops-btn"
+          href={`/staff?tab=users&q=${encodeURIComponent(p.usernameKey)}`}
+        >
+          {r.targetType === "MESSAGE" ? "Author" : "Person"} in Users
+        </a>,
+      );
+    if (t.roomId)
+      out.push(
+        <a
+          key="room"
+          className="wops-btn"
+          href={roomHref(t)}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Open room <ExternalLink size={13} />
+        </a>,
+      );
+    if (r.targetType === "LOBBY")
+      out.push(
+        <a
+          key="lobby"
+          className="wops-btn"
+          href={`/lobby/${encodeURIComponent(r.targetId)}`}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Open lobby <ExternalLink size={13} />
+        </a>,
+      );
+    return out;
   }
 
   return (
-    <div>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          marginBottom: 14,
-        }}
-      >
-        <h2 style={{ fontSize: 18, fontWeight: 800, margin: 0 }}>Reports</h2>
-        <div style={{ display: "flex", gap: 4 }}>
-          {(["OPEN", "REVIEWED", "ACTIONED", "DISMISSED", "ALL"] as const).map((s) => (
-            <button
-              key={s}
-              onClick={() => setFilter(s)}
-              style={{
-                padding: "5px 10px",
-                borderRadius: 6,
-                border: "1px solid rgba(255,255,255,.1)",
-                background: filter === s ? "rgba(124,58,237,.2)" : "rgba(255,255,255,.03)",
-                color: filter === s ? "rgb(196,181,253)" : "rgba(255,255,255,.7)",
-                fontSize: 11,
-                fontWeight: 700,
-                cursor: "pointer",
-                fontFamily: "inherit",
-              }}
-            >
-              {s}
+    <div style={{ maxWidth: 920 }}>
+      <div className="wops-tool">
+        <div className="wops-seg" role="group" aria-label="Show">
+          {FILTERS.map((f) => (
+            <button key={f} type="button" aria-pressed={filter === f} onClick={() => setFilter(f)}>
+              {FILTER_LABEL[f]}
             </button>
           ))}
         </div>
       </div>
-
-      {loading && <div style={{ padding: 20, opacity: 0.5, fontSize: 13 }}>Loading reports...</div>}
-      {!loading && reports.length === 0 && (
-        <div style={{ padding: "32px 20px", textAlign: "center", fontSize: 13 }}>
-          <div style={{ fontWeight: 700, color: "rgba(255,255,255,.65)" }}>
-            {filter === "OPEN" ? "Queue is clear." : "No reports in this view."}
-          </div>
-          <div style={{ fontSize: 11, color: "rgba(255,255,255,.4)", marginTop: 3 }}>
-            {filter === "OPEN"
-              ? "When users flag things, they land here."
-              : "Change the filter to see more."}
-          </div>
+      {flash && (
+        <div className="wops-flash" data-tone={flash.bad ? "bad" : undefined} role="status">
+          {flash.text}
         </div>
       )}
-
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        {reports.map((r) => (
-          <div
-            key={r.id}
-            style={{
-              padding: 14,
-              borderRadius: 10,
-              background: "rgba(255,255,255,.02)",
-              border: "1px solid rgba(255,255,255,.08)",
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                marginBottom: 8,
-                flexWrap: "wrap",
-              }}
-            >
-              <span
-                style={{
-                  padding: "3px 8px",
-                  borderRadius: 5,
-                  background: "rgba(239,68,68,.15)",
-                  border: "1px solid rgba(239,68,68,.3)",
-                  color: "rgb(252,165,165)",
-                  fontSize: 10,
-                  fontWeight: 800,
-                  letterSpacing: ".05em",
-                }}
-              >
-                {REASON_LABELS[r.reason] || r.reason}
-              </span>
-              <span
-                style={{ fontSize: 11, color: "rgba(255,255,255,.4)", fontFamily: "monospace" }}
-              >
-                {r.targetType}
-              </span>
-              {r.status !== "OPEN" && (
-                <span
-                  style={{
-                    padding: "3px 8px",
-                    borderRadius: 5,
-                    background: "rgba(255,255,255,.05)",
-                    fontSize: 10,
-                    fontWeight: 700,
-                    color: "rgba(255,255,255,.5)",
-                  }}
-                >
-                  {r.status}
-                </span>
-              )}
-              <span style={{ flex: 1 }} />
-              <span style={{ fontSize: 11, color: "rgba(255,255,255,.35)" }}>
-                {new Date(r.createdAt).toLocaleString()}
-              </span>
-            </div>
-            <div style={{ fontSize: 12, color: "rgba(255,255,255,.75)", marginBottom: 6 }}>
-              <strong>{r.reporterName}</strong> reported{" "}
-              {r.targetType === "USER" ? (
-                <strong>{r.targetName || r.targetId}</strong>
-              ) : (
-                <code style={{ fontSize: 11, color: "rgba(255,255,255,.55)" }}>{r.targetId}</code>
-              )}
-              {r.context && (
-                <>
-                  {" "}
-                  in{" "}
-                  <code style={{ fontSize: 11, color: "rgba(255,255,255,.55)" }}>{r.context}</code>
-                </>
-              )}
-            </div>
-            {r.bodySnapshot && (
+      {loading ? (
+        <div className="wops-muted">Loading…</div>
+      ) : reports.length === 0 ? (
+        <div className="wops-muted">
+          {filter === "OPEN" ? "Nothing reported. The queue is clear." : "None here."}
+        </div>
+      ) : (
+        <div className="wops-rows">
+          {reports.map((r) => {
+            const t = r.target;
+            return (
               <div
-                style={{
-                  padding: "8px 10px",
-                  marginTop: 4,
-                  marginBottom: 8,
-                  borderRadius: 7,
-                  background: "rgba(0,0,0,.3)",
-                  border: "1px solid rgba(255,255,255,.05)",
-                  fontSize: 12,
-                  color: "rgba(255,255,255,.82)",
-                  fontStyle: "italic",
-                  lineHeight: 1.45,
-                }}
+                key={r.id}
+                className="wops-card"
+                data-tone={r.status === "OPEN" ? "hot" : undefined}
               >
-                "{r.bodySnapshot}"
-              </div>
-            )}
-            {r.note && (
-              <div style={{ fontSize: 11, color: "rgba(255,255,255,.55)", marginBottom: 8 }}>
-                <strong>Note:</strong> {r.note}
-              </div>
-            )}
-            {r.reviewerName && r.reviewedAt && (
-              <div style={{ fontSize: 10, color: "rgba(255,255,255,.35)", marginBottom: 8 }}>
-                {r.status.toLowerCase()} by {r.reviewerName} on{" "}
-                {new Date(r.reviewedAt).toLocaleString()}
-              </div>
-            )}
-            {r.status === "OPEN" && (
-              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                <button
-                  disabled={busyId === r.id}
-                  onClick={() => action(r.id, "ACTIONED")}
-                  style={{
-                    padding: "6px 12px",
-                    borderRadius: 6,
-                    border: "1px solid rgba(34,197,94,.4)",
-                    background: "rgba(34,197,94,.1)",
-                    color: "rgb(134,239,172)",
-                    fontSize: 11,
-                    fontWeight: 700,
-                    cursor: "pointer",
-                    fontFamily: "inherit",
-                  }}
-                >
-                  Actioned
-                </button>
-                <button
-                  disabled={busyId === r.id}
-                  onClick={() => action(r.id, "REVIEWED")}
-                  style={{
-                    padding: "6px 12px",
-                    borderRadius: 6,
-                    border: "1px solid rgba(255,255,255,.12)",
-                    background: "rgba(255,255,255,.04)",
-                    color: "rgba(255,255,255,.7)",
-                    fontSize: 11,
-                    fontWeight: 700,
-                    cursor: "pointer",
-                    fontFamily: "inherit",
-                  }}
-                >
-                  Reviewed
-                </button>
-                <button
-                  disabled={busyId === r.id}
-                  onClick={() => action(r.id, "DISMISSED")}
-                  style={{
-                    padding: "6px 12px",
-                    borderRadius: 6,
-                    border: "1px solid rgba(255,255,255,.08)",
-                    background: "transparent",
-                    color: "rgba(255,255,255,.5)",
-                    fontSize: 11,
-                    fontWeight: 700,
-                    cursor: "pointer",
-                    fontFamily: "inherit",
-                  }}
-                >
-                  Dismiss
-                </button>
-                {r.targetType === "LOBBY" && (
-                  <>
-                    <span style={{ flex: 1 }} />
-                    <a
-                      href={`/lobby/${r.targetId}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{
-                        padding: "6px 12px",
-                        borderRadius: 6,
-                        border: "1px solid rgba(255,255,255,.12)",
-                        background: "rgba(255,255,255,.04)",
-                        color: "rgba(255,255,255,.7)",
-                        fontSize: 11,
-                        fontWeight: 700,
-                        fontFamily: "inherit",
-                        textDecoration: "none",
-                      }}
-                    >
-                      View ↗
-                    </a>
-                    <button
-                      disabled={busyId === r.id}
-                      onClick={() => clearBranding(r.targetId, r.id)}
-                      title="Remove this lobby's logo + banner"
-                      style={{
-                        padding: "6px 12px",
-                        borderRadius: 6,
-                        border: "1px solid rgba(245,158,11,.45)",
-                        background: "rgba(245,158,11,.12)",
-                        color: "rgb(253,230,138)",
-                        fontSize: 11,
-                        fontWeight: 700,
-                        cursor: "pointer",
-                        fontFamily: "inherit",
-                      }}
-                    >
-                      Clear branding
-                    </button>
-                  </>
+                <div className="wops-card-top" style={{ flexWrap: "wrap" }}>
+                  <b style={{ color: "var(--o-text)" }}>{REASON_LABELS[r.reason] || r.reason}</b>
+                  <span>
+                    on {KIND[r.targetType]}
+                    {t?.name ? `: ${t.name}` : ""}
+                  </span>
+                  {r.status !== "OPEN" && (
+                    <span className="wops-tag" data-tone="staff">
+                      {FILTER_LABEL[r.status]}
+                    </span>
+                  )}
+                  <span className="wops-when" style={{ marginLeft: "auto" }}>
+                    {r.reporterName} · {ago(r.createdAt)}
+                  </span>
+                </div>
+                {r.bodySnapshot && (
+                  <blockquote
+                    style={{
+                      margin: "10px 0 0",
+                      padding: "8px 12px",
+                      borderLeft: "3px solid rgb(var(--o-a) / .5)",
+                      background: "rgb(0 0 0 / .2)",
+                      borderRadius: 8,
+                      fontSize: 14,
+                    }}
+                  >
+                    {r.bodySnapshot}
+                    {t?.deleted && <span className="wops-note"> (removed)</span>}
+                  </blockquote>
                 )}
+                {r.note && (
+                  <div className="wops-note" style={{ marginTop: 8 }}>
+                    Reporter&apos;s note: {r.note}
+                  </div>
+                )}
+                {r.reviewerName && r.reviewedAt && (
+                  <div className="wops-note" style={{ marginTop: 8 }}>
+                    {FILTER_LABEL[r.status]} by {r.reviewerName}, {ago(r.reviewedAt)}
+                  </div>
+                )}
+                <div
+                  style={{
+                    display: "flex",
+                    gap: 6,
+                    flexWrap: "wrap",
+                    marginTop: 12,
+                    alignItems: "center",
+                  }}
+                >
+                  {r.status === "OPEN" && tools(r)}
+                  {r.status === "OPEN" && (
+                    <span style={{ marginLeft: "auto", display: "flex", gap: 6 }}>
+                      <button
+                        type="button"
+                        className="wops-btn"
+                        disabled={busy === r.id}
+                        onClick={() => void close(r, "REVIEWED")}
+                      >
+                        No action needed
+                      </button>
+                      <button
+                        type="button"
+                        className="wops-btn"
+                        disabled={busy === r.id}
+                        onClick={() => void close(r, "DISMISSED")}
+                      >
+                        Dismiss
+                      </button>
+                    </span>
+                  )}
+                </div>
               </div>
-            )}
-          </div>
-        ))}
-      </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

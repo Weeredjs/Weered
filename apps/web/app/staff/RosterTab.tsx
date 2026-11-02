@@ -1,79 +1,152 @@
 "use client";
 import { useState, useEffect } from "react";
-import { RoleBadge, S, apiFetch, fmtDate, roleColor } from "./shared";
+import { Avatar } from "../../components/dock/shellHelpers";
+import { apiFetch } from "./shared";
+
+type StaffMember = {
+  id: string;
+  name: string;
+  usernameKey: string;
+  globalRole: string;
+  avatar?: string | null;
+  avatarColor?: string | null;
+  createdAt: string;
+};
+
+const RUNGS: { title: string; roles: string[] }[] = [
+  { title: "God", roles: ["GOD"] },
+  { title: "Staff and Admin", roles: ["ADMIN", "STAFF"] },
+  { title: "Support", roles: ["SUPPORT"] },
+];
+
+// Who can do what, as the server enforces it (lib/roleLadder.ts and the staff
+// routes). The Permissions tab said the paid tier was earned through notoriety,
+// left out what Support does, and missed that STAFF could make ADMIN (ops
+// audit 2026-11-01); folded in here and corrected 2026-11-02.
+const LADDER: [string, string][] = [
+  ["Member", "Lobbies, chat, voice, DMs, crews."],
+  [
+    "Support",
+    "Moderates everywhere: kicks members, locks and clears lobby chat, works reports, ban appeals, bug reports and mods, removes reported messages. Can't ban, give roles or change settings.",
+  ],
+  [
+    "Staff · Admin",
+    "One rung. Everything Support does, plus: ban and unban, give or remove Support, lobbies, rooms, tiers, broadcast, outreach, analytics and the audit log.",
+  ],
+  [
+    "God",
+    "Everything, plus making or removing staff and the site switches in Config. Can't be kicked or banned.",
+  ],
+];
+const LOBBY: [string, string][] = [
+  ["1 · Member", "Takes part in the lobby and its rooms."],
+  ["2 · Trusted", "Reads the lobby's admin pages."],
+  ["3 · Moderator", "Kicks, mutes and clears chat in the lobby; joins its admin chat."],
+  ["4 · Admin", "Runs the lobby: name, settings, rooms, events, modules."],
+  ["5 · Owner", "Everything, including paid tiers, transfer and deleting."],
+];
+
+function Rows({ rows }: { rows: [string, string][] }) {
+  return (
+    <div className="wops-card" style={{ padding: "6px 16px" }}>
+      <div className="wops-feed">
+        {rows.map(([who, can]) => (
+          <div key={who} className="wops-feed-row" style={{ alignItems: "flex-start" }}>
+            <b style={{ flex: "0 0 120px" }}>{who}</b>
+            <span style={{ whiteSpace: "normal" }}>{can}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export function RosterTab() {
-  const [staff, setStaff] = useState<any[]>([]);
+  const [staff, setStaff] = useState<StaffMember[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     apiFetch("/staff/roster")
-      .then((j) => {
-        setStaff(j.staff || []);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
+      .then((j) => setStaff(j.staff || []))
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, []);
 
-  if (loading)
-    return <div style={{ textAlign: "center", padding: 20, opacity: 0.4 }}>Loading roster...</div>;
-
-  const grouped: Record<string, any[]> = {};
-  for (const u of staff) {
-    const r = u.globalRole || "STAFF";
-    if (!grouped[r]) grouped[r] = [];
-    grouped[r].push(u);
-  }
-  const order = ["GOD", "ADMIN", "STAFF", "SUPPORT"];
-
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-      <div style={{ fontSize: 13, opacity: 0.5 }}>{staff.length} staff members</div>
-      {order
-        .filter((r) => grouped[r]?.length)
-        .map((r) => (
-          <div key={r}>
-            <div style={S.sectionTitle}>
-              {r} ({grouped[r].length})
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              {grouped[r].map((u: any) => {
-                const rc = roleColor(u.globalRole);
-                return (
-                  <div
-                    key={u.id}
-                    style={{ ...S.card, display: "flex", alignItems: "center", gap: 12 }}
+    <div style={{ maxWidth: 880 }}>
+      {loading ? (
+        <div className="wops-muted">Loading…</div>
+      ) : (
+        RUNGS.map((rung) => {
+          const people = staff.filter((s) => rung.roles.includes(s.globalRole));
+          if (!people.length) return null;
+          return (
+            <section key={rung.title} className="wops-section">
+              <h2 className="wops-section-title">
+                {rung.title} <small>{people.length}</small>
+              </h2>
+              <div
+                className="wops-grid"
+                style={{ gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))" }}
+              >
+                {people.map((s) => (
+                  <a
+                    key={s.id}
+                    className="wops-card"
+                    href={`/staff?tab=users&q=${encodeURIComponent(s.usernameKey)}`}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 12,
+                      color: "inherit",
+                      textDecoration: "none",
+                    }}
                   >
-                    <div
-                      style={{
-                        width: 36,
-                        height: 36,
-                        borderRadius: 999,
-                        background: u.avatarColor || "rgba(124,58,237,.25)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        fontSize: 14,
-                        fontWeight: 700,
-                        flexShrink: 0,
-                        border: `2px solid ${rc.border}`,
-                      }}
-                    >
-                      {(u.name || "?").slice(0, 1).toUpperCase()}
+                    <Avatar
+                      name={s.name}
+                      size={40}
+                      src={s.avatar}
+                      chosenColor={s.avatarColor || undefined}
+                    />
+                    <div style={{ minWidth: 0 }}>
+                      <b style={{ display: "block", fontSize: 15 }}>{s.name}</b>
+                      <span className="wops-note">
+                        @{s.usernameKey} · {s.globalRole === "ADMIN" ? "Admin · " : ""}since{" "}
+                        {new Date(s.createdAt).toLocaleDateString(undefined, {
+                          month: "short",
+                          year: "numeric",
+                        })}
+                      </span>
                     </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontWeight: 700, fontSize: 14 }}>{u.name}</div>
-                      <div style={{ fontSize: 10, opacity: 0.4 }}>
-                        joined {fmtDate(u.createdAt)}
-                      </div>
-                    </div>
-                    <RoleBadge role={u.globalRole} />
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        ))}
+                  </a>
+                ))}
+              </div>
+            </section>
+          );
+        })
+      )}
+
+      <section className="wops-section">
+        <h2 className="wops-section-title">
+          Who can do what <small>you act only on people below you</small>
+        </h2>
+        <Rows rows={LADDER} />
+      </section>
+      <section className="wops-section">
+        <h2 className="wops-section-title">
+          In a lobby <small>each lobby&apos;s own ladder, separate from Weered&apos;s</small>
+        </h2>
+        <Rows rows={LOBBY} />
+      </section>
+      <section className="wops-section">
+        <h2 className="wops-section-title">Tiers and notoriety</h2>
+        <div className="wops-card wops-muted" style={{ lineHeight: 1.55 }}>
+          Two separate things that share crime names. The <b>tier</b> is paid: Free, Indicted ($6 a
+          month), Felon ($14 a month), or Kingpin, which only staff give (Subscriptions).{" "}
+          <b>Notoriety</b> is earned by taking part and climbs from Street Rat to Kingpin. One never
+          changes the other.
+        </div>
+      </section>
     </div>
   );
 }

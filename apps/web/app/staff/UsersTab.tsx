@@ -6,9 +6,12 @@ import {
   RoleBadge,
   S,
   StaffNote,
+  STAFF_ERRORS,
   StaffUser,
   apiFetch,
   fmtDate,
+  mayActOn,
+  rolesToGive,
 } from "./shared";
 import { onActivate } from "@/lib/a11y";
 
@@ -22,22 +25,36 @@ export function UsersTab({ myRole }: { myRole: GlobalRole }) {
   const [msg, setMsg] = useState("");
   const [banReason, setBanReason] = useState("");
 
-  const canEdit = myRole !== "SUPPORT";
-  const canGod = myRole === "GOD";
   const canBan = myRole === "STAFF" || myRole === "ADMIN" || myRole === "GOD";
+  const fail = (j: any) => setMsg(STAFF_ERRORS[j?.error] || j?.error || "Failed.");
 
-  const search = useCallback(async () => {
-    setLoading(true);
-    try {
-      const j = await apiFetch(`/staff/users?q=${encodeURIComponent(q)}`);
-      setUsers(j.users || []);
-    } finally {
-      setLoading(false);
-    }
-  }, [q]);
+  const search = useCallback(
+    async (term = q) => {
+      setLoading(true);
+      try {
+        const j = await apiFetch(`/staff/users?q=${encodeURIComponent(term)}`);
+        const list: StaffUser[] = j.users || [];
+        setUsers(list);
+        return list;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [q],
+  );
 
+  // ?q= opens someone straight away (the Roster and Reports link here).
   useEffect(() => {
-    void search();
+    let term = "";
+    try {
+      term = new URLSearchParams(window.location.search).get("q") || "";
+    } catch {}
+    setQ(term);
+    void search(term).then((list) => {
+      const hit = term && list.find((u) => u.usernameKey === term.toLowerCase());
+      if (hit) void loadNotes(hit);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function loadNotes(u: StaffUser) {
@@ -71,13 +88,14 @@ export function UsersTab({ myRole }: { myRole: GlobalRole }) {
       void search();
       if (selected?.id === userId)
         setSelected((s) => (s ? { ...s, globalRole: role as GlobalRole } : s));
-    } else setMsg(j.error || "Failed.");
+    } else fail(j);
   }
 
   async function kickUser(userId: string, name: string) {
     if (!confirm(`Global kick ${name}?`)) return;
     const j = await apiFetch(`/staff/users/${userId}/kick`, { method: "POST" });
-    setMsg(j.ok ? `Kicked ${name}` : j.error || "Failed.");
+    if (j.ok) setMsg(`Kicked ${name}`);
+    else fail(j);
   }
 
   async function banUser(userId: string, name: string) {
@@ -92,7 +110,7 @@ export function UsersTab({ myRole }: { myRole: GlobalRole }) {
       void search();
       if (selected?.id === userId)
         setSelected((s) => (s ? { ...s, banned: true, banReason: banReason.trim() } : s));
-    } else setMsg(j.error || "Failed.");
+    } else fail(j);
   }
 
   async function unbanUser(userId: string, name: string) {
@@ -103,14 +121,14 @@ export function UsersTab({ myRole }: { myRole: GlobalRole }) {
       void search();
       if (selected?.id === userId)
         setSelected((s) => (s ? { ...s, banned: false, banReason: undefined } : s));
-    } else setMsg(j.error || "Failed.");
+    } else fail(j);
   }
 
   return (
     <div
       style={{
         display: "grid",
-        gridTemplateColumns: "1fr 1.2fr",
+        gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
         gap: 16,
         alignItems: "start",
         height: "100%",
@@ -123,9 +141,9 @@ export function UsersTab({ myRole }: { myRole: GlobalRole }) {
             placeholder="Search by name or handle…"
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && search()}
+            onKeyDown={(e) => e.key === "Enter" && void search()}
           />
-          <button style={S.btn} onClick={search}>
+          <button style={S.btn} onClick={() => void search()}>
             {loading ? "…" : "Search"}
           </button>
         </div>
@@ -232,40 +250,35 @@ export function UsersTab({ myRole }: { myRole: GlobalRole }) {
             )}
           </div>
 
-          {canEdit && (
+          {mayActOn(myRole, selected.globalRole) && (
             <div style={S.card}>
-              <div style={S.sectionTitle}>Role Actions</div>
+              <div style={S.sectionTitle}>Role</div>
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                <button style={S.btn} onClick={() => setRole(selected.id, "SUPPORT")}>
-                  → SUPPORT
-                </button>
-                <button style={S.btn} onClick={() => setRole(selected.id, "STAFF")}>
-                  → STAFF
-                </button>
-                <button style={S.btn} onClick={() => setRole(selected.id, "USER")}>
-                  → USER
-                </button>
-                {canGod && (
+                {rolesToGive(myRole)
+                  .filter((r) => r !== selected.globalRole)
+                  .map((r) => (
+                    <button
+                      key={r}
+                      style={r === "GOD" ? S.warn : S.btn}
+                      onClick={() => void setRole(selected.id, r)}
+                    >
+                      → {r}
+                    </button>
+                  ))}
+                {selected.globalRole !== "GOD" && (
                   <button
-                    style={{
-                      ...S.btn,
-                      borderColor: "rgba(245,158,11,.30)",
-                      color: "rgb(253,230,138)",
-                    }}
-                    onClick={() => setRole(selected.id, "GOD")}
+                    style={S.danger}
+                    onClick={() => void kickUser(selected.id, selected.name)}
                   >
-                    → GOD
+                    Global Kick
                   </button>
                 )}
-                <button style={S.danger} onClick={() => kickUser(selected.id, selected.name)}>
-                  Global Kick
-                </button>
               </div>
               {msg && <div style={{ marginTop: 8, fontSize: 12, opacity: 0.7 }}>{msg}</div>}
             </div>
           )}
 
-          {canBan && (
+          {canBan && mayActOn(myRole, selected.globalRole) && selected.globalRole !== "GOD" && (
             <div style={S.card}>
               <div style={S.sectionTitle}>Global Ban</div>
               {selected.banned ? (

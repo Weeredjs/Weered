@@ -1981,6 +1981,7 @@ async function main() {
     getGlobalRole,
     canAccessStaff,
     rooms,
+    globalAudit,
   } as any);
   await app.register(staffTodayRoutes, {
     authFromHeader,
@@ -2279,6 +2280,7 @@ async function main() {
     authFromHeader,
     getGlobalRole,
     canAccessStaff,
+    globalAudit,
   } as any);
 
   await app.register(publicRoutes, {

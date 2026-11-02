@@ -3,6 +3,7 @@ import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
 import { accountCount } from "../lib/registration";
 import { paidThroughStripe } from "../lib/stripeTier";
+import { mayActOn, mayGiveRole } from "../lib/roleLadder";
 import { cutoffNow } from "../lib/sessionCutoff";
 import { GlobalRole, ReportStatus, SubTier } from "@prisma/client";
 
@@ -108,20 +109,16 @@ export default async function staffRoutes(app: FastifyInstance, opts: Opts) {
     const newRole = String(body.role || "USER").toUpperCase() as GlobalRole;
     if (!Object.values(GlobalRole).includes(newRole))
       return reply.code(400).send({ ok: false, error: "invalid_role" });
-    if (
-      actorRole !== GlobalRole.GOD &&
-      (newRole === GlobalRole.STAFF || newRole === GlobalRole.GOD)
-    ) {
-      return reply.code(403).send({ ok: false, error: "insufficient_rank" });
-    }
+    if (targetId === u.id) return reply.code(400).send({ ok: false, error: "cannot_change_self" });
     const target = await prisma.user.findUnique({
       where: { id: targetId },
       select: { id: true, name: true, globalRole: true },
     });
     if (!target) return reply.code(404).send({ ok: false, error: "user_not_found" });
-    if (target.globalRole === GlobalRole.GOD && actorRole !== GlobalRole.GOD) {
-      return reply.code(403).send({ ok: false, error: "cannot_modify_god" });
-    }
+    // Only on someone below you, and only a role below yours: STAFF and ADMIN
+    // make or remove SUPPORT; only GOD makes or removes staff.
+    if (!mayGiveRole(actorRole, target.globalRole, newRole))
+      return reply.code(403).send({ ok: false, error: "insufficient_rank" });
     await prisma.user.update({ where: { id: targetId }, data: { globalRole: newRole } });
     await globalAudit(u.id, u.name, "role_change", targetId, target.name, {
       from: target.globalRole,
@@ -182,8 +179,14 @@ export default async function staffRoutes(app: FastifyInstance, opts: Opts) {
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const role = await getGlobalRole(u.id);
     if (!canAssignRoles(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
-    const logs = await prisma.globalAudit.findMany({ orderBy: { createdAt: "desc" }, take: 100 });
-    return reply.send({ ok: true, logs });
+    // ?before= pages back through older entries, 100 at a time.
+    const before = new Date(String((req as any).query?.before || ""));
+    const logs = await prisma.globalAudit.findMany({
+      where: Number.isNaN(before.getTime()) ? {} : { createdAt: { lt: before } },
+      orderBy: { createdAt: "desc" },
+      take: 100,
+    });
+    return reply.send({ ok: true, logs, more: logs.length === 100 });
   });
 
   // The Control Panel's lobby controls: lock and unlock its chat, and clear it.
@@ -299,6 +302,8 @@ export default async function staffRoutes(app: FastifyInstance, opts: Opts) {
     if (!target) return reply.code(404).send({ ok: false, error: "user_not_found" });
     if (target.globalRole === GlobalRole.GOD)
       return reply.code(403).send({ ok: false, error: "cannot_kick_god" });
+    if (!mayActOn(role, target.globalRole))
+      return reply.code(403).send({ ok: false, error: "insufficient_rank" });
     for (const room of rooms.values()) {
       if (room.users.has(targetId) || room.mods.has(targetId)) {
         // Kept out of these rooms for ten minutes, as a room kick does.
@@ -337,6 +342,8 @@ export default async function staffRoutes(app: FastifyInstance, opts: Opts) {
     if (!target) return reply.code(404).send({ ok: false, error: "user_not_found" });
     if (target.globalRole === GlobalRole.GOD)
       return reply.code(403).send({ ok: false, error: "cannot_ban_god" });
+    if (!mayActOn(role, target.globalRole))
+      return reply.code(403).send({ ok: false, error: "insufficient_rank" });
     if (target.banned) return reply.code(400).send({ ok: false, error: "already_banned" });
 
     const body: any = (req as any).body || {};
@@ -582,6 +589,7 @@ export default async function staffRoutes(app: FastifyInstance, opts: Opts) {
         })
       : [];
     const nameMap = new Map(users.map((x) => [x.id, x.name]));
+    const about = await reportTargets(rows);
     return reply.send({
       reports: rows.map((r: any) => ({
         ...r,
@@ -590,8 +598,134 @@ export default async function staffRoutes(app: FastifyInstance, opts: Opts) {
         reporterName: nameMap.get(r.reporterId) || r.reporterId,
         targetName: r.targetType === "USER" ? nameMap.get(r.targetId) || r.targetId : null,
         reviewerName: r.reviewedById ? nameMap.get(r.reviewedById) || r.reviewedById : null,
+        target: about.get(r.id) || null,
       })),
     });
+  });
+
+  /**
+   * What each report is about, so the desk can link to it and offer the right
+   * tool (ops audit 2026-11-01: only lobby reports had a button). A message
+   * report names its author and room, so staff can act on the person too.
+   */
+  async function reportTargets(rows: any[]) {
+    const ids = (t: string) => rows.filter((r) => r.targetType === t).map((r) => r.targetId);
+    const [msgs, people, lobbies, roomRows] = await Promise.all([
+      prisma.roomMessage.findMany({
+        where: { id: { in: ids("MESSAGE") } },
+        select: { id: true, roomId: true, userId: true, userName: true, deletedAt: true },
+      }),
+      prisma.user.findMany({
+        where: { id: { in: ids("USER") } },
+        select: { id: true, name: true, usernameKey: true, globalRole: true, banned: true },
+      }),
+      prisma.lobby.findMany({
+        where: { id: { in: ids("LOBBY") } },
+        select: { id: true, name: true },
+      }),
+      prisma.room.findMany({
+        where: { id: { in: ids("ROOM") } },
+        select: { id: true, name: true, lobbyId: true },
+      }),
+    ]);
+    const authors = await prisma.user.findMany({
+      where: { id: { in: msgs.map((m) => m.userId) } },
+      select: { id: true, usernameKey: true, globalRole: true, banned: true },
+    });
+    const authorOf = new Map(authors.map((a) => [a.id, a]));
+    const msgOf = new Map(msgs.map((m) => [m.id, m]));
+    const personOf = new Map(people.map((p) => [p.id, p]));
+    const lobbyOf = new Map(lobbies.map((l) => [l.id, l]));
+    const roomOf = new Map(roomRows.map((x) => [x.id, x]));
+    const out = new Map<string, any>();
+    for (const r of rows) {
+      if (r.targetType === "MESSAGE") {
+        const m = msgOf.get(r.targetId);
+        const a = m && authorOf.get(m.userId);
+        out.set(
+          r.id,
+          m
+            ? {
+                exists: true,
+                name: m.userName,
+                roomId: m.roomId,
+                deleted: !!m.deletedAt,
+                person: a
+                  ? { id: a.id, usernameKey: a.usernameKey, role: a.globalRole, banned: a.banned }
+                  : null,
+              }
+            : { exists: false },
+        );
+      } else if (r.targetType === "USER") {
+        const p = personOf.get(r.targetId);
+        out.set(
+          r.id,
+          p
+            ? {
+                exists: true,
+                name: p.name,
+                person: {
+                  id: p.id,
+                  usernameKey: p.usernameKey,
+                  role: p.globalRole,
+                  banned: p.banned,
+                },
+              }
+            : { exists: false },
+        );
+      } else if (r.targetType === "LOBBY") {
+        const l = lobbyOf.get(r.targetId);
+        out.set(r.id, l ? { exists: true, name: l.name, lobbyId: l.id } : { exists: false });
+      } else {
+        const x = roomOf.get(r.targetId);
+        const live = rooms.get(r.targetId);
+        out.set(
+          r.id,
+          x || live
+            ? {
+                exists: true,
+                name: x?.name || live?.name || r.targetId,
+                roomId: r.targetId,
+                lobbyId: x?.lobbyId ?? null,
+              }
+            : { exists: false },
+        );
+      }
+    }
+    return out;
+  }
+
+  // Remove a reported room message, as a room moderator's delete does
+  // (sockets/messaging.ts chat:delete), from the Reports desk.
+  app.post("/staff/messages/:id/delete", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const role = await getGlobalRole(u.id);
+    if (!canAccessStaff(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
+    const id = String((req as any).params?.id || "");
+    const m = await prisma.roomMessage.findUnique({
+      where: { id },
+      select: { id: true, roomId: true, userId: true, userName: true, body: true, deletedAt: true },
+    });
+    if (!m) return reply.code(404).send({ ok: false, error: "not_found" });
+    if (m.deletedAt) return reply.send({ ok: true, already: true });
+    const deletedAt = Date.now();
+    await prisma.roomMessage.update({
+      where: { id },
+      data: { body: "", deletedAt: new Date(deletedAt) },
+    });
+    const room = rooms.get(m.roomId);
+    const live = room?.msgs?.find((x: any) => x.id === id);
+    if (live) {
+      live.deletedAt = deletedAt;
+      live.body = "";
+    }
+    if (room) broadcast(room, { type: "chat:deleted", roomId: m.roomId, msgId: id, deletedAt });
+    await globalAudit(u.id, u.name, "message_delete", id, m.userName, {
+      roomId: m.roomId,
+      body: m.body.slice(0, 200),
+    });
+    return reply.send({ ok: true });
   });
 
   app.post("/staff/reports/:id/action", async (req, reply) => {
@@ -604,12 +738,13 @@ export default async function staffRoutes(app: FastifyInstance, opts: Opts) {
     const status = String(body.status || "").toUpperCase();
     if (!["REVIEWED", "ACTIONED", "DISMISSED"].includes(status))
       return reply.code(400).send({ ok: false, error: "invalid_status" });
+    const did = typeof body.did === "string" ? body.did.slice(0, 40) : undefined;
     try {
       await prisma.report.update({
         where: { id },
         data: { status: status as ReportStatus, reviewedAt: new Date(), reviewedById: u.id },
       });
-      await globalAudit(u.id, u.name, `report_${status.toLowerCase()}`, id);
+      await globalAudit(u.id, u.name, `report_${status.toLowerCase()}`, id, undefined, { did });
       return reply.send({ ok: true });
     } catch {
       return reply.code(500).send({ ok: false, error: "update_failed" });
@@ -847,11 +982,17 @@ export default async function staffRoutes(app: FastifyInstance, opts: Opts) {
     const role = await getGlobalRole(u.id);
     if (!canAccessStaff(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
 
+    // Serving staff only: not deleted or banned accounts (ops audit 2026-11-01).
     const staff = await prisma.user.findMany({
-      where: { globalRole: { in: ["SUPPORT", "STAFF", "ADMIN", "GOD"] } },
+      where: {
+        globalRole: { in: ["SUPPORT", "STAFF", "ADMIN", "GOD"] },
+        deletedAt: null,
+        banned: false,
+      },
       select: {
         id: true,
         name: true,
+        usernameKey: true,
         globalRole: true,
         avatar: true,
         avatarColor: true,
@@ -889,6 +1030,7 @@ export default async function staffRoutes(app: FastifyInstance, opts: Opts) {
     const post = await prisma.staffPost.create({
       data: { authorId: u.id, authorName: u.name, body: text, pinned: !!body.pinned },
     });
+    await globalAudit(u.id, u.name, "board_post", post.id, text.slice(0, 80));
     return reply.send({ ok: true, post });
   });
 
@@ -906,6 +1048,13 @@ export default async function staffRoutes(app: FastifyInstance, opts: Opts) {
       where: { id: postId },
       data: { pinned: !post.pinned },
     });
+    await globalAudit(
+      u.id,
+      u.name,
+      updated.pinned ? "board_pin" : "board_unpin",
+      postId,
+      post.body.slice(0, 80),
+    );
     return reply.send({ ok: true, post: updated });
   });
 
@@ -915,12 +1064,17 @@ export default async function staffRoutes(app: FastifyInstance, opts: Opts) {
     const role = await getGlobalRole(u.id);
     if (!canAccessStaff(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
 
+    // Your own post, or anyone's if you're STAFF and up (SUPPORT could delete
+    // anyone's through the server, though the page hid the button: ops audit).
     const postId = (req as any).params.id;
-    try {
-      await prisma.staffPost.delete({ where: { id: postId } });
-    } catch {
-      return reply.code(404).send({ ok: false, error: "not_found" });
-    }
+    const post = await prisma.staffPost.findUnique({ where: { id: postId } });
+    if (!post) return reply.code(404).send({ ok: false, error: "not_found" });
+    if (post.authorId !== u.id && !canAssignRoles(role))
+      return reply.code(403).send({ ok: false, error: "forbidden" });
+    await prisma.staffPost.delete({ where: { id: postId } }).catch(swallow);
+    await globalAudit(u.id, u.name, "board_delete", postId, post.body.slice(0, 80), {
+      author: post.authorName,
+    });
     return reply.send({ ok: true });
   });
 
