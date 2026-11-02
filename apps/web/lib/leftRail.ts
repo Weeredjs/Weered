@@ -60,7 +60,8 @@ export function normRole(x: any) {
   const s = String(x || "")
     .trim()
     .toUpperCase();
-  if (!s) return "";
+  // "none" means no role (a room's role before its details arrive).
+  if (!s || s === "NONE") return "";
   if (s === "GOD") return "GOD";
   if (s === "SUPPORT") return "SUPPORT";
   if (s === "STAFF") return "STAFF";

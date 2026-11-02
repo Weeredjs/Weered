@@ -34,7 +34,7 @@ export function LogoMenu() {
   const { openSheet } = useOverlay() as any;
   const [open, setOpen] = useState(false);
   const [view, setView] = useState<View>("menu");
-  const [pos, setPos] = useState<{ top: number; right: number } | null>(null);
+  const [pos, setPos] = useState<{ top: number; right?: number; left?: number } | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
   const btnRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -75,8 +75,13 @@ export function LogoMenu() {
     const el = btnRef.current;
     if (!el) return;
     const rect = el.getBoundingClientRect();
-    const right = Math.max(8, window.innerWidth - rect.right);
-    setPos({ top: rect.bottom + 8, right });
+    const top = rect.bottom + 8;
+    // Open toward the room there is: under the logo on the right (the
+    // desktop's right rail) it hangs left; on the left (a phone's Control
+    // Panel, 2026-11-01) it hung off the screen, so it hangs right instead.
+    if (rect.left + rect.width / 2 < window.innerWidth / 2)
+      setPos({ top, left: Math.max(8, rect.left) });
+    else setPos({ top, right: Math.max(8, window.innerWidth - rect.right) });
   }, []);
 
   const toggleOpen = useCallback(() => {
@@ -192,7 +197,13 @@ export function LogoMenu() {
             ref={panelRef}
             className="weered-logo-menu-panel"
             role="menu"
-            style={{ position: "fixed", top: pos.top, right: pos.right }}
+            style={{
+              position: "fixed",
+              top: pos.top,
+              right: pos.right,
+              left: pos.left,
+              maxWidth: "calc(100vw - 16px)",
+            }}
           >
             {view === "menu" ? (
               <>

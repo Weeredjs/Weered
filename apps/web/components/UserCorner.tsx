@@ -38,7 +38,9 @@ function normRole(x: string) {
   const s = String(x || "")
     .trim()
     .toUpperCase();
-  if (!s) return "";
+  // "none" is the room role before a room's details arrive: no role, not a
+  // role called NONE (it showed under the name on James's phone, 2026-11-01).
+  if (!s || s === "NONE") return "";
   if (s === "GOD") return "GOD";
   if (s === "SUPPORT") return "SUPPORT";
   if (s === "STAFF") return "STAFF";

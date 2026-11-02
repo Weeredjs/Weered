@@ -1768,14 +1768,9 @@ html[data-weered-chrome="min"] .weered-usercorner {
   z-index: 5 !important;
 }
 
-/* Let the noto tooltip escape the banner content's stacking context so it
-   paints above the identity field below. Bumping the noto to a high z-index
-   AND giving its containing banner-content div a higher z-index than the
-   identity field — the avatar still paints above the ID line because it's
-   inside its own positioned container deeper in the tree. */
-html[data-weered-chrome="min"] .weered-uc-banner {
-  z-index: 10 !important;
-}
+/* The banner stays under the identity field: lifting it (z-index 10, for a
+   .weered-uc-noto tooltip nothing renders any more) put its dark fade over the
+   top of the avatar, which overlaps it (2026-11-01, James's phone). */
 html[data-weered-chrome="min"] .weered-uc-noto {
   z-index: 50 !important;
 }
