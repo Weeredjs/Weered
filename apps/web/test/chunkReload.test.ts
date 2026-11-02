@@ -52,6 +52,21 @@ describe("reloadForNewBuild", () => {
     expect(reload).toHaveBeenCalledTimes(1);
   });
 
+  it("never reloads when the browser blocks storage (it couldn't stop a loop)", () => {
+    const reload = vi.fn();
+    vi.stubGlobal("sessionStorage", {
+      getItem: () => {
+        throw new Error("SecurityError");
+      },
+      setItem: () => {
+        throw new Error("SecurityError");
+      },
+    });
+    vi.stubGlobal("window", { location: { reload } });
+    expect(reloadForNewBuild()).toBe(false);
+    expect(reload).not.toHaveBeenCalled();
+  });
+
   it("tries again after the minute is up", () => {
     const reload = stub();
     const now = vi.spyOn(Date, "now").mockReturnValue(1_000_000);

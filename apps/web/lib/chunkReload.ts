@@ -15,13 +15,16 @@ export function isChunkError(e: unknown): boolean {
   );
 }
 
-/** Reload to the current build; false when one was just tried. */
+/** Reload to the current build; false when one was just tried, or when the
+ *  browser won't let us remember that one was (blocked storage would loop). */
 export function reloadForNewBuild(): boolean {
   try {
     const last = Number(sessionStorage.getItem(KEY) || 0);
     if (Date.now() - last < 60_000) return false;
     sessionStorage.setItem(KEY, String(Date.now()));
-  } catch {}
+  } catch {
+    return false;
+  }
   window.location.reload();
   return true;
 }
