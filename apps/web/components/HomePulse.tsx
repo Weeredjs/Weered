@@ -9,7 +9,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { avatarBg } from "../lib/avatarColor";
+import { avatarFill } from "../lib/avatarColor";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "https://api.weered.ca";
 
@@ -62,7 +62,7 @@ function Face({
         fontSize: size * 0.38,
         fontWeight: 800,
         color: "#fff",
-        background: avatar ? "rgba(255,255,255,.08)" : color || avatarBg(name),
+        background: avatarFill(!!avatar, name, false, color),
         opacity: dim ? 0.45 : 1,
       }}
     >

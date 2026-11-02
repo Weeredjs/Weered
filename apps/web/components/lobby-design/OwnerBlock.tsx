@@ -7,6 +7,7 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useWeered } from "../WeeredProvider";
 import { placeOf, type Place } from "../../lib/place";
+import { avatarFill } from "../../lib/avatarColor";
 import PlaceGate, { GATES } from "../PlaceGate";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "https://api.weered.ca";
@@ -125,7 +126,7 @@ export default function OwnerBlock({
             display: "grid",
             placeItems: "center",
             border: `3px solid ${accent}`,
-            background: p.avatarColor || "#2a2440",
+            background: avatarFill(!!p.avatar, p.name, false, p.avatarColor),
             color: "#fff",
             fontSize: 28,
             fontWeight: 900,

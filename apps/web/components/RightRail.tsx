@@ -6,7 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useWeered, useRoomUsers } from "./WeeredProvider";
 import { moduleGlyph, roomMonogram } from "../lib/roomGlyph";
 import { useOverlay } from "./overlays/OverlayProvider";
-import { avatarBg } from "../lib/avatarColor";
+import { avatarFill } from "../lib/avatarColor";
 import EmptyState from "./EmptyState";
 import { weeredConfirm } from "../lib/confirm";
 import { weeredToast } from "../lib/toast";
@@ -151,7 +151,7 @@ function useLobbyCrews(lobbyId: string, enabled: boolean) {
 function PresenceAvatar({ user, size = 28, onClick }: { user: any; size?: number; onClick?: () => void }) {
   const name = String(user?.name || "?");
   const initial = name.slice(0, 1).toUpperCase();
-  const bg = user?.avatar ? "rgba(255,255,255,.08)" : avatarBg(name, false, user?.avatarColor);
+  const bg = avatarFill(!!user?.avatar, name, false, user?.avatarColor);
   return (
     <button
       type="button"
@@ -234,7 +234,7 @@ function AvatarStack({ users, size = 18 }: { users: any[]; size?: number }) {
     <div style={{ display: "flex", flexDirection: "row-reverse", alignItems: "center" }}>
       {shown.map((u, i) => {
         const nm = String(u?.name || u?.username || "?");
-        const bg = u?.avatar ? "rgba(255,255,255,.08)" : avatarBg(nm, false, u?.avatarColor);
+        const bg = avatarFill(!!u?.avatar, nm, false, u?.avatarColor);
         return (
           <div key={i} style={{
             width: size, height: size, borderRadius: "50%", flexShrink: 0,

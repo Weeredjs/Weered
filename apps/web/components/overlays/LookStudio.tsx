@@ -8,6 +8,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import DescribeBox from "../build/DescribeBox";
 import { describeJob } from "../../lib/aiBuild";
+import { AVATAR_PALETTE, avatarFill } from "../../lib/avatarColor";
 import {
   FRAME_PRESETS,
   FRAME_STYLES,
@@ -27,6 +28,7 @@ import {
 const NAME_DEFAULT: NameLook = { colors: ["#a78bfa", "#38bdf8"], glow: true, motion: "none" };
 const FRAME_DEFAULT: FrameLook = { colors: ["#a78bfa", "#38bdf8"], style: "glow" };
 const MOTION_LABEL: Record<string, string> = { none: "Still", shimmer: "Shimmer", pulse: "Pulse" };
+const lower = (c: string | null | undefined) => (c ? c.toLowerCase() : null);
 const STYLE_LABEL: Record<string, string> = {
   ring: "Ring",
   double: "Rings",
@@ -104,29 +106,42 @@ export default function LookStudio({
 }: {
   name: string;
   avatar?: string | null;
-  avatarColor: string;
+  /** The colour they picked, or null for none (lib/avatarColor.ts avatarFill). */
+  avatarColor: string | null;
   nameEffect: string | null;
   avatarFrame: string | null;
-  onSave: (patch: { nameEffect: string; avatarFrame: string }) => Promise<void>;
+  /** avatarColor "" is none. */
+  onSave: (patch: {
+    nameEffect: string;
+    avatarFrame: string;
+    avatarColor: string;
+  }) => Promise<void>;
 }) {
   const [nm, setNm] = useState<string | null>(nameEffect);
   const [fr, setFr] = useState<string | null>(avatarFrame);
+  const [bg, setBg] = useState<string | null>(lower(avatarColor));
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
   useEffect(() => setNm(nameEffect), [nameEffect]);
   useEffect(() => setFr(avatarFrame), [avatarFrame]);
+  useEffect(() => setBg(lower(avatarColor)), [avatarColor]);
 
   const ownName = useMemo(() => parseName(nm), [nm]);
   const ownFrame = useMemo(() => parseFrame(fr), [fr]);
-  const dirty = (nm || null) !== (nameEffect || null) || (fr || null) !== (avatarFrame || null);
+  const dirty =
+    (nm || null) !== (nameEffect || null) ||
+    (fr || null) !== (avatarFrame || null) ||
+    bg !== lower(avatarColor);
   const nfx = nameFx(nm);
   const ffx = frameFx(fr);
+  // What sits behind the picture or the initial, as everyone will see it.
+  const fill = avatarFill(!!avatar, name, false, bg);
 
   async function save() {
     setBusy(true);
     setMsg("");
     try {
-      await onSave({ nameEffect: nm || "none", avatarFrame: fr || "none" });
+      await onSave({ nameEffect: nm || "none", avatarFrame: fr || "none", avatarColor: bg || "" });
       setMsg("Saved. Everyone sees it next time you join a room.");
     } catch {
       setMsg("Didn't save. Try again.");
@@ -183,7 +198,7 @@ export default function LookStudio({
             height: 46,
             borderRadius: "50%",
             flexShrink: 0,
-            background: avatar ? `${avatarColor}22` : avatarColor,
+            background: fill,
             display: "grid",
             placeItems: "center",
             overflow: "hidden",
@@ -289,7 +304,7 @@ export default function LookStudio({
                   width: 28,
                   height: 28,
                   borderRadius: "50%",
-                  background: avatarColor,
+                  background: fill,
                   border: k === "none" ? "1px dashed rgba(255,255,255,.3)" : "none",
                   outline: on ? "2px solid #fff" : undefined,
                   outlineOffset: on ? 8 : undefined,
@@ -337,6 +352,63 @@ export default function LookStudio({
         </div>
       )}
 
+      <div style={label}>Avatar background</div>
+      <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 10 }}>
+        {([null, ...AVATAR_PALETTE] as (string | null)[]).map((c) => {
+          const on = bg === c;
+          return (
+            <button
+              key={c || "none"}
+              type="button"
+              title={c || "None"}
+              aria-label={c ? `Background ${c}` : "No background"}
+              aria-pressed={on}
+              onClick={() => setBg(c)}
+              style={{
+                width: 26,
+                height: 26,
+                borderRadius: "50%",
+                padding: 0,
+                cursor: "pointer",
+                background: c || "transparent",
+                border: c ? "none" : "1px dashed rgba(255,255,255,.35)",
+                outline: on ? "2px solid #fff" : undefined,
+                outlineOffset: on ? 3 : undefined,
+              }}
+            />
+          );
+        })}
+        <label
+          style={{
+            ...chip(!!bg && !AVATAR_PALETTE.includes(bg)),
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
+          }}
+        >
+          ✦ Your own
+          <input
+            type="color"
+            value={bg || "#8b5cf6"}
+            aria-label="Your own background colour"
+            onChange={(e) => setBg(e.target.value.toLowerCase())}
+            style={{
+              width: 22,
+              height: 18,
+              padding: 0,
+              border: "none",
+              background: "transparent",
+              cursor: "pointer",
+            }}
+          />
+        </label>
+      </div>
+      {avatar && (
+        <div style={{ fontSize: 11, opacity: 0.5, marginTop: 6 }}>
+          Shows wherever your picture is see-through.
+        </div>
+      )}
+
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 16 }}>
         <button
           type="button"
@@ -360,6 +432,7 @@ export default function LookStudio({
             onClick={() => {
               setNm(nameEffect);
               setFr(avatarFrame);
+              setBg(lower(avatarColor));
             }}
           >
             Put it back

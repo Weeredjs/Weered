@@ -4,7 +4,7 @@ import React from "react";
 import RoleGlyph from "./RoleGlyph";
 import RoleIcon, { TierIcon, roomRoleIcon } from "./RoleIcon";
 
-import { avatarBg } from "../lib/avatarColor";
+import { avatarFill } from "../lib/avatarColor";
 import { frameFx, nameFx } from "../lib/looks";
 
 export function SteamIcon({ size = 14 }: { size?: number }) {
@@ -186,7 +186,7 @@ export default function PresenceRow({
     return `linear-gradient(90deg, rgba(${r},${g},${b},${a.toFixed(3)}) 0%, rgba(${r},${g},${b},${(a * 0.45).toFixed(3)}) 60%, transparent 100%)`;
   })();
   const initial = (name || "?")[0]?.toUpperCase() || "?";
-  const bg = avatar ? "rgba(255,255,255,0.08)" : avatarColor || avatarBg(name || "");
+  const bg = avatarFill(!!avatar, name || "", false, avatarColor);
   const avatarSize = compact ? 30 : 36;
 
   const activePlatformKey =

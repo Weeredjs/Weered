@@ -11,6 +11,8 @@ async function makeApp() {
       awardNotoriety: async () => null,
       rooms: new Map(),
       publishState: () => {},
+      // A visible change (picture, colour) is pushed to the person's open sockets.
+      getWss: () => ({ clients: new Set() }),
     } as any),
   );
 }
@@ -88,6 +90,32 @@ describe("profile - PATCH /profile/me", () => {
       payload: {},
     });
     expect(none.statusCode).toBe(400);
+    await app.close();
+  });
+
+  it("keeps an avatar colour only when it is a colour: set, cleared, or left alone", async () => {
+    const app = await makeApp();
+    const uid = await newUser("u4");
+    const patch = (avatarColor: string) =>
+      app.inject({
+        method: "PATCH",
+        url: "/profile/me",
+        headers: { authorization: `Bearer ${testToken(uid)}` },
+        payload: { avatarColor, bio: "" },
+      });
+    const color = async () =>
+      (await prisma.user.findUnique({ where: { id: uid }, select: { avatarColor: true } }))
+        ?.avatarColor;
+
+    expect((await patch("#14B8A6")).statusCode).toBe(200);
+    expect(await color()).toBe("#14B8A6");
+    // Drawn straight into styles: a url() would be fetched by every viewer.
+    await patch("url(//x.io/a)");
+    await patch("red;top:0");
+    expect(await color()).toBe("#14B8A6");
+    // Empty is "no colour" (Background: None).
+    await patch("");
+    expect(await color()).toBeNull();
     await app.close();
   });
 });

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { avatarBg } from "../lib/avatarColor";
+import { avatarBg, avatarFill } from "../lib/avatarColor";
 import RoleIcon, { TierIcon, getRoleDisplayName, getRoleColor } from "./RoleIcon";
 import { SteamIcon, TwitchIcon, XboxIcon } from "./PresenceRow";
 import { onActivate } from "@/lib/a11y";
@@ -460,7 +460,7 @@ export default function UserHoverCard({
               width: 40,
               height: 40,
               borderRadius: "50%",
-              background: profile?.avatar ? "transparent" : aColor,
+              background: avatarFill(!!profile?.avatar, userName, false, profile?.avatarColor),
               border: `2px solid ${tier.color}`,
               boxShadow: `0 0 10px ${tier.color}30`,
               overflow: "hidden",

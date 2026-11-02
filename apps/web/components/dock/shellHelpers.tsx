@@ -1,6 +1,6 @@
 "use client";
 import React from "react";
-import { avatarBg } from "../../lib/avatarColor";
+import { avatarBg, avatarFill } from "../../lib/avatarColor";
 import LinkPreviewCard from "../LinkPreviewCard";
 
 // Pure helpers + small presentational atoms extracted from DockShell.
@@ -324,7 +324,7 @@ export function Avatar({
   chosenColor?: string;
   src?: string | null;
 }) {
-  const bg = color || avatarBg(name, isMe, chosenColor);
+  const bg = color || avatarFill(!!src, name, isMe, chosenColor);
   const common: React.CSSProperties = {
     width: size,
     height: size,

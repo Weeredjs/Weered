@@ -4,7 +4,7 @@ import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "re
 import { useWeered } from "./WeeredProvider";
 import { useOverlay } from "./overlays/OverlayProvider";
 import RoleIcon, { TierIcon } from "./RoleIcon";
-import { avatarBg } from "../lib/avatarColor";
+import { avatarFill } from "../lib/avatarColor";
 import { cornerFrameVars, nameFx } from "../lib/looks";
 import NotorietyBar from "./NotorietyBar";
 import { onActivate } from "@/lib/a11y";
@@ -664,12 +664,8 @@ export default function UserCorner() {
                 width: 56,
                 height: 56,
                 borderRadius: "50%",
-                ["--wa-bg" as any]: avatarUrl
-                  ? "rgba(255,255,255,.08)"
-                  : avatarBg(name, true, stickyAvatarColor),
-                background: avatarUrl
-                  ? "rgba(255,255,255,.08)"
-                  : avatarBg(name, true, stickyAvatarColor),
+                ["--wa-bg" as any]: avatarFill(!!avatarUrl, name, true, stickyAvatarColor),
+                background: avatarFill(!!avatarUrl, name, true, stickyAvatarColor),
                 boxShadow: `
                 0 0 0 3px rgba(10,10,18,.95),
                 0 0 0 4px ${cardAccent}80,

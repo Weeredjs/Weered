@@ -1,6 +1,6 @@
 "use client";
 
-import { AVATAR_PALETTE, avatarBg } from "../../../lib/avatarColor";
+import { AVATAR_PALETTE, MY_COLOR_KEY, avatarBg, avatarFill } from "../../../lib/avatarColor";
 import BarProfileCard from "../../bar/BarProfileCard";
 import React, { useEffect, useState, useCallback } from "react";
 import { useWeered } from "../../WeeredProvider";
@@ -430,13 +430,18 @@ export default function ProfileSheet({ userId }: { userId: string }) {
         const savedColor = j.avatarColor || avatarBg(j.name);
         setAvatarColor(savedColor);
         setAvatarUrl(j.avatar || null);
-        if (j.avatarColor) {
-          try { localStorage.setItem("weered:avatarColor", j.avatarColor); } catch {}
+        // This browser's own colour is the viewer's: someone else's profile
+        // must not repaint the viewer's avatar.
+        if (isMe) {
+          try {
+            if (j.avatarColor) localStorage.setItem(MY_COLOR_KEY, j.avatarColor);
+            else localStorage.removeItem(MY_COLOR_KEY);
+          } catch {}
         }
       })
       .catch(() => setError("Could not load profile."))
       .finally(() => setLoading(false));
-  }, [resolvedId, token, apiBase]);
+  }, [resolvedId, isMe, token, apiBase]);
 
   useEffect(() => {
     if (!resolvedId) return;
@@ -518,7 +523,7 @@ export default function ProfileSheet({ userId }: { userId: string }) {
     } catch {}
   }, [token, apiBase]);
 
-  const saveLook = useCallback(async (patch: { nameEffect: string; avatarFrame: string }) => {
+  const saveLook = useCallback(async (patch: { nameEffect: string; avatarFrame: string; avatarColor: string }) => {
     if (!token) throw new Error("signed out");
     const r = await fetch(`${apiBase}/profile/me`, {
       method: "PATCH",
@@ -530,7 +535,14 @@ export default function ProfileSheet({ userId }: { userId: string }) {
       ...prev,
       nameEffect: patch.nameEffect === "none" ? null : patch.nameEffect,
       avatarFrame: patch.avatarFrame === "none" ? null : patch.avatarFrame,
+      avatarColor: patch.avatarColor || null,
     } as any) : prev);
+    setAvatarColor(patch.avatarColor || avatarBg(""));
+    try {
+      if (patch.avatarColor) localStorage.setItem(MY_COLOR_KEY, patch.avatarColor);
+      else localStorage.removeItem(MY_COLOR_KEY);
+    } catch {}
+    try { window.dispatchEvent(new CustomEvent("weered:avatarColor", { detail: patch.avatarColor })); } catch {}
     try { window.dispatchEvent(new CustomEvent("weered:profile:updated")); } catch {}
   }, [token, apiBase]);
 
@@ -683,7 +695,7 @@ export default function ProfileSheet({ userId }: { userId: string }) {
           style={{
             ...frameFx((profile as any).avatarFrame).style,
             width: 96, height: 96, borderRadius: "50%", flexShrink: 0,
-            background: hasAvatar ? `${aColor}22` : aColor,
+            background: avatarFill(hasAvatar, profile.name, false, (profile as any).avatarColor),
             border: `3px solid ${tier.color}`,
             boxShadow: `0 0 30px ${tier.glow}, 0 0 0 4px rgba(0,0,0,.4), 0 10px 28px rgba(0,0,0,.5)`,
             display: "flex", alignItems: "center", justifyContent: "center",
@@ -1047,7 +1059,7 @@ export default function ProfileSheet({ userId }: { userId: string }) {
           <LookStudio
             name={profile.name}
             avatar={hasAvatar ? avatarUrl : null}
-            avatarColor={aColor}
+            avatarColor={(profile as any).avatarColor || null}
             nameEffect={(profile as any).nameEffect || null}
             avatarFrame={(profile as any).avatarFrame || null}
             onSave={saveLook}

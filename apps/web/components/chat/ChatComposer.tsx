@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { avatarBg } from "../../lib/avatarColor";
+import { avatarFill } from "../../lib/avatarColor";
 import RoleIcon, { TierIcon } from "../RoleIcon";
 import { GifPicker } from "./GifPicker";
 import { Icons } from "./Icons";
@@ -216,9 +216,7 @@ export function ChatComposer({
                     height: 22,
                     borderRadius: "50%",
                     flexShrink: 0,
-                    background: u.avatar
-                      ? "rgba(255,255,255,.08)"
-                      : avatarBg(u.name, false, u.avatarColor),
+                    background: avatarFill(!!u.avatar, u.name, false, u.avatarColor),
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",

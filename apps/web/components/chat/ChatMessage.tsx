@@ -2,7 +2,7 @@
 import { type Ctx } from "../WeeredProvider";
 
 import React from "react";
-import { avatarBg } from "../../lib/avatarColor";
+import { avatarFill } from "../../lib/avatarColor";
 import { nameFx } from "../../lib/looks";
 import { weeredConfirm } from "../../lib/confirm";
 import { weeredToast } from "../../lib/toast";
@@ -556,9 +556,7 @@ export function ChatMessage(props: ChatMessageProps) {
             height: 28,
             borderRadius: 999,
             flexShrink: 0,
-            background: msgAvatar
-              ? "rgba(255,255,255,.08)"
-              : avatarBg(uname, isMine, m?.user?.avatarColor),
+            background: avatarFill(!!msgAvatar, uname, isMine, m?.user?.avatarColor),
             display: "flex",
             alignItems: "center",
             justifyContent: "center",

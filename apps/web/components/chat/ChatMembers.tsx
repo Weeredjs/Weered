@@ -1,6 +1,6 @@
 "use client";
 
-import { avatarBg } from "../../lib/avatarColor";
+import { avatarFill } from "../../lib/avatarColor";
 import RoleIcon, { roomRoleIcon } from "../RoleIcon";
 import { CrewFlair } from "./flair";
 import { nameStyleFor } from "./chatShared";
@@ -126,9 +126,12 @@ export function ChatMembers({ ctx, liveRoomUsers, openHover, hoverClose }: ChatM
                         height: 24,
                         borderRadius: "50%",
                         flexShrink: 0,
-                        background: u?.avatar
-                          ? "rgba(255,255,255,.08)"
-                          : avatarBg(String(u?.name || "?"), false, u?.avatarColor),
+                        background: avatarFill(
+                          !!u?.avatar,
+                          String(u?.name || "?"),
+                          false,
+                          u?.avatarColor,
+                        ),
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",

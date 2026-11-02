@@ -245,8 +245,18 @@ export default async function profileRoutes(app: FastifyInstance, opts: Opts) {
 
       const body: any = (req as any).body || {};
       const bio = typeof body.bio === "string" ? body.bio.trim().slice(0, 280) : undefined;
+      // A #rrggbb colour, or "" to clear it. Pages draw it straight into a
+      // style, so anything else (a url(...) that every viewer would fetch) is
+      // left alone, as an unknown field is.
+      const colorIn = typeof body.avatarColor === "string" ? body.avatarColor.trim() : undefined;
       const avatarColor =
-        typeof body.avatarColor === "string" ? body.avatarColor.slice(0, 20) : undefined;
+        colorIn === undefined
+          ? undefined
+          : colorIn === ""
+            ? null
+            : /^#[0-9a-f]{6}$/i.test(colorIn)
+              ? colorIn
+              : undefined;
       const avatar = typeof body.avatar === "string" ? body.avatar.slice(0, 500) : undefined;
       const bannerUrl =
         typeof body.bannerUrl === "string" ? body.bannerUrl.slice(0, 500) : undefined;
@@ -361,7 +371,7 @@ export default async function profileRoutes(app: FastifyInstance, opts: Opts) {
           for (const sock of getWss().clients) {
             const s = sock;
             if (s.user?.id === viewer.id) {
-              if (avatarColor !== undefined) s.user.avatarColor = avatarColor;
+              if (avatarColor !== undefined) s.user.avatarColor = avatarColor || undefined;
               if (avatar !== undefined) s.user.avatar = avatar || undefined;
               if (panelBgColor !== undefined) s.user.panelBgColor = panelBgColor || undefined;
               if (panelAccentColor !== undefined)
@@ -374,7 +384,7 @@ export default async function profileRoutes(app: FastifyInstance, opts: Opts) {
                 if (room) {
                   const entry = room.users.get(viewer.id);
                   if (entry) {
-                    if (avatarColor !== undefined) entry.avatarColor = avatarColor;
+                    if (avatarColor !== undefined) entry.avatarColor = avatarColor || undefined;
                     if (avatar !== undefined) entry.avatar = avatar || undefined;
                     if (pillBgColor !== undefined) entry.pillBgColor = pillBgColor || undefined;
                     if (pillAccentColor !== undefined)

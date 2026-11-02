@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useWeered } from "../WeeredProvider";
 import { forumFetch, timeAgo, CATEGORY_CONFIG, FONT } from "./ForumHelpers";
 import Markdown from "./Markdown";
-import { avatarBg } from "../../lib/avatarColor";
+import { avatarFill } from "../../lib/avatarColor";
 import { useUserHover } from "../UserHoverCard";
 import { useOverlay } from "../overlays/OverlayProvider";
 import { weeredConfirm } from "../../lib/confirm";
@@ -557,7 +557,7 @@ export default function PostDetail({
               height: 28,
               borderRadius: "50%",
               flexShrink: 0,
-              background: me?.avatar ? "transparent" : avatarBg(me?.name || ""),
+              background: avatarFill(!!me?.avatar, me?.name || "", true, me?.avatarColor),
               overflow: "hidden",
               display: "flex",
               alignItems: "center",
