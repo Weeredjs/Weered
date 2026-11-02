@@ -235,7 +235,10 @@ export function makeEmptyRoom(roomId: string): RoomState {
 
 /** Real room ids are slugs and cuids, well under this. An id is also a Room row
  *  and an entry in every rooms:list reply, so an unbounded one (the audit sent
- *  ~250KB) is refused: callers treat "" as no room. */
+ *  ~250KB) is refused: callers treat "" as no room. So is the retired
+ *  `lobby:<id>` form: no client uses it and no room has it, but a room by that
+ *  name skipped its password and lock and heard that lobby's broadcasts (red
+ *  team 2026-11-01, finding 28). */
 export const ROOM_ID_MAX = 128;
 
 export function normalizeRoomId(input: string): string {
@@ -251,6 +254,7 @@ export function normalizeRoomId(input: string): string {
       break;
     }
   }
+  if (s.startsWith("lobby:")) return "";
   return s.length > ROOM_ID_MAX ? "" : s;
 }
 

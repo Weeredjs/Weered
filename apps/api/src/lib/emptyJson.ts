@@ -27,7 +27,9 @@ export function allowEmptyJsonBody(
     (req, body, done) => {
       const text = String(body);
       if (text.trim() === "") return done(null, {});
-      parse(req, text, done);
+      // Fastify types a parser as callback- or promise-style; its default JSON
+      // parser is the callback kind (it answers through done, returns nothing).
+      void parse(req, text, done);
     },
   );
 }

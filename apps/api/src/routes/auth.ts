@@ -25,6 +25,10 @@ function authedSend(req: any, reply: any, token: string, extra: Record<string, a
 }
 import { sendMail, buildVerifyEmail, buildResetEmail } from "../lib/email";
 
+// What a sign-in for a name with no password account checks against: the same
+// bcrypt cost as a real one, and nothing typed can match it.
+const NO_ACCOUNT_HASH = bcrypt.hashSync(randomBytes(24).toString("hex"), 10);
+
 // Auth routes (extracted from index.ts): local register/login/logout, email
 // verification + password reset, Google OAuth, dev-login, username-check,
 // onboarding. Cookie helpers live in lib/authCookie so the cookie name +
@@ -278,11 +282,14 @@ export default async function authRoutes(app: FastifyInstance, opts: Opts) {
         return reply
           .code(403)
           .send({ ok: false, error: "banned", message: await bannedMessage(user.id) });
-      const sessionToken = jwt.sign({ sub: user.id, name: user.name }, JWT_SECRET, {
-        expiresIn: "7d",
-      });
-      setAuthCookie(reply, sessionToken);
-      return authedSend(req, reply, sessionToken, { ok: true, user });
+      // The link proves the address and nothing more. It used to sign in
+      // whoever opened it: a 24-hour login link, and someone who registered
+      // with your address got you signed in to their account when you clicked
+      // (red team 2026-11-01, finding 23). A browser already signed in to this
+      // account stays signed in; anyone else signs in the usual way.
+      const me = authFromHeader((req.headers as any).authorization);
+      if (me?.id !== user.id) return reply.send({ ok: true, signedIn: false });
+      return reply.send({ ok: true, signedIn: true, user });
     },
   );
 
@@ -333,15 +340,19 @@ export default async function authRoutes(app: FastifyInstance, opts: Opts) {
         la = await prisma.localAuth.findUnique({ where: { username } }).catch(() => null);
       else if (email)
         la = await prisma.localAuth.findUnique({ where: { email } }).catch(() => null);
+      // The same answer, as fast, whether or not the account exists: the write
+      // and the email happen after it (red team finding 24).
       if (la && la.email) {
         const resetToken = randomBytes(32).toString("hex");
         const resetExp = new Date(Date.now() + 60 * 60 * 1000);
-        await prisma.localAuth.update({
-          where: { id: la.id },
-          data: { passwordResetToken: resetToken, passwordResetTokenExp: resetExp },
-        });
         const tmpl = buildResetEmail({ username: la.username, token: resetToken });
-        sendMail({ to: la.email, subject: tmpl.subject, html: tmpl.html }).catch(swallow);
+        void prisma.localAuth
+          .update({
+            where: { id: la.id },
+            data: { passwordResetToken: resetToken, passwordResetTokenExp: resetExp },
+          })
+          .then(() => sendMail({ to: la.email, subject: tmpl.subject, html: tmpl.html }))
+          .catch(swallow);
       }
       return reply.send({ ok: true });
     },
@@ -411,6 +422,9 @@ export default async function authRoutes(app: FastifyInstance, opts: Opts) {
         });
       const la = await prisma.localAuth.findUnique({ where: { username } }).catch(() => null);
       if (!la) {
+        // As slow as a wrong password, so the answer's timing doesn't say
+        // which names have a password account (red team finding 24).
+        await bcrypt.compare(password, NO_ACCOUNT_HASH);
         loginFailed(username);
         return reply.code(401).send({ error: "Invalid credentials" });
       }

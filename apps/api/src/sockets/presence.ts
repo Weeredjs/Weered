@@ -160,7 +160,6 @@ export async function handlePresence(ws: any, msg: any, opts: Opts): Promise<voi
       return;
     }
     const uid = ws.user.id;
-    const isLobby = String(roomId || "").startsWith("lobby:");
 
     // Level-gated room: refuse here, before the password and knock branches, so a
     // non-member is told why instead of being queued for a mod to admit. doJoin
@@ -187,7 +186,7 @@ export async function handlePresence(ws: any, msg: any, opts: Opts): Promise<voi
       return staffHere;
     };
 
-    if (room.passwordHash && !isLobby && !(await passes())) {
+    if (room.passwordHash && !(await passes())) {
       const suppliedPassword = typeof msg.password === "string" ? msg.password : "";
       if (!suppliedPassword) {
         send(ws, { type: "room:password:required", roomId });
@@ -200,8 +199,7 @@ export async function handlePresence(ws: any, msg: any, opts: Opts): Promise<voi
       }
     }
 
-    if (isLobby) room.locked = false;
-    if (room.locked && !isLobby && !(await passes())) {
+    if (room.locked && !(await passes())) {
       // A knock already at the door isn't announced again: repeats used to send
       // every moderator a knock and every occupant the full state each time
       // (red team 2026-11-01, finding 14).

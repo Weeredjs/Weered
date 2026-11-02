@@ -10,6 +10,9 @@ function VerifyEmailInner() {
 
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
   const [errMsg, setErrMsg] = useState("");
+  // The link proves the address; it signs nobody in. Only a browser already
+  // signed in to that account carries on in (red team finding 23).
+  const [signedIn, setSignedIn] = useState(false);
 
   useEffect(() => {
     const token = sp?.get("token") || "";
@@ -31,8 +34,8 @@ function VerifyEmailInner() {
           setErrMsg(j?.error || "Verification failed.");
           return;
         }
-        if (j.token) void 0;
-        if (j.user) localStorage.setItem("weered_user", JSON.stringify(j.user));
+        if (j.signedIn && j.user) localStorage.setItem("weered_user", JSON.stringify(j.user));
+        setSignedIn(!!j.signedIn);
         setStatus("success");
       })
       .catch(() => {
@@ -101,7 +104,9 @@ function VerifyEmailInner() {
 
   const sub = {
     loading: "Checking your verification link.",
-    success: "Your account is active. Welcome.",
+    success: signedIn
+      ? "Your account is active. Welcome."
+      : "Your email is confirmed. Sign in to carry on.",
     error: errMsg || "The link may have expired.",
   }[status];
 
@@ -211,11 +216,16 @@ function VerifyEmailInner() {
           <div className="ve-title">{title}</div>
           <div className="ve-sub">{sub}</div>
 
-          {status === "success" && (
-            <button className="ve-btn" onClick={() => router.replace("/home")}>
-              enter_weered()
-            </button>
-          )}
+          {status === "success" &&
+            (signedIn ? (
+              <button className="ve-btn" onClick={() => router.replace("/home")}>
+                enter_weered()
+              </button>
+            ) : (
+              <a href="/login" className="ve-btn">
+                sign_in()
+              </a>
+            ))}
           {status === "error" && (
             <div
               style={{ display: "flex", flexDirection: "column", gap: 10, alignItems: "center" }}

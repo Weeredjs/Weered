@@ -141,7 +141,7 @@ export function buildVerifyEmail(opts: { username: string; token: string }): {
     subject: "Verify your Weered email",
     html: shellHtml({
       heading: `Verify your email, ${opts.username}.`,
-      body: `Confirm your email so you can post in public forums, list items in the marketplace, and receive notifications.<br/><br/>This link expires in 24 hours.`,
+      body: `Confirm your email so you can post in public forums, list items in the marketplace, and receive notifications.<br/><br/>If you didn't make a Weered account called ${opts.username}, ignore this email and don't click the button: someone typed your address by mistake, and nothing happens unless you confirm it.<br/><br/>This link expires in 24 hours.`,
       ctaLabel: "Verify email",
       ctaUrl: url,
     }),
