@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
-import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import { onActivate } from "@/lib/a11y";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "https://api.weered.ca";
 
-const HIDE_ON_PREFIXES = ["/staff", "/room/", "/lobby/", "/overlay/"];
+/** Opens the feedback form from anywhere (the logo menu's Send feedback). */
+export const FEEDBACK_EVENT = "weered:feedback";
 
 function authHeader(): Record<string, string> {
   try {
@@ -31,11 +31,11 @@ const CATEGORY_LABELS: Record<Category, { label: string; placeholder: string }> 
   FEEDBACK: { label: "Feedback / suggestion", placeholder: "What should we change or add?" },
 };
 
+// The feedback form. It had a floating "feedback" pill in the bottom corner,
+// over the page's own menu; James 2026-11-02: "remove the feedback button ...
+// isn't necessary". It opens from the logo menu now (FEEDBACK_EVENT), and
+// still feeds ops' Bug Reports.
 export default function BugReportButton() {
-  const pathname = usePathname() || "";
-  const hidden =
-    pathname === "/" || HIDE_ON_PREFIXES.some((p) => pathname === p || pathname.startsWith(p));
-
   const [open, setOpen] = useState(false);
   const [body, setBody] = useState("");
   const [category, setCategory] = useState<Category>("BUG");
@@ -43,7 +43,15 @@ export default function BugReportButton() {
   const [err, setErr] = useState("");
   const [done, setDone] = useState(false);
 
-  if (hidden) return null;
+  useEffect(() => {
+    const show = () => {
+      setOpen(true);
+      setErr("");
+      setDone(false);
+    };
+    window.addEventListener(FEEDBACK_EVENT, show);
+    return () => window.removeEventListener(FEEDBACK_EVENT, show);
+  }, []);
 
   async function submit() {
     setErr("");
@@ -76,35 +84,6 @@ export default function BugReportButton() {
 
   return (
     <>
-      <button
-        onClick={() => {
-          setOpen(true);
-          setErr("");
-          setDone(false);
-        }}
-        title="Report a bug"
-        style={{
-          position: "fixed",
-          bottom: 36,
-          right: 12,
-          zIndex: 9998,
-          background: "rgba(20,18,28,0.85)",
-          border: "1px solid rgba(124,58,237,0.35)",
-          color: "rgba(216,180,254,0.85)",
-          padding: "5px 11px",
-          borderRadius: 999,
-          fontFamily: "ui-monospace, SFMono-Regular, monospace",
-          fontSize: 10,
-          fontWeight: 700,
-          letterSpacing: 0.5,
-          cursor: "pointer",
-          backdropFilter: "blur(8px)",
-          boxShadow: "0 4px 16px rgba(0,0,0,0.5)",
-        }}
-      >
-        🐛 feedback
-      </button>
-
       {open && (
         <div
           onClick={() => setOpen(false)}

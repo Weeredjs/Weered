@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { useWeered } from "./WeeredProvider";
 import { useOverlay } from "./overlays/OverlayProvider";
 import { NotificationsView } from "./NotificationCenter";
+import { FEEDBACK_EVENT } from "./BugReportButton";
 
 type View = "menu" | "notifications";
 
@@ -141,6 +142,11 @@ export function LogoMenu() {
   const openSettings = () => {
     close();
     openSheet?.("settings");
+  };
+  // The feedback form (BugReportButton), off the corner of every page since 2026-11-02.
+  const sendFeedback = () => {
+    close();
+    window.dispatchEvent(new Event(FEEDBACK_EVENT));
   };
   // Your shareable card (app/rap, 2026-11-01).
   const openRapSheet = () => {
@@ -350,6 +356,26 @@ export function LogoMenu() {
                     <path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3h.1a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5h.1a1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8v.1a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z" />
                   </svg>
                   <span className="weered-logo-menu-label">Settings</span>
+                </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="weered-logo-menu-item"
+                  onClick={sendFeedback}
+                >
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
+                  </svg>
+                  <span className="weered-logo-menu-label">Send feedback</span>
                 </button>
                 <div className="weered-logo-menu-divider" />
                 <button

@@ -1007,7 +1007,7 @@ function BannerUploadRow() {
   }
 
   return (
-    <Row label="ID card banner" hint="Wide image across the top of your ID card. PNG/JPEG/WebP/GIF, ≤4 MB. Indicted+ tier.">
+    <Row label="ID card banner" hint="Wide image across the top of your ID card. PNG/JPEG/WebP/GIF, up to 4 MB.">
       <div style={{ display: "flex", flexDirection: "column", gap: 8, alignItems: "stretch", minWidth: 240 }}>
         {bannerUrl && (
           <div style={{
