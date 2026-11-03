@@ -44,6 +44,8 @@ export async function sendMail(opts: {
   subject: string;
   html: string;
   text?: string;
+  /** Where a reply goes (the contact form: the person who wrote in). */
+  replyTo?: string;
 }): Promise<SendMailResult> {
   const from = process.env.MAIL_FROM || process.env.SMTP_FROM || "Weered <onboarding@resend.dev>";
 
@@ -56,6 +58,7 @@ export async function sendMail(opts: {
         subject: opts.subject,
         html: opts.html,
         text: opts.text || stripHtml(opts.html),
+        ...(opts.replyTo ? { replyTo: opts.replyTo } : {}),
       });
       if ((r as any).error) {
         log.error("[email:resend] send failed:", (r as any).error);
@@ -88,6 +91,7 @@ export async function sendMail(opts: {
       subject: opts.subject,
       html: opts.html,
       text: opts.text || stripHtml(opts.html),
+      ...(opts.replyTo ? { replyTo: opts.replyTo } : {}),
     });
     return { ok: true, messageId: info.messageId };
   } catch (e: any) {

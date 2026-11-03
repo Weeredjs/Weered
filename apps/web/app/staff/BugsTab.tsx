@@ -7,6 +7,8 @@ export const CATEGORY_BADGE: Record<string, { label: string; color: string; bg: 
   BUG: { label: "BUG", color: "rgb(252,165,165)", bg: "rgba(239,68,68,0.10)" },
   LOBBY_MODULE_REQUEST: { label: "MODULE", color: "rgb(216,180,254)", bg: "rgba(124,58,237,0.10)" },
   FEEDBACK: { label: "FEEDBACK", color: "rgb(252,211,77)", bg: "rgba(245,158,11,0.10)" },
+  // The contact form (weered.ca/contact), 2026-11-03.
+  CONTACT: { label: "CONTACT", color: "rgb(125,211,252)", bg: "rgba(14,165,233,0.10)" },
 };
 
 export function BugsTab() {

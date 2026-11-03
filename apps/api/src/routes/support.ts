@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import { prisma } from "../lib/prisma";
 import { APPEAL_COOLDOWN_MS } from "../lib/banAppeal";
 import { createNotification } from "../lib/notifications";
+import { cleanContact, takeContactMessage } from "../lib/contactMessage";
 
 type Opts = {
   authFromHeader: (h: any) => any;
@@ -205,7 +206,29 @@ export default async function supportRoutes(app: FastifyInstance, opts: Opts) {
     return reply.send({ ok: true });
   });
 
+  // The contact form (weered.ca/contact): anyone, signed in or not. Kept in
+  // Ops as kind CONTACT and emailed with the sender as reply-to
+  // (lib/contactMessage.ts). "website" is a field people never see: a bot
+  // that fills it is told "sent" and nothing is kept.
+  app.post<{ Body: { name?: string; email?: string; message?: string; website?: string } }>(
+    "/contact",
+    { config: { rateLimit: { max: 5, timeWindow: "1 hour" } } },
+    async (req, reply) => {
+      if (String(req.body?.website || "").trim()) return reply.send({ ok: true });
+      const c = cleanContact(req.body);
+      if ("error" in c) return reply.code(400).send({ ok: false, error: c.error });
+      const u = authFromHeader(req.headers?.authorization);
+      const r = await takeContactMessage(c, {
+        userId: u?.id || null,
+        userAgent: String(req.headers?.["user-agent"] || ""),
+      });
+      return reply.send({ ok: true, id: r.id });
+    },
+  );
+
   const VALID_CATEGORIES = new Set(["BUG", "LOBBY_MODULE_REQUEST", "FEEDBACK"]);
+  // Ops lists the contact form's messages too; members can't file one as a bug.
+  const LISTED_CATEGORIES = new Set([...VALID_CATEGORIES, "CONTACT"]);
   app.post<{
     Body: { body?: string; page?: string; category?: string };
   }>(
@@ -247,7 +270,7 @@ export default async function supportRoutes(app: FastifyInstance, opts: Opts) {
       const cat = String(req.query?.category || "").toUpperCase();
       const where: any = {};
       if (status !== "ALL") where.status = status;
-      if (cat && VALID_CATEGORIES.has(cat)) where.category = cat;
+      if (cat && LISTED_CATEGORIES.has(cat)) where.category = cat;
       const rows = await prisma.bugReport.findMany({
         where,
         orderBy: { createdAt: "desc" },

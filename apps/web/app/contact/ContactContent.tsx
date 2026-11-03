@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { apiBase } from "../apiBase";
 
 export default function ContactContent() {
   const [visible, setVisible] = useState(false);
@@ -9,6 +10,8 @@ export default function ContactContent() {
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
   const [err, setErr] = useState("");
+  // A field people never see; a bot that fills it is told "sent" and dropped.
+  const [website, setWebsite] = useState("");
 
   useEffect(() => {
     setTimeout(() => setVisible(true), 100);
@@ -26,23 +29,22 @@ export default function ContactContent() {
     setSending(true);
     setErr("");
     try {
-      const res = await fetch("https://formsubmit.co/ajax/james@weered.ca", {
+      // Weered keeps every message (Ops, Bug Reports) and emails it; it used to
+      // go through FormSubmit, which went down and lost them (2026-11-03).
+      const res = await fetch(`${apiBase()}/contact`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Accept: "application/json" },
-        body: JSON.stringify({
-          name,
-          email,
-          message: msg,
-          _subject: `[weered.ca] message from ${name}`,
-          _captcha: "false",
-        }),
+        body: JSON.stringify({ name, email, message: msg, website }),
       });
-      const j = await res.json();
-      if (j.success === "true" || j.success === true) {
-        setSent(true);
-      } else throw new Error("Delivery failed.");
+      const j = await res.json().catch(() => ({}));
+      if (res.ok && j?.ok) setSent(true);
+      else if (res.status === 429) setErr("That's a lot of messages. Try again in an hour.");
+      else if (j?.error === "message_too_short")
+        setErr("Say a little more (10 characters or more).");
+      else if (j?.error === "bad_email") setErr("Valid email required.");
+      else throw new Error(String(j?.error || res.status));
     } catch (_e: any) {
-      setErr("Something broke. Try again.");
+      setErr("Something broke. Email james@weered.ca and we'll get back to you.");
     } finally {
       setSending(false);
     }
@@ -271,6 +273,21 @@ export default function ContactContent() {
                   onChange={(e) => setMsg(e.target.value)}
                   placeholder="say what you need to say..."
                   rows={5}
+                />
+
+                <input
+                  value={website}
+                  onChange={(e) => setWebsite(e.target.value)}
+                  tabIndex={-1}
+                  autoComplete="off"
+                  aria-hidden="true"
+                  style={{
+                    position: "absolute",
+                    left: "-10000px",
+                    width: 1,
+                    height: 1,
+                    opacity: 0,
+                  }}
                 />
 
                 {err && <div className="ct-err">{err}</div>}
