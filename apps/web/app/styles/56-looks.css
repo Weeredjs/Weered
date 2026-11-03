@@ -364,3 +364,11 @@ html[data-weered-chrome="min"]:is(
   --weered-accent-ring: rgb(var(--skin-a) / 0.45) !important;
   --weered-accent-text: var(--skin-text) !important;
 }
+
+/* A paid member's background on their card, profile and rows (lib/lookBg.ts).
+   Theme sheets and lobby skins set row and card backgrounds with !important,
+   Nebula's with an id's weight (:not(#nb)); two ids' worth here outranks them
+   all, so the member's own background shows everywhere. */
+html:not(#look-a):not(#look-b) .weered-look-bg[style*="--look-bg"] {
+  background: var(--look-bg) !important;
+}

@@ -1,3 +1,4 @@
+import { cleanLookBg, mayHaveLookBg, shownLookBg } from "../lib/lookBg";
 import { handOffLobbies } from "../lib/lobbyDelete";
 import { log, swallow } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
@@ -92,6 +93,7 @@ export default async function profileRoutes(app: FastifyInstance, opts: Opts) {
           avatar: true,
           avatarColor: true,
           bannerUrl: true,
+          lookBg: true,
           steamId: true,
           twitchLogin: true,
           xboxGamertag: true,
@@ -206,6 +208,12 @@ export default async function profileRoutes(app: FastifyInstance, opts: Opts) {
         avatar: u.avatar || null,
         avatarColor: u.avatarColor || null,
         bannerUrl: u.bannerUrl || null,
+        // A paid member's background (lib/lookBg.ts). Their own profile always
+        // shows them their setting, so they can edit it after a plan lapses.
+        lookBg:
+          viewer && viewer.id === u.id
+            ? (u as any).lookBg || null
+            : shownLookBg(u as any).lookBg || null,
         steamId: u.steamId || null,
         twitchLogin: u.twitchLogin || null,
         xboxGamertag: u.xboxGamertag || null,
@@ -310,6 +318,28 @@ export default async function profileRoutes(app: FastifyInstance, opts: Opts) {
       const panelAccentColor = normColor(body.panelAccentColor);
       const pillBgColor = normColor(body.pillBgColor);
       const pillAccentColor = normColor(body.pillAccentColor);
+      const lookBg = body.lookBg === undefined ? undefined : cleanLookBg(body.lookBg);
+      if (body.lookBg !== undefined && lookBg === undefined)
+        return reply.code(400).send({ ok: false, error: "bad_background" });
+      let lookOwner: any = null;
+      if (lookBg) {
+        lookOwner = await prisma.user.findUnique({
+          where: { id: viewer.id },
+          select: { tier: true, globalRole: true, bannerUrl: true },
+        });
+        if (!lookOwner || !mayHaveLookBg(lookOwner))
+          return reply.code(402).send({
+            ok: false,
+            error: "paid_feature",
+            message: "A background comes with every paid plan, from $6 a month.",
+          });
+        if (lookBg === "banner" && !(bannerUrl || lookOwner.bannerUrl))
+          return reply.code(400).send({
+            ok: false,
+            error: "no_banner",
+            message: "Upload a banner first, then use it as your background.",
+          });
+      }
 
       if (
         bio === undefined &&
@@ -320,6 +350,7 @@ export default async function profileRoutes(app: FastifyInstance, opts: Opts) {
         panelAccentColor === undefined &&
         pillBgColor === undefined &&
         pillAccentColor === undefined &&
+        lookBg === undefined &&
         statusText === undefined &&
         statusEmoji === undefined &&
         avatarFrame === undefined &&
@@ -351,6 +382,7 @@ export default async function profileRoutes(app: FastifyInstance, opts: Opts) {
             ...(panelAccentColor !== undefined && { panelAccentColor }),
             ...(pillBgColor !== undefined && { pillBgColor }),
             ...(pillAccentColor !== undefined && { pillAccentColor }),
+            ...(lookBg !== undefined && { lookBg }),
           } as any,
           select: { id: true, bio: true, statusText: true, statusEmoji: true } as any,
         });
@@ -365,7 +397,9 @@ export default async function profileRoutes(app: FastifyInstance, opts: Opts) {
           panelBgColor !== undefined ||
           panelAccentColor !== undefined ||
           pillBgColor !== undefined ||
-          pillAccentColor !== undefined;
+          pillAccentColor !== undefined ||
+          lookBg !== undefined ||
+          bannerUrl !== undefined;
         if (visibleChanged) {
           if (avatar !== undefined && avatar)
             awardNotoriety(viewer.id, "AVATAR_SET").catch(swallow);
@@ -380,6 +414,8 @@ export default async function profileRoutes(app: FastifyInstance, opts: Opts) {
               if (pillBgColor !== undefined) s.user.pillBgColor = pillBgColor || undefined;
               if (pillAccentColor !== undefined)
                 s.user.pillAccentColor = pillAccentColor || undefined;
+              if (lookBg !== undefined) (s.user as any).lookBg = lookBg || undefined;
+              if (bannerUrl !== undefined) (s.user as any).bannerUrl = bannerUrl || undefined;
               if (s.roomId) {
                 const room = rooms.get(s.roomId);
                 if (room) {
@@ -390,6 +426,12 @@ export default async function profileRoutes(app: FastifyInstance, opts: Opts) {
                     if (pillBgColor !== undefined) entry.pillBgColor = pillBgColor || undefined;
                     if (pillAccentColor !== undefined)
                       entry.pillAccentColor = pillAccentColor || undefined;
+                    // The background as others see it, recomputed (lib/lookBg.ts).
+                    if (lookBg !== undefined || bannerUrl !== undefined) {
+                      delete (entry as any).lookBg;
+                      delete (entry as any).bannerUrl;
+                      Object.assign(entry, shownLookBg(s.user as any));
+                    }
                   }
                   publishState(room);
                 }

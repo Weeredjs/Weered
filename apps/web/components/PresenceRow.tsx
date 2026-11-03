@@ -1,5 +1,6 @@
 "use client";
 
+import { lookBgProps } from "@/lib/lookBg";
 import React from "react";
 import RoleGlyph from "./RoleGlyph";
 import RoleIcon, { TierIcon, roomRoleIcon } from "./RoleIcon";
@@ -127,6 +128,9 @@ export interface PresenceRowProps {
 
   pillBgColor?: string | null;
   pillAccentColor?: string | null;
+  /** A paid member's background, and the banner it may use (lib/lookBg.ts). */
+  lookBg?: string | null;
+  bannerUrl?: string | null;
 }
 
 export default function PresenceRow({
@@ -156,7 +160,10 @@ export default function PresenceRow({
   compact,
   pillBgColor,
   pillAccentColor,
+  lookBg,
+  bannerUrl,
 }: PresenceRowProps) {
+  const look = lookBgProps(lookBg, bannerUrl, "row");
   const validPillBg = pillBgColor && /^#[0-9a-f]{6}$/i.test(pillBgColor) ? pillBgColor : null;
   const validPillAccent =
     pillAccentColor && /^#[0-9a-f]{6}$/i.test(pillAccentColor) ? pillAccentColor : null;
@@ -309,8 +316,13 @@ export default function PresenceRow({
 
   const inner = (
     <div
-      className={"weered-presence-row-inner" + (pillTint ? " has-custom-bg" : "")}
+      className={
+        "weered-presence-row-inner" +
+        (pillTint ? " has-custom-bg" : "") +
+        (look ? ` ${look.className}` : "")
+      }
       style={{
+        ...(look ? { ...look.style, borderRadius: 8 } : {}),
         display: "flex",
         alignItems: "stretch",
         gap: 10,

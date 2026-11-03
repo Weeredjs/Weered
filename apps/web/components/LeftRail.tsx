@@ -977,6 +977,8 @@ export default function LeftRail() {
                   platforms={platforms}
                   pillBgColor={u?.pillBgColor}
                   pillAccentColor={u?.pillAccentColor}
+                  lookBg={u?.lookBg}
+                  bannerUrl={u?.bannerUrl}
                   onClick={() =>
                     replaceTop("profile", { userId: String(u?.id ?? rid ?? nm ?? "unknown") })
                   }

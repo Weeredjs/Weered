@@ -105,12 +105,16 @@ export async function hydrateGlobalRole(user: AuthedUser): Promise<AuthedUser> {
         avatarFrame: true,
         googleId: true,
         discordId: true,
+        lookBg: true,
+        bannerUrl: true,
       } as any,
     });
     return {
       ...user,
       usernameKey: (u as any)?.usernameKey ?? undefined,
       needsUsername: u ? onStandInName(u as any) : false,
+      lookBg: (u as any)?.lookBg ?? undefined,
+      bannerUrl: (u as any)?.bannerUrl ?? undefined,
       globalRole: String(u?.globalRole ?? "USER"),
       tier: String(u?.tier ?? "INNOCENT"),
       avatarColor: u?.avatarColor ?? undefined,

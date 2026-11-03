@@ -1,4 +1,5 @@
 "use client";
+import { lookBgProps } from "@/lib/lookBg";
 import React from "react";
 import EmptyState from "../EmptyState";
 import { Avatar } from "./shellHelpers";
@@ -401,8 +402,11 @@ export function FriendRow({
     return "offline";
   })();
 
+  // A paid member's background, over any row tint (lib/lookBg.ts).
+  const look = lookBgProps(f.lookBg, f.bannerUrl, "row");
   return (
     <div
+      className={look?.className}
       style={{
         display: "flex",
         alignItems: "center",
@@ -410,6 +414,7 @@ export function FriendRow({
         padding: "7px 14px",
         borderBottom: "1px solid var(--weered-bd)",
         background: pillTint,
+        ...(look?.style || {}),
       }}
     >
       <div style={{ position: "relative" as const }}>

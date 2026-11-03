@@ -1,5 +1,6 @@
 "use client";
 
+import { lookBgProps, mayPickLookBg } from "@/lib/lookBg";
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { avatarBg, avatarFill } from "../lib/avatarColor";
@@ -15,6 +16,9 @@ const FONT =
 type Profile = {
   id: string;
   name: string;
+  /** A paid member's background and the banner it may use (lib/lookBg.ts). */
+  lookBg?: string | null;
+  bannerUrl?: string | null;
   bio: string;
   notoriety: number;
   notorietyRank?: string;
@@ -403,9 +407,13 @@ export default function UserHoverCard({
   const lastSeen = profile?.lastSeen ? lastSeenText(profile.lastSeen) : null;
   const isOnline = lastSeen === "Online now";
 
+  const look = mayPickLookBg(profile)
+    ? lookBgProps(profile?.lookBg, profile?.bannerUrl, "card")
+    : null;
   return createPortal(
     <div
       ref={cardRef}
+      className={look?.className}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
       style={{
@@ -424,6 +432,8 @@ export default function UserHoverCard({
         fontFamily: FONT,
         color: "rgba(243,244,246,.92)",
         animation: "hoverCardIn 0.15s ease",
+        // A paid member's background (lib/lookBg.ts).
+        ...(look?.style || {}),
       }}
     >
       <style>{`@keyframes hoverCardIn { from { opacity: 0; transform: translateY(4px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }`}</style>

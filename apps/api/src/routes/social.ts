@@ -1,3 +1,4 @@
+import { shownLookBg } from "../lib/lookBg";
 import { ReportTargetType, ReportReason } from "@prisma/client";
 import { log, swallow } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
@@ -42,6 +43,8 @@ export default async function socialRoutes(app: FastifyInstance, opts: Opts) {
             lastSeenLocation: true,
             pillBgColor: true,
             pillAccentColor: true,
+            lookBg: true,
+            bannerUrl: true,
             statusText: true,
             statusEmoji: true,
             nameEffect: true,
@@ -98,6 +101,10 @@ export default async function socialRoutes(app: FastifyInstance, opts: Opts) {
       const joinOff = String(p.joinPolicy || "FRIENDS") === "OFF";
       return {
         ...p,
+        // Shown only while their plan covers it (lib/lookBg.ts).
+        lookBg: undefined,
+        bannerUrl: undefined,
+        ...shownLookBg(p),
         joinPolicy: undefined,
         online: roomId !== null,
         roomId: joinOff ? null : roomId,

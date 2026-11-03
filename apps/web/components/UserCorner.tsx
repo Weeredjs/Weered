@@ -1,5 +1,6 @@
 "use client";
 
+import { lookBgProps, mayPickLookBg } from "@/lib/lookBg";
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useWeered } from "./WeeredProvider";
 import { useOverlay } from "./overlays/OverlayProvider";
@@ -262,6 +263,8 @@ export default function UserCorner() {
     return clear;
   }, [avatarFrame]);
   const [bannerUrl, setBannerUrl] = useState<string | null>(null);
+  // A paid member's background over the whole card (lib/lookBg.ts).
+  const [lookBg, setLookBg] = useState<string | null>(null);
   const [status, setStatus] = useState<{ text: string; emoji: string }>({ text: "", emoji: "" });
   const [editingStatus, setEditingStatus] = useState(false);
   const [draftStatus, setDraftStatus] = useState<{ text: string; emoji: string }>({
@@ -300,6 +303,7 @@ export default function UserCorner() {
         setAvatarFrame(j?.avatarFrame || null);
         if (j?.bannerUrl) setBannerUrl(String(j.bannerUrl));
         else setBannerUrl(null);
+        setLookBg(typeof j?.lookBg === "string" ? j.lookBg : null);
         setStatus({ text: j?.statusText || "", emoji: j?.statusEmoji || "" });
         setProfileAvatar(
           typeof j?.avatar === "string" && j.avatar
@@ -438,9 +442,10 @@ export default function UserCorner() {
     return raw.slice(-8).toUpperCase();
   }, [me?.id]);
 
+  const look = mayPickLookBg(me) ? lookBgProps(lookBg, bannerUrl, "card") : null;
   return (
     <div
-      className="weered-usercorner"
+      className={"weered-usercorner" + (look ? ` ${look.className}` : "")}
       data-custom-bg={userPanelBg ? "1" : undefined}
       data-custom-accent={effectiveUserAccent ? "1" : undefined}
       style={{
@@ -464,9 +469,10 @@ export default function UserCorner() {
           0 0 30px ${cardAccent}08
         `,
         overflow: "hidden",
+        ...(look?.style || {}),
       }}
     >
-      {!userPanelBg && (
+      {!userPanelBg && !look && (
         <div
           aria-hidden
           style={{
@@ -555,9 +561,11 @@ export default function UserCorner() {
           // An uploaded banner, again through a variable: the rail's own
           // stylesheet clears every background in it with !important, which
           // hid it on every theme (James 2026-11-02); 56-looks.css paints it.
-          ...(bannerUrl
+          ...(bannerUrl && !look
             ? { ["--uc-banner" as any]: `url(${bannerUrl}) center / cover no-repeat` }
             : {}),
+          // With a background the card wears it whole; the strip steps aside.
+          ...(look ? { background: "transparent" } : {}),
           zIndex: 1,
         }}
       >

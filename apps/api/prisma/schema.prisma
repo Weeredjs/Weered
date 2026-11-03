@@ -530,6 +530,9 @@ model User {
   panelAccentColor String?
   pillBgColor      String?
   pillAccentColor  String?
+  // A paid member's background on their card, profile and rows: "c:#hex",
+  // "g:#hex,#hex" or "banner" (lib/lookBg.ts, James 2026-11-02).
+  lookBg           String?
 
   notoriety          Int        @default(0)
   mediaBannedUntil   DateTime?

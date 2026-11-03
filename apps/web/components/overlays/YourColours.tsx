@@ -4,6 +4,7 @@
 // others (James 2026-11-02: the appearance settings were doubled up).
 import React from "react";
 import { Row, Section, settingsFetch } from "./sheets/SettingsSheet";
+import { YourBackground } from "./YourBackground";
 
 // Under Nebula these colours sit out: the colourway paints your own Weered,
 // and people rows carry no tint or stripe there. They still dress your ID card
@@ -87,6 +88,14 @@ export function YourColours({ nebula = false }: { nebula?: boolean }) {
     clearField("panelAccentColor", setPanelAccentColor);
     clearField("pillBgColor", setPillBgColor);
     clearField("pillAccentColor", setPillAccentColor);
+    // The background at the top of this section resets with it (YourBackground).
+    void settingsFetch(`${apiBase}/profile/me`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ lookBg: "none" }),
+    })
+      .then(() => window.dispatchEvent(new CustomEvent("weered:profile:updated")))
+      .catch(() => {});
   }
 
   const ACCENT_PRESETS: { label: string; value: string }[] = [
@@ -97,8 +106,9 @@ export function YourColours({ nebula = false }: { nebula?: boolean }) {
     { label: "Slate", value: "#3b4a6b" },
   ];
 
-  return (
-    <Section title={nebula ? "Your colors in themed lobbies" : "Your colors"} onReset={resetColors}>
+  // The Classic-theme colours, shown open on Classic and folded away on Nebula.
+  const classicControls = (
+    <>
       <div
         style={{
           fontSize: 11,
@@ -213,7 +223,26 @@ export function YourColours({ nebula = false }: { nebula?: boolean }) {
         onClear={() => clearField("pillAccentColor", setPillAccentColor)}
       />
       <PillIntensityRow />
+    </>
+  );
+
+  return (
+    <Section title="Your background and colours" onReset={resetColors}>
+      <YourBackground />
       <BannerUploadRow />
+      {nebula ? (
+        // The colours below show on Classic and in lobbies with their own look;
+        // on Nebula, everyone's default, the background above does their job
+        // (James 2026-11-02: "This is still for the old theme").
+        <details style={{ marginTop: 14 }}>
+          <summary style={{ cursor: "pointer", fontSize: 12, fontWeight: 700, opacity: 0.8 }}>
+            Classic theme colours
+          </summary>
+          <div style={{ marginTop: 10 }}>{classicControls}</div>
+        </details>
+      ) : (
+        <>{classicControls}</>
+      )}
       {savedMsg && (
         <div
           style={{

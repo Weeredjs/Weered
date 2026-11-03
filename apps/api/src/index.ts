@@ -1,3 +1,4 @@
+import { shownLookBg } from "./lib/lookBg";
 import { decodeEntities, stripTags } from "./lib/htmlText";
 import { log, logger, swallow } from "./lib/logger";
 import { lobbyLevelOf } from "./lib/lobbyAccess";
@@ -756,6 +757,8 @@ async function doJoin(ws: Sock, roomId: string) {
       statusEmoji: (ws.user as any).statusEmoji ?? undefined,
       nameEffect: (ws.user as any).nameEffect ?? undefined,
       avatarFrame: (ws.user as any).avatarFrame ?? undefined,
+      // A paid member's background, with the banner it may use (lib/lookBg.ts).
+      ...shownLookBg(ws.user as any),
     };
     room.users.set(ws.user.id, userEntry);
     announcePresence(room, { type: "presence:join", roomId, user: userEntry });

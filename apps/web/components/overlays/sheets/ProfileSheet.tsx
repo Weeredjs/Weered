@@ -1,5 +1,6 @@
 "use client";
 
+import { lookBgProps, mayPickLookBg } from "@/lib/lookBg";
 import { AVATAR_PALETTE, MY_COLOR_KEY, avatarBg, avatarFill } from "../../../lib/avatarColor";
 import BarProfileCard from "../../bar/BarProfileCard";
 import React, { useEffect, useState, useCallback } from "react";
@@ -659,17 +660,20 @@ export default function ProfileSheet({ userId }: { userId: string }) {
   const rank      = notorietyRank(profile.notoriety);
   const hasAvatar = !!avatarUrl;
 
+  // A paid member's background on the header (lib/lookBg.ts).
+  const look = mayPickLookBg(profile) ? lookBgProps((profile as any).lookBg, (profile as any).bannerUrl, "card") : null;
   return (
     <div style={wrap}>
 
-      <div style={{
+      <div className={look?.className} style={{
+        ...(look?.style || {}),
         margin: "-16px -16px 0",
         height: 110,
         background: `radial-gradient(120% 140% at 18% 0%, ${tier.accent}3a 0%, transparent 55%), radial-gradient(120% 160% at 100% 0%, ${tier.color}26 0%, transparent 60%), linear-gradient(180deg, #16121f 0%, #0b0b0d 100%)`,
         position: "relative",
         overflow: "hidden",
       }}>
-        {(profile as any).bannerUrl && (
+        {(profile as any).bannerUrl && !look && (
           <img src={(profile as any).bannerUrl} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", opacity: 0.85 }} />
         )}
         <div style={{

@@ -1075,6 +1075,8 @@ function FriendsPanel({ lobbyId }: { lobbyId: string }) {
           platforms={platforms}
           pillBgColor={f.pillBgColor}
           pillAccentColor={f.pillAccentColor}
+          lookBg={f.lookBg}
+          bannerUrl={f.bannerUrl}
           onClick={() => userId && openSheet("profile", { userId })}
           action={actions}
           compact
