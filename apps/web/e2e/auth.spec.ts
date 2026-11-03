@@ -28,6 +28,10 @@ test.describe("auth journey", () => {
     await expect(page).toHaveURL(/\/home/);
     const text = (await page.locator("body").innerText()).trim();
     expect(text.length, "authenticated home should render content").toBeGreaterThan(20);
+
+    // The device remembers the name for Sign in, even after the socket signs in.
+    await page.waitForTimeout(3000);
+    expect(await page.evaluate(() => localStorage.getItem("weered:returning"))).toBe(username);
   });
 });
 

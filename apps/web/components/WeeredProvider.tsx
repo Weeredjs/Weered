@@ -489,8 +489,8 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
         if (u) {
           setMe(u);
           try { localStorage.setItem("weered_user", JSON.stringify(u)); } catch {}
-          // This device has an account: the login page opens on Sign in (app/login).
-          try { localStorage.setItem("weered:returning", String(u.username || "1")); } catch {}
+          // This device has an account: the login page opens on Sign in (app/login). The name the form saved stays: this user has no username, and writing "1" over it emptied Sign in for everyone (2026-11-03).
+          try { if (!localStorage.getItem("weered:returning")) localStorage.setItem("weered:returning", "1"); } catch {}
           if (u.globalRole) setGlobalRole(String(u.globalRole));
         } else {
           try { const raw = localStorage.getItem("weered_user"); if (raw) setMe(JSON.parse(raw)); } catch {}
