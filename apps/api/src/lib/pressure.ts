@@ -26,6 +26,10 @@ export type Pressure = {
 const EVERY_MS = 10_000;
 const HOT_TO_ENGAGE = 3;
 const CALM_TO_RELEASE = 90;
+/** Live connections before a hot box counts as a flood. The first auto flood
+ *  (2026-11-02 21:58 Halifax) was Fathom's build on the shared droplet taking
+ *  the memory, with 5 people on Weered: nothing flood mode can help with. */
+export const CROWD = 100;
 
 export function levelOf(p: Omit<Pressure, "level" | "at">): Pressure["level"] {
   if (p.loopMs > 250 || p.loadPerCore > 1.5 || p.memLeftPct < 10) return "hot";
@@ -58,7 +62,9 @@ export function makeWatch(deps: {
   let hot = 0;
   let calm = 0;
   return async (p: Pressure) => {
-    hot = p.level === "hot" ? hot + 1 : 0;
+    // Hot only counts with a crowd here; a build or Fathom busy on the shared
+    // box shows on Ops and in DigitalOcean's alerts, not as a flood.
+    hot = p.level === "hot" && p.sockets >= CROWD ? hot + 1 : 0;
     calm = p.level === "calm" ? calm + 1 : 0;
     const mode = deps.flood();
     if (hot === HOT_TO_ENGAGE && mode === "off") {

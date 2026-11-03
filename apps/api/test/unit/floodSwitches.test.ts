@@ -72,12 +72,12 @@ describe("lights off", () => {
 });
 
 describe("the pressure watch", () => {
-  const reading = (level: Pressure["level"]): Pressure => ({
+  const reading = (level: Pressure["level"], sockets = 500): Pressure => ({
     at: 0,
     loopMs: 0,
     loadPerCore: 0,
     memLeftPct: 50,
-    sockets: 0,
+    sockets,
     level,
   });
 
@@ -107,6 +107,18 @@ describe("the pressure watch", () => {
     await watch(reading("calm"));
     expect(mode).toBe("off");
     expect(alerts).toHaveLength(2);
+  });
+
+  it("a hot box with no crowd (a build on the shared server) never throws it", async () => {
+    // 2026-11-02: Fathom's build took the memory with 5 people on Weered.
+    let mode: "off" | "on" | "auto" = "off";
+    const watch = makeWatch({
+      flood: () => mode,
+      setFlood: async (m) => (mode = m),
+      alert: async () => {},
+    });
+    for (let i = 0; i < 10; i++) await watch(reading("hot", 5));
+    expect(mode).toBe("off");
   });
 
   it("never switches off a flood someone threw by hand", async () => {
