@@ -17,6 +17,7 @@ import { accountForGoogle } from "../lib/googleLink";
 import { cleanDisplayName } from "../lib/displayName";
 import { loginFailed, loginPaused, loginSucceeded, noAccountDelay } from "../lib/loginGuard";
 import { setAuthCookie, clearAuthCookie, isWebClient, readCookie } from "../lib/authCookie";
+import wsTicketRoute from "./wsTicket";
 
 // Web auth lives in the httpOnly cookie (set via setAuthCookie); only non-web
 // clients (mobile/desktop, which don't use cookies) get the token in the body.
@@ -441,22 +442,8 @@ export default async function authRoutes(app: FastifyInstance, opts: Opts) {
     },
   );
 
-  app.get("/auth/ws-ticket", async (req, reply) => {
-    const u = authFromHeader((req.headers as any).authorization);
-    if (!u) return reply.code(401).send({ ok: false });
-    const claims: any = { sub: u.id, name: u.name };
-    if ((u as any).guest) {
-      claims.guest = true;
-      claims.scope = (u as any).scope ?? null;
-    } else if ((u as any).host) {
-      claims.host = true;
-      claims.scope = (u as any).scope ?? null;
-    }
-    return reply.send({
-      ok: true,
-      ticket: jwt.sign(claims, JWT_SECRET, { expiresIn: "60s" }),
-    });
-  });
+  // The socket's ticket, where sessions roll (routes/wsTicket.ts).
+  wsTicketRoute(app, { authFromHeader, JWT_SECRET });
 
   // Frictionless guest join: validate a GUEST invite -> ephemeral scoped user -> short-lived
   // token bound to ONE lobby. Never sets the account cookie; token returned in body only

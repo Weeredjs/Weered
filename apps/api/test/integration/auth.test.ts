@@ -1,4 +1,5 @@
 import { describe, it, expect, afterEach, afterAll } from "vitest";
+import jwt from "jsonwebtoken";
 import authRoutes from "../../src/routes/auth";
 import { buildTestApp, testAuthFromHeader } from "../helpers/buildTestApp";
 import { prisma } from "../../src/lib/prisma";
@@ -198,6 +199,37 @@ describe("authRoutes - register + login", () => {
       payload: { username: uname("ghost"), password: "secret123" },
     });
     expect(ghost.statusCode).toBe(401);
+    await app.close();
+  });
+});
+
+// Rolling sessions (James 2026-11-03): every page load asks for a socket
+// ticket, and a session cookie more than a day old comes back fresh.
+describe("GET /auth/ws-ticket", () => {
+  const cookieFor = (ageS: number) =>
+    `weered_token=${jwt.sign({ sub: "itest-roll", name: "roller", iat: Math.floor(Date.now() / 1000) - ageS }, JWT_SECRET, { expiresIn: "7d" })}`;
+
+  it("renews a two-day-old session cookie and leaves a fresh one alone", async () => {
+    const app = await makeApp();
+    const old = await app.inject({
+      method: "GET",
+      url: "/auth/ws-ticket",
+      headers: { cookie: cookieFor(2 * 24 * 3600) },
+    });
+    expect(old.statusCode).toBe(200);
+    expect(old.json().ticket).toBeTruthy();
+    expect(String(old.headers["set-cookie"] || "")).toMatch(/^weered_token=.+Max-Age=604800/);
+
+    const fresh = await app.inject({
+      method: "GET",
+      url: "/auth/ws-ticket",
+      headers: { cookie: cookieFor(60) },
+    });
+    expect(fresh.statusCode).toBe(200);
+    expect(fresh.headers["set-cookie"]).toBeUndefined();
+
+    const none = await app.inject({ method: "GET", url: "/auth/ws-ticket" });
+    expect(none.statusCode).toBe(401);
     await app.close();
   });
 });
