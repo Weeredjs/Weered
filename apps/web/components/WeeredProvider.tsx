@@ -225,6 +225,7 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
   // Reconnects (see ws.onclose): a bump re-runs the socket effect.
   const [wsRetry, setWsRetry] = useState(0);
   const retriesRef = useRef(0);
+  const ticketDeniedRef = useRef(false);
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const [wsReady, setWsReady] = useState(false);
   const wsRef            = useRef<WebSocket | null>(null);
@@ -367,7 +368,12 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
 
     ws.onopen = () => {
       setWsState(ws.readyState);
-      fetch(`${API}/auth/ws-ticket`).then(r => r.json()).then(j => {
+      fetch(`${API}/auth/ws-ticket`).then(r => {
+        // Signed out (an expired session this page still remembers): no
+        // ticket will come, so don't keep reconnecting; a reload starts over.
+        if (r.status === 401 || r.status === 403) ticketDeniedRef.current = true;
+        return r.json();
+      }).then(j => {
         const tk = j && j.ticket;
         if (tk && wsRef.current === ws && ws.readyState === WebSocket.OPEN) {
           lastAuthTokenRef.current = tk;
@@ -384,7 +390,7 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
       // in the same second (1, 2, 4... up to 30 s, each 0.5-1.5x). Never after
       // the door shut (4010: the full page takes over); a minute when this
       // address has too many sockets (4029).
-      if (ev.code === 4010) return;
+      if (ev.code === 4010 || ticketDeniedRef.current) return;
       const n = retriesRef.current++;
       const wait = ev.code === 4029 ? 60_000 : Math.min(30_000, 1_000 * 2 ** n) * (0.5 + Math.random());
       clearTimeout(retryTimerRef.current);
