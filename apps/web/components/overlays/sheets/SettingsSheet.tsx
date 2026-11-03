@@ -709,7 +709,7 @@ function DangerZoneSection() {
       {!open ? (
         <div>
           <div style={{ fontSize: 12, color: "var(--weered-muted, rgba(148,163,184,.72))", marginBottom: 10, lineHeight: 1.5 }}>
-            Permanently delete your account. Wipes your profile, login, linked accounts, location, and push subscriptions. Your messages remain but are attributed to a generic "deleted user" handle. This cannot be undone.
+            Permanently delete your account. Wipes your profile, login, linked accounts, location, and push subscriptions. Your messages remain but are attributed to a generic "deleted user" handle. Each lobby you own goes to its top moderator; one with no moderator, and your place, is deleted. This cannot be undone.
           </div>
           <button
             type="button"

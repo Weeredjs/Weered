@@ -8,6 +8,10 @@ export function LobbiesTab({ myRole }: { myRole: GlobalRole }) {
   const [msg, setMsg] = useState("");
   const [featuredId, setFeaturedId] = useState("");
   const canEdit = myRole === "STAFF" || myRole === "ADMIN" || myRole === "GOD";
+  // Deleted lobbies, held 30 days before they're erased (api lib/lobbyDelete.ts).
+  const [gone, setGone] = useState<
+    { id: string; name: string; owner: string | null; deletedBy: string | null; erasedAt: string }[]
+  >([]);
 
   useEffect(() => {
     setLoading(true);
@@ -18,7 +22,39 @@ export function LobbiesTab({ myRole }: { myRole: GlobalRole }) {
         setLoading(false);
       },
     );
-  }, []);
+    if (canEdit) void apiFetch("/staff/lobbies/deleted").then((j) => setGone(j?.lobbies || []));
+  }, [canEdit]);
+
+  async function deleteLobby(l: StaffLobby) {
+    const reason = window.prompt(
+      `Delete ${l.name || l.id}? It vanishes at once and is erased in 30 days; you can restore it until then. Reason (for the audit log):`,
+    );
+    if (reason === null) return;
+    const j = await apiFetch(`/staff/lobbies/${encodeURIComponent(l.id)}/delete`, {
+      method: "POST",
+      body: JSON.stringify({ reason }),
+    });
+    if (j?.ok) {
+      setLobbies((prev) => prev.filter((x) => x.id !== l.id));
+      const g = await apiFetch("/staff/lobbies/deleted");
+      setGone(g?.lobbies || []);
+    }
+    setMsg(
+      j?.ok ? `Deleted ${l.id}. Restorable for 30 days.` : j?.message || j?.error || "Failed.",
+    );
+  }
+
+  async function restore(id: string) {
+    const j = await apiFetch(`/staff/lobbies/${encodeURIComponent(id)}/restore`, {
+      method: "POST",
+    });
+    if (j?.ok) {
+      setGone((prev) => prev.filter((x) => x.id !== id));
+      const d = await apiFetch("/staff/lobbies");
+      setLobbies(d?.lobbies || []);
+    }
+    setMsg(j?.ok ? `Restored ${id}.` : j?.message || "Failed.");
+  }
 
   async function togglePin(id: string, pinned: boolean) {
     const j = await apiFetch(`/staff/lobbies/${encodeURIComponent(id)}/pin`, {
@@ -217,6 +253,12 @@ export function LobbiesTab({ myRole }: { myRole: GlobalRole }) {
                   >
                     Clear Chat
                   </button>
+                  <button
+                    style={{ ...S.danger, fontSize: 11, padding: "4px 8px" }}
+                    onClick={() => void deleteLobby(l)}
+                  >
+                    Delete
+                  </button>
                 </div>
               )}
             </div>
@@ -226,6 +268,42 @@ export function LobbiesTab({ myRole }: { myRole: GlobalRole }) {
           <div style={{ opacity: 0.4, fontSize: 13 }}>No lobbies found.</div>
         )}
       </div>
+      {canEdit && gone.length > 0 && (
+        <div style={{ marginTop: 22 }}>
+          <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 8 }}>
+            Deleted · erased after 30 days
+          </div>
+          {gone.map((g) => (
+            <div
+              key={g.id}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 10,
+                padding: "8px 12px",
+                borderRadius: 8,
+                border: "1px solid rgba(255,255,255,.07)",
+                marginBottom: 6,
+                fontSize: 12,
+              }}
+            >
+              <span>
+                <b>{g.name || g.id}</b> · {g.id}
+                {g.owner ? ` · owner ${g.owner}` : ""}
+                {g.deletedBy ? ` · deleted by ${g.deletedBy}` : ""} · erased{" "}
+                {new Date(g.erasedAt).toLocaleDateString()}
+              </span>
+              <button
+                style={{ ...S.btn, fontSize: 11, padding: "4px 8px" }}
+                onClick={() => void restore(g.id)}
+              >
+                Restore
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

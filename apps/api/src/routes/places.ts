@@ -200,10 +200,11 @@ export async function placeForHost(host: string): Promise<string | null> {
   if (hit && Date.now() - hit.at < 60_000) return hit.ok ? id : null;
   const row = await prisma.lobby.findUnique({
     where: { id },
-    select: { id: true, moduleConfig: true },
+    select: { id: true, moduleConfig: true, deletedAt: true },
   });
   // A code place has no subdomain: it's reached at weered.ca/u/<code> only.
-  const ok = !!row && !isCodePlace(row);
+  // A deleted one answers nowhere (lib/lobbyDelete.ts).
+  const ok = !!row && !row.deletedAt && !isCodePlace(row);
   placeCache.set(id, { ok, at: Date.now() });
   if (placeCache.size > 5000) placeCache.clear();
   return ok ? id : null;
@@ -295,7 +296,7 @@ async function shown(l: { id: string; name: string; moduleConfig?: unknown }, ow
 
 async function placeOf(userId: string) {
   return prisma.lobby.findFirst({
-    where: { ownerId: userId, id: { startsWith: PLACE_PREFIX } },
+    where: { ownerId: userId, id: { startsWith: PLACE_PREFIX }, deletedAt: null },
     select: { id: true, name: true, moduleConfig: true },
     orderBy: { createdAt: "asc" },
   });

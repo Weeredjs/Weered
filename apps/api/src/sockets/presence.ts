@@ -1,6 +1,7 @@
 import { prisma } from "../lib/prisma";
 import { canEnterGatedRoom, lobbyLevelOf } from "../lib/lobbyAccess";
 import { announcePresence, banExempt } from "../lib/roomState";
+import { isLobbyDeleted } from "../lib/lobbyDelete";
 import { isOfficeRoom } from "../lib/officeRooms";
 import { guestMayEnter } from "../lib/guestScope";
 import { isStaffRoomId, mayEnterStaffRoom } from "../lib/staffRooms";
@@ -152,6 +153,12 @@ export async function handlePresence(ws: any, msg: any, opts: Opts): Promise<voi
     // Staff chat: staff only (lib/staffRooms.ts; doJoin checks again).
     if (!(await mayEnterStaffRoom(ws.user?.id, roomId))) {
       send(ws, { type: "room:denied", roomId, reason: "staff_only" });
+      return;
+    }
+    // A deleted lobby's rooms let nobody in, and aren't brought back to life
+    // by naming them (lib/lobbyDelete.ts).
+    if (isLobbyDeleted(roomId) || isLobbyDeleted(roomId.replace(/^@admin-/, ""))) {
+      send(ws, { type: "room:denied", roomId, reason: "lobby_deleted" });
       return;
     }
     const room = await ensureRoomLoaded(roomId);

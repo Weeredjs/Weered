@@ -169,6 +169,8 @@ import {
 } from "./lib/flood";
 import { startPressureWatch } from "./lib/pressure";
 import { admitSocket } from "./lib/socketGate";
+import { isLobbyDeleted, startLobbyPurgeSweep } from "./lib/lobbyDelete";
+import lobbyDeleteRoutes from "./routes/lobbyDelete";
 import campaignsRoutes from "./routes/campaigns";
 import characterRoutes from "./routes/characters";
 import diceRoutes from "./routes/dice";
@@ -573,7 +575,16 @@ async function doJoin(ws: Sock, roomId: string) {
     send(ws, { type: "room:denied", roomId, reason: "staff_only" });
     return false;
   }
+  // A deleted lobby's rooms let nobody in (lib/lobbyDelete.ts).
+  if (isLobbyDeleted(roomId) || isLobbyDeleted(roomId.replace(/^@admin-/, ""))) {
+    send(ws, { type: "room:denied", roomId, reason: "lobby_deleted" });
+    return false;
+  }
   const room = await ensureRoomLoaded(roomId);
+  if (isLobbyDeleted(room.lobbyId)) {
+    send(ws, { type: "room:denied", roomId, reason: "lobby_deleted" });
+    return false;
+  }
   if (roomId === "lobby" && !room.name) room.name = "Home Lobby";
 
   {
@@ -1033,6 +1044,8 @@ async function main() {
   });
   await app.register(discordAuthRoutes, { JWT_SECRET, getSiteConfig, seedWelcomeDM });
   await app.register(guestJoinRoutes, { JWT_SECRET });
+  await app.register(lobbyDeleteRoutes, { authFromHeader, getGlobalRole });
+  startLobbyPurgeSweep();
 
   const WEB_URL = process.env.APP_URL || "https://weered.ca";
 
@@ -1063,7 +1076,7 @@ async function main() {
     }
     const lobbyId = String(req.params?.id || req.params?.lobbyId || "");
     const lobby = await prisma.lobby.findUnique({ where: { id: lobbyId } });
-    if (!lobby) {
+    if (!lobby || lobby.deletedAt) {
       reply.code(404).send({ ok: false, error: "lobby_not_found" });
       return null;
     }

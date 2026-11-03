@@ -942,6 +942,8 @@ export default async function staffRoutes(app: FastifyInstance, opts: Opts) {
     if (!canAccessStaff(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
 
     const list = await prisma.lobby.findMany({
+      // Deleted ones are listed apart, with their restore (routes/lobbyDelete.ts).
+      where: { deletedAt: null },
       select: {
         id: true,
         name: true,

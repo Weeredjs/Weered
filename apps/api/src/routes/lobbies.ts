@@ -213,7 +213,7 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
     if (memberships.length === 0) return reply.send({ ok: true, lobbies: [] });
     const lobbyIds = memberships.map((m: any) => m.lobbyId);
     const lobbies = await prisma.lobby.findMany({
-      where: { id: { in: lobbyIds } },
+      where: { id: { in: lobbyIds }, deletedAt: null },
       select: {
         id: true,
         name: true,
@@ -295,9 +295,12 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
           },
           orderBy: { sortOrder: "asc" },
         },
+        deletedAt: true,
       },
     });
-    if (!lobby) return reply.code(404).send({ ok: false, error: "not_found" });
+    // A deleted lobby is gone to everyone (lib/lobbyDelete.ts); staff restore
+    // it from Ops.
+    if (!lobby || lobby.deletedAt) return reply.code(404).send({ ok: false, error: "not_found" });
 
     const lastMsgByRoom = await lastMessageMap(lobby.rooms.map((r: any) => r.id));
     const enrichedRooms = lobby.rooms.map((r: any) => {
@@ -399,7 +402,8 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
         const tier = String(dbUser?.tier ?? "INNOCENT");
         // A member's place (routes/places.ts) never counts toward the limit.
         const ownedCount = await prisma.lobby.count({
-          where: { ownerId: u.id, NOT: { id: { startsWith: "u-" } } },
+          // A deleted lobby gives its slot back (lib/lobbyDelete.ts).
+          where: { ownerId: u.id, deletedAt: null, NOT: { id: { startsWith: "u-" } } },
         });
         if (tier !== "KINGPIN" && ownedCount >= FREE_LOBBIES) {
           return reply.code(403).send({
@@ -626,6 +630,8 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
       lobby: {
         id: lobby.id,
         name: lobby.name,
+        // Who owns it (public on the lobby page too): the Delete tab is theirs.
+        ownerId: (lobby as any).ownerId ?? null,
         description: lobby.description,
         verified: lobby.verified,
         pinned: lobby.pinned,

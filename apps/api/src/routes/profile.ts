@@ -1,3 +1,4 @@
+import { handOffLobbies } from "../lib/lobbyDelete";
 import { log, swallow } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 import { cleanFrame, cleanNameEffect } from "../lib/looks";
@@ -764,6 +765,9 @@ export default async function profileRoutes(app: FastifyInstance, opts: Opts) {
         }
 
         await globalAudit(userId, anonName, "account_deleted_self", userId);
+        // Their lobbies go to each one's top moderator; one with none, and
+        // their place, is deleted (held 30 days). lib/lobbyDelete.ts.
+        await handOffLobbies(userId, anonName).catch(swallow);
 
         return reply.send({ ok: true });
       } catch (e: any) {

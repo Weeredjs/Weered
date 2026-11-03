@@ -73,7 +73,7 @@ export async function vanityPlace(label: string): Promise<string | null> {
   if (looksOfficial(label) && !isStaffRole(u.globalRole)) return null;
   const p = await prisma.lobby
     .findFirst({
-      where: { ownerId: u.id, id: { startsWith: PLACE_PREFIX } },
+      where: { ownerId: u.id, id: { startsWith: PLACE_PREFIX }, deletedAt: null },
       orderBy: { createdAt: "asc" },
       select: { id: true },
     })

@@ -187,6 +187,13 @@ model Lobby {
   newAccountChatHours Int      @default(0)
   newAccountLinkHours Int      @default(0)
 
+  // Deleted by its owner or staff (lib/lobbyDelete.ts, James 2026-11-02): gone
+  // from everywhere at once, erased after 30 days. Until then staff can bring
+  // it back and nobody can take its id. deletedRestore keeps what to put back.
+  deletedAt      DateTime?
+  deletedById    String?
+  deletedRestore Json?
+
   rooms            Room[]
   members          LobbyMember[]
   bans             LobbyBan[]

@@ -36,6 +36,7 @@ export type AdminBan = { id: string; userId: string; reason: string; createdAt: 
 export type LobbyData = {
   id: string;
   name: string;
+  ownerId?: string | null;
   description: string;
   verified: boolean;
   pinned: boolean;
@@ -264,6 +265,8 @@ export const NAV_ITEMS = [
   { id: "events", label: "Events", icon: "📅", minLevel: 4 },
   { id: "members", label: "Members", icon: "👥", minLevel: 2 },
   { id: "audit", label: "Audit Log", icon: "📋", minLevel: 3 },
+  // The owner only (DeleteTab checks it's really them).
+  { id: "delete", label: "Delete lobby", icon: "🗑️", minLevel: 5 },
 ] as const;
 
 export type NavId = (typeof NAV_ITEMS)[number]["id"];

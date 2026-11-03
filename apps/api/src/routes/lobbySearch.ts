@@ -35,6 +35,7 @@ export default async function lobbySearchRoutes(app: FastifyInstance, opts: Opts
       : [];
     const unlistedWhere = {
       unlisted: true,
+      deletedAt: null,
       OR: [
         { id: q },
         { name: { equals: q, mode: "insensitive" as const } },
@@ -54,7 +55,7 @@ export default async function lobbySearchRoutes(app: FastifyInstance, opts: Opts
 
     const [allPinned, matchingRooms, unlistedHits] = await Promise.all([
       prisma.lobby.findMany({
-        where: { pinned: true },
+        where: { pinned: true, deletedAt: null },
         select: {
           id: true,
           name: true,

@@ -31,6 +31,7 @@ import { DEFAULT_ROLE_NAMES, RolesTab } from "./RolesTab";
 import { RoomsTab } from "./RoomsTab";
 import { TiersTab } from "./TiersTab";
 import { TournamentsTab } from "./TournamentsTab";
+import { DeleteTab } from "./DeleteTab";
 
 export default function LobbyAdminPage() {
   const params = useParams();
@@ -349,6 +350,14 @@ export default function LobbyAdminPage() {
               />
             )}
             {nav === "audit" && <AuditTab initialLogs={audit} />}
+            {nav === "delete" && (
+              <DeleteTab
+                lobby={lobby}
+                isOwner={
+                  !!lobby.ownerId && String(lobby.ownerId) === String((ctx as any)?.me?.id || "")
+                }
+              />
+            )}
           </div>
         </div>
 
