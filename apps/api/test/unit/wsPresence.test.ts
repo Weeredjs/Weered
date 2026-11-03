@@ -90,12 +90,16 @@ describe("ws handlePresence - join gates + idle/leave", () => {
   it("presence:idle marks the user away and broadcasts to their rooms", async () => {
     const room = mkRoom();
     room.users.set("alice", { id: "alice", name: "Alice" });
+    // Someone else in the room hears it (lib/roomState.ts announcePresence:
+    // at once in a small room like this one).
+    const heard: any[] = [];
+    room.sockets.add({ readyState: 1, send: (raw: string) => heard.push(JSON.parse(raw)) });
     rooms.set("r1", room);
     const ws = mkWs();
     await handlePresence(ws, { type: "presence:idle", away: true }, mkOpts());
     expect((ws.user as any).isAway).toBe(true);
     expect((room.users.get("alice") as any).isAway).toBe(true);
-    expect(broadcasts.find((m) => m.type === "presence:join")).toBeTruthy();
+    expect(heard.find((m) => m.type === "presence:join" && m.user?.isAway)).toBeTruthy();
   });
 
   it("presence:leave calls leaveRoom", async () => {

@@ -1,6 +1,6 @@
 import { prisma } from "../lib/prisma";
 import { canEnterGatedRoom, lobbyLevelOf } from "../lib/lobbyAccess";
-import { banExempt } from "../lib/roomState";
+import { announcePresence, banExempt } from "../lib/roomState";
 import { isOfficeRoom } from "../lib/officeRooms";
 import { guestMayEnter } from "../lib/guestScope";
 import { isStaffRoomId, mayEnterStaffRoom } from "../lib/staffRooms";
@@ -237,7 +237,7 @@ export async function handlePresence(ws: any, msg: any, opts: Opts): Promise<voi
       const entry = room.users.get(ws.user.id);
       if (entry) {
         entry.isAway = away;
-        broadcast(room, { type: "presence:join", roomId: room.roomId, user: entry });
+        announcePresence(room, { type: "presence:join", roomId: room.roomId, user: entry });
       }
     }
     return;

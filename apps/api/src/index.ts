@@ -158,7 +158,17 @@ import { handlePresence } from "./sockets/presence";
 import { handleChat, handleCrewDm, handleReactionToggle } from "./sockets/messaging";
 import { handleRoomClose, handleRoomMod } from "./sockets/roomMod";
 import { handlePoker } from "./sockets/poker";
-import { handleAuthHello, handleClose } from "./sockets/connection";
+import { handleAuthHello, handleClose, DOOR_KEEPERS, shutOut } from "./sockets/connection";
+import {
+  DOOR_MESSAGE,
+  floodOn,
+  onFloodChange,
+  passesShutDoor,
+  siteDoor,
+  startFloodWatch,
+} from "./lib/flood";
+import { startPressureWatch } from "./lib/pressure";
+import { admitSocket } from "./lib/socketGate";
 import campaignsRoutes from "./routes/campaigns";
 import characterRoutes from "./routes/characters";
 import diceRoutes from "./routes/dice";
@@ -199,6 +209,8 @@ import {
   rooms,
   articleRoomMeta,
   _lobbyActivityAt,
+  announcePresence,
+  sendRaw,
   normalizeRoomId,
   ensureRoomLoaded,
   loadExistingRoom,
@@ -239,7 +251,7 @@ import {
   binanceSubs,
   DEFAULT_SYMBOLS,
 } from "./lib/binanceFeed";
-import { getSiteFlags, getAI, isAIAvailable } from "./lib/ai";
+import { getAI, isAIAvailable } from "./lib/ai";
 import { buildOperatorSystemPrompt } from "./lib/operatorPrompt";
 import { runFeedWorker, recencyScore } from "./lib/feedWorker";
 import {
@@ -735,7 +747,7 @@ async function doJoin(ws: Sock, roomId: string) {
       avatarFrame: (ws.user as any).avatarFrame ?? undefined,
     };
     room.users.set(ws.user.id, userEntry);
-    broadcast(room, { type: "presence:join", roomId, user: userEntry });
+    announcePresence(room, { type: "presence:join", roomId, user: userEntry });
   }
 
   if (ws.user && !(ws.user as any).guest) {
@@ -868,23 +880,31 @@ async function main() {
     return reply.code(401).send({ ok: false, error: "session_revoked" });
   });
 
-  // Maintenance gate: when on, non-staff get 503. /health, /auth/*, and /staff*
-  // always pass so an operator can always log in and turn it back off.
+  // The door (lib/flood.ts): maintenance, or "at capacity" in a flood. When
+  // shut, non-staff get 503. /health, /auth/*, /staff*, the waitlist, the
+  // door's own status and Stripe's webhook always pass, so an operator can
+  // sign in and open it again and nobody's payment is dropped.
   // Fail-open: any error here lets the request through so a bug can never down the site.
   app.addHook("onRequest", async (req: any, reply: any) => {
     try {
-      if ((await getSiteFlags()).maintenanceMode !== "true") return;
-      const url = String(req.url || "").split("?")[0];
-      if (url === "/health" || url.startsWith("/auth/") || url.startsWith("/staff")) return;
+      const door = siteDoor();
+      if (door === "open" || passesShutDoor(req.url)) return;
       const au = authFromHeader(req.headers.authorization);
       if (au && canAccessStaff(await getGlobalRole(au.id))) return;
-      return reply
-        .code(503)
-        .send({ error: "maintenance", message: "Weered is down for maintenance. Back shortly." });
+      return reply.code(503).send({ error: door, message: DOOR_MESSAGE[door] });
     } catch (e) {
       swallow(e);
     }
   });
+  // What the "Weered is full" page asks before letting people back in.
+  app.get("/site/status", async (_req, reply) =>
+    reply.header("cache-control", "no-store").send({
+      ok: true,
+      door: siteDoor(),
+      flood: floodOn(),
+      message: siteDoor() === "open" ? "" : DOOR_MESSAGE[siteDoor() as "capacity"],
+    }),
+  );
 
   // ── Zod-backed validation + OpenAPI ───────────────────────────────────────
   // The Zod compilers only run for routes that declare a `schema`, so every
@@ -1561,6 +1581,21 @@ async function main() {
   setPresenceWss(wss);
   startPresencePolling();
   startListingSweep();
+  // The flood switches (lib/flood.ts) and the pressure watch that can throw
+  // the first one by itself (lib/pressure.ts).
+  onFloodChange((now, was) => {
+    if (now.door !== "open" && was.door === "open")
+      for (const c of wss.clients) {
+        const u = (c as any).user;
+        if (!u || !DOOR_KEEPERS.includes(String(u.globalRole))) shutOut(c, send);
+      }
+    if (now.flood !== was.flood) {
+      const raw = JSON.stringify({ type: "site:flood", on: now.flood !== "off" });
+      for (const c of wss.clients) sendRaw(c as Sock, raw);
+    }
+  });
+  startFloodWatch();
+  startPressureWatch({ sockets: () => wss.clients.size });
   app.log.info(`WS listening on ws://127.0.0.1:${WS_PORT}`);
 
   // Guest liveness sweep (60s): WS path mirrors the HTTP revocation hook, so a
@@ -1620,12 +1655,24 @@ async function main() {
   }, 30000);
   wss.on("close", () => clearInterval(wsHeartbeat));
 
-  wss.on("connection", (rawWs) => {
+  wss.on("connection", (rawWs, req) => {
     const ws = rawWs as Sock;
     (ws as any).isAlive = true;
     ws.on("pong", () => {
       (ws as any).isAlive = true;
     });
+    // One address can't hold the server open with thousands of sockets, and a
+    // socket that never signs in is let go (flood readiness 2026-11-02).
+    if (!admitSocket(ws, req)) return;
+    const signInBy = setTimeout(() => {
+      if (!ws.user)
+        try {
+          ws.close(4008, "auth_timeout");
+        } catch (e) {
+          swallow(e);
+        }
+    }, 15_000);
+    ws.on("close", () => clearTimeout(signInBy));
 
     ws.on("message", (raw) => {
       (async () => {

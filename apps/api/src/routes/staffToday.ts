@@ -1,6 +1,8 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
 import { isStaffRole } from "../lib/lobbyAuth";
+import { floodSetting, siteDoor } from "../lib/flood";
+import { pressureNow } from "../lib/pressure";
 import { accountCount } from "../lib/registration";
 import { SITE_CONFIG_DEFAULTS, getAllSiteConfig } from "../lib/siteConfig";
 import { STRIPE_LIVE_STATUSES as STRIPE_LIVE } from "../lib/stripeTier";
@@ -146,6 +148,11 @@ export default async function staffTodayRoutes(app: FastifyInstance, opts: Opts)
         registrationCap: Number(cfg.registrationCap) || 0,
         waitlist,
         aiEnabled: cfg.aiEnabled !== "false",
+        // The flood switches and the latest pressure reading (lib/flood.ts,
+        // lib/pressure.ts).
+        floodMode: floodSetting(),
+        door: siteDoor(),
+        pressure: pressureNow(),
       },
       recent: audit.map((a) => ({ ...a, createdAt: a.createdAt.toISOString() })),
     });

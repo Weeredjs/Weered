@@ -7,6 +7,7 @@ import { mayActOn, mayGiveRole } from "../lib/roleLadder";
 import { isProtectedRoom } from "../lib/roomKinds";
 import { sendToEveryone } from "../lib/notifications";
 import { cutoffNow } from "../lib/sessionCutoff";
+import { refreshFlood } from "../lib/flood";
 import { GlobalRole, ReportStatus, SubTier } from "@prisma/client";
 
 type Opts = {
@@ -846,6 +847,9 @@ export default async function staffRoutes(app: FastifyInstance, opts: Opts) {
         maintenanceMode: config.maintenanceMode === "true",
         aiEnabled: config.aiEnabled !== "false",
         defaultTier: config.defaultTier || "INNOCENT",
+        // The flood switches (lib/flood.ts): "off" | "on" | "auto".
+        floodMode: ["on", "auto"].includes(config.floodMode) ? config.floodMode : "off",
+        capacityMode: config.capacityMode === "true",
       },
     });
   });
@@ -877,10 +881,16 @@ export default async function staffRoutes(app: FastifyInstance, opts: Opts) {
       updates.push({ key: "aiEnabled", value: String(body.aiEnabled) });
     if (body.defaultTier !== undefined)
       updates.push({ key: "defaultTier", value: String(body.defaultTier) });
+    if (body.floodMode !== undefined)
+      updates.push({ key: "floodMode", value: body.floodMode === "on" ? "on" : "off" });
+    if (body.capacityMode !== undefined)
+      updates.push({ key: "capacityMode", value: String(body.capacityMode === true) });
 
     for (const { key, value } of updates) {
       await setSiteConfig(key, value);
     }
+    // The door, flood mode and the AI switch take effect now, not in 15 s.
+    await refreshFlood(true);
 
     await globalAudit(u.id, u.name, "config_update", undefined, undefined, {
       keys: updates.map((u) => u.key),

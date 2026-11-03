@@ -13,6 +13,11 @@ let _anthropicLoaded = false;
 // so per-request hooks never hammer the DB. registrationOpen is read directly.
 let _siteFlags: Record<string, string> = {};
 let _siteFlagsAt = 0;
+/** Read the flags afresh next time: a switch in Ops takes effect at once. */
+export function forgetSiteFlags() {
+  _siteFlagsAt = 0;
+}
+
 export async function getSiteFlags(): Promise<Record<string, string>> {
   const now = Date.now();
   if (now - _siteFlagsAt > 15000) {
@@ -29,7 +34,10 @@ export async function getSiteFlags(): Promise<Record<string, string>> {
 export async function getAI(): Promise<any | null> {
   const key = process.env.ANTHROPIC_API_KEY;
   if (!key) return null;
-  if ((await getSiteFlags()).aiEnabled === "false") return null;
+  const flags = await getSiteFlags();
+  // Flood mode rests the builder and the Operator too (lib/flood.ts).
+  if (flags.aiEnabled === "false" || flags.floodMode === "on" || flags.floodMode === "auto")
+    return null;
   if (!_anthropicLoaded) {
     _anthropicLoaded = true;
     try {

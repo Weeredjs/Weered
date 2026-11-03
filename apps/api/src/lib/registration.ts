@@ -14,6 +14,9 @@ export async function registrationBlock(
   read: ReadConfig,
 ): Promise<"registration_closed" | "registration_full" | null> {
   if ((await read("registrationOpen")) === "false") return "registration_closed";
+  // Flood mode: newcomers wait on the waitlist until it's off (lib/flood.ts).
+  const flood = await read("floodMode");
+  if (flood === "on" || flood === "auto") return "registration_full";
   const cap = Number((await read("registrationCap")) ?? SITE_CONFIG_DEFAULTS.registrationCap);
   if (Number.isFinite(cap) && cap > 0 && (await accountCount()) >= cap) return "registration_full";
   return null;

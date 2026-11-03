@@ -1,6 +1,23 @@
 import { swallow } from "../lib/logger";
 import { prisma } from "../lib/prisma";
 import { publishState } from "../lib/roomState";
+import { DOOR_MESSAGE, floodOn, siteDoor } from "../lib/flood";
+
+/** Who stays in when the door is shut: the people who run Weered. */
+export const DOOR_KEEPERS = ["SUPPORT", "STAFF", "ADMIN", "GOD"];
+
+/** "Weered is full" (or down for maintenance), then a clean close the web
+ *  won't retry (4010); it checks /site/status instead. */
+export function shutOut(ws: any, send: (ws: any, msg: any) => void) {
+  const door = siteDoor();
+  if (door === "open") return;
+  send(ws, { type: "site:closed", door, message: DOOR_MESSAGE[door] });
+  try {
+    ws.close(4010, door);
+  } catch (e) {
+    swallow(e);
+  }
+}
 
 // Connection-lifecycle WS handlers extracted from index.ts wss.on("connection"):
 // handleAuthHello -- the auth:hello entry gate, still dispatched FIRST (before the
@@ -115,9 +132,17 @@ export async function handleAuthHello(
       }
       return;
     }
+    // The door is shut (lib/flood.ts): everyone but staff is told why and let
+    // go cleanly; 4010 tells the web not to reconnect.
+    if (siteDoor() !== "open" && !DOOR_KEEPERS.includes(String(hydrated.globalRole))) {
+      ws.user = undefined;
+      shutOut(ws, send);
+      return;
+    }
     ws.user = hydrated;
     send(ws, {
       type: "auth:ok",
+      ...(floodOn() ? { flood: true } : {}),
       user: {
         id: ws.user.id,
         name: ws.user.name,

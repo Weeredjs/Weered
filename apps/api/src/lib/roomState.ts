@@ -7,6 +7,7 @@ import { randomUUID } from "node:crypto";
 import { type ReactionAgg } from "./chatHelpers";
 import { hostAvatar } from "./hostAvatar";
 import { lobbyLevelOf } from "./lobbyAccess";
+import { floodOn } from "./flood";
 
 // In-memory room/WS state engine extracted from index.ts. wss is injected
 // once from main() so the lobby-activity ping can still reach all clients.
@@ -562,31 +563,117 @@ export function send(ws: Sock, msg: any) {
   }
 }
 
+/** One message, already packaged, to one socket. */
+export function sendRaw(ws: Sock, raw: string) {
+  try {
+    if (ws.readyState === 1) ws.send(raw);
+  } catch (e) {
+    swallow(e);
+  }
+}
+
+/** To everyone in the room. Packaged once, not once per person: a crowd of n
+ *  made every message n packagings (flood readiness 2026-11-02). */
 export function broadcast(room: RoomState, msg: any) {
-  for (const s of room.sockets) send(s, msg);
-  // Room occupancy changed: ping everyone so lobby rails refresh on push
-  // instead of polling. Tiny payload, throttled to 1/2s per room.
-  if (msg && (msg.type === "presence:join" || msg.type === "presence:leave")) {
-    const now = Date.now();
-    const last = _lobbyActivityAt.get(room.roomId) || 0;
-    if (now - last > 2000) {
-      _lobbyActivityAt.set(room.roomId, now);
-      const ping = JSON.stringify({
-        type: "lobby:activity",
-        lobbyId: room.lobbyId || null,
-        roomId: room.roomId,
-      });
-      for (const sock of (_wss as any)?.clients ?? []) {
-        try {
-          if (sock.readyState === 1) sock.send(ping);
-        } catch (e) {
-          swallow(e);
-        }
-      }
-    }
+  const raw = JSON.stringify(withPayload(msg));
+  for (const s of room.sockets) sendRaw(s, raw);
+  if (msg && (msg.type === "presence:join" || msg.type === "presence:leave"))
+    pingLobbyActivity(room);
+}
+
+/** Room occupancy changed: lobby rails refresh on push instead of polling. It
+ *  went to every socket on the site for any arrival anywhere; now only to
+ *  people in the same lobby (or in Weered's own rooms, for those), at most
+ *  every 2 s per room, 10 s for a big room, 30 s in flood mode. */
+function pingLobbyActivity(room: RoomState) {
+  const now = Date.now();
+  const every = floodOn() ? 30_000 : isBigRoom(room) ? 10_000 : 2_000;
+  if (now - (_lobbyActivityAt.get(room.roomId) || 0) <= every) return;
+  _lobbyActivityAt.set(room.roomId, now);
+  const lobbyId = room.lobbyId || null;
+  const ping = JSON.stringify({ type: "lobby:activity", lobbyId, roomId: room.roomId });
+  for (const sock of (_wss as any)?.clients ?? []) {
+    const rid = (sock as Sock).roomId;
+    if (!rid) continue;
+    const there = rooms.get(rid);
+    const sameLobby = lobbyId ? rid === lobbyId || there?.lobbyId === lobbyId : !there?.lobbyId;
+    if (sameLobby) sendRaw(sock as Sock, ping);
   }
 }
 export const _lobbyActivityAt = new Map<string, number>();
+
+/**
+ * Big rooms (flood readiness, 2026-11-02). Everyone on Home sits in one room,
+ * and each arrival went to every person in it, so a crowd's cost grew with
+ * the crowd times its arrivals: the local load test choked at about 500.
+ * Above BIG_ROOM people (30 in flood mode) a room stops announcing each
+ * arrival and departure; it sends its head count and a sample of names at
+ * most once a second (every 3 s in flood mode). Smaller rooms are unchanged.
+ */
+export const BIG_ROOM = 80;
+const BIG_ROOM_FLOOD = 30;
+export const isBigRoom = (room: RoomState) =>
+  room.users.size > (floodOn() ? BIG_ROOM_FLOOD : BIG_ROOM);
+const sampleSize = () => (floodOn() ? 40 : 60);
+
+/** A join, leave or away change: to everyone at once in a small room; folded
+ *  into the next state update in a big one. */
+export function announcePresence(room: RoomState, msg: any) {
+  if (isBigRoom(room)) {
+    pingLobbyActivity(room);
+    scheduleState(room, "people");
+  } else if ((room as any)._sampleSig) {
+    // Just back under the line: screens hold a sample, so everyone gets the
+    // whole list once, then single joins and leaves again.
+    pingLobbyActivity(room);
+    sendStateNow(room);
+  } else broadcast(room, msg);
+}
+
+/** "people": only who's here changed. "all": the room itself did too (a lock,
+ *  a mute, the voice queue), so the next send must carry the whole state. */
+function scheduleState(room: RoomState, what: "people" | "all") {
+  const r = room as any;
+  if (what === "all") r._stateAll = true;
+  if (r._stateTimer) return;
+  const every = floodOn() ? 3_000 : 1_000;
+  const wait = Math.max(0, (r._stateAt || 0) + every - Date.now());
+  r._stateTimer = setTimeout(() => {
+    r._stateTimer = null;
+    r._stateAt = Date.now();
+    if (rooms.get(room.roomId) === room) sendStateNow(room);
+  }, wait);
+}
+
+function sendStateNow(room: RoomState) {
+  const r = room as any;
+  const big = isBigRoom(room);
+  const payload = buildStatePayload(room, big ? { sample: sampleSize() } : undefined);
+  // In a big room the sample hardly moves once it's full (staff, then the
+  // earliest arrivals): when it hasn't and the room is as it was, the head
+  // count alone goes out, a few dozen bytes instead of the sample.
+  const sig = payload.users.map((u: any) => u.id).join(",");
+  if (big && !r._stateAll && r._sampleSig === sig) {
+    const raw = JSON.stringify({
+      type: "presence:count",
+      roomId: room.roomId,
+      count: payload.count,
+    });
+    for (const s of room.sockets) sendRaw(s, raw);
+    return;
+  }
+  r._stateAll = false;
+  r._sampleSig = big ? sig : null;
+  const raw = JSON.stringify(payload);
+  let admin: string | null = null;
+  for (const s of room.sockets) {
+    sendRaw(s, raw);
+    const uid = s.user?.id;
+    if (!uid || !isModOrOwner(room, uid, s.user?.globalRole)) continue;
+    admin ??= JSON.stringify(withPayload(adminStatePayload(room)));
+    sendRaw(s, admin);
+  }
+}
 
 export function isOwner(room: RoomState, userId?: string) {
   return Boolean(userId && room.ownerId && room.ownerId === userId);
@@ -728,7 +815,10 @@ export function audit(room: RoomState, item: Omit<AuditItem, "id" | "ts"> & { ts
   }
 }
 
-export function buildStatePayload(room: RoomState) {
+/** Everything about the room for the people in it. With `sample`, a big
+ *  room's list is its moderators and staff, then the earliest arrivals, up to
+ *  that many (plus `include`, the person it's for); `count` is everyone. */
+export function buildStatePayload(room: RoomState, opts?: { sample?: number; include?: string }) {
   const roleMap = new Map<string, string>();
   const colorMap = new Map<string, string>();
   const avatarMap = new Map<string, string>();
@@ -744,7 +834,21 @@ export function buildStatePayload(room: RoomState) {
         pillAccentMap.set(s.user.id, (s.user as any).pillAccentColor);
     }
   }
-  const users = Array.from(room.users.values()).map((u) => ({
+  let present = Array.from(room.users.values());
+  const total = present.length;
+  if (opts?.sample && total > opts.sample) {
+    const first = (u: any) =>
+      u.id === opts.include ||
+      u.id === room.ownerId ||
+      room.mods.has(u.id) ||
+      Number(u.lobbyRoleLevel) >= 3 ||
+      ["STAFF", "ADMIN", "GOD", "SUPPORT"].includes(String(u.globalRole || ""));
+    present = [...present.filter(first), ...present.filter((u) => !first(u))].slice(
+      0,
+      Math.max(opts.sample, present.filter(first).length),
+    );
+  }
+  const users = present.map((u) => ({
     ...u,
     role: u.id ? roleOf(room, u.id) : "member",
     globalRole: (u.id ? roleMap.get(u.id) : undefined) ?? (u as any).globalRole ?? "USER",
@@ -775,7 +879,8 @@ export function buildStatePayload(room: RoomState) {
     bannerUrl: room.bannerUrl || null,
     accentColor: room.accentColor || null,
     users,
-    count: users.length - (_isAIAvailable() ? 1 : 0),
+    count: total,
+    ...(users.length - (_isAIAvailable() ? 1 : 0) < total ? { sampled: true } : {}),
     locked: Boolean(room.locked),
     chatDisabled: Boolean(room.chatLocked),
     slowSec: room.slowSec || 0,
@@ -816,20 +921,22 @@ export function adminStatePayload(room: RoomState) {
 }
 
 export function publishStateToSocket(ws: Sock, room: RoomState) {
-  send(ws, buildStatePayload(room));
+  const big = isBigRoom(room);
+  sendRaw(
+    ws,
+    JSON.stringify(
+      buildStatePayload(room, big ? { sample: sampleSize(), include: ws.user?.id } : undefined),
+    ),
+  );
   const uid = ws.user?.id;
   if (uid && isModOrOwner(room, uid, ws.user?.globalRole)) send(ws, adminStatePayload(room));
 }
 
+/** The room's state to everyone in it: at once in a small room, folded into
+ *  at most one a second in a big one. */
 export function publishState(room: RoomState) {
-  const payload = buildStatePayload(room);
-  broadcast(room, payload);
-
-  for (const s of room.sockets) {
-    const uid = s.user?.id;
-    if (!uid || !isModOrOwner(room, uid, s.user?.globalRole)) continue;
-    send(s, adminStatePayload(room));
-  }
+  if (isBigRoom(room)) scheduleState(room, "all");
+  else sendStateNow(room);
 }
 
 export function leaveRoom(ws: Sock) {
@@ -849,7 +956,7 @@ export function leaveRoom(ws: Sock) {
     }
     if (!userHasOtherSocket) {
       const existed = room.users.delete(ws.user.id);
-      if (existed) broadcast(room, { type: "presence:leave", roomId, userId: ws.user.id });
+      if (existed) announcePresence(room, { type: "presence:leave", roomId, userId: ws.user.id });
       const userId = ws.user.id;
       const location = (room as any).name || roomId;
       prisma.user
