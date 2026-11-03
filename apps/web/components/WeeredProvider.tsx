@@ -11,6 +11,7 @@ import { onActivate } from "@/lib/a11y";
 import React, { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { hotStore } from "./hotStore";
 import { setFloodFlag } from "@/lib/floodMode";
+import { watchSession } from "@/lib/staleSession";
 
 const API    = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 const WS_URL = process.env.NEXT_PUBLIC_WS_URL   || "ws://127.0.0.1:4001";
@@ -320,6 +321,9 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
     } catch {}
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname]);
+
+  // A session the API stopped honouring goes to Sign in (lib/staleSession.ts).
+  useEffect(() => (token ? watchSession(API, () => { setToken(""); setMe(null); }) : undefined), [token]);
 
   useEffect(() => {
     try {

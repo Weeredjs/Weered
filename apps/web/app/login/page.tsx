@@ -7,6 +7,7 @@
 import React, { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { onAccent, safeAccent, safeImage } from "../../lib/brandSafe";
+import { sessionAlive } from "../../lib/staleSession";
 
 /** The lobby a sign-in is for (?lobby=), as its page shows it. */
 type Brand = {
@@ -174,11 +175,23 @@ function LoginForm() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- once, on open
   }, []);
 
+  // Signed in already: on in. Only a session the API still honours, though; a
+  // remembered one that ran out bounced everyone with an old session back to
+  // /home, never to this form (the provider forgets it, lib/staleSession.ts).
   React.useEffect(() => {
     try {
-      if (localStorage.getItem("weered_user")) router.replace(nextPath);
-    } catch {}
-  }, [router, nextPath]);
+      if (!localStorage.getItem("weered_user")) return;
+    } catch {
+      return;
+    }
+    let cancelled = false;
+    void sessionAlive(API).then((alive) => {
+      if (alive && !cancelled) router.replace(nextPath);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [API, router, nextPath]);
 
   async function submit(over?: { mode: "login" | "register"; u: string; p: string }) {
     const m = over?.mode ?? mode;
@@ -296,6 +309,8 @@ function LoginForm() {
     if (e === "registration_full") return ""; // the full panel says it
     if (e === "account_suspended") return "This account is suspended.";
     if (e === "discord_cancelled") return "Discord sign-in was cancelled.";
+    if (e === "session_ended") return "Your session ran out. Sign in again.";
+    if (e === "guest_ended") return "Your guest pass ran out.";
     if (e) return "That sign-in didn't finish. Try again.";
     return "";
   }, [sp]);

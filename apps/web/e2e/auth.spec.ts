@@ -30,3 +30,32 @@ test.describe("auth journey", () => {
     expect(text.length, "authenticated home should render content").toBeGreaterThan(20);
   });
 });
+
+// A session that ran out (7 days after sign-in) while the browser still
+// remembers the member: the site stayed "signed in" over an empty chat and
+// Sign in bounced back to /home (2026-11-03). No account needed: the
+// remembered member is made up and has no cookie.
+test.describe("an ended session", () => {
+  const remember = () =>
+    localStorage.setItem("weered_user", JSON.stringify({ id: "e2e-ended", name: "ended_member" }));
+
+  test("goes to Sign in with the name filled in", async ({ page }) => {
+    await page.goto("/login");
+    await page.evaluate(remember);
+    await page.evaluate(() => localStorage.setItem("weered:returning", "ended_member"));
+    await page.goto("/home");
+    await expect(page).toHaveURL(/\/login\?error=session_ended&next=%2Fhome/, { timeout: 15000 });
+    await expect(page.getByText("Your session ran out. Sign in again.")).toBeVisible();
+    await expect(page.getByPlaceholder("your_handle")).toHaveValue("ended_member");
+    expect(await page.evaluate(() => localStorage.getItem("weered_user"))).toBeNull();
+  });
+
+  test("Sign in stays put instead of bouncing to /home", async ({ page }) => {
+    await page.goto("/login");
+    await page.evaluate(remember);
+    await page.goto("/login");
+    await page.waitForTimeout(3000);
+    await expect(page).toHaveURL(/\/login$/);
+    await expect(page.getByPlaceholder("your_handle")).toBeVisible();
+  });
+});
