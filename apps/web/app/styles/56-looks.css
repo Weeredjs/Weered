@@ -115,6 +115,23 @@ html[data-weered-chrome="min"]
   .weered-name-custom.is-shimmer {
   background-size: 200% 100% !important;
 }
+/* The strip-down's `background` shorthand also resets background-clip, so the
+   rescues above drew these names as solid bars with no letters (2026-11-03). */
+html[data-weered-chrome="min"]
+  :is(.weered-left, .weered-usercorner)
+  :is(
+    .weered-name-sunset,
+    .weered-name-ocean,
+    .weered-name-chrome,
+    .weered-name-blood,
+    .weered-name-mint,
+    .weered-name-void,
+    .weered-name-gilded,
+    .weered-name-custom
+  ) {
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+}
 
 /* ── Avatar frames ────────────────────────────────────────────────────── */
 .weered-frame-ember {
