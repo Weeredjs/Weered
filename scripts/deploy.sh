@@ -17,11 +17,14 @@ if [ "$MODE" != "api" ]; then
   echo ">>> Building web (next build — also the web type gate)"
   ( cd "$ROOT/apps/web" && pnpm next build )
   echo ">>> Restarting weered-web"
-  pm2 restart weered-web --update-env
+  # A heap ceiling, so a Weered flood can't take the memory Fathom shares
+  # (scripts/fence-weered.sh). Set on the restart only, never the build.
+  NODE_OPTIONS="--max-old-space-size=1024" pm2 restart weered-web --update-env
 fi
 
 echo ">>> Restarting weered-api"
-pm2 restart weered-api --update-env
+NODE_OPTIONS="--max-old-space-size=1536" pm2 restart weered-api --update-env
+bash "$ROOT/scripts/fence-weered.sh"
 
 echo ">>> Waiting for API to boot, then smoke-testing"
 sleep 12   # tsx boot (transpile + Prisma + WS) takes ~5-15s

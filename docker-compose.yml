@@ -34,6 +34,10 @@ services:
     image: redis:7-alpine
     container_name: weered_redis
     restart: unless-stopped
+    # Ceilings so a Weered flood can't starve Fathom on the shared droplet
+    # (scripts/fence-weered.sh applies the same to the running container).
+    cpus: 0.5
+    mem_limit: 256m
     command: ["redis-server", "--appendonly", "yes"]
     ports:
       # Loopback only -- this was answering unauthenticated PING from the
@@ -56,6 +60,10 @@ services:
     image: livekit/livekit-server:v1.9
     container_name: weered_livekit
     restart: unless-stopped
+    # Ceilings so a Weered flood can't starve Fathom (scripts/fence-weered.sh).
+    # Postgres stays uncapped: it holds Fathom's database too.
+    cpus: 1.0
+    mem_limit: 768m
     command: ["--config", "/etc/livekit.yaml"]
     depends_on:
       redis:
