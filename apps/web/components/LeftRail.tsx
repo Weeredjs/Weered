@@ -1,5 +1,6 @@
 "use client";
 
+import { poll } from "@/lib/floodMode";
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -43,8 +44,16 @@ export default function LeftRail() {
   const { openSheet: _openSheet, replaceTop } = useOverlay();
   const pathname = usePathname() || "";
   const router = useRouter();
-  const { joinedRoomId, activeRoomId, me, globalRole, currentLobbyId, joinStatus, leave } =
-    useWeered() as any;
+  const {
+    joinedRoomId,
+    activeRoomId,
+    me,
+    globalRole,
+    currentLobbyId,
+    joinStatus,
+    leave,
+    metaByRoom,
+  } = useWeered() as any;
   const users = useRoomUsers(activeRoomId);
   // The Review Room gate: true only inside an office room or on the office host.
   // Every office-context divergence below checks this flag and nothing else.
@@ -158,7 +167,7 @@ export default function LeftRail() {
         if (typeof j.balance === "number") setPaperBal(j.balance);
       })
       .catch(() => {});
-    const iv = setInterval(() => {
+    return poll(() => {
       fetch("https://api.weered.ca/paper/wallet", { headers: { Authorization: `Bearer ${tok}` } })
         .then((r) => r.json())
         .then((j) => {
@@ -166,7 +175,6 @@ export default function LeftRail() {
         })
         .catch(() => {});
     }, 30000);
-    return () => clearInterval(iv);
   }, []);
 
   const sub = useMemo(() => {
@@ -207,7 +215,7 @@ export default function LeftRail() {
       } catch {}
     };
     void fetchPresence();
-    const t = setInterval(fetchPresence, 20000);
+    const stopPoll = poll(fetchPresence, 20000);
     // And soon after someone's rank changes, so a promotion shows. Only then:
     // every open page refetching on every arrival or departure is a request
     // per viewer per join in a busy lobby; the poll above covers those.
@@ -227,7 +235,7 @@ export default function LeftRail() {
     for (const k of kinds) window.addEventListener(k, nudge);
     return () => {
       cancelled = true;
-      clearInterval(t);
+      stopPoll();
       if (soon) clearTimeout(soon);
       for (const k of kinds) window.removeEventListener(k, nudge);
     };
@@ -577,8 +585,7 @@ export default function LeftRail() {
       } catch {}
     };
     void fetchCounts();
-    const t = setInterval(fetchCounts, 20000);
-    return () => clearInterval(t);
+    return poll(fetchCounts, 20000);
   }, [favs.length, recentRooms.length]);
 
   const [pendingRooms, setPendingRooms] = useState<Set<string>>(new Set());
@@ -878,7 +885,10 @@ export default function LeftRail() {
                 {isLobbyActive && lobbyPresence.length > 0
                   ? `${lobbyPresenceId} · all rooms`
                   : `context: ${getRoomName(rawRoomKey) || (isLobbyActive ? "lobby" : "—")}`}{" "}
-                • {listed.length}
+                {/* A big room sends a sample of names; its head count is everyone. */}•{" "}
+                {!q && metaByRoom?.[activeRoomId]?.sampled
+                  ? metaByRoom[activeRoomId].count
+                  : listed.length}
               </>
             )}
           </div>

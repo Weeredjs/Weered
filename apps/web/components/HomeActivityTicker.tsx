@@ -1,5 +1,6 @@
 "use client";
 
+import { hiddenTab, refreshEvery } from "@/lib/floodMode";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 
@@ -26,6 +27,11 @@ export default function HomeActivityTicker() {
     let timer: ReturnType<typeof setTimeout> | null = null;
 
     async function load() {
+      // A hidden tab waits its turn instead of asking.
+      if (hiddenTab()) {
+        if (aliveRef.current) timer = setTimeout(load, 15_000);
+        return;
+      }
       try {
         const tok = (() => {
           try {
@@ -76,7 +82,8 @@ export default function HomeActivityTicker() {
       } catch {
         if (aliveRef.current) setHasFetched(true);
       }
-      if (aliveRef.current) timer = setTimeout(load, 15_000);
+      // Slower in flood mode (lib/floodMode.ts).
+      if (aliveRef.current) timer = setTimeout(load, refreshEvery(15_000));
     }
     void load();
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { poll } from "@/lib/floodMode";
 import { useEffect, useState, useCallback } from "react";
 import EmptyState from "./EmptyState";
 import LoadingState from "./LoadingState";
@@ -98,8 +99,7 @@ export function useNotifications() {
 
   useEffect(() => {
     void fetchUnreadCount();
-    const iv = setInterval(fetchUnreadCount, 30000);
-    return () => clearInterval(iv);
+    return poll(fetchUnreadCount, 30000);
   }, [fetchUnreadCount]);
 
   useEffect(() => {

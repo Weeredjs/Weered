@@ -82,6 +82,9 @@ export type SiteConfig = {
   maintenanceMode: boolean;
   aiEnabled: boolean;
   defaultTier: UserTier;
+  /** The flood switches (api lib/flood.ts); "auto" = the pressure watch threw it. */
+  floodMode?: "off" | "on" | "auto";
+  capacityMode?: boolean;
 };
 
 export function fmtDate(s: string) {

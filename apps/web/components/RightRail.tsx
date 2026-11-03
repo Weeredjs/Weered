@@ -1,5 +1,6 @@
 "use client";
 
+import { floodOn, hiddenTab, poll } from "@/lib/floodMode";
 import React from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -99,7 +100,13 @@ function useWsRefresh(types: string[], cb: () => void) {
   const cbRef = React.useRef(cb); cbRef.current = cb;
   React.useEffect(() => {
     let t: any = null;
-    const fire = () => { if (t) return; t = setTimeout(() => { t = null; cbRef.current(); }, 800); };
+    // A push asks for a reload; in a crowd every arrival pushed, so every tab
+    // reloaded about once a second. Now at most every 3-5 s (15-25 s in flood
+    // mode), spread out, and not at all from a hidden tab (flood readiness 2026-11-02).
+    const fire = () => {
+      if (t || hiddenTab()) return;
+      t = setTimeout(() => { t = null; cbRef.current(); }, (floodOn() ? 20_000 : 4_000) * (0.75 + Math.random() * 0.5));
+    };
     const names = types.map(x => `weered:${x}`);
     names.forEach(n => window.addEventListener(n, fire));
     return () => { if (t) clearTimeout(t); names.forEach(n => window.removeEventListener(n, fire)); };
@@ -121,8 +128,8 @@ function useLobbyPresence(lobbyId: string) {
     };
     void load();
     loadRef.current = () => void load();
-    const t = setInterval(load, 60000);
-    return () => { alive = false; clearInterval(t); };
+    const stop = poll(load, 60000);
+    return () => { alive = false; stop(); };
   }, [lobbyId]);
   const loadRef = React.useRef<() => void>(() => {});
   useWsRefresh(["presence:join", "presence:leave", "presence:state", "lobby:activity"], () => loadRef.current());
@@ -142,8 +149,8 @@ function useLobbyCrews(lobbyId: string, enabled: boolean) {
       } catch {}
     };
     void (load());
-    const t = setInterval(load, 60000);
-    return () => { alive = false; clearInterval(t); };
+    const stop = poll(load, 60000);
+    return () => { alive = false; stop(); };
   }, [lobbyId, enabled]);
   return crews;
 }
@@ -430,7 +437,7 @@ function RoomsPanel({ currentRoomId, lobbyId }: { currentRoomId: string; lobbyId
   }
 
   React.useEffect(() => { void load(); }, [lobbyId]);
-  React.useEffect(() => { const t = setInterval(load, 60000); return () => clearInterval(t); }, [lobbyId]);
+  React.useEffect(() => poll(load, 60000), [lobbyId]);
   useWsRefresh(["lobby:activity", "room:closed", "room:locked"], load);
 
   const filtered = rows
@@ -977,7 +984,7 @@ function FriendsPanel({ lobbyId }: { lobbyId: string }) {
     try { const j = await apiFetch("/friends"); setFriends(Array.isArray(j?.friends) ? j.friends : []); } catch {}
   }
   React.useEffect(() => { if (mounted) void load(); }, [mounted]);
-  React.useEffect(() => { if (!mounted) return; const t = setInterval(load, 60000); return () => clearInterval(t); }, [mounted]);
+  React.useEffect(() => { if (!mounted) return; return poll(load, 60000); }, [mounted]);
 
   // "Come hang where I am": a notification that links them to your room.
   async function invite(userId: string) {
@@ -1205,7 +1212,7 @@ function CrewPanel({ lobbyId }: { lobbyId: string }) {
   React.useEffect(() => { setMounted(true); }, []);
   async function load() { try { const j = await apiFetch("/crews/mine"); setCrews(Array.isArray(j?.crews) ? j.crews : []); } catch {} }
   React.useEffect(() => { if (mounted) void load(); }, [mounted]);
-  React.useEffect(() => { if (!mounted) return; const t = setInterval(load, 60000); return () => clearInterval(t); }, [mounted]);
+  React.useEffect(() => { if (!mounted) return; return poll(load, 60000); }, [mounted]);
 
   if (!mounted) return null;
   if (!crews.length) return <CrewEmptyDiscovery lobbyId={lobbyId} />;

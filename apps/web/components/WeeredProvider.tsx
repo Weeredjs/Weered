@@ -9,6 +9,8 @@ import SystemBroadcast from "./SystemBroadcast";
 import { weeredToast } from "../lib/toast";
 import { onActivate } from "@/lib/a11y";
 import React, { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { hotStore } from "./hotStore";
+import { setFloodFlag } from "@/lib/floodMode";
 
 const API    = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 const WS_URL = process.env.NEXT_PUBLIC_WS_URL   || "ws://127.0.0.1:4001";
@@ -27,8 +29,8 @@ function effectiveWsUrl(): string {
 }
 
 type Role       = "owner" | "mod" | "member" | "none";
-type RoomUser   = { id: string; name: string; role?: Role; globalRole?: string; avatarColor?: string };
-type ChatMsg    = { id: string; user: RoomUser; body: string; ts: number; kind?: "trade" | "dice" | "system" | "poker" | "poker-winner"; meta?: any };
+export type RoomUser   = { id: string; name: string; role?: Role; globalRole?: string; avatarColor?: string };
+export type ChatMsg    = { id: string; user: RoomUser; body: string; ts: number; kind?: "trade" | "dice" | "system" | "poker" | "poker-winner"; meta?: any };
 type Knock      = { userId: string; name: string; ts: number };
 type JoinStatus = "idle" | "joining" | "joined" | "knocking" | "banned" | "denied";
 
@@ -52,7 +54,7 @@ type AuditItem = {
   targetId?: string; targetName?: string; note?: string;
 };
 
-type RoomMeta   = { name: string; locked: boolean; chatDisabled: boolean; slowSec?: number; thumbnail?: string; ownerId: string; mods: string[]; description?: string; iconUrl?: string; bannerUrl?: string; accentColor?: string; disabledModules?: string[] };
+type RoomMeta   = { name: string; locked: boolean; chatDisabled: boolean; slowSec?: number; thumbnail?: string; ownerId: string; mods: string[]; description?: string; iconUrl?: string; bannerUrl?: string; accentColor?: string; disabledModules?: string[]; count?: number; sampled?: boolean };
 type AdminState = { knocks: Knock[]; banned: string[]; muted: string[]; audit: AuditItem[] };
 type ModuleState = { mode: string; url?: string; channel?: string; setBy?: string; setAt?: number } | null;
 
@@ -147,54 +149,8 @@ function readSettings(): any {
   } catch { return null; }
 }
 
-// ── Hot-path store (presence / chat / typing) ────────────────────────────────
-// These maps change on every message, keystroke and presence tick. They live
-// outside React context so an update only re-renders components subscribed
-// through the useRoom* hooks — not every useWeered() consumer.
-type HotMaps = {
-  usersByRoom: Record<string, RoomUser[]>;
-  msgsByRoom: Record<string, ChatMsg[]>;
-  typingByRoom: Record<string, { userId: string; name: string; ts: number }[]>;
-};
-const EMPTY_USERS: RoomUser[] = [];
-const EMPTY_MSGS: ChatMsg[] = [];
-const EMPTY_TYPING: { userId: string; name: string; ts: number }[] = [];
-export const hotStore = {
-  state: { usersByRoom: {}, msgsByRoom: {}, typingByRoom: {} } as HotMaps,
-  subs: new Set<() => void>(),
-  set<K extends keyof HotMaps>(key: K, updater: React.SetStateAction<HotMaps[K]>) {
-    const prev = hotStore.state[key];
-    const next = typeof updater === "function" ? (updater as (p: HotMaps[K]) => HotMaps[K])(prev) : updater;
-    if (next === prev) return;
-    hotStore.state = { ...hotStore.state, [key]: next };
-    hotStore.subs.forEach((fn) => { try { fn(); } catch {} });
-  },
-  subscribe(fn: () => void) { hotStore.subs.add(fn); return () => { hotStore.subs.delete(fn); }; },
-};
-export function useRoomUsers(roomId?: string): RoomUser[] {
-  return React.useSyncExternalStore(
-    hotStore.subscribe,
-    () => (roomId ? hotStore.state.usersByRoom[roomId] || EMPTY_USERS : EMPTY_USERS),
-    () => EMPTY_USERS,
-  );
-}
-export function useUsersByRoom(): Record<string, RoomUser[]> {
-  return React.useSyncExternalStore(hotStore.subscribe, () => hotStore.state.usersByRoom, () => hotStore.state.usersByRoom);
-}
-export function useRoomMsgs(roomId?: string): ChatMsg[] {
-  return React.useSyncExternalStore(
-    hotStore.subscribe,
-    () => (roomId ? hotStore.state.msgsByRoom[roomId] || EMPTY_MSGS : EMPTY_MSGS),
-    () => EMPTY_MSGS,
-  );
-}
-export function useRoomTyping(roomId?: string): { userId: string; name: string; ts: number }[] {
-  return React.useSyncExternalStore(
-    hotStore.subscribe,
-    () => (roomId ? hotStore.state.typingByRoom[roomId] || EMPTY_TYPING : EMPTY_TYPING),
-    () => EMPTY_TYPING,
-  );
-}
+// The hot-path store lives in ./hotStore (moved 2026-11-02 to make room here).
+export { hotStore, useRoomUsers, useUsersByRoom, useRoomMsgs, useRoomTyping } from "./hotStore";
 
 const WeeredContext = createContext<Ctx | null>(null);
 
@@ -266,6 +222,10 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
   const [globalRole, setGlobalRole] = useState("");
 
   const [wsState, setWsState] = useState<number>(WebSocket.CLOSED);
+  // Reconnects (see ws.onclose): a bump re-runs the socket effect.
+  const [wsRetry, setWsRetry] = useState(0);
+  const retriesRef = useRef(0);
+  const retryTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const [wsReady, setWsReady] = useState(false);
   const wsRef            = useRef<WebSocket | null>(null);
   // Users we've already fired an away-alert for, per room. Reconnects replay
@@ -416,10 +376,19 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
       }).catch(() => {});
     };
 
-    ws.onclose = () => {
+    ws.onclose = (ev) => {
       setWsState(WebSocket.CLOSED);
       setWsReady(false);
       if (wsRef.current === ws) wsRef.current = null;
+      // Back on its own, spread out so a restart doesn't bring every tab back
+      // in the same second (1, 2, 4... up to 30 s, each 0.5-1.5x). Never after
+      // the door shut (4010: the full page takes over); a minute when this
+      // address has too many sockets (4029).
+      if (ev.code === 4010) return;
+      const n = retriesRef.current++;
+      const wait = ev.code === 4029 ? 60_000 : Math.min(30_000, 1_000 * 2 ** n) * (0.5 + Math.random());
+      clearTimeout(retryTimerRef.current);
+      retryTimerRef.current = setTimeout(() => setWsRetry((x) => x + 1), wait);
     };
     ws.onerror = () => { setWsState(ws.readyState); };
 
@@ -502,6 +471,8 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
       if (Array.isArray(msg.rooms)) setRooms(msg.rooms);
 
       if (msg.type === "auth:ok") {
+        retriesRef.current = 0;
+        setFloodFlag(Boolean(msg.flood));
         setWsReady(true);
         setWsState(WebSocket.OPEN);
         const u = msg.user ?? msg.payload?.user ?? null;
@@ -525,6 +496,17 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
+      if (msg.type === "presence:count") {
+        const rid = String(msg.roomId || "");
+        setMetaByRoom(prev => (prev[rid] ? { ...prev, [rid]: { ...prev[rid], count: Number(msg.count) || 0 } } : prev));
+        return;
+      }
+      // The flood switches (api lib/flood.ts): the door shut, or flood mode flipped.
+      if (msg.type === "site:closed") {
+        try { window.dispatchEvent(new CustomEvent("weered:site-closed", { detail: { door: msg.door, message: msg.message } })); } catch {}
+        return;
+      }
+      if (msg.type === "site:flood") { setFloodFlag(Boolean(msg.on)); return; }
       if (msg.type === "presence:state") {
         const rid  = String(msg.roomId || "");
         const list = Array.isArray(msg.users) ? msg.users : [];
@@ -549,6 +531,9 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
             bannerUrl: msg.bannerUrl || undefined,
             accentColor: msg.accentColor || undefined,
             disabledModules: Array.isArray(msg.disabledModules) ? msg.disabledModules.map(String) : [],
+            // A big room sends a sample of names; count is everyone (api lib/roomState.ts).
+            count: Number.isFinite(msg.count) ? Number(msg.count) : list.length,
+            sampled: Boolean(msg.sampled),
           },
         }));
         setStatusByRoom(prev => ({ ...prev, [rid]: "joined" }));
@@ -1124,7 +1109,7 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
 
     return () => { };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token]);
+  }, [token, wsRetry]);
 
   useEffect(() => {
     if (!wsReady) return;

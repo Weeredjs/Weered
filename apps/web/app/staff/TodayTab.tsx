@@ -42,6 +42,16 @@ export type TodayData = {
     registrationCap: number;
     waitlist: number;
     aiEnabled: boolean;
+    // The flood switches and the server's latest reading (api lib/flood.ts, lib/pressure.ts).
+    floodMode?: "off" | "on" | "auto";
+    door?: "open" | "capacity" | "maintenance";
+    pressure?: {
+      loopMs: number;
+      loadPerCore: number;
+      memLeftPct: number;
+      sockets: number;
+      level: "calm" | "busy" | "hot";
+    } | null;
   };
   recent?: {
     id: string;
@@ -290,6 +300,30 @@ export function TodayTab({
               <i className="wops-dot" data-tone={site.maintenanceMode ? "warn" : "off"} />
               Maintenance {site.maintenanceMode ? "on" : "off"}
             </span>
+            {site.pressure && (
+              <span
+                className="wops-chip"
+                title={`Event loop ${site.pressure.loopMs} ms late · load ${site.pressure.loadPerCore} per core · ${site.pressure.memLeftPct}% memory left`}
+              >
+                <i
+                  className="wops-dot"
+                  data-tone={site.pressure.level === "calm" ? undefined : "warn"}
+                />
+                Server {site.pressure.level} · {site.pressure.sockets.toLocaleString()} connected
+              </span>
+            )}
+            {site.floodMode && site.floodMode !== "off" && (
+              <span className="wops-chip">
+                <i className="wops-dot" data-tone="warn" />
+                Flood mode on{site.floodMode === "auto" ? " (by itself)" : ""}
+              </span>
+            )}
+            {site.door === "capacity" && (
+              <span className="wops-chip">
+                <i className="wops-dot" data-tone="warn" />
+                Lights off: Weered is full
+              </span>
+            )}
           </div>
         </section>
       )}

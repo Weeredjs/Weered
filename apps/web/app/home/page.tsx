@@ -1,5 +1,6 @@
 "use client";
 
+import { poll } from "@/lib/floodMode";
 import React, { useMemo, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
@@ -538,9 +539,10 @@ function LiveTicker({ rooms: _rooms, onJoin, apiBase }: { rooms: any[]; onJoin: 
       } catch {}
     };
     void (fetchStream()); void (fetchRooms());
-    const t1 = setInterval(fetchStream, 90000);
-    const t2 = setInterval(fetchRooms, 12000);
-    return () => { cancelled = true; clearInterval(t1); clearInterval(t2); };
+    // Spread out, slower in flood mode, skipped in a hidden tab (lib/floodMode.ts).
+    const stop1 = poll(fetchStream, 90000);
+    const stop2 = poll(fetchRooms, 15000);
+    return () => { cancelled = true; stop1(); stop2(); };
   }, [apiBase]);
 
   if (!stream && liveRooms.length === 0) return null;

@@ -1,5 +1,6 @@
 "use client";
 
+import { poll } from "@/lib/floodMode";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useWeered } from "./WeeredProvider";
 import { hideSpoilers } from "./chat/chatShared";
@@ -329,8 +330,7 @@ export default function DockShell(props: { forceMode?: "rail" | "floating" } = {
         .catch(() => {});
     }
     pollUnread();
-    const t = setInterval(pollUnread, 60000);
-    return () => clearInterval(t);
+    return poll(pollUnread, 60000);
   }, [tokenMaybe, apiBase]);
 
   useEffect(() => {

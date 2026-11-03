@@ -94,8 +94,69 @@ export function ConfigTab() {
     </button>
   );
 
+  // The flood switches act the moment they're pressed: in a flood there's no
+  // time for Save (api lib/flood.ts, flood readiness 2026-11-02).
+  async function setSwitch(body: Partial<SiteConfig>, done: string) {
+    if (
+      body.capacityMode === true &&
+      !window.confirm(
+        'Lights off: everyone but staff gets the "Weered is full" page and drops out of their rooms. Go?',
+      )
+    )
+      return;
+    const j = await apiFetch("/staff/config", { method: "POST", body: JSON.stringify(body) });
+    if (j?.ok) setConfig((c) => (c ? { ...c, ...body } : c));
+    setMsg(j?.ok ? done : j?.error || "Failed.");
+  }
+  const flood = config.floodMode || "off";
+
   return (
     <div style={{ maxWidth: 560 }}>
+      <div
+        style={{
+          padding: "12px 14px",
+          borderRadius: 9,
+          border: "1px solid rgba(251,191,36,.35)",
+          background: "rgba(251,191,36,.06)",
+          marginBottom: 14,
+        }}
+      >
+        <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 4 }}>If Weered floods</div>
+        <div style={{ fontSize: 12, opacity: 0.75, lineHeight: 1.5, marginBottom: 10 }}>
+          Flood mode: sign-ups wait on the waitlist, the AI builder rests, crowded rooms update
+          every few seconds and pages refresh less. It also switches itself on when the server runs
+          hot, and off after 15 calm minutes. Lights off: everyone but staff gets a &quot;Weered is
+          full&quot; page until you switch it back.
+        </div>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <button
+            style={flood === "off" ? S.btn : S.btnPri}
+            onClick={() =>
+              void setSwitch(
+                { floodMode: flood === "off" ? "on" : "off" },
+                flood === "off" ? "Flood mode is on." : "Flood mode is off.",
+              )
+            }
+          >
+            {flood === "off"
+              ? "Flood mode: off"
+              : flood === "auto"
+                ? "Flood mode: on (by itself)"
+                : "Flood mode: on"}
+          </button>
+          <button
+            style={config.capacityMode ? S.btnPri : S.btn}
+            onClick={() =>
+              void setSwitch(
+                { capacityMode: !config.capacityMode },
+                config.capacityMode ? "The doors are open again." : "Lights off: Weered is full.",
+              )
+            }
+          >
+            {config.capacityMode ? "Lights off: on, open the doors" : "Lights off"}
+          </button>
+        </div>
+      </div>
       <Row label="Featured Hero Lobby">
         <select
           value={config.featuredLobbyId || ""}

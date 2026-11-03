@@ -1,5 +1,6 @@
 "use client";
 
+import { poll } from "@/lib/floodMode";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useWeered } from "./WeeredProvider";
@@ -54,8 +55,7 @@ export function LogoMenu() {
 
   useEffect(() => {
     void fetchUnread();
-    const iv = setInterval(fetchUnread, 30000);
-    return () => clearInterval(iv);
+    return poll(fetchUnread, 30000);
   }, [fetchUnread]);
 
   useEffect(() => {
