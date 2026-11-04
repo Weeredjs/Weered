@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { plural } from "../lib/plural";
 
 const API = "https://api.weered.ca";
 
@@ -275,7 +276,7 @@ export default function LobbySearch({
             logo={l.logoUrl}
             accent={l.accentColor}
             name={l.name}
-            sub={`${l._count?.members ?? 0} members · ${l._count?.rooms ?? 0} rooms`}
+            sub={`${plural(l._count?.members ?? 0, "member")} · ${plural(l._count?.rooms ?? 0, "room")}`}
           />
         ))}
       {rooms.length > 0 && <SectionLabel>Rooms</SectionLabel>}
@@ -299,7 +300,7 @@ export default function LobbySearch({
 
   if (hero) {
     const hints = allLobbies.length
-      ? [...HERO_HINTS, `${allLobbies.length} lobbies. Find your people.`]
+      ? [...HERO_HINTS, `${plural(allLobbies.length, "lobby", "lobbies")}. Find your people.`]
       : HERO_HINTS;
     const ph =
       focused || q ? "Search lobbies, rooms, people, tags…" : hints[hintIdx % hints.length];

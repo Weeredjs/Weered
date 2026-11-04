@@ -12,6 +12,7 @@ import { treeCount, MAX_DEPTH, INDENT_CAP } from "../../lib/commentTree";
 import MarkdownComposer from "./MarkdownComposer";
 import LinkPreviewCard from "../LinkPreviewCard";
 import { previewUrls } from "../../lib/forumLinks";
+import { plural } from "../../lib/plural";
 
 export type CommentT = {
   id: string;
@@ -115,7 +116,7 @@ export default function CommentNode({ c, ctx }: { c: CommentT; ctx: NodeCtx }) {
         >
           <span style={{ color: ACCENT, fontWeight: 900 }}>[+]</span>
           <span style={{ color: "rgba(229,231,235,.6)" }}>{c.authorName}</span>
-          <span style={{ opacity: 0.45 }}>&middot; {c.score} points</span>
+          <span style={{ opacity: 0.45 }}>&middot; {plural(c.score, "point")}</span>
           {hidden > 0 && (
             <span style={{ opacity: 0.45 }}>
               &middot; {hidden} {hidden === 1 ? "reply" : "replies"}

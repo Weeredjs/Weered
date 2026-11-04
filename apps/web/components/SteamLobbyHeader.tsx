@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { noun } from "../lib/plural";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
@@ -128,7 +129,7 @@ export default function SteamLobbyHeader({
         <span
           title={
             count !== null
-              ? `${count.toLocaleString()} players online via Steam`
+              ? `${count.toLocaleString()} ${noun(count, "player")} online via Steam`
               : "Loading concurrent player count…"
           }
           style={{
@@ -163,7 +164,7 @@ export default function SteamLobbyHeader({
 
       {owned?.owned && (
         <span
-          title={`You own this game on Steam${owned.hoursPlayed > 0 ? ` — ${owned.hoursPlayed.toLocaleString()} hours played` : ""}${owned.lastPlayed ? ` · last played ${new Date(owned.lastPlayed).toLocaleDateString()}` : ""}`}
+          title={`You own this game on Steam${owned.hoursPlayed > 0 ? ` — ${owned.hoursPlayed.toLocaleString()} ${noun(owned.hoursPlayed, "hour")} played` : ""}${owned.lastPlayed ? ` · last played ${new Date(owned.lastPlayed).toLocaleDateString()}` : ""}`}
           style={{
             display: "inline-flex",
             alignItems: "center",

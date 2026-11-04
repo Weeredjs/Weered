@@ -18,6 +18,7 @@ import ShellSlot from "./shell/ShellSlot";
 import { useShellLayout } from "../lib/shellDesign";
 import { isCore, keyOf, PANEL_CORES, stockShell, type PanelCore } from "../lib/shellLayout";
 import { useOfficeSkin } from "./useOfficeSkin";
+import { plural } from "../lib/plural";
 
 const STOCK_SHELL = stockShell();
 
@@ -854,7 +855,7 @@ function LobbyModPanel({ globalRole, lobbyId }: { globalRole: string; lobbyId: s
             const ok = await weeredConfirm({ title: "Clear all lobby chat?", body: "Every message in this lobby's chat gets wiped. Can't be undone.", confirmLabel: "Clear chat", destructive: true });
             if (!ok) return;
             setLoad(true);
-            try { const j = await apiFetch("/staff/lobby/clear-chat", { method: "POST", body: JSON.stringify({ lobbyId }) }); setNote(j.ok ? `Chat cleared (${j.removed ?? 0} messages).` : j.error || "Failed."); }
+            try { const j = await apiFetch("/staff/lobby/clear-chat", { method: "POST", body: JSON.stringify({ lobbyId }) }); setNote(j.ok ? `Chat cleared (${plural(j.removed ?? 0, "message")}).` : j.error || "Failed."); }
             catch { setNote("Request failed."); } finally { setLoad(false); }
           }}
           onKeyDown={(e) => { if ((e.key === "Enter" || e.key === " ") && !loading) (e.currentTarget as HTMLElement).click(); }}
@@ -1349,7 +1350,7 @@ function DiscoverLobbiesPanel({ currentLobbyId }: { currentLobbyId: string }) {
                   {l.verified && <span style={{ fontSize: 9, color: "rgb(110,231,183)" }}>✓</span>}
                 </div>
                 <div style={{ fontSize: 10, opacity: 0.55, marginTop: 1 }}>
-                  {(l.onlineCount || 0) > 0 ? `${l.onlineCount} online` : `${l._count?.members || 0} members`}
+                  {(l.onlineCount || 0) > 0 ? `${l.onlineCount} online` : plural(l._count?.members || 0, "member")}
                 </div>
               </div>
               <span style={{ fontSize: 10, padding: "3px 8px", borderRadius: 999, border: `1px solid ${accent}55`, background: `${accent}18`, color: "rgba(243,244,246,.85)", flexShrink: 0 }}>visit</span>

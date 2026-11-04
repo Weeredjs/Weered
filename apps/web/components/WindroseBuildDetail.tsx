@@ -4,6 +4,7 @@ import React from "react";
 import { useOverlay } from "./overlays/OverlayProvider";
 import { useWeered } from "./WeeredProvider";
 import { onActivate } from "@/lib/a11y";
+import { plural } from "../lib/plural";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 const ACCENT = "#c9a066";
@@ -517,7 +518,7 @@ export default function WindroseBuildDetail({
                   marginTop: 2,
                 }}
               >
-                {build.views || 0} views · {build.saveCount || 0} saved
+                {plural(build.views || 0, "view")} · {build.saveCount || 0} saved
               </div>
             </div>
             <VoteBtn

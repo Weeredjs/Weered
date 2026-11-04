@@ -13,6 +13,7 @@ import { hotStore } from "./hotStore";
 import { setFloodFlag } from "@/lib/floodMode";
 import { watchSession } from "@/lib/staleSession";
 import { holdChat, releaseChat, type HeldChat } from "@/lib/chatOutbox";
+import { plural } from "../lib/plural";
 
 const API    = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 const WS_URL = process.env.NEXT_PUBLIC_WS_URL   || "ws://127.0.0.1:4001";
@@ -653,7 +654,7 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
         weeredToast.warn(
           banned
             ? `You were banned from ${where}${by}.`
-            : `You were removed from ${where}${by}. You can come back in ${Number(msg.minutes) || 10} minutes.`,
+            : `You were removed from ${where}${by}. You can come back in ${plural(Number(msg.minutes) || 10, "minute")}.`,
         );
         if (rid) {
           setDeniedByRoom(prev => ({ ...prev, [rid]: { reason: banned ? "banned" : "kicked", minutes: Number(msg.minutes) || undefined, by: msg.by ? String(msg.by) : undefined } }));

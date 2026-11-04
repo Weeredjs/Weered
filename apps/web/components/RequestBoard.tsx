@@ -17,6 +17,7 @@ import {
   type ReactNode,
 } from "react";
 import { useWeered } from "./WeeredProvider";
+import { plural } from "../lib/plural";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
@@ -405,7 +406,7 @@ export default function RequestBoard({
         <Link
           href={loginHref}
           className="weered-req-btn"
-          aria-label={`Sign in to vote for ${r.title} (${r.voteCount} votes)`}
+          aria-label={`Sign in to vote for ${r.title} (${plural(r.voteCount, "vote")})`}
           title="Sign in to vote"
           style={style}
         >
@@ -420,7 +421,7 @@ export default function RequestBoard({
         onClick={() => void toggleVote(r)}
         disabled={r.pending}
         aria-pressed={r.voted}
-        aria-label={`${r.voted ? "Remove your vote for" : "Vote for"} ${r.title} (${r.voteCount} votes)`}
+        aria-label={`${r.voted ? "Remove your vote for" : "Vote for"} ${r.title} (${plural(r.voteCount, "vote")})`}
         style={style}
       >
         {inner}

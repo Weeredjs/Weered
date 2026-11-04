@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useState } from "react";
+import { plural } from "../lib/plural";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 const ACCENT = "#e84393";
@@ -597,7 +598,7 @@ export default function GtaLfgBoard({
                   </span>
                   {(p.hostCompleted ?? 0) > 0 && (
                     <span
-                      title={`${p.hostCompleted} sessions completed`}
+                      title={`${plural(p.hostCompleted, "session")} completed`}
                       style={{
                         fontFamily: "var(--font-barlow), sans-serif",
                         fontSize: 9,

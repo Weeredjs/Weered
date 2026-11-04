@@ -9,6 +9,7 @@ import React, { useEffect, useState } from "react";
 import { apiFetch } from "../../lib/api";
 import { onActivate } from "@/lib/a11y";
 import { FONT } from "./ForumHelpers";
+import { plural } from "../../lib/plural";
 
 export type Section = {
   id: string;
@@ -393,7 +394,7 @@ export function SectionManageModal({
             >
               <span style={{ fontSize: 14 }}>{s.icon || "•"}</span>
               <span style={{ flex: 1, fontSize: 12, fontWeight: 700 }}>{s.name}</span>
-              <span style={{ fontSize: 10, opacity: 0.5 }}>{s.postCount} posts</span>
+              <span style={{ fontSize: 10, opacity: 0.5 }}>{plural(s.postCount, "post")}</span>
               <button onClick={() => reorder(s, -1)} disabled={i === 0 || busy} style={btnIcon}>
                 &#9650;
               </button>

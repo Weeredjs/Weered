@@ -6,6 +6,7 @@ import EmptyState from "./EmptyState";
 import ModuleTabBar from "./ModuleTabBar";
 import { useWatchHere, consumePendingStream } from "../lib/useWatchHere";
 import { onActivate } from "@/lib/a11y";
+import { noun, plural } from "../lib/plural";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 const ODOTA = "https://api.opendota.com/api";
@@ -533,7 +534,7 @@ function PlayerLookup({ accent, heroMap }: { accent: string; heroMap: Record<num
                             {heroName}
                           </span>
                           <span style={{ fontSize: 11, fontFamily: "monospace", opacity: 0.5 }}>
-                            {h.games} games
+                            {plural(h.games, "game")}
                           </span>
                           <span style={{
                             fontSize: 11, fontWeight: 700, fontFamily: "monospace", minWidth: 48, textAlign: "right",
@@ -978,7 +979,7 @@ function TwitchStreams({ lobbyId, accentColor }: { lobbyId: string; accentColor:
             )}
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 12, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.title}</div>
-              <div style={{ fontSize: 11, opacity: 0.5, marginTop: 2 }}>{s.userName} &middot; {s.viewerCount?.toLocaleString()} viewers</div>
+              <div style={{ fontSize: 11, opacity: 0.5, marginTop: 2 }}>{s.userName} &middot; {s.viewerCount?.toLocaleString()} {noun(s.viewerCount, "viewer")}</div>
             </div>
             <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#22c55e", boxShadow: "0 0 6px rgba(34,197,94,.6)", flexShrink: 0 }} />
           </div>

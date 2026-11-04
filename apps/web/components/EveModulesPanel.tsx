@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import EmptyState from "./EmptyState";
 import NewsStage from "./NewsStage";
+import { noun, plural } from "../lib/plural";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 const ACCENT_EVE = "#d4af37";
@@ -360,7 +361,7 @@ function LiveTab() {
             const arr = pulse.dangerous || [];
             const max = Math.max(1, ...arr.map((s: any) => s.shipKills || 0));
             return arr.map((s: any, i: number) => (
-              <SystemRow key={s.id} rank={i + 1} name={s.name} id={s.id} right={`${s.shipKills} kills`} rightColor="#fca5a5" pct={(s.shipKills || 0) / max} barColor="rgba(252,165,165,.11)" />
+              <SystemRow key={s.id} rank={i + 1} name={s.name} id={s.id} right={plural(s.shipKills, "kill")} rightColor="#fca5a5" pct={(s.shipKills || 0) / max} barColor="rgba(252,165,165,.11)" />
             ));
           })()}
         </div>
@@ -393,7 +394,7 @@ function LiveTab() {
                     <img src={PORTRAIT(p.id, 32)} alt="" style={{ width: 18, height: 18, borderRadius: 2, flexShrink: 0 }} />
                     <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</span>
                   </span>
-                  <span style={{ position: "relative", zIndex: 1, color: "rgb(244,212,108)", fontWeight: 700, whiteSpace: "nowrap" }}>{(p.kills || 0).toLocaleString()} kills</span>
+                  <span style={{ position: "relative", zIndex: 1, color: "rgb(244,212,108)", fontWeight: 700, whiteSpace: "nowrap" }}>{(p.kills || 0).toLocaleString()} {noun(p.kills || 0, "kill")}</span>
                 </div>
               ));
             })()}
@@ -747,7 +748,7 @@ function LookupTab() {
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 15, fontWeight: 800 }}>{corp.name} <span style={{ opacity: 0.5, fontWeight: 500 }}>[{corp.ticker}]</span></div>
             <div style={{ fontSize: 11, opacity: 0.6, marginTop: 2 }}>
-              {corp.memberCount} members
+              {plural(corp.memberCount, "member")}
               {corp.allianceId && <span> · alliance {corp.allianceId}</span>}
             </div>
             <div style={{ marginTop: 6, display: "flex", gap: 6 }}>

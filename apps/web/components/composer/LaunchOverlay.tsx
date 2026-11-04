@@ -4,6 +4,7 @@
 // the theme, opening the starter rooms, doors open (app/lobby/create).
 import React from "react";
 import { FAINT, MUTED, TEXT, alpha } from "./ui";
+import { plural } from "../../lib/plural";
 
 export default function LaunchOverlay({
   phase,
@@ -72,8 +73,8 @@ export default function LaunchOverlay({
                 : phase === "rooms"
                   ? `Opening rooms ${roomProgress.tried}/${roomProgress.total}`
                   : phase === "done"
-                    ? `${roomProgress.made} of ${roomProgress.total} rooms open`
-                    : `Opening ${roomCount} rooms`,
+                    ? `${roomProgress.made} of ${plural(roomProgress.total, "room")} open`
+                    : `Opening ${plural(roomCount, "room")}`,
             done: phase === "done",
           },
           { label: "Doors open", done: phase === "done" },

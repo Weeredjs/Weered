@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { plural } from "../lib/plural";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
@@ -494,7 +495,7 @@ export default function PassiveTree({ accent = "#AF6025" }: { accent?: string })
         )}
         {allocated.size > 0 && (
           <span style={{ fontSize: 11, fontWeight: 700, color: accent, fontFamily: "monospace" }}>
-            {allocated.size} points allocated
+            {plural(allocated.size, "point")} allocated
           </span>
         )}
         <div style={{ marginLeft: "auto", display: "flex", gap: 6 }}>

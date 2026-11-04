@@ -17,6 +17,7 @@ import {
   type Fleet,
   type Rank,
 } from "./vaShared";
+import { plural } from "../../lib/plural";
 
 /**
  * The group flight, as an airport departure display.
@@ -228,7 +229,7 @@ export default function VaDepartureBoard({
                 color: VA.muted,
               }}
             >
-              {flight.totals.booked} of {flight.totals.slots} slots booked
+              {flight.totals.booked} of {plural(flight.totals.slots, "slot")} booked
             </div>
             <div
               style={{

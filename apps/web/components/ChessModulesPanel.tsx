@@ -2,6 +2,7 @@
 import React, { useEffect, useState, useCallback } from "react";
 import TournamentsPanel from "./TournamentsPanel";
 import ModuleTabBar from "./ModuleTabBar";
+import { plural } from "../lib/plural";
 
 const ACCENT_CHESS = "#7C3AED";
 const API = process.env.NEXT_PUBLIC_API_BASE || "https://api.weered.ca";
@@ -391,7 +392,7 @@ function ChessProfile() {
                     {v.rating}
                   </div>
                   <div style={{ fontSize: 9, color: "rgba(255,255,255,.45)", marginTop: 2 }}>
-                    {v.games} games · {v.prog >= 0 ? "+" : ""}
+                    {plural(v.games, "game")} · {v.prog >= 0 ? "+" : ""}
                     {v.prog}
                   </div>
                 </div>
@@ -511,7 +512,7 @@ function ChessAudit() {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
       <div style={{ fontSize: 11, color: "rgba(255,255,255,.55)", marginBottom: 4 }}>
-        Last {games.length} games — full metadata from the provider. Source of truth.
+        Last {plural(games.length, "game")} — full metadata from the provider. Source of truth.
       </div>
       {games.map((g: any) => {
         const win = g.result === "WIN",

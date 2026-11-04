@@ -5,6 +5,7 @@ import ModuleTabBar from "../ModuleTabBar";
 import { useBarMaps } from "./useBarMaps";
 import MapThumb from "./MapThumb";
 import { useBarDesktopStatus } from "../room/BarLaunch";
+import { plural } from "../../lib/plural";
 
 // Beyond All Reason lobby module. Data comes from BAR's public live services
 // through our API (routes/bar.ts), cached server-side. Private battles are the
@@ -315,7 +316,7 @@ function MatchesTab({ data, error }: { data: MembersResponse | null; error: stri
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontWeight: 700, fontSize: 13 }}>{f.map}</div>
               <div style={{ ...muted, marginTop: 2 }}>
-                {ago(f.startTime)} · {f.durationMin} min · {f.players} players
+                {ago(f.startTime)} · {f.durationMin} min · {plural(f.players, "player")}
                 {f.bots ? " · with AI" : ""}
               </div>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginTop: 6 }}>

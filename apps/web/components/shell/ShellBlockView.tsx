@@ -10,6 +10,7 @@ import dynamic from "next/dynamic";
 import { BLOCK_META, isSitePath, type ShellBlock, type ShellRegion } from "../../lib/shellLayout";
 import { spotifyEmbed, youTubeEmbed } from "../lobby-design/LobbyHomeCanvas";
 import WebpageEmbed from "../WebpageEmbed";
+import { noun } from "../../lib/plural";
 
 const RequestBoard = dynamic(() => import("../RequestBoard"), { ssr: false });
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
@@ -303,9 +304,9 @@ function Body({ block, wide }: { block: ShellBlock; wide: boolean }) {
         <div className="wsb-stats">
           {(
             [
-              [members, "members"],
+              [members, noun(members, "member")],
               [online, "online"],
-              [rooms.length, "rooms"],
+              [rooms.length, noun(rooms.length, "room")],
             ] as [number | undefined, string][]
           ).map(([n, l]) => (
             <div key={l}>

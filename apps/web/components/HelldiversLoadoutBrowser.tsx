@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import HelldiversLoadoutBuilder from "./HelldiversLoadoutBuilder";
 import { onActivate } from "@/lib/a11y";
+import { plural } from "../lib/plural";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
@@ -455,9 +456,9 @@ function LoadoutCard({ loadout, onClick }: { loadout: Loadout; onClick: () => vo
         >
           <span style={{ color: score > 0 ? "#10b981" : score < 0 ? "#f87171" : "#888" }}>
             {score >= 0 ? "+" : ""}
-            {score} votes
+            {plural(score, "vote")}
           </span>
-          <span style={{ color: "#666" }}>{loadout.views} views</span>
+          <span style={{ color: "#666" }}>{plural(loadout.views, "view")}</span>
         </div>
       </div>
     </div>
@@ -708,7 +709,7 @@ function LoadoutDetail({
               {score}
             </div>
             <div style={{ fontSize: 11, color: "#666", marginTop: 4 }}>
-              {l.upvotes}↑ / {l.downvotes}↓ · {l.views} views
+              {l.upvotes}↑ / {l.downvotes}↓ · {plural(l.views, "view")}
             </div>
           </div>
           <button

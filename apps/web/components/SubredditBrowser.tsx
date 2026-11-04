@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import EmptyState from "./EmptyState";
 import LoadingState from "./LoadingState";
+import { plural } from "../lib/plural";
 
 type RedditPost = {
   id: string;
@@ -150,7 +151,11 @@ export default function SubredditBrowser({
             <div>
               <div style={{ fontWeight: 1000, fontSize: 15 }}>r/{sub}</div>
               <div style={{ fontSize: 11, opacity: 0.6 }}>
-                {loading ? "Loading…" : err ? `Error: ${err}` : `${posts.length} posts · ${sort}`}
+                {loading
+                  ? "Loading…"
+                  : err
+                    ? `Error: ${err}`
+                    : `${plural(posts.length, "post")} · ${sort}`}
               </div>
             </div>
           </div>
@@ -277,7 +282,7 @@ export default function SubredditBrowser({
               >
                 <span>u/{selected.author}</span>
                 <span>{fmtTime(selected.created_utc)}</span>
-                <span>💬 {selected.num_comments} comments</span>
+                <span>💬 {plural(selected.num_comments, "comment")}</span>
                 <span>r/{selected.subreddit}</span>
               </div>
 

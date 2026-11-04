@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import StreamInterceptModal, { type StreamInfo } from "./StreamInterceptModal";
 import { onActivate } from "@/lib/a11y";
+import { noun } from "../lib/plural";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
@@ -450,9 +451,11 @@ export default function LobbyHeroBar({
             typeof memberCount === "number" ||
             (inGame ?? 0) > 0) && (
             <div style={{ display: "flex", gap: 6 }}>
-              {typeof roomCount === "number" && <StatChip value={roomCount} label="rooms" />}
+              {typeof roomCount === "number" && (
+                <StatChip value={roomCount} label={noun(roomCount, "room")} />
+              )}
               {typeof memberCount === "number" && memberCount > 0 && (
-                <StatChip value={memberCount} label="members" />
+                <StatChip value={memberCount} label={noun(memberCount, "member")} />
               )}
               {(inGame ?? 0) > 0 && (
                 <StatChip
@@ -664,7 +667,7 @@ function LiveStreamCard({ stream, accent }: { stream: FeaturedStream; accent: st
             backdropFilter: "blur(4px)",
           }}
         >
-          {stream.viewers.toLocaleString()} viewers
+          {stream.viewers.toLocaleString()} {noun(stream.viewers, "viewer")}
         </div>
       </div>
       <div style={{ padding: "8px 10px" }}>

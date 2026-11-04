@@ -4,6 +4,7 @@ import StreamInterceptModal, { type StreamInfo } from "./StreamInterceptModal";
 import { consumePendingStream } from "../lib/useWatchHere";
 import { S, apiFetch } from "./D2Shared";
 import { onActivate } from "@/lib/a11y";
+import { noun } from "../lib/plural";
 
 export function TwitchStreams({
   gameName = "Destiny 2",
@@ -175,7 +176,7 @@ export function TwitchStreams({
                 }}
               />
               <span style={{ fontSize: 11, color: "rgba(230,235,240,.75)", fontWeight: 600 }}>
-                {s.viewerCount?.toLocaleString()} viewers
+                {s.viewerCount?.toLocaleString()} {noun(s.viewerCount, "viewer")}
               </span>
             </div>
           </div>

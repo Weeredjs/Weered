@@ -2,6 +2,7 @@
 
 import React from "react";
 import { API } from "./chatShared";
+import { plural } from "../../lib/plural";
 
 export const MTG_DECK_URL_RE =
   /^https?:\/\/(?:www\.)?(moxfield\.com\/decks\/[\w-]+|archidekt\.com\/decks\/\d+)/i;
@@ -188,7 +189,7 @@ export function MtgDeckChip({ url }: { url: string }) {
           {deck.commanders[0] ? `${deck.commanders[0]} · ` : ""}
           {deck.format || deck.source}
           {deck.author ? ` · ${deck.author}` : ""}
-          {deck.cardCount ? ` · ${deck.cardCount} cards` : ""}
+          {deck.cardCount ? ` · ${plural(deck.cardCount, "card")}` : ""}
         </span>
       </span>
       {colorPips && (

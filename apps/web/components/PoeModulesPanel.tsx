@@ -7,6 +7,7 @@ import ModuleTabBar from "./ModuleTabBar";
 import PassiveTree from "./PassiveTree";
 import { useWatchHere, consumePendingStream } from "../lib/useWatchHere";
 import { onActivate } from "@/lib/a11y";
+import { noun } from "../lib/plural";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 const POE_NINJA = "https://poe.ninja/api/data";
@@ -536,7 +537,7 @@ function TwitchStreams({ lobbyId, accent, twitch }: { lobbyId: string; accent: s
             )}
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 12, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.title}</div>
-              <div style={{ fontSize: 11, opacity: 0.5, marginTop: 2 }}>{s.userName} {"\u00B7"} {s.viewerCount?.toLocaleString()} viewers</div>
+              <div style={{ fontSize: 11, opacity: 0.5, marginTop: 2 }}>{s.userName} {"\u00B7"} {s.viewerCount?.toLocaleString()} {noun(s.viewerCount, "viewer")}</div>
             </div>
             <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#22c55e", boxShadow: "0 0 6px rgba(34,197,94,.6)", flexShrink: 0 }} />
           </div>

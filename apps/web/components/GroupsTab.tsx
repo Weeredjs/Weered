@@ -5,6 +5,7 @@ import EmptyState from "./EmptyState";
 import { hideSpoilers } from "./chat/chatShared";
 import LoadingState from "./LoadingState";
 import { weeredConfirm } from "../lib/confirm";
+import { plural } from "../lib/plural";
 
 function fmtRel(iso: string): string {
   const ms = Date.now() - new Date(iso).getTime();
@@ -299,7 +300,7 @@ export default function GroupsTab({
           </button>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontWeight: 700, fontSize: 14, color: "var(--weered-text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{title}</div>
-            <div style={{ fontSize: 10, color: "var(--weered-muted)" }}>{active.members.length} members</div>
+            <div style={{ fontSize: 10, color: "var(--weered-muted)" }}>{plural(active.members.length, "member")}</div>
           </div>
           <button
             onClick={() => setView("settings")}

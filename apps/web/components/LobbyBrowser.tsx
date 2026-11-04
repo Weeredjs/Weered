@@ -16,6 +16,7 @@ const BORDER = "rgba(255,255,255,.08)";
 const MONO = "'SF Mono', 'Cascadia Mono', 'Fira Code', 'Consolas', monospace";
 
 import type { Lobby } from "@weered/shared";
+import { plural } from "../lib/plural";
 
 function hueFromId(id: string): number {
   return Math.abs([...id].reduce((a, c) => a + c.charCodeAt(0), 0)) % 360;
@@ -298,7 +299,7 @@ function LobbyCard({ lobby, onClick }: { lobby: Lobby; onClick: () => void }) {
               gap: 4,
             }}
           >
-            {lobby._count.members} members
+            {plural(lobby._count.members, "member")}
           </span>
           {lobby.onlineCount > 0 && (
             <span

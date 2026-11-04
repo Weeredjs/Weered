@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import StoryInterceptModal from "./StoryInterceptModal";
 import type { FeedItem } from "./HomeFeed";
+import { plural } from "../lib/plural";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 const GAMING_ACCENT = "#7C3AED";
@@ -53,7 +54,7 @@ const PIN_RULES: { compute: () => Pin | null }[] = [
       return {
         id: "gta6",
         label: "GTA 6 Countdown",
-        value: `${d} days`,
+        value: plural(d, "day"),
         sub: "Nov 19 · find your crew now",
         href: "/lobby/gta6",
         accent: "#e84393",

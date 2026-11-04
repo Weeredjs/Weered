@@ -2,6 +2,7 @@
 
 import React from "react";
 import { VA, HEAD_FONT, Card, Country, type Hub, type VaLink } from "./vaShared";
+import { noun } from "../../lib/plural";
 
 /**
  * The public, recruitment-facing page. The headline, the three values and the
@@ -320,8 +321,9 @@ export default function VaJoin({ hub, publicLinks }: { hub: Hub; publicLinks: Va
           ))}
         </ol>
         <div style={{ fontSize: 12, color: VA.faint, marginTop: 10 }}>
-          The crew here fly {hub.stats.hours30d.toLocaleString("en-GB")} hours a month between them.
-          Evenings CET are when the bases are busiest.
+          The crew here fly {hub.stats.hours30d.toLocaleString("en-GB")}{" "}
+          {noun(hub.stats.hours30d, "hour")} a month between them. Evenings CET are when the bases
+          are busiest.
         </div>
       </Card>
       {a.disclaimer && (

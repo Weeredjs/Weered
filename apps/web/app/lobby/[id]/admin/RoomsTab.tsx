@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { weeredConfirm } from "../../../../lib/confirm";
 import { AdminRoom, S, apiFetch } from "./shared";
+import { plural } from "../../../../lib/plural";
 
 export function RoomsTab({
   lobbyId,
@@ -47,7 +48,9 @@ export function RoomsTab({
           marginBottom: 14,
         }}
       >
-        <div style={{ fontSize: 13, opacity: 0.6 }}>{rooms.length} rooms in this lobby</div>
+        <div style={{ fontSize: 13, opacity: 0.6 }}>
+          {plural(rooms.length, "room")} in this lobby
+        </div>
         {msg && <div style={{ fontSize: 12, opacity: 0.7 }}>{msg}</div>}
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
@@ -80,7 +83,7 @@ export function RoomsTab({
                 )}
               </div>
               <div style={{ fontSize: 11, opacity: 0.4, marginTop: 2, fontFamily: "monospace" }}>
-                {r.onlineCount} online · {r.memberCount} members
+                {r.onlineCount} online · {plural(r.memberCount, "member")}
               </div>
             </div>
             {canManage && (

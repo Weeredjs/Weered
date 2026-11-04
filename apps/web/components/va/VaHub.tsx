@@ -22,6 +22,7 @@ import {
   type Pirep,
 } from "./vaShared";
 import { eventsSince } from "../../lib/eventsSince";
+import { plural } from "../../lib/plural";
 
 /**
  * The crew hub's front page: one screen for what is otherwise spread across
@@ -134,7 +135,7 @@ export default function VaHub({
             }}
           >
             {crew
-              ? `${greeting}. ${s.liveNow ? `${s.liveNow} crews are out there.` : "The bases are quiet."}`
+              ? `${greeting}. ${s.liveNow ? `${plural(s.liveNow, "crew")} ${s.liveNow === 1 ? "is" : "are"} out there.` : "The bases are quiet."}`
               : "Holiday flying, with a crew around you."}
           </h2>
           <div style={{ color: VA.ice, fontSize: 14, maxWidth: 560 }}>
@@ -482,7 +483,7 @@ export default function VaHub({
                   {countdown(gf.startsAt, now)}
                 </span>
                 <span style={{ fontSize: 12, color: VA.muted }}>
-                  {gf.booked}/{gf.slots} slots booked
+                  {gf.booked}/{plural(gf.slots, "slot")} booked
                 </span>
               </div>
               <div

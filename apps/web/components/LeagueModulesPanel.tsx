@@ -6,6 +6,7 @@ import EmptyState from "./EmptyState";
 import ModuleTabBar from "./ModuleTabBar";
 import { useWatchHere, consumePendingStream } from "../lib/useWatchHere";
 import { onActivate } from "@/lib/a11y";
+import { noun } from "../lib/plural";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
@@ -302,7 +303,7 @@ function TwitchStreams({
                 }}
               />
               <span style={{ fontSize: 11, color: "rgba(230,235,240,.75)", fontWeight: 600 }}>
-                {s.viewerCount?.toLocaleString()} viewers
+                {s.viewerCount?.toLocaleString()} {noun(s.viewerCount, "viewer")}
               </span>
             </div>
           </div>

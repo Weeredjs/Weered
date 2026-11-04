@@ -13,6 +13,7 @@ import WebpageEmbed from "../WebpageEmbed";
 import FrontDeskBlock from "./FrontDeskBlock";
 import OwnerBlock from "./OwnerBlock";
 import CustomBlockFrame from "./CustomBlockFrame";
+import { noun } from "../../lib/plural";
 
 const RequestBoard = dynamic(() => import("../RequestBoard"), { ssr: false });
 
@@ -754,7 +755,7 @@ function BlockBody({ block, rooms, ...p }: CanvasProps & { block: Block; rooms: 
 
     case "stats": {
       const online = rooms.reduce((n, r) => n + (r.onlineCount || 0), 0);
-      const stat = (n: number | undefined, l: string) => (
+      const stat = (n: number | undefined, one: string, many?: string) => (
         <div>
           <div
             style={{
@@ -776,7 +777,7 @@ function BlockBody({ block, rooms, ...p }: CanvasProps & { block: Block; rooms: 
               marginTop: 4,
             }}
           >
-            {l}
+            {noun(n, one, many)}
           </div>
         </div>
       );
@@ -786,9 +787,9 @@ function BlockBody({ block, rooms, ...p }: CanvasProps & { block: Block; rooms: 
             {pr.title || "Pulse"}
           </Title>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
-            {stat(p.counts?.members, "members")}
-            {stat(online, "online")}
-            {stat(rooms.length || p.counts?.rooms, "rooms")}
+            {stat(p.counts?.members, "member")}
+            {stat(online, "online", "online")}
+            {stat(rooms.length || p.counts?.rooms, "room")}
           </div>
         </div>
       );

@@ -31,6 +31,7 @@ import { DmComposer } from "./dock/DmComposer";
 import { DmMessage } from "./dock/DmMessage";
 import type { DmMsg, DmThread } from "./dock/types";
 import { useSteady } from "../lib/useSteady";
+import { plural } from "../lib/plural";
 
 type GroupMemberLite = { id: string; name: string; avatar?: string | null };
 type GroupThreadLite = {
@@ -1607,7 +1608,7 @@ export default function DockShell(props: { forceMode?: "rail" | "floating" } = {
                                   {title}
                                 </span>
                                 <span
-                                  title={`${memberCount} members`}
+                                  title={plural(memberCount, "member")}
                                   style={{
                                     flexShrink: 0,
                                     display: "inline-flex",

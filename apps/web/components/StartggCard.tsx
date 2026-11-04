@@ -4,6 +4,7 @@
 // (Admin → Modules → start.gg). Data comes from our API, never from start.gg
 // directly; polls every 60 s while a tournament is live, every 5 min otherwise.
 import React, { useEffect, useState } from "react";
+import { plural } from "../lib/plural";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
@@ -74,7 +75,6 @@ const fmtDay = (ms: number | null) =>
   ms === null
     ? ""
     : new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" }).format(new Date(ms));
-const plural = (n: number, w: string) => `${n} ${w}${n === 1 ? "" : "s"}`;
 
 export function useStartgg(lobbyId: string) {
   const [data, setData] = useState<Payload | null>(null);

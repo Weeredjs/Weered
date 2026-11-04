@@ -13,6 +13,7 @@ import {
   type BarDifficulty,
   type BarMode,
 } from "@/lib/bar/startScript";
+import { plural } from "../../lib/plural";
 
 // The Beyond All Reason side of the room Launch Pad. The pad itself (slots,
 // ready check, countdown, server state) is shared with Steam launches; this
@@ -166,7 +167,7 @@ export function BarTargetSummary({ target, users }: { target: LaunchTarget; user
   return (
     <span>
       {BAR_MODE_LABEL[cfg.mode]} · host {host}
-      {cfg.mode === "team" ? ` · ${cfg.teams} teams` : ""}
+      {cfg.mode === "team" ? ` · ${plural(cfg.teams, "team")}` : ""}
       {!isDesktopApp() ? <span style={{ opacity: 0.6 }}> · desktop app needed to play</span> : null}
     </span>
   );
@@ -284,7 +285,7 @@ export function BarSetupDialog({
               >
                 {[2, 3, 4].map((n) => (
                   <option key={n} value={n}>
-                    {n} teams
+                    {plural(n, "team")}
                   </option>
                 ))}
               </select>

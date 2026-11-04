@@ -7,6 +7,7 @@ import ModuleTabBar from "./ModuleTabBar";
 import { useWatchHere, consumePendingStream } from "../lib/useWatchHere";
 import { onActivate } from "@/lib/a11y";
 import NewsStage from "./NewsStage";
+import { noun } from "../lib/plural";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
@@ -784,7 +785,7 @@ function TwitchStreams({ lobbyId, accent }: { lobbyId: string; accent: string })
                 {s.title}
               </div>
               <div style={{ fontSize: 11, opacity: 0.5, marginTop: 2 }}>
-                {s.userName} {"·"} {s.viewerCount?.toLocaleString()} viewers
+                {s.userName} {"·"} {s.viewerCount?.toLocaleString()} {noun(s.viewerCount, "viewer")}
               </div>
             </div>
             <div

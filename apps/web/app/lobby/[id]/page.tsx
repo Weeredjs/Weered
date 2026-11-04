@@ -45,6 +45,7 @@ import { useLobbyDesign } from "../../../components/lobby-design/useLobbyDesign"
 import { TAB_DEFAULT_LABEL, newBlock, type BlockType, type TabId } from "../../../lib/lobbyLayout";
 import { FONT_STACK, PRESET_BY_ID } from "../../../lib/lobbyThemePresets";
 import { useWatchHere, clearPendingStream } from "../../../lib/useWatchHere";
+import { plural } from "../../../lib/plural";
 
 // Per-vertical panels are code-split: a lobby only downloads its own module.
 const panelLoading = () => (
@@ -977,7 +978,7 @@ export default function LobbyIdPage() {
                   whiteSpace: "nowrap",
                 }}
               >
-                {lobbyInfo?._count?.members ?? 0} members
+                {plural(lobbyInfo?._count?.members ?? 0, "member")}
               </span>
             </div>
           ) : (

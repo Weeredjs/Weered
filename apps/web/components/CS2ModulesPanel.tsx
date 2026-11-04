@@ -6,6 +6,7 @@ import EmptyState from "./EmptyState";
 import ModuleTabBar from "./ModuleTabBar";
 import { useWatchHere, consumePendingStream } from "../lib/useWatchHere";
 import { onActivate } from "@/lib/a11y";
+import { noun, plural } from "../lib/plural";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
@@ -375,7 +376,7 @@ function SquadFinder({ lobbyId, accent }: { lobbyId: string; accent: string }) {
             </button>
 
             <div style={{ fontSize: 11, opacity: 0.45, fontFamily: "monospace" }}>
-              Team: {maxPlayersForMode(mode)} players
+              Team: {plural(maxPlayersForMode(mode), "player")}
             </div>
           </div>
 
@@ -717,7 +718,8 @@ function TwitchStreams({
                 {s.title}
               </div>
               <div style={{ fontSize: 11, opacity: 0.5, marginTop: 2 }}>
-                {s.userName} \u00B7 {s.viewerCount?.toLocaleString()} viewers
+                {s.userName} \u00B7 {s.viewerCount?.toLocaleString()}{" "}
+                {noun(s.viewerCount, "viewer")}
               </div>
             </div>
             <div

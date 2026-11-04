@@ -6,6 +6,7 @@ import EmptyState from "./EmptyState";
 import ModuleTabBar from "./ModuleTabBar";
 import { useWatchHere, consumePendingStream } from "../lib/useWatchHere";
 import { onActivate } from "@/lib/a11y";
+import { noun, plural } from "../lib/plural";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
@@ -309,7 +310,7 @@ function TwitchStreams({
                 {s.title}
               </div>
               <div style={{ fontSize: 11, opacity: 0.5, marginTop: 2 }}>
-                {s.userName} · {s.viewerCount?.toLocaleString()} viewers
+                {s.userName} · {s.viewerCount?.toLocaleString()} {noun(s.viewerCount, "viewer")}
               </div>
             </div>
             <div
@@ -718,7 +719,8 @@ function StatsLookup({ accent }: { accent: string }) {
           {label}
         </span>
         <span style={{ fontSize: 11, color: "rgba(243,244,246,.8)", flex: 1 }}>
-          {data.wins}W · {data.kills}K · {data.kd} K/D · {data.avgDmg} ADR · {data.rounds} games
+          {data.wins}W · {data.kills}K · {data.kd} K/D · {data.avgDmg} ADR ·{" "}
+          {plural(data.rounds, "game")}
         </span>
         <span style={{ fontSize: 10, color: "rgba(148,163,184,.4)" }}>
           {data.winRate ? `${(data.winRate * 100).toFixed(1)}%` : "—"} WR
@@ -961,7 +963,7 @@ function WeaponMastery({ accent }: { accent: string }) {
                     )}
                   </div>
                   <div style={{ fontSize: 10, color: "rgba(148,163,184,.5)", marginTop: 2 }}>
-                    {w.kills} kills · {w.damage.toLocaleString()} dmg · {w.headshots} HS ·{" "}
+                    {plural(w.kills, "kill")} · {w.damage.toLocaleString()} dmg · {w.headshots} HS ·{" "}
                     {w.longestKill}m longest
                   </div>
                 </div>
@@ -1122,8 +1124,8 @@ function RecentMatches({ accent }: { accent: string }) {
                       )}
                     </div>
                     <div style={{ fontSize: 10, color: "rgba(148,163,184,.5)", marginTop: 2 }}>
-                      {p ? `${p.kills} kills · ${p.damage} dmg · ${p.assists} ast` : ""} ·{" "}
-                      {m.match?.playerCount} players · {m.match?.duration}min
+                      {p ? `${plural(p.kills, "kill")} · ${p.damage} dmg · ${p.assists} ast` : ""} ·{" "}
+                      {plural(m.match?.playerCount, "player")} · {m.match?.duration}min
                     </div>
                   </div>
                   <div style={{ fontSize: 11, color: "rgba(148,163,184,.35)", flexShrink: 0 }}>

@@ -25,6 +25,7 @@ import ShellDesigner from "../../components/shell/ShellDesigner";
 import { startDesign, useShellLayout } from "../../lib/shellDesign";
 import { LEGACY_HOME, isCore, keyOf } from "../../lib/shellLayout";
 import { useOfficeSkin } from "../../components/useOfficeSkin";
+import { plural } from "../../lib/plural";
 
 
 function pickFirst(...vals: any[]): string {
@@ -1103,7 +1104,7 @@ export default function HomePage() {
                     >
                       <div style={{ fontSize: 28, marginBottom: 4, opacity: 0.85 }}>🧭</div>
                       <div style={{ fontFamily: "var(--font-barlow), sans-serif", fontWeight: 800, fontSize: 15, letterSpacing: "1px", textTransform: "uppercase", color: "rgba(243,244,246,.95)" }}>
-                        Browse all {lobbyTotal || lobbies.length} lobbies
+                        Browse all {plural(lobbyTotal || lobbies.length, "lobby", "lobbies")}
                       </div>
                       <div style={{ fontSize: 10, color: "rgba(148,163,184,.55)" }}>Search · discover · find your community</div>
                     </div>

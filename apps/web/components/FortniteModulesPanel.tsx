@@ -8,6 +8,7 @@ import LoadingState from "./LoadingState";
 import ModuleTabBar from "./ModuleTabBar";
 import { useWatchHere, consumePendingStream } from "../lib/useWatchHere";
 import { onActivate } from "@/lib/a11y";
+import { noun, plural } from "../lib/plural";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
@@ -158,7 +159,7 @@ function TwitchStreams({ gameName, lobbyId, accentColor }: { gameName: string; l
             {s.thumbnailUrl && <img src={s.thumbnailUrl.replace("{width}", "80").replace("{height}", "45")} alt={s.userName + " stream thumbnail"} style={{ width: 80, height: 45, borderRadius: 2, objectFit: "cover", flexShrink: 0, border: "1px solid rgba(255,255,255,.06)" }} />}
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 12, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.title}</div>
-              <div style={{ fontSize: 11, opacity: 0.5, marginTop: 2 }}>{s.userName} · {s.viewerCount?.toLocaleString()} viewers</div>
+              <div style={{ fontSize: 11, opacity: 0.5, marginTop: 2 }}>{s.userName} · {s.viewerCount?.toLocaleString()} {noun(s.viewerCount, "viewer")}</div>
             </div>
             <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#EF4444", boxShadow: "0 0 6px #EF444488", flexShrink: 0 }} />
           </div>
@@ -359,7 +360,7 @@ function StatsLookup({ accent }: { accent: string }) {
     return (
       <div style={{ display: "flex", gap: 8, alignItems: "center", padding: "6px 0", borderBottom: "1px solid rgba(255,255,255,.04)" }}>
         <span style={{ fontSize: 11, fontWeight: 700, color: accent, width: 50, flexShrink: 0 }}>{label}</span>
-        <span style={{ fontSize: 11, color: "rgba(243,244,246,.8)", flex: 1 }}>{data.wins ?? 0} W · {data.kills ?? 0} K · {(data.kd ?? 0).toFixed(2)} K/D · {data.matches ?? 0} games</span>
+        <span style={{ fontSize: 11, color: "rgba(243,244,246,.8)", flex: 1 }}>{data.wins ?? 0} W · {data.kills ?? 0} K · {(data.kd ?? 0).toFixed(2)} K/D · {plural(data.matches ?? 0, "game")}</span>
         <span style={{ fontSize: 10, color: "rgba(148,163,184,.4)" }}>{data.winRate ? `${(data.winRate * 100).toFixed(1)}%` : "—"} WR</span>
       </div>
     );

@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { S, SiteConfig, apiFetch } from "./shared";
+import { plural } from "../../lib/plural";
 
 export function ConfigTab() {
   const [config, setConfig] = useState<SiteConfig | null>(null);
@@ -184,7 +185,7 @@ export function ConfigTab() {
             onChange={(e) => num("registrationCap", e.target.value)}
           />
           <span style={{ fontSize: 12, opacity: 0.7 }}>
-            {config.accounts ?? 0} accounts · {config.waitlist ?? 0} waiting
+            {plural(config.accounts ?? 0, "account")} · {config.waitlist ?? 0} waiting
           </span>
           {(config.waitlist ?? 0) > 0 && (
             <button style={S.btn} onClick={copyWaitlist}>

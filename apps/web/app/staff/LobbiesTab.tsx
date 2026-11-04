@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { GlobalRole, S, StaffLobby, apiFetch } from "./shared";
+import { plural } from "../../lib/plural";
 
 export function LobbiesTab({ myRole }: { myRole: GlobalRole }) {
   const [lobbies, setLobbies] = useState<StaffLobby[]>([]);
@@ -110,7 +111,9 @@ export function LobbiesTab({ myRole }: { myRole: GlobalRole }) {
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{ fontSize: 13, opacity: 0.6 }}>{lobbies.length} lobbies</div>
+          <div style={{ fontSize: 13, opacity: 0.6 }}>
+            {plural(lobbies.length, "lobby", "lobbies")}
+          </div>
           {featuredId && (
             <span
               style={{

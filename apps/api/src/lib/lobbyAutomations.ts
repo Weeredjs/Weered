@@ -192,7 +192,7 @@ async function runAlerts(now: number) {
         userId: a.createdById,
         type: "SYSTEM",
         title: `${count} in ${spec.roomName}`,
-        body: `${count} people are in ${spec.roomName} now.`,
+        body: `${count === 1 ? "1 person is" : `${count} people are`} in ${spec.roomName} now.`,
         actionUrl: link,
         meta: { automationId: a.id },
       });

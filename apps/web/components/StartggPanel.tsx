@@ -12,6 +12,7 @@
 // concludes the product is broken, not that the TO has linked nothing yet.
 import React from "react";
 import { useStartgg } from "./StartggCard";
+import { plural } from "../lib/plural";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "https://api.weered.ca";
 
@@ -230,7 +231,7 @@ function EnteredFromHere({ lobbyId, accent }: { lobbyId: string; accent: string 
         ))}
       </div>
       <div style={{ fontSize: 11, opacity: 0.55, marginTop: 8 }}>
-        {d.members.length} of {d.linked} members who linked a start.gg account
+        {d.members.length} of {plural(d.linked, "member")} who linked a start.gg account
       </div>
     </section>
   );

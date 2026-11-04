@@ -5,6 +5,7 @@ import CrewChatPanel from "../CrewChatPanel";
 import EmptyState from "../EmptyState";
 import { weeredConfirm } from "../../lib/confirm";
 import { onActivate } from "@/lib/a11y";
+import { plural } from "../../lib/plural";
 
 // Crew tab extracted from DockShell.
 
@@ -421,7 +422,9 @@ export function CrewTab({
                       )}
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 10 }}>
-                      <span style={{ color: "var(--weered-muted)" }}>{members.length} members</span>
+                      <span style={{ color: "var(--weered-muted)" }}>
+                        {plural(members.length, "member")}
+                      </span>
                       {onlineMembers.length > 0 && (
                         <span
                           style={{

@@ -15,6 +15,7 @@ import {
   type Pirep,
   type PirepStatus,
 } from "./vaShared";
+import { noun } from "../../lib/plural";
 
 /** The airline's PIREP log: every report, newest first, as vAMSYS files them. */
 
@@ -98,7 +99,7 @@ export default function VaLogbook({
         </select>
         <div style={{ flex: 1 }} />
         <span style={{ fontSize: 12, color: VA.muted }}>
-          {total.toLocaleString("en-GB")} reports this month
+          {total.toLocaleString("en-GB")} {noun(total, "report")} this month
         </span>
       </div>
 

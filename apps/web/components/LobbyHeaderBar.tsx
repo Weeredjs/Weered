@@ -9,6 +9,7 @@ import { ui } from "./weeredUi";
 import { weeredReport } from "../lib/report";
 import { weeredToast } from "../lib/toast";
 import { onActivate } from "@/lib/a11y";
+import { plural } from "../lib/plural";
 
 type Mode = "rooms" | "people";
 
@@ -629,8 +630,8 @@ export default function LobbyHeaderBar({
                               textAlign: "right",
                             }}
                           >
-                            <div>{lobby._count.rooms} rooms</div>
-                            <div>{lobby._count.members} members</div>
+                            <div>{plural(lobby._count.rooms, "room")}</div>
+                            <div>{plural(lobby._count.members, "member")}</div>
                           </div>
                         )}
                       </button>

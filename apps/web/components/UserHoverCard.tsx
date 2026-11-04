@@ -8,6 +8,7 @@ import RoleIcon, { TierIcon, getRoleDisplayName, getRoleColor } from "./RoleIcon
 import { SteamIcon, TwitchIcon, XboxIcon } from "./PresenceRow";
 import { onActivate } from "@/lib/a11y";
 import { placeAddress, placeOf, type Place } from "../lib/place";
+import { noun } from "../lib/plural";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 const FONT =
@@ -583,7 +584,7 @@ export default function UserHoverCard({
             </div>
             <div>
               <span style={{ fontWeight: 800 }}>{profile.roomsHosted}</span>{" "}
-              <span style={{ opacity: 0.35 }}>rooms</span>
+              <span style={{ opacity: 0.35 }}>{noun(profile.roomsHosted, "room")}</span>
             </div>
             {profile.notorietyRank && (
               <div

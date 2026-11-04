@@ -77,7 +77,7 @@ export function bookingLine(
   if (!gf || !wave || !slot) return null;
   const city = snap.airports.find((a) => a.iata === slot.arr)?.city || slot.arr;
   const total = gf.waves.reduce((n, w) => n + w.slots.length, 0);
-  return `${slot.callsign} ${slot.dep} to ${city}, gate ${slot.gate} in the ${wave.name} wave, just went to ${who}. ${booked} of ${total} slots booked for the bank.`;
+  return `${slot.callsign} ${slot.dep} to ${city}, gate ${slot.gate} in the ${wave.name} wave, just went to ${who}. ${booked} of ${total} ${total === 1 ? "slot" : "slots"} booked for the bank.`;
 }
 
 async function post(deps: Deps, roomId: string, user: { id: string; name: string }, body: string) {

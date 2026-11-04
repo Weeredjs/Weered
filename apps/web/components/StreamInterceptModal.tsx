@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { onActivate } from "@/lib/a11y";
 import { useWeered } from "./WeeredProvider";
+import { noun } from "../lib/plural";
 
 export interface StreamInfo {
   userLogin: string;
@@ -201,7 +202,7 @@ export default function StreamInterceptModal({
               {stream.gameName && <span>{stream.gameName}</span>}
               {stream.gameName && <span style={{ opacity: 0.3 }}>·</span>}
               <span style={{ color: "rgba(252,165,165,.8)" }}>
-                {stream.viewerCount.toLocaleString()} viewers
+                {stream.viewerCount.toLocaleString()} {noun(stream.viewerCount, "viewer")}
               </span>
             </div>
           </div>

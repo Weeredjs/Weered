@@ -1,6 +1,7 @@
 "use client";
 import { S, fmtDate } from "./shared";
 import { FlairItem, TournamentRow } from "./ChallengesTab";
+import { plural } from "../../../../lib/plural";
 
 export function FlairEditor({
   tournaments,
@@ -66,8 +67,8 @@ export function FlairEditor({
                 <div style={{ minWidth: 0, flex: 1 }}>
                   <div style={{ fontWeight: 700, fontSize: 14 }}>{t.title}</div>
                   <div style={{ fontSize: 11, opacity: 0.5, marginTop: 2 }}>
-                    {t.status} · {t._count?.entries || 0} entries · {fmtDate(t.startsAt)} →{" "}
-                    {fmtDate(t.endsAt)}
+                    {t.status} · {plural(t._count?.entries || 0, "entry", "entries")} ·{" "}
+                    {fmtDate(t.startsAt)} → {fmtDate(t.endsAt)}
                   </div>
                 </div>
                 {selItem && (

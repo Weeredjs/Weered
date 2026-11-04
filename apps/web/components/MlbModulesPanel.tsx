@@ -7,6 +7,7 @@ import EmptyState from "./EmptyState";
 import { useWatchHere, consumePendingStream } from "../lib/useWatchHere";
 import ModuleTabBar from "./ModuleTabBar";
 import { onActivate } from "@/lib/a11y";
+import { noun } from "../lib/plural";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
@@ -843,7 +844,7 @@ function MlbTwitchStreams({ lobbyId, accentColor }: { lobbyId?: string; accentCo
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
               <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#22c55e", flexShrink: 0, boxShadow: "0 0 6px rgba(34,197,94,.6)" }} />
               <span style={{ fontSize: 11, color: "rgba(230,235,240,.75)", fontWeight: 600 }}>
-                {(s.viewerCount || s.viewer_count)?.toLocaleString()} viewers
+                {(s.viewerCount || s.viewer_count)?.toLocaleString()} {noun(s.viewerCount || s.viewer_count, "viewer")}
               </span>
             </div>
           </div>

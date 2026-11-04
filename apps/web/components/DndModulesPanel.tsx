@@ -6,6 +6,7 @@ import { useWatchHere, consumePendingStream } from "../lib/useWatchHere";
 import EmptyState from "./EmptyState";
 import SessionZero, { useSessionZero } from "./SessionZero";
 import { onActivate } from "@/lib/a11y";
+import { noun, plural } from "../lib/plural";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 const OPEN5E = "https://api.open5e.com/v1";
@@ -706,7 +707,7 @@ function MagicItemBrowser() {
           {RARITY_OPTIONS.map(r => <option key={r} value={r}>{r === "All" ? "All Rarities" : r.charAt(0).toUpperCase() + r.slice(1)}</option>)}
         </select>
       </div>
-      <span style={{ fontSize: 10, color: "rgba(148,163,184,.4)", marginBottom: 8, display: "block" }}>{total} items</span>
+      <span style={{ fontSize: 10, color: "rgba(148,163,184,.4)", marginBottom: 8, display: "block" }}>{plural(total, "item")}</span>
 
       {loading ? (
         <div style={{ padding: 30, textAlign: "center", opacity: 0.4, fontSize: 13 }}>Rummaging through the hoard...</div>
@@ -1315,7 +1316,7 @@ function TwitchStreams({ lobbyId }: { lobbyId: string }) {
             {s.thumbnailUrl && <img src={s.thumbnailUrl.replace("{width}", "80").replace("{height}", "45")} alt={s.userName + " stream thumbnail"} style={{ width: 80, height: 45, borderRadius: 6, objectFit: "cover", flexShrink: 0, border: "1px solid rgba(255,255,255,.06)" }} />}
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 12, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.title}</div>
-              <div style={{ fontSize: 11, opacity: 0.5, marginTop: 2 }}>{s.userName} · {s.viewerCount?.toLocaleString()} viewers</div>
+              <div style={{ fontSize: 11, opacity: 0.5, marginTop: 2 }}>{s.userName} · {s.viewerCount?.toLocaleString()} {noun(s.viewerCount, "viewer")}</div>
             </div>
             <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#EF4444", boxShadow: "0 0 6px #EF444488", flexShrink: 0 }} />
           </div>
