@@ -397,7 +397,7 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
       // the door shut (4010: the full page takes over); a minute when this
       // address has too many sockets (4029).
       if (ev.code === 4010 || ticketDeniedRef.current) return;
-      // 4012: a deploy restarting the server (api lib/restartNotice.ts); back in a second or two, no backoff.
+      // 4012: a deploy restarting the server (api lib/restartNotice.ts); straight back, no backoff.
       const n = ev.code === 4012 ? (retriesRef.current = 1) : retriesRef.current++;
       const wait = ev.code === 4029 ? 60_000 : Math.min(30_000, 1_000 * 2 ** n) * (0.5 + Math.random());
       clearTimeout(retryTimerRef.current);

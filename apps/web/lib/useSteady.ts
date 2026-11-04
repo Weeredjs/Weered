@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 
 /** True at once; false only after `value` has stayed false for `holdMs`. A
- *  deploy's second-or-two restart (James 2026-11-03) doesn't flash the
+ *  deploy's restart (about 8 s, James 2026-11-03) doesn't flash the
  *  connection dot. */
 export function useSteady(value: boolean, holdMs: number): boolean {
   const [shown, setShown] = useState(value);

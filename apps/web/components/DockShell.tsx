@@ -129,7 +129,7 @@ export default function DockShell(props: { forceMode?: "rail" | "floating" } = {
       (typeof wsState === "string" && wsState.toLowerCase() === "open"),
     [wsReady, wsState],
   );
-  const steadyUp = useSteady(wsUp, 8000); // a deploy's blip doesn't flash the dot
+  const steadyUp = useSteady(wsUp, 15000); // a deploy's restart (~8 s; Caddy holds 15) doesn't flash the dot
 
   const tokenMaybe = useMemo(() => {
     if (typeof window === "undefined") return "";

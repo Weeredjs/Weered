@@ -179,6 +179,12 @@ fi
 
 # ════════════════════════════════════════════════════════════════════════
 hdr "TIER 4 — BACKGROUND WORKERS"
+# These look for the API's startup lines. A deploy that didn't restart the API
+# (a page-only fix, scripts/deploy.sh) has none fresh to find; the workers were
+# checked when it last started.
+if [ "${SMOKE_API_RESTARTED:-1}" = 0 ]; then
+  ok "workers: API not restarted by this deploy (checked when it last started)"
+else
 LOG=$(pm2 logs weered-api --nostream --lines 1500 2>&1)
 check_worker() {
   local label="$1" pattern="$2"
@@ -191,6 +197,7 @@ check_worker "Lobby seeder (boot)"              "lobbies seeded"
 check_worker "Feed worker (RSS)"                "feed.*worker.*done|\\[feed\\]"
 check_worker "News worker (RSS)"                "newsWorker|\\[news\\].*upserted"
 check_worker "Challenge worker"                 "challenge.*worker|\\[challenge\\]"
+fi
 
 # Activity ticker buffer — should have entries (synthetic seeder primes 5)
 ACT_COUNT=$(curl -sS --max-time 10 "$API/public/activity" | jq -r '.events | length' 2>/dev/null)

@@ -89,6 +89,6 @@ if [ "$MODE" != none ]; then bash "$ROOT/scripts/fence-weered.sh"; fi
 echo ">>> Waiting for both to answer, then smoke-testing"
 for _ in $(seq 1 60); do curl -sf -o /dev/null http://127.0.0.1:4000/health && break || sleep 1; done
 for _ in $(seq 1 60); do curl -sf -o /dev/null http://127.0.0.1:3000/build-info && break || sleep 1; done
-bash "$ROOT/scripts/smoke.sh"
+SMOKE_API_RESTARTED=$(has_api && echo 1 || echo 0) bash "$ROOT/scripts/smoke.sh"
 
 echo ">>> Deploy complete ($MODE)"

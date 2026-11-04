@@ -1,4 +1,4 @@
-// Chat sent while the socket is down for a restart's second or two (a deploy,
+// Chat sent while the socket is down for a restart's few seconds (a deploy,
 // James 2026-11-03) used to vanish: sendChat returned without a word and the
 // box was already cleared. Now it waits here and goes out once the room is
 // back (presence:state). Twenty at most, and nothing older than a minute.
