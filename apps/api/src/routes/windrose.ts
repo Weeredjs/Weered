@@ -2,6 +2,7 @@ import { log, swallow } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 import { fetchWithTimeout } from "../lib/fetchWithTimeout";
 import { assertSafeUrl, fetchSafe } from "../lib/ssrfGuard";
+import { steamNewsUrl } from "../lib/steamNews";
 import { z } from "zod";
 import { prisma } from "../lib/prisma";
 
@@ -568,7 +569,7 @@ Rules:
     const cached = wrCacheGet(cacheKey);
     if (cached) return reply.send(cached);
     try {
-      const url = `https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=${WINDROSE_APPID}&count=12&maxlength=600&format=json`;
+      const url = steamNewsUrl(WINDROSE_APPID, { count: 12, maxlength: 600 });
       const res = await fetchWithTimeout(url);
       if (!res.ok) return reply.send({ ok: false, error: "steam_fetch_failed" });
       const j: any = await res.json();

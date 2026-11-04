@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { fetchWithTimeout } from "../lib/fetchWithTimeout";
+import { steamNewsUrl } from "../lib/steamNews";
 
 // Official Ubisoft server-status feed — the same endpoint their public status
 // page (ubisoft.com/.../the-division-2/status) calls from its own JS. The
@@ -59,9 +60,8 @@ export async function fetchDivision2Status(): Promise<Division2Status | null> {
 }
 
 // Official announcements (patch notes, State of the Game, events) via Steam's
-// keyless ISteamNews feed for the Division 2 app. Cached 15 min.
-const STEAM_NEWS_URL =
-  "https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=2221490&count=8&maxlength=280";
+// keyless news feed for the Division 2 app. Cached 15 min.
+const STEAM_NEWS_URL = steamNewsUrl(2221490, { count: 8, maxlength: 280 });
 
 type NewsItem = { title: string; url: string; date: string; source: string; snippet: string };
 let _newsCache: { data: NewsItem[]; exp: number } | null = null;

@@ -3,6 +3,7 @@ import { log, swallow } from "../lib/logger";
 import { prisma } from "../lib/prisma";
 import { isStaffUser } from "../lib/isStaffUser";
 import { rconRead, HllvRconError } from "../lib/hllvRcon";
+import { steamNewsUrl } from "../lib/steamNews";
 import {
   type Game,
   STEAM_APP_ID,
@@ -471,9 +472,7 @@ export default async function hllvRoutes(app: FastifyInstance, opts: Opts = {}) 
       jget(
         `https://api.steampowered.com/ISteamUserStats/GetNumberOfCurrentPlayers/v1/?appid=${appId}`,
       ),
-      jget(
-        `https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=${appId}&count=8&maxlength=400&format=json`,
-      ),
+      jget(steamNewsUrl(appId, { count: 8, maxlength: 400 })),
     ]);
     const playingNow =
       playersJ?.response?.result === 1 ? Number(playersJ.response.player_count) : null;

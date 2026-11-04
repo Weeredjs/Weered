@@ -4,6 +4,7 @@ import { prisma } from "../lib/prisma";
 import { createNotification } from "../lib/notifications";
 import { isStaffUser } from "../lib/isStaffUser";
 import { assertSafeUrl } from "../lib/ssrfGuard";
+import { steamNewsUrl } from "../lib/steamNews";
 import { awardNotoriety } from "../lib/notoriety";
 
 // Hell Let Loose. There is no official Team17 API (servers are GSP-rented) —
@@ -480,9 +481,7 @@ export default async function hllRoutes(app: FastifyInstance, opts: Opts = {}) {
       jget(
         `https://api.steampowered.com/ISteamUserStats/GetNumberOfCurrentPlayers/v1/?appid=${STEAM_APP_ID}`,
       ),
-      jget(
-        `https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=${STEAM_APP_ID}&count=8&maxlength=400&format=json`,
-      ),
+      jget(steamNewsUrl(STEAM_APP_ID, { count: 8, maxlength: 400 })),
     ]);
     const playingNow =
       playersJ?.response?.result === 1 ? Number(playersJ.response.player_count) : null;
