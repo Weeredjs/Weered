@@ -937,10 +937,15 @@ export default function LobbyRoomDirectory({
           </div>
         )}
 
+        {/* Columns never grow to fit a card's content. The lobby themes un-clip
+            event cards (overflow: visible, for their corner hexes), and without
+            these floors one card's text widened the whole column under the chat. */}
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: compact ? "1fr" : "repeat(auto-fill, minmax(300px, 1fr))",
+            gridTemplateColumns: compact
+              ? "minmax(0, 1fr)"
+              : "repeat(auto-fill, minmax(min(300px, 100%), 1fr))",
             gap: compact ? 8 : 14,
           }}
         >
@@ -997,6 +1002,7 @@ export default function LobbyRoomDirectory({
                 style={{
                   position: "relative",
                   overflow: "hidden",
+                  minWidth: 0,
                   borderRadius: 14,
                   cursor: "pointer",
                   border: `1px solid ${cardColor}22`,
