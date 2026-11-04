@@ -208,6 +208,25 @@ function Face({ name, src, size = 40 }: { name: string; src?: string | null; siz
   );
 }
 
+/** A server's round icon: its logo, or its initials when there's none or it won't load. */
+function ServerIcon({ name, src }: { name: string; src?: string | null }) {
+  const [broken, setBroken] = useState(false);
+  return src && !broken ? (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      className="fam-rail-icon"
+      src={src}
+      alt={name}
+      title={name}
+      onError={() => setBroken(true)}
+    />
+  ) : (
+    <span className="fam-rail-icon fam-rail-letters" title={name}>
+      {initials(name)}
+    </span>
+  );
+}
+
 export default function FamiliarView({
   lobbyId,
   onUpgrade,
@@ -273,7 +292,11 @@ export default function FamiliarView({
   }, [msgs.length, channel]);
 
   const rooms = lobby?.rooms || [];
-  const voice = rooms.filter((r) => /voice|video|screen/i.test(String(r.defaultModule || "")));
+  // Voice channels the usual way round: General first, AFK last.
+  const rank = (n: string) => (/^general$/i.test(n) ? 0 : /^afk$/i.test(n) ? 2 : 1);
+  const voice = rooms
+    .filter((r) => /voice|video|screen/i.test(String(r.defaultModule || "")))
+    .sort((a, b) => rank(a.name) - rank(b.name));
   const textRooms = rooms.filter((r) => !voice.includes(r));
   const channels = [{ id: "general", name: "general", topic: "The lobby chat." }].concat(
     textRooms
@@ -324,20 +347,12 @@ export default function FamiliarView({
         <div className="fam-rail-sep" />
         <div className="fam-rail-item" data-on>
           <span className="fam-rail-pill" />
-          {lobby?.logoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img className="fam-rail-icon" src={lobby.logoUrl} alt={name} title={name} />
-          ) : (
-            <span className="fam-rail-icon fam-rail-letters" title={name}>
-              {initials(name)}
-            </span>
-          )}
+          <ServerIcon name={name} src={lobby?.logoUrl} />
         </div>
         {others.map((l) => (
           <a key={l.id} className="fam-rail-item" href={`/lobby/${l.id}`} title={l.name}>
             <span className="fam-rail-pill" />
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img className="fam-rail-icon" src={l.logoUrl!} alt={l.name} />
+            <ServerIcon name={l.name} src={l.logoUrl} />
           </a>
         ))}
         <button type="button" className="fam-rail-icon fam-rail-add" title="Add a Server">

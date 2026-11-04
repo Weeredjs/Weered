@@ -428,6 +428,8 @@ html.weered-downgraded body {
   min-width: 0;
   min-height: 0;
   background: #313338;
+  /* A site-wide main rule leaves room for the phone nav; none here. */
+  padding: 0 !important;
 }
 .fam-chat-head {
   gap: 8px;
