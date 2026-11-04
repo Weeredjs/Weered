@@ -9,6 +9,8 @@ export default [
     ignores: [
       "**/node_modules/**",
       "**/.next/**",
+      "**/.next-staged/**",
+      "**/.next-prev/**",
       "**/dist/**",
       "**/build/**",
       "**/.gradle/**",

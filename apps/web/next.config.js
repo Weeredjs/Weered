@@ -10,6 +10,9 @@ const SENTRY_RELEASE = (() => {
 const nextConfig = {
   // No X-Powered-By: Next.js header (review 2026-10-06).
   poweredByHeader: false,
+  // A deploy builds beside the live site (NEXT_DIST_DIR=.next-staged) and
+  // swaps it in when done (scripts/deploy.sh); everything else uses .next.
+  distDir: process.env.NEXT_DIST_DIR || ".next",
   env: { NEXT_PUBLIC_SENTRY_RELEASE: SENTRY_RELEASE },
   // Lint runs in CI (root eslint flat config); the build is the type-gate only.
   eslint: { ignoreDuringBuilds: true },

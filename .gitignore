@@ -1,5 +1,10 @@
 # ── Build outputs ─────────────────────────────────────────────
 apps/web/.next/
+# The deploy's side-by-side web builds and its record of the last deploy
+# (scripts/deploy.sh, server-deploy.sh).
+apps/web/.next-staged/
+apps/web/.next-prev/
+.deployed-commit
 apps/web/out/
 apps/web/dist/
 apps/web/build/
