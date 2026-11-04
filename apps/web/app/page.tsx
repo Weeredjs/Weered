@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import LandingFilm from "../components/LandingFilm";
 
 function AuthRouter({ onUnauthed }: { onUnauthed: (next: string) => void }) {
   const router = useRouter();
@@ -105,6 +106,7 @@ function Landing({ nextPath }: { nextPath: string }) {
           <a href="/requests?meeting=1" className="lp-biz">
             Building for a business? <span>Book a meeting →</span>
           </a>
+          <LandingFilm />
         </main>
 
         <footer className="lp-foot">
@@ -273,6 +275,46 @@ const LANDING_CSS = `
 }
 .lp-biz span { color: #c4b5fd !important; }
 .lp-biz:hover { color: rgba(255,255,255,.8) !important; }
+.lp-film {
+  position: relative;
+  width: min(960px, 100%);
+  aspect-ratio: 16 / 9;
+  margin-top: clamp(30px, 5vh, 48px);
+  border-radius: 18px;
+  overflow: hidden;
+  border: 1px solid rgba(196,181,253,.28);
+  background: #0b0716;
+  box-shadow: 0 30px 90px rgba(0,0,0,.6), 0 0 80px -20px rgba(124,58,237,.55);
+  animation: lp-rise .8s .45s cubic-bezier(.2,.8,.2,1) both;
+}
+.lp-film video { display: block; width: 100%; height: 100%; object-fit: cover; }
+.lp-film-sound, .lp-film-play {
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+  min-height: 40px;
+  padding: 0 16px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.22);
+  background: rgba(7,6,13,.7);
+  backdrop-filter: blur(6px);
+  color: #fff;
+  font: inherit;
+  font-weight: 700;
+  font-size: 15px;
+  cursor: pointer;
+  transition: background .2s, border-color .2s;
+}
+.lp-film-sound:hover, .lp-film-play:hover { background: rgba(124,58,237,.55); border-color: rgba(196,181,253,.6); }
+.lp-film-play {
+  right: 50%;
+  bottom: 50%;
+  transform: translate(50%, 50%);
+  min-height: 54px;
+  padding: 0 26px;
+  font-size: 18px;
+  background: rgba(124,58,237,.75);
+}
 .lp-foot {
   position: relative;
   z-index: 1;

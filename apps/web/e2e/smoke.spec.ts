@@ -38,6 +38,14 @@ test.describe("landing flow", () => {
     await expect(page.getByRole("link", { name: "Get in" }).first()).toBeVisible();
   });
 
+  test("shows the film under the buttons, from Caddy's /media/film/", async ({ page }) => {
+    await page.goto("/");
+    const film = page.locator(".lp-film video");
+    await expect(film).toHaveAttribute("src", /^\/media\/film\/weered-cut3-(1080|720)\.mp4$/);
+    await expect(film).toHaveAttribute("poster", /^\/media\/film\//);
+    await expect(page.locator(".lp-film").getByRole("button")).toBeVisible();
+  });
+
   test("Get in navigates to the login page", async ({ page }) => {
     await page.goto("/");
     await page.getByRole("link", { name: "Get in" }).first().click();
