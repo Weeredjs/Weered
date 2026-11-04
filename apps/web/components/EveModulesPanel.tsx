@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useState } from "react";
 import EmptyState from "./EmptyState";
+import NewsStage from "./NewsStage";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 const ACCENT_EVE = "#d4af37";
@@ -417,33 +418,20 @@ function NewsTab() {
     return () => clearInterval(t);
   }, [load]);
 
-  if (items === null) return <div style={{ padding: 24, opacity: 0.4, fontSize: 12 }}>Loading news...</div>;
-  if (items.length === 0) return <EmptyState compact title="No recent EVE news." hint="Pulled from across the web; check back shortly." />;
-
-  const isToday = (d: string) => {
-    try { const t = new Date(d); const now = new Date(); return t.toDateString() === now.toDateString(); } catch { return false; }
-  };
-
+  // EVE's own news with its pictures and trailers, cycling, beside the press
+  // round-up this tab always listed (James 2026-11-04).
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-      {items.map((n: any, i: number) => {
-        const fresh = n.pubDate && isToday(n.pubDate);
-        return (
-          <a key={i} href={n.link} target="_blank" rel="noopener noreferrer" style={{ ...S.card, borderLeft: fresh ? "2px solid rgba(134,239,172,.55)" : "2px solid rgba(212,175,55,.3)", textDecoration: "none", color: "inherit", display: "flex", gap: 11, alignItems: "flex-start", padding: "11px 13px" }}>
-            <span style={{ width: 30, height: 30, flexShrink: 0, borderRadius: 2, background: "rgba(212,175,55,.12)", border: "1px solid rgba(212,175,55,.25)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800, color: "rgb(244,212,108)" }}>
-              {(n.source || "E").trim().charAt(0).toUpperCase()}
-            </span>
-            <div style={{ minWidth: 0, flex: 1 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: "rgb(244,212,108)", lineHeight: 1.35 }}>{n.title}</div>
-              <div style={{ fontSize: 10, opacity: 0.5, marginTop: 4, display: "flex", alignItems: "center", gap: 6 }}>
-                {fresh && <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#86efac", boxShadow: "0 0 5px #86efac", flexShrink: 0 }} />}
-                <span>{n.source}{n.pubDate && <span>{n.source ? " · " : ""}{(() => { try { return new Date(n.pubDate).toLocaleDateString(); } catch { return ""; } })()}</span>}</span>
-              </div>
-            </div>
-          </a>
-        );
-      })}
-    </div>
+    <NewsStage
+      game="eve"
+      accent="#d4af37"
+      listTitle="Across the web"
+      list={(items || []).map((n: any) => ({
+        title: String(n.title || ""),
+        url: String(n.link || ""),
+        date: String(n.pubDate || ""),
+        source: String(n.source || ""),
+      }))}
+    />
   );
 }
 

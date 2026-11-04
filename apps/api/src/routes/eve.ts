@@ -1,6 +1,7 @@
 import { log, swallow } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 import { fetchWithTimeout } from "../lib/fetchWithTimeout";
+import { decodeEntities } from "../lib/htmlText";
 import { prisma } from "../lib/prisma";
 import { signOAuthState, verifyOAuthState } from "../lib/oauthState";
 
@@ -561,11 +562,12 @@ export default async function eveRoutes(app: FastifyInstance, opts: Opts) {
         const block = m[1];
         const title = pick(block, "title");
         if (!title) continue;
+        // The feed's text is XML-escaped: "&amp;" showed in the headlines.
         items.push({
-          title,
-          link: pick(block, "link"),
+          title: decodeEntities(title),
+          link: decodeEntities(pick(block, "link")),
           pubDate: pick(block, "pubDate"),
-          source: pick(block, "source"),
+          source: decodeEntities(pick(block, "source")),
         });
       }
       return reply.send({ ok: true, items });

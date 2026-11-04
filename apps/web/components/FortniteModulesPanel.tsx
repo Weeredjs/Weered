@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import StreamInterceptModal, { type StreamInfo } from "./StreamInterceptModal";
 import EmptyState from "./EmptyState";
+import NewsStage from "./NewsStage";
 import LoadingState from "./LoadingState";
 import ModuleTabBar from "./ModuleTabBar";
 import { useWatchHere, consumePendingStream } from "../lib/useWatchHere";
@@ -547,21 +548,22 @@ function FnNews() {
 
   useEffect(() => { apiFetch("/fortnite/news").then(j => { if (j.ok) setNews(j.news || []); setLoading(false); }).catch(() => setLoading(false)); }, []);
 
-  if (loading) return <div style={{ padding: 20, textAlign: "center", opacity: 0.4, fontSize: 13 }}>Loading news...</div>;
-  if (news.length === 0) return <EmptyState compact title="No news right now." />;
-
+  // Epic's in-game news first, then the press that names Fortnite, one story at
+  // a time beside the headlines (James 2026-11-04).
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-      {news.map(n => (
-        <div key={n.id} style={{ borderRadius: 2, overflow: "hidden", border: "1px solid rgba(255,255,255,.08)", background: "rgba(255,255,255,.02)" }}>
-          {(n.image || n.tileImage) && <div style={{ height: 140, background: `url(${n.image || n.tileImage}) center/cover no-repeat`, borderBottom: "1px solid rgba(255,255,255,.06)" }} />}
-          <div style={{ padding: "12px 14px" }}>
-            <div style={{ fontSize: 14, fontWeight: 700, color: "rgba(243,244,246,.95)", lineHeight: 1.3 }}>{n.title}</div>
-            {n.body && <div style={{ fontSize: 12, color: "rgba(148,163,184,.6)", marginTop: 6, lineHeight: 1.5 }}>{n.body}</div>}
-          </div>
-        </div>
-      ))}
-    </div>
+    <NewsStage
+      game="fortnite"
+      accent="#7c3aed"
+      extra={loading ? undefined : news.map((n: any) => ({
+        title: String(n.title || ""),
+        url: "",
+        date: "",
+        source: "Fortnite",
+        snippet: String(n.body || ""),
+        image: n.image || n.tileImage || undefined,
+        official: true,
+      }))}
+    />
   );
 }
 

@@ -67,6 +67,7 @@ import mtgRoutes from "./routes/mtg";
 import pubgRoutes from "./routes/pubg";
 import leagueRoutes from "./routes/league";
 import division2Routes from "./routes/division2";
+import gameNewsRoutes from "./routes/gameNews";
 import assettoRoutes from "./routes/assetto";
 import bungieRoutes from "./routes/bungie";
 import eveRoutes from "./routes/eve";
@@ -2181,6 +2182,7 @@ async function main() {
 
   await app.register(leagueRoutes);
   await app.register(division2Routes);
+  await app.register(gameNewsRoutes);
   await app.register(assettoRoutes, { lobbyAdminAccess } as any);
 
   await app.register(fortniteRoutes, { authFromHeader, sendPush });
