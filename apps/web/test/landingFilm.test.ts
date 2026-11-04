@@ -1,5 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { FILM, pickFilm } from "../components/LandingFilm";
+import { FILM, INTRO, loopStart, pickFilm } from "../components/LandingFilm";
+
+describe("loopStart", () => {
+  it("skips the film's title card while muted (the headline above says it)", () => {
+    expect(loopStart(true)).toBe(INTRO);
+    expect(INTRO).toBeGreaterThan(4);
+    expect(INTRO).toBeLessThan(6);
+  });
+
+  it("plays from the top with sound", () => {
+    expect(loopStart(false)).toBe(0);
+  });
+});
 
 describe("pickFilm", () => {
   it("plays the 1080p cut by itself on a big screen", () => {

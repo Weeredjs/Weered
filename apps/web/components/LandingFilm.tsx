@@ -19,6 +19,12 @@ export function pickFilm(o: { small: boolean; saveData: boolean; calm: boolean }
   return { src: o.small || o.saveData ? FILM.sd : FILM.hd, still: o.calm || o.saveData };
 }
 
+/** The film opens on its own "A place for anything." card, right under the
+ *  page's headline saying the same, so the muted loop starts after it. With
+ *  sound it plays from the top, music and all. */
+export const INTRO = 4.8;
+export const loopStart = (muted: boolean) => (muted ? INTRO : 0);
+
 export default function LandingFilm() {
   const ref = useRef<HTMLVideoElement>(null);
   const [src, setSrc] = useState<string | null>(null);
@@ -78,9 +84,17 @@ export default function LandingFilm() {
         src={src ?? undefined}
         poster={src ? FILM.poster : undefined}
         muted={muted}
-        loop
         playsInline
         preload={still ? "none" : "auto"}
+        onLoadedMetadata={(e) => {
+          const v = e.currentTarget;
+          if (v.muted && v.currentTime < INTRO) v.currentTime = INTRO;
+        }}
+        onEnded={(e) => {
+          const v = e.currentTarget;
+          v.currentTime = loopStart(v.muted);
+          v.play().catch(() => {});
+        }}
         onPlay={() => setPlaying(true)}
         onPause={() => setPlaying(false)}
         aria-label="A minute of Weered: a lobby built from one sentence, rooms, a place of your own, a crew and the lobbies to explore"
