@@ -12,6 +12,7 @@ import React, { createContext, useContext, useEffect, useLayoutEffect, useMemo, 
 import { hotStore } from "./hotStore";
 import { setFloodFlag } from "@/lib/floodMode";
 import { watchSession } from "@/lib/staleSession";
+import { holdChat, releaseChat, type HeldChat } from "@/lib/chatOutbox";
 
 const API    = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 const WS_URL = process.env.NEXT_PUBLIC_WS_URL   || "ws://127.0.0.1:4001";
@@ -230,6 +231,7 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const [wsReady, setWsReady] = useState(false);
   const wsRef            = useRef<WebSocket | null>(null);
+  const outboxRef        = useRef<HeldChat[]>([]); // chat sent during a restart (lib/chatOutbox.ts)
   // Users we've already fired an away-alert for, per room. Reconnects replay
   // presence:join for members already in the room, which was climbing the unread
   // badge while sitting alone/idle. Only a genuine first arrival ticks; cleared
@@ -395,7 +397,8 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
       // the door shut (4010: the full page takes over); a minute when this
       // address has too many sockets (4029).
       if (ev.code === 4010 || ticketDeniedRef.current) return;
-      const n = retriesRef.current++;
+      // 4012: a deploy restarting the server (api lib/restartNotice.ts); back in a second or two, no backoff.
+      const n = ev.code === 4012 ? (retriesRef.current = 1) : retriesRef.current++;
       const wait = ev.code === 4029 ? 60_000 : Math.min(30_000, 1_000 * 2 ** n) * (0.5 + Math.random());
       clearTimeout(retryTimerRef.current);
       retryTimerRef.current = setTimeout(() => setWsRetry((x) => x + 1), wait);
@@ -547,6 +550,7 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
           },
         }));
         setStatusByRoom(prev => ({ ...prev, [rid]: "joined" }));
+        if (msg.sampled || list.some((u: any) => String(u?.id || "") === myId)) releaseChat(outboxRef, rid, (raw) => ws.send(raw)); // once the room lists me
         if (msg.activeModule) {
           setModuleByRoom(prev => ({ ...prev, [rid]: msg.activeModule }));
         }
@@ -1336,11 +1340,11 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
     const b = body.trim();
     if ((!b && !opts?.attachmentId) || !canChat()) return;
     const ws = wsRef.current;
-    if (!ws || ws.readyState !== WebSocket.OPEN) return;
     let rid = activeRoomId; try { rid = decodeURIComponent(activeRoomId); } catch {}
     const env: any = { type: "chat:send", roomId: rid, body: b };
     if (opts?.replyToId) env.replyToId = opts.replyToId;
     if (opts?.attachmentId) env.attachmentId = opts.attachmentId;
+    if (!ws || ws.readyState !== WebSocket.OPEN) return holdChat(outboxRef, env); // sent when the room is back
     ws.send(JSON.stringify(env));
   }
 

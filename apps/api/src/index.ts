@@ -298,6 +298,7 @@ import { canEnterGatedRoom } from "./lib/lobbyAccess";
 import { isOfficeRoom } from "./lib/officeRooms";
 import { issuedBeforeCutoff } from "./lib/sessionCutoff";
 import { sessionHook } from "./lib/sessionHook";
+import { sayRestarting } from "./lib/restartNotice";
 import { allowEmptyJsonBody } from "./lib/emptyJson";
 import { mayEnterStaffRoom } from "./lib/staffRooms";
 import { withinBudget } from "./lib/roomGate";
@@ -708,6 +709,33 @@ async function doJoin(ws: Sock, roomId: string) {
     await prisma.room.update({ where: { id: room.roomId }, data: { ownerId: room.ownerId } });
   }
 
+  // Lobby rank drives the role title + icon shown beside this member's name.
+  // One indexed lookup (LobbyMember is unique on lobbyId+userId), best-effort:
+  // a slow or failing DB must never stop someone entering a room, it just
+  // means no icon this session. Refreshed on their next join, so a promotion
+  // shows up without a restart. It's looked up before the socket counts as in
+  // the room: with this wait between the two, another join from the same page
+  // (a reconnect sends several) published the room without this member, and a
+  // message sent on that state was dropped as not in the room (2026-11-03).
+  let lobbyRoleLevel: number | undefined;
+  if (
+    ws.user &&
+    ws.roomId !== roomId &&
+    room.lobbyId &&
+    !(ws.user as any).guest &&
+    !room.users.has(ws.user.id)
+  ) {
+    try {
+      // The lobby's owner counts as its owner with or without a member row.
+      const level = await lobbyLevelOf(ws.user.id, room.lobbyId);
+      if (level > 0) lobbyRoleLevel = level;
+    } catch (e) {
+      swallow(e);
+    }
+    // Gone while we looked: don't seat a closed socket.
+    if ((ws as any).readyState > 1) return false;
+  }
+
   if (ws.roomId === roomId) {
     publishStateToSocket(ws, room);
     return true;
@@ -721,21 +749,6 @@ async function doJoin(ws: Sock, roomId: string) {
   if (ws.user) room.pending.delete(ws.user.id);
 
   if (ws.user && !room.users.has(ws.user.id)) {
-    // Lobby rank drives the role title + icon shown beside this member's name.
-    // One indexed lookup (LobbyMember is unique on lobbyId+userId), best-effort:
-    // a slow or failing DB must never stop someone entering a room, it just
-    // means no icon this session. Refreshed on their next join, so a promotion
-    // shows up without a restart.
-    let lobbyRoleLevel: number | undefined;
-    if (room.lobbyId && !(ws.user as any).guest) {
-      try {
-        // The lobby's owner counts as its owner with or without a member row.
-        const level = await lobbyLevelOf(ws.user.id, room.lobbyId);
-        if (level > 0) lobbyRoleLevel = level;
-      } catch (e) {
-        swallow(e);
-      }
-    }
     const userEntry = {
       id: ws.user.id,
       name: ws.user.name,
@@ -2379,6 +2392,7 @@ async function main() {
   );
 
   process.on("SIGINT", async () => {
+    await sayRestarting(wss); // pages come straight back (lib/restartNotice.ts)
     for (const [, ws] of binanceSubs) {
       try {
         ws.close();

@@ -30,6 +30,7 @@ import { CrewTab } from "./dock/CrewTab";
 import { DmComposer } from "./dock/DmComposer";
 import { DmMessage } from "./dock/DmMessage";
 import type { DmMsg, DmThread } from "./dock/types";
+import { useSteady } from "../lib/useSteady";
 
 type GroupMemberLite = { id: string; name: string; avatar?: string | null };
 type GroupThreadLite = {
@@ -128,6 +129,7 @@ export default function DockShell(props: { forceMode?: "rail" | "floating" } = {
       (typeof wsState === "string" && wsState.toLowerCase() === "open"),
     [wsReady, wsState],
   );
+  const steadyUp = useSteady(wsUp, 8000); // a deploy's blip doesn't flash the dot
 
   const tokenMaybe = useMemo(() => {
     if (typeof window === "undefined") return "";
@@ -754,7 +756,7 @@ export default function DockShell(props: { forceMode?: "rail" | "floating" } = {
           >
             Burner
           </span>
-          <StatusDot online={wsUp} />
+          <StatusDot online={steadyUp} />
           <span style={{ flex: 1 }} />
           <button
             className="weered-dock-close"
