@@ -92,6 +92,7 @@ export default async function staffRoutes(app: FastifyInstance, opts: Opts) {
         banned: true,
         banReason: true,
         createdAt: true,
+        signupSource: true,
       },
       orderBy: { createdAt: "desc" },
       take: 50,

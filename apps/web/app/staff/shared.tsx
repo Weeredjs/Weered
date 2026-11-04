@@ -35,6 +35,8 @@ export type StaffUser = {
   email?: string;
   banned?: boolean;
   banReason?: string;
+  /** The ?ref= that brought them (api routes/signupSource.ts). */
+  signupSource?: string | null;
 };
 export type AuditLog = {
   id: string;

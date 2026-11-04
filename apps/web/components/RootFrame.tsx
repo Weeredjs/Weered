@@ -24,6 +24,7 @@ import ShellAmbient from "./shell/ShellAmbient";
 import BlizzardGuard from "./shell/BlizzardGuard";
 import UpdateNotice from "./UpdateNotice";
 import ChunkRecovery from "./ChunkRecovery";
+import SignupSource from "./SignupSource";
 import UsernameStep from "./UsernameStep";
 import SiteClosed from "./SiteClosed";
 import DesktopTitleBar from "./DesktopTitleBar";
@@ -243,6 +244,7 @@ export default function RootFrame({ children }: { children: React.ReactNode }) {
           {/* A designed lobby's look across its whole space (after ThemeRestore). */}
           <SpaceTheme />
           <UsernameStep />
+          <SignupSource />
           <SiteClosed />
           <ShellGate left={<LeftRail />} right={<RightRailSwitch />}>
             {children}

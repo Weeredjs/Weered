@@ -173,6 +173,7 @@ export function UsersTab({ myRole }: { myRole: GlobalRole }) {
                   </div>
                   <div style={{ fontSize: 11, opacity: 0.45, marginTop: 1 }}>
                     @{u.usernameKey} · {fmtDate(u.createdAt)}
+                    {u.signupSource ? ` · via ${u.signupSource}` : ""}
                   </div>
                 </div>
                 <RoleBadge role={u.globalRole} />
@@ -232,6 +233,7 @@ export function UsersTab({ myRole }: { myRole: GlobalRole }) {
             </div>
             <div style={{ fontSize: 11, opacity: 0.4, marginTop: 2 }}>
               Joined: {fmtDate(selected.createdAt)}
+              {selected.signupSource ? ` · came from ${selected.signupSource}` : ""}
             </div>
             {selected.banned && selected.banReason && (
               <div

@@ -68,6 +68,7 @@ import pubgRoutes from "./routes/pubg";
 import leagueRoutes from "./routes/league";
 import division2Routes from "./routes/division2";
 import gameNewsRoutes from "./routes/gameNews";
+import signupSourceRoutes from "./routes/signupSource";
 import assettoRoutes from "./routes/assetto";
 import bungieRoutes from "./routes/bungie";
 import eveRoutes from "./routes/eve";
@@ -1223,6 +1224,7 @@ async function main() {
     canAccessStaff,
     onAvatarChanged,
   });
+  await app.register(signupSourceRoutes, { authFromHeader });
 
   await app.register(notorietyRoutes, { authFromHeader, getNotorietyRank, NOTORIETY_RANKS });
   await app.register(crewsRoutes, {
