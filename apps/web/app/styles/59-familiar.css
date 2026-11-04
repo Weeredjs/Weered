@@ -1,0 +1,659 @@
+/* =====================================================================
+   THE DOWNGRADE (components/familiar/) — 2026-11-04
+   =====================================================================
+   James: "Oh you like discord? It can downgrade to that." A lobby drawn the
+   old place's way, as a prop: its greys, spacing and hover states. Their name,
+   logo and font are not used; system faces stand in. The layer sits over the
+   whole page, outside .weered-shell, so none of Weered's look reaches it. */
+
+/* ── The drain, then the install box ───────────────────────────────────── */
+html.weered-downgrading .weered-shell {
+  filter: grayscale(1) brightness(0.65) blur(1.5px);
+  transform: scale(0.985);
+  transition:
+    filter 2.4s ease,
+    transform 2.4s ease;
+}
+html.weered-downgraded body {
+  overflow: hidden;
+}
+.weered-downgrade-btn {
+  padding: 6px 14px;
+  border: 1px solid;
+  border-radius: 8px;
+  background: rgba(88, 101, 242, 0.14);
+  color: #e3e5e8;
+  font-weight: 800;
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  font-family: inherit;
+}
+.weered-downgrade-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.weered-downgrade-install {
+  position: fixed;
+  inset: 0;
+  z-index: 9400;
+  display: grid;
+  place-items: center;
+  background: rgba(0, 0, 0, 0.3);
+  font-family: "Noto Sans", "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+.weered-downgrade-box {
+  width: 360px;
+  padding: 24px 28px;
+  border-radius: 8px;
+  background: #313338;
+  color: #dbdee1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  text-align: center;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6);
+}
+.weered-downgrade-box b {
+  font-size: 20px;
+  color: #f2f3f5;
+}
+.weered-downgrade-box > span:not(.weered-downgrade-bar) {
+  font-size: 14px;
+  color: #b5bac1;
+}
+.weered-downgrade-bar {
+  height: 8px;
+  border-radius: 4px;
+  background: #1e1f22;
+  overflow: hidden;
+}
+.weered-downgrade-bar > span {
+  display: block;
+  height: 100%;
+  background: #5865f2;
+  animation: fam-bar linear both;
+}
+.weered-downgrade-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 9400;
+  animation: fam-in 0.45s ease both;
+}
+.weered-downgrade-layer[data-leaving] {
+  animation: fam-out 0.9s ease both;
+}
+@keyframes fam-bar {
+  from {
+    width: 0;
+  }
+  to {
+    width: 100%;
+  }
+}
+@keyframes fam-in {
+  from {
+    opacity: 0;
+    transform: scale(1.015);
+    filter: saturate(0);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}
+@keyframes fam-out {
+  0% {
+    opacity: 1;
+    filter: none;
+  }
+  55% {
+    opacity: 1;
+    filter: saturate(3) hue-rotate(60deg) blur(2px);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.04);
+    filter: saturate(3) hue-rotate(90deg) blur(10px);
+  }
+}
+
+/* ── The old place ─────────────────────────────────────────────────────── */
+.fam {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: 72px 240px minmax(0, 1fr) 240px;
+  background: #313338;
+  color: #dbdee1;
+  font-family: "Noto Sans", "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 16px;
+  line-height: 1.375;
+  text-align: left;
+}
+.fam *,
+.fam *::before,
+.fam *::after {
+  box-sizing: border-box;
+}
+.fam button,
+.fam input {
+  font-family: inherit;
+}
+.fam ::-webkit-scrollbar {
+  width: 8px;
+}
+.fam ::-webkit-scrollbar-thumb {
+  background: #1a1b1e;
+  border-radius: 4px;
+}
+.fam ::-webkit-scrollbar-track {
+  background: transparent;
+}
+@media (max-width: 1100px) {
+  .fam {
+    grid-template-columns: 72px 240px minmax(0, 1fr);
+  }
+  .fam-members {
+    display: none;
+  }
+}
+
+/* Server icons */
+.fam-rail {
+  background: #1e1f22;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 0;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+.fam-rail::-webkit-scrollbar {
+  display: none;
+}
+.fam-rail-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: #313338;
+  color: #dbdee1;
+  border: none;
+  padding: 0;
+  object-fit: cover;
+  cursor: pointer;
+  text-decoration: none;
+  flex-shrink: 0;
+  transition:
+    border-radius 0.15s ease-out,
+    background 0.15s ease-out,
+    color 0.15s ease-out;
+}
+.fam-rail-icon:hover,
+.fam-rail-item[data-on] .fam-rail-icon {
+  border-radius: 16px;
+}
+.fam-rail-home:hover {
+  background: #5865f2;
+  color: #fff;
+}
+.fam-rail-add {
+  color: #23a55a;
+}
+.fam-rail-add:hover {
+  background: #23a55a;
+  color: #fff;
+}
+.fam-rail-letters {
+  font-size: 18px;
+  font-weight: 600;
+}
+.fam-rail-sep {
+  width: 32px;
+  height: 2px;
+  border-radius: 1px;
+  background: #35363c;
+  flex-shrink: 0;
+}
+.fam-rail-item {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  width: 72px;
+  flex-shrink: 0;
+}
+.fam-rail-pill {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 4px;
+  height: 8px;
+  margin-top: -4px;
+  border-radius: 0 4px 4px 0;
+  background: #f2f3f5;
+  opacity: 0;
+  transition:
+    height 0.15s ease-out,
+    margin-top 0.15s ease-out,
+    opacity 0.15s ease-out;
+}
+.fam-rail-item:hover .fam-rail-pill {
+  opacity: 1;
+  height: 20px;
+  margin-top: -10px;
+}
+.fam-rail-item[data-on] .fam-rail-pill {
+  opacity: 1;
+  height: 40px;
+  margin-top: -20px;
+}
+
+/* Channels */
+.fam-side {
+  background: #2b2d31;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.fam-side-head,
+.fam-chat-head {
+  height: 48px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  box-shadow:
+    0 1px 0 rgba(4, 4, 5, 0.2),
+    0 1.5px 0 rgba(6, 6, 7, 0.05),
+    0 2px 0 rgba(4, 4, 5, 0.05);
+  position: relative;
+  z-index: 1;
+}
+.fam-side-head {
+  justify-content: space-between;
+  padding: 0 16px;
+  color: #f2f3f5;
+  font-weight: 600;
+  cursor: pointer;
+}
+.fam-side-head:hover {
+  background: #35373c;
+}
+.fam-channels {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 8px 8px;
+}
+.fam-cat {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 18px 0 4px 2px;
+  color: #949ba4;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+.fam-cat:hover {
+  color: #dbdee1;
+}
+.fam-chan {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  height: 34px;
+  padding: 0 8px;
+  margin: 1px 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: #949ba4;
+  font-size: 16px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+}
+.fam-chan > span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.fam-chan svg {
+  color: #80848e;
+  flex-shrink: 0;
+}
+.fam-chan:hover {
+  background: #35373c;
+  color: #dbdee1;
+}
+.fam-chan[data-on] {
+  background: #404249;
+  color: #fff;
+}
+.fam-voice-user {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 30px;
+  padding: 0 8px 0 36px;
+  color: #949ba4;
+  font-size: 14px;
+}
+
+/* You, bottom left */
+.fam-me {
+  height: 52px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 8px;
+  background: #232428;
+}
+.fam-me-face {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+}
+.fam-dot {
+  position: absolute;
+  right: -3px;
+  bottom: -3px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #23a55a;
+  border: 3px solid #232428;
+}
+.fam-dot-idle {
+  background: #f0b232;
+}
+.fam-me-words {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  line-height: 1.25;
+}
+.fam-me-words b {
+  font-size: 14px;
+  font-weight: 600;
+  color: #f2f3f5;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.fam-me-words span {
+  font-size: 12px;
+  color: #b5bac1;
+}
+.fam-me-icons {
+  display: flex;
+}
+.fam-me-icons button {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: #b5bac1;
+  cursor: pointer;
+}
+.fam-me-icons button:hover {
+  background: #3d3e45;
+  color: #dbdee1;
+}
+.fam-face {
+  border-radius: 50%;
+  object-fit: cover;
+  display: inline-grid;
+  place-items: center;
+  color: #fff;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+/* The chat */
+.fam-chat {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  background: #313338;
+}
+.fam-chat-head {
+  gap: 8px;
+  padding: 0 16px;
+  color: #f2f3f5;
+}
+.fam-chat-head b {
+  font-weight: 600;
+}
+.fam-chat-hash svg {
+  width: 24px;
+  height: 24px;
+  color: #80848e;
+  display: block;
+}
+.fam-divider {
+  width: 1px;
+  height: 24px;
+  margin: 0 8px;
+  background: #3f4147;
+  flex-shrink: 0;
+}
+.fam-topic {
+  min-width: 0;
+  color: #949ba4;
+  font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.fam-head-icons {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  color: #b5bac1;
+  flex-shrink: 0;
+}
+.fam-head-icons > span {
+  display: inline-flex;
+}
+.fam-search {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 144px;
+  height: 24px;
+  padding: 0 6px;
+  border-radius: 4px;
+  background: #1e1f22;
+  color: #949ba4;
+  font-size: 14px;
+}
+.fam-messages {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 24px;
+}
+.fam-welcome {
+  margin: auto 16px 8px;
+  padding-top: 16px;
+}
+.fam-welcome-hash {
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  background: #41434a;
+  color: #fff;
+  display: grid;
+  place-items: center;
+}
+.fam-welcome-hash svg {
+  width: 42px;
+  height: 42px;
+}
+.fam-welcome h2 {
+  margin: 8px 0;
+  font-size: 32px;
+  line-height: 40px;
+  font-weight: 700;
+  color: #f2f3f5;
+}
+.fam-welcome p {
+  margin: 0;
+  color: #b5bac1;
+}
+.fam-msg {
+  display: flex;
+  gap: 16px;
+  margin-top: 17px;
+  padding: 2px 48px 2px 16px;
+}
+.fam-msg:hover {
+  background: rgba(2, 2, 2, 0.06);
+}
+.fam-msg-body {
+  min-width: 0;
+}
+.fam-msg-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  line-height: 22px;
+}
+.fam-msg-head b {
+  font-size: 16px;
+  font-weight: 500;
+}
+.fam-msg-head time {
+  font-size: 12px;
+  color: #949ba4;
+}
+.fam-msg p {
+  margin: 0;
+  color: #dbdee1;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.fam-compose {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  height: 44px;
+  margin: 0 16px 24px;
+  padding-right: 16px;
+  border-radius: 8px;
+  background: #383a40;
+}
+.fam-compose-plus {
+  width: 56px;
+  display: grid;
+  place-items: center;
+}
+.fam-compose-plus svg {
+  width: 24px;
+  height: 24px;
+  padding: 3px;
+  border-radius: 50%;
+  background: #b5bac1;
+  color: #383a40;
+}
+.fam-compose input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: #dbdee1;
+  font-size: 16px;
+}
+.fam-compose input::placeholder {
+  color: #6d6f78;
+}
+.fam-compose-icons {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  color: #b5bac1;
+}
+.fam-gif {
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 15px;
+  padding: 0 3px;
+  border: 2px solid currentColor;
+  border-radius: 4px;
+}
+.fam-readonly {
+  padding-left: 16px;
+  color: #6d6f78;
+}
+.fam-upgrade {
+  position: absolute;
+  right: 24px;
+  bottom: 84px;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #8b5cf6, #5800e5);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+.fam-upgrade:hover {
+  filter: brightness(1.12);
+}
+
+/* Who's online */
+.fam-members {
+  background: #2b2d31;
+  overflow-y: auto;
+  padding: 0 8px 20px;
+}
+.fam-members-head {
+  padding: 24px 8px 4px;
+  color: #949ba4;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+.fam-member {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 42px;
+  padding: 0 8px;
+  border-radius: 4px;
+  color: #949ba4;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.fam-member > span:last-child {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.fam-member:hover {
+  background: #35373c;
+}
+.fam-member .fam-dot {
+  border-color: #2b2d31;
+}

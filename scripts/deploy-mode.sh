@@ -10,8 +10,8 @@ while IFS= read -r f; do
   case "$f" in
     apps/web/e2e/* | apps/web/test/* | apps/api/test/*) ;;
     apps/mobile/* | apps/desktop/* | apps/mod/* | docs/* | .github/* | *.md) ;;
-    # Tooling no running server loads.
-    scripts/* | server-deploy.sh | .gitignore | eslint.config.mjs) ;;
+    # Tooling no running server loads (the API bundles src/ only).
+    scripts/* | apps/api/scripts/* | server-deploy.sh | .gitignore | eslint.config.mjs) ;;
     apps/web/*) web=1 ;;
     apps/api/*) api=1 ;;
     *)

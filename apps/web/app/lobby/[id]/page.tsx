@@ -30,6 +30,7 @@ import LobbySplash, {
   DESTINY_SPLASH_PALETTE,
 } from "../../../components/LobbySplash";
 import LobbyHall from "../../../components/LobbyHall";
+import Downgrade, { DOWNGRADE_LOBBIES } from "../../../components/familiar/Downgrade";
 import LobbyTierCards from "../../../components/LobbyTierCards";
 import LobbyEvents from "../../../components/LobbyEvents";
 import GuestLaunchBar from "../../../components/GuestLaunchBar";
@@ -1186,6 +1187,15 @@ export default function LobbyIdPage() {
                   >
                     ⚙ Admin
                   </a>
+                )}
+                {DOWNGRADE_LOBBIES.includes(lobbyId) && (
+                  <span
+                    style={{
+                      marginLeft: (canDesign && !design.designing) || showAdmin ? 6 : "auto",
+                    }}
+                  >
+                    <Downgrade lobbyId={lobbyId} accent={accent} />
+                  </span>
                 )}
               </div>
 
