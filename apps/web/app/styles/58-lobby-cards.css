@@ -1,0 +1,54 @@
+/* =====================================================================
+   LOBBY CARDS — module lists flow into columns (2026-11-04)
+   =====================================================================
+   James: module blocks were "vastly over kill for a full screen desktop
+   monitor": 1,400px rows holding one cut-off line. A list of cards in a
+   module is .weered-flow: as many columns as fit, none narrower than the
+   lobby's card width, one on a phone. data-flow="wide" is for cards with a
+   row of controls (LFG posts, matches, challenges). The lobby's Card size
+   (Design → Tabs & layout, lib/lobbyLayout.ts `cards`) sets the width on
+   .weered-lobby-cards. Data tables (ladders, standings) keep their rows. */
+.weered-lobby-cards {
+  --weered-card-min: 340px;
+}
+.weered-lobby-cards[data-card-size="s"] {
+  --weered-card-min: 260px;
+}
+.weered-lobby-cards[data-card-size="l"] {
+  --weered-card-min: 460px;
+}
+
+.weered-flow {
+  display: grid !important;
+  grid-template-columns: repeat(
+    auto-fill,
+    minmax(min(var(--weered-card-min, 340px), 100%), 1fr)
+  ) !important;
+  gap: 10px;
+}
+.weered-flow[data-flow="wide"] {
+  grid-template-columns: repeat(
+    auto-fill,
+    minmax(min(calc(var(--weered-card-min, 340px) * 1.35), 100%), 1fr)
+  ) !important;
+}
+/* A card is a grid item now: it may shrink, and the column's spacing is the gap. */
+.weered-flow > * {
+  min-width: 0;
+  margin: 0 !important;
+}
+.weered-flow > .weered-empty {
+  grid-column: 1 / -1;
+}
+/* One cut-off line in a full-width row becomes up to three lines in a card.
+   Rows laid out with flex keep their single line. */
+.weered-flow
+  [style*="text-overflow: ellipsis"]:not([style*="display: flex"]):not(
+    [style*="display: inline-flex"]
+  ) {
+  white-space: normal !important;
+  display: -webkit-box !important;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}

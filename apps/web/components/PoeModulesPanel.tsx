@@ -404,7 +404,7 @@ function FindTeam({ lobbyId, accent }: { lobbyId: string; accent: string }) {
       {posts.length === 0 ? (
         <EmptyState icon="👥" title="No parties posted yet." hint="Drop one up top — someone's looking." />
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        <div className="weered-flow" data-flow="wide" style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           {posts.map(p => {
             const isFull = p.status === "FULL";
             const playerCount = (p.players || []).length;
@@ -519,7 +519,7 @@ function TwitchStreams({ lobbyId, accent, twitch }: { lobbyId: string; accent: s
         </div>
       )}
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <div className="weered-flow" style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         {streams.map(s => (
           <div key={s.userLogin} onClick={() => handleCardClick(s)} onKeyDown={onActivate(() => handleCardClick(s))} tabIndex={0} role="button" style={{
             ...S.card, cursor: "pointer", display: "flex", gap: 10, alignItems: "center",

@@ -1206,7 +1206,7 @@ function TavernBoard({ lobbyId }: { lobbyId: string }) {
           <div className="dnd-serif" style={{ fontSize: 14, color: "rgba(201,168,120,.7)", fontStyle: "italic" }}>The board hangs empty. Pin the first quest.</div>
         </div>
       ) : (
-        <div className="dnd-corkboard" style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+        <div className="dnd-corkboard weered-flow" data-flow="wide" style={{ display: "flex", flexDirection: "column", gap: 4 }}>
           {posts.map(p => {
             const meta = p.metadata || {};
             const isLFDM = (p.tags || []).includes("Looking for DM");
@@ -1306,7 +1306,7 @@ function TwitchStreams({ lobbyId }: { lobbyId: string }) {
           </div>
         </div>
       )}
-      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <div className="weered-flow" style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         {streams.map(s => (
           <div key={s.userLogin} onClick={() => setInterceptStream(s)} onKeyDown={onActivate(() => setInterceptStream(s))} tabIndex={0} role="button" style={{ ...S.card, cursor: "pointer", display: "flex", gap: 10, alignItems: "center", transition: "border-color .12s" }}
             onMouseEnter={e => (e.currentTarget.style.borderColor = `${ACCENT}44`)}

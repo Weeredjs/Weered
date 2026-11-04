@@ -590,7 +590,7 @@ function PgaNews({ accentColor }: { accentColor: string }) {
   if (error) return <div style={{ padding: 20, textAlign: "center", fontSize: 12, color: "rgba(252,165,165,.8)" }}>{error}</div>;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+    <div className="weered-flow" style={{ display: "flex", flexDirection: "column", gap: 8 }}>
       {articles.map((a, i) => (
         <a
           key={i}

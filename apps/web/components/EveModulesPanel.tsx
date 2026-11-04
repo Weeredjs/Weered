@@ -239,7 +239,7 @@ function KillboardTab() {
       <div style={{ ...S.card, background: "rgba(212,175,55,.06)", fontSize: 12, opacity: 0.78, lineHeight: 1.5 }}>
         🔥 Biggest recent kills across <strong>nullsec</strong> — live from zKillboard. Link your capsuleer on the <strong>Capsuleer</strong> tab to surface kills involving this lobby.
       </div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+      <div className="weered-flow" style={{ display: "flex", flexDirection: "column", gap: 4 }}>
         {kills.map((k: any) => (
           <a
             key={k.killId}
@@ -425,7 +425,7 @@ function NewsTab() {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+    <div className="weered-flow" style={{ display: "flex", flexDirection: "column", gap: 6 }}>
       {items.map((n: any, i: number) => {
         const fresh = n.pubDate && isToday(n.pubDate);
         return (

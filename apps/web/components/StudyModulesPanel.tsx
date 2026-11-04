@@ -861,7 +861,11 @@ function FindPartners({ lobbyId, accent }: { lobbyId: string; accent: string }) 
         </div>
       )}
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      <div
+        className="weered-flow"
+        data-flow="wide"
+        style={{ display: "flex", flexDirection: "column", gap: 8 }}
+      >
         {posts.map((p) => {
           const slots = `${(p.players || []).length}/${p.maxPlayers || 8}`;
           const isFull = p.status === "FULL";

@@ -368,7 +368,11 @@ export function CrewTab({ lobbyId }: { lobbyId: string }) {
           hint="Be the first to raise one. Your crew is out there."
         />
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        <div
+          className="weered-flow"
+          data-flow="wide"
+          style={{ display: "flex", flexDirection: "column", gap: 10 }}
+        >
           {posts.map((p) => (
             <div key={p.id} style={{ ...S.card, padding: "12px 16px" }}>
               <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>

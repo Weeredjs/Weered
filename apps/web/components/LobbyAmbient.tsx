@@ -26,6 +26,7 @@ export default function LobbyAmbient({
   accent = "#7c3aed",
   intensity = 1,
   symbol = "✦",
+  image,
   light = false,
   forced = false,
   style,
@@ -35,6 +36,9 @@ export default function LobbyAmbient({
   intensity?: number;
   /** What floats by when the effect is "symbol". */
   symbol?: string;
+  /** A picture that floats by instead of the symbol: the lobby's logo, or
+   *  the viewer's own upload. The symbol shows until it loads, or if it can't. */
+  image?: string;
   /** Drawn over a light background (Blizzard): flakes go grey-blue to show. */
   light?: boolean;
   /** The lobby's own effect, set to show even for viewers who turned
@@ -57,6 +61,13 @@ export default function LobbyAmbient({
     let parts: P[] = [];
     const dpr = Math.min(2, window.devicePixelRatio || 1);
     const rnd = (a: number, b: number) => a + Math.random() * (b - a);
+    // The picture for the symbol effect, drawn once it has loaded.
+    let pic: HTMLImageElement | null = null;
+    if (effect === "symbol" && image) {
+      pic = new Image();
+      pic.decoding = "async";
+      pic.src = image;
+    }
 
     const density: Record<string, number> = {
       stars: 0.00018,
@@ -277,11 +288,19 @@ export default function LobbyAmbient({
             ctx!.save();
             ctx!.translate(p.x, p.y);
             ctx!.rotate(Math.sin(p.t) * 0.35);
-            ctx!.font = glyphFont(p.r);
-            ctx!.textAlign = "center";
-            ctx!.textBaseline = "middle";
-            ctx!.fillStyle = accent;
-            ctx!.fillText(symbol || "✦", 0, 0);
+            if (pic && pic.complete && pic.naturalWidth > 0) {
+              // The picture's longer side matches the symbol's size.
+              const s = (p.r * 1.25) / Math.max(pic.naturalWidth, pic.naturalHeight);
+              const pw = pic.naturalWidth * s;
+              const ph = pic.naturalHeight * s;
+              ctx!.drawImage(pic, -pw / 2, -ph / 2, pw, ph);
+            } else {
+              ctx!.font = glyphFont(p.r);
+              ctx!.textAlign = "center";
+              ctx!.textBaseline = "middle";
+              ctx!.fillStyle = accent;
+              ctx!.fillText(symbol || "✦", 0, 0);
+            }
             ctx!.restore();
             break;
           case "rain":
@@ -345,7 +364,7 @@ export default function LobbyAmbient({
       cancelAnimationFrame(raf);
       ro.disconnect();
     };
-  }, [effect, accent, intensity, symbol, light, still]);
+  }, [effect, accent, intensity, symbol, image, light, still]);
 
   if (!effect || effect === "none") return null;
   return (

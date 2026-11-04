@@ -286,6 +286,7 @@ export default function LobbyRoomDirectory({
   style,
   presenceUsers,
   compact,
+  cardSize = "m",
 }: {
   lobbyId: string;
   accentColor?: string;
@@ -295,7 +296,12 @@ export default function LobbyRoomDirectory({
   presenceUsers?: LobbyPresenceUser[];
   // Narrow single-column stack (the Lobby tab, where chat holds the centre).
   compact?: boolean;
+  /** The lobby's Card size, in the stack: medium is one row with Join beside
+   *  the name, small drops the description, large is the full card. */
+  cardSize?: "s" | "m" | "l";
 }) {
+  const slim = !!compact && cardSize !== "l";
+  const tiny = !!compact && cardSize === "s";
   const router = useRouter();
   const { join } = useWeered() as any;
   const [rooms, setRooms] = useState<RoomData[]>([]);
@@ -946,7 +952,7 @@ export default function LobbyRoomDirectory({
             gridTemplateColumns: compact
               ? "minmax(0, 1fr)"
               : "repeat(auto-fill, minmax(min(300px, 100%), 1fr))",
-            gap: compact ? 8 : 14,
+            gap: slim ? 6 : compact ? 8 : 14,
           }}
         >
           {sortedRooms.map((room) => {
@@ -969,6 +975,14 @@ export default function LobbyRoomDirectory({
             const isLive = liveCount > 0;
             const onlineUsers: RoomUser[] = occupants;
             const quietAgo = isLive ? null : timeAgo(room.lastMessageAt, room.lastActiveAt);
+            // Medium and small cards carry the footer's line beside the description.
+            const slimMeta = isLive
+              ? null
+              : memberCount > 0
+                ? `${memberCount} joined`
+                : quietAgo
+                  ? `active ${quietAgo}`
+                  : null;
 
             const cardColor =
               room.accentColor && /^#[0-9a-f]{6}$/i.test(room.accentColor)
@@ -977,6 +991,25 @@ export default function LobbyRoomDirectory({
                   ? LIVE_COLOR
                   : accent;
             const angle = meshAngle(room.id);
+            const joinChip = (
+              <span
+                className="weered-room-join"
+                style={{
+                  flexShrink: 0,
+                  fontSize: 11,
+                  fontWeight: 700,
+                  padding: slim ? "4px 11px" : "5px 14px",
+                  borderRadius: 8,
+                  background: `${cardColor}12`,
+                  border: `1px solid ${cardColor}25`,
+                  color: "rgba(243,244,246,.7)",
+                  transition: "all .18s",
+                  letterSpacing: "0.02em",
+                }}
+              >
+                Join →
+              </span>
+            );
 
             const cssVars = {
               "--card-glow": isLive ? "rgba(34,197,94,.15)" : `${accent}18`,
@@ -1075,15 +1108,26 @@ export default function LobbyRoomDirectory({
                   }}
                 />
 
-                <div style={{ position: "relative", zIndex: 1, padding: "16px 18px 18px" }}>
+                <div
+                  style={{
+                    position: "relative",
+                    zIndex: 1,
+                    padding: tiny ? "8px 12px" : slim ? "10px 12px" : "16px 18px 18px",
+                  }}
+                >
                   <div
-                    style={{ display: "flex", alignItems: "flex-start", gap: 12, marginBottom: 10 }}
+                    style={{
+                      display: "flex",
+                      alignItems: slim ? "center" : "flex-start",
+                      gap: slim ? 10 : 12,
+                      marginBottom: slim ? 0 : 10,
+                    }}
                   >
                     <div
                       style={{
-                        width: 48,
-                        height: 48,
-                        borderRadius: 12,
+                        width: tiny ? 26 : slim ? 34 : 48,
+                        height: tiny ? 26 : slim ? 34 : 48,
+                        borderRadius: tiny ? 7 : slim ? 9 : 12,
                         flexShrink: 0,
                         background: customIcon
                           ? "rgba(0,0,0,.25)"
@@ -1092,7 +1136,7 @@ export default function LobbyRoomDirectory({
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
-                        fontSize: 22,
+                        fontSize: tiny ? 13 : slim ? 16 : 22,
                         boxShadow: `0 0 16px ${cardColor}10`,
                         overflow: "hidden",
                       }}
@@ -1105,7 +1149,7 @@ export default function LobbyRoomDirectory({
                         className="weered-room-card-name"
                         style={{
                           fontWeight: 800,
-                          fontSize: 15,
+                          fontSize: slim ? 14 : 15,
                           lineHeight: 1.25,
                           color: "rgba(243,244,246,.95)",
                           letterSpacing: "-0.3px",
@@ -1146,20 +1190,22 @@ export default function LobbyRoomDirectory({
                           {room.name}
                         </span>
                       </div>
-                      <div
-                        className="weered-room-subtitle"
-                        style={{
-                          fontSize: 11,
-                          color: "rgba(148,163,184,.45)",
-                          marginTop: 3,
-                          lineHeight: 1.4,
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        {subtitle}
-                      </div>
+                      {!tiny && (
+                        <div
+                          className="weered-room-subtitle"
+                          style={{
+                            fontSize: 11,
+                            color: "rgba(148,163,184,.45)",
+                            marginTop: slim ? 2 : 3,
+                            lineHeight: 1.4,
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {slim ? [slimMeta, subtitle].filter(Boolean).join(" · ") : subtitle}
+                        </div>
+                      )}
                     </div>
 
                     {isLive ? (
@@ -1214,136 +1260,124 @@ export default function LobbyRoomDirectory({
                         🔒 Locked
                       </div>
                     ) : null}
+                    {slim && joinChip}
                   </div>
 
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      paddingTop: 12,
-                      borderTop: "1px solid rgba(255,255,255,.04)",
-                    }}
-                  >
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      {onlineUsers.length > 0 && (
-                        <div style={{ display: "flex", alignItems: "center" }}>
-                          {onlineUsers.slice(0, 4).map((u, i) => {
-                            const name = u.name || "?";
-                            const color = avColor(name);
-                            return (
+                  {!slim && (
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        paddingTop: 12,
+                        borderTop: "1px solid rgba(255,255,255,.04)",
+                      }}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        {onlineUsers.length > 0 && (
+                          <div style={{ display: "flex", alignItems: "center" }}>
+                            {onlineUsers.slice(0, 4).map((u, i) => {
+                              const name = u.name || "?";
+                              const color = avColor(name);
+                              return (
+                                <div
+                                  key={u.id || i}
+                                  title={name}
+                                  style={{
+                                    width: 24,
+                                    height: 24,
+                                    borderRadius: "50%",
+                                    border: "2px solid rgba(15,17,23,.9)",
+                                    marginLeft: i === 0 ? 0 : -8,
+                                    zIndex: 4 - i,
+                                    position: "relative",
+                                    overflow: "hidden",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    fontSize: 10,
+                                    fontWeight: 700,
+                                    color: "rgba(255,255,255,.85)",
+                                    background: u.avatar
+                                      ? "rgba(255,255,255,.08)"
+                                      : `linear-gradient(135deg, ${color}55, ${color}aa)`,
+                                    flexShrink: 0,
+                                  }}
+                                >
+                                  {u.avatar ? (
+                                    <img
+                                      src={u.avatar}
+                                      alt={name + " avatar"}
+                                      style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                                    />
+                                  ) : (
+                                    (name[0]?.toUpperCase() ?? "?")
+                                  )}
+                                </div>
+                              );
+                            })}
+                            {liveCount > 4 && (
                               <div
-                                key={u.id || i}
-                                title={name}
                                 style={{
                                   width: 24,
                                   height: 24,
                                   borderRadius: "50%",
                                   border: "2px solid rgba(15,17,23,.9)",
-                                  marginLeft: i === 0 ? 0 : -8,
-                                  zIndex: 4 - i,
-                                  position: "relative",
-                                  overflow: "hidden",
+                                  marginLeft: -8,
+                                  zIndex: 0,
+                                  background: "rgba(255,255,255,.06)",
                                   display: "flex",
                                   alignItems: "center",
                                   justifyContent: "center",
-                                  fontSize: 10,
+                                  fontSize: 9,
                                   fontWeight: 700,
-                                  color: "rgba(255,255,255,.85)",
-                                  background: u.avatar
-                                    ? "rgba(255,255,255,.08)"
-                                    : `linear-gradient(135deg, ${color}55, ${color}aa)`,
-                                  flexShrink: 0,
+                                  color: "rgba(255,255,255,.4)",
+                                  fontFamily: "monospace",
                                 }}
                               >
-                                {u.avatar ? (
-                                  <img
-                                    src={u.avatar}
-                                    alt={name + " avatar"}
-                                    style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                                  />
-                                ) : (
-                                  (name[0]?.toUpperCase() ?? "?")
-                                )}
+                                +{liveCount - 4}
                               </div>
-                            );
-                          })}
-                          {liveCount > 4 && (
-                            <div
-                              style={{
-                                width: 24,
-                                height: 24,
-                                borderRadius: "50%",
-                                border: "2px solid rgba(15,17,23,.9)",
-                                marginLeft: -8,
-                                zIndex: 0,
-                                background: "rgba(255,255,255,.06)",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                fontSize: 9,
-                                fontWeight: 700,
-                                color: "rgba(255,255,255,.4)",
-                                fontFamily: "monospace",
-                              }}
-                            >
-                              +{liveCount - 4}
-                            </div>
-                          )}
-                        </div>
-                      )}
+                            )}
+                          </div>
+                        )}
 
-                      <span
-                        style={{
-                          fontSize: 10,
-                          color: "rgba(148,163,184,.35)",
-                          fontFamily: "monospace",
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 4,
-                        }}
-                      >
-                        <svg
-                          width="12"
-                          height="12"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2.2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          style={{ opacity: 0.5 }}
+                        <span
+                          style={{
+                            fontSize: 10,
+                            color: "rgba(148,163,184,.35)",
+                            fontFamily: "monospace",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 4,
+                          }}
                         >
-                          <circle cx="12" cy="8" r="3.5" />
-                          <path d="M5.5 21v-1.5A5 5 0 0110.5 14h3a5 5 0 015 5.5V21" />
-                        </svg>
-                        {isLive
-                          ? `${liveCount} here now`
-                          : memberCount > 0
-                            ? `${memberCount} joined${quietAgo ? ` · ${quietAgo}` : ""}`
-                            : quietAgo
-                              ? `active ${quietAgo}`
-                              : "Be first in"}
-                      </span>
-                    </div>
+                          <svg
+                            width="12"
+                            height="12"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2.2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            style={{ opacity: 0.5 }}
+                          >
+                            <circle cx="12" cy="8" r="3.5" />
+                            <path d="M5.5 21v-1.5A5 5 0 0110.5 14h3a5 5 0 015 5.5V21" />
+                          </svg>
+                          {isLive
+                            ? `${liveCount} here now`
+                            : memberCount > 0
+                              ? `${memberCount} joined${quietAgo ? ` · ${quietAgo}` : ""}`
+                              : quietAgo
+                                ? `active ${quietAgo}`
+                                : "Be first in"}
+                        </span>
+                      </div>
 
-                    <span
-                      className="weered-room-join"
-                      style={{
-                        fontSize: 11,
-                        fontWeight: 700,
-                        padding: "5px 14px",
-                        borderRadius: 8,
-                        background: `${cardColor}12`,
-                        border: `1px solid ${cardColor}25`,
-                        color: "rgba(243,244,246,.7)",
-                        transition: "all .18s",
-                        letterSpacing: "0.02em",
-                      }}
-                    >
-                      Join →
-                    </span>
-                  </div>
+                      {joinChip}
+                    </div>
+                  )}
                 </div>
               </div>
             );

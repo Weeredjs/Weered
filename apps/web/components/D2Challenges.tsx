@@ -830,7 +830,11 @@ export function ChallengeBoard({ lobbyId }: { lobbyId: string }) {
       </div>
 
       {subTab === "active" && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        <div
+          className="weered-flow"
+          data-flow="wide"
+          style={{ display: "flex", flexDirection: "column", gap: 8 }}
+        >
           {activeChallenges.length === 0 ? (
             <EmptyState compact title="No active challenges." hint="Drops on reset." />
           ) : (
@@ -848,7 +852,11 @@ export function ChallengeBoard({ lobbyId }: { lobbyId: string }) {
       )}
 
       {subTab === "mine" && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        <div
+          className="weered-flow"
+          data-flow="wide"
+          style={{ display: "flex", flexDirection: "column", gap: 8 }}
+        >
           {myChallenges.length === 0 ? (
             <div style={{ padding: 20, textAlign: "center", opacity: 0.3, fontSize: 12 }}>
               You haven&apos;t enrolled in any challenges yet.
@@ -875,7 +883,11 @@ export function ChallengeBoard({ lobbyId }: { lobbyId: string }) {
       )}
 
       {subTab === "completed" && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        <div
+          className="weered-flow"
+          data-flow="wide"
+          style={{ display: "flex", flexDirection: "column", gap: 8 }}
+        >
           {completedChallenges.length === 0 ? (
             <EmptyState compact title="Nothing completed yet." hint="Get grinding." />
           ) : (

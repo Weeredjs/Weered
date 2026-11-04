@@ -58,6 +58,7 @@ export type EditOp =
       intensity?: number;
       sparkle?: boolean;
       symbol?: string;
+      symbolLogo?: boolean;
       forced?: boolean;
       shape?: "round" | "soft" | "square" | "cut";
       texture?: "glass" | "grid" | "lines" | "dots" | "solid";
@@ -69,7 +70,8 @@ export type EditOp =
   | { op: "move"; id: string; at: string }
   | { op: "hero"; mode: HeroMode }
   | { op: "door"; door: LobbyDoor | null }
-  | { op: "rename"; name?: string; description?: string };
+  | { op: "rename"; name?: string; description?: string }
+  | { op: "cards"; cards: "s" | "m" | "l" };
 export type DripResult = { look: Record<string, unknown>; layout?: string; summary: string };
 
 export class BuildError extends Error {
@@ -218,6 +220,9 @@ export function applyOps(
         if (op.intensity !== undefined) t.intensity = op.intensity;
         if (op.sparkle !== undefined) t.sparkle = op.sparkle;
         if (op.symbol) t.symbol = op.symbol;
+        // A new symbol replaces the logo unless the logo is asked for too.
+        if (op.symbolLogo !== undefined) t.symbolLogo = op.symbolLogo || undefined;
+        else if (op.symbol) t.symbolLogo = undefined;
         if (op.forced !== undefined) t.fxForced = op.forced;
         if (op.shape) t.shape = op.shape;
         if (op.texture) t.texture = op.texture;
@@ -254,6 +259,9 @@ export function applyOps(
       }
       case "hero":
         l.hero = op.mode;
+        break;
+      case "cards":
+        l.cards = op.cards === "m" ? undefined : op.cards;
         break;
       case "door":
         l.door = op.door ? sanitizeDoor(op.door) : { ...(l.door || emptyDoor()), on: false };

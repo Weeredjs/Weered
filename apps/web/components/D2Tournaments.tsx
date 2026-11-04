@@ -338,7 +338,11 @@ export function TournamentBoard({ lobbyId }: { lobbyId: string }) {
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+    <div
+      className="weered-flow"
+      data-flow="wide"
+      style={{ display: "flex", flexDirection: "column", gap: 8 }}
+    >
       {tournaments.map((t) => (
         <TournamentCard
           key={t.id}

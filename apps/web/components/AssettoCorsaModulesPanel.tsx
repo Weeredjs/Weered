@@ -604,7 +604,11 @@ function FindARace({ lobbyId, accent }: { lobbyId: string; accent: string }) {
           hint="Post one — the board shows who's already on track."
         />
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        <div
+          className="weered-flow"
+          data-flow="wide"
+          style={{ display: "flex", flexDirection: "column", gap: 6 }}
+        >
           {posts.map((p) => {
             const full = p.status === "FULL";
             const count = (p.players || []).length;
@@ -754,7 +758,7 @@ function TwitchStreams({ lobbyId, accent }: { lobbyId: string; accent: string })
           </div>
         </div>
       )}
-      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <div className="weered-flow" style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         {streams.map((s) => (
           <div
             key={s.userLogin}

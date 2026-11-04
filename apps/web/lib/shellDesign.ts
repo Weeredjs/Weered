@@ -27,6 +27,7 @@ import {
   PALETTE_IDS,
   type NebulaFont,
   type Palette,
+  type RailButtons,
   type ShellBackdrop,
   type ShellFx,
   type ShellLines,
@@ -51,16 +52,26 @@ export type ShellLook = {
   stars: boolean;
   density: "comfortable" | "compact";
   shape: ShellShape;
+  /** The side buttons' shape (styles/99-nebula-buttons.css). */
+  buttons: RailButtons;
   lines: ShellLines;
   texture: ShellTexture;
   backdrop: ShellBackdrop;
   fx: ShellFx;
   fxIntensity: number;
   fxSymbol: string;
+  /** Your uploaded picture ("" for none) and whether it floats instead of fxSymbol. */
+  fxImage: string;
+  fxPicture: boolean;
   fxFront: boolean;
 };
 
+/** Only a picture the symbol upload wrote (api routes/uploads.ts). */
+export const isSymbolPicture = (v: unknown): v is string =>
+  typeof v === "string" && /^https?:\/\/[^/]+\/symbols\/[A-Za-z0-9_]+-\d+\.webp$/.test(v);
+
 const SHAPES: ShellShape[] = ["round", "soft", "square", "cut"];
+const BUTTONS: RailButtons[] = ["tile", "chevron", "cut", "pill"];
 const TEXTURES: ShellTexture[] = ["glass", "grid", "lines", "dots", "solid"];
 const BACKDROPS: ShellBackdrop[] = ["sky", "grid", "plain"];
 export const SHELL_FX: ShellFx[] = [
@@ -201,12 +212,15 @@ export function lookFromPrefs(p: UiPrefs): ShellLook {
     font: p.font || "default",
     stars: p.stars !== false,
     shape: p.shape || "soft",
+    buttons: p.buttons && BUTTONS.includes(p.buttons) ? p.buttons : "tile",
     lines: p.lines || "soft",
     texture: p.texture || "glass",
     backdrop: p.backdrop || "sky",
     fx: p.fx || "none",
     fxIntensity: typeof p.fxIntensity === "number" ? p.fxIntensity : 1,
     fxSymbol: p.fxSymbol || "✦",
+    fxImage: isSymbolPicture(p.fxImage) ? p.fxImage : "",
+    fxPicture: p.fxPicture === true,
     fxFront: p.fxFront === true,
     // Settings → Display keeps density in its own store; what's on the page
     // is the truth when the prefs don't say.
@@ -234,6 +248,7 @@ function cleanLook(raw: any, base: ShellLook): ShellLook {
     stars: typeof r.stars === "boolean" ? r.stars : base.stars,
     density: r.density === "compact" || r.density === "comfortable" ? r.density : base.density,
     shape: SHAPES.includes(r.shape) ? r.shape : base.shape,
+    buttons: BUTTONS.includes(r.buttons) ? r.buttons : base.buttons,
     lines: r.lines === "hard" || r.lines === "soft" ? r.lines : base.lines,
     texture: TEXTURES.includes(r.texture) ? r.texture : base.texture,
     backdrop: BACKDROPS.includes(r.backdrop) ? r.backdrop : base.backdrop,
@@ -245,6 +260,8 @@ function cleanLook(raw: any, base: ShellLook): ShellLook {
     fxFront: typeof r.fxFront === "boolean" ? r.fxFront : base.fxFront,
     fxSymbol:
       typeof r.fxSymbol === "string" && r.fxSymbol.trim() ? r.fxSymbol.slice(0, 24) : base.fxSymbol,
+    fxImage: r.fxImage === "" || isSymbolPicture(r.fxImage) ? r.fxImage : base.fxImage,
+    fxPicture: typeof r.fxPicture === "boolean" ? r.fxPicture : base.fxPicture,
   };
 }
 
@@ -375,12 +392,16 @@ export async function saveDesign(): Promise<AccountSave> {
     stars: d.look.stars,
     density: d.look.density,
     shape: d.look.shape,
+    buttons: d.look.buttons,
     lines: d.look.lines,
     texture: d.look.texture,
     backdrop: d.look.backdrop,
     fx: d.look.fx,
     fxIntensity: d.look.fxIntensity,
     fxSymbol: d.look.fxSymbol,
+    // A forgotten picture goes as "none": the account merges, so a missing key keeps it.
+    fxImage: d.look.fxImage || "none",
+    fxPicture: d.look.fxPicture,
     fxFront: d.look.fxFront,
   });
   if (res !== "ok") {

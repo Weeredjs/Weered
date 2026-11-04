@@ -136,7 +136,7 @@ function Scoreboard({ accentColor }: { accentColor: string }) {
         <div style={{ fontSize: 10, textAlign: "center", opacity: 0.3 }}>Refreshing...</div>
       )}
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <div className="weered-flow" data-flow="wide" style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         {games.map(g => {
           const gid = g.gamePk || g.id || g.gameId;
           const isExp = expanded === String(gid);
@@ -697,7 +697,7 @@ function PlayerSearch({ accentColor, initialPlayerId, initialPlayerName }: {
 
       {error && <div style={{ fontSize: 12, color: "rgba(252,165,165,.8)" }}>{error}</div>}
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <div className="weered-flow" style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         {results.map((p, i) => {
           const pid = p.id || p.playerId;
           return (

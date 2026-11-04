@@ -172,7 +172,7 @@ export default function RedditFeedTab({
           </button>
         </div>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        <div className="weered-flow" style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           {posts.map((p) => (
             <a
               key={p.id}

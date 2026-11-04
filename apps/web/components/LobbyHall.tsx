@@ -27,6 +27,7 @@ export default function LobbyHall({
   accentColor,
   bannerUrl,
   moduleType,
+  cardSize,
   style,
 }: {
   lobbyId: string;
@@ -36,6 +37,8 @@ export default function LobbyHall({
   moduleType?: string;
   hasModules?: boolean;
   onOpenModules?: () => void;
+  /** The lobby's Card size (Design → Tabs & layout). */
+  cardSize?: "s" | "m" | "l";
   style?: React.CSSProperties;
 }) {
   const accent = accentColor || "#5800E5";
@@ -94,6 +97,7 @@ export default function LobbyHall({
         moduleType={moduleType}
         presenceUsers={presence}
         compact
+        cardSize={cardSize}
         style={{ flex: "0 1 420px", minWidth: 0, minHeight: 0 }}
       />
 

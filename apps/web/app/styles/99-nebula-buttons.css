@@ -1,0 +1,96 @@
+/* =====================================================================
+   SIDE BUTTONS — Crew, Friends, DMs and the Panel tab (2026-11-04)
+   =====================================================================
+   Change your drip → Look → Side buttons. lib/uiPrefs.ts paints
+   data-weered-buttons (tile is Nebula's own and writes nothing). The two
+   :not(#…) outrank the Corners rules in 98-nebula-structure.css, which reach
+   these buttons through .weered-rail-stack. A clipped shape cuts anything
+   outside the button, so the unread badge moves inside on every shape but
+   tile. */
+
+/* Chevron: the old minimal look's notched strip, tinted in the colourway so
+   the notch reads against the rail (plain glass is the page's own colour).
+   The Panel tab stays square with the spine, as it did there. */
+html[data-weered-theme="nebula"][data-weered-buttons="chevron"]:not([data-weered-lobby]):not(
+    #nb
+  ):not(#nb-buttons)
+  .weered-rail-stack
+  :is(.weered-rail-quick, .weered-rail-tab) {
+  border: none !important;
+  border-radius: 0 !important;
+  background: linear-gradient(100deg, rgb(var(--nb-a) / 0.26), rgb(var(--nb-a) / 0.1)) !important;
+  box-shadow:
+    inset 2px 0 0 rgb(var(--nb-a) / 0.75),
+    inset 0 1px 0 rgb(255 255 255 / 0.05) !important;
+}
+html[data-weered-theme="nebula"][data-weered-buttons="chevron"]:not([data-weered-lobby]):not(
+    #nb
+  ):not(#nb-buttons)
+  .weered-rail-stack
+  .weered-rail-quick {
+  clip-path: polygon(0 0, 100% 0, 85% 50%, 100% 100%, 0 100%) !important;
+  padding-right: 6px !important;
+}
+/* FRIENDS is the widest label; tighter tracking keeps its S off the notch. */
+html[data-weered-theme="nebula"][data-weered-buttons="chevron"]:not([data-weered-lobby]):not(
+    #nb
+  ):not(#nb-buttons)
+  .weered-rail-stack
+  .weered-rail-quick-label {
+  letter-spacing: 0.1px !important;
+}
+html[data-weered-theme="nebula"][data-weered-buttons="chevron"]:not([data-weered-lobby]):not(
+    #nb
+  ):not(#nb-buttons)
+  .weered-rail-stack
+  :is(.weered-rail-quick, .weered-rail-tab):is(:hover, .is-hot) {
+  box-shadow:
+    inset 3px 0 0 rgb(var(--nb-a)),
+    inset 0 0 0 999px rgb(var(--nb-a) / 0.1) !important;
+}
+
+/* Cut: angled top-left and bottom-right corners, like the Cut panels. */
+html[data-weered-theme="nebula"][data-weered-buttons="cut"]:not([data-weered-lobby]):not(#nb):not(
+    #nb-buttons
+  )
+  .weered-rail-stack
+  :is(.weered-rail-quick, .weered-rail-tab) {
+  border-radius: 0 !important;
+  clip-path: polygon(
+    9px 0,
+    100% 0,
+    100% calc(100% - 9px),
+    calc(100% - 9px) 100%,
+    0 100%,
+    0 9px
+  ) !important;
+}
+html[data-weered-theme="nebula"][data-weered-buttons="cut"]:not([data-weered-lobby]):not(#nb):not(
+    #nb-buttons
+  )
+  .weered-rail-stack
+  :is(.weered-rail-quick, .weered-rail-tab):is(:hover, .is-hot) {
+  background: rgb(var(--nb-a) / 0.14) !important;
+}
+
+/* Pill: fully rounded ends. */
+html[data-weered-theme="nebula"][data-weered-buttons="pill"]:not([data-weered-lobby]):not(#nb):not(
+    #nb-buttons
+  )
+  .weered-rail-stack
+  :is(.weered-rail-quick, .weered-rail-tab) {
+  border-radius: 999px !important;
+}
+
+/* The badge, inside the clipped shapes and off the pill's curve. */
+html[data-weered-theme="nebula"]:is(
+    [data-weered-buttons="chevron"],
+    [data-weered-buttons="cut"],
+    [data-weered-buttons="pill"]
+  ):not([data-weered-lobby]):not(#nb):not(#nb-buttons)
+  .weered-rail-stack
+  .weered-rail-quick
+  .weered-rail-quick-badge {
+  top: 3px !important;
+  right: 3px !important;
+}

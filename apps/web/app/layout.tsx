@@ -186,6 +186,7 @@ try {
   if (up && up.font && up.font !== 'default') d.setAttribute('data-weered-font', up.font);
   var shp = (up && up.shape) || 'soft';
   if (shp !== 'round') d.setAttribute('data-weered-shape', shp);
+  if (up && up.buttons && up.buttons !== 'tile') d.setAttribute('data-weered-buttons', up.buttons);
   if (up && up.lines === 'hard') d.setAttribute('data-weered-lines', 'hard');
   if (up && up.texture && up.texture !== 'glass') d.setAttribute('data-weered-texture', up.texture);
   if (up && up.backdrop && up.backdrop !== 'sky') d.setAttribute('data-weered-backdrop', up.backdrop);

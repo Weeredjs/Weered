@@ -148,7 +148,7 @@ function TwitchStreams({ gameName, lobbyId, accentColor }: { gameName: string; l
           </div>
         </div>
       )}
-      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <div className="weered-flow" style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         {streams.map(s => (
           <div key={s.userLogin} onClick={() => setInterceptStream(s)} onKeyDown={onActivate(() => setInterceptStream(s))} tabIndex={0} role="button" style={{ ...S.card, cursor: "pointer", display: "flex", gap: 10, alignItems: "center", transition: "border-color .12s" }}
             onMouseEnter={e => (e.currentTarget.style.borderColor = `${accentColor}44`)}
@@ -284,7 +284,7 @@ function LfgBoard({ lobbyId, accent }: { lobbyId: string; accent: string }) {
       {posts.length === 0 ? (
         <EmptyState compact title="No LFG posts yet." hint="Drop the first one — someone's looking." />
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        <div className="weered-flow" data-flow="wide" style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           {posts.map(p => (
             <div key={p.id} style={{ ...S.card, display: "flex", flexDirection: "column", gap: 6 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -551,7 +551,7 @@ function FnNews() {
   if (news.length === 0) return <EmptyState compact title="No news right now." />;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+    <div className="weered-flow" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
       {news.map(n => (
         <div key={n.id} style={{ borderRadius: 2, overflow: "hidden", border: "1px solid rgba(255,255,255,.08)", background: "rgba(255,255,255,.02)" }}>
           {(n.image || n.tileImage) && <div style={{ height: 140, background: `url(${n.image || n.tileImage}) center/cover no-repeat`, borderBottom: "1px solid rgba(255,255,255,.06)" }} />}

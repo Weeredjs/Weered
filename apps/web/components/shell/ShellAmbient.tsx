@@ -42,6 +42,7 @@ export default function ShellAmbient() {
       accent={c.a}
       intensity={look.fxIntensity}
       symbol={look.fxSymbol}
+      image={look.fxPicture && look.fxImage ? look.fxImage : undefined}
       light={!!c.light}
       // In front: over the page (below sheets and Design mode), never in the
       // way of a click; behind: under the glass, over the sky.

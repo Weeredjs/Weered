@@ -445,7 +445,11 @@ export default function HelldiversSquadFinder({
         </div>
       )}
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      <div
+        className="weered-flow"
+        data-flow="wide"
+        style={{ display: "flex", flexDirection: "column", gap: 8 }}
+      >
         {posts.map((p) => {
           const { tags, rest } = parseTags(p.activity || "");
           const isFull = p.status === "FULL";

@@ -35,6 +35,9 @@ export const hasVanityName = (tier: unknown) => tierAtLeast(tier, "INDICTED");
 export const canBuildModules = (tier: unknown) => tierAtLeast(tier, "FELON");
 /** A lobby on a domain of your own (club.com). */
 export const canOwnDomain = (tier: unknown) => tierAtLeast(tier, "CONDEMNED");
+/** A picture of your own floating in your look's symbol effect (2026-11-04).
+ *  Paid by James's yes to "Indicted and up"; return true here to free it. */
+export const canFloatPicture = (tier: unknown) => tierAtLeast(tier, "INDICTED");
 
 /** How many of your lobbies may have <lobby>.weered.ca. */
 export function subdomainAllowance(tier: unknown): number {

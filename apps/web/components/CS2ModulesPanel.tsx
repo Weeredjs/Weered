@@ -407,7 +407,11 @@ function SquadFinder({ lobbyId, accent }: { lobbyId: string; accent: string }) {
           hint="Drop the first one — someone's queueing."
         />
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        <div
+          className="weered-flow"
+          data-flow="wide"
+          style={{ display: "flex", flexDirection: "column", gap: 6 }}
+        >
           {posts.map((p) => {
             const isFull = p.status === "FULL";
             const playerCount = (p.players || []).length;
@@ -665,7 +669,7 @@ function TwitchStreams({
         </div>
       )}
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <div className="weered-flow" style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         {streams.map((s) => (
           <div
             key={s.userLogin}
@@ -788,7 +792,7 @@ function RanksReference({ accent }: { accent: string }) {
         >
           <span style={{ fontSize: 12 }}>{"\u2B50"}</span> PREMIER CS RATING
         </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+        <div className="weered-flow" style={{ display: "flex", flexDirection: "column", gap: 4 }}>
           {PREMIER_TIERS.map((t) => (
             <div
               key={t.label}

@@ -121,6 +121,7 @@ export default async function aiBuildRoutes(app: FastifyInstance, opts: Opts) {
           description:
             typeof body.description === "string" ? body.description : ctx.lobby.description,
           moduleType: ctx.lobby.moduleType,
+          logoUrl: ctx.lobby.logoUrl,
         },
         layout,
       );

@@ -38,6 +38,8 @@ export type RailSection = "card" | "nav" | "presence" | "favs" | "recent";
 export type NebulaFont = "default" | "condensed" | "serif" | "stencil" | "clean" | "mono";
 /** Corners: round (Nebula's own), soft, square (all corners), cut (chamfered). */
 export type ShellShape = "round" | "soft" | "square" | "cut";
+/** The side buttons (Crew, Friends, DMs, Panel): styles/99-nebula-buttons.css. */
+export type RailButtons = "tile" | "chevron" | "cut" | "pill";
 /** Line weight: soft glow hairlines, or hard crisp edges. */
 export type ShellLines = "soft" | "hard";
 /** What the cards are made of. */
@@ -75,12 +77,18 @@ export type UiPrefs = {
   barColor?: string;
   font?: NebulaFont;
   shape?: ShellShape;
+  buttons?: RailButtons;
   lines?: ShellLines;
   texture?: ShellTexture;
   backdrop?: ShellBackdrop;
   fx?: ShellFx;
   fxIntensity?: number;
   fxSymbol?: string;
+  /** Your own uploaded picture for the symbol effect (api /profile/symbol/upload),
+   *  or "none" once forgotten. */
+  fxImage?: string;
+  /** The symbol effect floats that picture instead of the characters. */
+  fxPicture?: boolean;
   /** The effect floats over the page instead of behind the glass. */
   fxFront?: boolean;
   setup?: "done" | "skipped";
@@ -99,6 +107,7 @@ export const DEFAULT_LOOK: UiPrefs = {
   accent: "#8b5cf6",
   font: "default",
   shape: "soft",
+  buttons: "tile",
   lines: "soft",
   texture: "glass",
   backdrop: "sky",
@@ -386,6 +395,7 @@ export function paintUiPrefs(p: UiPrefs) {
     else d.removeAttribute(name);
   };
   attr("data-weered-shape", p.shape, "round");
+  attr("data-weered-buttons", p.buttons, "tile");
   attr("data-weered-lines", p.lines, "soft");
   attr("data-weered-texture", p.texture, "glass");
   attr("data-weered-backdrop", p.backdrop, "sky");

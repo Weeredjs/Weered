@@ -18,12 +18,15 @@ import { chip, label, panel } from "./designerKit";
 export function ThemeDock({
   accent,
   layout,
+  logoUrl,
   set,
   onPreset,
   onClose,
 }: {
   accent: string;
   layout: LobbyLayout;
+  /** The lobby's logo, which the symbol effect can float instead. */
+  logoUrl?: string | null;
   set: (fn: (l: LobbyLayout) => LobbyLayout) => void;
   onPreset: (id: string) => void;
   onClose: () => void;
@@ -261,7 +264,7 @@ export function ThemeDock({
               value={th.symbol ?? ""}
               placeholder="✦"
               maxLength={12}
-              onChange={(e) => setTheme({ symbol: e.target.value })}
+              onChange={(e) => setTheme({ symbol: e.target.value, symbolLogo: undefined })}
               aria-label="Your symbol"
               style={{
                 width: 54,
@@ -278,11 +281,29 @@ export function ThemeDock({
               <button
                 key={sym}
                 style={{ ...chip(th.symbol === sym, accent), padding: "2px 6px", fontSize: 14 }}
-                onClick={() => setTheme({ symbol: sym })}
+                onClick={() => setTheme({ symbol: sym, symbolLogo: undefined })}
               >
                 {sym}
               </button>
             ))}
+            {logoUrl ? (
+              <button
+                style={{ ...chip(!!th.symbolLogo, accent), padding: "2px 8px", fontSize: 12 }}
+                onClick={() => setTheme({ symbolLogo: th.symbolLogo ? undefined : true })}
+                title="Float the lobby's own logo instead"
+              >
+                <img
+                  src={logoUrl}
+                  alt=""
+                  style={{ width: 16, height: 16, objectFit: "contain", verticalAlign: "-3px" }}
+                />{" "}
+                Our logo
+              </button>
+            ) : (
+              <span style={{ fontSize: 11, opacity: 0.55 }}>
+                Upload a logo in Admin to float it here.
+              </span>
+            )}
           </div>
         )}
         {th.effect && th.effect !== "none" && (

@@ -4,9 +4,11 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
   BLOCK_CATALOG,
+  CARD_SIZES,
   TAB_BLURB,
   TAB_DEFAULT_LABEL,
   type BlockType,
+  type CardSize,
   type HeroMode,
   type LobbyLayout,
   type TabId,
@@ -130,6 +132,7 @@ export function TabsEditor({
   onPatch,
   onLanding,
   onHero,
+  onCards,
   onShow,
 }: {
   accent: string;
@@ -139,9 +142,11 @@ export function TabsEditor({
   onPatch: (id: TabId, patch: { label?: string; hidden?: boolean }) => void;
   onLanding: (id: TabId) => void;
   onHero: (h: HeroMode) => void;
+  onCards: (c: CardSize) => void;
   onShow: (t: TabId) => void;
 }) {
   const [drag, setDrag] = useState<number | null>(null);
+  const cards = layout.cards || "m";
   return (
     <div>
       <div style={label}>Header</div>
@@ -153,6 +158,25 @@ export function TabsEditor({
             onClick={() => onHero(h)}
           >
             {h === "full" ? "Banner" : h === "compact" ? "Slim" : "None"}
+          </button>
+        ))}
+      </div>
+      <div style={label}>Card size</div>
+      <div style={{ display: "flex", gap: 6 }}>
+        {CARD_SIZES.map((c) => (
+          <button
+            key={c}
+            style={{ ...chip(cards === c, accent), flex: 1 }}
+            onClick={() => onCards(c)}
+            title={
+              c === "s"
+                ? "Room rows and more cards across"
+                : c === "m"
+                  ? "One-line rooms, cards a third of a big screen"
+                  : "Full room cards, fewer cards across"
+            }
+          >
+            {c === "s" ? "Small" : c === "m" ? "Medium" : "Large"}
           </button>
         ))}
       </div>

@@ -274,6 +274,8 @@ export type EditOp =
       intensity?: number;
       sparkle?: boolean;
       symbol?: string;
+      /** The symbol effect floats the lobby's own logo instead. */
+      symbolLogo?: boolean;
       forced?: boolean;
       shape?: string;
       texture?: string;
@@ -285,7 +287,8 @@ export type EditOp =
   | { op: "move"; id: string; at: string }
   | { op: "hero"; mode: "full" | "compact" | "hidden" }
   | { op: "door"; door: PlanDoor | null }
-  | { op: "rename"; name?: string; description?: string };
+  | { op: "rename"; name?: string; description?: string }
+  | { op: "cards"; cards: "s" | "m" | "l" };
 
 /** One block's props, checked per type. Returns only the keys that were given
  *  and valid; null when a new block of this type would be empty. */
@@ -404,6 +407,7 @@ export function cleanOps(raw: unknown, blocks: Map<string, string>, given: strin
         if (n !== undefined) op.intensity = n;
         if (bool(o.sparkle) !== undefined) op.sparkle = o.sparkle;
         if (o.symbol !== undefined && clip(o.symbol, 12)) op.symbol = clip(o.symbol, 12);
+        if (bool(o.symbolLogo) !== undefined) op.symbolLogo = o.symbolLogo;
         if (bool(o.forced) !== undefined) op.forced = o.forced;
         // The whole space: corners, surface and backdrop (web components/SpaceTheme.tsx).
         if (oneOf(o.shape, ["round", "soft", "square", "cut"] as const)) op.shape = o.shape;
@@ -443,6 +447,10 @@ export function cleanOps(raw: unknown, blocks: Map<string, string>, given: strin
         if (o.mode === "full" || o.mode === "compact" || o.mode === "hidden")
           ops.push({ op: "hero", mode: o.mode });
         break;
+      case "cards":
+        if (o.cards === "s" || o.cards === "m" || o.cards === "l")
+          ops.push({ op: "cards", cards: o.cards });
+        break;
       case "door":
         ops.push({ op: "door", door: cleanDoor(o.door) });
         break;
@@ -465,7 +473,7 @@ export function cleanOps(raw: unknown, blocks: Map<string, string>, given: strin
 /** What the model is shown of a lobby: long text trimmed, so a big Home page
  *  stays a small prompt. */
 export function lobbyForModel(
-  lobby: { name?: string; description?: string; moduleType?: string },
+  lobby: { name?: string; description?: string; moduleType?: string; logoUrl?: string | null },
   layout: unknown,
 ) {
   const L = obj(layout);
@@ -484,6 +492,7 @@ export function lobbyForModel(
     name: clip(lobby.name, 100),
     description: clip(lobby.description, 500),
     game: lobby.moduleType || "NONE",
+    hasLogo: !!lobby.logoUrl,
     look: trim(obj(L.theme)),
     hero: L.hero || "full",
     blocks: arr(L.blocks)
@@ -504,6 +513,7 @@ const DRIP_PALETTE_IDS = DRIP_PALETTES.map((p) => p.id);
 const DRIP_FONT_IDS = Object.keys(DRIP_FONTS);
 const DRIP_PRESET_IDS = DRIP_PRESETS.map((p) => p.id);
 const SHAPES = ["round", "soft", "square", "cut"] as const;
+const BUTTONS = ["tile", "chevron", "cut", "pill"] as const;
 const LINES = ["soft", "hard"] as const;
 const TEXTURES = ["glass", "grid", "lines", "dots", "solid"] as const;
 const BACKDROPS = ["sky", "grid", "plain"] as const;
@@ -525,12 +535,14 @@ const NEBULA_ONLY = [
   "accent",
   "font",
   "shape",
+  "buttons",
   "lines",
   "texture",
   "backdrop",
   "fx",
   "fxIntensity",
   "fxSymbol",
+  "fxPicture",
   "stars",
 ];
 
@@ -540,12 +552,14 @@ export type DripLook = Partial<{
   accent: string;
   font: string;
   shape: string;
+  buttons: string;
   lines: string;
   texture: string;
   backdrop: string;
   fx: string;
   fxIntensity: number;
   fxSymbol: string;
+  fxPicture: boolean;
   stars: boolean;
   density: "comfortable" | "compact";
 }>;
@@ -567,6 +581,7 @@ export function cleanDrip(
   } else if (oneOf(l.palette, DRIP_PALETTE_IDS)) look.palette = l.palette;
   if (oneOf(l.font, DRIP_FONT_IDS)) look.font = l.font;
   if (oneOf(l.shape, SHAPES)) look.shape = l.shape;
+  if (oneOf(l.buttons, BUTTONS)) look.buttons = l.buttons;
   if (oneOf(l.lines, LINES)) look.lines = l.lines;
   if (oneOf(l.texture, TEXTURES)) look.texture = l.texture;
   if (oneOf(l.backdrop, BACKDROPS)) look.backdrop = l.backdrop;
@@ -577,6 +592,8 @@ export function cleanDrip(
     const s = clip(l.fxSymbol, 12);
     if (s) look.fxSymbol = s;
   }
+  // Their own uploaded picture, on or off; the builder never sets the picture.
+  if (bool(l.fxPicture) !== undefined) look.fxPicture = l.fxPicture;
   if (bool(l.stars) !== undefined) look.stars = l.stars;
   if (l.density === "comfortable" || l.density === "compact") look.density = l.density;
   // A Nebula-only change under a Classic skin would do nothing: switch to Nebula.
@@ -633,7 +650,7 @@ export const EDIT_SYSTEM = `You change a lobby on Weered: its Home page (a colum
 You get the lobby as JSON: name, description, game, look, hero (the banner at the top: full, compact or hidden), blocks (the Home page in order: id, type, size, props) and door (the front door, or null).
 
 Operations:
-- look: any of preset, accent (#rrggbb), effect, font, entrance, intensity (0.2 to 1.5), sparkle (true or false), symbol (an emoji or up to 3 characters; used when effect is symbol), forced (keeps the effect on for people who turned animations off; only if they ask), and for the whole space (both sidebars and every room of the lobby, not just this page): shape (corners: round, soft, square or cut), texture (what the cards are made of: glass, grid, lines, dots or solid), backdrop (behind the glass: sky, grid or plain). A preset brings its own accent, effect and font unless you set them too.
+- look: any of preset, accent (#rrggbb), effect, font, entrance, intensity (0.2 to 1.5), sparkle (true or false), symbol (an emoji or up to 3 characters; used when effect is symbol), symbolLogo (true floats the lobby's own logo instead of the characters, with effect symbol; only when hasLogo is true. Asked for their logo with hasLogo false: keep a fitting symbol and say in the summary to upload a logo in Admin first), forced (keeps the effect on for people who turned animations off; only if they ask), and for the whole space (both sidebars and every room of the lobby, not just this page): shape (corners: round, soft, square or cut), texture (what the cards are made of: glass, grid, lines, dots or solid), backdrop (behind the glass: sky, grid or plain). A preset brings its own accent, effect and font unless you set them too.
 - add: a new block: type, size (s, m, l or full), props, and at: "start", "end", or the id of the block to put it after.
 - update: an existing block's size, or the props you're changing (give type too).
 - remove: a block, by id.
@@ -641,6 +658,7 @@ Operations:
 - hero: full, compact or hidden.
 - door: the whole front door (on, title, body, button, rules, questions, age18), or null to turn it off.
 - rename: a new name and/or description for the lobby.
+- cards: the size of the lobby's cards (the room list beside the chat, and the lists in its game tab): s (slim room rows, more cards across), m (the default) or l (full room cards, fewer across).
 
 Blocks and their props:
 ${BUILD_BLOCKS.map((b) => `- ${b.type} (${b.name}: ${b.blurb})`).join("\n")}
@@ -663,8 +681,10 @@ You get their current look as JSON.
   .map(([id, n]) => `${id} (${n})`)
   .join(", ")}.
 - shape: round, soft, square, cut (angled corners). lines: soft (hairlines and glow) or hard (crisp, no glow).
+- buttons: the four side buttons (Crew, Friends, DMs, Panel): tile, chevron (notched like an arrow strip), cut (angled corners) or pill.
 - texture (the card surface): glass, grid, lines, dots, solid. backdrop: sky, grid, plain.
 - fx (moving background): none, snow, blizzard, embers, rain, petals, bubbles, fireflies, matrix (code rain), symbol (their emoji or up to 3 characters in fxSymbol). fxIntensity 0.2 to 1.5.
+- fxPicture: true floats the picture they uploaded (fxImage in their look) instead of the characters, with fx symbol; false goes back to the characters. Asked for their logo or a picture with no fxImage: use a fitting symbol and say in the summary they can upload a picture under Your symbol.
 - stars: the starfield behind everything. density: comfortable or compact.
 - layout, only if they ask to rearrange: ${DRIP_PRESETS.map((p) => `${p.id} (${p.blurb})`).join("; ")}
 - summary: one short plain sentence (20 words at most) saying what changed.
@@ -771,13 +791,15 @@ export const EDIT_TOOL = {
         items: {
           type: "object",
           properties: {
-            op: E(["look", "add", "update", "remove", "move", "hero", "door", "rename"]),
+            op: E(["look", "add", "update", "remove", "move", "hero", "door", "rename", "cards"]),
+            cards: E(["s", "m", "l"]),
             id: S("an existing block's id"),
             type: E(BLOCK_TYPES),
             size: E(SIZES),
             props: { type: "object" },
             at: S('"start", "end", or a block id'),
             ...LOOK_PROPS,
+            symbolLogo: { type: "boolean" },
             sparkle: { type: "boolean" },
             forced: { type: "boolean" },
             mode: E(["full", "compact", "hidden"]),
@@ -808,12 +830,14 @@ export const DRIP_TOOL = {
           accent: S("#rrggbb, with palette custom"),
           font: E(DRIP_FONT_IDS),
           shape: E(SHAPES),
+          buttons: E(BUTTONS),
           lines: E(LINES),
           texture: E(TEXTURES),
           backdrop: E(BACKDROPS),
           fx: E(DRIP_FX),
           fxIntensity: { type: "number" },
           fxSymbol: S(),
+          fxPicture: { type: "boolean" },
           stars: { type: "boolean" },
           density: E(["comfortable", "compact"]),
         },

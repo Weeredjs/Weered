@@ -5,6 +5,7 @@ import { ownsUploadName } from "../lib/ownImages";
 import { join } from "path";
 import { existsSync, mkdirSync, writeFileSync, unlinkSync } from "fs";
 import { moderateProfileImage } from "../lib/imageModeration";
+import { canFloatPicture } from "../lib/tiers";
 
 type Opts = {
   authFromHeader: (h?: string) => { id: string; name?: string } | null;
@@ -264,6 +265,69 @@ export default async function uploadsRoutes(app: FastifyInstance, opts: Opts) {
       }
     },
   );
+
+  // The picture that floats by in your look's symbol effect ("Change the snow
+  // to my logo", James 2026-11-04): small, square, moderated like an avatar,
+  // one per person. Saving it into the look is the client's (uiPrefs.fxImage).
+  const SYMBOL_DIR = join(process.cwd(), "uploads", "symbols");
+  if (!existsSync(SYMBOL_DIR)) mkdirSync(SYMBOL_DIR, { recursive: true });
+  const SYMBOL_MAX_BYTES = 1024 * 1024;
+
+  app.post(
+    "/profile/symbol/upload",
+    { bodyLimit: 4 * 1024 * 1024, config: { rateLimit: { max: 10, timeWindow: "1 minute" } } },
+    async (req, reply) => {
+      const u = authFromHeader((req as any).headers?.authorization);
+      if (!u) return reply.code(401).send({ error: "unauthorized" });
+      const dbUser: any = await prisma.user.findUnique({
+        where: { id: u.id },
+        select: { tier: true, globalRole: true, uiPrefs: true, mediaBannedUntil: true } as any,
+      });
+      if (!canFloatPicture(dbUser?.tier) && !canAccessStaff(dbUser?.globalRole)) {
+        return reply
+          .code(402)
+          .send({ error: "plan_required", message: "Your own picture is Indicted and up." });
+      }
+      if (dbUser?.mediaBannedUntil && new Date(dbUser.mediaBannedUntil).getTime() > Date.now()) {
+        return reply
+          .code(403)
+          .send({ error: "media_banned", message: "Your upload privileges are suspended." });
+      }
+      const body: any = (req as any).body || {};
+      const dataUrl = body.image;
+      if (!dataUrl || typeof dataUrl !== "string")
+        return reply.code(400).send({ error: "missing_image" });
+      const match = dataUrl.match(/^data:image\/(png|jpeg|jpg|webp|gif);base64,(.+)$/);
+      if (!match)
+        return reply
+          .code(400)
+          .send({ error: "invalid_format", message: "Image must be PNG, JPEG, WebP, or GIF." });
+      const buffer = Buffer.from(match[2], "base64");
+      if (buffer.length > SYMBOL_MAX_BYTES)
+        return reply.code(400).send({ error: "too_large", message: "Image must be under 1MB." });
+      const mod = await moderateProfileImage(buffer, { userId: u.id, square: true, maxDim: 128 });
+      if (!mod.ok) return reply.code(mod.code).send({ error: mod.error, message: mod.message });
+      try {
+        const prev = String(dbUser?.uiPrefs?.fxImage || "");
+        const url = persistImage(SYMBOL_DIR, "symbols", prev, mod.webp, u.id);
+        return reply.send({ ok: true, url });
+      } catch (e) {
+        log.error("[symbol upload]", e);
+        return reply.code(500).send({ error: "upload_failed" });
+      }
+    },
+  );
+
+  app.get("/symbols/:filename", async (req, reply) => {
+    const filename = String((req as any).params?.filename || "").replaceAll(/[^a-zA-Z0-9._-]/g, "");
+    if (!filename.endsWith(".webp")) return reply.code(400).send("bad request");
+    const filepath = join(SYMBOL_DIR, filename);
+    if (!existsSync(filepath)) return reply.code(404).send("not found");
+    const { readFileSync } = await import("fs");
+    reply.header("Content-Type", "image/webp");
+    reply.header("Cache-Control", "public, max-age=31536000, immutable");
+    return reply.send(readFileSync(filepath));
+  });
 
   app.get("/banners/:filename", async (req, reply) => {
     const filename = String((req as any).params?.filename || "").replaceAll(/[^a-zA-Z0-9._-]/g, "");

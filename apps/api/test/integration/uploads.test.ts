@@ -3,6 +3,7 @@ import sharp from "sharp";
 import uploadsRoutes from "../../src/routes/uploads";
 import { buildTestApp, testToken, testAuthFromHeader } from "../helpers/buildTestApp";
 import { prisma } from "../../src/lib/prisma";
+import { sanitizeUiPrefs } from "../../src/lib/uiPrefs";
 
 const created: string[] = [];
 
@@ -179,6 +180,40 @@ describe("uploads - POST /profile/banner/upload (moderated)", () => {
     });
     expect(bad.statusCode).toBe(400);
     expect(bad.json().error).toBe("invalid_format");
+    await app.close();
+  });
+});
+
+describe("uploads - POST /profile/symbol/upload (your own floating picture)", () => {
+  it("is Indicted and up, and the address it returns is one the look will keep", async () => {
+    const app = await makeApp();
+    const free = await app.inject({
+      method: "POST",
+      url: "/profile/symbol/upload",
+      headers: { authorization: "Bearer " + testToken(await newUser("sym_free")) },
+      payload: { image: await pngDataUrl() },
+    });
+    expect(free.statusCode).toBe(402);
+    expect(free.json().error).toBe("plan_required");
+
+    const paid = await app.inject({
+      method: "POST",
+      url: "/profile/symbol/upload",
+      headers: {
+        authorization: "Bearer " + testToken(await newUser("sym_paid", { tier: "INDICTED" })),
+      },
+      payload: { image: await pngDataUrl() },
+    });
+    expect(paid.statusCode).toBe(200);
+    const url = paid.json().url;
+    expect(url).toMatch(/\/symbols\/[A-Za-z0-9_]+-\d+\.webp$/);
+    expect(sanitizeUiPrefs({ fxImage: url, fxPicture: true })).toEqual({
+      fxImage: url,
+      fxPicture: true,
+    });
+    const served = await app.inject({ method: "GET", url: "/symbols/" + url.split("/").pop() });
+    expect(served.statusCode).toBe(200);
+    expect(served.headers["content-type"]).toBe("image/webp");
     await app.close();
   });
 });

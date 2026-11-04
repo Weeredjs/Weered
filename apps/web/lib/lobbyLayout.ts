@@ -101,6 +101,8 @@ export type LobbyTheme = {
   sparkle?: boolean;
   /** What floats by when the effect is "symbol": an emoji or a few characters. */
   symbol?: string;
+  /** The symbol effect floats the lobby's own logo instead (2026-11-04). */
+  symbolLogo?: boolean;
   /** The effect and sparkle show even for visitors who turned animations
    *  off (James 2026-10-30: "users can't opt out"). Their system's
    *  reduce-motion setting still wins; see lib/motion.ts. */
@@ -177,6 +179,12 @@ export function emptyDoor(): LobbyDoor {
   };
 }
 
+/** How big the lobby's cards are: room cards beside the chat, and the module
+ *  lists, which add a column instead of stretching (styles/58-lobby-cards.css;
+ *  James 2026-11-04: "vastly over kill for a full screen desktop monitor"). */
+export type CardSize = "s" | "m" | "l";
+export const CARD_SIZES: CardSize[] = ["s", "m", "l"];
+
 export type LobbyLayout = {
   v: 1;
   tabs: TabEntry[];
@@ -186,6 +194,8 @@ export type LobbyLayout = {
   blocks: Block[];
   roomOrder: string[];
   door?: LobbyDoor;
+  /** Absent = medium. */
+  cards?: CardSize;
 };
 
 const TAB_IDS = Object.keys(TAB_DEFAULT_LABEL) as TabId[];
@@ -428,6 +438,7 @@ export function sanitizeLayout(raw: unknown): LobbyLayout | null {
     entrance: ENTRANCES.includes(th.entrance) ? th.entrance : undefined,
     sparkle: !!th.sparkle,
     symbol: cleanSymbol(th.symbol),
+    symbolLogo: th.symbolLogo === true ? true : undefined,
     fxForced: th.fxForced === true ? true : undefined,
     shape: ["round", "soft", "square", "cut"].includes(th.shape) ? th.shape : undefined,
     texture: ["glass", "grid", "lines", "dots", "solid"].includes(th.texture)
@@ -445,6 +456,7 @@ export function sanitizeLayout(raw: unknown): LobbyLayout | null {
     blocks,
     roomOrder: (Array.isArray(r.roomOrder) ? r.roomOrder : []).map(String).slice(0, 200),
     door: sanitizeDoor(r.door),
+    cards: r.cards === "s" || r.cards === "l" ? r.cards : undefined,
   };
 }
 

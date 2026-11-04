@@ -261,7 +261,7 @@ function TwitchStreams({
           </div>
         </div>
       )}
-      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <div className="weered-flow" style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         {streams.map((s) => (
           <div
             key={s.userLogin}
@@ -548,7 +548,11 @@ function LfgBoard({ lobbyId, accent }: { lobbyId: string; accent: string }) {
       {posts.length === 0 ? (
         <EmptyState compact title="No LFG posts yet." hint="Drop the first one." />
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        <div
+          className="weered-flow"
+          data-flow="wide"
+          style={{ display: "flex", flexDirection: "column", gap: 6 }}
+        >
           {posts.map((p) => (
             <div key={p.id} style={{ ...S.card, display: "flex", flexDirection: "column", gap: 6 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -904,7 +908,7 @@ function WeaponMastery({ accent }: { accent: string }) {
           >
             {playerName}'s Arsenal
           </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          <div className="weered-flow" style={{ display: "flex", flexDirection: "column", gap: 4 }}>
             {weapons.map((w, i) => (
               <div
                 key={w.weapon}

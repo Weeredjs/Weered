@@ -40,6 +40,8 @@ export type DesignerProps = {
   domain: { host: string | null; status: string | null };
   onDomainChange: (d: { host: string | null; status: string | null }) => void;
   onPublished: (fields: { name?: string; description?: string }) => void;
+  /** The lobby's uploaded logo, if any: the symbol effect can float it. */
+  logoUrl?: string | null;
 };
 
 export default function LobbyDesigner(p: DesignerProps) {
@@ -372,6 +374,7 @@ export default function LobbyDesigner(p: DesignerProps) {
                   }))
                 }
                 onHero={(h) => set((l) => ({ ...l, hero: h }))}
+                onCards={(c) => set((l) => ({ ...l, cards: c === "m" ? undefined : c }))}
                 onShow={p.onShowTab}
               />
             )}
@@ -448,6 +451,7 @@ export default function LobbyDesigner(p: DesignerProps) {
         <ThemeDock
           accent={accent}
           layout={d}
+          logoUrl={p.logoUrl}
           set={set}
           onPreset={pickPreset}
           onClose={() => setDockOpen(false)}

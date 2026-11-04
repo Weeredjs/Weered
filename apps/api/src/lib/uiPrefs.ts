@@ -30,6 +30,12 @@ export const UI_FONTS = ["default", "condensed", "serif", "stencil", "clean", "m
 export const UI_SHAPES = ["round", "soft", "square", "cut"] as const;
 /** Section bars under Nebula (2026-11-02): none, a solid bar, or Classic's slant. */
 export const UI_BARS = ["off", "solid", "slant"] as const;
+/** The side buttons' shape (Crew, Friends, DMs, Panel; 2026-11-04). */
+export const UI_BUTTONS = ["tile", "chevron", "cut", "pill"] as const;
+const SITE_BASE = process.env.NEXT_PUBLIC_API_BASE || "https://api.weered.ca";
+const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+/** A picture the symbol upload wrote: <SITE_BASE>/symbols/<user>-<time>.webp. */
+const SYMBOL_URL = new RegExp(`^${escapeRe(SITE_BASE)}/symbols/[A-Za-z0-9_]+-\\d+\\.webp$`);
 export const UI_LINES = ["soft", "hard"] as const;
 export const UI_TEXTURES = ["glass", "grid", "lines", "dots", "solid"] as const;
 export const UI_BACKDROPS = ["sky", "grid", "plain"] as const;
@@ -118,6 +124,7 @@ export type UiPrefs = {
   bars?: (typeof UI_BARS)[number];
   /** The bars' own colour; "none" follows the colourway. */
   barColor?: string;
+  buttons?: (typeof UI_BUTTONS)[number];
   font?: (typeof UI_FONTS)[number];
   shape?: (typeof UI_SHAPES)[number];
   lines?: (typeof UI_LINES)[number];
@@ -126,6 +133,10 @@ export type UiPrefs = {
   fx?: (typeof UI_FX)[number];
   fxIntensity?: number;
   fxSymbol?: string;
+  /** Their uploaded picture (an address under /symbols/), or "none". */
+  fxImage?: string;
+  /** The symbol effect floats the picture instead of the characters. */
+  fxPicture?: boolean;
   fxFront?: boolean;
   stars?: boolean;
   density?: "comfortable" | "compact";
@@ -251,6 +262,8 @@ export function sanitizeUiPrefs(raw: unknown): UiPrefs {
   if (bars) out.bars = bars;
   const barColor = hexOrNone(src.barColor);
   if (barColor) out.barColor = barColor;
+  const buttons = oneOf(UI_BUTTONS, src.buttons);
+  if (buttons) out.buttons = buttons;
   const font = oneOf(UI_FONTS, src.font);
   if (font) out.font = font;
   const shape = oneOf(UI_SHAPES, src.shape);
@@ -273,6 +286,11 @@ export function sanitizeUiPrefs(raw: unknown): UiPrefs {
       .slice(0, 16);
     if (sym) out.fxSymbol = sym;
   }
+  // Their own picture instead of the characters: only a file our symbol
+  // upload wrote (routes/uploads.ts), or "none" to forget it.
+  if (typeof src.fxImage === "string" && (src.fxImage === "none" || SYMBOL_URL.test(src.fxImage)))
+    out.fxImage = src.fxImage;
+  if (typeof src.fxPicture === "boolean") out.fxPicture = src.fxPicture;
   if (typeof src.fxFront === "boolean") out.fxFront = src.fxFront;
   if (typeof src.stars === "boolean") out.stars = src.stars;
   const density = oneOf(["comfortable", "compact"] as const, src.density);

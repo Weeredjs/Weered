@@ -918,6 +918,7 @@ export default function LobbyIdPage() {
             accent={accent}
             intensity={dTheme.intensity ?? 1}
             symbol={dTheme.symbol}
+            image={dTheme.symbolLogo && lobbyInfo?.logoUrl ? lobbyInfo.logoUrl : undefined}
             forced={dTheme.fxForced}
           />
           {accent && (
@@ -1189,6 +1190,8 @@ export default function LobbyIdPage() {
               </div>
 
               <div
+                className="weered-lobby-cards"
+                data-card-size={L?.cards || "m"}
                 style={{
                   flex: 1,
                   minHeight: 0,
@@ -1255,6 +1258,7 @@ export default function LobbyIdPage() {
                     accentColor={accent}
                     bannerUrl={lobbyInfo?.bannerUrl}
                     moduleType={lobbyInfo?.moduleType}
+                    cardSize={L?.cards}
                     style={{ flex: 1, minHeight: 0 }}
                   />
                 ) : view === "lfg" && hasLfgBoard ? (
@@ -1314,6 +1318,7 @@ export default function LobbyIdPage() {
           domain={domain}
           onDomainChange={setDomain}
           onPublished={() => loadLobby()}
+          logoUrl={lobbyInfo?.logoUrl}
         />
       )}
       <style>{`

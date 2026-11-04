@@ -370,7 +370,7 @@ function OpsBoard({ accent }: { accent: string }) {
             No intel available right now.
           </div>
         ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          <div className="weered-flow" style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             {news.slice(0, 6).map((n) => {
               const when = (() => {
                 try {
@@ -646,7 +646,11 @@ function SquadFinder({ lobbyId, accent }: { lobbyId: string; accent: string }) {
       {posts.length === 0 ? (
         <EmptyState icon="👥" title="No squads posted yet." hint="Post one — agents are lurking." />
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        <div
+          className="weered-flow"
+          data-flow="wide"
+          style={{ display: "flex", flexDirection: "column", gap: 6 }}
+        >
           {posts.map((p) => {
             const isFull = p.status === "FULL";
             const playerCount = (p.players || []).length;
@@ -829,7 +833,7 @@ function TwitchStreams({ lobbyId, accent }: { lobbyId: string; accent: string })
         </div>
       )}
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <div className="weered-flow" style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         {streams.map((s) => (
           <div
             key={s.userLogin}

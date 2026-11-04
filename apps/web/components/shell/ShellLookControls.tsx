@@ -1,16 +1,18 @@
 "use client";
 
-// Design your Weered → Look: the structure (corners, lines, card texture,
-// backdrop) and the moving effect (with its intensity, and the symbol that
-// floats by when you pick your own). Nebula only; Classic has its own skins.
+// Design your Weered → Look: the structure (corners, side buttons, lines, card
+// texture, backdrop) and the moving effect (with its intensity, and the symbol
+// that floats by when you pick your own). Nebula only; Classic has its own skins.
 import React from "react";
 import { chip, input, label } from "../lobby-design/designerKit";
 import { alpha } from "../composer/ui";
 import LobbyAmbient from "../LobbyAmbient";
 import { SYMBOL_PICKS } from "../../lib/lobbyThemePresets";
 import { SHELL_FX, editLook, type ShellLook } from "../../lib/shellDesign";
+import { useWeered } from "../WeeredProvider";
 import type {
   PaletteColours,
+  RailButtons,
   ShellBackdrop,
   ShellFx,
   ShellLines,
@@ -23,6 +25,12 @@ const SHAPES: { id: ShellShape; name: string }[] = [
   { id: "soft", name: "Soft" },
   { id: "square", name: "Square" },
   { id: "cut", name: "Cut" },
+];
+const BUTTON_SHAPES: { id: RailButtons; name: string; blurb: string }[] = [
+  { id: "tile", name: "Tile", blurb: "Rounded glass tiles" },
+  { id: "chevron", name: "Chevron", blurb: "Notched, stacked like an arrow strip" },
+  { id: "cut", name: "Cut", blurb: "Angled corners" },
+  { id: "pill", name: "Pill", blurb: "Fully rounded ends" },
 ];
 const LINES: { id: ShellLines; name: string; blurb: string }[] = [
   { id: "soft", name: "Soft", blurb: "Hairlines and glow" },
@@ -107,6 +115,149 @@ function Swatch({
   );
 }
 
+const API = process.env.NEXT_PUBLIC_API_BASE || "https://api.weered.ca";
+/** The plans that may float their own picture: api lib/tiers.ts canFloatPicture. */
+const PICTURE_TIERS = ["INDICTED", "FELON", "CONDEMNED", "KINGPIN"];
+
+/** Your own picture in place of the characters ("Change the snow to my logo",
+ *  James 2026-11-04). The upload is saved at once; using it is part of the look. */
+function SymbolPicture({
+  accent,
+  look,
+  onLook,
+}: {
+  accent: string;
+  look: ShellLook;
+  onLook: OnLook;
+}) {
+  const { me, globalRole } = useWeered() as any;
+  const [busy, setBusy] = React.useState(false);
+  const [err, setErr] = React.useState("");
+  const allowed =
+    PICTURE_TIERS.includes(String(me?.tier || "").toUpperCase()) ||
+    ["STAFF", "GOD"].includes(String(globalRole || "").toUpperCase());
+
+  async function upload(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    e.target.value = "";
+    if (!f) return;
+    setErr("");
+    if (f.size > 1024 * 1024) return setErr("The picture must be under 1 MB.");
+    if (!/^image\/(png|jpeg|webp|gif)$/.test(f.type)) return setErr("Use PNG, JPEG, WebP or GIF.");
+    setBusy(true);
+    try {
+      const image: string = await new Promise((res, rej) => {
+        const r = new FileReader();
+        r.onload = () => res(String(r.result || ""));
+        r.onerror = () => rej(new Error("read_failed"));
+        r.readAsDataURL(f);
+      });
+      const r = await fetch(`${API}/profile/symbol/upload`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image }),
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || !j?.ok) setErr(j?.message || "That didn't upload. Try another picture.");
+      else onLook({ fxImage: String(j.url), fxPicture: true });
+    } catch {
+      setErr("That didn't upload. Try again.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <>
+      <div style={label}>Your picture</div>
+      {look.fxImage ? (
+        <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+          <img
+            src={look.fxImage}
+            alt=""
+            style={{ width: 30, height: 30, objectFit: "contain", borderRadius: 6 }}
+          />
+          <button
+            type="button"
+            onClick={() => onLook({ fxPicture: true })}
+            style={{ ...chip(look.fxPicture, accent), padding: "5px 10px" }}
+          >
+            Picture
+          </button>
+          <button
+            type="button"
+            onClick={() => onLook({ fxPicture: false })}
+            style={{ ...chip(!look.fxPicture, accent), padding: "5px 10px" }}
+          >
+            Characters
+          </button>
+          {allowed && (
+            <label style={{ ...chip(false, accent), padding: "5px 10px", cursor: "pointer" }}>
+              {busy ? "Uploading…" : "Replace"}
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/webp,image/gif"
+                hidden
+                onChange={upload}
+              />
+            </label>
+          )}
+        </div>
+      ) : allowed ? (
+        <label
+          style={{
+            ...chip(false, accent),
+            display: "inline-block",
+            padding: "6px 12px",
+            cursor: "pointer",
+          }}
+        >
+          {busy ? "Uploading…" : "Upload a picture"}
+          <input
+            type="file"
+            accept="image/png,image/jpeg,image/webp,image/gif"
+            hidden
+            onChange={upload}
+          />
+        </label>
+      ) : (
+        <div style={{ fontSize: 11.5, opacity: 0.7 }}>
+          Float your own logo or picture instead.{" "}
+          <a href="/subscribe" style={{ color: accent }}>
+            Indicted and up
+          </a>
+        </div>
+      )}
+      {err && <div style={{ fontSize: 11, color: "#f87171", marginTop: 6 }}>{err}</div>}
+    </>
+  );
+}
+
+/** A tiny side button in the chosen shape (styles/99-nebula-buttons.css). */
+function ButtonSwatch({ shape, c }: { shape: RailButtons; c: PaletteColours }) {
+  return (
+    <span
+      aria-hidden
+      style={{
+        display: "block",
+        width: 16,
+        height: 26,
+        borderRadius: shape === "tile" ? 5 : shape === "pill" ? 999 : 0,
+        clipPath:
+          shape === "chevron"
+            ? "polygon(0 0, 100% 0, 76% 50%, 100% 100%, 0 100%)"
+            : shape === "cut"
+              ? "polygon(5px 0, 100% 0, 100% calc(100% - 5px), calc(100% - 5px) 100%, 0 100%, 0 5px)"
+              : undefined,
+        border: `1px solid ${alpha(c.a, 0.45)}`,
+        boxShadow: `inset 2px 0 0 ${alpha(c.a, 0.8)}`,
+        background: alpha(c.ink, 0.75),
+      }}
+    />
+  );
+}
+
 function Pick<T extends string>({
   items,
   value,
@@ -174,6 +325,14 @@ export function StructureControls({
         render={(id) => (
           <Swatch shape={id} texture={look.texture} hard={look.lines === "hard"} c={c} />
         )}
+      />
+      <div style={label}>Side buttons</div>
+      <Pick
+        items={BUTTON_SHAPES}
+        value={look.buttons}
+        accent={accent}
+        onPick={(v) => onLook({ buttons: v })}
+        render={(id) => <ButtonSwatch shape={id} c={c} />}
       />
       <div style={label}>Lines</div>
       <Pick
@@ -291,6 +450,7 @@ export function EffectControls({
           <div style={{ fontSize: 11, opacity: 0.5, marginTop: 6 }}>
             An emoji or up to three characters.
           </div>
+          <SymbolPicture accent={accent} look={look} onLook={onLook} />
         </>
       )}
       {look.fx !== "none" && (

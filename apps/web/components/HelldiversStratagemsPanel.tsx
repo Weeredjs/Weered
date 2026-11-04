@@ -426,7 +426,11 @@ export default function HelldiversStratagemsPanel({
           : `${filtered.length} stratagem${filtered.length === 1 ? "" : "s"} match`}
       </div>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <div
+        className="weered-flow"
+        data-flow="wide"
+        style={{ display: "flex", flexDirection: "column", gap: 6 }}
+      >
         {filtered.map((s) => {
           const catColor = CATEGORY_COLORS[s.category] || accent;
           const isOpen = selected?.slug === s.slug;

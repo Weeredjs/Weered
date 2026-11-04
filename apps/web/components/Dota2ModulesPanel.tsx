@@ -247,7 +247,7 @@ function StackFinder({ lobbyId, accent }: { lobbyId: string; accent: string }) {
       {posts.length === 0 ? (
         <EmptyState icon="🎮" title="No stacks posted yet." hint="Drop one — someone's ready to queue." />
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        <div className="weered-flow" data-flow="wide" style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           {posts.map(p => {
             const isFull = p.status === "FULL";
             const playerCount = (p.players || []).length;
@@ -671,7 +671,7 @@ function LiveMatches({ accent }: { accent: string }) {
   return (
     <div>
       <div style={{ ...S.label, marginBottom: 10 }}>TOP LIVE MATCHES BY MMR</div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      <div className="weered-flow" data-flow="wide" style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         {matches.map((m, idx) => {
           const radiantPlayers = (m.players || []).filter((p: any) => p.team === 0 || (p.team_tag === "radiant"));
           const direPlayers = (m.players || []).filter((p: any) => p.team === 1 || (p.team_tag === "dire"));
@@ -961,7 +961,7 @@ function TwitchStreams({ lobbyId, accentColor }: { lobbyId: string; accentColor:
         </div>
       )}
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <div className="weered-flow" style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         {streams.map(s => (
           <div key={s.userLogin} onClick={() => handleCardClick(s)} onKeyDown={onActivate(() => handleCardClick(s))} tabIndex={0} role="button" style={{
             ...S.card, cursor: "pointer", display: "flex", gap: 10, alignItems: "center",
