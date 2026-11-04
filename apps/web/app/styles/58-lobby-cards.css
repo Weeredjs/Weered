@@ -37,7 +37,8 @@
   min-width: 0;
   margin: 0 !important;
 }
-.weered-flow > .weered-empty {
+.weered-flow > .weered-empty,
+.weered-flow > .weered-flow-full {
   grid-column: 1 / -1;
 }
 /* One cut-off line in a full-width row becomes up to three lines in a card.

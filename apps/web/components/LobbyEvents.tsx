@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState, type CSSProperties } from "react";
 import EmptyState from "./EmptyState";
 import LoadingState from "./LoadingState";
 import EventDescribe from "./build/EventDescribe";
+import { eventsSince } from "../lib/eventsSince";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
@@ -59,7 +60,9 @@ export default function LobbyEvents({
   const [err, setErr] = useState("");
 
   const load = useCallback(async () => {
-    const j = await apiFetch(`/lobbies/${encodeURIComponent(lobbyId)}/events`);
+    const j = await apiFetch(
+      `/lobbies/${encodeURIComponent(lobbyId)}/events?from=${encodeURIComponent(eventsSince())}`,
+    );
     if (j.ok) setEvents(j.events.filter((e: EventItem) => e.status === "PUBLISHED"));
     setLoading(false);
   }, [lobbyId]);
@@ -111,8 +114,9 @@ export default function LobbyEvents({
     fontSize: 13,
   };
 
+  // One block across the top of the event cards (styles/58-lobby-cards.css).
   const postBar = canPost && (
-    <>
+    <div className="weered-flow-full" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
       <EventDescribe lobbyId={lobbyId} accent={color} onCreated={() => void load()} />
       <div
         style={{
@@ -237,7 +241,7 @@ export default function LobbyEvents({
           </button>
         )}
       </div>
-    </>
+    </div>
   );
 
   if (events.length === 0)
@@ -259,6 +263,7 @@ export default function LobbyEvents({
 
   return (
     <div
+      className="weered-flow"
       style={{
         padding: "12px 16px",
         display: "flex",
@@ -266,6 +271,7 @@ export default function LobbyEvents({
         gap: 10,
         overflowY: "auto",
         flex: 1,
+        alignContent: "start",
       }}
     >
       {postBar}

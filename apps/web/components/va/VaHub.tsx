@@ -21,6 +21,7 @@ import {
   type Hub,
   type Pirep,
 } from "./vaShared";
+import { eventsSince } from "../../lib/eventsSince";
 
 /**
  * The crew hub's front page: one screen for what is otherwise spread across
@@ -62,7 +63,7 @@ export default function VaHub({
 
   useEffect(() => {
     void vaFetch<{ events: LobbyEvent[] }>(
-      `/lobbies/${encodeURIComponent(lobbyId)}/events?limit=12`,
+      `/lobbies/${encodeURIComponent(lobbyId)}/events?limit=12&from=${encodeURIComponent(eventsSince())}`,
     ).then((r) => {
       if (r.status === 200 && r.data)
         setEvents(r.data.events.filter((e) => Date.parse(e.endsAt || e.startsAt) > Date.now()));

@@ -425,7 +425,7 @@ function NewsTab() {
   };
 
   return (
-    <div className="weered-flow" style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
       {items.map((n: any, i: number) => {
         const fresh = n.pubDate && isToday(n.pubDate);
         return (

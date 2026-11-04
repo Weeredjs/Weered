@@ -551,7 +551,7 @@ function FnNews() {
   if (news.length === 0) return <EmptyState compact title="No news right now." />;
 
   return (
-    <div className="weered-flow" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
       {news.map(n => (
         <div key={n.id} style={{ borderRadius: 2, overflow: "hidden", border: "1px solid rgba(255,255,255,.08)", background: "rgba(255,255,255,.02)" }}>
           {(n.image || n.tileImage) && <div style={{ height: 140, background: `url(${n.image || n.tileImage}) center/cover no-repeat`, borderBottom: "1px solid rgba(255,255,255,.06)" }} />}

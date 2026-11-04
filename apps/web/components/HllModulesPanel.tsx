@@ -9,6 +9,7 @@ import ServerRhythm from "./hll/ServerRhythm";
 import LinkedServers from "./hllv/FrontLines";
 import RosterTab from "./hllv/Roster";
 import Muster from "./hllv/Muster";
+import { eventsSince } from "../lib/eventsSince";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 const ACCENT = "#BFA46F"; // brass over field-grey — HLL's palette
@@ -403,7 +404,7 @@ function FrontLines({ accent, onGo }: { accent: string; onGo?: (tab: string) => 
 
   useEffect(() => {
     // Tonight strip: today's posted events + armed rallies, one glance.
-    fetch(`${API}/lobbies/hll/events`)
+    fetch(`${API}/lobbies/hll/events?from=${encodeURIComponent(eventsSince())}`)
       .then((r) => r.json())
       .then((j) => {
         const now = Date.now();

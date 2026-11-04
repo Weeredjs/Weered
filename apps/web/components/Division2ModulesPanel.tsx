@@ -370,7 +370,7 @@ function OpsBoard({ accent }: { accent: string }) {
             No intel available right now.
           </div>
         ) : (
-          <div className="weered-flow" style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             {news.slice(0, 6).map((n) => {
               const when = (() => {
                 try {
