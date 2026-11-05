@@ -5,7 +5,8 @@ const ROLE_MAP: Record<string, { file: string; color: string }> = {
   GOD: { file: "godfather", color: "#D4A017" },
   ADMIN: { file: "lieutenant", color: "#EF4444" },
   STAFF: { file: "enforcer", color: "#60A5FA" },
-  SUPPORT: { file: "backup", color: "#5800E5" },
+  // The support role is Weered's medic: a red cross (James 2026-11-05).
+  SUPPORT: { file: "medic", color: "#E5262E" },
   MOD: { file: "captain", color: "#5800E5" },
   OWNER: { file: "founder", color: "#F97316" },
   MEMBER: { file: "member", color: "#94A3B8" },
@@ -26,7 +27,7 @@ const DISPLAY_NAMES: Record<string, string> = {
   GOD: "Godfather",
   ADMIN: "Lieutenant",
   STAFF: "Enforcer",
-  SUPPORT: "Backup",
+  SUPPORT: "Medic",
   MOD: "Captain",
   OWNER: "Founder",
   ROOM_MOD: "Moderator",
@@ -46,7 +47,7 @@ interface RoleIconProps {
   className?: string;
 }
 
-const ICON_VERSION = "v5";
+const ICON_VERSION = "v6";
 
 export default function RoleIcon({ role, size = 14, style, className }: RoleIconProps) {
   const info = ROLE_MAP[role];

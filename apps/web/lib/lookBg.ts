@@ -56,7 +56,8 @@ export function lookBgProps(
   return css ? { className: "weered-look-bg", style: { ["--look-bg" as string]: css } } : null;
 }
 
-/** Can this account pick one? (The API checks again.) */
+/** Can this account pick one? (The API checks again.) Medics (SUPPORT) wear
+ *  one too: a look, not a power (James 2026-11-05, the admin account). */
 export const mayPickLookBg = (me: { tier?: unknown; globalRole?: unknown } | null | undefined) =>
   ["INDICTED", "FELON", "CONDEMNED", "KINGPIN"].includes(String(me?.tier || "").toUpperCase()) ||
-  ["STAFF", "ADMIN", "GOD"].includes(String(me?.globalRole || "").toUpperCase());
+  ["SUPPORT", "STAFF", "ADMIN", "GOD"].includes(String(me?.globalRole || "").toUpperCase());

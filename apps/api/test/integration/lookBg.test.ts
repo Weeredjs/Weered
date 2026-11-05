@@ -57,6 +57,15 @@ describe("the rules", () => {
     expect(shownLookBg({ lookBg: "c:#112233", tier: "INNOCENT", globalRole: "STAFF" })).toEqual({
       lookBg: "c:#112233",
     });
+    // Medics (SUPPORT) wear one: a look, not a power (2026-11-05).
+    expect(
+      shownLookBg({
+        lookBg: "banner",
+        tier: "INNOCENT",
+        globalRole: "SUPPORT",
+        bannerUrl: "/b.webp",
+      }),
+    ).toEqual({ lookBg: "banner", bannerUrl: "/b.webp" });
     expect(shownLookBg({ lookBg: "banner", tier: "FELON", bannerUrl: "/uploads/b.webp" })).toEqual({
       lookBg: "banner",
       bannerUrl: "/uploads/b.webp",

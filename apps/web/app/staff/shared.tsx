@@ -116,11 +116,12 @@ export function roleColor(r: string) {
       border: "rgba(167,139,250,.30)",
       color: "rgb(196,181,253)",
     };
+  // Medics: the red of their cross.
   if (r === "SUPPORT")
     return {
-      bg: "rgba(14,165,233,.10)",
-      border: "rgba(14,165,233,.28)",
-      color: "rgb(186,230,253)",
+      bg: "rgba(229,38,46,.12)",
+      border: "rgba(229,38,46,.32)",
+      color: "rgb(254,202,202)",
     };
   return {
     bg: "rgba(255,255,255,.05)",

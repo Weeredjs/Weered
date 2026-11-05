@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+  <!-- Medic: Weered's support role, a clean red cross (James 2026-11-05) -->
+  <path d="M12.5 3.5h7a1.5 1.5 0 0 1 1.5 1.5v6h6a1.5 1.5 0 0 1 1.5 1.5v7a1.5 1.5 0 0 1-1.5 1.5h-6v6a1.5 1.5 0 0 1-1.5 1.5h-7a1.5 1.5 0 0 1-1.5-1.5v-6h-6a1.5 1.5 0 0 1-1.5-1.5v-7a1.5 1.5 0 0 1 1.5-1.5h6v-6a1.5 1.5 0 0 1 1.5-1.5z"
+        fill="#E5262E" stroke="#ffffff" stroke-opacity=".92" stroke-width="1.4" stroke-linejoin="round" />
+</svg>

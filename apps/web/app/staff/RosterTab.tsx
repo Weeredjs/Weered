@@ -16,7 +16,7 @@ type StaffMember = {
 const RUNGS: { title: string; roles: string[] }[] = [
   { title: "God", roles: ["GOD"] },
   { title: "Staff and Admin", roles: ["ADMIN", "STAFF"] },
-  { title: "Support", roles: ["SUPPORT"] },
+  { title: "Medics (Support)", roles: ["SUPPORT"] },
 ];
 
 // Who can do what, as the server enforces it (lib/roleLadder.ts and the staff
@@ -26,7 +26,7 @@ const RUNGS: { title: string; roles: string[] }[] = [
 const LADDER: [string, string][] = [
   ["Member", "Lobbies, chat, voice, DMs, crews."],
   [
-    "Support",
+    "Medic (Support)",
     "Moderates everywhere: kicks members, locks and clears lobby chat, works reports, ban appeals, bug reports and mods, removes reported messages. Can't ban, give roles or change settings.",
   ],
   [

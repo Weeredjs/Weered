@@ -38,6 +38,7 @@ describe("lookBg", () => {
     expect(mayPickLookBg({ tier: "INDICTED" })).toBe(true);
     expect(mayPickLookBg({ tier: "INNOCENT" })).toBe(false);
     expect(mayPickLookBg({ tier: "INNOCENT", globalRole: "STAFF" })).toBe(true);
+    expect(mayPickLookBg({ tier: "INNOCENT", globalRole: "SUPPORT" })).toBe(true);
     expect(mayPickLookBg(null)).toBe(false);
   });
 });

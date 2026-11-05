@@ -5,7 +5,7 @@ import { isStaffRole } from "./lobbyAuth";
  * A paid member's background (James 2026-11-02): their ID card, profile, the
  * card people open from their name, and their row in presence and friends
  * lists. "c:#rrggbb" one colour, "g:#rrggbb,#rrggbb" two as a gradient,
- * "banner" their banner picture. Indicted ($6) and up, and staff. It stops
+ * "banner" their banner picture. Indicted ($6) and up, staff and Medics. It stops
  * showing when a plan ends and comes back with it; the setting is kept.
  * Drawn by web lib/lookBg.ts.
  */
@@ -20,8 +20,12 @@ export function cleanLookBg(v: unknown): string | null | undefined {
   return ONE.test(s) || TWO.test(s) || s === "banner" ? s : undefined;
 }
 
+/** Paid plans and staff, and Medics (SUPPORT): a look, not a power, so it
+ *  doesn't go through isStaffRole (James 2026-11-05, the admin account). */
 export const mayHaveLookBg = (u: { tier?: string | null; globalRole?: string | null }) =>
-  isPaidTier(u.tier) || isStaffRole(u.globalRole);
+  isPaidTier(u.tier) ||
+  isStaffRole(u.globalRole) ||
+  String(u.globalRole || "").toUpperCase() === "SUPPORT";
 
 /** What other people see: the background, with the banner it uses, or nothing. */
 export function shownLookBg(u: {
