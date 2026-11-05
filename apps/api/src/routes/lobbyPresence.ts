@@ -60,6 +60,11 @@ export function registerLobbyPresence(app: FastifyInstance, deps: Deps) {
             statusEmoji: u.statusEmoji ?? null,
             nameEffect: u.nameEffect ?? null,
             avatarFrame: u.avatarFrame ?? null,
+            // Their background, as the room's entry already carries it (only
+            // while allowed: lib/lookBg.ts shownLookBg). Left off this list, it
+            // showed on Home's live list and nowhere else (James 2026-11-05).
+            lookBg: u.lookBg ?? null,
+            bannerUrl: u.bannerUrl ?? null,
             roomId: placeHidden ? null : room.roomId,
             roomName: placeHidden ? null : room.name || room.roomId,
           });
