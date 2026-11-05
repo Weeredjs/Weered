@@ -25,6 +25,19 @@ export function ownImageOk(
   return s.startsWith(own) && /^\d+\.webp$/.test(s.slice(own.length));
 }
 
+/** A crew's logo or banner by address: the same rule for crews (2026-11-05,
+ *  when crews got their own uploads). Its own upload (`POST /crews/:id/image`
+ *  names files `crew-<id>-logo|banner-<time>.webp`), a /brand/ picture, what it
+ *  already has, or nothing. Any other address skipped moderation. */
+export function crewImageOk(url: string, crewId: string, current?: string | null): boolean {
+  const s = url.trim();
+  if (!s) return true;
+  if (current && s === current) return true;
+  if (/^\/brand\/[a-zA-Z0-9/_.-]+\.(svg|png|webp|jpe?g)$/.test(s) && !s.includes("..")) return true;
+  const own = `${SITE_BASE}/banners/crew-${crewId}-`;
+  return !!crewId && s.startsWith(own) && /^(logo|banner)-\d+\.webp$/.test(s.slice(own.length));
+}
+
 /** May the upload routes delete this previous file? Only the uploader's own. */
 export function ownsUploadName(name: string, uid: string): boolean {
   return (

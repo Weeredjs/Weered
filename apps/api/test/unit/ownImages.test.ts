@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { ownImageOk, ownsUploadName } from "../../src/lib/ownImages";
+import { crewImageOk, ownImageOk, ownsUploadName } from "../../src/lib/ownImages";
 
 // Avatars and banners by address (red team 2026-11-01, findings 16 and 17).
 const SITE = "https://api.weered.ca";
@@ -26,5 +26,25 @@ describe("pictures someone may set by address", () => {
     expect(ownsUploadName("u1-1793500000000.webp", "u1")).toBe(true);
     expect(ownsUploadName("u2-1793500000000.webp", "u1")).toBe(false);
     expect(ownsUploadName("lobby-banner-u1-1.webp", "u1")).toBe(false);
+  });
+});
+
+// A crew's logo and banner (2026-11-05): the same rule, for the crew's own uploads.
+describe("crew pictures by address", () => {
+  it("takes the crew's own upload, one of ours, what it has, or nothing", () => {
+    expect(crewImageOk(`${SITE}/banners/crew-c1-logo-1793900000000.webp`, "c1")).toBe(true);
+    expect(crewImageOk(`${SITE}/banners/crew-c1-banner-1793900000000.webp`, "c1")).toBe(true);
+    expect(crewImageOk("/brand/avatars/pilot.svg", "c1")).toBe(true);
+    const had = `${SITE}/banners/lobby-crewlogo-u1-1793818426652.webp`;
+    expect(crewImageOk(had, "c1", had)).toBe(true);
+    expect(crewImageOk("", "c1")).toBe(true);
+  });
+
+  it("refuses an outside picture, another crew's file, and anything that isn't one", () => {
+    expect(crewImageOk("https://evil.example/x.png", "c1")).toBe(false);
+    expect(crewImageOk(`${SITE}/banners/crew-c2-logo-1793900000000.webp`, "c1")).toBe(false);
+    expect(crewImageOk(`${SITE}/banners/crew-c1-logo-x.webp`, "c1")).toBe(false);
+    expect(crewImageOk(`${SITE}/banners/u1-1793900000000.webp`, "c1")).toBe(false);
+    expect(crewImageOk(`${SITE}/banners/crew--logo-1793900000000.webp`, "")).toBe(false);
   });
 });

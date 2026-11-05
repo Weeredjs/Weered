@@ -377,8 +377,10 @@ export function CrewTab({
                       height: 38,
                       borderRadius: 10,
                       flexShrink: 0,
-                      background:
-                        "linear-gradient(135deg, rgba(88,0,229,.2), rgba(212,160,23,.15))",
+                      // The crew's own logo when it has one.
+                      background: crew.logoUrl
+                        ? `url("${String(crew.logoUrl).replace(/["\\]/g, "")}") center / cover no-repeat`
+                        : "linear-gradient(135deg, rgba(88,0,229,.2), rgba(212,160,23,.15))",
                       border: "1px solid rgba(212,160,23,.25)",
                       display: "flex",
                       alignItems: "center",
@@ -389,7 +391,8 @@ export function CrewTab({
                       fontFamily: "monospace",
                     }}
                   >
-                    {crew.tag ? crew.tag.slice(0, 2) : crew.name.slice(0, 1).toUpperCase()}
+                    {!crew.logoUrl &&
+                      (crew.tag ? crew.tag.slice(0, 2) : crew.name.slice(0, 1).toUpperCase())}
                   </div>
 
                   <div style={{ flex: 1, minWidth: 0 }}>
@@ -532,6 +535,29 @@ export function CrewTab({
 
               {isExpanded && (
                 <div style={{ padding: "0 14px 12px" }}>
+                  {/* The crew's page: its look, roster and, for its leader, the
+                      editor (James 2026-11-05: "No link to crew dojo in crew"). */}
+                  <a
+                    href={`/crew/${encodeURIComponent(crew.tag ? String(crew.tag).toLowerCase() : crew.id)}`}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: 8,
+                      marginBottom: 10,
+                      padding: "8px 10px",
+                      borderRadius: 8,
+                      background: "rgba(212,160,23,.08)",
+                      border: "1px solid rgba(212,160,23,.25)",
+                      color: "rgba(243,244,246,.92)",
+                      fontSize: 12,
+                      fontWeight: 700,
+                      textDecoration: "none",
+                    }}
+                  >
+                    <span>Crew page</span>
+                    <span style={{ color: "#D4A017" }}>Open →</span>
+                  </a>
                   {crew.description && (
                     <div
                       style={{

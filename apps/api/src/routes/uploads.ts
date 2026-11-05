@@ -214,6 +214,78 @@ export default async function uploadsRoutes(app: FastifyInstance, opts: Opts) {
     },
   );
 
+  // A crew's logo and banner, uploaded by its leader (James 2026-11-05: "I can
+  // only change the colors"). The profile banner's pipeline and bans; the files
+  // are named for the crew (lib/ownImages.ts crewImageOk), so a new one
+  // replaces the old file.
+  app.post(
+    "/crews/:crewId/image",
+    { bodyLimit: 8 * 1024 * 1024, config: { rateLimit: { max: 10, timeWindow: "1 minute" } } },
+    async (req, reply) => {
+      const u = authFromHeader((req as any).headers?.authorization);
+      if (!u) return reply.code(401).send({ error: "unauthorized" });
+      const body: any = (req as any).body || {};
+      const kind = body.kind === "logo" || body.kind === "banner" ? (body.kind as string) : null;
+      if (!kind) return reply.code(400).send({ error: "bad_kind" });
+      const crewId = String((req.params as any)?.crewId || "");
+      const crew = await prisma.crew.findUnique({
+        where: { id: crewId },
+        select: { id: true, ownerId: true, logoUrl: true, bannerUrl: true },
+      });
+      if (!crew) return reply.code(404).send({ error: "not_found" });
+      if (crew.ownerId !== u.id)
+        return reply.code(403).send({
+          error: "leader_only",
+          message: "Only the crew's leader can change its pictures.",
+        });
+      const me: any = await prisma.user.findUnique({
+        where: { id: u.id },
+        select: { mediaBannedUntil: true } as any,
+      });
+      if (me?.mediaBannedUntil && new Date(me.mediaBannedUntil).getTime() > Date.now())
+        return reply
+          .code(403)
+          .send({ error: "media_banned", message: "Your upload privileges are suspended." });
+
+      const match = String(body.image || "").match(
+        /^data:image\/(png|jpeg|jpg|webp|gif);base64,(.+)$/,
+      );
+      if (!match)
+        return reply
+          .code(400)
+          .send({ error: "invalid_format", message: "Image must be PNG, JPEG, WebP, or GIF." });
+      const buffer = Buffer.from(match[2], "base64");
+      if (buffer.length > BANNER_MAX_BYTES)
+        return reply.code(400).send({ error: "too_large", message: "Image must be under 4MB." });
+
+      const logo = kind === "logo";
+      const mod = await moderateProfileImage(buffer, {
+        userId: u.id,
+        square: logo,
+        maxDim: logo ? 512 : 1600,
+      });
+      if (!mod.ok) return reply.code(mod.code).send({ error: mod.error, message: mod.message });
+      try {
+        const field = logo ? "logoUrl" : "bannerUrl";
+        const url = persistImage(
+          BANNER_DIR,
+          "banners",
+          String(crew[field] || ""),
+          mod.webp,
+          `crew-${crew.id}-${kind}`,
+        );
+        const updated = await prisma.crew.update({
+          where: { id: crew.id },
+          data: { [field]: url },
+        });
+        return reply.send({ ok: true, url, crew: updated });
+      } catch (e) {
+        log.error("[crew image upload]", e);
+        return reply.code(500).send({ error: "upload_failed" });
+      }
+    },
+  );
+
   app.post(
     "/lobbies/upload-image",
     { bodyLimit: 8 * 1024 * 1024, config: { rateLimit: { max: 10, timeWindow: "1 minute" } } },

@@ -19,6 +19,14 @@ describe("lookBg", () => {
     expect(lookBgCss("c:#7c3aed", null, "card")).toContain("#7c3aedcc");
   });
 
+  it("lays a banner across the top of a tall panel instead of blowing it up", () => {
+    const panel = lookBgCss("banner", "/b.webp", "panel")!;
+    expect(panel).toContain('url("/b.webp") center top / 100% auto no-repeat');
+    expect(panel).not.toContain("cover");
+    expect(lookBgCss("banner", "/b.webp", "card")).toContain("cover");
+    expect(lookBgCss("c:#7c3aed", null, "panel")).toBe(lookBgCss("c:#7c3aed", null, "card"));
+  });
+
   it('never lets a banner address out of url("")', () => {
     expect(lookBgCss("banner", "/uploads/banners/a.webp", "card")).toContain(
       'url("/uploads/banners/a.webp")',

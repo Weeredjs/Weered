@@ -38,7 +38,10 @@ function makeApp() {
   );
 }
 
+const crews: string[] = [];
+
 afterAll(async () => {
+  if (crews.length) await prisma.crew.deleteMany({ where: { id: { in: crews } } }).catch(() => {});
   if (created.length)
     await prisma.user.deleteMany({ where: { id: { in: created } } }).catch(() => {});
 });
@@ -214,6 +217,69 @@ describe("uploads - POST /profile/symbol/upload (your own floating picture)", ()
     const served = await app.inject({ method: "GET", url: "/symbols/" + url.split("/").pop() });
     expect(served.statusCode).toBe(200);
     expect(served.headers["content-type"]).toBe("image/webp");
+    await app.close();
+  });
+});
+
+// A crew's logo and banner, by its leader (James 2026-11-05: "I can only change the colors").
+describe("uploads - POST /crews/:crewId/image", () => {
+  it("lets the leader set the logo and banner, and nobody else", async () => {
+    const app = await makeApp();
+    const leader = await newUser("crew_lead");
+    const member = await newUser("crew_member");
+    const crew = await prisma.crew.create({
+      data: {
+        name: "Upload Test",
+        ownerId: leader,
+        members: { create: [{ userId: leader, role: "LEADER" }, { userId: member }] },
+      },
+      select: { id: true },
+    });
+    crews.push(crew.id);
+    const post = (who: string, kind: string) =>
+      app.inject({
+        method: "POST",
+        url: `/crews/${crew.id}/image`,
+        headers: { authorization: "Bearer " + testToken(who) },
+        payload: { kind, image: undefined as any },
+      });
+
+    const logo = await app.inject({
+      method: "POST",
+      url: `/crews/${crew.id}/image`,
+      headers: { authorization: "Bearer " + testToken(leader) },
+      payload: { kind: "logo", image: await pngDataUrl() },
+    });
+    expect(logo.statusCode).toBe(200);
+    expect(logo.json().url).toMatch(/\/banners\/crew-[A-Za-z0-9]+-logo-\d+\.webp$/);
+    expect(logo.json().url).toContain(`/banners/crew-${crew.id}-logo-`);
+    expect(logo.json().crew.logoUrl).toBe(logo.json().url);
+
+    const banner = await app.inject({
+      method: "POST",
+      url: `/crews/${crew.id}/image`,
+      headers: { authorization: "Bearer " + testToken(leader) },
+      payload: { kind: "banner", image: await pngDataUrl() },
+    });
+    expect(banner.statusCode).toBe(200);
+    expect(banner.json().crew.bannerUrl).toMatch(/\/banners\/crew-[A-Za-z0-9]+-banner-\d+\.webp$/);
+    expect(banner.json().crew.bannerUrl).toContain(`crew-${crew.id}-banner-`);
+
+    const notLeader = await app.inject({
+      method: "POST",
+      url: `/crews/${crew.id}/image`,
+      headers: { authorization: "Bearer " + testToken(member) },
+      payload: { kind: "logo", image: await pngDataUrl() },
+    });
+    expect(notLeader.statusCode).toBe(403);
+    expect((await post(leader, "avatar")).statusCode).toBe(400);
+    expect((await post(leader, "logo")).statusCode).toBe(400);
+    const noAuth = await app.inject({
+      method: "POST",
+      url: `/crews/${crew.id}/image`,
+      payload: { kind: "logo" },
+    });
+    expect(noAuth.statusCode).toBe(401);
     await app.close();
   });
 });

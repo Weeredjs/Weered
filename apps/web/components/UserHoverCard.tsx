@@ -409,7 +409,7 @@ export default function UserHoverCard({
   const isOnline = lastSeen === "Online now";
 
   const look = mayPickLookBg(profile)
-    ? lookBgProps(profile?.lookBg, profile?.bannerUrl, "card")
+    ? lookBgProps(profile?.lookBg, profile?.bannerUrl, "panel")
     : null;
   return createPortal(
     <div

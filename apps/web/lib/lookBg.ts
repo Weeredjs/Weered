@@ -25,8 +25,15 @@ const safeBanner = (u: unknown) => {
   return /^(\/|https:\/\/)[^\s"'()\\<>]+$/.test(s) ? s : null;
 };
 
-/** The CSS background for a row or a card, or null when there's none. */
-export function lookBgCss(v: unknown, bannerUrl: unknown, place: "row" | "card"): string | null {
+/** Where it's drawn: a list row, a card (the ID card, a profile header), or a
+ *  tall panel (the card people open from a name). */
+export type LookPlace = "row" | "card" | "panel";
+
+/** The CSS background for a row, a card or a panel, or null when there's none.
+ *  A banner covers a row or a card, but a tall panel would blow a wide banner
+ *  up several times over (James 2026-11-05: "All stretched out"), so there it
+ *  is a strip across the top that fades into the panel. */
+export function lookBgCss(v: unknown, bannerUrl: unknown, place: LookPlace): string | null {
   const bg = parseLookBg(v);
   if (!bg) return null;
   const row = place === "row";
@@ -40,6 +47,8 @@ export function lookBgCss(v: unknown, bannerUrl: unknown, place: "row" | "card")
       : `linear-gradient(135deg, ${bg.a}d9 0%, ${bg.b}a6 100%)`;
   const url = safeBanner(bannerUrl);
   if (!url) return null;
+  if (place === "panel")
+    return `linear-gradient(180deg, rgba(12,12,20,.15) 0px, rgba(12,12,20,.55) 60px, rgba(12,12,20,.97) 150px), url("${url}") center top / 100% auto no-repeat rgb(12,12,20)`;
   return row
     ? `linear-gradient(90deg, rgba(7,6,15,.35), rgba(7,6,15,.72)), url("${url}") center / cover no-repeat`
     : `linear-gradient(180deg, rgba(7,6,15,.2), rgba(7,6,15,.78)), url("${url}") center / cover no-repeat`;
@@ -50,7 +59,7 @@ export function lookBgCss(v: unknown, bannerUrl: unknown, place: "row" | "card")
 export function lookBgProps(
   v: unknown,
   bannerUrl: unknown,
-  place: "row" | "card",
+  place: LookPlace,
 ): { className: string; style: Record<string, string> } | null {
   const css = lookBgCss(v, bannerUrl, place);
   return css ? { className: "weered-look-bg", style: { ["--look-bg" as string]: css } } : null;

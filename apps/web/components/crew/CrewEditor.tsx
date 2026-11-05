@@ -55,6 +55,8 @@ export default function CrewEditor({
     description: string;
     recruiting: boolean;
     recruitingNote: string;
+    logoUrl?: string | null;
+    bannerUrl?: string | null;
   };
   onSaved: (crew: any) => void;
 }) {
@@ -76,6 +78,43 @@ export default function CrewEditor({
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState("");
   const set = (p: Partial<Look>) => setLook((l) => ({ ...l, ...p }));
+  // The crew's pictures save as soon as they're picked (POST /crews/:id/image,
+  // checked like a profile banner); James 2026-11-05: "I can only change the colors".
+  const [pics, setPics] = useState({ logo: crew.logoUrl || "", banner: crew.bannerUrl || "" });
+  const [busy, setBusy] = useState<"" | "logo" | "banner">("");
+
+  async function upload(kind: "logo" | "banner", file: File | undefined) {
+    if (!file) return;
+    if (file.size > 4 * 1024 * 1024) {
+      setMsg("That picture is over 4MB.");
+      return;
+    }
+    setBusy(kind);
+    setMsg("");
+    try {
+      const image = await new Promise<string>((res, rej) => {
+        const fr = new FileReader();
+        fr.onload = () => res(String(fr.result || ""));
+        fr.onerror = () => rej(fr.error);
+        fr.readAsDataURL(file);
+      });
+      const r = await fetch(`${API}/crews/${encodeURIComponent(crew.id)}/image`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify({ kind, image }),
+      });
+      const j = await r.json().catch(() => ({}));
+      if (j?.ok && j.crew) {
+        setPics((p) => ({ ...p, [kind]: j.url }));
+        setMsg(kind === "logo" ? "Logo saved." : "Banner saved.");
+        onSaved(j.crew);
+      } else setMsg(j?.message || "That picture didn't upload. Try another.");
+    } catch {
+      setMsg("Couldn't reach Weered.");
+    }
+    setBusy("");
+  }
 
   async function save() {
     setSaving(true);
@@ -223,6 +262,56 @@ export default function CrewEditor({
             onChange={(e) => set({ accentColor: e.target.value })}
           />
         </div>
+      </div>
+      <span style={label}>Logo and banner</span>
+      <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+        {(
+          [
+            ["logo", "Logo", 64, 64],
+            ["banner", "Banner", 230, 64],
+          ] as const
+        ).map(([kind, name, w, h]) => (
+          <label
+            key={kind}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              padding: 6,
+              borderRadius: 10,
+              border: "1px dashed rgba(255,255,255,.18)",
+              cursor: busy ? "wait" : "pointer",
+            }}
+          >
+            <span
+              style={{
+                width: w,
+                height: h,
+                borderRadius: kind === "logo" ? 10 : 8,
+                flexShrink: 0,
+                background: pics[kind]
+                  ? `url("${pics[kind]}") center / cover no-repeat`
+                  : `linear-gradient(135deg, ${look.accentColor}55, rgba(0,0,0,.4))`,
+                border: `1px solid ${look.accentColor}55`,
+              }}
+            />
+            <span style={{ fontSize: 12.5, fontWeight: 700 }}>
+              {busy === kind
+                ? "Uploading…"
+                : `${pics[kind] ? "Change" : "Add"} ${name.toLowerCase()}`}
+            </span>
+            <input
+              type="file"
+              accept="image/png,image/jpeg,image/webp,image/gif"
+              style={{ display: "none" }}
+              disabled={!!busy}
+              onChange={(e) => {
+                void upload(kind, e.target.files?.[0]);
+                e.target.value = "";
+              }}
+            />
+          </label>
+        ))}
       </div>
       <span style={label}>About the crew</span>
       <textarea

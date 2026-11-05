@@ -3,6 +3,7 @@ import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
 import { resolveUserNames, displayName } from "../lib/userNames";
 import { cleanCrewTag, isUniqueClash, looksLikeTag } from "../lib/crewTag";
+import { crewImageOk } from "../lib/ownImages";
 import { z } from "zod";
 
 const tagTaken = (tag: string) => ({
@@ -595,9 +596,20 @@ export default async function crewsRoutes(app: FastifyInstance, opts: Opts) {
       if (typeof body.description === "string")
         data.description = body.description.trim().slice(0, 800);
       // The crew page draws these inside CSS url(): a link only, nothing that
-      // could close the url() and add styles of its own.
-      if (typeof body.logoUrl === "string") data.logoUrl = imageUrl(body.logoUrl);
-      if (typeof body.bannerUrl === "string") data.bannerUrl = imageUrl(body.bannerUrl);
+      // could close the url() and add styles of its own. And only the crew's
+      // own upload (POST /crews/:id/image), a /brand/ picture or what it has:
+      // an outside address skipped moderation (lib/ownImages.ts).
+      for (const k of ["logoUrl", "bannerUrl"] as const) {
+        if (typeof body[k] !== "string") continue;
+        const v = imageUrl(body[k]);
+        if (v && !crewImageOk(v, crew.id, crew[k]))
+          return reply.code(400).send({
+            ok: false,
+            error: "bad_image",
+            message: "Upload the picture on the crew page instead.",
+          });
+        data[k] = v;
+      }
       if (typeof body.accentColor === "string")
         data.accentColor = /^#[0-9a-f]{6}$/i.test(body.accentColor) ? body.accentColor : null;
       if (typeof body.tagShape === "string" && /^(rounded|square|pill)$/.test(body.tagShape))
