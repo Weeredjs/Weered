@@ -278,7 +278,7 @@ export default function FamiliarView({
         .then((r) => r.json())
         .then((j) => live && Array.isArray(j?.users) && setPeople(j.users))
         .catch(() => {});
-    loadPeople();
+    void loadPeople();
     const iv = setInterval(loadPeople, 30_000);
     return () => {
       live = false;
