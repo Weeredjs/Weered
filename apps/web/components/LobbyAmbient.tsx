@@ -9,6 +9,7 @@
 import React, { useEffect, useRef } from "react";
 import type { EffectId } from "../lib/lobbyLayout";
 import { useMotionOff } from "../lib/motion";
+import { isResting, onRestChange } from "../lib/rest";
 
 type P = {
   x: number;
@@ -215,12 +216,16 @@ export default function LobbyAmbient({
     const glyphFont = (px: number) =>
       `${Math.round(px)}px "Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",system-ui,sans-serif`;
     function frame(now: number) {
-      const dt = Math.min(3, (now - last) / 16.7);
-      last = now;
-      if (document.hidden) {
-        raf = requestAnimationFrame(frame);
+      // At rest (lib/rest.ts) the loop stops; it starts again when someone looks.
+      if (document.hidden || isResting()) {
+        raf = 0;
         return;
       }
+      raf = requestAnimationFrame(frame);
+      // Thirty frames a second: the drift looks the same at half the drawing.
+      if (now - last < 32) return;
+      const dt = Math.min(3, (now - last) / 16.7);
+      last = now;
       ctx!.clearRect(0, 0, w, h);
 
       if (effect === "matrix") {
@@ -240,7 +245,6 @@ export default function LobbyAmbient({
           cols[i] += (2 + (i % 5) * 0.6) * dt;
           if (cols[i] - 14 * 16 > h) cols[i] = rnd(-200, 0);
         }
-        raf = requestAnimationFrame(frame);
         return;
       }
 
@@ -357,11 +361,20 @@ export default function LobbyAmbient({
         }
       }
       ctx!.globalAlpha = 1;
-      raf = requestAnimationFrame(frame);
     }
-    raf = requestAnimationFrame(frame);
+    const start = () => {
+      if (raf) return;
+      last = performance.now();
+      raf = requestAnimationFrame(frame);
+    };
+    start();
+    const stopListening = onRestChange((r) => r || start());
+    const onVisible = () => document.hidden || start();
+    document.addEventListener("visibilitychange", onVisible);
     return () => {
       cancelAnimationFrame(raf);
+      stopListening();
+      document.removeEventListener("visibilitychange", onVisible);
       ro.disconnect();
     };
   }, [effect, accent, intensity, symbol, image, light, still]);

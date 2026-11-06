@@ -40,6 +40,7 @@ import BugReportButton from "./BugReportButton";
 import { OFFICE_SKIN_CSS } from "./officeSkinCss";
 import { safeJsonLd } from "@/lib/jsonLd";
 import { isOfficeRoomPath } from "@/lib/officeRooms";
+import { watchRest } from "@/lib/rest";
 
 const jsonLd = {
   "@context": "https://schema.org",
@@ -196,6 +197,14 @@ export default function RootFrame({ children }: { children: React.ReactNode }) {
       document.getElementById("office-skin-css")?.remove();
     };
   }, [officeSkin, pathname]);
+
+  // The moving decoration rests while nobody is looking (lib/rest.ts). A
+  // stream overlay in OBS is watched without a hand on it, so it keeps moving.
+  const restful = !(
+    pathname &&
+    (pathname.startsWith("/overlay/") || pathname === "/foyer" || pathname.startsWith("/foyer/"))
+  );
+  useEffect(() => (restful ? watchRest() : undefined), [restful]);
 
   if (pathname === "/foyer" || (pathname && pathname.startsWith("/foyer/"))) {
     // White-label: no Weered providers, chrome, footer, JSON-LD, titlebar, or service worker.

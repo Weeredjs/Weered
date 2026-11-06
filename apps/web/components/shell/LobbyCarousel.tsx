@@ -6,12 +6,14 @@
 // they fade out to the side of the screen. Visa versa on the right. growing to
 // the center"). The busy ones first. Hovering holds it, a drag scrubs it, a
 // focused card comes to the middle, and a click goes in. One animation loop
-// writes the cards' transforms directly (no re-render a frame) and stops while
-// the strip is off screen; a card's picture loads the first time it comes near.
+// writes the cards' transforms directly (no re-render a frame), thirty times a
+// second while it cruises, and stops while the strip is off screen, held still
+// or at rest (lib/rest.ts); a card's picture loads the first time it comes near.
 import React, { useEffect, useRef } from "react";
 import Link from "next/link";
 import { avatarBg } from "../../lib/avatarColor";
 import { hideBroken, sizedImage } from "../../lib/sizedImage";
+import { isResting, onRestChange } from "../../lib/rest";
 
 export type DriftLobby = {
   id: string;
@@ -120,25 +122,32 @@ export default function LobbyCarousel({
       }
     };
 
+    // Nothing left to move: held (or reduced motion) and slowed to a stop.
+    const settled = () => !drag && focusAt === null && (held || still) && Math.abs(speed) < 0.5;
     const step = (now: number) => {
-      const dt = last ? Math.min(0.05, (now - last) / 1000) : 0;
-      last = now;
-      if (focusAt !== null) {
-        // The shortest way round to the focused card.
-        let d = (focusAt - offset) % L;
-        if (d > L / 2) d -= L;
-        if (d < -L / 2) d += L;
-        offset += d * Math.min(1, dt * 7);
-      } else if (!drag) {
-        const want = held || still ? 0 : SPEED;
-        speed += (want - speed) * Math.min(1, dt * 3);
-        offset += speed * dt;
+      raf = 0;
+      // Cruising, thirty frames a second do; a drag or a card coming to the
+      // middle gets every frame.
+      if (drag || focusAt !== null || !last || now - last >= 32) {
+        const dt = last ? Math.min(0.05, (now - last) / 1000) : 0;
+        last = now;
+        if (focusAt !== null) {
+          // The shortest way round to the focused card.
+          let d = (focusAt - offset) % L;
+          if (d > L / 2) d -= L;
+          if (d < -L / 2) d += L;
+          offset += d * Math.min(1, dt * 7);
+        } else if (!drag) {
+          const want = held || still ? 0 : SPEED;
+          speed += (want - speed) * Math.min(1, dt * 3);
+          offset += speed * dt;
+        }
+        paint();
       }
-      paint();
-      raf = onScreen ? requestAnimationFrame(step) : 0;
+      if (onScreen && !isResting() && !settled()) raf = requestAnimationFrame(step);
     };
     const run = () => {
-      if (!raf) {
+      if (!raf && onScreen && !isResting()) {
         last = 0;
         raf = requestAnimationFrame(step);
       }
@@ -163,6 +172,7 @@ export default function LobbyCarousel({
     };
     const leave = (e: PointerEvent) => {
       if (e.pointerType === "mouse") held = false;
+      run();
     };
     const move = (e: PointerEvent) => {
       if (!drag) return;
@@ -172,17 +182,22 @@ export default function LobbyCarousel({
       offset -= dx;
       if (drag.moved > 6) dragged.current = true;
     };
-    const up = () => {
+    const release = () => {
       drag = null;
       window.removeEventListener("pointermove", move);
       window.removeEventListener("pointerup", up);
       window.removeEventListener("pointercancel", up);
+    };
+    const up = () => {
+      release();
+      run();
     };
     const down = (e: PointerEvent) => {
       if (e.button !== 0) return;
       dragged.current = false;
       drag = { x: e.clientX, moved: 0 };
       focusAt = null;
+      run();
       window.addEventListener("pointermove", move);
       window.addEventListener("pointerup", up);
       window.addEventListener("pointercancel", up);
@@ -191,10 +206,13 @@ export default function LobbyCarousel({
     const focusIn = (e: FocusEvent) => {
       const i = cards.current.indexOf(e.target as HTMLAnchorElement);
       if (i >= 0) focusAt = i * SPACING;
+      run();
     };
     const focusOut = (e: FocusEvent) => {
       if (!el.contains(e.relatedTarget as Node)) focusAt = null;
+      run();
     };
+    const stopListening = onRestChange((r) => r || run());
     el.addEventListener("pointerenter", enter);
     el.addEventListener("pointerleave", leave);
     el.addEventListener("pointerdown", down);
@@ -202,9 +220,12 @@ export default function LobbyCarousel({
     el.addEventListener("focusout", focusOut);
     return () => {
       cancelAnimationFrame(raf);
+      raf = 0;
+      onScreen = false;
+      stopListening();
       ro.disconnect();
       io.disconnect();
-      up();
+      release();
       el.removeEventListener("pointerenter", enter);
       el.removeEventListener("pointerleave", leave);
       el.removeEventListener("pointerdown", down);
