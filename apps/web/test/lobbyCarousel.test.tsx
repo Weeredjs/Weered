@@ -87,6 +87,22 @@ describe("LobbyCarousel", () => {
     expect(banner.getAttribute("src")).toBe("/b.png");
   });
 
+  it("loads pictures that arrive after a card was first shown", () => {
+    // Arriving at Home, the list shows the lobbies before their pictures
+    // (James 2026-11-06: "Images don't load when you navigate in on the
+    // already showing lobby blocks").
+    stubBrowser();
+    const view = render(<LobbyCarousel lobbies={[lobby("gta6"), lobby("chess")]} />);
+    view.rerender(
+      <LobbyCarousel
+        lobbies={[lobby("gta6", { bannerUrl: "/b.png", logoUrl: "/l.png" }), lobby("chess")]}
+      />,
+    );
+    const first = view.container.querySelector("a.weered-drift-card") as HTMLElement;
+    expect(first.querySelector("img.weered-drift-banner")?.getAttribute("src")).toBe("/b.png");
+    expect(first.querySelector("img.weered-drift-logo")?.getAttribute("src")).toBe("/l.png");
+  });
+
   it("draws nothing without lobbies", () => {
     stubBrowser();
     const view = render(<LobbyCarousel lobbies={[]} />);

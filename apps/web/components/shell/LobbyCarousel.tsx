@@ -42,6 +42,16 @@ const smooth = (a: number, b: number, x: number) => {
   return t * t * (3 - 2 * t);
 };
 
+/** Load the pictures a card holds now (and only those not loaded yet). */
+function loadPictures(card: HTMLElement) {
+  card.querySelectorAll<HTMLImageElement>("img[data-src]").forEach((img) => {
+    const want = img.dataset.src || "";
+    if (!want || img.getAttribute("src") === want) return;
+    img.style.visibility = "";
+    img.src = want;
+  });
+}
+
 export default function LobbyCarousel({
   lobbies,
   onOpen,
@@ -115,9 +125,7 @@ export default function LobbyCarousel({
         c.style.zIndex = String(1000 - Math.round(k * 1000));
         if (!c.dataset.seen) {
           c.dataset.seen = "1";
-          c.querySelectorAll<HTMLImageElement>("img[data-src]").forEach((img) => {
-            img.src = img.dataset.src || "";
-          });
+          loadPictures(c);
         }
       }
     };
@@ -233,6 +241,14 @@ export default function LobbyCarousel({
       el.removeEventListener("focusout", focusOut);
     };
   }, [n]);
+
+  // Home's list can fill in after the cards first showed (arriving at Home
+  // shows the lobbies before their pictures): a card already seen loads the
+  // pictures it holds now (James 2026-11-06: "Images don't load when you
+  // navigate in on the already showing lobby blocks").
+  useEffect(() => {
+    for (const c of cards.current) if (c?.dataset.seen) loadPictures(c);
+  }, [lobbies]);
 
   if (!n) return null;
   return (
