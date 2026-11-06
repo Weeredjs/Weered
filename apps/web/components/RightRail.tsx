@@ -16,7 +16,8 @@ import { LogoMenu } from "./LogoMenu";
 import { onActivate } from "@/lib/a11y";
 import ShellSlot from "./shell/ShellSlot";
 import { useShellLayout } from "../lib/shellDesign";
-import { isCore, keyOf, PANEL_CORES, stockShell, type PanelCore } from "../lib/shellLayout";
+import { isAnyCore, isCore, keyOf, PANEL_CORES, stockShell, type AnyCore, type PanelCore } from "../lib/shellLayout";
+import AnyCoreSection from "./shell/AnyCoreSection";
 import { useOfficeSkin } from "./useOfficeSkin";
 import { plural } from "../lib/plural";
 
@@ -1378,8 +1379,10 @@ export function useRailScope(lobbyId?: string): { lobbyId: string; currentRoomId
   return { lobbyId: resolvedLobbyId, currentRoomId };
 }
 
-/** One of the panel's sections, wherever the viewer put it (either sidebar). */
-export function RailPanel({ id, lobbyId, currentRoomId }: { id: PanelCore; lobbyId: string; currentRoomId: string }) {
+/** One of the panel's sections, wherever the viewer put it (either sidebar),
+ *  or one of Home's ways in or the chat, which go anywhere. */
+export function RailPanel({ id, lobbyId, currentRoomId }: { id: PanelCore | AnyCore; lobbyId: string; currentRoomId: string }) {
+  if (isAnyCore(id)) return <AnyCoreSection id={id} region="left" />;
   switch (id) {
     case "whoshere": return <WhosHerePanel lobbyId={lobbyId} />;
     case "rooms": return <RoomsPanel currentRoomId={currentRoomId} lobbyId={lobbyId} />;
@@ -1390,8 +1393,9 @@ export function RailPanel({ id, lobbyId, currentRoomId }: { id: PanelCore; lobby
   return null;
 }
 
-export const isPanelCore = (v: unknown): v is PanelCore =>
-  typeof v === "string" && (PANEL_CORES as readonly string[]).includes(v);
+/** A section a sidebar draws through RailPanel. */
+export const isPanelCore = (v: unknown): v is PanelCore | AnyCore =>
+  typeof v === "string" && ((PANEL_CORES as readonly string[]).includes(v) || isAnyCore(v));
 
 export default function RightRail({ lobbyId }: { lobbyId?: string }) {
   const { globalRole } = useWeered() as any;

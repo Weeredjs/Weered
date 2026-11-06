@@ -34,11 +34,19 @@ export const HOME_CORES = [
   "activity",
   "visited",
 ] as const;
+/** Home's four ways in and its chat, which work anywhere (James 2026-11-05:
+ *  "Search, Browse, Create, Change... Have a home chat and presence
+ *  connection. Everything should work everywhere so the design can pick it
+ *  up"). Drawn by components/shell/AnyCoreSection.tsx. */
+export const ANY_CORES = ["search", "browse", "create", "change", "homechat"] as const;
 export type LeftCore = (typeof LEFT_CORES)[number];
 export type PanelCore = (typeof PANEL_CORES)[number];
 export type HomeCore = (typeof HOME_CORES)[number];
-export type CoreId = LeftCore | PanelCore | HomeCore;
-export const CORE_IDS: CoreId[] = [...LEFT_CORES, ...PANEL_CORES, ...HOME_CORES];
+export type AnyCore = (typeof ANY_CORES)[number];
+export type CoreId = LeftCore | PanelCore | HomeCore | AnyCore;
+export const CORE_IDS: CoreId[] = [...LEFT_CORES, ...PANEL_CORES, ...HOME_CORES, ...ANY_CORES];
+export const isAnyCore = (v: unknown): v is AnyCore =>
+  typeof v === "string" && (ANY_CORES as readonly string[]).includes(v);
 
 /** Every lobby block but the game integration, which needs a lobby's module,
  *  the front desk, which rings a lobby's staff, and custom blocks, whose code
@@ -88,6 +96,8 @@ export type CoreMeta = {
   regions: ShellRegion[];
   /** Can't be switched off. */
   locked?: boolean;
+  /** On Home, the columns of 12 it takes (a section takes the row otherwise). */
+  homeSpan?: number;
 };
 
 // Your card, the navigation, Presence, Favorites and Recent are built into
@@ -182,7 +192,40 @@ export const CORE_META: Record<CoreId, CoreMeta> = {
     blurb: "Shown to free accounts.",
     icon: "👑",
     regions: ["home"],
-    locked: true,
+  },
+  search: {
+    name: "Search",
+    blurb: "Find a lobby, a room or a game.",
+    icon: "🔎",
+    regions: ["home", "left", "right"],
+    homeSpan: 3,
+  },
+  browse: {
+    name: "Browse",
+    blurb: "Every lobby on Weered. The live ones first.",
+    icon: "🌐",
+    regions: ["home", "left", "right"],
+    homeSpan: 3,
+  },
+  create: {
+    name: "Create",
+    blurb: "A lobby for anything. Say what you want and it's built.",
+    icon: "✨",
+    regions: ["home", "left", "right"],
+    homeSpan: 3,
+  },
+  change: {
+    name: "Change",
+    blurb: "Your Weered: the colours, the layout, what's on screen.",
+    icon: "🎨",
+    regions: ["home", "left", "right"],
+    homeSpan: 3,
+  },
+  homechat: {
+    name: "Chat",
+    blurb: "Who's here and what they're saying: Home's chat on Home, a lobby's in a lobby.",
+    icon: "🗨",
+    regions: ["home", "left", "right"],
   },
   popular: {
     name: "Popular rooms",
@@ -344,13 +387,33 @@ export const itemIcon = (it: ShellItem): string =>
 // list lobbies the grid shows; Recently visited and Messages are in the
 // sidebar and the dock; Activity was an XP log), so they start switched off,
 // one click away in Design.
+//
+// Home again, 2026-11-05 (James: "The only thing that will be there is
+// Search, Browse, Create, Change... Simple and you are right in it. Have a
+// home chat and presence connection"): the four ways in and the Home chat.
+// Everything that was on Home is one click away in Design.
 const STOCK: Record<ShellRegion, CoreId[]> = {
   left: ["card", "nav", "presence", "favs", "recent"],
   right: ["whoshere", "rooms", "friends", "crew", "discover"],
-  home: ["build", "pulse", "live", "featured", "news", "upgrade"],
+  home: ["search", "browse", "create", "change", "homechat"],
 };
 /** Sections that start switched off. */
-const STOCK_OFF: CoreId[] = ["ticker", "hero", "popular", "dms", "activity", "visited"];
+const STOCK_OFF: CoreId[] = [
+  "build",
+  "pulse",
+  "live",
+  "featured",
+  "news",
+  "upgrade",
+  "ticker",
+  "hero",
+  "popular",
+  "dms",
+  "activity",
+  "visited",
+];
+/** Home as stock had it from 2026-10-30 to 11-05. */
+const HOME_2026_10_30: CoreId[] = ["build", "pulse", "live", "featured", "news", "upgrade"];
 /** Home as it came before 2026-10-30. A saved Home still in exactly this order
  *  was never arranged by hand, so it follows the new one; the office desk
  *  (components/useOfficeSkin.ts) keeps it. */
@@ -479,9 +542,19 @@ function restoreMissing(l: ShellLayout): ShellLayout {
   return l;
 }
 
-export function sanitizeShell(raw: unknown): ShellLayout | null {
+/** Presets with no blocks: a layout still on one of these (never edited
+ *  since it was picked) follows the preset as it is now, so the start
+ *  prompt's answers get the new Home (2026-11-05). Presets with blocks keep
+ *  what was saved: rebuilding them would give their blocks new ids. */
+const FOLLOWS_PRESET = new Set(["weered", "clean", "social", "focus", "everything", "minimal"]);
+
+export function sanitizeShell(raw: unknown, follow = true): ShellLayout | null {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
   const r = raw as any;
+  if (follow && typeof r.preset === "string" && FOLLOWS_PRESET.has(r.preset)) {
+    const now = presetLayout(r.preset);
+    if (now) return now;
+  }
   const placed = new Set<CoreId>();
   const blockIds = new Set<string>();
   let blocks = 0;
@@ -508,10 +581,16 @@ export function sanitizeShell(raw: unknown): ShellLayout | null {
   };
   const left = take(r.left, "left");
   const right = take(r.right, "right");
-  const legacy =
-    Array.isArray(r.home) &&
-    r.home.length === LEGACY_HOME.length &&
-    r.home.every((x: unknown, i: number) => x === LEGACY_HOME[i]);
+  // A Home still exactly as an old stock had it was never arranged by hand.
+  const same = (a: unknown, b: CoreId[]) =>
+    Array.isArray(a) && a.length === b.length && a.every((x: unknown, i: number) => x === b[i]);
+  const legacy = same(r.home, LEGACY_HOME) || same(r.home, HOME_2026_10_30);
+  // A Home arranged by hand before the ways in existed keeps what it had
+  // (James 2026-11-05: "Anyone who saved their own Home keeps it"): they start
+  // switched off there, one click away in Design.
+  const named = (id: string) =>
+    [r.left, r.right, r.home, r.hidden].some((l) => Array.isArray(l) && l.includes(id));
+  const ownHome = Array.isArray(r.home) && r.home.length > 0 && !legacy && !ANY_CORES.some(named);
   const home = take(legacy ? STOCK.home : r.home, "home");
   const hidden: CoreId[] = [];
   for (const x of Array.isArray(r.hidden) ? r.hidden : []) {
@@ -519,6 +598,7 @@ export function sanitizeShell(raw: unknown): ShellLayout | null {
     if (CORE_META[id] && !CORE_META[id].locked && !placed.has(id) && !hidden.includes(id))
       hidden.push(id);
   }
+  if (ownHome) for (const id of ANY_CORES) if (!placed.has(id)) hidden.push(id);
   const preset = typeof r.preset === "string" && PRESET_IDS.has(r.preset) ? r.preset : undefined;
   return restoreMissing({ v: 1, ...(preset ? { preset } : {}), left, right, home, hidden });
 }
@@ -658,6 +738,9 @@ export type ShellPreset = {
   build: () => PresetBody;
 };
 
+/** Home's four ways in, first on every preset's Home (2026-11-05). */
+const WAYS_IN: CoreId[] = ["search", "browse", "create", "change"];
+
 export const SHELL_PRESETS: ShellPreset[] = [
   {
     id: "weered",
@@ -667,16 +750,15 @@ export const SHELL_PRESETS: ShellPreset[] = [
     build: () => ({ left: [...STOCK.left], right: [...STOCK.right], home: [...STOCK.home] }),
   },
   {
-    // The start prompt's "Keep it clean" (components/setup/StartPrompt.tsx):
-    // your places, your people and a way to build; the rest a click away.
+    // Your places, your people and the Home chat; the rest a click away.
     id: "clean",
     name: "Clean",
-    blurb: "Your places, your people, and a way to build. Nothing else.",
+    blurb: "Your places, your people and the Home chat. Nothing else.",
     setup: true,
     build: () => ({
-      left: ["card", "nav", "favs", "friends"],
-      right: ["rooms", "whoshere"],
-      home: ["build", "pulse", "popular"],
+      left: ["card", "nav", "favs"],
+      right: ["friends", "rooms"],
+      home: [...WAYS_IN, "homechat"],
     }),
   },
   {
@@ -687,7 +769,7 @@ export const SHELL_PRESETS: ShellPreset[] = [
     build: () => ({
       left: ["card", "nav", "friends", "crew", "favs", "presence", "recent"],
       right: ["rooms", "whoshere", "discover"],
-      home: ["build", "pulse", "dms", "activity", "live", "featured", "news", "upgrade", "visited"],
+      home: [...WAYS_IN, "homechat", "pulse", "dms", "activity"],
     }),
   },
   {
@@ -698,7 +780,7 @@ export const SHELL_PRESETS: ShellPreset[] = [
     build: () => ({
       left: ["card", "nav", "favs", "friends"],
       right: ["rooms"],
-      home: ["pulse", "featured", "upgrade", "news"],
+      home: [...WAYS_IN, "pulse"],
     }),
   },
   {
@@ -710,6 +792,8 @@ export const SHELL_PRESETS: ShellPreset[] = [
       left: ["card", "nav", "presence", "friends", "favs", "recent"],
       right: ["whoshere", "rooms", "crew", "discover"],
       home: [
+        ...WAYS_IN,
+        "homechat",
         "build",
         "pulse",
         "ticker",
@@ -733,7 +817,7 @@ export const SHELL_PRESETS: ShellPreset[] = [
     build: () => ({
       left: ["card", "nav", "favs"],
       right: ["friends"],
-      home: ["featured", "upgrade"],
+      home: [...WAYS_IN],
     }),
   },
   {
@@ -754,10 +838,10 @@ export const SHELL_PRESETS: ShellPreset[] = [
       left: ["card", "nav", "crew", "friends", "favs"],
       right: [newShellBlock("countdown"), newShellBlock("events"), "rooms", newShellBlock("links")],
       home: [
+        ...WAYS_IN,
         newShellBlock("welcome", { title: "Game night", body: "Rooms open at eight." }),
         "pulse",
         "featured",
-        "upgrade",
         "news",
         "activity",
       ],
@@ -770,7 +854,7 @@ export const SHELL_PRESETS: ShellPreset[] = [
     build: () => ({
       left: ["card", "nav", "friends", "presence", "favs"],
       right: ["rooms", "crew"],
-      home: [newShellBlock("video"), "pulse", "live", "featured", "upgrade"],
+      home: [...WAYS_IN, newShellBlock("video"), "pulse", "live", "featured"],
     }),
   },
 ];
@@ -780,5 +864,5 @@ const PRESET_IDS = new Set(SHELL_PRESETS.map((p) => p.id));
 export function presetLayout(id: string): ShellLayout | null {
   const p = SHELL_PRESETS.find((x) => x.id === id);
   if (!p) return null;
-  return sanitizeShell({ ...p.build(), hidden: CORE_IDS, preset: id });
+  return sanitizeShell({ ...p.build(), hidden: CORE_IDS, preset: id }, false);
 }

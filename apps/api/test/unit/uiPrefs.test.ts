@@ -119,6 +119,24 @@ describe("UI prefs", () => {
     });
   });
 
+  it("keeps Home's ways in and its chat in any region, and the upgrade card off", () => {
+    const p = sanitizeUiPrefs({
+      shell: {
+        v: 1,
+        left: ["card", "nav", "homechat"],
+        right: ["search", "rooms"],
+        home: ["browse", "create", "change", "pulse"],
+        hidden: ["upgrade", "build"],
+      },
+    });
+    expect(p.shell).toMatchObject({
+      left: ["card", "nav", "homechat"],
+      right: ["search", "rooms"],
+      home: ["browse", "create", "change", "pulse"],
+      hidden: ["upgrade", "build"],
+    });
+  });
+
   it("drops an oversized or malformed layout", () => {
     const big = { left: [{ id: "b1", type: "rules", props: { body: "x".repeat(30_000) } }] };
     expect(sanitizeUiPrefs({ shell: big }).shell).toBeUndefined();

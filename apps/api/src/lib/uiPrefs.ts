@@ -81,6 +81,12 @@ const SHELL_CORES: Record<string, readonly string[]> = {
   dms: ["home"],
   activity: ["home"],
   visited: ["home"],
+  // Home's four ways in and its chat work anywhere (2026-11-05).
+  search: ["home", "left", "right"],
+  browse: ["home", "left", "right"],
+  create: ["home", "left", "right"],
+  change: ["home", "left", "right"],
+  homechat: ["home", "left", "right"],
 };
 export const SHELL_BLOCK_TYPES = [
   "welcome",
@@ -227,7 +233,6 @@ function sanitizeShell(raw: unknown): ShellPrefs | undefined {
       typeof h === "string" &&
       SHELL_CORES[h] &&
       h !== "nav" &&
-      h !== "upgrade" &&
       !placed.has(h) &&
       a.indexOf(h) === i,
   ) as string[];

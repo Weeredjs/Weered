@@ -14,7 +14,6 @@ import EmptyState from "../../components/EmptyState";
 import LobbyChatDrawer from "../../components/LobbyChatDrawer";
 import HomeActivityTicker from "../../components/HomeActivityTicker";
 import FirstTimePrompt from "../../components/FirstTimePrompt";
-import SetupGate from "../../components/setup/SetupGate";
 import HomePinnedNews from "../../components/HomePinnedNews";
 import HomePulse from "../../components/HomePulse";
 import HomeBuild from "../../components/HomeBuild";
@@ -23,7 +22,12 @@ import { onActivate } from "@/lib/a11y";
 import ShellSlot from "../../components/shell/ShellSlot";
 import ShellDesigner from "../../components/shell/ShellDesigner";
 import { startDesign, useShellLayout } from "../../lib/shellDesign";
-import { LEGACY_HOME, isCore, keyOf } from "../../lib/shellLayout";
+import AnyCoreSection from "../../components/shell/AnyCoreSection";
+import { LEGACY_HOME, isAnyCore, isCore, keyOf, type CoreId } from "../../lib/shellLayout";
+
+/** Home's sections that list lobbies and rooms: with none of them on Home,
+ *  empty lists don't mean an empty Weered. */
+const LISTS_PLACES: CoreId[] = ["hero", "live", "featured", "popular", "ticker"];
 import { useOfficeSkin } from "../../components/useOfficeSkin";
 import { plural } from "../../lib/plural";
 
@@ -1026,6 +1030,8 @@ export default function HomePage() {
   // Home's built-in sections, by id. The viewer's layout (lib/shellLayout.ts)
   // decides which show and in what order, with their blocks between them.
   const homeSection = (id: string): React.ReactNode => {
+    // The four ways in and the chat go anywhere (components/shell/AnyCoreSection.tsx).
+    if (isAnyCore(id)) return <AnyCoreSection id={id} region="home" roomId="lobby" />;
     switch (id) {
       case "build":
         return <HomeBuild lobbies={lobbies} signedIn={!!me?.id} canDesign={!!me && !office} />;
@@ -1223,12 +1229,15 @@ export default function HomePage() {
           </div>
         </div>
 
-        <div className="home-topbar-search" style={{ flex: "0 1 560px", display: "flex", justifyContent: "flex-end", minWidth: 0, maxWidth: 680 }}>
-          <LobbySearch hero width={680} />
-        </div>
+        {/* Home's own Search and Change tiles stand in for these (2026-11-05). */}
+        {!homeLayout.includes("search") && (
+          <div className="home-topbar-search" style={{ flex: "0 1 560px", display: "flex", justifyContent: "flex-end", minWidth: 0, maxWidth: 680 }}>
+            <LobbySearch hero width={680} />
+          </div>
+        )}
 
         <div className="home-topbar-actions" style={{ flex: "0 0 auto", display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 10 }}>
-          {me && !office && (
+          {me && !office && !homeLayout.includes("change") && (
             <button
               type="button"
               onClick={() => startDesign()}
@@ -1274,7 +1283,6 @@ export default function HomePage() {
       <div data-shell-scroller="home" style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: "0 20px 8px" }}>
 
         <FirstTimePrompt />
-        <SetupGate />
 
         <div className="weered-home-grid" data-shell-root="home">
           {homeLayout.map((it) => (
@@ -1284,7 +1292,8 @@ export default function HomePage() {
           ))}
         </div>
 
-        {lobbies.length === 0 && popularRooms.length === 0 && (
+        {/* Only where Home lists places: under the four ways in it read as broken. */}
+        {lobbies.length === 0 && popularRooms.length === 0 && homeLayout.some((it) => LISTS_PLACES.includes(it as CoreId)) && (
           <EmptyState
             icon={<img src="/brand/logo/weered-shieldlogo-512.png" alt="" style={{ width: 72, height: 72, opacity: 0.45 }} />}
             title="Nothing's happening yet."
@@ -1309,7 +1318,18 @@ export default function HomePage() {
 
       {me && !office && <ShellDesigner />}
 
-      <LobbyChatDrawer roomId="room:lobby" title="Lobby Chat" />
+      {/* The chat is on Home itself when the layout has it: no second one at the
+          edge. Without it the edge tab stays, closed, so it never covers the four
+          ways in (the office desk keeps its own). */}
+      <LobbyChatDrawer
+        roomId="room:lobby"
+        title="Lobby Chat"
+        {...(homeLayout.includes("homechat")
+          ? { hideTab: true, defaultOpen: false }
+          : office
+            ? {}
+            : { defaultOpen: false })}
+      />
     </div>
   );
 }

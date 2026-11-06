@@ -142,11 +142,14 @@ export default function ShellDesigner() {
 
   const save = async () => {
     const rightBefore = JSON.stringify(s.base?.layout.right);
+    const leftBefore = JSON.stringify(s.base?.layout.left);
     const res = await saveDesign();
     if (res === "ok") {
       setConfetti((n) => n + 1);
       if (JSON.stringify(d.layout.right) !== rightBefore && d.layout.right.length)
         window.dispatchEvent(new Event("weered:rail:open-right"));
+      if (JSON.stringify(d.layout.left) !== leftBefore)
+        window.dispatchEvent(new Event("weered:rail:open-left"));
     } else if (res === "too_large")
       weeredToast.error(
         "That's more than a layout can hold. Shorten a few blocks (long lists and banners take the most room), then Save.",

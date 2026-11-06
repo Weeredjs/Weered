@@ -38,7 +38,6 @@ function expectWhole(l: ShellLayout) {
   seen.push(...l.hidden);
   expect([...seen].sort()).toEqual([...CORE_IDS].sort());
   expect(l.left).toContain("nav");
-  expect(l.home).toContain("upgrade");
 }
 
 describe("the viewer's own layout", () => {
@@ -134,7 +133,6 @@ describe("the viewer's own layout", () => {
     l = hideItem(l, b.id);
     expect(findItem(l, b.id)).toBeNull();
     expect(hideItem(l, "nav")).toBe(l);
-    expect(hideItem(l, "upgrade")).toBe(l);
     // Bringing a switched-off section back takes it out of hidden.
     l = placeItem(l, "presence", "left", 0);
     expect(l.hidden).not.toContain("presence");
@@ -240,47 +238,81 @@ describe("custom colourway", () => {
   });
 });
 
-describe("Home, re-arranged 2026-10-30", () => {
-  const OFF = ["ticker", "hero", "popular", "dms", "activity", "visited"];
+describe("Home, re-arranged 2026-11-05", () => {
+  const WAYS = ["search", "browse", "create", "change", "homechat"];
+  const OFF = ["build", "pulse", "live", "featured", "news", "upgrade", "ticker", "hero"];
 
-  it("leads with Build your own and starts the repeats switched off", () => {
+  it("is the four ways in and the Home chat, everything else switched off", () => {
     const s = stockShell();
-    expect(s.home).toEqual(["build", "pulse", "live", "featured", "news", "upgrade"]);
+    expect(s.home).toEqual(WAYS);
     expect(s.hidden).toEqual(expect.arrayContaining(OFF));
     expectWhole(s);
   });
 
-  it("moves a Home still in the old stock order to the new one", () => {
-    const old = { ...stockShell(), home: [...LEGACY_HOME], hidden: [] };
-    const l = sanitizeShell(old)!;
-    expect(l.home).toEqual(stockShell().home);
-    expect(l.hidden).toEqual(expect.arrayContaining(OFF));
-    expectWhole(l);
+  it("moves a Home still in an old stock order to the new one", () => {
+    for (const home of [LEGACY_HOME, ["build", "pulse", "live", "featured", "news", "upgrade"]]) {
+      const l = sanitizeShell({ ...stockShell(), home: [...home], hidden: [] })!;
+      expect(l.home).toEqual(WAYS);
+      expect(l.hidden).toEqual(expect.arrayContaining(OFF));
+      expectWhole(l);
+    }
   });
 
-  it("keeps a Home arranged by hand, with Build your own added at the top", () => {
+  it("gives a layout still on its preset the preset as it is now", () => {
+    const l = sanitizeShell({
+      ...stockShell(),
+      preset: "clean",
+      home: ["build", "pulse", "live"],
+    })!;
+    expect(l).toEqual(presetLayout("clean"));
+    expect(l.home.slice(0, 4)).toEqual(["search", "browse", "create", "change"]);
+  });
+
+  it("keeps a Home arranged by hand, with the ways in switched off there", () => {
     const l = sanitizeShell({
       ...stockShell(),
       home: ["featured", "ticker", "news", "upgrade", "pulse", "live"],
       hidden: ["hero", "popular", "dms", "activity", "visited"],
     })!;
-    expect(l.home).toEqual(["build", "featured", "ticker", "news", "upgrade", "pulse", "live"]);
+    expect(l.home).toEqual(["featured", "ticker", "news", "upgrade", "pulse", "live"]);
+    expect(l.hidden).toEqual(expect.arrayContaining([...WAYS, "build"]));
     expectWhole(l);
   });
 
-  it("leaves Build your own off for someone who switched it off", () => {
+  it("leaves a layout that already has the ways in where its owner put them", () => {
     const l = sanitizeShell({
       ...stockShell(),
-      hidden: [...stockShell().hidden, "build"],
-      home: ["pulse", "upgrade"],
+      left: ["card", "nav", "homechat", "favs"],
+      home: ["pulse", "search"],
+      hidden: [...stockShell().hidden, "browse", "create", "change"],
     })!;
-    expect(l.home).not.toContain("build");
-    expect(l.hidden).toContain("build");
+    // (Presence and Recent, never named, come back in their stock places.)
+    expect(l.left).toEqual(["card", "nav", "presence", "homechat", "favs", "recent"]);
+    expect(l.home).toEqual(["pulse", "search"]);
     expectWhole(l);
   });
 
-  it("keeps every preset whole", () => {
-    for (const p of SHELL_PRESETS) expectWhole(presetLayout(p.id)!);
+  it("lets the ways in and the chat live in either sidebar too", () => {
+    let l = placeItem(stockShell(), "homechat", "left", 2);
+    expect(l.left[2]).toBe("homechat");
+    l = placeItem(l, "browse", "right", 0);
+    expect(l.right[0]).toBe("browse");
+    expect(l.home).toEqual(["search", "create", "change"]);
+    expectWhole(l);
+  });
+
+  it("lets the upgrade card be switched off like the rest", () => {
+    const l = hideItem(placeItem(stockShell(), "upgrade", "home", 0), "upgrade");
+    expect(l.home).not.toContain("upgrade");
+    expect(l.hidden).toContain("upgrade");
+  });
+
+  it("keeps every preset whole, the four ways in first on its Home", () => {
+    for (const p of SHELL_PRESETS) {
+      const l = presetLayout(p.id)!;
+      expectWhole(l);
+      expect(l.home.slice(0, 4)).toEqual(["search", "browse", "create", "change"]);
+    }
     expect(
       presetLayout("everything")!.hidden.filter((h) => CORE_META[h].regions.includes("home")),
     ).toEqual([]);

@@ -9,13 +9,25 @@ import { NO_SHELL_ROUTES } from "../lib/lobbyThemes";
 import { useShellDesign } from "../lib/shellDesign";
 import { useWeered } from "./WeeredProvider";
 import { isGuestSession } from "../lib/guestSession";
+import LeftRailStack from "./shell/LeftRailStack";
 
-function LeftRailScroll({ children }: { children: React.ReactNode }) {
+// Folded, the sidebar stays mounted and only hides: its card sets the page's
+// avatar frame and colours (UserCorner), and it opens again where it was.
+function LeftRailScroll({
+  children,
+  folded,
+  onHide,
+}: {
+  children: React.ReactNode;
+  folded: boolean;
+  onHide?: () => void;
+}) {
   const [hovered, setHovered] = useState(false);
 
   return (
     <aside
-      className="weered-left"
+      className={`weered-left${folded ? " is-folded" : ""}`}
+      aria-hidden={folded || undefined}
       data-rail-hover={hovered ? "1" : "0"}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
@@ -40,6 +52,15 @@ function LeftRailScroll({ children }: { children: React.ReactNode }) {
         }
       `}</style>
       {children}
+      {onHide && (
+        // At the foot, not the top corner, where it would sit on the card's banner.
+        <div className="weered-left-hide">
+          <button type="button" title="Hide sidebar" onClick={onHide} className="weered-rail-close">
+            {ICO_COLLAPSE_LEFT}
+            <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: ".5px" }}>HIDE</span>
+          </button>
+        </div>
+      )}
     </aside>
   );
 }
@@ -394,6 +415,20 @@ const ICO_COLLAPSE_RIGHT = (
     <polyline points="9 18 15 12 9 6" />
   </svg>
 );
+const ICO_COLLAPSE_LEFT = (
+  <svg
+    width="14"
+    height="14"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2.5"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <polyline points="15 18 9 12 15 6" />
+  </svg>
+);
 
 export default function ShellGate({
   left,
@@ -507,6 +542,44 @@ export default function ShellGate({
     });
   };
 
+  // The left sidebar folds the same way (James 2026-11-05), open by default.
+  // Read before paint, so a folded sidebar doesn't flash open on every load.
+  const [leftCollapsed, setLeftCollapsed] = useState(false);
+  useLayoutEffect(() => {
+    try {
+      if (localStorage.getItem("weered_left_collapsed") === "1") setLeftCollapsed(true);
+    } catch {}
+  }, []);
+  const setLeft = React.useCallback((folded: boolean) => {
+    setLeftCollapsed(folded);
+    try {
+      localStorage.setItem("weered_left_collapsed", folded ? "1" : "0");
+    } catch {}
+  }, []);
+  // Opens it, at a section when the folded icons ask for one ("card" is the top).
+  const openLeft = React.useCallback(
+    (at?: string) => {
+      setLeft(false);
+      if (!at) return;
+      requestAnimationFrame(() =>
+        requestAnimationFrame(() => {
+          const el =
+            at === "card"
+              ? document.querySelector(".weered-left .weered-usercorner")
+              : document.querySelector(`.weered-left [data-shell-key="${CSS.escape(at)}"]`);
+          el?.scrollIntoView({ block: "start", behavior: "smooth" });
+        }),
+      );
+    },
+    [setLeft],
+  );
+  useEffect(() => {
+    const open = (e: Event) => openLeft((e as CustomEvent).detail?.at);
+    window.addEventListener("weered:rail:open-left", open);
+    return () => window.removeEventListener("weered:rail:open-left", open);
+  }, [openLeft]);
+  const leftFolded = leftCollapsed && !designing;
+
   if (bare || guest) {
     const isOverlay = pathname.startsWith("/overlay");
     return (
@@ -523,8 +596,13 @@ export default function ShellGate({
 
   return (
     <>
-      <div className={`weered-shell${hideFooter ? "" : " has-footer"}`}>
-        <LeftRailScroll>{left}</LeftRailScroll>
+      <div
+        className={`weered-shell${hideFooter ? "" : " has-footer"}${leftFolded ? " is-left-folded" : ""}`}
+      >
+        <LeftRailScroll folded={leftFolded} onHide={designing ? undefined : () => setLeft(true)}>
+          {left}
+        </LeftRailScroll>
+        {leftFolded && <LeftRailStack onOpen={openLeft} />}
 
         <IconStrip
           side="left"

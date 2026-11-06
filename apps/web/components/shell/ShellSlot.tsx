@@ -4,7 +4,14 @@
 // section or a block. Design mode finds these by data-shell-key to outline,
 // select and drag them; outside Design mode they are plain wrappers.
 import React from "react";
-import { isCore, itemName, keyOf, type ShellItem, type ShellRegion } from "../../lib/shellLayout";
+import {
+  CORE_META,
+  isCore,
+  itemName,
+  keyOf,
+  type ShellItem,
+  type ShellRegion,
+} from "../../lib/shellLayout";
 import ShellBlockView from "./ShellBlockView";
 
 export default function ShellSlot({
@@ -21,12 +28,18 @@ export default function ShellSlot({
 }) {
   const style: React.CSSProperties = {};
   if (order !== undefined) style.order = order;
-  // Home is a 12-column grid: sections take the row, blocks their width.
+  // Home is a 12-column grid: sections take the row (Home's four ways in a
+  // quarter each, styles/51-start.css narrows them), blocks their width.
+  const span = isCore(item) ? CORE_META[item]?.homeSpan : undefined;
   if (region === "home")
-    style.gridColumn = isCore(item) ? "1 / -1" : `span ${SPAN[item.size] || 12}`;
+    style.gridColumn = isCore(item)
+      ? span
+        ? `span ${span}`
+        : "1 / -1"
+      : `span ${SPAN[item.size] || 12}`;
   return (
     <div
-      className={`weered-shell-slot weered-shell-slot-${region}${isCore(item) ? "" : " is-block"}`}
+      className={`weered-shell-slot weered-shell-slot-${region}${isCore(item) ? "" : " is-block"}${span ? " is-quarter" : ""}`}
       data-shell-key={keyOf(item)}
       data-shell-region={region}
       data-shell-label={itemName(item)}

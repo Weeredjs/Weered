@@ -1,0 +1,576 @@
+/* =====================================================================
+   START — Home's four ways in, the chat, the layout gallery and the
+   collapsed left sidebar (James 2026-11-05: "Simple and you are right in it")
+   =====================================================================
+   components/shell/AnyCoreSection.tsx, components/setup/LayoutGallery.tsx,
+   components/shell/LeftRailStack.tsx. Colours follow the colourway through
+   Nebula's --nb-a (accent) and --nb-b (deep accent) channels. */
+
+/* ── The four ways in: tiles on Home ─────────────────────────────────── */
+.weered-shell-slot-home.is-quarter {
+  margin-top: 16px;
+  min-width: 0;
+}
+@media (max-width: 1180px) {
+  .weered-shell-slot-home.is-quarter {
+    grid-column: span 6 !important;
+  }
+}
+@media (max-width: 640px) {
+  .weered-shell-slot-home.is-quarter {
+    grid-column: 1 / -1 !important;
+  }
+}
+
+.weered-wayin {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  height: 100%;
+  min-height: 148px;
+  box-sizing: border-box;
+  padding: 18px 18px 16px;
+  border-radius: 16px;
+  border: 1px solid rgb(var(--nb-a, 139 92 246) / 0.22);
+  background:
+    radial-gradient(120% 90% at 0% 0%, rgb(var(--nb-a, 139 92 246) / 0.16), transparent 60%),
+    rgba(12, 10, 22, 0.62);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: #f4f2ff;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    transform 0.18s ease,
+    border-color 0.2s,
+    box-shadow 0.25s;
+}
+div.weered-wayin {
+  cursor: default;
+}
+/* The global button:hover (40-core-layout.css) would flatten the glass. */
+button.weered-wayin:hover,
+button.weered-wayin:focus-visible {
+  background:
+    radial-gradient(120% 90% at 0% 0%, rgb(var(--nb-a, 139 92 246) / 0.24), transparent 60%),
+    rgba(12, 10, 22, 0.7);
+  filter: none;
+  transform: translateY(-2px);
+  border-color: rgb(var(--nb-a, 139 92 246) / 0.55);
+  box-shadow:
+    0 14px 36px rgba(0, 0, 0, 0.45),
+    0 0 0 1px rgb(var(--nb-a, 139 92 246) / 0.25),
+    0 0 28px -6px rgb(var(--nb-a, 139 92 246) / 0.6);
+  outline: none;
+}
+.weered-wayin-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-width: 0;
+}
+.weered-wayin-icon {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  color: #fff;
+  background: linear-gradient(135deg, rgb(var(--nb-a, 139 92 246)), rgb(var(--nb-b, 91 33 182)));
+  box-shadow: 0 6px 18px rgb(var(--nb-a, 139 92 246) / 0.45);
+}
+.weered-wayin-words {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.weered-wayin-title {
+  font-size: 19px;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  line-height: 1.1;
+}
+.weered-wayin-sub {
+  font-size: 13px;
+  line-height: 1.4;
+  color: rgba(236, 232, 255, 0.66);
+}
+.weered-wayin-go {
+  position: absolute;
+  right: 16px;
+  bottom: 12px;
+  font-size: 18px;
+  font-weight: 800;
+  color: rgb(var(--nb-a, 139 92 246));
+  transition: transform 0.18s ease;
+}
+button.weered-wayin:hover .weered-wayin-go {
+  transform: translateX(3px);
+}
+.weered-wayin-search {
+  margin-top: auto;
+  min-width: 0;
+}
+
+/* In a sidebar: a compact row. */
+.weered-wayin.is-rail {
+  min-height: 0;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  margin: 6px 0;
+}
+.weered-wayin.is-rail .weered-wayin-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+}
+.weered-wayin.is-rail .weered-wayin-icon svg {
+  width: 17px;
+  height: 17px;
+}
+.weered-wayin.is-rail .weered-wayin-title {
+  font-size: 14px;
+}
+.weered-wayin.is-rail .weered-wayin-sub {
+  font-size: 11.5px;
+}
+
+/* ── The chat, with who's here ───────────────────────────────────────── */
+.weered-shell-slot-home .weered-chathere {
+  margin-top: 16px;
+}
+.weered-chathere {
+  display: flex;
+  flex-direction: column;
+  border-radius: 16px;
+  border: 1px solid rgb(var(--nb-a, 139 92 246) / 0.2);
+  background: rgba(10, 9, 18, 0.66);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  overflow: hidden;
+}
+.weered-chathere-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  background: linear-gradient(90deg, rgb(var(--nb-a, 139 92 246) / 0.14), transparent 70%);
+}
+.weered-chathere-title {
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: #f4f2ff;
+}
+.weered-chathere-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: rgba(187, 247, 208, 0.9);
+}
+.weered-chathere-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #22c55e;
+  box-shadow: 0 0 8px rgba(34, 197, 94, 0.7);
+}
+.weered-chathere-faces {
+  display: flex;
+  margin-left: auto;
+}
+.weered-chathere-face {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  margin-left: -6px;
+  border-radius: 50%;
+  border: 2px solid rgba(10, 9, 18, 0.95);
+  background-size: cover;
+  background-position: center;
+  font-size: 11px;
+  font-weight: 800;
+  color: #fff;
+}
+.weered-chathere-body {
+  height: 440px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.weered-chathere-body > * {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.weered-chathere.is-rail {
+  margin: 8px 0;
+  border-radius: 12px;
+}
+.weered-chathere.is-rail .weered-chathere-body {
+  height: 340px;
+}
+
+/* ── The left sidebar, folded (components/ShellGate.tsx, LeftRailStack) ── */
+.weered-left.is-folded {
+  display: none !important;
+}
+/* Hide sits at the sidebar's foot, pinned while it scrolls. */
+.weered-left-hide {
+  position: sticky;
+  bottom: 0;
+  z-index: 3;
+  display: flex;
+  justify-content: flex-end;
+  margin-top: -36px;
+  padding: 0 8px 8px;
+  pointer-events: none;
+}
+.weered-left-hide .weered-rail-close {
+  position: static;
+  pointer-events: auto;
+}
+.weered-rail-stack-left {
+  gap: 6px;
+  max-height: 100%;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+.weered-rail-stack-left::-webkit-scrollbar {
+  display: none;
+}
+.weered-lstack-me {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  margin-bottom: 6px;
+  border-radius: 50%;
+  border: 2px solid rgb(var(--nb-a, 139 92 246) / 0.65);
+  background-size: cover;
+  background-position: center;
+  box-shadow: 0 0 14px rgb(var(--nb-a, 139 92 246) / 0.35);
+  color: #fff;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 800;
+  cursor: pointer;
+  transition:
+    transform 0.15s,
+    box-shadow 0.2s;
+}
+.weered-lstack-me:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 0 20px rgb(var(--nb-a, 139 92 246) / 0.6);
+}
+.weered-lstack-btn {
+  position: relative;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: var(--weered-panel, rgba(12, 10, 22, 0.7));
+  color: rgb(var(--nb-a, 167 139 250) / 0.75);
+  cursor: pointer;
+  text-decoration: none;
+  transition:
+    transform 0.15s,
+    color 0.15s,
+    border-color 0.2s,
+    box-shadow 0.2s;
+}
+.weered-lstack-btn:hover,
+.weered-lstack-btn:focus-visible {
+  background: rgb(var(--nb-a, 139 92 246) / 0.16);
+  filter: none;
+  transform: translateX(2px);
+  color: #fff;
+  border-color: rgb(var(--nb-a, 139 92 246) / 0.5);
+  box-shadow: 0 0 16px rgb(var(--nb-a, 139 92 246) / 0.35);
+  outline: none;
+}
+.weered-lstack-btn.is-active {
+  color: #fff;
+  border-color: rgb(var(--nb-a, 139 92 246) / 0.55);
+  background: rgb(var(--nb-a, 139 92 246) / 0.22);
+}
+.weered-lstack-glyph {
+  font-size: 17px;
+  line-height: 1;
+}
+.weered-lstack-badge {
+  position: absolute;
+  top: -5px;
+  right: -6px;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  border-radius: 999px;
+  box-sizing: border-box;
+  display: grid;
+  place-items: center;
+  font-size: 10px;
+  font-weight: 800;
+  color: #052e16;
+  background: #4ade80;
+  border: 2px solid rgba(10, 9, 18, 0.95);
+}
+.weered-lstack-sep {
+  flex-shrink: 0;
+  width: 22px;
+  height: 1px;
+  margin: 3px 0;
+  background: rgba(255, 255, 255, 0.1);
+}
+.weered-rail-stack-left .weered-rail-tab {
+  width: 32px;
+  flex: 0 0 auto;
+  align-self: center;
+  min-height: 150px;
+  margin-top: 6px;
+}
+/* Narrower screens fold the sidebar into the icon strip already. */
+@media (max-width: 1399px) {
+  .weered-rail-stack-left {
+    display: none !important;
+  }
+}
+/* The full-screen chat tucks against the folded strip instead of the sidebar
+   (16 padding + 48 strip + 16 gap). */
+@media (min-width: 1400px) {
+  .weered-shell.is-left-folded .weered-chat-fullscreen {
+    left: 80px !important;
+  }
+}
+
+/* ── Pick a layout (components/setup/LayoutGallery.tsx) ─────────────── */
+.weered-gallery {
+  position: fixed;
+  inset: 0;
+  z-index: 99990;
+  overflow-y: auto;
+  outline: none;
+  color: #f4f3ff;
+  background:
+    radial-gradient(1200px 600px at 15% -10%, rgba(139, 92, 246, 0.22), transparent 60%),
+    radial-gradient(900px 500px at 100% 0%, rgba(56, 189, 248, 0.12), transparent 60%),
+    radial-gradient(900px 600px at 50% 110%, rgba(251, 146, 60, 0.1), transparent 60%), #07060d;
+  animation: weered-gallery-in 0.28s ease-out;
+}
+@keyframes weered-gallery-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.weered-gallery-inner {
+  max-width: 1500px;
+  margin: 0 auto;
+  padding: 40px 32px 56px;
+}
+.weered-gallery-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 28px;
+}
+.weered-gallery-eyebrow {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #a78bfa;
+}
+.weered-gallery-title {
+  margin: 6px 0 8px;
+  font-size: clamp(30px, 4vw, 44px);
+  font-weight: 900;
+  line-height: 1.05;
+  letter-spacing: -0.01em;
+}
+.weered-gallery-note {
+  margin: 0;
+  font-size: 15px;
+  color: rgba(236, 232, 255, 0.7);
+}
+.weered-gallery-note b {
+  color: #fff;
+}
+.weered-gallery-skip {
+  flex-shrink: 0;
+  padding: 9px 18px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(236, 232, 255, 0.8);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+.weered-gallery-skip:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+.weered-gallery-groups {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 600px), 1fr));
+  gap: 26px 28px;
+}
+.weered-gallery-group-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin: 0 2px 10px;
+  min-width: 0;
+}
+.weered-gallery-group-name {
+  font-size: 18px;
+  font-weight: 900;
+}
+.weered-gallery-group-blurb {
+  font-size: 13px;
+  color: rgba(236, 232, 255, 0.58);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.weered-gallery-tiles {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+.weered-gallery-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.weered-gallery-tile:hover,
+.weered-gallery-tile:focus {
+  background: none;
+  border: none;
+  filter: none;
+}
+.weered-gallery-tile:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+.weered-gallery-shot {
+  position: relative;
+  display: block;
+  aspect-ratio: 16 / 10;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: #0d0b1c;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  transition:
+    transform 0.2s ease,
+    border-color 0.2s,
+    box-shadow 0.25s;
+}
+.weered-gallery-shot img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top left;
+}
+.weered-gallery-tile:not(:disabled):hover .weered-gallery-shot,
+.weered-gallery-tile:focus-visible .weered-gallery-shot,
+.weered-gallery-tile.is-picked .weered-gallery-shot {
+  transform: translateY(-3px) scale(1.02);
+  border-color: var(--tile-a);
+  box-shadow:
+    0 18px 40px rgba(0, 0, 0, 0.55),
+    0 0 0 2px var(--tile-a),
+    0 0 34px -6px var(--tile-a);
+}
+.weered-gallery-tile:focus-visible {
+  outline: none;
+}
+.weered-gallery-shot-blank {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.5);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--tile-a) 30%, #0d0b1c), #0d0b1c 70%);
+}
+.weered-gallery-tick {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 46px;
+  font-weight: 900;
+  color: #fff;
+  background: color-mix(in srgb, var(--tile-a) 45%, transparent);
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.5);
+  animation: weered-gallery-in 0.2s ease-out;
+}
+.weered-gallery-look {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding-left: 2px;
+  font-size: 13px;
+  font-weight: 700;
+  color: rgba(236, 232, 255, 0.78);
+}
+.weered-gallery-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--tile-a);
+  box-shadow: 0 0 8px var(--tile-a);
+}
+@media (max-width: 640px) {
+  .weered-gallery-inner {
+    padding: 24px 16px 40px;
+  }
+  .weered-gallery-group-head {
+    flex-direction: column;
+    gap: 2px;
+  }
+  .weered-gallery-group-blurb {
+    white-space: normal;
+  }
+  .weered-gallery-tiles {
+    gap: 8px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .weered-gallery,
+  .weered-gallery-tick {
+    animation: none;
+  }
+}

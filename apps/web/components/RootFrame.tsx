@@ -26,6 +26,7 @@ import UpdateNotice from "./UpdateNotice";
 import ChunkRecovery from "./ChunkRecovery";
 import SignupSource from "./SignupSource";
 import UsernameStep from "./UsernameStep";
+import SetupGate from "./setup/SetupGate";
 import SiteClosed from "./SiteClosed";
 import DesktopTitleBar from "./DesktopTitleBar";
 import LobbyBrowser from "./LobbyBrowser";
@@ -244,6 +245,7 @@ export default function RootFrame({ children }: { children: React.ReactNode }) {
           {/* A designed lobby's look across its whole space (after ThemeRestore). */}
           <SpaceTheme />
           <UsernameStep />
+          <SetupGate />
           <SignupSource />
           <SiteClosed />
           <ShellGate left={<LeftRail />} right={<RightRailSwitch />}>
