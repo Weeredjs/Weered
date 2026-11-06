@@ -14,6 +14,7 @@ import Link from "next/link";
 import { avatarBg } from "../../lib/avatarColor";
 import { hideBroken, sizedImage } from "../../lib/sizedImage";
 import { isResting, onRestChange } from "../../lib/rest";
+import { useMotionOff } from "../../lib/motion";
 
 export type DriftLobby = {
   id: string;
@@ -76,6 +77,9 @@ export default function LobbyCarousel({
   ).flat();
   const n = ring.length;
   const dragged = useRef(false);
+  // Still under reduce motion, Turn off all animations or Light effects: a
+  // row that only moves when it's dragged.
+  const still = useMotionOff();
 
   useEffect(() => {
     const el = strip.current;
@@ -90,14 +94,6 @@ export default function LobbyCarousel({
     let held = false;
     let focusAt: number | null = null;
     let drag: { x: number; moved: number } | null = null;
-    const still = (() => {
-      try {
-        return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-      } catch {
-        return false;
-      }
-    })();
-
     const paint = () => {
       // R: how far from the middle a card is still on screen, in track px. A
       // card's screen position is the running sum of the scales inside it, so
@@ -240,7 +236,7 @@ export default function LobbyCarousel({
       el.removeEventListener("focusin", focusIn);
       el.removeEventListener("focusout", focusOut);
     };
-  }, [n]);
+  }, [n, still]);
 
   // Home's list can fill in after the cards first showed (arriving at Home
   // shows the lobbies before their pictures): a card already seen loads the

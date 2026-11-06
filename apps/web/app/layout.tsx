@@ -195,6 +195,9 @@ try {
   if (up && /^#[0-9a-f]{6}$/i.test(up.barColor || '')) d.style.setProperty('--nb-bar', up.barColor);
   if (s && s.density) d.setAttribute('data-weered-density', s.density);
   if (s && s.reduceMotion) d.setAttribute('data-weered-reduce-motion', '1');
+  // Light effects (lib/displaySettings.ts): as chosen here, else as this device draws.
+  if (s && s.lightEffects === true) d.setAttribute('data-weered-light', '1');
+  else if (!(s && s.lightEffects === false) && localStorage.getItem('weered:sw-draw') === '1') d.setAttribute('data-weered-light', '1');
   // SEO slab gate: hide the server-rendered lobby slab for authenticated users
   // before paint (no FOUC). The slab stays in the DOM for crawlers.
   if (localStorage.getItem('weered_user')) d.setAttribute('data-weered-authed', '1');

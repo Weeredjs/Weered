@@ -14,6 +14,7 @@ import { setFloodFlag } from "@/lib/floodMode";
 import { watchSession } from "@/lib/staleSession";
 import { holdChat, releaseChat, type HeldChat } from "@/lib/chatOutbox";
 import { plural } from "../lib/plural";
+import { lightEffectsOn } from "../lib/displaySettings";
 
 const API    = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 const WS_URL = process.env.NEXT_PUBLIC_WS_URL   || "ws://127.0.0.1:4001";
@@ -143,6 +144,7 @@ function applySettingsToDom(s: any) {
   root.setAttribute("data-weered-theme", String(s?.theme || "nebula"));
   root.setAttribute("data-weered-density",      String(s?.density      ?? "comfortable"));
   root.setAttribute("data-weered-reduce-motion", s?.reduceMotion ? "1" : "0");
+  root.setAttribute("data-weered-light", lightEffectsOn(s) ? "1" : "0");
 }
 
 function readSettings(): any {
@@ -298,6 +300,8 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const s = readSettings();
     if (s) applySettingsToDom(s);
+    // Nothing chosen on this device yet: Light effects still follows how it draws.
+    else document.documentElement.setAttribute("data-weered-light", lightEffectsOn(null) ? "1" : "0");
     const onChanged = (ev: any) => {
       const next = ev?.detail ?? readSettings();
       if (next) applySettingsToDom(next);

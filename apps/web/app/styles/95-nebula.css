@@ -404,10 +404,14 @@ html[data-weered-stars="off"] .nb-sparkles,
 html[data-weered-stars="off"] .nb-shooting {
   display: none;
 }
-/* The app's own Reduce motion setting writes "1" (and "0" when off). */
+/* The app's own Reduce motion setting writes "1" (and "0" when off), and so
+   does Light effects (lib/displaySettings.ts). */
 html[data-weered-reduce-motion="1"] .nb-sky *,
 html[data-weered-reduce-motion="1"] .nb-sky *::before,
-html[data-weered-reduce-motion="1"] .nb-sky *::after {
+html[data-weered-reduce-motion="1"] .nb-sky *::after,
+html[data-weered-light="1"] .nb-sky *,
+html[data-weered-light="1"] .nb-sky *::before,
+html[data-weered-light="1"] .nb-sky *::after {
   animation: none !important;
 }
 @media (prefers-reduced-motion: reduce) {
@@ -787,9 +791,12 @@ html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-userc
     linear-gradient(#000 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
-  animation: nb-spin 7s linear infinite;
+  /* A gradient the browser repaints, not one it can move: at sixty a second it
+     kept a quarter of a core busy (2026-11-06). Fifteen looks the same. */
+  animation: nb-spin 7s steps(105) infinite;
 }
-html[data-weered-reduce-motion="1"] .weered-usercorner::after {
+html[data-weered-reduce-motion="1"] .weered-usercorner::after,
+html[data-weered-light="1"] .weered-usercorner::after {
   animation: none !important;
 }
 @media (prefers-reduced-motion: reduce) {

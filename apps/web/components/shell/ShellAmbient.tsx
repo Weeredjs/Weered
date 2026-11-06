@@ -3,7 +3,8 @@
 // The viewer's own moving effect (snow, a blizzard, embers, their own symbol
 // floating by...), drawn behind the whole app over Nebula's sky. The same
 // canvas lobbies use (components/LobbyAmbient.tsx). Nebula only; lobbies
-// with their own theme keep theirs; off when Reduce motion is on.
+// with their own theme keep theirs; off when Reduce motion or Light effects
+// is on.
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import LobbyAmbient from "../LobbyAmbient";
@@ -31,10 +32,11 @@ export default function ShellAmbient() {
     "data-weered-theme",
     "data-weered-lobby",
     "data-weered-reduce-motion",
+    "data-weered-light",
   ]);
   if (!look || !look.fx || look.fx === "none") return null;
   if (html["data-weered-theme"] !== "nebula" || html["data-weered-lobby"]) return null;
-  if (html["data-weered-reduce-motion"] === "1") return null;
+  if (html["data-weered-reduce-motion"] === "1" || html["data-weered-light"] === "1") return null;
   const c = paletteColours(look.palette, look.accent, look.accent2);
   return createPortal(
     <LobbyAmbient

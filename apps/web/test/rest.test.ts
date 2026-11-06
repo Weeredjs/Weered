@@ -103,4 +103,28 @@ describe("rest", () => {
     expect(seen).toEqual([true, false]);
     off();
   });
+
+  it("holds the loops under Light effects, all but a loading wheel", async () => {
+    const glow = fakeAnimation(Infinity);
+    const wheel = {
+      ...fakeAnimation(Infinity),
+      effect: {
+        getTiming: () => ({ iterations: Infinity }),
+        getKeyframes: () => [
+          { offset: 0, easing: "linear", composite: "auto", transform: "rotate(0deg)" },
+          { offset: 1, easing: "linear", composite: "auto", transform: "rotate(360deg)" },
+        ],
+      },
+    };
+    (document as any).getAnimations = () => [glow, wheel];
+    document.documentElement.setAttribute("data-weered-light", "1");
+    stop = watchRest();
+    expect(glow.pause).toHaveBeenCalled();
+    expect(wheel.pause).not.toHaveBeenCalled();
+    // Switched off, the glow moves again.
+    document.documentElement.setAttribute("data-weered-light", "0");
+    await Promise.resolve();
+    expect(glow.play).toHaveBeenCalled();
+    document.documentElement.removeAttribute("data-weered-light");
+  });
 });

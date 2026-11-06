@@ -37,7 +37,12 @@ import {
 import { editLayout, editLook, selectItem, type ShellLook } from "../../lib/shellDesign";
 import { beginLibraryDrag, justDragged } from "./ShellDesignOverlay";
 import { EffectControls, StructureControls } from "./ShellLookControls";
-import { readDisplay, setDisplay, type DisplaySwitches } from "../../lib/displaySettings";
+import {
+  drawnInSoftware,
+  readDisplay,
+  setDisplay,
+  type DisplaySwitches,
+} from "../../lib/displaySettings";
 
 // ── Sections ──────────────────────────────────────────────────────────────
 export function SectionsTab({
@@ -474,11 +479,21 @@ function SectionBars({ accent, look, deep }: { accent: string; look: ShellLook; 
   );
 }
 
-/** This device's two display switches (lib/displaySettings.ts): they apply at
+/** This device's display switches (lib/displaySettings.ts): they apply at
  *  once, outside the draft, as they did in Settings. */
 function DeviceSwitches({ accent }: { accent: string }) {
-  const [d, setD] = useState<DisplaySwitches>({ reduceMotion: false, keepDefaultTheme: false });
-  useEffect(() => setD(readDisplay()), []);
+  const [d, setD] = useState<DisplaySwitches>({
+    reduceMotion: false,
+    keepDefaultTheme: false,
+    lightEffects: null,
+  });
+  // Where this device draws without a graphics card, Light effects starts on.
+  const [software, setSoftware] = useState(false);
+  useEffect(() => {
+    setD(readDisplay());
+    setSoftware(drawnInSoftware());
+  }, []);
+  const light = d.lightEffects ?? software;
   return (
     <>
       <Toggle
@@ -487,6 +502,17 @@ function DeviceSwitches({ accent }: { accent: string }) {
         onClick={() => setD(setDisplay({ reduceMotion: !d.reduceMotion }))}
         title="Turn off all animations"
         blurb="No effects, starfield or transitions, here or in lobbies. On this device, right away."
+      />
+      <Toggle
+        on={light}
+        accent={accent}
+        onClick={() => setD(setDisplay({ lightEffects: !light }))}
+        title="Light effects"
+        blurb={
+          d.lightEffects === null && software
+            ? "On by itself here: this device draws without a graphics card. The sky holds still; the snow, the glows and the carousel stop."
+            : "The sky holds still; the snow, the glows and the carousel stop, and menus still move. Easier on fans and batteries. On this device."
+        }
       />
       <Toggle
         on={d.keepDefaultTheme}
