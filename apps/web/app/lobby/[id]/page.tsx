@@ -5,7 +5,9 @@ import { useParams, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import { useWeered } from "../../../components/WeeredProvider";
 import { weeredConfirm } from "../../../lib/confirm";
-import { useShellPlace } from "../../../lib/shellPlace";
+import InviteModal from "../../../components/InviteModal";
+import { weeredReport } from "../../../lib/report";
+import { weeredToast } from "../../../lib/toast";
 import JoinLobbyOverlay from "../../../components/JoinLobbyOverlay";
 import LobbyChatDrawer from "../../../components/LobbyChatDrawer";
 import LobbyHeroBar from "../../../components/LobbyHeroBar";
@@ -517,16 +519,7 @@ export default function LobbyIdPage() {
   const redditSub = REDDIT_TAB_LOBBIES[lobbyId];
   const KNOWN_ACCENTS: Record<string, string> = { gta6: "#e84393" };
   const accent = dTheme.accent || lobbyInfo?.accentColor || KNOWN_ACCENTS[lobbyId] || undefined;
-  // The bar at the top of the page shows this lobby (components/shell/UniversalBar).
-  useShellPlace({
-    kind: "lobby",
-    title: lobbyInfo?.name || lobbyId,
-    lobbyId,
-    accentColor: accent,
-    logoUrl: lobbyInfo?.logoUrl,
-    verified: isVerified || !!lobbyInfo?.verified,
-    steamAppId: (lobbyInfo as any)?.moduleConfig?.steamAppId || null,
-  });
+  const [inviting, setInviting] = useState(false);
   const gameName =
     lobbyInfo?.moduleConfig?.twitchCategory ||
     MODULE_GAME_NAMES[lobbyInfo?.moduleType || ""] ||
@@ -807,6 +800,14 @@ export default function LobbyIdPage() {
 
   return (
     <>
+      {inviting && (
+        <InviteModal
+          type="LOBBY"
+          targetId={lobbyId}
+          targetName={lobbyInfo?.name || lobbyId}
+          onClose={() => setInviting(false)}
+        />
+      )}
       <GuestLaunchBar
         lobbyId={lobbyId}
         lobbyName={lobbyInfo?.name || "this lobby"}
@@ -1197,6 +1198,67 @@ export default function LobbyIdPage() {
                     <Downgrade lobbyId={lobbyId} accent={accent} />
                   </span>
                 )}
+                {/* Invite and Report, here since the bar over every page became
+                    Home's own (2026-11-06). */}
+                <span
+                  data-guest-hide
+                  style={{
+                    marginLeft:
+                      (canDesign && !design.designing) ||
+                      showAdmin ||
+                      DOWNGRADE_LOBBIES.includes(lobbyId)
+                        ? 6
+                        : "auto",
+                    display: "flex",
+                    gap: 6,
+                  }}
+                >
+                  <button
+                    type="button"
+                    onClick={() => setInviting(true)}
+                    className="weered-lobby-invite"
+                    style={{
+                      padding: "5px 12px",
+                      borderRadius: 7,
+                      border: "1px solid rgba(255,255,255,.14)",
+                      background: "rgba(255,255,255,.04)",
+                      color: "inherit",
+                      fontSize: 11,
+                      fontWeight: 700,
+                      letterSpacing: ".04em",
+                      cursor: "pointer",
+                    }}
+                  >
+                    Invite
+                  </button>
+                  <button
+                    type="button"
+                    title="Report this lobby"
+                    aria-label="Report this lobby"
+                    onClick={async () => {
+                      const res = await weeredReport({ targetType: "LOBBY", targetId: lobbyId });
+                      if (res?.ok) weeredToast.success("Report submitted. Staff will review.");
+                      else if (res && !res.ok)
+                        weeredToast.error(
+                          res.error === "report_rate_limit"
+                            ? "You're reporting too fast. Try again shortly."
+                            : "Report failed.",
+                        );
+                    }}
+                    style={{
+                      padding: "5px 8px",
+                      borderRadius: 7,
+                      border: "1px solid rgba(255,255,255,.1)",
+                      background: "transparent",
+                      color: "inherit",
+                      fontSize: 11,
+                      opacity: 0.6,
+                      cursor: "pointer",
+                    }}
+                  >
+                    ⚐
+                  </button>
+                </span>
               </div>
 
               <div

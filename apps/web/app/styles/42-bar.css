@@ -2,10 +2,9 @@
    THE BAR AT THE TOP OF EVERY PAGE (2026-11-06)
    =====================================================================
    components/shell/UniversalBar.tsx, with its search in components/search/
-   UniversalSearch.tsx. James: "Combine them. Just have that universal bar the
-   same everywhere. Use the formatting from the lobby version." The lobby
-   header's measurements, kept; a lobby's theme still reaches the row through
-   .weered-lobby-header-row. */
+   UniversalSearch.tsx. Home's own header, with the search, everywhere (James:
+   "Other way around. I meant the home bar. But with the search. Keep the Hi
+   <Username>"). It runs the width of the frame, as it did on Home. */
 
 /* The centre column: the bar, then the page in a box of its own, which a
    page fills with height: 100% or inset: 0. */
@@ -51,113 +50,64 @@
 .weered-ubar {
   position: relative;
   flex: none;
-  padding: 0;
-  /* Its list opens over the page under it. */
-  z-index: 30;
-}
-.weered-ubar-accent {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 2px;
-  z-index: 2;
-  pointer-events: none;
-}
-.weered-ubar-row {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px 14px;
+  gap: 14px;
+  padding: 16px 20px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  /* Edge to edge in the frame, over the frame's own padding. */
+  margin: calc(-1 * var(--weered-pad-y)) calc(-1 * var(--weered-pad-x)) 0;
+}
+@media (max-width: 1099px) {
+  .weered-ubar {
+    margin: -12px -12px 0;
+  }
+}
+@media (max-width: 767px) {
+  .weered-ubar {
+    margin: -6px -6px 0;
+  }
+}
+.weered-guest-frame > .weered-ubar {
+  margin: -16px -16px 0;
+}
+@media (max-width: 767px) {
+  .weered-guest-frame > .weered-ubar {
+    margin: -8px -8px 0;
+  }
 }
 
-/* Where you are. */
-.weered-ubar-place {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex: 0 1 auto;
-  min-width: 0;
-  max-width: 40%;
+/* The time of day over "Hey, you". */
+.weered-ubar-greet {
+  flex: 1 1 160px;
+  min-width: 120px;
 }
-.weered-ubar-link,
-.weered-ubar-link:hover {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
-  color: inherit;
-  text-decoration: none;
+.weered-ubar-hello {
+  min-height: 12px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.25);
 }
-.weered-ubar-place > .weered-ubar-mark {
-  margin-right: 4px;
-}
-.weered-ubar-mark {
-  width: 28px;
-  height: 28px;
-  border-radius: 7px;
-  flex: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-  background: rgba(88, 0, 229, 0.12);
-  border: 1px solid rgba(88, 0, 229, 0.13);
-  color: #5800e5;
-  font-size: 12px;
+.weered-ubar-hey {
+  margin-top: 3px;
+  font-size: 22px;
   font-weight: 900;
-  transition: all 0.15s ease;
-}
-.weered-ubar-mark:has(img) {
-  background: rgba(0, 0, 0, 0.4);
-  border-color: rgba(255, 255, 255, 0.08);
-}
-.weered-ubar-mark img {
-  width: 20px;
-  height: 20px;
-  object-fit: contain;
-}
-.weered-ubar-mark.is-weered,
-.weered-ubar-mark.is-weered:has(img) {
-  background: transparent;
-  border-color: transparent;
-}
-.weered-ubar-mark.is-weered img {
-  width: 26px;
-  height: 26px;
-}
-.weered-ubar-name {
-  font-size: 14px;
-  font-weight: 900;
-  letter-spacing: -0.3px;
-  color: rgba(243, 244, 246, 0.97);
-  white-space: nowrap;
+  line-height: 1.1;
+  letter-spacing: -0.5px;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
 }
-.weered-ubar-verified {
-  flex: none;
-  font-size: 8px;
-  font-weight: 800;
-  padding: 2px 6px;
-  border-radius: 5px;
-  background: rgba(88, 0, 229, 0.15);
-  border: 1px solid rgba(88, 0, 229, 0.21);
+.weered-ubar-hey span {
   color: #5800e5;
-  letter-spacing: 0.05em;
-}
-.weered-ubar-wordmark {
-  height: 26px;
-  width: auto;
-  max-width: 220px;
-  object-fit: contain;
-  flex: none;
 }
 
-/* One search, everything else to the right of it. */
+/* The search, then the two buttons Home's header always had. */
 .weered-ubar-search {
   position: relative;
-  flex: 1 1 160px;
+  flex: 0 1 560px;
   min-width: 0;
 }
 .weered-ubar-actions {
@@ -165,19 +115,42 @@
   align-items: center;
   gap: 10px;
   flex: none;
-  /* A guest has no search: their Leave still sits at the right. */
-  margin-left: auto;
 }
-.weered-ubar-ico {
-  display: none;
-}
-.weered-ubar-actions .weered-btn {
-  padding: 5px 10px;
+.weered-ubar .home-topbar-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: 2px;
+  font-family: inherit;
   font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  text-decoration: none;
+  cursor: pointer;
+  filter: none;
+  transition: all 0.15s;
 }
-.weered-ubar-actions .weered-ubar-report {
-  padding: 5px 8px;
-  opacity: 0.6;
+.weered-ubar .weered-ubar-desktop {
+  padding: 7px 12px;
+  border: 1px solid rgba(245, 183, 0, 0.25);
+  background: linear-gradient(135deg, rgba(245, 183, 0, 0.12), rgba(245, 183, 0, 0.04));
+  color: #f5b700;
+}
+.weered-ubar .weered-ubar-desktop:hover {
+  border-color: rgba(245, 183, 0, 0.45);
+  background: linear-gradient(135deg, rgba(245, 183, 0, 0.22), rgba(245, 183, 0, 0.08));
+  color: #f5b700;
+}
+.weered-ubar .weered-ubar-guide {
+  border: 1px solid rgba(124, 58, 237, 0.25);
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.15), rgba(124, 58, 237, 0.08));
+  color: #a78bfa;
+}
+.weered-ubar .weered-ubar-guide:hover {
+  border-color: rgba(124, 58, 237, 0.4);
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.25), rgba(124, 58, 237, 0.15));
 }
 
 /* Designing Home: the page is what's being worked on. */
@@ -186,30 +159,14 @@ html[data-weered-shell-design="1"] .weered-ubar-actions {
   display: none !important;
 }
 
-/* Narrow: the name gives way first, then the buttons go to icons' width. */
-@media (max-width: 767px) {
-  .weered-ubar-row {
-    gap: 8px;
-    padding: 6px 10px;
+/* A phone: your name on a line of its own, the search under it full width,
+   and the two buttons left to the menu (as Home's header did). */
+@media (max-width: 600px) {
+  .weered-ubar-search {
+    flex: 1 1 100%;
   }
-  .weered-ubar-place {
-    max-width: 30%;
-  }
-  .weered-ubar-place .weered-ubar-name,
-  .weered-ubar-place .weered-ubar-verified {
+  .weered-ubar .home-topbar-secondary {
     display: none;
-  }
-  .weered-ubar-actions {
-    gap: 6px;
-  }
-  .weered-ubar-ico {
-    display: inline-flex;
-  }
-  .weered-ubar-label {
-    display: none;
-  }
-  .weered-ubar-actions .weered-btn {
-    padding: 6px 8px;
   }
 }
 
@@ -234,8 +191,8 @@ html[data-weered-shell-design="1"] .weered-ubar-actions {
   outline: none;
 }
 .weered-find.is-bar .weered-find-input {
-  padding: 5px 28px 5px 30px;
-  font-size: 12px;
+  padding: 7px 28px 7px 30px;
+  font-size: 13px;
 }
 .weered-find.is-tile .weered-find-lens {
   left: 12px;

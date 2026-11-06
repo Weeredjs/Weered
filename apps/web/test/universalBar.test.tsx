@@ -5,7 +5,8 @@ import { act, cleanup, fireEvent, render, waitFor } from "@testing-library/react
 
 // The bar at the top of every page and its one search (James 2026-11-06:
 // "Just have that universal bar the same everywhere... Just search that taps
-// into everything").
+// into everything", then "I meant the home bar. But with the search. Keep the
+// Hi <Username>").
 const nav = vi.hoisted(() => ({ path: "/home", push: vi.fn() }));
 vi.mock("next/navigation", () => ({
   usePathname: () => nav.path,
@@ -25,7 +26,6 @@ vi.mock("../components/InviteModal", () => ({
     return <div>invite modal</div>;
   },
 }));
-vi.mock("../components/SteamLobbyHeader", () => ({ default: () => null }));
 vi.mock("../components/guide/WeeredGuide", () => ({
   default: (p: any) => (p.open ? <div>the guide</div> : null),
 }));
@@ -34,12 +34,6 @@ vi.mock("../lib/shellDesign", () => ({ startDesign: vi.fn() }));
 
 import UniversalBar from "../components/shell/UniversalBar";
 import UniversalSearch, { goToFor } from "../components/search/UniversalSearch";
-import { placeForPath, useShellPlace, type ShellPlace } from "../lib/shellPlace";
-
-function Page({ place }: { place: ShellPlace }) {
-  useShellPlace(place);
-  return null;
-}
 
 function answer(body: object) {
   const f = vi.fn(async () => new Response(JSON.stringify({ ok: true, ...body })));
@@ -62,85 +56,37 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe("where the bar says you are", () => {
-  it("names a page from its address", () => {
-    expect(placeForPath("/home")).toEqual({ kind: "home", title: "Home" });
-    expect(placeForPath("/lobby/eve")).toMatchObject({ kind: "lobby", lobbyId: "eve" });
-    expect(placeForPath("/lobby/create").title).toBe("Create a lobby");
-    expect(placeForPath("/forum/abc").title).toBe("Forum");
-    expect(placeForPath("/forum/bookmarks").title).toBe("Saved posts");
-    expect(placeForPath("/somewhere-new").title).toBe("Weered");
-  });
-
-  it("shows the place a page names, and lets go when the page goes", () => {
+describe("the bar", () => {
+  it("is Home's header: the time of day over Hey, you, and its two buttons", async () => {
+    weered.value = { me: { id: "u1", name: "weered" } };
     nav.path = "/lobby/eve";
-    const view = render(
-      <>
-        <UniversalBar />
-        <Page place={{ kind: "lobby", title: "EVE Online", lobbyId: "eve", verified: true }} />
-      </>,
-    );
-    expect(view.getByText("EVE Online")).toBeTruthy();
-    expect(view.getByText("VERIFIED")).toBeTruthy();
-    expect(view.getByLabelText("Report this lobby")).toBeTruthy();
-    view.rerender(<UniversalBar />);
-    // From the address alone: the id.
-    expect(view.getByText("eve")).toBeTruthy();
-  });
-
-  it("has nothing to report on Home and invites to Weered from there", () => {
     const view = render(<UniversalBar />);
-    expect(view.getByText("Home")).toBeTruthy();
+    expect(view.getByText("weered")).toBeTruthy();
+    expect(view.container.querySelector(".weered-ubar-hey")?.textContent).toBe("Hey, weered");
+    await waitFor(() =>
+      expect(view.container.querySelector(".weered-ubar-hello")?.textContent).toMatch(
+        /^(Good (morning|afternoon|evening)|Late night)$/,
+      ),
+    );
+    expect(view.getByText("Desktop app").closest("a")?.getAttribute("href")).toBe("/desktop");
+    // The search is in it, and no lobby's own buttons are.
+    expect(view.getByRole("combobox")).toBeTruthy();
     expect(view.queryByLabelText("Report this lobby")).toBeNull();
-    fireEvent.click(view.getByLabelText("Invite"));
-    expect(invites.last).toMatchObject({ type: "PLATFORM" });
+    fireEvent.click(view.getByText("What can you do here?"));
+    expect(view.getByText("the guide")).toBeTruthy();
   });
 
-  it("invites to the lobby in a lobby, and to the room in a room", () => {
-    const view = render(
-      <>
-        <UniversalBar />
-        <Page place={{ kind: "lobby", title: "EVE Online", lobbyId: "eve" }} />
-      </>,
-    );
-    fireEvent.click(view.getByLabelText("Invite"));
-    expect(invites.last).toMatchObject({
-      type: "LOBBY",
-      targetId: "eve",
-      targetName: "EVE Online",
-    });
-    cleanup();
-    const room = render(
-      <>
-        <UniversalBar />
-        <Page
-          place={{
-            kind: "room",
-            title: "EVE Online",
-            href: "/lobby/eve",
-            lobbyId: "eve",
-            roomId: "r1",
-            roomName: "Fleet ops",
-          }}
-        />
-      </>,
-    );
-    // The way back to the lobby, and nothing to report in a room.
-    expect(room.getByTitle("Back to EVE Online").getAttribute("href")).toBe("/lobby/eve");
-    expect(room.queryByLabelText("Report this lobby")).toBeNull();
-    fireEvent.click(room.getByLabelText("Invite"));
-    expect(invites.last).toMatchObject({ type: "ROOM", targetId: "r1", targetName: "Fleet ops" });
+  it("says Hey, there until it knows who you are", () => {
+    weered.value = {};
+    const view = render(<UniversalBar />);
+    expect(view.container.querySelector(".weered-ubar-hey")?.textContent).toBe("Hey, there");
   });
 
-  it("treats The Lobby as Weered's own: an invite to Weered, nothing to report", () => {
-    const view = render(
-      <>
-        <UniversalBar />
-        <Page place={{ kind: "lobby", title: "The Lobby", lobbyId: "lobby" }} />
-      </>,
-    );
-    expect(view.queryByLabelText("Report this lobby")).toBeNull();
-    fireEvent.click(view.getByLabelText("Invite"));
+  it("invites a friend to Weered from the search", () => {
+    const view = render(<UniversalBar />);
+    fireEvent.focus(view.getByRole("combobox"));
+    fireEvent.change(view.getByRole("combobox"), { target: { value: "invite" } });
+    fireEvent.click(view.getByText("Invite a friend"));
     expect(invites.last).toMatchObject({ type: "PLATFORM" });
   });
 });
@@ -243,12 +189,12 @@ describe("the search", () => {
     expect(nav.push).toHaveBeenCalledWith("/forum/p1");
   });
 
-  it("opens the guide from anywhere the bar is", async () => {
+  it("opens the guide from the search too", async () => {
     nav.path = "/lobby/eve";
     const view = render(<UniversalBar />);
     const box = view.getByRole("combobox");
     fireEvent.focus(box);
-    fireEvent.click(view.getByText("What can you do here?"));
+    fireEvent.click(view.getByRole("option", { name: /What can you do here\?/ }));
     await waitFor(() => expect(view.getByText("the guide")).toBeTruthy());
   });
 

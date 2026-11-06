@@ -148,6 +148,13 @@ html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .home-topbar-
   color: var(--nb-hi) !important;
   text-shadow: 0 0 28px rgb(var(--nb-a) / 0.6);
 }
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .home-topbar-secondary {
+  background: rgb(var(--nb-a) / 0.12) !important;
+  border: 1px solid rgb(var(--nb-a) / 0.4) !important;
+  border-radius: 999px !important;
+  color: #fff !important;
+  clip-path: none !important;
+}
 /* Section heads get a rule running out to the edge: the page's structure. */
 html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .home-section-head,
 html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .home-live-head {

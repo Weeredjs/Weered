@@ -2,7 +2,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { useWeered } from "../../../../components/WeeredProvider";
-import { useShellPlace } from "../../../../lib/shellPlace";
 import LobbyChatPanel from "../../../../components/LobbyChatPanel";
 import RoomStage from "../../../../components/room/RoomStage";
 import {
@@ -82,21 +81,6 @@ export default function LobbyAdminPage() {
   useEffect(() => {
     void load();
   }, [load]);
-
-  // The bar at the top of the page names the lobby being run.
-  const barLobby = data?.lobby;
-  useShellPlace(
-    barLobby
-      ? {
-          kind: "lobby",
-          title: barLobby.name || lobbyId,
-          lobbyId,
-          accentColor: barLobby.accentColor || null,
-          logoUrl: barLobby.logoUrl || null,
-          verified: !!barLobby.verified,
-        }
-      : null,
-  );
 
   if (loading)
     return (

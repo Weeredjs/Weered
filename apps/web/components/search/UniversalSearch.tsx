@@ -23,6 +23,8 @@ const API = process.env.NEXT_PUBLIC_API_BASE || "https://api.weered.ca";
 
 /** Opens "What can you do here?" wherever the bar is (UniversalBar mounts it). */
 export const GUIDE_EVENT = "weered:guide:open";
+/** Opens an invite to Weered itself, from the bar. */
+export const INVITE_EVENT = "weered:invite:open";
 
 type Lobby = {
   id: string;
@@ -109,6 +111,14 @@ export const GO_TO: Go[] = [
     sub: "For Windows, Mac and Linux",
     words: "download windows mac linux install",
     icon: "⤓",
+  },
+  {
+    id: "invite",
+    label: "Invite a friend",
+    sub: "A link into Weered",
+    words: "invite friend link share",
+    icon: "+",
+    mine: true,
   },
   {
     id: "home",
@@ -418,6 +428,8 @@ export default function UniversalSearch({
         return window.dispatchEvent(new CustomEvent(GUIDE_EVENT));
       case "desktop":
         return router.push("/desktop");
+      case "invite":
+        return window.dispatchEvent(new CustomEvent(INVITE_EVENT));
       case "home":
         return router.push("/home");
       case "lobby":

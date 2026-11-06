@@ -6,7 +6,6 @@
 // thread the old page's drawer ("room:lobby") showed, so no history moves.
 
 import { useEffect, useState } from "react";
-import { useShellPlace } from "../../lib/shellPlace";
 import LobbyHall from "../../components/LobbyHall";
 import LobbyChatDrawer from "../../components/LobbyChatDrawer";
 
@@ -38,7 +37,6 @@ export default function LobbyPage() {
 
   const name = info?.name || "The Lobby";
   const accent = info?.accentColor || undefined;
-  useShellPlace({ kind: "lobby", title: name, lobbyId: LOBBY_ID, accentColor: accent });
 
   return (
     <div
