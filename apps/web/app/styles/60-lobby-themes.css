@@ -3045,15 +3045,6 @@ html .weered-usercorner[data-custom-bg="1"] {
   .home-topbar-greet > div:nth-child(2) {
     font-size: 18px !important;
   }
-  .home-topbar-secondary {
-    display: none !important;
-  }
-  .home-topbar-search {
-    flex: 1 1 100% !important;
-  }
-  .home-topbar-search input {
-    width: 100% !important;
-  }
 }
 
 /* The activity ticker on /home — the marquee already scrolls and the

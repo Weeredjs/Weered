@@ -148,41 +148,6 @@ html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .home-topbar-
   color: var(--nb-hi) !important;
   text-shadow: 0 0 28px rgb(var(--nb-a) / 0.6);
 }
-html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .home-search-hero input {
-  background: rgb(var(--nb-ink-2) / 0.62) !important;
-  border: 1px solid rgb(var(--nb-a) / 0.36) !important;
-  border-radius: 16px !important;
-  color: #fff !important;
-  -webkit-backdrop-filter: blur(14px);
-  backdrop-filter: blur(14px);
-  box-shadow:
-    0 0 0 4px rgb(var(--nb-a) / 0.07),
-    0 22px 50px -22px rgb(var(--nb-b) / 0.9) !important;
-}
-html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb)
-  .home-search-hero
-  span[style*="position: relative"]
-  > span[style*="position: absolute"] {
-  display: none !important;
-}
-html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .home-search-hero button {
-  clip-path: none !important;
-  border-radius: 999px !important;
-  background: rgb(255 255 255 / 0.05) !important;
-  border: 1px solid rgb(var(--nb-a) / 0.3) !important;
-  box-shadow: none !important;
-}
-html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .home-search-hero button:hover {
-  background: rgb(var(--nb-a) / 0.16) !important;
-  border-color: rgb(var(--nb-a) / 0.6) !important;
-}
-html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .home-topbar-secondary {
-  background: rgb(var(--nb-a) / 0.12) !important;
-  border: 1px solid rgb(var(--nb-a) / 0.4) !important;
-  border-radius: 999px !important;
-  color: #fff !important;
-  clip-path: none !important;
-}
 /* Section heads get a rule running out to the edge: the page's structure. */
 html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .home-section-head,
 html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .home-live-head {
@@ -490,23 +455,6 @@ html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .hbs-left i:f
 }
 html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .hbs-home b {
   background: linear-gradient(135deg, rgb(var(--nb-a)), rgb(var(--nb-c))) !important;
-}
-/* The search's Browse matches the field beside it. */
-html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb)
-  .home-search-hero
-  .home-search-browse {
-  border-radius: 16px !important;
-  border: 1px solid rgb(var(--nb-a) / 0.36) !important;
-  background: rgb(var(--nb-ink-2) / 0.62) !important;
-  color: #fff !important;
-  -webkit-backdrop-filter: blur(14px);
-  backdrop-filter: blur(14px);
-}
-html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb)
-  .home-search-hero
-  .home-search-browse:hover {
-  border-color: rgb(var(--nb-a) / 0.7) !important;
-  background: rgb(var(--nb-a) / 0.18) !important;
 }
 /* The featured lobby, leading the grid. */
 html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .home-lobby-lead {

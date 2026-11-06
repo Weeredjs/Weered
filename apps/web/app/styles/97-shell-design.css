@@ -352,36 +352,6 @@
   padding: 4px 14px 6px;
 }
 
-/* Home's ✦ Design button */
-.home-topbar-design {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 7px 14px;
-  border-radius: 2px;
-  border: 1px solid rgba(167, 139, 250, 0.45);
-  background: linear-gradient(135deg, rgba(124, 58, 237, 0.28), rgba(124, 58, 237, 0.1));
-  color: #e9e3ff;
-  font-family: inherit;
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  white-space: nowrap;
-  cursor: pointer;
-  transition:
-    border-color 0.15s,
-    box-shadow 0.2s;
-}
-.home-topbar-design:hover {
-  border-color: rgba(196, 181, 253, 0.85);
-  box-shadow: 0 0 18px rgba(124, 58, 237, 0.35);
-}
-@media (max-width: 999px) {
-  .home-topbar-design {
-    display: none;
-  }
-}
-
 /* ── Nebula ─────────────────────────────────────────────────────────── */
 html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .weered-shell-block-home {
   background: var(--nb-glass) !important;
@@ -425,15 +395,6 @@ html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb)
   a:hover {
   border-color: rgb(var(--nb-a) / 0.45) !important;
   background: rgb(var(--nb-a) / 0.1) !important;
-}
-html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) .home-topbar-design {
-  border-radius: 999px !important;
-  border: 1px solid rgb(var(--nb-a) / 0.45) !important;
-  background: rgb(var(--nb-a) / 0.14) !important;
-  color: var(--nb-hi) !important;
-  font-family: var(--nb-font) !important;
-  font-size: 12.5px !important;
-  letter-spacing: 0.06em !important;
 }
 /* Panel sections moved into the left sidebar keep the left's spacing. */
 html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb)
@@ -484,8 +445,6 @@ html[data-weered-shell-design="1"] .weered-mobile-nav,
 html[data-weered-shell-design="1"] .weered-rail-close,
 html[data-weered-shell-design="1"] .lobby-chat-drawer,
 html[data-weered-shell-design="1"] .lobby-chat-tab,
-html[data-weered-shell-design="1"] .home-topbar-actions,
-html[data-weered-shell-design="1"] .home-topbar-search,
 html[data-weered-shell-design="1"] .weered-push-prompt {
   display: none !important;
 }

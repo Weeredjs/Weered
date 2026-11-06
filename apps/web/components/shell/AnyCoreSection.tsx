@@ -11,7 +11,7 @@
 // "we need some sharp images for the buttons").
 import React from "react";
 import { useRouter } from "next/navigation";
-import LobbySearch from "../LobbySearch";
+import UniversalSearch from "../search/UniversalSearch";
 import LobbyChatPanel from "../LobbyChatPanel";
 import { useWeered, useRoomUsers } from "../WeeredProvider";
 import { startDesign } from "../../lib/shellDesign";
@@ -150,7 +150,7 @@ function WayIn({
         {art}
         {head}
         <div className="weered-wayin-box">
-          <LobbySearch width="100%" placeholder="Lobbies, rooms, games…" />
+          <UniversalSearch variant="tile" placeholder="Lobbies, rooms, people…" />
         </div>
       </div>
     );

@@ -400,15 +400,15 @@ export const itemIcon = (it: ShellItem): string =>
 // home chat and presence connection"): the four ways in and the Home chat.
 // Everything that was on Home is one click away in Design. Then, 11-06, every
 // lobby drifting past between them ("between the search, browse, etc. and
-// chat put a half sized featured carousel of all 50 lobbies").
+// chat put a half sized featured carousel of all 50 lobbies"), and the build
+// blocks back on top ("Add the build blocks back in at the top as well").
 const STOCK: Record<ShellRegion, CoreId[]> = {
   left: ["card", "nav", "presence", "favs", "recent"],
   right: ["whoshere", "rooms", "friends", "crew", "discover"],
-  home: ["search", "browse", "create", "change", "carousel", "homechat"],
+  home: ["build", "search", "browse", "create", "change", "carousel", "homechat"],
 };
 /** Sections that start switched off. */
 const STOCK_OFF: CoreId[] = [
-  "build",
   "pulse",
   "live",
   "featured",
@@ -608,7 +608,8 @@ export function sanitizeShell(raw: unknown, follow = true): ShellLayout | null {
       hidden.push(id);
   }
   if (ownHome)
-    for (const id of [...ANY_CORES, "carousel" as const]) if (!placed.has(id)) hidden.push(id);
+    for (const id of [...ANY_CORES, "carousel" as const, "build" as const])
+      if (!placed.has(id)) hidden.push(id);
   const preset = typeof r.preset === "string" && PRESET_IDS.has(r.preset) ? r.preset : undefined;
   return restoreMissing({ v: 1, ...(preset ? { preset } : {}), left, right, home, hidden });
 }
@@ -748,7 +749,8 @@ export type ShellPreset = {
   build: () => PresetBody;
 };
 
-/** Home's four ways in, first on every preset's Home (2026-11-05). */
+/** Home's four ways in, first on every preset's Home (2026-11-05), under the
+ *  build blocks where a Home has them (11-06). */
 const WAYS_IN: CoreId[] = ["search", "browse", "create", "change"];
 
 export const SHELL_PRESETS: ShellPreset[] = [
@@ -802,10 +804,10 @@ export const SHELL_PRESETS: ShellPreset[] = [
       left: ["card", "nav", "presence", "friends", "favs", "recent"],
       right: ["whoshere", "rooms", "crew", "discover"],
       home: [
+        "build",
         ...WAYS_IN,
         "carousel",
         "homechat",
-        "build",
         "pulse",
         "ticker",
         "hero",

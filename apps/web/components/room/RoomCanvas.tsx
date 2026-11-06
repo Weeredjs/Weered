@@ -16,6 +16,7 @@ import {
   OFFICE_MODULE_SKIN,
 } from "./roomModules";
 import LaunchPad from "./LaunchPad";
+import { useShellPlace } from "../../lib/shellPlace";
 import { dialedInHere, setDialedIn } from "../../lib/chatDialIn";
 import { useOverlay } from "../overlays/OverlayProvider";
 import { useVoice } from "../VoiceContext";
@@ -475,6 +476,19 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
     try { return decodeURIComponent(roomId || ""); } catch { return roomId || ""; }
   }, [w?.meta?.name, w?.meta?.title, w?.meta?.label, w?.admin?.name, roomId, isOfficeRoom]);
 
+  // The bar at the top of the page: the room's lobby, a way back to it.
+  const barLobby = lobbyContext || (w?.meta?.lobbyName ? { id: currentLobbyId, name: w.meta.lobbyName, logoUrl: w?.meta?.lobbyLogo } : null);
+  useShellPlace({
+    kind: "room",
+    title: barLobby?.name || roomLabel,
+    href: barLobby?.id ? `/lobby/${encodeURIComponent(barLobby.id)}` : undefined,
+    logoUrl: barLobby?.logoUrl || null,
+    accentColor: w?.meta?.accentColor || null,
+    lobbyId: barLobby?.id || undefined,
+    roomId,
+    roomName: roomLabel,
+  });
+
   const roomThumbnail = useMemo(() => {
     if (w?.meta?.thumbnail) return w.meta.thumbnail;
     if (!articleUrl) return null;
@@ -661,7 +675,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
   }, [knockCount, isOfficeRoom]);
 
   return (
-    <div className="flex flex-col min-w-0" style={{ position: "relative", overflow: "hidden", height: "calc(100vh - 32px)" }}>
+    <div className="flex flex-col min-w-0" style={{ position: "relative", overflow: "hidden", height: "100%" }}>
 
       {joinStatus === "knocking" && (
         <div style={{ position: "absolute", inset: 0, zIndex: 200, background: "rgba(10,10,18,0.92)", backdropFilter: "blur(12px)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16 }}>

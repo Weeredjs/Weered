@@ -10,6 +10,8 @@ import { useShellDesign } from "../lib/shellDesign";
 import { useWeered } from "./WeeredProvider";
 import { isGuestSession } from "../lib/guestSession";
 import LeftRailStack from "./shell/LeftRailStack";
+import UniversalBar from "./shell/UniversalBar";
+import { useOfficeSkin } from "./useOfficeSkin";
 
 // Folded, the sidebar stays mounted and only hides: its card sets the page's
 // avatar frame and colours (UserCorner), and it opens again where it was.
@@ -443,6 +445,9 @@ export default function ShellGate({
   // A guest (a lobby's guest link) sees the lobby alone: no rails, no footer.
   const [guest, setGuest] = useState(false);
   useEffect(() => setGuest(isGuestSession()), [pathname]);
+  // The ECEB office (its own host, or a meeting room on ours) isn't a Weered
+  // page: no Weered bar over it.
+  const office = useOfficeSkin();
 
   useEffect(() => {
     const parts = pathname.split("/").filter(Boolean);
@@ -582,7 +587,14 @@ export default function ShellGate({
     return (
       <>
         <div className="legal-root" aria-hidden="true" style={{ display: "none" }} />
-        {children}
+        {guest && !bare ? (
+          <div className="weered-guest-frame">
+            <UniversalBar />
+            <div className="weered-center-body">{children}</div>
+          </div>
+        ) : (
+          children
+        )}
         {!isOverlay && !guest && <SiteFooter />}
       </>
     );
@@ -607,7 +619,11 @@ export default function ShellGate({
           onToggle={() => setOverlay((o) => (o === "left" ? null : "left"))}
         />
 
-        <main className="weered-center">{children}</main>
+        {/* The same bar over every page (James 2026-11-06), the page under it. */}
+        <main className="weered-center">
+          {!office && <UniversalBar />}
+          <div className="weered-center-body">{children}</div>
+        </main>
 
         {rightCollapsed && !designing ? (
           <div className="weered-rail-stack">

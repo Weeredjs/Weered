@@ -471,7 +471,10 @@ html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) main.weered-c
     0 30px 90px -40px rgb(0 0 0 / 0.95),
     inset 0 1px 0 rgb(255 255 255 / 0.05) !important;
 }
-html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb) main.weered-center > div {
+html[data-weered-theme="nebula"]:not([data-weered-lobby]):not(#nb)
+  main.weered-center
+  > .weered-center-body
+  > div {
   background: transparent !important;
 }
 

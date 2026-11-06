@@ -4,6 +4,7 @@ import CrewEditor from "../../../components/crew/CrewEditor";
 import React, { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { useWeered } from "../../../components/WeeredProvider";
+import { useShellPlace } from "../../../lib/shellPlace";
 import { onActivate } from "@/lib/a11y";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "https://api.weered.ca";
@@ -81,6 +82,18 @@ export default function CrewView({ crewId, initial }: { crewId: string; initial:
 
   const ctx: any = useWeered();
   const meId: string = String(ctx?.me?.id || "");
+  // The bar at the top of the page names the crew; its Invite is to the crew.
+  useShellPlace(
+    c
+      ? {
+          kind: "crew",
+          title: c.name,
+          crewId: c.id,
+          logoUrl: c.logoUrl || null,
+          accentColor: c.accentColor || null,
+        }
+      : null,
+  );
   const myMembership = useMemo(
     () => (c?.members || []).find((m: CrewMember) => m.userId === meId) || null,
     [c?.members, meId],

@@ -1,0 +1,366 @@
+/* =====================================================================
+   THE BAR AT THE TOP OF EVERY PAGE (2026-11-06)
+   =====================================================================
+   components/shell/UniversalBar.tsx, with its search in components/search/
+   UniversalSearch.tsx. James: "Combine them. Just have that universal bar the
+   same everywhere. Use the formatting from the lobby version." The lobby
+   header's measurements, kept; a lobby's theme still reaches the row through
+   .weered-lobby-header-row. */
+
+/* The centre column: the bar, then the page in a box of its own, which a
+   page fills with height: 100% or inset: 0. */
+.weered-center {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.weered-center-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  position: relative;
+}
+/* The 80px under a page held a floating feedback pill, gone since 11-02; a
+   page now runs to the frame's foot, as a lobby and a room already did. */
+@media (min-width: 1100px) {
+  .weered-center {
+    padding-bottom: var(--weered-pad-y);
+  }
+}
+
+/* A guest has no frame (ShellGate): the bar and the lobby, the page alone. */
+.weered-guest-frame {
+  position: fixed;
+  top: var(--wtb-h, 0px);
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  box-sizing: border-box;
+}
+@media (max-width: 767px) {
+  .weered-guest-frame {
+    position: static;
+    min-height: 100vh;
+    padding: 8px;
+  }
+}
+
+.weered-ubar {
+  position: relative;
+  flex: none;
+  padding: 0;
+  /* Its list opens over the page under it. */
+  z-index: 30;
+}
+.weered-ubar-accent {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  z-index: 2;
+  pointer-events: none;
+}
+.weered-ubar-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+}
+
+/* Where you are. */
+.weered-ubar-place {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 40%;
+}
+.weered-ubar-link,
+.weered-ubar-link:hover {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+}
+.weered-ubar-place > .weered-ubar-mark {
+  margin-right: 4px;
+}
+.weered-ubar-mark {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: rgba(88, 0, 229, 0.12);
+  border: 1px solid rgba(88, 0, 229, 0.13);
+  color: #5800e5;
+  font-size: 12px;
+  font-weight: 900;
+  transition: all 0.15s ease;
+}
+.weered-ubar-mark:has(img) {
+  background: rgba(0, 0, 0, 0.4);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+.weered-ubar-mark img {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+}
+.weered-ubar-mark.is-weered,
+.weered-ubar-mark.is-weered:has(img) {
+  background: transparent;
+  border-color: transparent;
+}
+.weered-ubar-mark.is-weered img {
+  width: 26px;
+  height: 26px;
+}
+.weered-ubar-name {
+  font-size: 14px;
+  font-weight: 900;
+  letter-spacing: -0.3px;
+  color: rgba(243, 244, 246, 0.97);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.weered-ubar-verified {
+  flex: none;
+  font-size: 8px;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 5px;
+  background: rgba(88, 0, 229, 0.15);
+  border: 1px solid rgba(88, 0, 229, 0.21);
+  color: #5800e5;
+  letter-spacing: 0.05em;
+}
+.weered-ubar-wordmark {
+  height: 26px;
+  width: auto;
+  max-width: 220px;
+  object-fit: contain;
+  flex: none;
+}
+
+/* One search, everything else to the right of it. */
+.weered-ubar-search {
+  position: relative;
+  flex: 1 1 160px;
+  min-width: 0;
+}
+.weered-ubar-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: none;
+  /* A guest has no search: their Leave still sits at the right. */
+  margin-left: auto;
+}
+.weered-ubar-ico {
+  display: none;
+}
+.weered-ubar-actions .weered-btn {
+  padding: 5px 10px;
+  font-size: 11px;
+}
+.weered-ubar-actions .weered-ubar-report {
+  padding: 5px 8px;
+  opacity: 0.6;
+}
+
+/* Designing Home: the page is what's being worked on. */
+html[data-weered-shell-design="1"] .weered-ubar-search,
+html[data-weered-shell-design="1"] .weered-ubar-actions {
+  display: none !important;
+}
+
+/* Narrow: the name gives way first, then the buttons go to icons' width. */
+@media (max-width: 767px) {
+  .weered-ubar-row {
+    gap: 8px;
+    padding: 6px 10px;
+  }
+  .weered-ubar-place {
+    max-width: 30%;
+  }
+  .weered-ubar-place .weered-ubar-name,
+  .weered-ubar-place .weered-ubar-verified {
+    display: none;
+  }
+  .weered-ubar-actions {
+    gap: 6px;
+  }
+  .weered-ubar-ico {
+    display: inline-flex;
+  }
+  .weered-ubar-label {
+    display: none;
+  }
+  .weered-ubar-actions .weered-btn {
+    padding: 6px 8px;
+  }
+}
+
+/* ── The search ────────────────────────────────────────────────────────── */
+.weered-find {
+  position: relative;
+  width: 100%;
+}
+.weered-find-lens {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  color: rgba(203, 213, 225, 0.45);
+  pointer-events: none;
+  z-index: 1;
+}
+.weered-find .weered-find-input {
+  width: 100%;
+  box-sizing: border-box;
+  outline: none;
+}
+.weered-find.is-bar .weered-find-input {
+  padding: 5px 28px 5px 30px;
+  font-size: 12px;
+}
+.weered-find.is-tile .weered-find-lens {
+  left: 12px;
+}
+.weered-find.is-tile .weered-find-input {
+  padding: 9px 30px 9px 34px;
+  font-size: 13px;
+}
+.weered-find-busy {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  margin-top: -5px;
+  border-radius: 50%;
+  border: 2px solid rgba(167, 139, 250, 0.25);
+  border-top-color: rgba(167, 139, 250, 0.9);
+  animation: weeredFindSpin 0.7s linear infinite;
+}
+@keyframes weeredFindSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* On the page itself, under its box (UniversalSearch places it): no tile or
+   sidebar the box sits in clips it or stacks over it. */
+.weered-find-list {
+  position: fixed;
+  overflow-y: auto;
+  z-index: 1000;
+  padding: 4px 0 6px;
+  background: rgba(12, 12, 20, 0.98);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(12px);
+}
+.weered-find-section {
+  padding: 8px 14px 4px;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(148, 163, 184, 0.5);
+}
+.weered-find-list .weered-find-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 12px;
+  margin: 0;
+  border: none;
+  border-left: 3px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  filter: none;
+  color: rgba(243, 244, 246, 0.98);
+  font-family: inherit;
+  font-weight: 400;
+  text-align: left;
+  cursor: pointer;
+}
+.weered-find-list .weered-find-row:hover,
+.weered-find-list .weered-find-row.is-active {
+  background: rgba(124, 58, 237, 0.16);
+  border-left-color: #7c3aed;
+  filter: none;
+}
+.weered-find-pic {
+  width: 28px;
+  height: 28px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+}
+.weered-find-pic.is-round {
+  border-radius: 50%;
+}
+.weered-find-pic img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 3px;
+  box-sizing: border-box;
+}
+.weered-find-pic.is-round img {
+  object-fit: cover;
+  padding: 0;
+}
+.weered-find-words {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.weered-find-name {
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.weered-find-sub {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.45);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.weered-find-none {
+  padding: 12px 16px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.45);
+  text-align: center;
+}

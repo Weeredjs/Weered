@@ -5,7 +5,7 @@ import { useParams, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import { useWeered } from "../../../components/WeeredProvider";
 import { weeredConfirm } from "../../../lib/confirm";
-import LobbyHeaderBar from "../../../components/LobbyHeaderBar";
+import { useShellPlace } from "../../../lib/shellPlace";
 import JoinLobbyOverlay from "../../../components/JoinLobbyOverlay";
 import LobbyChatDrawer from "../../../components/LobbyChatDrawer";
 import LobbyHeroBar from "../../../components/LobbyHeroBar";
@@ -517,6 +517,16 @@ export default function LobbyIdPage() {
   const redditSub = REDDIT_TAB_LOBBIES[lobbyId];
   const KNOWN_ACCENTS: Record<string, string> = { gta6: "#e84393" };
   const accent = dTheme.accent || lobbyInfo?.accentColor || KNOWN_ACCENTS[lobbyId] || undefined;
+  // The bar at the top of the page shows this lobby (components/shell/UniversalBar).
+  useShellPlace({
+    kind: "lobby",
+    title: lobbyInfo?.name || lobbyId,
+    lobbyId,
+    accentColor: accent,
+    logoUrl: lobbyInfo?.logoUrl,
+    verified: isVerified || !!lobbyInfo?.verified,
+    steamAppId: (lobbyInfo as any)?.moduleConfig?.steamAppId || null,
+  });
   const gameName =
     lobbyInfo?.moduleConfig?.twitchCategory ||
     MODULE_GAME_NAMES[lobbyInfo?.moduleType || ""] ||
@@ -875,10 +885,8 @@ export default function LobbyIdPage() {
             display: "flex",
             flexDirection: "column",
             gap: 8,
-            // 16px is the shell's top padding. --wtb-h is the desktop title bar and
-            // --shell-footer-h the SiteFooter strip (both 0px in a plain browser);
-            // ignoring them pushed the chat composer's button row under the footer.
-            height: "calc(100vh - 16px - var(--wtb-h, 0px) - var(--shell-footer-h, 0px))",
+            // The box under the bar at the top of every page (ShellGate).
+            height: "100%",
             minHeight: 0,
             "--lobby-accent": accent || "#5800E5",
             "--lobby-accent-dim": accent ? `${accent}22` : "rgba(88,0,229,0.13)",
@@ -886,15 +894,6 @@ export default function LobbyIdPage() {
           } as React.CSSProperties
         }
       >
-        <LobbyHeaderBar
-          title={lobbyInfo?.name || lobbyId}
-          lobbyId={lobbyId}
-          accentColor={accent}
-          logoUrl={lobbyInfo?.logoUrl}
-          verified={isVerified || lobbyInfo?.verified}
-          steamAppId={(lobbyInfo as any)?.moduleConfig?.steamAppId || null}
-        />
-
         <div
           className="weered-lobby-body"
           style={{

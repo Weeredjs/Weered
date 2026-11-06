@@ -142,7 +142,7 @@ html[data-weered-theme="nebula"][data-weered-palette="blizzard"]:not([data-weere
     .weered-dock-close,
     .weered-dock-close:hover,
     .weered-dock-tab:not(.weered-dock-tab-active):hover,
-    .home-topbar-secondary,
+    .weered-ubar-name,
     .home-section-label,
     .home-live-head > span,
     .weered-shell-block .wsb-banner-title,
@@ -167,7 +167,7 @@ html[data-weered-theme="nebula"][data-weered-palette="blizzard"]:not([data-weere
     .weered-dock input,
     .weered-dock textarea,
     .lobby-chat-drawer input:not([type="file"]),
-    .home-search-hero input
+    .weered-find-input
   ) {
   background: rgb(15 23 42 / 0.045) !important;
   border-color: rgb(15 23 42 / 0.16) !important;
@@ -325,13 +325,6 @@ html[data-weered-theme="nebula"][data-weered-palette="blizzard"]:not([data-weere
 html[data-weered-theme="nebula"][data-weered-palette="blizzard"]:not([data-weered-lobby]):not(#nb)
   .home-build-sketch {
   background: rgb(15 23 42 / 0.05) !important;
-}
-html[data-weered-theme="nebula"][data-weered-palette="blizzard"]:not([data-weered-lobby]):not(#nb)
-  .home-search-hero
-  .home-search-browse {
-  background: rgb(15 23 42 / 0.045) !important;
-  border-color: rgb(15 23 42 / 0.16) !important;
-  color: #0f172a !important;
 }
 html[data-weered-theme="nebula"][data-weered-palette="blizzard"]:not([data-weered-lobby]):not(#nb)
   .home-build-mine {

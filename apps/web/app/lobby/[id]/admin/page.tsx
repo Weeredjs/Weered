@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { useWeered } from "../../../../components/WeeredProvider";
+import { useShellPlace } from "../../../../lib/shellPlace";
 import LobbyChatPanel from "../../../../components/LobbyChatPanel";
 import RoomStage from "../../../../components/room/RoomStage";
 import {
@@ -82,6 +83,21 @@ export default function LobbyAdminPage() {
     void load();
   }, [load]);
 
+  // The bar at the top of the page names the lobby being run.
+  const barLobby = data?.lobby;
+  useShellPlace(
+    barLobby
+      ? {
+          kind: "lobby",
+          title: barLobby.name || lobbyId,
+          lobbyId,
+          accentColor: barLobby.accentColor || null,
+          logoUrl: barLobby.logoUrl || null,
+          verified: !!barLobby.verified,
+        }
+      : null,
+  );
+
   if (loading)
     return (
       <div
@@ -136,7 +152,8 @@ export default function LobbyAdminPage() {
   return (
     <div
       style={{
-        height: "100vh",
+        // The box under the bar at the top of every page (ShellGate).
+        height: "100%",
         display: "flex",
         flexDirection: "column",
         background: "var(--weered-bg, #080810)",

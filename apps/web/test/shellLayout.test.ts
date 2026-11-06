@@ -239,11 +239,12 @@ describe("custom colourway", () => {
 });
 
 describe("Home, re-arranged 2026-11-05", () => {
-  // The four ways in, every lobby drifting past (11-06), then the chat.
-  const STOCK_HOME = ["search", "browse", "create", "change", "carousel", "homechat"];
-  const OFF = ["build", "pulse", "live", "featured", "news", "upgrade", "ticker", "hero"];
+  // The build blocks (back on top 11-06), the four ways in, every lobby
+  // drifting past (11-06), then the chat.
+  const STOCK_HOME = ["build", "search", "browse", "create", "change", "carousel", "homechat"];
+  const OFF = ["pulse", "live", "featured", "news", "upgrade", "ticker", "hero"];
 
-  it("is the four ways in, the carousel and the Home chat, everything else off", () => {
+  it("is the build blocks, the four ways in, the carousel and the chat, the rest off", () => {
     const s = stockShell();
     expect(s.home).toEqual(STOCK_HOME);
     expect(s.hidden).toEqual(expect.arrayContaining(OFF));
@@ -276,7 +277,7 @@ describe("Home, re-arranged 2026-11-05", () => {
       hidden: ["hero", "popular", "dms", "activity", "visited"],
     })!;
     expect(l.home).toEqual(["featured", "ticker", "news", "upgrade", "pulse", "live"]);
-    expect(l.hidden).toEqual(expect.arrayContaining([...STOCK_HOME, "build"]));
+    expect(l.hidden).toEqual(expect.arrayContaining(STOCK_HOME));
     expectWhole(l);
   });
 
@@ -285,7 +286,7 @@ describe("Home, re-arranged 2026-11-05", () => {
       ...stockShell(),
       left: ["card", "nav", "homechat", "favs"],
       home: ["pulse", "search"],
-      hidden: [...stockShell().hidden, "browse", "create", "change"],
+      hidden: [...stockShell().hidden, "build", "browse", "create", "change"],
     })!;
     // (Presence and Recent, never named, come back in their stock places.)
     expect(l.left).toEqual(["card", "nav", "presence", "homechat", "favs", "recent"]);
@@ -299,15 +300,15 @@ describe("Home, re-arranged 2026-11-05", () => {
     expect(l.left[2]).toBe("homechat");
     l = placeItem(l, "browse", "right", 0);
     expect(l.right[0]).toBe("browse");
-    expect(l.home).toEqual(["search", "create", "change", "carousel"]);
+    expect(l.home).toEqual(["build", "search", "create", "change", "carousel"]);
     expectWhole(l);
   });
 
   it("puts the carousel between the ways in and the chat, where a layout has both", () => {
     for (const id of ["weered", "social", "everything"]) {
       const home = presetLayout(id)!.home;
-      expect(home.indexOf("carousel")).toBe(4);
-      expect(home[5]).toBe("homechat");
+      expect(home[home.indexOf("change") + 1]).toBe("carousel");
+      expect(home[home.indexOf("carousel") + 1]).toBe("homechat");
     }
     // Clean, Focus and Minimal keep to what they say they are.
     for (const id of ["clean", "focus", "minimal"])
@@ -321,12 +322,14 @@ describe("Home, re-arranged 2026-11-05", () => {
     expect(l.hidden).toContain("upgrade");
   });
 
-  it("keeps every preset whole, the four ways in first on its Home", () => {
+  it("keeps every preset whole, the four ways in first on its Home after the build blocks", () => {
     for (const p of SHELL_PRESETS) {
       const l = presetLayout(p.id)!;
       expectWhole(l);
-      expect(l.home.slice(0, 4)).toEqual(["search", "browse", "create", "change"]);
+      const home = l.home[0] === "build" ? l.home.slice(1) : l.home;
+      expect(home.slice(0, 4)).toEqual(["search", "browse", "create", "change"]);
     }
+    for (const id of ["weered", "everything"]) expect(presetLayout(id)!.home[0]).toBe("build");
     expect(
       presetLayout("everything")!.hidden.filter((h) => CORE_META[h].regions.includes("home")),
     ).toEqual([]);

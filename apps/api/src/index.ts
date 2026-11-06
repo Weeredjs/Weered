@@ -2210,6 +2210,7 @@ async function main() {
   // Virtual-airline crew hub (vOCN): roster, PIREPs, group-flight slots, staff desk.
   await app.register((await import("./routes/va")).default, { authFromHeader });
   await app.register((await import("./routes/lobbySearch")).default, { authFromHeader });
+  await app.register((await import("./routes/search")).default, { authFromHeader });
   await app.register((await import("./routes/cowork")).default, { authFromHeader });
   await app.register(helldiversStratagemsRoutes);
   await app.register(helldiversLoadoutsRoutes, { authFromHeader });

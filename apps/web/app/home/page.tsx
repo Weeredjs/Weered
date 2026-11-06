@@ -8,8 +8,6 @@ import Link from "next/link";
 import { useWeered, useUsersByRoom } from "../../components/WeeredProvider";
 import DmPreviewStrip from "../../components/DmPreviewStrip";
 import ActivityFeed from "../../components/ActivityFeed";
-import WeeredGuide from "../../components/guide/WeeredGuide";
-import { useOverlay } from "../../components/overlays/OverlayProvider";
 import EmptyState from "../../components/EmptyState";
 import LobbyChatDrawer from "../../components/LobbyChatDrawer";
 import HomeActivityTicker from "../../components/HomeActivityTicker";
@@ -17,11 +15,10 @@ import FirstTimePrompt from "../../components/FirstTimePrompt";
 import HomePinnedNews from "../../components/HomePinnedNews";
 import HomePulse from "../../components/HomePulse";
 import HomeBuild from "../../components/HomeBuild";
-import LobbySearch from "../../components/LobbySearch";
 import { onActivate } from "@/lib/a11y";
 import ShellSlot from "../../components/shell/ShellSlot";
 import ShellDesigner from "../../components/shell/ShellDesigner";
-import { startDesign, useShellLayout } from "../../lib/shellDesign";
+import { useShellLayout } from "../../lib/shellDesign";
 import AnyCoreSection from "../../components/shell/AnyCoreSection";
 import LobbyCarousel, { type DriftLobby } from "../../components/shell/LobbyCarousel";
 import { LEGACY_HOME, isAnyCore, isCore, keyOf, type CoreId } from "../../lib/shellLayout";
@@ -836,8 +833,6 @@ export default function HomePage() {
     try { join?.("lobby"); } catch {}
   }, [me?.id, joinedRoomId, joinStatus, join]);
 
-  const [showShowcase, setShowShowcase] = useState(false);
-  const { openSheet } = useOverlay() as any;
   // The office desk keeps the Home it always had, and has no Design.
   const office = useOfficeSkin();
   const ownHome = useShellLayout().home;
@@ -1236,69 +1231,21 @@ export default function HomePage() {
   return (
     <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}>
 
+      {/* The bar over every page took this header's place (James 2026-11-06:
+          "Combine them"). The office desk has no bar, so it keeps its greeting. */}
+      {office && (
       <div className="home-topbar" style={{ display: "flex", alignItems: "center", gap: 14, padding: "16px 20px 12px", borderBottom: "1px solid rgba(255,255,255,.06)", flexShrink: 0, flexWrap: "wrap" }}>
-        {/* The name holds the left and takes whatever room is left (a long one
-            shortens with an ellipsis); search and the buttons sit on the right,
-            so they stay put whatever the name (James 2026-10-31). */}
         <div className="home-topbar-greet" style={{ flex: "1 1 160px", minWidth: 120 }}>
           <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: "1.5px", textTransform: "uppercase", color: "rgba(255,255,255,.25)" }}>{greeting()}</div>
           <div style={{ fontWeight: 900, fontSize: 22, lineHeight: 1.1, marginTop: 3, letterSpacing: "-0.5px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
             Hey, <span style={{ color: "#5800E5" }}>{myName}</span>
           </div>
         </div>
-
-        {/* Home's own Search and Change tiles stand in for these (2026-11-05). */}
-        {!homeLayout.includes("search") && (
-          <div className="home-topbar-search" style={{ flex: "0 1 560px", display: "flex", justifyContent: "flex-end", minWidth: 0, maxWidth: 680 }}>
-            <LobbySearch hero width={680} />
-          </div>
-        )}
-
-        <div className="home-topbar-actions" style={{ flex: "0 0 auto", display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 10 }}>
-          {me && !office && !homeLayout.includes("change") && (
-            <button
-              type="button"
-              onClick={() => startDesign()}
-              className="home-topbar-design"
-              title="Change your drip: move sections, add blocks, pick a look"
-            >
-              <span aria-hidden>✦</span> Design
-            </button>
-          )}
-          <Link
-            href="/desktop"
-            className="home-topbar-secondary"
-            style={{
-              background: "linear-gradient(135deg, rgba(245,183,0,0.12), rgba(245,183,0,0.04))",
-              border: "1px solid rgba(245,183,0,0.25)", borderRadius: 2, padding: "7px 12px",
-              color: "#f5b700", fontSize: 11, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap",
-              letterSpacing: "0.02em", transition: "all 0.15s", fontFamily: "inherit", textDecoration: "none",
-              display: "inline-flex", alignItems: "center", gap: 6,
-            }}
-            onMouseEnter={e => { (e.currentTarget).style.background = "linear-gradient(135deg, rgba(245,183,0,0.22), rgba(245,183,0,0.08))"; (e.currentTarget).style.borderColor = "rgba(245,183,0,0.45)"; }}
-            onMouseLeave={e => { (e.currentTarget).style.background = "linear-gradient(135deg, rgba(245,183,0,0.12), rgba(245,183,0,0.04))"; (e.currentTarget).style.borderColor = "rgba(245,183,0,0.25)"; }}
-          >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>
-            Desktop app
-          </Link>
-          <button
-            onClick={() => setShowShowcase(true)}
-            className="home-topbar-secondary"
-            style={{
-              background: "linear-gradient(135deg, rgba(124,58,237,0.15), rgba(124,58,237,0.08))",
-              border: "1px solid rgba(124,58,237,0.25)", borderRadius: 2, padding: "7px 14px",
-              color: "#a78bfa", fontSize: 11, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap",
-              letterSpacing: "0.02em", transition: "all 0.15s", fontFamily: "inherit",
-            }}
-            onMouseEnter={e => { (e.currentTarget).style.background = "linear-gradient(135deg, rgba(124,58,237,0.25), rgba(124,58,237,0.15))"; (e.currentTarget).style.borderColor = "rgba(124,58,237,0.4)"; }}
-            onMouseLeave={e => { (e.currentTarget).style.background = "linear-gradient(135deg, rgba(124,58,237,0.15), rgba(124,58,237,0.08))"; (e.currentTarget).style.borderColor = "rgba(124,58,237,0.25)"; }}
-          >
-            What can you do here?
-          </button>
-        </div>
       </div>
+      )}
 
-      <div data-shell-scroller="home" style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: "0 20px 8px" }}>
+      {/* Edge to edge under the bar, so Home's blocks line up with it. */}
+      <div data-shell-scroller="home" style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: office ? "0 20px 8px" : "0 0 8px" }}>
 
         <FirstTimePrompt />
 
@@ -1322,17 +1269,6 @@ export default function HomePage() {
       </div>
 
       <style>{`div::-webkit-scrollbar{display:none}`}</style>
-
-      <WeeredGuide
-        open={showShowcase}
-        onClose={() => setShowShowcase(false)}
-        actions={{
-          design: me && !office ? () => startDesign() : undefined,
-          look: () => openSheet?.("settings", { tab: "appearance" }),
-          build: () => router.push("/lobby/create"),
-          href: (path) => router.push(path),
-        }}
-      />
 
       {me && !office && <ShellDesigner />}
 
