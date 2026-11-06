@@ -5,7 +5,10 @@
 // "The only thing that will be there is Search, Browse, Create, Change...
 // Have a home chat and presence connection. Everything should work
 // everywhere so the design can pick it up"). Listed in lib/shellLayout.ts
-// (ANY_CORES); styled in styles/51-start.css.
+// (ANY_CORES); styled in styles/51-start.css. On Home each tile carries a
+// picture of what it does, made from the real thing: lobbies' logos and
+// banners, the layout gallery's pictures, the colourways (James 2026-11-06:
+// "we need some sharp images for the buttons").
 import React from "react";
 import { useRouter } from "next/navigation";
 import LobbySearch from "../LobbySearch";
@@ -13,7 +16,18 @@ import LobbyChatPanel from "../LobbyChatPanel";
 import { useWeered, useRoomUsers } from "../WeeredProvider";
 import { startDesign } from "../../lib/shellDesign";
 import { avatarBg } from "../../lib/avatarColor";
+import { hideBroken, sizedImage } from "../../lib/sizedImage";
+import { PALETTES } from "../../lib/uiPrefs";
 import { CORE_META, type AnyCore, type ShellRegion } from "../../lib/shellLayout";
+
+/** What the tiles' pictures are made of. */
+export type ArtLobby = {
+  id: string;
+  name: string;
+  bannerUrl?: string | null;
+  logoUrl?: string | null;
+  accentColor?: string | null;
+};
 
 const ICONS: Record<Exclude<AnyCore, "homechat">, React.ReactNode> = {
   search: (
@@ -81,17 +95,28 @@ export default function AnyCoreSection({
   id,
   region,
   roomId,
+  lobbies,
 }: {
   id: AnyCore;
   region: ShellRegion;
   /** For the chat: the room it shows (Home passes its own). */
   roomId?: string;
+  /** For the tiles' pictures (Home passes its list). */
+  lobbies?: ArtLobby[];
 }) {
   if (id === "homechat") return <ChatHere region={region} roomId={roomId} />;
-  return <WayIn id={id} region={region} />;
+  return <WayIn id={id} region={region} lobbies={lobbies || []} />;
 }
 
-function WayIn({ id, region }: { id: Exclude<AnyCore, "homechat">; region: ShellRegion }) {
+function WayIn({
+  id,
+  region,
+  lobbies,
+}: {
+  id: Exclude<AnyCore, "homechat">;
+  region: ShellRegion;
+  lobbies: ArtLobby[];
+}) {
   const router = useRouter();
   const meta = CORE_META[id];
   const rail = region !== "home";
@@ -116,18 +141,22 @@ function WayIn({ id, region }: { id: Exclude<AnyCore, "homechat">; region: Shell
     </span>
   );
   const cls = `weered-wayin weered-wayin-${id}${rail ? " is-rail" : ""}`;
+  // A sidebar row is too small for a picture.
+  const art = rail ? null : <WayInArt id={id} lobbies={lobbies} />;
   // Search holds its own box, so it isn't one big button.
   if (id === "search")
     return (
       <div className={cls}>
+        {art}
         {head}
-        <div className="weered-wayin-search">
+        <div className="weered-wayin-box">
           <LobbySearch width="100%" placeholder="Lobbies, rooms, games…" />
         </div>
       </div>
     );
   return (
     <button type="button" className={cls} onClick={go}>
+      {art}
       {head}
       {!rail && (
         <span className="weered-wayin-go" aria-hidden>
@@ -135,6 +164,138 @@ function WayIn({ id, region }: { id: Exclude<AnyCore, "homechat">; region: Shell
         </span>
       )}
     </button>
+  );
+}
+
+/** Lobbies to draw from: the ones with the picture asked for, then stand-ins
+ *  in their own colours, so a tile is never bare while the list loads. */
+function pick(lobbies: ArtLobby[], key: "bannerUrl" | "logoUrl", count: number): ArtLobby[] {
+  const have = lobbies.filter((l) => l[key]).slice(0, count);
+  const fill = ["Weered", "Crew", "Lounge", "Arena", "Studio"].map((name) => ({ id: name, name }));
+  return [...have, ...fill].slice(0, count);
+}
+const tint = (l: ArtLobby) => l.accentColor || avatarBg(l.name || l.id);
+
+/** The layouts and colourways Change offers, as they look. */
+const SHOTS = ["weered-violet", "clean-ocean", "social-ember"];
+const DOTS = (["violet", "ocean", "aurora", "ember", "graphite"] as const).map(
+  (p) => PALETTES[p].a,
+);
+
+function WayInArt({ id, lobbies }: { id: Exclude<AnyCore, "homechat">; lobbies: ArtLobby[] }) {
+  if (id === "browse")
+    return (
+      <span className="weered-art weered-art-browse" aria-hidden>
+        <span className="weered-art-stage">
+          {pick(lobbies, "bannerUrl", 3).map((l, i) => (
+            <span
+              key={l.id}
+              className={`weered-art-card is-${i}`}
+              style={{ ["--card-a" as any]: tint(l) }}
+            >
+              {l.bannerUrl ? (
+                <img
+                  className="weered-art-card-banner"
+                  src={sizedImage(l.bannerUrl, 256)}
+                  alt=""
+                  loading="lazy"
+                  decoding="async"
+                  onError={hideBroken}
+                />
+              ) : null}
+              {l.logoUrl ? (
+                <img
+                  className="weered-art-card-logo"
+                  src={sizedImage(l.logoUrl, 48)}
+                  alt=""
+                  loading="lazy"
+                  decoding="async"
+                  onError={hideBroken}
+                />
+              ) : null}
+            </span>
+          ))}
+        </span>
+      </span>
+    );
+  if (id === "search") {
+    const chips = pick(lobbies, "logoUrl", 5);
+    const chip = (l: ArtLobby, cls: string) =>
+      l.logoUrl ? (
+        <img
+          className={cls}
+          src={sizedImage(l.logoUrl, 96)}
+          alt=""
+          loading="lazy"
+          decoding="async"
+          onError={hideBroken}
+        />
+      ) : (
+        <span className={cls} style={{ background: tint(l) }}>
+          {l.name.slice(0, 1)}
+        </span>
+      );
+    return (
+      <span className="weered-art weered-art-search" aria-hidden>
+        <span className="weered-art-stage">
+          {chips.map((l, i) =>
+            i === 2 ? null : (
+              <React.Fragment key={l.id}>{chip(l, `weered-art-chip is-${i}`)}</React.Fragment>
+            ),
+          )}
+          {/* The lens, with the one it found under the glass. */}
+          <span className="weered-art-lens">
+            <span className="weered-art-lens-glass">
+              {chips[2] ? chip(chips[2], "weered-art-chip is-found") : null}
+            </span>
+          </span>
+        </span>
+      </span>
+    );
+  }
+  if (id === "create")
+    return (
+      <span className="weered-art weered-art-create" aria-hidden>
+        <span className="weered-art-stage">
+          <span className="weered-art-frame">
+            <span className="weered-art-block is-banner" />
+            <span className="weered-art-block is-chat">
+              <i />
+              <i />
+              <i />
+            </span>
+            <span className="weered-art-block is-rooms">
+              <i />
+              <i />
+              <i />
+              <i />
+            </span>
+          </span>
+          <span className="weered-art-spark">✦</span>
+        </span>
+      </span>
+    );
+  return (
+    <span className="weered-art weered-art-change" aria-hidden>
+      <span className="weered-art-stage">
+        {SHOTS.map((k, i) => (
+          <img
+            key={k}
+            className={`weered-art-shot is-${i}`}
+            src={sizedImage(`/brand/layouts/${k}.webp`, 256)}
+            alt=""
+            loading="lazy"
+            decoding="async"
+            onError={hideBroken}
+          />
+        ))}
+        <span className="weered-art-dots">
+          {DOTS.map((c) => (
+            <i key={c} style={{ background: c }} />
+          ))}
+        </span>
+      </span>
+    </span>
   );
 }
 

@@ -33,6 +33,7 @@ export const HOME_CORES = [
   "dms",
   "activity",
   "visited",
+  "carousel",
 ] as const;
 /** Home's four ways in and its chat, which work anywhere (James 2026-11-05:
  *  "Search, Browse, Create, Change... Have a home chat and presence
@@ -241,6 +242,12 @@ export const CORE_META: Record<CoreId, CoreMeta> = {
     icon: "🧳",
     regions: ["home"],
   },
+  carousel: {
+    name: "Lobby carousel",
+    blurb: "Every lobby drifting past, the busy ones first. Click one to go in.",
+    icon: "🎠",
+    regions: ["home"],
+  },
 };
 
 export type ShellBlockMeta = {
@@ -391,11 +398,13 @@ export const itemIcon = (it: ShellItem): string =>
 // Home again, 2026-11-05 (James: "The only thing that will be there is
 // Search, Browse, Create, Change... Simple and you are right in it. Have a
 // home chat and presence connection"): the four ways in and the Home chat.
-// Everything that was on Home is one click away in Design.
+// Everything that was on Home is one click away in Design. Then, 11-06, every
+// lobby drifting past between them ("between the search, browse, etc. and
+// chat put a half sized featured carousel of all 50 lobbies").
 const STOCK: Record<ShellRegion, CoreId[]> = {
   left: ["card", "nav", "presence", "favs", "recent"],
   right: ["whoshere", "rooms", "friends", "crew", "discover"],
-  home: ["search", "browse", "create", "change", "homechat"],
+  home: ["search", "browse", "create", "change", "carousel", "homechat"],
 };
 /** Sections that start switched off. */
 const STOCK_OFF: CoreId[] = [
@@ -598,7 +607,8 @@ export function sanitizeShell(raw: unknown, follow = true): ShellLayout | null {
     if (CORE_META[id] && !CORE_META[id].locked && !placed.has(id) && !hidden.includes(id))
       hidden.push(id);
   }
-  if (ownHome) for (const id of ANY_CORES) if (!placed.has(id)) hidden.push(id);
+  if (ownHome)
+    for (const id of [...ANY_CORES, "carousel" as const]) if (!placed.has(id)) hidden.push(id);
   const preset = typeof r.preset === "string" && PRESET_IDS.has(r.preset) ? r.preset : undefined;
   return restoreMissing({ v: 1, ...(preset ? { preset } : {}), left, right, home, hidden });
 }
@@ -769,7 +779,7 @@ export const SHELL_PRESETS: ShellPreset[] = [
     build: () => ({
       left: ["card", "nav", "friends", "crew", "favs", "presence", "recent"],
       right: ["rooms", "whoshere", "discover"],
-      home: [...WAYS_IN, "homechat", "pulse", "dms", "activity"],
+      home: [...WAYS_IN, "carousel", "homechat", "pulse", "dms", "activity"],
     }),
   },
   {
@@ -793,6 +803,7 @@ export const SHELL_PRESETS: ShellPreset[] = [
       right: ["whoshere", "rooms", "crew", "discover"],
       home: [
         ...WAYS_IN,
+        "carousel",
         "homechat",
         "build",
         "pulse",

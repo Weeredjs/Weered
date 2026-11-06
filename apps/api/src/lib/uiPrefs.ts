@@ -81,6 +81,8 @@ const SHELL_CORES: Record<string, readonly string[]> = {
   dms: ["home"],
   activity: ["home"],
   visited: ["home"],
+  // Every lobby drifting past (2026-11-06).
+  carousel: ["home"],
   // Home's four ways in and its chat work anywhere (2026-11-05).
   search: ["home", "left", "right"],
   browse: ["home", "left", "right"],

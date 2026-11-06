@@ -36,6 +36,7 @@ const SECRET = process.env.JWT_SECRET || "local-only-secret";
 // allows 600 a minute from one address (src/index.ts). Past it, Home comes up
 // empty: nobody here, no chat, no card look.
 const PAUSE_MS = Number(process.env.SHOTS_PAUSE_MS || 20_000);
+const SETTLE_MS = Number(process.env.SHOTS_SETTLE_MS || 9_000);
 const here = path.dirname(fileURLToPath(import.meta.url));
 const OUT = path.resolve(here, "../../web/public/brand/layouts");
 const { chromium } = createRequire(path.resolve(here, "../../web/package.json"))(
@@ -118,8 +119,8 @@ try {
       await page.goto(BASE + "/home", { waitUntil: "domcontentloaded", timeout: 180_000 });
       await page.addStyleTag({ content: "nextjs-portal{display:none!important}" });
       await page.locator(".weered-wayin-search").first().waitFor({ timeout: 120_000 });
-      // Presence, the chat's lines, avatars and the fonts.
-      await page.waitForTimeout(4500);
+      // Presence, the chat's lines, avatars, the carousel's pictures and the fonts.
+      await page.waitForTimeout(SETTLE_MS);
       const png = await page.screenshot();
       const file = path.join(OUT, `${key}.webp`);
       await sharp(png).resize(800, 500).webp({ quality: 80 }).toFile(file);

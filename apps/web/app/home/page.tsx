@@ -23,6 +23,7 @@ import ShellSlot from "../../components/shell/ShellSlot";
 import ShellDesigner from "../../components/shell/ShellDesigner";
 import { startDesign, useShellLayout } from "../../lib/shellDesign";
 import AnyCoreSection from "../../components/shell/AnyCoreSection";
+import LobbyCarousel, { type DriftLobby } from "../../components/shell/LobbyCarousel";
 import { LEGACY_HOME, isAnyCore, isCore, keyOf, type CoreId } from "../../lib/shellLayout";
 
 /** Home's sections that list lobbies and rooms: with none of them on Home,
@@ -963,6 +964,21 @@ export default function HomePage() {
     [filtered]
   );
 
+  // Every lobby, busiest first: the carousel, and the pictures on the tiles.
+  const driftLobbies = useMemo<DriftLobby[]>(
+    () =>
+      lobbies.map((r: any) => ({
+        id: roomId(r),
+        name: roomName(r),
+        bannerUrl: r?.bannerUrl ?? null,
+        logoUrl: r?.logoUrl ?? null,
+        accentColor: r?.accentColor ?? null,
+        online: onlineCount(r),
+        members: Number(r?._count?.members ?? r?.memberCount ?? 0),
+      })),
+    [lobbies]
+  );
+
   const featured = useMemo(() => {
     if (featuredLobby) {
       const id = featuredLobby.id;
@@ -1031,7 +1047,7 @@ export default function HomePage() {
   // decides which show and in what order, with their blocks between them.
   const homeSection = (id: string): React.ReactNode => {
     // The four ways in and the chat go anywhere (components/shell/AnyCoreSection.tsx).
-    if (isAnyCore(id)) return <AnyCoreSection id={id} region="home" roomId="lobby" />;
+    if (isAnyCore(id)) return <AnyCoreSection id={id} region="home" roomId="lobby" lobbies={driftLobbies} />;
     switch (id) {
       case "build":
         return <HomeBuild lobbies={lobbies} signedIn={!!me?.id} canDesign={!!me && !office} />;
@@ -1198,6 +1214,8 @@ export default function HomePage() {
             </div>
           </>
         );
+      case "carousel":
+        return <LobbyCarousel lobbies={driftLobbies} onOpen={handleLobbyVisit} />;
       case "visited":
         return (
           <>

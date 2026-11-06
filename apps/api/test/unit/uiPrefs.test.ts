@@ -137,6 +137,20 @@ describe("UI prefs", () => {
     });
   });
 
+  it("keeps the lobby carousel on Home and nowhere else", () => {
+    const p = sanitizeUiPrefs({
+      shell: {
+        v: 1,
+        left: ["card", "nav", "carousel"],
+        right: ["rooms"],
+        home: ["search", "carousel", "homechat"],
+        hidden: [],
+      },
+    });
+    expect(p.shell?.home).toEqual(["search", "carousel", "homechat"]);
+    expect(p.shell?.left).toEqual(["card", "nav"]);
+  });
+
   it("drops an oversized or malformed layout", () => {
     const big = { left: [{ id: "b1", type: "rules", props: { body: "x".repeat(30_000) } }] };
     expect(sanitizeUiPrefs({ shell: big }).shell).toBeUndefined();

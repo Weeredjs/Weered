@@ -3,20 +3,27 @@
    collapsed left sidebar (James 2026-11-05: "Simple and you are right in it")
    =====================================================================
    components/shell/AnyCoreSection.tsx, components/setup/LayoutGallery.tsx,
-   components/shell/LeftRailStack.tsx. Colours follow the colourway through
-   Nebula's --nb-a (accent) and --nb-b (deep accent) channels. */
+   components/shell/LeftRailStack.tsx, components/shell/LobbyCarousel.tsx.
+   Colours follow the colourway through Nebula's --nb-a (accent) and --nb-b
+   (deep accent) channels. */
 
 /* ── The four ways in: tiles on Home ─────────────────────────────────── */
+/* Four across while each tile has room for its words and its picture; two,
+   then one, by the width Home has (both sidebars open leave a wide window's
+   Home narrow). */
+.weered-home-grid {
+  container: weered-home / inline-size;
+}
 .weered-shell-slot-home.is-quarter {
   margin-top: 16px;
   min-width: 0;
 }
-@media (max-width: 1180px) {
+@container weered-home (max-width: 1240px) {
   .weered-shell-slot-home.is-quarter {
     grid-column: span 6 !important;
   }
 }
-@media (max-width: 640px) {
+@container weered-home (max-width: 600px) {
   .weered-shell-slot-home.is-quarter {
     grid-column: 1 / -1 !important;
   }
@@ -29,8 +36,9 @@
   gap: 12px;
   width: 100%;
   height: 100%;
-  min-height: 148px;
+  min-height: 164px;
   box-sizing: border-box;
+  overflow: hidden;
   padding: 18px 18px 16px;
   border-radius: 16px;
   border: 1px solid rgb(var(--nb-a, 139 92 246) / 0.22);
@@ -72,6 +80,18 @@ button.weered-wayin:focus-visible {
   gap: 12px;
   min-width: 0;
 }
+/* On Home the picture says what the icon would: words left, picture right. */
+.weered-wayin:not(.is-rail) > .weered-wayin-head {
+  position: relative;
+  z-index: 1;
+  max-width: 57%;
+}
+.weered-wayin:not(.is-rail) .weered-wayin-icon {
+  display: none;
+}
+.weered-wayin:not(.is-rail) .weered-wayin-sub {
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+}
 .weered-wayin-icon {
   flex-shrink: 0;
   display: grid;
@@ -108,11 +128,14 @@ button.weered-wayin:focus-visible {
   font-weight: 800;
   color: rgb(var(--nb-a, 139 92 246));
   transition: transform 0.18s ease;
+  z-index: 1;
 }
 button.weered-wayin:hover .weered-wayin-go {
   transform: translateX(3px);
 }
-.weered-wayin-search {
+.weered-wayin-box {
+  position: relative;
+  z-index: 2;
   margin-top: auto;
   min-width: 0;
 }
@@ -139,6 +162,486 @@ button.weered-wayin:hover .weered-wayin-go {
 }
 .weered-wayin.is-rail .weered-wayin-sub {
   font-size: 11.5px;
+}
+
+/* ── The tiles' pictures (AnyCoreSection's WayInArt) ─────────────────── */
+.weered-art {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 44%;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+/* Search's box runs under the picture. */
+.weered-wayin-search .weered-art {
+  bottom: 52px;
+}
+.weered-art-stage {
+  position: relative;
+  width: 150px;
+  height: 112px;
+  transform: translateX(6px);
+}
+.weered-wayin-search .weered-art-stage {
+  transform: translateX(6px) scale(0.86);
+}
+.weered-art img {
+  display: block;
+}
+
+/* Browse: three lobbies' banners, fanned; they spread on hover. */
+.weered-art-card {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 100px;
+  height: 62px;
+  margin: -31px 0 0 -50px;
+  border-radius: 9px;
+  overflow: hidden;
+  background: linear-gradient(135deg, var(--card-a, #7c3aed), #0d0b1c 80%);
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.55);
+  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.weered-art-card-banner {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.weered-art-card-logo {
+  position: absolute;
+  left: 6px;
+  bottom: 6px;
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  object-fit: cover;
+  background: #0d0b1c;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+}
+.weered-art-card.is-0 {
+  transform: translate(-38px, 10px) rotate(-14deg);
+}
+.weered-art-card.is-1 {
+  z-index: 2;
+  transform: translate(0, -6px) rotate(-1deg);
+}
+.weered-art-card.is-2 {
+  z-index: 1;
+  transform: translate(38px, 12px) rotate(12deg);
+}
+.weered-wayin:hover .weered-art-card.is-0 {
+  transform: translate(-52px, 14px) rotate(-20deg);
+}
+.weered-wayin:hover .weered-art-card.is-1 {
+  transform: translate(0, -12px) scale(1.06);
+}
+.weered-wayin:hover .weered-art-card.is-2 {
+  transform: translate(52px, 16px) rotate(18deg);
+}
+
+/* Search: lobbies' logos, one of them found under the lens. */
+.weered-art-chip {
+  position: absolute;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  object-fit: cover;
+  display: grid;
+  place-items: center;
+  font-size: 13px;
+  font-weight: 800;
+  color: #fff;
+  background: #0d0b1c;
+  border: 1px solid rgba(255, 255, 255, 0.26);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.5);
+}
+.weered-art-chip.is-0 {
+  left: 2px;
+  top: 60px;
+  transform: rotate(-8deg);
+}
+.weered-art-chip.is-1 {
+  left: 26px;
+  top: 6px;
+  transform: rotate(7deg);
+}
+.weered-art-chip.is-3 {
+  left: 116px;
+  top: 74px;
+  transform: rotate(10deg);
+}
+.weered-art-chip.is-4 {
+  left: 120px;
+  top: 2px;
+  transform: rotate(-6deg);
+}
+.weered-art-lens {
+  position: absolute;
+  left: 46px;
+  top: 20px;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: 5px solid rgb(var(--nb-a, 139 92 246));
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.35),
+    0 10px 24px rgba(0, 0, 0, 0.5),
+    0 0 22px rgb(var(--nb-a, 139 92 246) / 0.45);
+  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.weered-art-lens::after {
+  content: "";
+  position: absolute;
+  right: -17px;
+  bottom: -22px;
+  width: 9px;
+  height: 30px;
+  border-radius: 5px;
+  background: linear-gradient(rgb(var(--nb-a, 139 92 246)), rgb(var(--nb-b, 91 33 182)));
+  transform: rotate(-45deg);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.45);
+}
+.weered-art-lens-glass {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  background: rgba(13, 11, 28, 0.6);
+}
+.weered-art-lens-glass::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 30% 26%,
+    rgba(255, 255, 255, 0.42),
+    rgba(255, 255, 255, 0.05) 42%,
+    transparent 60%
+  );
+}
+.weered-art-chip.is-found {
+  position: static;
+  width: 40px;
+  height: 40px;
+  border-radius: 11px;
+  box-shadow: none;
+  transform: none;
+}
+.weered-wayin:hover .weered-art-lens {
+  transform: translate(8px, -5px) rotate(-8deg);
+}
+
+/* Create: a lobby going together; its pieces snap in on hover. */
+.weered-art-frame {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 122px;
+  height: 80px;
+  margin: -40px 0 0 -61px;
+  border-radius: 12px;
+  border: 1.5px dashed rgb(var(--nb-a, 139 92 246) / 0.7);
+  background: rgb(var(--nb-a, 139 92 246) / 0.06);
+  transition:
+    border-color 0.3s,
+    background 0.3s,
+    box-shadow 0.3s;
+}
+.weered-art-block {
+  position: absolute;
+  box-sizing: border-box;
+  border-radius: 7px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.45);
+  transition: transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.weered-art-block.is-banner {
+  left: 7px;
+  right: 7px;
+  top: 7px;
+  height: 24px;
+  background: linear-gradient(
+    110deg,
+    rgb(var(--nb-a, 139 92 246)),
+    rgb(var(--nb-b, 91 33 182)) 70%,
+    rgb(var(--nb-c, 49 46 129))
+  );
+  transform: translate(-12px, -18px) rotate(-7deg);
+}
+.weered-art-block.is-chat {
+  left: 7px;
+  bottom: 7px;
+  width: 56px;
+  height: 34px;
+  padding: 0 7px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  background: rgba(13, 11, 28, 0.94);
+  transform: translate(-16px, 14px) rotate(6deg);
+}
+.weered-art-block.is-chat i {
+  display: block;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.55);
+}
+.weered-art-block.is-chat i:nth-child(2) {
+  width: 70%;
+  background: rgb(var(--nb-a, 139 92 246) / 0.9);
+}
+.weered-art-block.is-chat i:nth-child(3) {
+  width: 45%;
+}
+.weered-art-block.is-rooms {
+  right: 7px;
+  bottom: 7px;
+  width: 44px;
+  height: 34px;
+  padding: 5px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3px;
+  background: rgba(13, 11, 28, 0.94);
+  transform: translate(18px, 12px) rotate(-5deg);
+}
+.weered-art-block.is-rooms i {
+  border-radius: 3px;
+  background: rgb(var(--nb-a, 139 92 246) / 0.55);
+}
+.weered-art-block.is-rooms i:nth-child(1) {
+  background: rgba(52, 211, 153, 0.85);
+}
+.weered-art-spark {
+  position: absolute;
+  right: 4px;
+  top: 0;
+  font-size: 22px;
+  line-height: 1;
+  color: #fff;
+  text-shadow:
+    0 0 12px rgb(var(--nb-a, 139 92 246)),
+    0 0 4px #fff;
+  animation: weered-art-twinkle 2.4s ease-in-out infinite;
+}
+@keyframes weered-art-twinkle {
+  0%,
+  100% {
+    transform: scale(0.85) rotate(0deg);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.15) rotate(20deg);
+    opacity: 1;
+  }
+}
+.weered-wayin:hover .weered-art-block {
+  transform: none;
+}
+.weered-wayin:hover .weered-art-frame {
+  border-style: solid;
+  border-color: rgb(var(--nb-a, 139 92 246));
+  box-shadow: 0 0 24px rgb(var(--nb-a, 139 92 246) / 0.35);
+}
+
+/* Change: three of the gallery's layouts and the colourways. */
+.weered-art-shot {
+  position: absolute;
+  left: 50%;
+  top: 44%;
+  width: 104px;
+  height: 65px;
+  margin: -32px 0 0 -52px;
+  border-radius: 8px;
+  object-fit: cover;
+  object-position: top left;
+  background: #0d0b1c;
+  border: 1px solid rgba(255, 255, 255, 0.26);
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.55);
+  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.weered-art-shot.is-0 {
+  transform: translate(-34px, 6px) rotate(-12deg);
+}
+.weered-art-shot.is-1 {
+  z-index: 2;
+  transform: translate(0, -4px);
+}
+.weered-art-shot.is-2 {
+  z-index: 1;
+  transform: translate(34px, 8px) rotate(11deg);
+}
+.weered-wayin:hover .weered-art-shot.is-0 {
+  transform: translate(-48px, 10px) rotate(-18deg);
+}
+.weered-wayin:hover .weered-art-shot.is-1 {
+  transform: translate(0, -10px) scale(1.06);
+}
+.weered-wayin:hover .weered-art-shot.is-2 {
+  transform: translate(48px, 12px) rotate(17deg);
+}
+.weered-art-dots {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  z-index: 3;
+  display: flex;
+  gap: 6px;
+  padding: 4px 7px;
+  border-radius: 999px;
+  transform: translateX(-50%);
+  background: rgba(8, 7, 16, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+.weered-art-dots i {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.2);
+}
+@media (prefers-reduced-motion: reduce) {
+  .weered-art-spark {
+    animation: none;
+  }
+}
+
+/* ── Every lobby drifting past (components/shell/LobbyCarousel.tsx) ──── */
+/* Cards are placed by the component's animation loop; until it runs they
+   stay hidden rather than piled in the middle. */
+.weered-shell-slot-home .weered-drift {
+  margin-top: 18px;
+}
+.weered-drift {
+  position: relative;
+  height: calc(var(--drift-h, 148px) + 34px);
+  overflow: hidden;
+  touch-action: pan-y;
+  user-select: none;
+  cursor: grab;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+}
+.weered-drift:active {
+  cursor: grabbing;
+}
+.weered-drift-card {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  display: block;
+  visibility: hidden;
+  color: #fff;
+  text-decoration: none;
+  transform-origin: center center;
+  will-change: transform, opacity;
+  -webkit-user-drag: none;
+}
+.weered-drift-face {
+  position: absolute;
+  inset: 0;
+  display: block;
+  overflow: hidden;
+  border-radius: 14px;
+  background: linear-gradient(135deg, var(--drift-a, #7c3aed), #0d0b1c 78%);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.5);
+  transition:
+    transform 0.25s ease,
+    border-color 0.2s;
+}
+.weered-drift-banner {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.weered-drift-scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(8, 7, 16, 0) 34%, rgba(8, 7, 16, 0.9) 100%);
+}
+.weered-drift-info {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.weered-drift-logo {
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  object-fit: cover;
+  background: #0d0b1c;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+.weered-drift-logo.is-letter {
+  display: grid;
+  place-items: center;
+  font-size: 17px;
+  font-weight: 900;
+  background: var(--drift-a, #7c3aed);
+}
+.weered-drift-words {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.weered-drift-name {
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1.15;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
+}
+.weered-drift-meta {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: rgba(236, 232, 255, 0.72);
+}
+.weered-drift-meta.is-live {
+  color: #86efac;
+}
+.weered-drift-meta.is-live::before {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: 5px;
+  vertical-align: 1px;
+  border-radius: 50%;
+  background: #22c55e;
+  box-shadow: 0 0 6px #22c55e;
+}
+.weered-drift-card:hover .weered-drift-face,
+.weered-drift-card:focus-visible .weered-drift-face {
+  transform: translateY(-4px);
+  border-color: rgb(var(--nb-a, 139 92 246) / 0.85);
+}
+.weered-drift-card:focus-visible {
+  outline: none;
+}
+/* Not the site's link colour (40-core-layout.css a:hover, Press's too). */
+.weered-drift .weered-drift-card:hover,
+.weered-drift .weered-drift-card:focus-visible {
+  color: #fff;
 }
 
 /* ── The chat, with who's here ───────────────────────────────────────── */
@@ -224,20 +727,64 @@ button.weered-wayin:hover .weered-wayin-go {
 .weered-left.is-folded {
   display: none !important;
 }
-/* Hide sits at the sidebar's foot, pinned while it scrolls. */
-.weered-left-hide {
-  position: sticky;
-  bottom: 0;
-  z-index: 3;
-  display: flex;
-  justify-content: flex-end;
-  margin-top: -36px;
-  padding: 0 8px 8px;
-  pointer-events: none;
+/* Hide: a handle in the gap beside the sidebar, halfway down. The item is
+   zero-wide and takes back the gap it adds, so the gutter stays as it was. */
+.weered-left-handle {
+  position: relative;
+  flex: 0 0 0px;
+  width: 0;
+  margin-left: -16px;
+  z-index: 6;
 }
-.weered-left-hide .weered-rail-close {
-  position: static;
-  pointer-events: auto;
+html[data-weered-density="compact"] .weered-left-handle {
+  margin-left: -12px;
+}
+.weered-left-handle > button {
+  position: absolute;
+  top: 50%;
+  left: 1px;
+  width: 14px;
+  height: 64px;
+  margin-top: -32px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 7px;
+  border: 1px solid rgb(var(--nb-a, 139 92 246) / 0.4);
+  background: var(--weered-panel, rgba(12, 10, 22, 0.85));
+  color: rgb(var(--nb-a, 167 139 250) / 0.85);
+  cursor: pointer;
+  box-shadow: 0 0 10px rgb(var(--nb-a, 139 92 246) / 0.18);
+  transition:
+    width 0.15s,
+    left 0.15s,
+    color 0.15s,
+    border-color 0.2s,
+    box-shadow 0.2s,
+    background 0.2s;
+}
+html[data-weered-density="compact"] .weered-left-handle > button {
+  left: -1px;
+}
+.weered-left-handle > button svg {
+  width: 12px;
+  height: 12px;
+}
+.weered-left-handle > button:hover,
+.weered-left-handle > button:focus-visible {
+  left: -2px;
+  width: 20px;
+  color: #fff;
+  background: rgb(var(--nb-a, 139 92 246) / 0.35);
+  border-color: rgb(var(--nb-a, 139 92 246) / 0.8);
+  box-shadow: 0 0 16px rgb(var(--nb-a, 139 92 246) / 0.45);
+  filter: none;
+  outline: none;
+}
+@media (max-width: 1399px) {
+  .weered-left-handle {
+    display: none !important;
+  }
 }
 .weered-rail-stack-left {
   gap: 6px;
@@ -292,8 +839,8 @@ button.weered-wayin:hover .weered-wayin-go {
     border-color 0.2s,
     box-shadow 0.2s;
 }
-.weered-lstack-btn:hover,
-.weered-lstack-btn:focus-visible {
+.weered-rail-stack-left .weered-lstack-btn:hover,
+.weered-rail-stack-left .weered-lstack-btn:focus-visible {
   background: rgb(var(--nb-a, 139 92 246) / 0.16);
   filter: none;
   transform: translateX(2px);

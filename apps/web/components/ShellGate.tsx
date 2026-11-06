@@ -13,15 +13,7 @@ import LeftRailStack from "./shell/LeftRailStack";
 
 // Folded, the sidebar stays mounted and only hides: its card sets the page's
 // avatar frame and colours (UserCorner), and it opens again where it was.
-function LeftRailScroll({
-  children,
-  folded,
-  onHide,
-}: {
-  children: React.ReactNode;
-  folded: boolean;
-  onHide?: () => void;
-}) {
+function LeftRailScroll({ children, folded }: { children: React.ReactNode; folded: boolean }) {
   const [hovered, setHovered] = useState(false);
 
   return (
@@ -52,16 +44,21 @@ function LeftRailScroll({
         }
       `}</style>
       {children}
-      {onHide && (
-        // At the foot, not the top corner, where it would sit on the card's banner.
-        <div className="weered-left-hide">
-          <button type="button" title="Hide sidebar" onClick={onHide} className="weered-rail-close">
-            {ICO_COLLAPSE_LEFT}
-            <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: ".5px" }}>HIDE</span>
-          </button>
-        </div>
-      )}
     </aside>
+  );
+}
+
+// Hide, as a handle in the gap beside the sidebar, halfway down: never over
+// its card's banner or a section's title (James 2026-11-06: "We need to find
+// a better place for that hide button"). A zero-width item that gives back
+// the gap it sits in (styles/51-start.css).
+function LeftRailHandle({ onHide }: { onHide: () => void }) {
+  return (
+    <div className="weered-left-handle">
+      <button type="button" title="Hide sidebar" aria-label="Hide sidebar" onClick={onHide}>
+        {ICO_COLLAPSE_LEFT}
+      </button>
+    </div>
   );
 }
 
@@ -599,9 +596,8 @@ export default function ShellGate({
       <div
         className={`weered-shell${hideFooter ? "" : " has-footer"}${leftFolded ? " is-left-folded" : ""}`}
       >
-        <LeftRailScroll folded={leftFolded} onHide={designing ? undefined : () => setLeft(true)}>
-          {left}
-        </LeftRailScroll>
+        <LeftRailScroll folded={leftFolded}>{left}</LeftRailScroll>
+        {!leftFolded && !designing && <LeftRailHandle onHide={() => setLeft(true)} />}
         {leftFolded && <LeftRailStack onOpen={openLeft} />}
 
         <IconStrip
