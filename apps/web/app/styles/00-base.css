@@ -1,7 +1,7 @@
-/* Lobby-theme fonts (Pirata One, Cormorant Garamond, Rajdhani) are now
-   loaded via next/font/google in app/layout.tsx — self-hosted,
-   preloaded, no FOUC. CSS vars --font-pirata, --font-cormorant,
-   --font-rajdhani are available everywhere. */
+/* The display fonts (Pirata One, Cormorant Garamond, Rajdhani, Barlow
+   Condensed, Saira Stencil One) are served from our own server: their
+   @font-face rules and the CSS vars --font-pirata, --font-cormorant,
+   --font-rajdhani, --font-barlow, --font-saira-stencil are in 01-fonts.css. */
 
 /* Tier-2 header logo: clickable to replay the splash overlay */
 .weered-tier2-logo {

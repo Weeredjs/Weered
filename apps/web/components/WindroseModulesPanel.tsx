@@ -58,7 +58,6 @@ export default function WindroseModulesPanel({
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Pirata+One&family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&display=swap');
         @keyframes windrose-wave {
           0%,100% { transform: translateY(0) rotate(0); }
           50% { transform: translateY(-2px) rotate(0.3deg); }

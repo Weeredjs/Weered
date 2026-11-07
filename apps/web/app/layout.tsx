@@ -2,51 +2,8 @@ import "./globals.css";
 import "@fontsource/dm-mono/400.css";
 import "@fontsource/dm-mono/500.css";
 import React from "react";
-import {
-  Pirata_One,
-  Cormorant_Garamond,
-  Rajdhani,
-  Barlow_Condensed,
-  Saira_Stencil_One,
-} from "next/font/google";
-
-const pirataOne = Pirata_One({
-  weight: "400",
-  subsets: ["latin"],
-  variable: "--font-pirata",
-  display: "swap",
-  preload: true,
-});
-const cormorant = Cormorant_Garamond({
-  weight: ["400", "600", "700"],
-  style: ["normal", "italic"],
-  subsets: ["latin"],
-  variable: "--font-cormorant",
-  display: "swap",
-  preload: true,
-});
-const rajdhani = Rajdhani({
-  weight: ["400", "500", "600", "700"],
-  subsets: ["latin"],
-  variable: "--font-rajdhani",
-  display: "swap",
-  preload: true,
-});
-const barlow = Barlow_Condensed({
-  weight: ["400", "500", "600", "700", "800"],
-  subsets: ["latin"],
-  variable: "--font-barlow",
-  display: "swap",
-  preload: true,
-});
-const sairaStencil = Saira_Stencil_One({
-  weight: "400",
-  subsets: ["latin"],
-  variable: "--font-saira-stencil",
-  display: "swap",
-  preload: true,
-});
 import RootFrame from "../components/RootFrame";
+import { PRELOADED_FONTS } from "../lib/fonts";
 import {
   chromeFor,
   FORCED_THEME_LOBBIES,
@@ -224,12 +181,12 @@ try {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html
-      lang="en"
-      suppressHydrationWarning
-      className={`${pirataOne.variable} ${cormorant.variable} ${rajdhani.variable} ${barlow.variable} ${sairaStencil.variable}`}
-    >
+    <html lang="en" suppressHydrationWarning>
       <head>
+        {/* Our own fonts (app/styles/01-fonts.css), fetched before the CSS asks. */}
+        {PRELOADED_FONTS.map((href) => (
+          <link key={href} rel="preload" href={href} as="font" type="font/woff2" crossOrigin="" />
+        ))}
         <script dangerouslySetInnerHTML={{ __html: themeBootScript }} />
         <script
           dangerouslySetInnerHTML={{
