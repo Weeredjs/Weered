@@ -192,8 +192,8 @@ export const GO_TO: Go[] = [
   {
     id: "store",
     label: "Store",
-    sub: "Flair, frames and more",
-    words: "store shop buy",
+    sub: "Spend your Paper: flair, frames and more",
+    words: "store shop buy paper money wallet balance",
     icon: "◇",
     mine: true,
   },

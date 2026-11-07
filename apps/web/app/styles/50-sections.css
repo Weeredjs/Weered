@@ -81,6 +81,42 @@
   background: rgba(124, 58, 237, 0.14);
   border-color: rgba(88, 0, 229, 0.34);
 }
+/* Paper, top right of the card across from its ID (components/UserCorner.tsx):
+   the balance, a way into the store. */
+.weered-uc-paper {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(212, 160, 23, 0.45);
+  background: rgba(10, 10, 16, 0.6);
+  color: #f5c542;
+  font-family: ui-monospace, "JetBrains Mono", monospace;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  text-decoration: none;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+  transition:
+    border-color 0.15s,
+    background 0.15s;
+}
+.weered-uc-paper:hover {
+  color: #f5c542;
+  border-color: rgba(245, 197, 66, 0.8);
+  background: rgba(212, 160, 23, 0.18);
+}
+/* The minimal chrome clears every border and fill in the sidebar
+   (80-chrome-min.css); the Paper button keeps its own, as avatars do. */
+html[data-weered-chrome="min"] .weered-left .weered-uc-paper {
+  border-color: rgba(212, 160, 23, 0.45) !important;
+  background: rgba(10, 10, 16, 0.6) !important;
+}
+html[data-weered-chrome="min"] .weered-left .weered-uc-paper:hover {
+  border-color: rgba(245, 197, 66, 0.8) !important;
+  background: rgba(212, 160, 23, 0.18) !important;
+}
 .weered-avatar {
   width: 34px;
   height: 34px;

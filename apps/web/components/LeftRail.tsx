@@ -130,7 +130,6 @@ export default function LeftRail() {
       "forum",
       isWindrose ? "Ship's Log" : isDestiny ? "Vanguard Report" : isDnd ? "Tales" : "Forum",
     ),
-    paper: tb("paper", isWindrose ? "Doubloons" : isDestiny ? "Glimmer" : isDnd ? "Gold" : "Paper"),
     downtown: tb("downtown", "Downtown"),
     locator: tb(
       "locator",
@@ -151,7 +150,6 @@ export default function LeftRail() {
     lobby: ti("lobby", isWindrose ? "⚓" : isDestiny ? "🛡" : isDnd ? "🍺" : "🏠"),
     home: ti("home", isWindrose ? "🏴‍☠️" : isDestiny ? "🛰" : isDnd ? "🔥" : "📡"),
     forum: ti("forum", isWindrose ? "📜" : isDestiny ? "📖" : isDnd ? "📜" : "💬"),
-    paper: ti("paper", isWindrose ? "🪙" : isDestiny ? "💠" : isDnd ? "🪙" : "💵"),
     downtown: ti("downtown", "🏙"),
     locator: ti("locator", isWindrose ? "🧭" : isDestiny ? "👁" : isDnd ? "🗺" : "🎯"),
     ops: ti("ops", isWindrose ? "🗝" : isDestiny ? "⚔" : isDnd ? "🎲" : "⚙"),
@@ -160,24 +158,6 @@ export default function LeftRail() {
   const profileUserId = (me?.id ?? me?.userId ?? me?.name ?? me?.username ?? "me").toString();
 
   const [q, setQ] = useState("");
-  const [paperBal, setPaperBal] = useState<number | null>(null);
-  useEffect(() => {
-    const tok = typeof localStorage !== "undefined" ? localStorage.getItem("weered_token") : null;
-    fetch("https://api.weered.ca/paper/wallet", { headers: { Authorization: `Bearer ${tok}` } })
-      .then((r) => r.json())
-      .then((j) => {
-        if (typeof j.balance === "number") setPaperBal(j.balance);
-      })
-      .catch(() => {});
-    return poll(() => {
-      fetch("https://api.weered.ca/paper/wallet", { headers: { Authorization: `Bearer ${tok}` } })
-        .then((r) => r.json())
-        .then((j) => {
-          if (typeof j.balance === "number") setPaperBal(j.balance);
-        })
-        .catch(() => {});
-    }, 30000);
-  }, []);
 
   const sub = useMemo(() => {
     const m = pathname.match(/^\/r\/([^/?#]+)/i);
@@ -813,14 +793,6 @@ export default function LeftRail() {
                   key: "forum",
                 },
                 {
-                  href: "/store",
-                  label: navLabels.paper,
-                  icon: navIcons.paper,
-                  active: pathname.startsWith("/store"),
-                  onClick: undefined as any,
-                  key: "paper",
-                },
-                {
                   href: "/map",
                   label: navLabels.locator,
                   icon: navIcons.locator,
@@ -857,13 +829,6 @@ export default function LeftRail() {
           >
             <span className="text-[15px] opacity-70">{item.icon}</span>
             <span className="flex-1 font-semibold text-[13px]">{item.label}</span>
-            {item.key === "paper" && paperBal !== null && (
-              <span
-                style={{ fontSize: 11, fontWeight: 800, color: "#D4A017", fontFamily: "monospace" }}
-              >
-                {paperBal.toLocaleString()}
-              </span>
-            )}
             {item.active && (
               <span className="h-2 w-2 rounded-full bg-violet-400/90 shadow-[0_0_6px_rgba(124,58,237,.4)]" />
             )}

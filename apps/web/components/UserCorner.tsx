@@ -2,6 +2,7 @@
 
 import { lookBgProps, mayPickLookBg } from "@/lib/lookBg";
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { useWeered } from "./WeeredProvider";
 import { useOverlay } from "./overlays/OverlayProvider";
 import RoleIcon, { TierIcon } from "./RoleIcon";
@@ -11,6 +12,7 @@ import NotorietyBar from "./NotorietyBar";
 import { onActivate } from "@/lib/a11y";
 import { useLobbyLang, pick, type LobbyLang } from "../lib/lobbyLang";
 import { TIMBOS_ROLES, TIMBOS_LOBBY_ID } from "../lib/timbosCopy";
+import { usePaperBalance } from "../lib/paperBalance";
 
 function useFitText(ref: any, text: string, sizes: number[]): number {
   const [size, setSize] = useState(sizes[0]);
@@ -119,6 +121,18 @@ export default function UserCorner() {
               ? "Anonyme"
               : "Burner"
             : "Burner";
+
+  // Paper, off the card (James 2026-11-07: "Remove paper. Have that as a
+  // button off the profile"), in a themed lobby's own money.
+  const paper = usePaperBalance();
+  const [paperName, paperIcon] =
+    lobbyTheme === "windrose"
+      ? ["Doubloons", "🪙"]
+      : lobbyTheme === "destiny2"
+        ? ["Glimmer", "💠"]
+        : lobbyTheme === "dnd"
+          ? ["Gold", "🪙"]
+          : ["Paper", "💵"];
 
   const API_BASE = (process.env.NEXT_PUBLIC_API_BASE as string) || "http://127.0.0.1:4000";
   const [lobbyLogo, setLobbyLogo] = React.useState<string | null>(null);
@@ -537,6 +551,19 @@ export default function UserCorner() {
           />
         </div>
       ) : null}
+      {paper !== null && (
+        <Link
+          href="/store"
+          className="weered-uc-paper"
+          title={`${paperName}: ${paper.toLocaleString()}. Open the store`}
+          aria-label={`${paperName}: ${paper.toLocaleString()}. Open the store`}
+          // Inline: the minimal chrome makes every child of the card relative.
+          style={{ position: "absolute", top: 6, right: lobbyLogo ? 40 : 8, zIndex: 3 }}
+        >
+          <span aria-hidden>{paperIcon}</span>
+          {paper.toLocaleString()}
+        </Link>
+      )}
 
       <div
         className="weered-uc-banner"
