@@ -1315,7 +1315,7 @@ function DiscoverLobbiesPanel({ currentLobbyId }: { currentLobbyId: string }) {
   return (
     <div className="weered-rr-section" style={{ marginBottom: 16 }}>
       <div style={{ fontSize: 11, fontWeight: 700, opacity: 0.5, letterSpacing: ".7px", textTransform: "uppercase", marginBottom: 8 }}>
-        Discover · hot lobbies
+        Hot spots
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         {lobbies.map(l => {

@@ -559,7 +559,7 @@ export default function SetupPreview(p: Props) {
     ),
     discover: (
       <div key="discover" style={card({ paddingBottom: 6 })}>
-        {title("Discover")}
+        {title("Hot spots")}
         {["EVE Online", "Destiny 2"].map((n) => (
           <div
             key={n}

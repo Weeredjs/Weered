@@ -1119,11 +1119,11 @@ export default function HomePage() {
                       onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(124,58,237,.6)"; (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)"; }}
                       onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(124,58,237,.3)"; (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; }}
                     >
-                      <div style={{ fontSize: 28, marginBottom: 4, opacity: 0.85 }}>🧭</div>
+                      <div style={{ fontSize: 28, marginBottom: 4, opacity: 0.85 }}>🏙</div>
                       <div style={{ fontFamily: "var(--font-barlow), sans-serif", fontWeight: 800, fontSize: 15, letterSpacing: "1px", textTransform: "uppercase", color: "rgba(243,244,246,.95)" }}>
-                        Browse all {plural(lobbyTotal || lobbies.length, "lobby", "lobbies")}
+                        Downtown
                       </div>
-                      <div style={{ fontSize: 10, color: "rgba(148,163,184,.55)" }}>Search · discover · find your community</div>
+                      <div style={{ fontSize: 10, color: "rgba(148,163,184,.55)" }}>All {plural(lobbyTotal || lobbies.length, "lobby", "lobbies")}, the busy ones first</div>
                     </div>
 
                   </div>

@@ -476,7 +476,7 @@ function Yours({ actions }: { actions: GuideActions }) {
             ],
             [
               "Friends where you want them.",
-              "Friends, Crew, Rooms, Who's here and Discover sit on either side.",
+              "Friends, Crew, Rooms, Who's here and Hot spots sit on either side.",
             ],
             ["Switch sections off.", "Anything you don't use goes, and comes back from the list."],
             ["Add blocks.", `Up to ${SHELL_MAX_BLOCKS} across your sidebars and Home.`],

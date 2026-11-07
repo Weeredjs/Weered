@@ -521,7 +521,7 @@ export default function LobbyBrowser() {
             flexShrink: 0,
           }}
         >
-          Discover
+          Downtown
         </div>
 
         <div style={{ flex: 1, maxWidth: 480 }}>

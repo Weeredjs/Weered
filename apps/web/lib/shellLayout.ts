@@ -146,7 +146,8 @@ export const CORE_META: Record<CoreId, CoreMeta> = {
   },
   crew: { name: "Crew", blurb: "Your crew, online first.", icon: "🛡", regions: ["left", "right"] },
   discover: {
-    name: "Discover",
+    // Not Discord's word (James 2026-11-07); the hot spots of Downtown.
+    name: "Hot spots",
     blurb: "Hot lobbies. Shows until you have friends or a crew.",
     icon: "🔭",
     regions: ["left", "right"],
@@ -202,9 +203,11 @@ export const CORE_META: Record<CoreId, CoreMeta> = {
     homeSpan: 3,
   },
   browse: {
-    name: "Browse",
+    // James 2026-11-07: "Discord uses 'Discover' so we should choose something
+    // else. More clever than browse." Home is yours; Downtown is everyone's.
+    name: "Downtown",
     blurb: "Every lobby on Weered. The live ones first.",
-    icon: "🌐",
+    icon: "🏙",
     regions: ["home", "left", "right"],
     homeSpan: 3,
   },

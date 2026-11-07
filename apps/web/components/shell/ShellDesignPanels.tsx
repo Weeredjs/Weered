@@ -331,7 +331,7 @@ export function LayoutsTab({
       </div>
       <div style={label}>Where things live</div>
       <div style={{ fontSize: 11.5, opacity: 0.62, lineHeight: 1.5 }}>
-        Friends, Crew, Rooms, Who&apos;s here and Discover go in either sidebar. Your card,
+        Friends, Crew, Rooms, Who&apos;s here and Hot spots go in either sidebar. Your card,
         navigation, Presence, Favorites and Recent are built into the left one. Blocks go anywhere,
         Home included. On screens under 1400px wide the left sidebar folds into the icon strip; it
         opens with one click.

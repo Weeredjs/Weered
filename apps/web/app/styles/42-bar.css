@@ -132,6 +132,15 @@
   filter: none;
   transition: all 0.15s;
 }
+.weered-ubar .weered-ubar-downtown {
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.06);
+  color: #f4f2ff;
+}
+.weered-ubar .weered-ubar-downtown:hover {
+  border-color: rgba(255, 255, 255, 0.34);
+  background: rgba(255, 255, 255, 0.12);
+}
 .weered-ubar .weered-ubar-desktop {
   padding: 7px 12px;
   border: 1px solid rgba(245, 183, 0, 0.25);
@@ -166,6 +175,14 @@ html[data-weered-shell-design="1"] .weered-ubar-actions {
     flex: 1 1 100%;
   }
   .weered-ubar .home-topbar-secondary {
+    display: none;
+  }
+  /* Downtown stays, as its skyline. */
+  .weered-ubar .weered-ubar-downtown {
+    display: inline-flex;
+    padding: 8px 10px;
+  }
+  .weered-ubar-downtown .weered-ubar-label {
     display: none;
   }
 }

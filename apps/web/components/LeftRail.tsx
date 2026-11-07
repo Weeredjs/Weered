@@ -131,6 +131,7 @@ export default function LeftRail() {
       isWindrose ? "Ship's Log" : isDestiny ? "Vanguard Report" : isDnd ? "Tales" : "Forum",
     ),
     paper: tb("paper", isWindrose ? "Doubloons" : isDestiny ? "Glimmer" : isDnd ? "Gold" : "Paper"),
+    downtown: tb("downtown", "Downtown"),
     locator: tb(
       "locator",
       isWindrose ? "Sextant" : isDestiny ? "Ghost" : isDnd ? "Compass" : "Locator",
@@ -151,6 +152,7 @@ export default function LeftRail() {
     home: ti("home", isWindrose ? "🏴‍☠️" : isDestiny ? "🛰" : isDnd ? "🔥" : "📡"),
     forum: ti("forum", isWindrose ? "📜" : isDestiny ? "📖" : isDnd ? "📜" : "💬"),
     paper: ti("paper", isWindrose ? "🪙" : isDestiny ? "💠" : isDnd ? "🪙" : "💵"),
+    downtown: ti("downtown", "🏙"),
     locator: ti("locator", isWindrose ? "🧭" : isDestiny ? "👁" : isDnd ? "🗺" : "🎯"),
     ops: ti("ops", isWindrose ? "🗝" : isDestiny ? "⚔" : isDnd ? "🎲" : "⚙"),
   };
@@ -789,6 +791,18 @@ export default function LeftRail() {
                     router.push("/home");
                   },
                   key: "home",
+                },
+                {
+                  // Every lobby (components/LobbyBrowser.tsx), over the page.
+                  href: "/home",
+                  label: navLabels.downtown,
+                  icon: navIcons.downtown,
+                  active: false,
+                  onClick: (e: any) => {
+                    e.preventDefault();
+                    window.dispatchEvent(new CustomEvent("weered:lobby:browse"));
+                  },
+                  key: "downtown",
                 },
                 {
                   href: "/forum",

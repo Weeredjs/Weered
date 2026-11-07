@@ -4,8 +4,8 @@
 // (James 2026-11-06: "Combine them. Just have that universal bar the same
 // everywhere... Just search that taps into everything", then "Other way
 // around. I meant the home bar. But with the search. Keep the Hi <Username>").
-// The time of day over "Hey, you", one search for everything, and the two
-// buttons Home's header always had. ShellGate puts it over every page in the
+// The time of day over "Hey, you", one search for everything, Downtown (every
+// lobby; James 2026-11-07), and the two buttons Home's header always had. ShellGate puts it over every page in the
 // frame. A lobby's own Invite and Report sit in the lobby, by Design and Admin.
 // Styled in styles/42-bar.css.
 
@@ -65,6 +65,29 @@ export default function UniversalBar() {
       </div>
 
       <div className="home-topbar-actions weered-ubar-actions">
+        <button
+          type="button"
+          className="home-topbar-secondary weered-ubar-downtown"
+          data-guest-hide
+          aria-label="Downtown"
+          title="Every lobby on Weered"
+          onClick={() => window.dispatchEvent(new CustomEvent("weered:lobby:browse"))}
+        >
+          <svg
+            width="13"
+            height="13"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden
+          >
+            <path d="M3 21h18M5 21V10h4v11M9 21V4h6v17M15 21v-8h4v8M12 8v.01M12 12v.01M12 16v.01" />
+          </svg>
+          <span className="weered-ubar-label">Downtown</span>
+        </button>
         <Link href="/desktop" className="home-topbar-secondary weered-ubar-desktop" data-guest-hide>
           <svg
             width="12"

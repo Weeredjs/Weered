@@ -78,9 +78,9 @@ type Go = {
 export const GO_TO: Go[] = [
   {
     id: "browse",
-    label: "Browse every lobby",
-    sub: "The busy ones first",
-    words: "browse all lobbies explore discover find",
+    label: "Downtown",
+    sub: "Every lobby, the busy ones first",
+    words: "downtown browse all lobbies explore discover find city",
     icon: "▦",
   },
   {

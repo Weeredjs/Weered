@@ -1741,6 +1741,10 @@ export default function DockShell(props: { forceMode?: "rail" | "floating" } = {
       >
         <a
           href="/lobby"
+          onClick={(e) => {
+            e.preventDefault();
+            window.dispatchEvent(new CustomEvent("weered:lobby:browse"));
+          }}
           style={{
             color: "inherit",
             textDecoration: "none",
@@ -1754,7 +1758,7 @@ export default function DockShell(props: { forceMode?: "rail" | "floating" } = {
             (e.currentTarget as HTMLElement).style.opacity = ".75";
           }}
         >
-          Browse lobbies
+          Downtown
         </a>
         <span style={{ opacity: 0.3 }}>·</span>
         <a
