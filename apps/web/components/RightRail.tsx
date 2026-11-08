@@ -9,6 +9,7 @@ import { moduleGlyph, roomMonogram } from "../lib/roomGlyph";
 import { useOverlay } from "./overlays/OverlayProvider";
 import { avatarFill } from "../lib/avatarColor";
 import EmptyState from "./EmptyState";
+import CrewBadge from "./crew/CrewBadge";
 import { weeredConfirm } from "../lib/confirm";
 import { weeredToast } from "../lib/toast";
 import PresenceRow from "./PresenceRow";
@@ -1189,7 +1190,7 @@ function CrewEmptyDiscovery({ lobbyId }: { lobbyId: string }) {
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 12, fontWeight: 700, color: "rgba(243,244,246,.95)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  {c.name}{c.tag && <span style={{ marginLeft: 5, fontSize: 9, opacity: 0.5, fontFamily: "monospace" }}>[{c.tag}]</span>}
+                  {c.name}{c.tag && <CrewBadge crew={c} size={11} style={{ marginLeft: 6 }} />}
                 </div>
                 <div style={{ fontSize: 10, opacity: 0.55, marginTop: 1 }}>
                   {c.memberCount || 0} member{(c.memberCount || 0) === 1 ? "" : "s"}
@@ -1222,7 +1223,7 @@ function CrewPanel({ lobbyId }: { lobbyId: string }) {
   if (!crews.length) return <CrewEmptyDiscovery lobbyId={lobbyId} />;
 
   const allMembers = crews.flatMap((c: any) =>
-    (c.members || []).map((m: any) => ({ ...m, crewName: c.name, crewTag: c.tag }))
+    (c.members || []).map((m: any) => ({ ...m, crew: c }))
   );
   const online = allMembers.filter((m: any) => m.online);
 
@@ -1254,8 +1255,8 @@ function CrewPanel({ lobbyId }: { lobbyId: string }) {
                   roleIcon={m.role === "LEADER" ? "★" : undefined}
                   roleTitle={m.role === "LEADER" ? "Crew leader" : undefined}
                   secondaryText={
-                    <span style={{ display: "inline-flex", gap: 5, minWidth: 0 }}>
-                      {m.crewTag && <span style={{ fontWeight: 700, letterSpacing: ".06em", opacity: 0.55, flexShrink: 0 }}>[{m.crewTag}]</span>}
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 5, minWidth: 0 }}>
+                      {m.crew.tag && <CrewBadge crew={m.crew} size={11} />}
                       <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{where}</span>
                     </span>
                   }

@@ -5,6 +5,7 @@ import React, { useEffect, useState, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { avatarBg, avatarFill } from "../lib/avatarColor";
 import RoleIcon, { TierIcon, getRoleDisplayName, getRoleColor } from "./RoleIcon";
+import CrewBadge from "./crew/CrewBadge";
 import { SteamIcon, TwitchIcon, XboxIcon } from "./PresenceRow";
 import { onActivate } from "@/lib/a11y";
 import { placeAddress, placeOf, type Place } from "../lib/place";
@@ -39,6 +40,7 @@ type Profile = {
     tag: string;
     logoUrl: string | null;
     accentColor: string | null;
+    tagShape?: string | null;
     role: string;
   } | null;
 };
@@ -648,13 +650,17 @@ export default function UserHoverCard({
                   {pc.tag && (
                     <div
                       style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 5,
+                        marginTop: 2,
                         fontSize: 9,
-                        opacity: 0.55,
                         fontFamily: "ui-monospace, monospace",
                         letterSpacing: "0.5px",
                       }}
                     >
-                      [{pc.tag}] · {String(pc.role).toLowerCase()}
+                      <CrewBadge crew={pc} size={11} />
+                      <span style={{ opacity: 0.55 }}>· {String(pc.role).toLowerCase()}</span>
                     </div>
                   )}
                 </div>

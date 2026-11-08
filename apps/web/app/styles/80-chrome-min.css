@@ -1468,10 +1468,8 @@ html[data-weered-chrome="min"] .weered-usercorner a[href^="/crew/"] {
   display: none !important;
 }
 
-/* Crew line ([8MTR] The 8 Meter) — sharp tag badge, hover lift */
-html[data-weered-chrome="min"] .weered-uc-crew-line span:first-child {
-  border-radius: 0 !important;
-}
+/* Crew line ([8MTR] The 8 Meter) — hover lift. The badge keeps the corners
+   its crew picked (crew/CrewBadge.tsx), so nothing here squares it off. */
 html[data-weered-chrome="min"] .weered-uc-crew-line:hover span:last-child {
   color: rgba(255, 255, 255, 0.92) !important;
 }

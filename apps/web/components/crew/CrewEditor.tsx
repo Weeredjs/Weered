@@ -6,6 +6,7 @@
 // the only editor was buried in the Windrose crew panel (WrCrew.tsx).
 import React, { useState } from "react";
 import DescribeBox from "../build/DescribeBox";
+import CrewBadge from "./CrewBadge";
 import { describeJob } from "../../lib/aiBuild";
 import { API, authHeaders } from "../../lib/apiClient";
 
@@ -18,8 +19,6 @@ type Look = {
   recruiting: boolean;
   recruitingNote: string;
 };
-
-const RADIUS = { rounded: 6, square: 0, pill: 999 } as const;
 
 const field: React.CSSProperties = {
   width: "100%",
@@ -204,19 +203,7 @@ export default function CrewEditor({
       />
 
       <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "4px 0 6px" }}>
-        <span
-          style={{
-            padding: "3px 9px",
-            borderRadius: RADIUS[look.tagShape],
-            background: look.accentColor,
-            color: "#fff",
-            fontSize: 12,
-            fontWeight: 900,
-            letterSpacing: ".08em",
-          }}
-        >
-          [{look.tag || "TAG"}]
-        </span>
+        <CrewBadge crew={{ ...look, tag: look.tag || "TAG" }} size={20} />
         <span style={{ fontSize: 15, fontWeight: 800 }}>{look.name || "Your crew"}</span>
       </div>
 

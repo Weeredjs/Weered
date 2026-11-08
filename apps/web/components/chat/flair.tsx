@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import FlairBadge from "../FlairBadge";
+import CrewBadge, { type CrewLook } from "../crew/CrewBadge";
 import { useEquippedFlair } from "../../lib/useEquippedFlair";
 import { API } from "./chatShared";
 
@@ -11,11 +12,9 @@ export function ChatFlair({ userId, size = "sm" }: { userId: string; size?: "sm"
   return <FlairBadge flair={f} size={size} />;
 }
 
-export type CrewFlairData = {
-  tag: string;
-  logoUrl: string | null;
-  accentColor: string | null;
-} | null;
+// The crew badge beside a name in chat and the member list: the crew's tag on its
+// plate (crew/CrewBadge.tsx), never its logo squeezed into a square.
+export type CrewFlairData = CrewLook | null;
 const crewFlairCache = new Map<string, CrewFlairData>();
 const crewFlairInflight = new Map<string, Promise<void>>();
 
@@ -43,8 +42,9 @@ export function CrewFlair({ userId, size = 13 }: { userId: string; size?: number
           pc
             ? {
                 tag: String(pc.tag || ""),
-                logoUrl: pc.logoUrl || null,
+                name: String(pc.name || ""),
                 accentColor: pc.accentColor || null,
+                tagShape: pc.tagShape || null,
               }
             : null,
         );
@@ -59,47 +59,5 @@ export function CrewFlair({ userId, size = 13 }: { userId: string; size?: number
     crewFlairInflight.set(userId, p);
   }, [userId, flair]);
   if (!flair) return null;
-  const accent =
-    flair.accentColor && /^#[0-9a-f]{6}$/i.test(flair.accentColor)
-      ? flair.accentColor
-      : "rgba(201,160,102,0.7)";
-  if (flair.logoUrl) {
-    return (
-      <span
-        title={`Crew: [${flair.tag || ""}]`}
-        style={{
-          width: size,
-          height: size,
-          borderRadius: 3,
-          display: "inline-block",
-          backgroundImage: `url(${flair.logoUrl})`,
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-          border: `1px solid ${accent}`,
-          flexShrink: 0,
-        }}
-      />
-    );
-  }
-  if (flair.tag) {
-    return (
-      <span
-        title={`Crew: [${flair.tag}]`}
-        style={{
-          fontSize: Math.max(8, size - 4),
-          fontWeight: 800,
-          letterSpacing: "1px",
-          padding: "0 4px",
-          borderRadius: 2,
-          color: accent,
-          border: `1px solid ${accent}`,
-          fontFamily: "ui-monospace, monospace",
-          lineHeight: `${size}px`,
-        }}
-      >
-        {flair.tag}
-      </span>
-    );
-  }
-  return null;
+  return <CrewBadge crew={flair} size={size} />;
 }

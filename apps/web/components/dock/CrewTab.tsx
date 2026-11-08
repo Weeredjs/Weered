@@ -2,6 +2,7 @@
 import React from "react";
 import { avatarBg } from "../../lib/avatarColor";
 import CrewChatPanel from "../CrewChatPanel";
+import CrewBadge from "../crew/CrewBadge";
 import EmptyState from "../EmptyState";
 import { weeredConfirm } from "../../lib/confirm";
 import { onActivate } from "@/lib/a11y";
@@ -407,22 +408,7 @@ export function CrewTab({
                       >
                         {crew.name}
                       </span>
-                      {crew.tag && (
-                        <span
-                          style={{
-                            fontSize: 9,
-                            padding: "2px 5px",
-                            borderRadius: 5,
-                            fontFamily: "monospace",
-                            fontWeight: 700,
-                            background: "rgba(212,160,23,.1)",
-                            border: "1px solid rgba(212,160,23,.25)",
-                            color: "rgba(212,160,23,.7)",
-                          }}
-                        >
-                          [{crew.tag}]
-                        </span>
-                      )}
+                      {crew.tag && <CrewBadge crew={crew} size={13} />}
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 10 }}>
                       <span style={{ color: "var(--weered-muted)" }}>

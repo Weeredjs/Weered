@@ -2,6 +2,7 @@
 import { lookBgProps } from "@/lib/lookBg";
 import React from "react";
 import EmptyState from "../EmptyState";
+import CrewBadge from "../crew/CrewBadge";
 import { Avatar } from "./shellHelpers";
 
 // Friends tab (+ FriendRow + labels + lastSeenAgo) extracted from DockShell.
@@ -359,10 +360,6 @@ export function FriendRow({
   const tier = String(f.tier || "").toUpperCase();
   const roleChip = FRIEND_ROLE_LABEL[role];
   const tierChip = FRIEND_TIER_LABEL[tier];
-  const crewTag = f.primaryCrew?.tag ? `[${f.primaryCrew.tag}]` : "";
-  const crewAccent = f.primaryCrew?.accentColor || "rgba(124,58,237,.85)";
-  const tagShape = String(f.primaryCrew?.tagShape || "rounded");
-  const tagRadius = tagShape === "square" ? 0 : tagShape === "pill" ? 999 : 4;
   const validPillBg = f.pillBgColor && /^#[0-9a-f]{6}$/i.test(f.pillBgColor) ? f.pillBgColor : null;
 
   const [pillIntensity, setPillIntensity] = React.useState<number>(60);
@@ -446,25 +443,7 @@ export function FriendRow({
           >
             {f.name}
           </span>
-          {crewTag && (
-            <span
-              title={f.primaryCrew?.name || ""}
-              style={{
-                fontSize: 9,
-                fontWeight: 900,
-                padding: "1px 5px",
-                borderRadius: tagRadius,
-                color: crewAccent,
-                background: `${crewAccent}1f`,
-                border: `1px solid ${crewAccent}40`,
-                letterSpacing: ".05em",
-                flexShrink: 0,
-                fontFamily: "ui-monospace, 'JetBrains Mono', monospace",
-              }}
-            >
-              {crewTag}
-            </span>
-          )}
+          {f.primaryCrew && <CrewBadge crew={f.primaryCrew} size={12} />}
           {roleChip && (
             <span
               style={{

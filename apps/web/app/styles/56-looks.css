@@ -389,3 +389,16 @@ html[data-weered-chrome="min"]:is(
 html:not(#look-a):not(#look-b) .weered-look-bg[style*="--look-bg"] {
   background: var(--look-bg) !important;
 }
+
+/* A crew's badge keeps its crew's look the same way (components/crew/
+   CrewBadge.tsx, James 2026-11-08: "a small decorative rectangle"). The left
+   rail's minimal chrome strips every fill, border and corner inside it, and
+   Nebula's corner choice rounds or squares everything; the badge's inline style
+   passes its values here. */
+html:not(#look-a):not(#look-b) .weered-crew-badge {
+  background: var(--cb-bg) !important;
+  border: 1px solid var(--cb-edge) !important;
+  border-radius: var(--cb-radius) !important;
+  box-shadow: var(--cb-shadow) !important;
+  color: var(--cb-ink) !important;
+}

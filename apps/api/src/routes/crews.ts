@@ -553,6 +553,9 @@ export default async function crewsRoutes(app: FastifyInstance, opts: Opts) {
         logoUrl: crew.logoUrl,
         bannerUrl: crew.bannerUrl,
         accentColor: crew.accentColor,
+        // The badge's corners; the crew editor starts from it, so a crew page
+        // without it reset every square or pill crew to rounded on save.
+        tagShape: crew.tagShape || "rounded",
         homePort: crew.homePort,
         recruiting: crew.recruiting,
         recruitingNote: crew.recruitingNote,
@@ -680,6 +683,7 @@ export default async function crewsRoutes(app: FastifyInstance, opts: Opts) {
           logoUrl: c.logoUrl,
           bannerUrl: c.bannerUrl,
           accentColor: c.accentColor,
+          tagShape: c.tagShape || "rounded",
           homePort: c.homePort,
           recruiting: c.recruiting,
           recruitingNote: c.recruitingNote,
@@ -736,6 +740,7 @@ export default async function crewsRoutes(app: FastifyInstance, opts: Opts) {
         tag: c.tag,
         logoUrl: c.logoUrl,
         accentColor: c.accentColor,
+        tagShape: c.tagShape || "rounded",
         recruiting: c.recruiting,
         memberCount: (c.members || []).length,
         updatedAt: c.updatedAt,

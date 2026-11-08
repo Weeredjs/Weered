@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from "react";
 import EmptyState from "./EmptyState";
 import LoadingState from "./LoadingState";
+import CrewBadge from "./crew/CrewBadge";
 import {
   BrassDivider,
   PAL,
@@ -46,6 +47,7 @@ export type PublishedCrew = {
   logoUrl?: string | null;
   bannerUrl?: string | null;
   accentColor?: string | null;
+  tagShape?: string | null;
   homePort?: string | null;
   recruiting: boolean;
   recruitingNote: string;
@@ -574,21 +576,7 @@ export function CrewProfileCard({ crew, isMember }: { crew: PublishedCrew; isMem
               >
                 {crew.name}
               </span>
-              {crew.tag && (
-                <span
-                  style={{
-                    fontSize: 10,
-                    fontFamily: WR_FONT_MONO,
-                    color: accent,
-                    letterSpacing: "1.5px",
-                    padding: "2px 6px",
-                    border: `1px solid ${accent}45`,
-                    background: `${accent}10`,
-                  }}
-                >
-                  [{crew.tag}]
-                </span>
-              )}
+              {crew.tag && <CrewBadge crew={crew} size={16} />}
             </div>
             <div
               style={{
@@ -935,6 +923,7 @@ export function CrewLeaderColumn({
     tag: string;
     logoUrl?: string | null;
     accentColor?: string | null;
+    tagShape?: string | null;
     value: number;
     sub: string;
   }[];
@@ -1037,18 +1026,7 @@ export function CrewLeaderColumn({
                     }}
                   >
                     {r.name}
-                    {r.tag ? (
-                      <span
-                        style={{
-                          fontSize: 9,
-                          color: accent,
-                          marginLeft: 6,
-                          fontFamily: WR_FONT_MONO,
-                        }}
-                      >
-                        [{r.tag}]
-                      </span>
-                    ) : null}
+                    {r.tag ? <CrewBadge crew={r} size={12} style={{ marginLeft: 6 }} /> : null}
                   </div>
                   <div style={{ fontSize: 9, color: PAL.parchDim, fontStyle: "italic" }}>
                     {r.sub}

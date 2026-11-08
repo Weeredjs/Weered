@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useWeered } from "./WeeredProvider";
 import { useOverlay } from "./overlays/OverlayProvider";
 import RoleIcon, { TierIcon } from "./RoleIcon";
+import CrewBadge from "./crew/CrewBadge";
 import { MY_COLOR_KEY, avatarFill } from "../lib/avatarColor";
 import { cornerFrameVars, nameFx } from "../lib/looks";
 import NotorietyBar from "./NotorietyBar";
@@ -253,6 +254,7 @@ export default function UserCorner() {
     tag: string;
     logoUrl: string | null;
     accentColor: string | null;
+    tagShape: string | null;
   } | null>(null);
   const [_notorietyRank, setNotorietyRank] = useState<string>("");
   const [notorietyScore, setNotorietyScore] = useState<number | null>(null);
@@ -307,6 +309,7 @@ export default function UserCorner() {
             tag: j.primaryCrew.tag || "",
             logoUrl: j.primaryCrew.logoUrl || null,
             accentColor: j.primaryCrew.accentColor || null,
+            tagShape: j.primaryCrew.tagShape || null,
           });
         } else {
           setPrimaryCrew(null);
@@ -917,20 +920,7 @@ export default function UserCorner() {
                 padding: 0,
               }}
             >
-              {primaryCrew.tag && (
-                <span
-                  style={{
-                    fontFamily: "ui-monospace, 'JetBrains Mono', monospace",
-                    fontSize: 10,
-                    fontWeight: 900,
-                    letterSpacing: "1px",
-                    color: cardAccent,
-                    flexShrink: 0,
-                  }}
-                >
-                  [{primaryCrew.tag}]
-                </span>
-              )}
+              {primaryCrew.tag && <CrewBadge crew={primaryCrew} size={13} />}
               <span
                 style={{
                   fontSize: 12,

@@ -1,5 +1,6 @@
 "use client";
 
+import CrewBadge from "../../../components/crew/CrewBadge";
 import CrewEditor from "../../../components/crew/CrewEditor";
 import React, { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
@@ -390,21 +391,7 @@ export default function CrewView({ crewId, initial }: { crewId: string; initial:
                     >
                       {c.name}
                     </h1>
-                    {c.tag && (
-                      <span
-                        style={{
-                          fontSize: 12,
-                          fontFamily: WR_MONO,
-                          color: "#c4b5fd",
-                          letterSpacing: "1.5px",
-                          padding: "3px 10px",
-                          border: `1px solid rgba(124,58,237,0.5)`,
-                          background: `rgba(124,58,237,0.12)`,
-                        }}
-                      >
-                        [{c.tag}]
-                      </span>
-                    )}
+                    {c.tag && <CrewBadge crew={c} size={20} />}
                   </div>
                   <div
                     style={{

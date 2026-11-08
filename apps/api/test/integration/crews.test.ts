@@ -156,4 +156,41 @@ describe("crews - create / invite / join-request", () => {
     expect(already.statusCode).toBe(409);
     await app.close();
   });
+
+  // The crew badge wears the corners its leader picked (web crew/CrewBadge.tsx).
+  // The crew page's editor starts from GET /crews/:id, so without the shape
+  // there it reset every square or pill crew to rounded on save.
+  it("every crew read carries the badge's shape", async () => {
+    const app = await makeApp();
+    const owner = await newUser("shape");
+    const auth = { authorization: `Bearer ${testToken(owner)}` };
+    const lobbyId = "itest_shape_" + Date.now();
+    const created = await app.inject({
+      method: "POST",
+      url: "/crews",
+      headers: auth,
+      payload: { name: "Shape Crew" },
+    });
+    const crewId = created.json().crew.id;
+    crews.push(crewId);
+    const patched = await app.inject({
+      method: "PATCH",
+      url: `/crews/${crewId}`,
+      headers: auth,
+      payload: { tagShape: "square", accentColor: "#ff4f9a", publicInLobbies: [lobbyId] },
+    });
+    expect(patched.statusCode).toBe(200);
+
+    const one = (await app.inject({ method: "GET", url: `/crews/${crewId}` })).json().crew;
+    expect(one.tagShape).toBe("square");
+    const mine = (await app.inject({ method: "GET", url: "/crews/mine", headers: auth })).json();
+    expect(mine.crews.find((c: any) => c.id === crewId).tagShape).toBe("square");
+    const here = (await app.inject({ method: "GET", url: `/lobbies/${lobbyId}/crews` })).json();
+    expect(here.crews.find((c: any) => c.id === crewId).tagShape).toBe("square");
+    const board = (
+      await app.inject({ method: "GET", url: `/lobbies/${lobbyId}/crews/leaderboard` })
+    ).json();
+    expect(board.largest.find((c: any) => c.id === crewId).tagShape).toBe("square");
+    await app.close();
+  });
 });

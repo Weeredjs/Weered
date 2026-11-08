@@ -5,6 +5,7 @@ import { useOverlay } from "./overlays/OverlayProvider";
 import { useWeered, useRoomUsers } from "./WeeredProvider";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { weeredConfirm } from "../lib/confirm";
+import CrewBadge from "./crew/CrewBadge";
 import EmptyState from "./EmptyState";
 import { onActivate } from "@/lib/a11y";
 
@@ -191,7 +192,11 @@ function CrewPanel() {
         const online = (crew.members || []).filter((m: any) => m.online);
         return (
           <div key={crew.id} style={{ marginBottom: 8 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, opacity: 0.6, marginBottom: 4 }}>{crew.name} {crew.tag ? `[${crew.tag}]` : ""} · {online.length} online</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 700, marginBottom: 4 }}>
+              <span style={{ opacity: 0.6 }}>{crew.name}</span>
+              {crew.tag && <CrewBadge crew={crew} size={11} />}
+              <span style={{ opacity: 0.6 }}>· {online.length} online</span>
+            </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
               {(crew.members || []).map((m: any) => {
                 const userId = String(m.userId ?? m.id ?? "");

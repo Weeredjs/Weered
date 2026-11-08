@@ -8,6 +8,7 @@ import Link from "next/link";
 import { useWeered } from "../WeeredProvider";
 import { placeOf, type Place } from "../../lib/place";
 import { avatarFill } from "../../lib/avatarColor";
+import CrewBadge from "../crew/CrewBadge";
 import PlaceGate, { GATES } from "../PlaceGate";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "https://api.weered.ca";
@@ -26,7 +27,12 @@ type Profile = {
   steamId?: string | null;
   xboxGamertag?: string | null;
   gameAccounts?: { gameType: string; displayName: string; platform?: string | null }[];
-  primaryCrew?: { name: string; tag?: string; accentColor?: string | null } | null;
+  primaryCrew?: {
+    name: string;
+    tag?: string;
+    accentColor?: string | null;
+    tagShape?: string | null;
+  } | null;
   /** Set only when this viewer may join them (their join setting). */
   currentRoomId?: string | null;
   currentRoomIsLobby?: boolean;
@@ -178,8 +184,10 @@ export default function OwnerBlock({
             {p.notorietyRank && <Chip accent={accent}>{p.notorietyRank}</Chip>}
             {p.primaryCrew && (
               <Chip accent={p.primaryCrew.accentColor || accent}>
-                {p.primaryCrew.tag ? `[${p.primaryCrew.tag}] ` : ""}
-                {p.primaryCrew.name}
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                  {p.primaryCrew.tag && <CrewBadge crew={p.primaryCrew} size={13} />}
+                  {p.primaryCrew.name}
+                </span>
               </Chip>
             )}
             {/* A place is text only; where they're talking is a lobby room, one

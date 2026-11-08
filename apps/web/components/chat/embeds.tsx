@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { API } from "./chatShared";
+import CrewBadge from "../crew/CrewBadge";
 import { onActivate } from "@/lib/a11y";
 
 const WEERED_BOUNTY_RE = /(?:https?:\/\/[^\s/]+)?\/windrose\/bounty\/([^\s/?#]+)/i;
@@ -405,7 +406,7 @@ export function WeeredCrewEmbed({ id, href }: { id: string; href: string }) {
           >
             ⚑ Crew
           </div>
-          <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginTop: 1 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 7, marginTop: 1 }}>
             <span
               style={{
                 fontFamily: "'Pirata One', Georgia, serif",
@@ -416,18 +417,7 @@ export function WeeredCrewEmbed({ id, href }: { id: string; href: string }) {
             >
               {data.name}
             </span>
-            {data.tag && (
-              <span
-                style={{
-                  fontSize: 10,
-                  fontFamily: "ui-monospace, monospace",
-                  color: accent,
-                  letterSpacing: "1px",
-                }}
-              >
-                [{data.tag}]
-              </span>
-            )}
+            {data.tag && <CrewBadge crew={data} size={14} />}
           </div>
           <div
             style={{

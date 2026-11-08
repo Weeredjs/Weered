@@ -7,13 +7,21 @@
 import React, { useEffect, useState } from "react";
 import { crewPath } from "../../lib/rapSheet";
 import { onAccent, safeAccent } from "../../lib/brandSafe";
+import CrewBadge from "../crew/CrewBadge";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
 /** Midnight on the 19th, wherever the viewer is. */
 const LAUNCH = new Date(2026, 10, 19, 0, 0, 0).getTime();
 
-type CrewChip = { id: string; name: string; tag: string; recruiting?: boolean };
+type CrewChip = {
+  id: string;
+  name: string;
+  tag: string;
+  recruiting?: boolean;
+  accentColor?: string | null;
+  tagShape?: string | null;
+};
 
 function left(ms: number): string {
   const m = Math.max(0, Math.floor(ms / 60000));
@@ -136,6 +144,9 @@ export default function GtaLaunchStrip({ lobbyId, accent }: { lobbyId: string; a
               href={crewPath(c)}
               title={c.recruiting ? "Recruiting" : undefined}
               style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
                 padding: "3px 9px",
                 borderRadius: 999,
                 textDecoration: "none",
@@ -145,9 +156,7 @@ export default function GtaLaunchStrip({ lobbyId, accent }: { lobbyId: string; a
                 border: `1px solid ${c.recruiting ? `${a}66` : "rgba(255,255,255,.12)"}`,
               }}
             >
-              {c.tag ? (
-                <span style={{ color: a, fontFamily: "ui-monospace, monospace" }}>[{c.tag}] </span>
-              ) : null}
+              {c.tag ? <CrewBadge crew={c} size={13} /> : null}
               {c.name}
             </a>
           ))}

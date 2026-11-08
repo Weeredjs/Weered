@@ -3,6 +3,7 @@
 import { lookBgProps, mayPickLookBg } from "@/lib/lookBg";
 import { AVATAR_PALETTE, MY_COLOR_KEY, avatarBg, avatarFill } from "../../../lib/avatarColor";
 import BarProfileCard from "../../bar/BarProfileCard";
+import CrewBadge from "../../crew/CrewBadge";
 import React, { useEffect, useState, useCallback } from "react";
 import { useWeered } from "../../WeeredProvider";
 import { useOverlay } from "../OverlayProvider";
@@ -767,7 +768,7 @@ export default function ProfileSheet({ userId }: { userId: string }) {
         )}
         {(profile as any).primaryCrew?.name && (
           <a href={`/crew/${encodeURIComponent((profile as any).primaryCrew.id)}`} style={{ display: "inline-flex", alignItems: "center", gap: 7, textDecoration: "none", width: "fit-content" }}>
-            <span style={{ fontFamily: "ui-monospace, monospace", fontSize: 11, fontWeight: 900, letterSpacing: "1px", color: ((profile as any).primaryCrew.accentColor || "#a78bfa") }}>[{(profile as any).primaryCrew.tag}]</span>
+            {(profile as any).primaryCrew.tag && <CrewBadge crew={(profile as any).primaryCrew} size={14} />}
             <span style={{ fontSize: 13, fontStyle: "italic", color: "rgba(240,232,214,.78)", paddingRight: 3 }}>{(profile as any).primaryCrew.name}</span>
           </a>
         )}
