@@ -36,7 +36,7 @@ const S = {
     maxWidth: 960,
     margin: "0 auto",
     padding: "24px 16px",
-    minHeight: "100vh",
+    minHeight: "var(--weered-page-h, 100vh)",
   } as React.CSSProperties,
   header: {
     display: "flex",

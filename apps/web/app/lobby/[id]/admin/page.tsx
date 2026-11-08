@@ -86,7 +86,7 @@ export default function LobbyAdminPage() {
     return (
       <div
         style={{
-          minHeight: "100vh",
+          minHeight: "var(--weered-page-h, 100vh)",
           display: "grid",
           placeItems: "center",
           background: "var(--weered-bg, #080810)",
@@ -103,7 +103,7 @@ export default function LobbyAdminPage() {
     return (
       <div
         style={{
-          minHeight: "100vh",
+          minHeight: "var(--weered-page-h, 100vh)",
           display: "grid",
           placeItems: "center",
           background: "var(--weered-bg, #080810)",

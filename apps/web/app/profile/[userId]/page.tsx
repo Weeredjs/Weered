@@ -653,7 +653,7 @@ function NotorietyBar({ value, color }: { value: number; color: string }) {
 }
 
 const pageWrap: React.CSSProperties = {
-  minHeight: "100vh",
+  minHeight: "var(--weered-page-h, 100vh)",
   display: "flex",
   alignItems: "flex-start",
   justifyContent: "center",

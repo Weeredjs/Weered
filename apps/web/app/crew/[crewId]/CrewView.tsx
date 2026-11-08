@@ -267,7 +267,7 @@ export default function CrewView({ crewId, initial }: { crewId: string; initial:
   return (
     <div
       style={{
-        minHeight: "100vh",
+        minHeight: "var(--weered-page-h, 100vh)",
         padding: "24px 28px 60px",
         background: `
         radial-gradient(ellipse 100% 55% at 50% -10%, rgba(124,58,237,0.13) 0%, transparent 55%),

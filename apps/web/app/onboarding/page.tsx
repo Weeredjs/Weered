@@ -112,7 +112,7 @@ function OnboardingForm() {
     <>
       <style>{`
         .wo-root {
-          min-height: 100vh;
+          min-height: var(--weered-page-h, 100vh);
           background: #080810;
           display: flex;
           align-items: center;
@@ -355,7 +355,9 @@ function OnboardingForm() {
 
 export default function OnboardingPage() {
   return (
-    <Suspense fallback={<div style={{ minHeight: "100vh", background: "#080810" }} />}>
+    <Suspense
+      fallback={<div style={{ minHeight: "var(--weered-page-h, 100vh)", background: "#080810" }} />}
+    >
       <OnboardingForm />
     </Suspense>
   );

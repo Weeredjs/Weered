@@ -28,7 +28,7 @@ export default function BanCourtPage() {
   return (
     <div
       style={{
-        minHeight: "100vh",
+        minHeight: "var(--weered-page-h, 100vh)",
         background: "#0c0b0a",
         color: "#e8e8f0",
         fontFamily: "monospace",

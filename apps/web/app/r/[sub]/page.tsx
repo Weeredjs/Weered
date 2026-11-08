@@ -14,7 +14,7 @@ export default function SubredditRoute(props: { params: Promise<{ sub: string }>
   return (
     <div
       style={{
-        minHeight: "100vh",
+        minHeight: "var(--weered-page-h, 100vh)",
         display: "grid",
         placeItems: "center",
         background: "var(--weered-bg,#050816)",

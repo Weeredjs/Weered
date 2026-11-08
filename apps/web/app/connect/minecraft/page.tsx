@@ -61,7 +61,7 @@ function ConnectMinecraftInner() {
   return (
     <div
       style={{
-        minHeight: "100vh",
+        minHeight: "var(--weered-page-h, 100vh)",
         display: "grid",
         placeItems: "center",
         padding: 20,
@@ -252,7 +252,7 @@ export default function ConnectMinecraftPage() {
       fallback={
         <div
           style={{
-            minHeight: "100vh",
+            minHeight: "var(--weered-page-h, 100vh)",
             display: "grid",
             placeItems: "center",
             background: "#080810",

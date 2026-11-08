@@ -167,7 +167,7 @@ export default function SubscribeContent() {
     <>
       <style>{`
         .sub-root {
-          min-height: 100vh;
+          min-height: var(--weered-page-h, 100vh);
           background: #050810;
           display: flex;
           flex-direction: column;

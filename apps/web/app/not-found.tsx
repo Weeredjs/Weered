@@ -11,7 +11,7 @@ export default function NotFound() {
     <>
       <style>{`
         .nf-root {
-          min-height: 100vh;
+          min-height: var(--weered-page-h, 100vh);
           background: #080810;
           display: flex;
           align-items: center;

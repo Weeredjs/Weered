@@ -203,7 +203,7 @@ export default function InvitePage() {
   }
 
   const containerStyle: React.CSSProperties = {
-    minHeight: "100vh",
+    minHeight: "var(--weered-page-h, 100vh)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",

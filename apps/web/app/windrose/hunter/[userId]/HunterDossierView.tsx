@@ -130,7 +130,7 @@ export default function HunterDossierView({
   return (
     <div
       style={{
-        minHeight: "100vh",
+        minHeight: "var(--weered-page-h, 100vh)",
         padding: "40px 20px 60px",
         background: `
         radial-gradient(ellipse 120% 80% at 50% -10%, ${PAL.stormFoam}70 0%, transparent 55%),

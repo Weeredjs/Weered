@@ -582,6 +582,13 @@ export default function ShellGate({
   }, [openLeft]);
   const leftFolded = leftCollapsed && !designing;
 
+  // The page's box scrolls (42-bar.css) and stays as pages change in it, so
+  // each new page starts at its top.
+  const bodyRef = React.useRef<HTMLDivElement | null>(null);
+  useLayoutEffect(() => {
+    if (bodyRef.current) bodyRef.current.scrollTop = 0;
+  }, [pathname]);
+
   if (bare || guest) {
     const isOverlay = pathname.startsWith("/overlay");
     return (
@@ -590,7 +597,9 @@ export default function ShellGate({
         {guest && !bare ? (
           <div className="weered-guest-frame">
             <UniversalBar />
-            <div className="weered-center-body">{children}</div>
+            <div ref={bodyRef} className="weered-center-body">
+              {children}
+            </div>
           </div>
         ) : (
           children
@@ -622,7 +631,9 @@ export default function ShellGate({
         {/* The same bar over every page (James 2026-11-06), the page under it. */}
         <main className="weered-center">
           {!office && <UniversalBar />}
-          <div className="weered-center-body">{children}</div>
+          <div ref={bodyRef} className="weered-center-body">
+            {children}
+          </div>
         </main>
 
         {rightCollapsed && !designing ? (

@@ -25,7 +25,7 @@ function GoogleFinish() {
   return (
     <div
       style={{
-        minHeight: "100vh",
+        minHeight: "var(--weered-page-h, 100vh)",
         background: "#080810",
         display: "flex",
         alignItems: "center",
@@ -42,7 +42,9 @@ function GoogleFinish() {
 
 export default function GoogleFinishPage() {
   return (
-    <Suspense fallback={<div style={{ minHeight: "100vh", background: "#080810" }} />}>
+    <Suspense
+      fallback={<div style={{ minHeight: "var(--weered-page-h, 100vh)", background: "#080810" }} />}
+    >
       <GoogleFinish />
     </Suspense>
   );

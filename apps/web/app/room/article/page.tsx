@@ -19,12 +19,14 @@ function Redirect() {
     }
   }, []);
 
-  return <div style={{ minHeight: "100vh", background: "#080810" }} />;
+  return <div style={{ minHeight: "var(--weered-page-h, 100vh)", background: "#080810" }} />;
 }
 
 export default function ArticleRoomPage() {
   return (
-    <Suspense fallback={<div style={{ minHeight: "100vh", background: "#080810" }} />}>
+    <Suspense
+      fallback={<div style={{ minHeight: "var(--weered-page-h, 100vh)", background: "#080810" }} />}
+    >
       <Redirect />
     </Suspense>
   );

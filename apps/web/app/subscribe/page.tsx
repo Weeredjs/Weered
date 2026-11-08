@@ -11,7 +11,7 @@ export default function SubscribePage() {
       fallback={
         <div
           style={{
-            minHeight: "100vh",
+            minHeight: "var(--weered-page-h, 100vh)",
             display: "grid",
             placeItems: "center",
             background: "#080810",

@@ -7,7 +7,9 @@
    <Username>"). It runs the width of the frame, as it did on Home. */
 
 /* The centre column: the bar, then the page in a box of its own, which a
-   page fills with height: 100% or inset: 0. */
+   page fills with height: 100% or inset: 0. A page that would have been as
+   tall as the window takes min-height: var(--weered-page-h, 100vh): the box
+   here, the window on a page outside the frame. */
 .weered-center {
   display: flex;
   flex-direction: column;
@@ -17,6 +19,17 @@
   flex: 1 1 auto;
   min-height: 0;
   position: relative;
+  --weered-page-h: 100%;
+}
+/* A page taller than its box scrolls in it, under the bar (James 2026-11-08,
+   on his crew page: "Doesn't scroll. Can't get to the save button."). A page
+   that fills the box never overflows it, so it shows no scrollbar. A phone
+   scrolls the whole column, bar and all, as it did (40-core-layout.css). */
+@media (min-width: 768px) {
+  .weered-center-body {
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
 }
 /* The 80px under a page held a floating feedback pill, gone since 11-02; a
    page now runs to the frame's foot, as a lobby and a room already did. */
