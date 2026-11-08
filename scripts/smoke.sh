@@ -3,6 +3,10 @@
 # no restarts. Just probes the surfaces that matter.
 
 set -uo pipefail
+# Look for text in a variable with a here-string (grep -q P <<<"$x"), never
+# echo "$x" | grep -q P: grep -q quits at its first match, echo dies writing
+# the rest, and pipefail fails the check. /home (68KB) missed its marker 9
+# times in 20 that way (2026-11-08).
 
 API=http://127.0.0.1:4000
 PUB=https://weered.ca
@@ -50,12 +54,12 @@ hdr "TIER 1b — SHELL ROUTING (bare vs app-shell)"
 _shell_marker="weered-center"
 check_bare() {
   local body=$(curl -sS --max-time 10 "$PUB$1")
-  if echo "$body" | grep -q "$_shell_marker"; then fail "$1 renders app shell (would NOT scroll) — should be bare"
+  if grep -q "$_shell_marker" <<<"$body"; then fail "$1 renders app shell (would NOT scroll) — should be bare"
   else ok "$1 is bare (scrolls)"; fi
 }
 check_shell() {
   local body=$(curl -sS --max-time 10 "$PUB$1")
-  if echo "$body" | grep -q "$_shell_marker"; then ok "$1 renders app shell (expected)"
+  if grep -q "$_shell_marker" <<<"$body"; then ok "$1 renders app shell (expected)"
   else fail "$1 missing app shell"; fi
 }
 for p in /terms /privacy /guidelines /forgot-password /reset-password /verify-email; do check_bare "$p"; done
@@ -132,7 +136,7 @@ TOKEN_RES=$(curl -sS --max-time 10 -X POST "$API/auth/dev-login" \
 TOKEN=$(echo "$TOKEN_RES" | jq -r '.token // empty')
 USER_ID=$(echo "$TOKEN_RES" | jq -r '.user.id // empty')
 if [ -n "$TOKEN" ] && [ "$TOKEN" != "null" ]; then ok "dev-login → token issued for $DEV_USER ($USER_ID)"
-elif echo "$TOKEN_RES" | grep -q "not_found"; then warn "dev-login disabled in prod (expected since 2026-05-29 hardening) — auth round-trip skipped"
+elif grep -q "not_found" <<<"$TOKEN_RES"; then warn "dev-login disabled in prod (expected since 2026-05-29 hardening) — auth round-trip skipped"
 else fail "dev-login failed: $TOKEN_RES"; fi
 
 # Auth-gated /notoriety/me with token (validates token is accepted)
@@ -171,9 +175,9 @@ if command -v node >/dev/null 2>&1 && [ -n "$TOKEN" ]; then
     });
     ws.on("error", e => { console.log("WS_ERR:" + (e.message || e)); clearTimeout(timer); process.exit(); });
   ' 2>&1)
-  if echo "$WS_RESULT" | grep -q "WS_MSG:"; then ok "WebSocket: opened, auth:hello acknowledged"
-  elif echo "$WS_RESULT" | grep -q "WS_OPEN"; then ok "WebSocket: opened (no message in 6s — likely fine, server is silent on auth success)"
-  elif echo "$WS_RESULT" | grep -q "WS_TIMEOUT"; then warn "WebSocket: connect timeout"
+  if grep -q "WS_MSG:" <<<"$WS_RESULT"; then ok "WebSocket: opened, auth:hello acknowledged"
+  elif grep -q "WS_OPEN" <<<"$WS_RESULT"; then ok "WebSocket: opened (no message in 6s — likely fine, server is silent on auth success)"
+  elif grep -q "WS_TIMEOUT" <<<"$WS_RESULT"; then warn "WebSocket: connect timeout"
   else fail "WebSocket: $(echo "$WS_RESULT" | tail -3 | tr '\n' ' ')"; fi
 fi
 
