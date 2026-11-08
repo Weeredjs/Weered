@@ -31,6 +31,14 @@ describe("UI prefs", () => {
     }
   });
 
+  it("keeps the moving-sky choice, a yes or a no only", () => {
+    // The sky holds still unless chosen (James 2026-11-08); a choice the
+    // account dropped would put it back to still on the next device.
+    expect(sanitizeUiPrefs({ skyMotion: true })).toEqual({ skyMotion: true });
+    expect(sanitizeUiPrefs({ skyMotion: false })).toEqual({ skyMotion: false });
+    expect(sanitizeUiPrefs({ skyMotion: "on" })).toEqual({});
+  });
+
   it("rejects bad values without throwing", () => {
     expect(sanitizeUiPrefs(null)).toEqual({});
     expect(sanitizeUiPrefs("nebula")).toEqual({});

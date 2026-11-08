@@ -6,6 +6,8 @@
 // stylesheet shows .nb-sky; see styles/95-nebula.css). Everything moves by
 // transform and opacity, so it stays on the compositor. Starfield off
 // (data-weered-stars="off") hides the stars; Reduce motion freezes it all.
+// Unless Moving sky is on (data-weered-sky-motion="on"), only the bright stars
+// twinkle: the rest holds still (James 2026-11-08).
 import { useEffect, useRef, useState } from "react";
 import { motionOff } from "../lib/motion";
 import { createPortal } from "react-dom";
@@ -51,6 +53,7 @@ export default function NebulaSky() {
     let x = 0;
     let y = 0;
     const onMove = (e: PointerEvent) => {
+      if (document.documentElement.getAttribute("data-weered-sky-motion") !== "on") return;
       x = e.clientX / window.innerWidth - 0.5;
       y = e.clientY / window.innerHeight - 0.5;
       if (raf) return;

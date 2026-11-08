@@ -6,6 +6,7 @@ import { useWeered } from "../WeeredProvider";
 import { forumFetch, timeAgo, CATEGORY_CONFIG, TIER_COLORS, FONT } from "./ForumHelpers";
 import { avatarBg } from "../../lib/avatarColor";
 import { onActivate } from "@/lib/a11y";
+import { PostCardPreview, PostThumb, useForumView } from "./PostPreview";
 
 type Post = {
   id: string;
@@ -29,6 +30,8 @@ type Post = {
   myVote: number;
   myBookmarked?: boolean;
   bookmarkedAt?: string;
+  preview?: string;
+  image?: string | null;
 };
 
 export default function BookmarksPage() {
@@ -37,6 +40,8 @@ export default function BookmarksPage() {
   const me = w?.me;
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
+  // Cards or Compact, as chosen on the forum.
+  const [view] = useForumView();
 
   useEffect(() => {
     if (!me) {
@@ -186,9 +191,19 @@ export default function BookmarksPage() {
                       ★
                     </button>
                   </div>
-                  <div style={{ fontSize: 14, fontWeight: 700, lineHeight: 1.35, marginBottom: 6 }}>
+                  <div
+                    style={{
+                      fontSize: view === "cards" ? 16 : 14,
+                      fontWeight: 700,
+                      lineHeight: 1.35,
+                      marginBottom: 6,
+                    }}
+                  >
                     {post.title}
                   </div>
+                  {view === "cards" && (
+                    <PostCardPreview preview={post.preview} image={post.image} />
+                  )}
                   <div
                     style={{
                       display: "flex",
@@ -242,6 +257,7 @@ export default function BookmarksPage() {
                     )}
                   </div>
                 </div>
+                {view === "compact" && <PostThumb image={post.image} />}
               </div>
             );
           })}

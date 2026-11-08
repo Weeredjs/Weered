@@ -63,6 +63,9 @@ export type UiPrefs = {
   theme?: SiteThemeId;
   palette?: Palette;
   stars?: boolean;
+  /** Nebula's sky drifts (clouds, aurora, star field, shooting stars). Off
+   *  unless chosen: the sky holds still and its bright stars still twinkle. */
+  skyMotion?: boolean;
   density?: "comfortable" | "compact";
   rail?: { order: RailSection[]; hidden: RailSection[] };
   /** The viewer's own layout (lib/shellLayout.ts); absent = stock. */
@@ -100,7 +103,9 @@ export const PREFS_KEY = "weered:ui-prefs:v1";
 /** Everyone's look until they pick their own: the one on the weered account
  *  (James 2026-10-31: "make the default theme the one on the Weered account
  *  currently. It has curved square edges"). Nebula, violet #8b5cf6, soft
- *  corners, glass on the sky, stars, no effect. */
+ *  corners, glass on the sky, stars, no effect. The sky holds still (James
+ *  2026-11-08: "Can we have the background animation off by default. Stars
+ *  are fine."). */
 export const DEFAULT_LOOK: UiPrefs = {
   theme: "nebula",
   palette: "custom",
@@ -112,6 +117,7 @@ export const DEFAULT_LOOK: UiPrefs = {
   texture: "glass",
   backdrop: "sky",
   stars: true,
+  skyMotion: false,
   density: "comfortable",
   fx: "none",
   fxIntensity: 1,
@@ -401,6 +407,8 @@ export function paintUiPrefs(p: UiPrefs) {
   attr("data-weered-backdrop", p.backdrop, "sky");
   if (p.stars === false) d.setAttribute("data-weered-stars", "off");
   else d.removeAttribute("data-weered-stars");
+  if (p.skyMotion === true) d.setAttribute("data-weered-sky-motion", "on");
+  else d.removeAttribute("data-weered-sky-motion");
   if (p.density) d.setAttribute("data-weered-density", p.density);
 }
 

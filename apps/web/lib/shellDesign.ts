@@ -50,6 +50,8 @@ export type ShellLook = {
   barColor: string;
   font: NebulaFont;
   stars: boolean;
+  /** The sky drifts; off unless chosen (lib/uiPrefs.ts skyMotion). */
+  skyMotion: boolean;
   density: "comfortable" | "compact";
   shape: ShellShape;
   /** The side buttons' shape (styles/99-nebula-buttons.css). */
@@ -211,6 +213,7 @@ export function lookFromPrefs(p: UiPrefs): ShellLook {
     barColor: isHexColour(p.barColor) ? p.barColor : "",
     font: p.font || "default",
     stars: p.stars !== false,
+    skyMotion: p.skyMotion === true,
     shape: p.shape || "soft",
     buttons: p.buttons && BUTTONS.includes(p.buttons) ? p.buttons : "tile",
     lines: p.lines || "soft",
@@ -246,6 +249,7 @@ function cleanLook(raw: any, base: ShellLook): ShellLook {
     barColor: r.barColor === "" || isHexColour(r.barColor) ? r.barColor : base.barColor,
     font: (NEBULA_FONT_IDS as string[]).includes(r.font) ? r.font : base.font,
     stars: typeof r.stars === "boolean" ? r.stars : base.stars,
+    skyMotion: typeof r.skyMotion === "boolean" ? r.skyMotion : base.skyMotion,
     density: r.density === "compact" || r.density === "comfortable" ? r.density : base.density,
     shape: SHAPES.includes(r.shape) ? r.shape : base.shape,
     buttons: BUTTONS.includes(r.buttons) ? r.buttons : base.buttons,
@@ -390,6 +394,7 @@ export async function saveDesign(): Promise<AccountSave> {
     barColor: d.look.barColor || "none",
     font: d.look.font,
     stars: d.look.stars,
+    skyMotion: d.look.skyMotion,
     density: d.look.density,
     shape: d.look.shape,
     buttons: d.look.buttons,

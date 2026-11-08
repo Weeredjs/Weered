@@ -10,6 +10,7 @@ import { canManageLobby } from "../lib/lobbyAccess";
 import { z } from "zod";
 import { LobbyRole } from "@prisma/client";
 import { applyAutoModSideEffects, fileAutoModReport } from "./forum-mod";
+import { listedBody } from "../lib/forumPreview";
 
 const FORUM_UPLOAD_DIR = join(process.cwd(), "uploads", "forum");
 if (!existsSync(FORUM_UPLOAD_DIR)) mkdirSync(FORUM_UPLOAD_DIR, { recursive: true });
@@ -175,7 +176,7 @@ export default async function forumRoutes(app: FastifyInstance, opts: Opts) {
 
     const out = posts.map((p: any) => ({
       ...p,
-      body: p.removedAt ? "[removed by mod]" : p.body.slice(0, 200),
+      ...listedBody(p),
       author: authorMap[p.authorId] || null,
       myVote: myVotes[p.id] || 0,
       myBookmarked: !!myBookmarks[p.id],
@@ -874,7 +875,7 @@ export default async function forumRoutes(app: FastifyInstance, opts: Opts) {
         if (!p) return null;
         return {
           ...p,
-          body: p.removedAt ? "[removed by mod]" : p.body.slice(0, 200),
+          ...listedBody(p),
           author: authorMap[p.authorId] || null,
           myVote: 0,
           myBookmarked: true,
@@ -951,7 +952,7 @@ export default async function forumRoutes(app: FastifyInstance, opts: Opts) {
 
     const out = posts.map((p: any) => ({
       ...p,
-      body: p.removedAt ? "[removed by mod]" : p.body.slice(0, 200),
+      ...listedBody(p),
       author: authorMap[p.authorId] || null,
       lastCommentAt: lastMap.get(p.id) || null,
     }));

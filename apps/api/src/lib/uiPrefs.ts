@@ -147,6 +147,8 @@ export type UiPrefs = {
   fxPicture?: boolean;
   fxFront?: boolean;
   stars?: boolean;
+  /** Nebula's sky drifts; off unless chosen (web lib/uiPrefs.ts). */
+  skyMotion?: boolean;
   density?: "comfortable" | "compact";
   rail?: { order: RailSection[]; hidden: RailSection[] };
   shell?: ShellPrefs;
@@ -300,6 +302,7 @@ export function sanitizeUiPrefs(raw: unknown): UiPrefs {
   if (typeof src.fxPicture === "boolean") out.fxPicture = src.fxPicture;
   if (typeof src.fxFront === "boolean") out.fxFront = src.fxFront;
   if (typeof src.stars === "boolean") out.stars = src.stars;
+  if (typeof src.skyMotion === "boolean") out.skyMotion = src.skyMotion;
   const density = oneOf(["comfortable", "compact"] as const, src.density);
   if (density) out.density = density;
   if (src.rail && typeof src.rail === "object") {

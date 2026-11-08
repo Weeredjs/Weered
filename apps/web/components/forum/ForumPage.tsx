@@ -12,6 +12,7 @@ import PostDetail from "./PostDetail";
 import MarkdownComposer from "./MarkdownComposer";
 import StartggCard from "../StartggCard";
 import SectionSidebar, { SectionManageModal, type Section } from "./ForumSections";
+import { ForumViewToggle, PostCardPreview, PostThumb, useForumView } from "./PostPreview";
 
 type Post = {
   id: string;
@@ -36,6 +37,9 @@ type Post = {
   } | null;
   myVote: number;
   lobby?: { id: string; name: string; logoUrl?: string | null; accentColor?: string | null } | null;
+  /** The card's opening words and first picture (api lib/forumPreview.ts). */
+  preview?: string;
+  image?: string | null;
 };
 
 type SearchResults = {
@@ -90,6 +94,7 @@ export default function ForumPage({
   const canManageSections = !!lobbyId && (isStaff || isLobbyMod);
 
   const [posts, setPosts] = useState<Post[]>([]);
+  const [view, setView] = useForumView();
   const [sort, setSort] = useState("hot");
   const [category, setCategory] = useState("");
   const [sectionId, setSectionId] = useState("");
@@ -494,6 +499,9 @@ export default function ForumPage({
               })}
             </div>
           )}
+          <div style={{ marginLeft: "auto" }}>
+            <ForumViewToggle view={view} onChange={setView} />
+          </div>
         </div>
 
         {composing && (
@@ -940,10 +948,18 @@ export default function ForumPage({
                       ))}
                     </div>
                     <div
-                      style={{ fontSize: 14, fontWeight: 700, lineHeight: 1.35, marginBottom: 6 }}
+                      style={{
+                        fontSize: view === "cards" ? 16 : 14,
+                        fontWeight: 700,
+                        lineHeight: 1.35,
+                        marginBottom: 6,
+                      }}
                     >
                       {post.title}
                     </div>
+                    {view === "cards" && (
+                      <PostCardPreview preview={post.preview} image={post.image} />
+                    )}
                     <div
                       style={{
                         display: "flex",
@@ -1012,6 +1028,7 @@ export default function ForumPage({
                       )}
                     </div>
                   </div>
+                  {view === "compact" && <PostThumb image={post.image} />}
                 </div>
               );
             })}

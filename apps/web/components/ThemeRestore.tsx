@@ -24,6 +24,8 @@ export default function ThemeRestore() {
       d.setAttribute("data-weered-palette", up.palette || "custom");
       if (up.stars === false) d.setAttribute("data-weered-stars", "off");
       else d.removeAttribute("data-weered-stars");
+      if (up.skyMotion === true) d.setAttribute("data-weered-sky-motion", "on");
+      else d.removeAttribute("data-weered-sky-motion");
       if (s && s.density) d.setAttribute("data-weered-density", s.density);
       if (s && s.reduceMotion) d.setAttribute("data-weered-reduce-motion", "1");
       if (localStorage.getItem("weered_user")) d.setAttribute("data-weered-authed", "1");

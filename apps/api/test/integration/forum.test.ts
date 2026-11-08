@@ -99,6 +99,35 @@ describe("forum - create post + comment", () => {
     await app.close();
   });
 
+  it("every list of posts carries each post's card: its opening words and picture", async () => {
+    // James 2026-11-08: the forum with expanded "Thumbnail and previews".
+    const uid = await newUser("cards");
+    const app = await makeApp();
+    const auth = { authorization: `Bearer ${testToken(uid)}` };
+    const pic = "https://api.weered.ca/forum-img/itest-1794170998957-0123456789abcdef.webp";
+    const made = await app.inject({
+      method: "POST",
+      url: "/forum/posts",
+      headers: auth,
+      payload: { title: "Cards", body: `![banner](${pic})\n\nThe streets got a **remodel**.` },
+    });
+    const id = made.json().post?.id;
+    posts.push(id);
+    await app.inject({ method: "POST", url: `/forum/posts/${id}/bookmark`, headers: auth });
+
+    for (const url of [
+      "/forum/posts?sort=new&limit=50",
+      "/forum/me/bookmarks",
+      "/forum/me/subscriptions",
+    ]) {
+      const listed = (await app.inject({ method: "GET", url, headers: auth }))
+        .json()
+        .posts.find((p: any) => p.id === id);
+      expect(listed, url).toMatchObject({ preview: "The streets got a remodel.", image: pic });
+    }
+    await app.close();
+  });
+
   it("comment: 404 on missing post, 403 on a locked post", async () => {
     const uid = await newUser("cmt");
     const missing = await makeApp();

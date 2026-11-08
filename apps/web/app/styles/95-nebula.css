@@ -404,6 +404,19 @@ html[data-weered-stars="off"] .nb-sparkles,
 html[data-weered-stars="off"] .nb-shooting {
   display: none;
 }
+/* The sky holds still unless Moving sky is on (Change your drip; James
+   2026-11-08: "Can we have the background animation off by default. Stars are
+   fine."): the clouds, the aurora and the star field stay put, no star shoots
+   and nothing leans with the pointer. The bright stars still twinkle. */
+html:not([data-weered-sky-motion="on"]) :is(.nb-cloud, .nb-aurora, .nb-stars) {
+  animation: none !important;
+}
+html:not([data-weered-sky-motion="on"]) .nb-sky > * {
+  translate: none !important;
+}
+html:not([data-weered-sky-motion="on"]) .nb-shooting {
+  display: none;
+}
 /* The app's own Reduce motion setting writes "1" (and "0" when off), and so
    does Light effects (lib/displaySettings.ts). */
 html[data-weered-reduce-motion="1"] .nb-sky *,

@@ -716,7 +716,14 @@ export function LookTab({ accent, look }: { accent: string; look: ShellLook }) {
             accent={accent}
             onClick={() => editLook({ stars: !look.stars })}
             title="Starfield"
-            blurb="Drifting stars behind everything."
+            blurb="Stars behind everything."
+          />
+          <Toggle
+            on={look.skyMotion}
+            accent={accent}
+            onClick={() => editLook({ skyMotion: !look.skyMotion })}
+            title="Moving sky"
+            blurb="The clouds and stars drift, and now and then a star shoots."
           />
           <EffectControls accent={accent} look={look} c={colours} />
           <StructureControls accent={accent} look={look} c={colours} />
