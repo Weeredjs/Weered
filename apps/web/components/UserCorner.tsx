@@ -13,6 +13,7 @@ import NotorietyBar from "./NotorietyBar";
 import { onActivate } from "@/lib/a11y";
 import { useLobbyLang, pick, type LobbyLang } from "../lib/lobbyLang";
 import { TIMBOS_ROLES, TIMBOS_LOBBY_ID } from "../lib/timbosCopy";
+import { phoneLabel } from "../lib/phoneLabel";
 import { usePaperBalance } from "../lib/paperBalance";
 
 function useFitText(ref: any, text: string, sizes: number[]): number {
@@ -110,18 +111,7 @@ export default function UserCorner() {
     return () => obs.disconnect();
   }, []);
   const lobbyLang = useLobbyLang();
-  const burnerLabel =
-    lobbyTheme === "windrose"
-      ? "Bottle"
-      : lobbyTheme === "destiny2"
-        ? "Transmat"
-        : lobbyTheme === "helldivers2"
-          ? "Comms"
-          : lobbyTheme === TIMBOS_LOBBY_ID
-            ? lobbyLang === "fr"
-              ? "Anonyme"
-              : "Burner"
-            : "Burner";
+  const burnerLabel = phoneLabel(lobbyTheme, lobbyLang);
 
   // Paper, off the card (James 2026-11-07: "Remove paper. Have that as a
   // button off the profile"), in a themed lobby's own money.

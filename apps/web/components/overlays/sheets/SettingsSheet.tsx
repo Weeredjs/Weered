@@ -318,7 +318,7 @@ export default function SettingsSheet({ initialTab }: { initialTab?: string } = 
 
           {tab === "behavior" && (
             <Section title="Behavior" onReset={() => patch({ dockDefaultTab: DEFAULTS.dockDefaultTab, enterToSend: DEFAULTS.enterToSend, confirmDestructive: DEFAULTS.confirmDestructive })}>
-              <Row label="Burner default tab" hint="Which tab opens first when you hit Burner.">
+              <Row label="Phone default tab" hint="Which tab opens first when you open your Phone.">
                 <select style={selectStyle} value={s.dockDefaultTab} onChange={(e) => patch({ dockDefaultTab: e.target.value as any })}>
                   <option value="dms">Messages</option>
                   <option value="room">Room</option>

@@ -32,6 +32,7 @@ import { DmMessage } from "./dock/DmMessage";
 import type { DmMsg, DmThread } from "./dock/types";
 import { useSteady } from "../lib/useSteady";
 import { plural } from "../lib/plural";
+import { usePhoneLabel } from "../lib/phoneLabel";
 
 type GroupMemberLite = { id: string; name: string; avatar?: string | null };
 type GroupThreadLite = {
@@ -52,6 +53,7 @@ type GroupThreadLite = {
 };
 
 export default function DockShell(props: { forceMode?: "rail" | "floating" } = {}) {
+  const phone = usePhoneLabel();
   const ctx: any = (useWeered?.() as any) || {};
   const {
     me,
@@ -755,8 +757,23 @@ export default function DockShell(props: { forceMode?: "rail" | "floating" } = {
               color: "var(--weered-text)",
             }}
           >
-            Burner
+            {phone}
           </span>
+          {phone === "Phone" && (
+            <span
+              className="weered-dock-subtitle"
+              style={{
+                fontSize: 9,
+                fontWeight: 700,
+                letterSpacing: ".1em",
+                textTransform: "uppercase",
+                opacity: 0.45,
+                marginLeft: -2,
+              }}
+            >
+              burner
+            </span>
+          )}
           <StatusDot online={steadyUp} />
           <span style={{ flex: 1 }} />
           <button
