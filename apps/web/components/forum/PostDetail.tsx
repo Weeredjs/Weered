@@ -347,6 +347,7 @@ export default function PostDetail({
           }}
         >
           <button
+            className="weered-vote"
             onClick={() => handlePostVote(post.myVote === 1 ? 0 : 1)}
             style={{
               background: "none",
@@ -375,6 +376,7 @@ export default function PostDetail({
             {post.score}
           </span>
           <button
+            className="weered-vote"
             onClick={() => handlePostVote(post.myVote === -1 ? 0 : -1)}
             style={{
               background: "none",

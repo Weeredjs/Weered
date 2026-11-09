@@ -1,0 +1,108 @@
+/* ── Phone fixes from James's walkthrough (2026-11-09) ─────────────────── */
+.weered-mobile-legal {
+  display: none;
+}
+@media (max-width: 767px) {
+  /* The column stops at the tab bar's top edge and scrolls inside that. It ran
+     under the 56px bar and leaned on 64px of bottom padding, which a page that
+     overflows its box never reaches: a lobby's chat box (attach, GIF, emoji,
+     send) sat under the tab bar at the bottom of the scroll. */
+  .weered-center {
+    padding-bottom: 8px;
+    max-height: calc(100dvh - 56px) !important;
+  }
+  /* The site footer sits under the tab bar and runs off the screen; its
+     links live at the foot of the Menu instead (MobileLegalLinks). */
+  html:has(.weered-mobile-nav) .site-footer {
+    display: none !important;
+  }
+  .weered-mobile-legal {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 14px;
+    padding: 12px 14px 16px;
+  }
+  .weered-mobile-legal a {
+    font-size: 12px;
+    color: var(--weered-muted, rgba(148, 163, 184, 0.75));
+    text-decoration: none;
+    padding: 4px 0;
+  }
+  /* A room keeps one row of tabs, the one by your thumb: the header's copy
+     and the "Voice chat available" banner (the stage has its own Join voice)
+     left the stage about 190px on a phone. */
+  .weered-room-head-pills,
+  .weered-room-voice-prompt {
+    display: none !important;
+  }
+}
+
+/* Downtown on a phone: title, Create and × on one row, the search under them.
+   In one row the × sat 32px off the screen's right edge and the search shrank
+   to a sliver (James 2026-11-09). */
+@media (max-width: 767px) {
+  .weered-dt-head {
+    flex-wrap: wrap;
+    gap: 10px !important;
+    padding: 12px 14px 10px !important;
+  }
+  .weered-dt-search {
+    order: 5;
+    flex: 1 1 100% !important;
+    max-width: none !important;
+  }
+  .weered-dt-create {
+    padding: 7px 12px !important;
+    margin-left: auto;
+  }
+  .weered-dt-create-sub {
+    display: none;
+  }
+  .weered-dt-close {
+    flex-shrink: 0;
+  }
+}
+
+/* The site footer: hidden where the tab bar covers it (above), and on a page
+   without the tab bar (pricing, terms) its links scroll sideways instead of
+   running off the screen. The marketing header drops "Why Weered" so its
+   button stops wrapping to three lines. */
+@media (max-width: 767px) {
+  .site-footer-left {
+    display: none !important;
+  }
+  .site-footer-nav {
+    overflow-x: auto;
+    scrollbar-width: none;
+    gap: 14px !important;
+    max-width: 100%;
+  }
+  .site-footer-nav a {
+    white-space: nowrap;
+    font-size: 11px !important;
+  }
+  .weered-mkt-why {
+    display: none;
+  }
+  .weered-mkt-cta {
+    white-space: nowrap;
+    padding: 7px 12px !important;
+  }
+}
+
+/* With Menu or Panel open, the tab bar still works: the dimmed backdrop
+   stopped at the screen's foot over the bar, so tapping Panel with the Menu
+   open only closed the Menu (James 2026-11-09). */
+@media (max-width: 767px) {
+  .weered-overlay-backdrop {
+    bottom: 56px;
+  }
+}
+
+/* Forum votes: a thumb-sized target (they were 17px). */
+@media (max-width: 767px) {
+  .weered-vote {
+    min-width: 32px;
+    min-height: 30px;
+  }
+}

@@ -769,7 +769,7 @@ export default function ForumPage({
                     onClick={(e) => e.stopPropagation()}
                     onKeyDown={(e) => e.stopPropagation()}
                   >
-                    <button
+                    <button className="weered-vote"
                       onClick={() => handleVote(post.id, post.myVote === 1 ? 0 : 1)}
                       style={{
                         background: "none",
@@ -797,7 +797,7 @@ export default function ForumPage({
                     >
                       {post.score}
                     </span>
-                    <button
+                    <button className="weered-vote"
                       onClick={() => handleVote(post.id, post.myVote === -1 ? 0 : -1)}
                       style={{
                         background: "none",

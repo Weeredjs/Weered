@@ -510,6 +510,7 @@ export default function LobbyBrowser() {
       }}
     >
       <div
+        className="weered-dt-head"
         style={{
           position: "sticky",
           top: 0,
@@ -535,7 +536,7 @@ export default function LobbyBrowser() {
           Downtown
         </div>
 
-        <div style={{ flex: 1, maxWidth: 480 }}>
+        <div className="weered-dt-search" style={{ flex: 1, maxWidth: 480 }}>
           <input
             ref={searchRef}
             placeholder="Search lobbies..."
@@ -582,6 +583,7 @@ export default function LobbyBrowser() {
         )}
 
         <button
+          className="weered-dt-create"
           onClick={() => {
             close();
             router.push("/lobby/create");
@@ -616,13 +618,17 @@ export default function LobbyBrowser() {
             >
               Create Your Lobby
             </div>
-            <div style={{ fontSize: 10, color: "rgba(255,255,255,.35)", marginTop: 1 }}>
+            <div
+              className="weered-dt-create-sub"
+              style={{ fontSize: 10, color: "rgba(255,255,255,.35)", marginTop: 1 }}
+            >
               Your game. Your rules.
             </div>
           </div>
         </button>
 
         <button
+          className="weered-dt-close"
           onClick={close}
           style={{
             width: 36,

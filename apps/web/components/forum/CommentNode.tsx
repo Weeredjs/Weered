@@ -153,6 +153,7 @@ export default function CommentNode({ c, ctx }: { c: CommentT; ctx: NodeCtx }) {
           }}
         >
           <button
+            className="weered-vote"
             onClick={() => ctx.onVote(c.id, c.myVote === 1 ? 0 : 1)}
             aria-label="Upvote"
             style={{
@@ -176,6 +177,7 @@ export default function CommentNode({ c, ctx }: { c: CommentT; ctx: NodeCtx }) {
             {c.score}
           </span>
           <button
+            className="weered-vote"
             onClick={() => ctx.onVote(c.id, c.myVote === -1 ? 0 : -1)}
             aria-label="Downvote"
             style={{

@@ -717,7 +717,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
       <LaunchPad roomId={roomId} moduleType={lobbyContext?.moduleType} />
 
       {voicePrompt && !voiceOff && voice.connState !== "connected" && voice.connState !== "connecting" && (
-        <div style={{ flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 16px", gap: 12, background: "color-mix(in srgb, var(--weered-room-accent, #7c3aed) 8%, transparent)", borderBottom: "1px solid color-mix(in srgb, var(--weered-room-accent, #7c3aed) 18%, transparent)" }}>
+        <div className="weered-room-voice-prompt" style={{ flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 16px", gap: 12, background: "color-mix(in srgb, var(--weered-room-accent, #7c3aed) 8%, transparent)", borderBottom: "1px solid color-mix(in srgb, var(--weered-room-accent, #7c3aed) 18%, transparent)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#22c55e", boxShadow: "0 0 8px #22c55e", flexShrink: 0 }} />
             <div>

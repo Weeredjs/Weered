@@ -56,7 +56,7 @@ export default function MarketingHeader({
         </Link>
 
         <nav style={{ display: "flex", alignItems: "center", gap: 22 }}>
-          <Link href="/why-not-discord" style={navLinkStyle}>
+          <Link href="/why-not-discord" style={navLinkStyle} className="weered-mkt-why">
             Why Weered
           </Link>
           <Link href="/lobby" style={navLinkStyle}>
@@ -65,7 +65,7 @@ export default function MarketingHeader({
           <Link href="/premium" style={navLinkStyle}>
             Premium
           </Link>
-          <Link href={ctaHref} style={ctaStyle}>
+          <Link href={ctaHref} style={ctaStyle} className="weered-mkt-cta">
             {ctaLabel} →
           </Link>
         </nav>

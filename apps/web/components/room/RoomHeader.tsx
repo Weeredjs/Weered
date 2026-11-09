@@ -440,6 +440,7 @@ export default function RoomHeader({
 
         {pills && pills.length > 0 && (
           <div
+            className="weered-room-head-pills"
             style={{
               display: "flex",
               alignItems: "center",

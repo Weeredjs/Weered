@@ -31,6 +31,8 @@ export default function JoinLobbyOverlay({
   joinMode,
   onJoin,
 }: Props) {
+  // "donkey's place": a name that already says whose it is.
+  const possessive = /['’]s\b/i.test(lobbyName);
   const [dismissed, setDismissed] = useState<boolean>(true);
   const [joining, setJoining] = useState(false);
 
@@ -129,7 +131,9 @@ export default function JoinLobbyOverlay({
             color: "#fff",
           }}
         >
-          Unlock the {lobbyName} experience
+          {/* A place already says whose it is: "Unlock the donkey's place
+              experience" read wrong (2026-11-09). */}
+          {possessive ? `Unlock ${lobbyName}` : `Unlock the ${lobbyName} experience`}
         </h2>
 
         <p
@@ -141,7 +145,9 @@ export default function JoinLobbyOverlay({
           }}
         >
           {themeable
-            ? `Join to unlock the full ${lobbyName} look + everything below. One click, free, no commitment.`
+            ? possessive
+              ? "Join to unlock its look + everything below. One click, free, no commitment."
+              : `Join to unlock the full ${lobbyName} look + everything below. One click, free, no commitment.`
             : `Join to unlock everything below. One click, free, no commitment.`}
         </p>
 

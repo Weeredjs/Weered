@@ -20,6 +20,7 @@ import { accentForRoom, groupRank, lobbyHref, normRoomKey, pickFirstString } fro
 import ShellSlot from "./shell/ShellSlot";
 import { RailPanel, isPanelCore, useRailScope } from "./RightRail";
 import { useShellDesign } from "../lib/shellDesign";
+import MobileLegalLinks from "./MobileLegalLinks";
 import {
   LEFT_CORES,
   isCore,
@@ -1454,6 +1455,7 @@ export default function LeftRail() {
           </span>
         </div>
       </div>
+      <MobileLegalLinks />
 
       <style>{`@keyframes weered-pending-pulse{0%,100%{opacity:1}50%{opacity:.5}}`}</style>
     </div>
