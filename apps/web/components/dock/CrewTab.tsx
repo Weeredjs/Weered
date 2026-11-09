@@ -292,21 +292,37 @@ export function CrewTab({
       <div
         style={{ padding: "10px 12px", borderBottom: "1px solid var(--weered-bd)", flexShrink: 0 }}
       >
+        {/* Already in a crew, starting another is a quiet second choice, not
+            the headline (James's walkthrough 2026-11-09). */}
         <button
           onClick={() => setView("create")}
-          style={{
-            width: "100%",
-            padding: "9px",
-            borderRadius: 10,
-            fontSize: 12,
-            fontWeight: 700,
-            cursor: "pointer",
-            border: "1px solid rgba(212,160,23,.3)",
-            background: "linear-gradient(135deg, rgba(88,0,229,.08), rgba(212,160,23,.08))",
-            color: "#D4A017",
-          }}
+          style={
+            crews.length
+              ? {
+                  width: "100%",
+                  padding: "6px",
+                  borderRadius: 10,
+                  fontSize: 11,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  border: "1px dashed rgba(255,255,255,.12)",
+                  background: "transparent",
+                  color: "rgba(148,163,184,.75)",
+                }
+              : {
+                  width: "100%",
+                  padding: "9px",
+                  borderRadius: 10,
+                  fontSize: 12,
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  border: "1px solid rgba(212,160,23,.3)",
+                  background: "linear-gradient(135deg, rgba(88,0,229,.08), rgba(212,160,23,.08))",
+                  color: "#D4A017",
+                }
+          }
         >
-          ⚔ Establish Crew
+          {crews.length ? "+ Start another crew" : "⚔ Establish Crew"}
         </button>
       </div>
       {presenceToast && (

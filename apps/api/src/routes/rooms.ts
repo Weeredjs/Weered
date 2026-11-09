@@ -10,6 +10,7 @@ import { isCampaignDm, managesRoom, mayReadRoom, roomIfEnterable } from "../lib/
 import { z } from "zod";
 import { RoomRole } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import { lobbyOnlineCount } from "../lib/lobbyCount";
 
 type Opts = {
   authFromHeader: (h?: string) => { id: string; name: string } | null;
@@ -60,7 +61,7 @@ export default async function roomsRoutes(app: FastifyInstance, opts: Opts) {
       verified: l.verified,
       pinned: true,
       moduleType: l.moduleType,
-      onlineCount: rooms.get(l.id)?.users.size ?? 0,
+      onlineCount: lobbyOnlineCount(rooms, l.id),
       locked: false,
     }));
 

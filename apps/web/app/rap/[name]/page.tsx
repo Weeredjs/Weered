@@ -25,7 +25,7 @@ export async function generateMetadata(props: {
 }): Promise<Metadata> {
   const { name } = await props.params;
   const s = await fetchSheet(name);
-  if (!s) return { title: "Rap sheet | Weered", robots: { index: false } };
+  if (!s) return { title: { absolute: "Rap sheet | Weered" }, robots: { index: false } };
   const title = `${s.name}'s rap sheet | Weered`;
   const description = [
     `${s.rank.title}, ${STATUS[s.tier] || "Innocent"}.`,
@@ -43,7 +43,8 @@ export async function generateMetadata(props: {
     alt: `${s.name}'s rap sheet`,
   };
   return {
-    title,
+    // Already names Weered; the layout's "%s | Weered" would double it.
+    title: { absolute: title },
     description,
     openGraph: {
       title,

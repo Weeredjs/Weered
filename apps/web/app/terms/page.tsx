@@ -2,7 +2,7 @@ import { Metadata } from "next";
 import TermsContent from "./TermsContent";
 
 export const metadata: Metadata = {
-  title: "Terms of Service | Weered",
+  title: { absolute: "Terms of Service | Weered" },
   description:
     "Terms of Service for Weered. By using weered.ca you agree to these terms governing account usage, content, video/screen sharing, and third-party integrations.",
   openGraph: {

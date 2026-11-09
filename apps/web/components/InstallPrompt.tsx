@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import { isGuestSession } from "../lib/guestSession";
+import { claimNudge, NUDGE_DESKTOP_CSS } from "../lib/nudgeSlot";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>;
@@ -36,6 +37,7 @@ export default function InstallPrompt() {
       (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
     if (isiOS) {
       const timer = setTimeout(() => {
+        if (!claimNudge("install")) return;
         setIsIOS(true);
         setShow(true);
       }, 3000);
@@ -45,7 +47,7 @@ export default function InstallPrompt() {
     function onBeforeInstall(e: Event) {
       e.preventDefault();
       deferredPrompt.current = e as BeforeInstallPromptEvent;
-      setShow(true);
+      if (claimNudge("install")) setShow(true);
     }
     window.addEventListener("beforeinstallprompt", onBeforeInstall);
 
@@ -190,8 +192,9 @@ export default function InstallPrompt() {
           }
         }
       `}</style>
+      <style>{NUDGE_DESKTOP_CSS}</style>
 
-      <div className="install-banner">
+      <div className="install-banner weered-nudge">
         <img src="/brand/logo/weered-logo-128.png" alt="Weered" className="install-banner-icon" />
         <div className="install-banner-text">
           <div className="install-banner-title">Keep Weered close.</div>

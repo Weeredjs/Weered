@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { isGuestSession } from "../lib/guestSession";
+import { claimNudge, NUDGE_DESKTOP_CSS } from "../lib/nudgeSlot";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
@@ -89,6 +90,7 @@ export default function PushPrompt() {
         if (Date.now() - ts < 14 * 24 * 60 * 60 * 1000) return;
       }
       const timer = setTimeout(() => {
+        if (!claimNudge("push")) return;
         setMode("ios");
         setShow(true);
       }, 5000);
@@ -105,6 +107,7 @@ export default function PushPrompt() {
     }
 
     const timer = setTimeout(() => {
+      if (!claimNudge("push")) return;
       setMode("push");
       setShow(true);
     }, 5000);
@@ -159,7 +162,7 @@ export default function PushPrompt() {
   if (mode === "ios") {
     return (
       <div
-        className="weered-push-prompt"
+        className="weered-push-prompt weered-nudge"
         style={{
           position: "fixed",
           bottom: 24,
@@ -333,7 +336,7 @@ export default function PushPrompt() {
 
   return (
     <div
-      className="weered-push-prompt"
+      className="weered-push-prompt weered-nudge"
       style={{
         position: "fixed",
         bottom: 72,
@@ -458,6 +461,7 @@ export default function PushPrompt() {
           <path d="M18 6L6 18M6 6l12 12" />
         </svg>
       </button>
+      <style>{NUDGE_DESKTOP_CSS}</style>
       <style>{`
         @keyframes weeredPushSlideUp { from { opacity: 0; transform: translateX(-50%) translateY(20px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
         @keyframes weeredPushBreath { 0%, 100% { box-shadow: 0 2px 8px rgba(124,58,237,0.3), inset 0 1px 0 rgba(255,255,255,0.15); } 50% { box-shadow: 0 2px 16px rgba(124,58,237,0.55), inset 0 1px 0 rgba(255,255,255,0.25); } }

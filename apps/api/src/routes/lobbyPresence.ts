@@ -78,8 +78,9 @@ export function registerLobbyPresence(app: FastifyInstance, deps: Deps) {
     if (isAIAvailable() && !seen.has("operator")) {
       users.push({ ...OPERATOR_PRESENCE, isAway: false });
     }
-    // `count` included for consumers that only need the headline number
-    // (home/page.tsx reads it; omitting it silently zeroed home live counts).
-    return reply.send({ ok: true, count: users.length, users });
+    // `count` is the headline number: people only, never The Operator (it made
+    // every lobby read "1 online" on Home; James's walkthrough 2026-11-09). The
+    // list keeps The Operator for the member sidebar.
+    return reply.send({ ok: true, count: seen.size, users });
   });
 }

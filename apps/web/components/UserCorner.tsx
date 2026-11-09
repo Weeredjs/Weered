@@ -294,6 +294,51 @@ export default function UserCorner() {
       setProfileAvatar(undefined);
       return () => {};
     }
+    // Your card as it last loaded, straight away: a refresh showed a bare card
+    // ("Set a status…", no crew, no banner) for a few seconds until the
+    // profile answered (James's walkthrough 2026-11-09).
+    const cacheKey = `weered:card:${me.id}`;
+    const apply = (j: any) => {
+      if (j?.primaryCrew) {
+        setPrimaryCrew({
+          id: j.primaryCrew.id,
+          name: j.primaryCrew.name,
+          tag: j.primaryCrew.tag || "",
+          logoUrl: j.primaryCrew.logoUrl || null,
+          accentColor: j.primaryCrew.accentColor || null,
+          tagShape: j.primaryCrew.tagShape || null,
+        });
+      } else {
+        setPrimaryCrew(null);
+      }
+      if (j?.notorietyRank) setNotorietyRank(String(j.notorietyRank));
+      if (typeof j?.notoriety === "number") setNotorietyScore(j.notoriety);
+      setNameEffect(j?.nameEffect || null);
+      setAvatarFrame(j?.avatarFrame || null);
+      if (j?.bannerUrl) setBannerUrl(String(j.bannerUrl));
+      else setBannerUrl(null);
+      setLookBg(typeof j?.lookBg === "string" ? j.lookBg : null);
+      setStatus({ text: j?.statusText || "", emoji: j?.statusEmoji || "" });
+      setProfileAvatar(
+        typeof j?.avatar === "string" && j.avatar
+          ? j.avatar
+          : j && "avatar" in j
+            ? null
+            : undefined,
+      );
+      const color = typeof j?.avatarColor === "string" && j.avatarColor ? j.avatarColor : null;
+      setProfileColor(color);
+      // This browser's copy of your colour follows the account, so a colour
+      // you dropped elsewhere doesn't linger here (lib/avatarColor.ts).
+      try {
+        if (color) localStorage.setItem(MY_COLOR_KEY, color);
+        else localStorage.removeItem(MY_COLOR_KEY);
+      } catch {}
+    };
+    try {
+      const cached = localStorage.getItem(cacheKey);
+      if (cached) apply(JSON.parse(cached));
+    } catch {}
     let cancelled = false;
     const token = (typeof window !== "undefined" ? localStorage.getItem("weered_token") : "") || "";
     fetch(`${API_BASE}/profile/${encodeURIComponent(me.id)}`, {
@@ -302,40 +347,10 @@ export default function UserCorner() {
       .then((r) => r.json())
       .then((j) => {
         if (cancelled) return;
-        if (j?.primaryCrew) {
-          setPrimaryCrew({
-            id: j.primaryCrew.id,
-            name: j.primaryCrew.name,
-            tag: j.primaryCrew.tag || "",
-            logoUrl: j.primaryCrew.logoUrl || null,
-            accentColor: j.primaryCrew.accentColor || null,
-            tagShape: j.primaryCrew.tagShape || null,
-          });
-        } else {
-          setPrimaryCrew(null);
-        }
-        if (j?.notorietyRank) setNotorietyRank(String(j.notorietyRank));
-        if (typeof j?.notoriety === "number") setNotorietyScore(j.notoriety);
-        setNameEffect(j?.nameEffect || null);
-        setAvatarFrame(j?.avatarFrame || null);
-        if (j?.bannerUrl) setBannerUrl(String(j.bannerUrl));
-        else setBannerUrl(null);
-        setLookBg(typeof j?.lookBg === "string" ? j.lookBg : null);
-        setStatus({ text: j?.statusText || "", emoji: j?.statusEmoji || "" });
-        setProfileAvatar(
-          typeof j?.avatar === "string" && j.avatar
-            ? j.avatar
-            : j && "avatar" in j
-              ? null
-              : undefined,
-        );
-        const color = typeof j?.avatarColor === "string" && j.avatarColor ? j.avatarColor : null;
-        setProfileColor(color);
-        // This browser's copy of your colour follows the account, so a colour
-        // you dropped elsewhere doesn't linger here (lib/avatarColor.ts).
+        apply(j);
         try {
-          if (color) localStorage.setItem(MY_COLOR_KEY, color);
-          else localStorage.removeItem(MY_COLOR_KEY);
+          if (j && typeof j === "object" && !j.error)
+            localStorage.setItem(cacheKey, JSON.stringify(j));
         } catch {}
       })
       .catch(() => {});

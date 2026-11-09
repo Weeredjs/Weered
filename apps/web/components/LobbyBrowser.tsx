@@ -17,6 +17,7 @@ const MONO = "'SF Mono', 'Cascadia Mono', 'Fira Code', 'Consolas', monospace";
 
 import type { Lobby } from "@weered/shared";
 import { plural } from "../lib/plural";
+import { descriptionLead } from "../lib/descriptionLead";
 
 function hueFromId(id: string): number {
   return Math.abs([...id].reduce((a, c) => a + c.charCodeAt(0), 0)) % 360;
@@ -86,6 +87,8 @@ function PulseDot({ size = 8 }: { size?: number }) {
     />
   );
 }
+
+const GENERIC_MODULES = new Set(["TWITCH", "FEED", "NONE"]);
 
 function ModuleBadge({ type }: { type: string }) {
   return (
@@ -276,7 +279,7 @@ function LobbyCard({ lobby, onClick }: { lobby: Lobby; onClick: () => void }) {
               overflow: "hidden",
             }}
           >
-            {lobby.description}
+            {descriptionLead(lobby.description)}
           </div>
         )}
 
@@ -288,7 +291,12 @@ function LobbyCard({ lobby, onClick }: { lobby: Lobby; onClick: () => void }) {
             flexWrap: "wrap",
           }}
         >
-          {lobby.moduleType && <ModuleBadge type={lobby.moduleType} />}
+          {/* The module type names the game's own panel (RIOT, CS2, DND). The
+              catch-alls (TWITCH, FEED, NONE) say nothing about the lobby, so no
+              chip (James's walkthrough 2026-11-09: Apex tagged TWITCH). */}
+          {lobby.moduleType && !GENERIC_MODULES.has(lobby.moduleType.toUpperCase()) && (
+            <ModuleBadge type={lobby.moduleType} />
+          )}
           <span
             style={{
               fontFamily: MONO,
@@ -495,6 +503,9 @@ export default function LobbyBrowser() {
         display: "flex",
         flexDirection: "column",
         opacity: visible ? 1 : 0,
+        // Fading out, it lets clicks through to the page it uncovers: a click
+        // just after × used to open the lobby tile under it (2026-11-09).
+        pointerEvents: visible ? "auto" : "none",
         transition: "opacity .2s ease",
       }}
     >

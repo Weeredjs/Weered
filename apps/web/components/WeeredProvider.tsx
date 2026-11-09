@@ -222,7 +222,15 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
   useLayoutEffect(() => {
     try {
       const u = localStorage.getItem("weered_user");
-      if (u) { setToken("authed"); setMe(JSON.parse(u)); }
+      if (u) {
+        setToken("authed");
+        const parsed = JSON.parse(u);
+        setMe(parsed);
+        // The role as this device last knew it, until /staff/me answers: a
+        // refresh hid Ops from staff for a few seconds (2026-11-09).
+        const role = parsed?.globalRole || localStorage.getItem("weered:role");
+        if (role) setGlobalRole(String(role));
+      }
     } catch {}
   }, []);
   const [globalRole, setGlobalRole] = useState("");
@@ -294,7 +302,13 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
     if (!token) { setGlobalRole(""); return; }
     fetch(`${API}/staff/me`, { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.json())
-      .then(j => { if (j?.globalRole) setGlobalRole(j.globalRole); })
+      .then(j => {
+        if (j?.globalRole) setGlobalRole(j.globalRole);
+        try {
+          if (j?.globalRole) localStorage.setItem("weered:role", String(j.globalRole));
+          else if (j && !j.globalRole) localStorage.removeItem("weered:role");
+        } catch {}
+      })
       .catch(() => {});
   }, [token]);
 
@@ -1287,7 +1301,7 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
 
   function logout() {
     fetch(`${API}/auth/logout`, { method: "POST", credentials: "include" }).catch(() => {});
-    try { localStorage.removeItem("weered_token"); localStorage.removeItem("weered_user"); document.documentElement.removeAttribute("data-weered-authed"); } catch {}
+    try { localStorage.removeItem("weered_token"); localStorage.removeItem("weered_user"); localStorage.removeItem("weered:role"); document.documentElement.removeAttribute("data-weered-authed"); } catch {}
     try { router.replace("/"); } catch {}
     setToken(""); setMe(null);
     setUsersByRoom({}); setMsgsByRoom({});

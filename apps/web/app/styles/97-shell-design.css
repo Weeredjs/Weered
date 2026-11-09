@@ -445,7 +445,8 @@ html[data-weered-shell-design="1"] .weered-mobile-nav,
 html[data-weered-shell-design="1"] .weered-rail-close,
 html[data-weered-shell-design="1"] .lobby-chat-drawer,
 html[data-weered-shell-design="1"] .lobby-chat-tab,
-html[data-weered-shell-design="1"] .weered-push-prompt {
+html[data-weered-shell-design="1"] .weered-push-prompt,
+html[data-weered-shell-design="1"] .weered-nudge {
   display: none !important;
 }
 /* A section with nothing to show yet still gets a slot to grab. */
@@ -465,4 +466,10 @@ html[data-weered-shell-design="1"] .weered-shell-slot-right:empty {
   border-radius: 14px;
   background: rgba(255, 255, 255, 0.025);
   margin-bottom: 10px;
+}
+/* Arranging the page never wipes a chat: Clear all chat (Control Panel) sits
+   inert while designing (James's walkthrough 2026-11-09). */
+html[data-weered-shell-design="1"] .weered-rr-destroy-link {
+  pointer-events: none !important;
+  opacity: 0.35;
 }

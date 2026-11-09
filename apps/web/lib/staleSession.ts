@@ -26,6 +26,7 @@ export function forgetSession() {
     guest = !!JSON.parse(localStorage.getItem("weered_user") || "null")?.isGuest;
     localStorage.removeItem("weered_user");
     localStorage.removeItem("weered_token");
+    localStorage.removeItem("weered:role");
     document.documentElement.removeAttribute("data-weered-authed");
     document.documentElement.removeAttribute("data-weered-guest");
   } catch {}

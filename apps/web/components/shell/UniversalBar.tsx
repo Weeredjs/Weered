@@ -129,6 +129,7 @@ export default function UniversalBar() {
             ).catch(() => {});
             try {
               localStorage.removeItem("weered_user");
+              localStorage.removeItem("weered:role");
             } catch {}
             window.location.assign("/");
           }}

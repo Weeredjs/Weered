@@ -308,6 +308,25 @@ export default function LeftRail() {
   const [serverRecents, setServerRecents] = useState<any[]>([]);
   const recentsLoaded = useRef(false);
 
+  // The visits as they last loaded, before paint: they carry the names, so a
+  // refresh showed Favorites as bare slugs ("timbos", "eve") for a few seconds
+  // until /recents answered (James's walkthrough 2026-11-09).
+  const recentsKey = me?.id ? `weered:recents:v1:${me.id}` : "";
+  useLayoutEffect(() => {
+    if (!recentsKey) return;
+    try {
+      const raw = localStorage.getItem(recentsKey);
+      const list = raw ? JSON.parse(raw) : null;
+      if (Array.isArray(list) && !recentsLoaded.current) setServerRecents(list);
+    } catch {}
+  }, [recentsKey]);
+  useEffect(() => {
+    if (!recentsKey) return;
+    try {
+      if (serverRecents.length) localStorage.setItem(recentsKey, JSON.stringify(serverRecents));
+    } catch {}
+  }, [serverRecents, recentsKey]);
+
   useEffect(() => {
     // Auth via the httpOnly cookie (global fetch-patch adds credentials+cookie
     // for api.weered.ca); gate on the user, not the boot-deleted weered_token.

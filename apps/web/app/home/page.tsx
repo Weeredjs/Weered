@@ -35,7 +35,8 @@ function pickFirst(...vals: any[]): string {
   return "";
 }
 function onlineCount(r: any): number {
-  return Number(r?.onlineCount ?? r?.online ?? r?.memberCount ?? r?.count ?? 0);
+  // People here now; never the member count (that read members as online).
+  return Number(r?.onlineCount ?? r?.online ?? 0);
 }
 function roomId(r: any): string {
   return pickFirst(r?.id, r?.roomId, "");
@@ -839,8 +840,6 @@ export default function HomePage() {
   const homeLayout = office ? LEGACY_HOME : ownHome;
   const [fetchedRooms, setFetchedRooms] = React.useState<any[]>([]);
 
-  const [lobbyPresenceCounts, setLobbyPresenceCounts] = React.useState<Record<string, number>>({});
-
   const [featuredLobby, setFeaturedLobby] = React.useState<any>(null);
   // Every lobby, as the lobby browser lists them (the grid shows the live set).
   const [lobbyTotal, setLobbyTotal] = React.useState(0);
@@ -861,7 +860,11 @@ export default function HomePage() {
       loggedIn ? fetch(`${base}/recents`, { headers }).then(r => r.json()).catch(() => ({})) : Promise.resolve({}),
     ]).then(([lobbyData, roomData, featuredData, recentsData]) => {
       const lobbies = Array.isArray(lobbyData?.lobbies)
-        ? lobbyData.lobbies.map((l: any) => ({ ...l, pinned: true, onlineCount: l._count?.members ?? 0 }))
+        ? // onlineCount is people in the lobby now (api lib/lobbyCount.ts), the
+          // same number Downtown shows. It was the member count here, then a
+          // per-lobby presence fetch that counted The Operator, so every lobby
+          // read "1 online" (James's walkthrough 2026-11-09).
+          lobbyData.lobbies.map((l: any) => ({ ...l, pinned: true, onlineCount: Number(l.onlineCount ?? 0) }))
         : [];
       setLobbyTotal(lobbies.length);
       const rms = Array.isArray(roomData?.rooms) ? roomData.rooms : [];
@@ -882,21 +885,6 @@ export default function HomePage() {
         setServerRecents(recentsData.recents);
       }
 
-      const lobbyIds = lobbies.map((l: any) => l.id).filter(Boolean);
-      if (lobbyIds.length) {
-        void (Promise.all(
-          lobbyIds.map((id: string) =>
-            fetch(`${base}/lobbies/${encodeURIComponent(id)}/presence`, { headers })
-              .then(r => r.json())
-              .then(j => ({ id, count: j?.count ?? 0 }))
-              .catch(() => ({ id, count: 0 }))
-          )
-        ).then(results => {
-          const counts: Record<string, number> = {};
-          for (const r of results) counts[r.id] = r.count;
-          setLobbyPresenceCounts(counts);
-        }));
-      }
     }));
   }, []);
 
@@ -918,17 +906,8 @@ export default function HomePage() {
     } else {
       base = ws.length > 0 ? ws : fetchedRooms;
     }
-    if (Object.keys(lobbyPresenceCounts).length > 0) {
-      return base.map((r: any) => {
-        const id = r.id ?? r.roomId;
-        if (id && lobbyPresenceCounts[id] !== undefined) {
-          return { ...r, onlineCount: lobbyPresenceCounts[id] };
-        }
-        return r;
-      });
-    }
     return base;
-  }, [rooms, fetchedRooms, lobbyPresenceCounts]);
+  }, [rooms, fetchedRooms]);
 
   const filtered = useMemo(() => allRooms, [allRooms]);
 
@@ -977,12 +956,13 @@ export default function HomePage() {
   const featured = useMemo(() => {
     if (featuredLobby) {
       const id = featuredLobby.id;
-      const liveCount = lobbyPresenceCounts[id] ?? onlineCount(featuredLobby);
+      const listed = lobbies.find(r => roomId(r) === id);
+      const liveCount = listed ? onlineCount(listed) : 0;
       return { ...featuredLobby, pinned: true, onlineCount: liveCount };
     }
     return lobbies.find(r => onlineCount(r) > 0) ?? lobbies[0] ?? popularRooms[0] ?? null;
   },
-    [lobbies, popularRooms, featuredLobby, lobbyPresenceCounts]
+    [lobbies, popularRooms, featuredLobby]
   );
 
   const featuredId = featured ? roomId(featured) : "";

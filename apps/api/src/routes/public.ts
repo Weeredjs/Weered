@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
 import { getActivity } from "../lib/publicActivity";
+import { lobbyOnlineCount } from "../lib/lobbyCount";
 
 type Opts = {
   rooms: Map<string, { users: Set<string>; sockets: Set<any>; [k: string]: any }>;
@@ -72,7 +73,7 @@ export default async function publicRoutes(app: FastifyInstance, opts: Opts) {
       return String(a.name || "").localeCompare(String(b.name || ""));
     });
     const enriched = sorted.map((l: any) => {
-      const liveCount = rooms.get(l.id)?.users?.size ?? 0;
+      const liveCount = lobbyOnlineCount(rooms, l.id);
       const reeled = applyWindroseReel
         ? applyWindroseReel({ ...l, onlineCount: liveCount })
         : { ...l, onlineCount: liveCount };

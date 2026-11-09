@@ -26,6 +26,7 @@ import { broadcast as broadcastRoom, publishState, roleOf } from "../lib/roomSta
 import { registerLobbyPresence } from "./lobbyPresence";
 
 import { touchLobbyViewer } from "../lib/lobbyViewers";
+import { lobbyOnlineCount } from "../lib/lobbyCount";
 
 type Opts = {
   authFromHeader: (h?: string) => { id: string; name: string } | null;
@@ -197,7 +198,7 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
     const enriched = lobbies.map((l: any) =>
       applyWindroseReel({
         ...l,
-        onlineCount: rooms.get(l.id)?.users?.size ?? 0,
+        onlineCount: lobbyOnlineCount(rooms, l.id),
       }),
     );
     return reply.send({ ok: true, lobbies: enriched });
@@ -229,7 +230,7 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
     const memberMap = new Map<string, any>(memberships.map((m: any) => [m.lobbyId, m]));
     const enriched = lobbies.map((l: any) => ({
       ...l,
-      onlineCount: rooms.get(l.id)?.users?.size ?? 0,
+      onlineCount: lobbyOnlineCount(rooms, l.id),
       role: memberMap.get(l.id)?.role || "MEMBER",
       roleLevel: memberMap.get(l.id)?.roleLevel ?? 1,
     }));

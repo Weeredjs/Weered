@@ -22,7 +22,7 @@ export async function generateMetadata(props: {
   const params = await props.params;
   const b = await fetchBounty(params.id);
   if (!b) {
-    return { title: "Bounty | Weered", description: "A Windrose bounty on Weered." };
+    return { title: { absolute: "Bounty | Weered" }, description: "A Windrose bounty on Weered." };
   }
   const status =
     b.status === "OPEN"

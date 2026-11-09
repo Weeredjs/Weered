@@ -152,3 +152,46 @@ describe("forum - create post + comment", () => {
     await app.close();
   });
 });
+
+describe("forum - Hot on a quiet board", () => {
+  it("still lists posts older than 30 days, after the recent ones, and keeps old pins on top", async () => {
+    const stamp = Date.now();
+    const owner = await prisma.user.create({
+      data: { usernameKey: "itest_forum_hot_" + stamp, name: "hot" },
+      select: { id: true },
+    });
+    const lobbyId = "itest-hot-" + stamp;
+    await prisma.lobby.create({ data: { id: lobbyId, name: lobbyId, ownerId: owner.id } });
+    const day = 24 * 60 * 60 * 1000;
+    const mk = (title: string, ageDays: number, pinned = false) =>
+      prisma.forumPost.create({
+        data: {
+          title,
+          body: title,
+          authorId: owner.id,
+          lobbyId,
+          pinned,
+          createdAt: new Date(Date.now() - ageDays * day),
+        } as any,
+        select: { id: true },
+      });
+    try {
+      await mk("old", 200);
+      await mk("old pin", 120, true);
+      await mk("recent", 2);
+      const app = await makeApp();
+      const r = await app.inject({
+        method: "GET",
+        url: `/forum/posts?sort=hot&lobbyId=${lobbyId}`,
+      });
+      expect(r.statusCode).toBe(200);
+      const titles = (r.json().posts || []).map((p: any) => p.title);
+      expect(titles).toEqual(["old pin", "recent", "old"]);
+      await app.close();
+    } finally {
+      await prisma.forumPost.deleteMany({ where: { lobbyId } }).catch(() => {});
+      await prisma.lobby.delete({ where: { id: lobbyId } }).catch(() => {});
+      await prisma.user.delete({ where: { id: owner.id } }).catch(() => {});
+    }
+  });
+});

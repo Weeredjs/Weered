@@ -127,7 +127,8 @@ export default async function forumRoutes(app: FastifyInstance, opts: Opts) {
       });
     } else {
       const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-      const hotWhere = { ...where, createdAt: { gte: thirtyDaysAgo } };
+      // A pinned post stays in Hot at any age.
+      const hotWhere = { ...where, OR: [{ createdAt: { gte: thirtyDaysAgo } }, { pinned: true }] };
       const candidates = await prisma.forumPost.findMany({
         where: hotWhere,
         orderBy: [{ createdAt: "desc" }],
@@ -148,6 +149,18 @@ export default async function forumRoutes(app: FastifyInstance, opts: Opts) {
         return b.hot - a.hot;
       });
       posts = scored.slice(0, limit).map((x) => x.post);
+      // A quiet board still shows its older posts under Hot, newest first, after
+      // the recent ones. Hot only looked back 30 days, so a lobby whose posts
+      // were older said "The board's empty" while its count said 1 (James's
+      // walkthrough 2026-11-09).
+      if (posts.length < limit) {
+        const older = await prisma.forumPost.findMany({
+          where: { ...where, createdAt: { lt: thirtyDaysAgo }, pinned: false },
+          orderBy: [{ createdAt: "desc" }],
+          take: limit - posts.length,
+        });
+        posts = posts.concat(older);
+      }
     }
 
     const authorMap = await enrichForumAuthors(posts.map((p: any) => p.authorId));

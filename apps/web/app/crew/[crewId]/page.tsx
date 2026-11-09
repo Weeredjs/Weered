@@ -19,7 +19,7 @@ export async function generateMetadata(props: {
 }): Promise<Metadata> {
   const params = await props.params;
   const c = await fetchCrew(params.crewId);
-  if (!c) return { title: "Crew | Weered", description: "A crew on Weered." };
+  if (!c) return { title: { absolute: "Crew | Weered" }, description: "A crew on Weered." };
   const recruitStatus = c.recruiting ? "Recruiting now" : "Closed ranks";
   const tag = c.tag ? ` [${c.tag}]` : "";
   const title = `${c.name}${tag} | Weered Crew`;
@@ -27,7 +27,8 @@ export async function generateMetadata(props: {
     ? `${c.description.slice(0, 140)}${c.description.length > 140 ? "…" : ""}`
     : `${c.memberCount} member${c.memberCount === 1 ? "" : "s"} · ${recruitStatus}.`;
   return {
-    title,
+    // Already names Weered; the layout's "%s | Weered" would double it.
+    title: { absolute: title },
     description,
     openGraph: {
       title,

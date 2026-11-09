@@ -2,7 +2,7 @@ import { Metadata } from "next";
 import GuidelinesContent from "./GuidelinesContent";
 
 export const metadata: Metadata = {
-  title: "Community Guidelines | Weered",
+  title: { absolute: "Community Guidelines | Weered" },
   description:
     "Weered Community Guidelines. Rules for chat, video, screen sharing, forums, and all community interactions on the platform.",
   openGraph: {

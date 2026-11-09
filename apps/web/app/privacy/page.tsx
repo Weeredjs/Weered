@@ -2,7 +2,7 @@ import { Metadata } from "next";
 import PrivacyContent from "./PrivacyContent";
 
 export const metadata: Metadata = {
-  title: "Privacy Policy | Weered",
+  title: { absolute: "Privacy Policy | Weered" },
   description:
     "Weered Privacy Policy. How we collect, use, store, and protect your personal information in compliance with Canadian privacy law (PIPEDA).",
   openGraph: {

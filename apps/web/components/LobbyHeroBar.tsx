@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import StreamInterceptModal, { type StreamInfo } from "./StreamInterceptModal";
 import { onActivate } from "@/lib/a11y";
 import { noun } from "../lib/plural";
+import { descriptionLead } from "../lib/descriptionLead";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
@@ -432,7 +433,9 @@ export default function LobbyHeroBar({
                 <div
                   style={{
                     fontSize: 12,
-                    color: "rgba(148,163,184,0.72)",
+                    // Readable over the banner art, not faint grey on it.
+                    color: "rgba(226,232,240,0.86)",
+                    textShadow: "0 1px 3px rgba(0,0,0,.85)",
                     lineHeight: 1.4,
                     overflow: "hidden",
                     textOverflow: "ellipsis",
@@ -441,7 +444,7 @@ export default function LobbyHeroBar({
                     WebkitBoxOrient: "vertical",
                   }}
                 >
-                  {description}
+                  {descriptionLead(description)}
                 </div>
               )}
             </div>
