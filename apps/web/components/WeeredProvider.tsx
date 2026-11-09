@@ -15,6 +15,7 @@ import { watchSession } from "@/lib/staleSession";
 import { holdChat, releaseChat, type HeldChat } from "@/lib/chatOutbox";
 import { plural } from "../lib/plural";
 import { lightEffectsOn } from "../lib/displaySettings";
+import { rememberedRole, rememberRole } from "../lib/roleMemory";
 
 const API    = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 const WS_URL = process.env.NEXT_PUBLIC_WS_URL   || "ws://127.0.0.1:4001";
@@ -222,15 +223,7 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
   useLayoutEffect(() => {
     try {
       const u = localStorage.getItem("weered_user");
-      if (u) {
-        setToken("authed");
-        const parsed = JSON.parse(u);
-        setMe(parsed);
-        // The role as this device last knew it, until /staff/me answers: a
-        // refresh hid Ops from staff for a few seconds (2026-11-09).
-        const role = parsed?.globalRole || localStorage.getItem("weered:role");
-        if (role) setGlobalRole(String(role));
-      }
+      if (u) { setToken("authed"); const p = JSON.parse(u); setMe(p); const role = rememberedRole(p?.globalRole); if (role) setGlobalRole(role); }
     } catch {}
   }, []);
   const [globalRole, setGlobalRole] = useState("");
@@ -302,13 +295,7 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
     if (!token) { setGlobalRole(""); return; }
     fetch(`${API}/staff/me`, { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.json())
-      .then(j => {
-        if (j?.globalRole) setGlobalRole(j.globalRole);
-        try {
-          if (j?.globalRole) localStorage.setItem("weered:role", String(j.globalRole));
-          else if (j && !j.globalRole) localStorage.removeItem("weered:role");
-        } catch {}
-      })
+      .then(j => { if (j?.globalRole) setGlobalRole(j.globalRole); rememberRole(j); })
       .catch(() => {});
   }, [token]);
 
