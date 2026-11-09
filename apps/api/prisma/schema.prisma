@@ -370,6 +370,10 @@ model Room {
   // Chat lock (separate from `locked`, the door): while on, only the room's
   // moderators can post (sockets/messaging.ts chat:send).
   chatLocked      Boolean       @default(false)
+  // Slow mode (room:slow): seconds between one person's messages; 0 = off.
+  slowSec         Int           @default(0)
+  // Who the room's moderators muted (mod:mute), until they're unmuted.
+  mutedUserIds    String[]      @default([])
   pinned          Boolean       @default(false)
   isEvent         Boolean       @default(false)
   passwordHash    String?
@@ -450,6 +454,11 @@ model RoomMessage {
   replyToUserId   String?
   replyToUserName String?
   replyToBody     String?
+  // The picture sent with it (ChatAttachment.id). The room shows it again when
+  // it reloads, while the picture is still ACTIVE.
+  attachmentId    String?
+  // Pinned by a moderator (chat:pin); the room's pins reload from this.
+  pinnedAt        DateTime?
 
   room Room @relation(fields: [roomId], references: [id], onDelete: Cascade)
 

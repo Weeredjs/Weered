@@ -1,5 +1,5 @@
 import { log, swallow } from "../lib/logger";
-import { OPERATOR_FACE } from "../lib/roomState";
+import { OPERATOR_FACE, chatAttachmentRef } from "../lib/roomState";
 import { prisma } from "../lib/prisma";
 import { randomUUID } from "crypto";
 import { mayAct } from "../lib/roomGate";
@@ -89,6 +89,13 @@ export async function handleChat(ws: any, msg: any, opts: Opts): Promise<void> {
     } else {
       room.pinnedMsgs.delete(msgId);
     }
+    // Saved on the message, so the pins outlive a restart (lib/roomState.ts loadRoom).
+    void prisma.roomMessage
+      .updateMany({
+        where: { id: msgId, roomId: room.roomId },
+        data: { pinnedAt: msg.type === "chat:pin" ? new Date() : null } as any,
+      })
+      .catch(swallow);
     broadcast(room, {
       type: "chat:pins",
       roomId: room.roomId,
@@ -270,15 +277,7 @@ export async function handleChat(ws: any, msg: any, opts: Opts): Promise<void> {
           att.status === "ACTIVE" &&
           Date.now() - new Date(att.createdAt).getTime() < 15 * 60_000
         ) {
-          attachment = {
-            id: att.id,
-            url: att.url,
-            thumbUrl: att.thumbUrl,
-            w: att.width,
-            h: att.height,
-            trusted: att.trusted,
-            expiresAt: att.expiresAt ? new Date(att.expiresAt).toISOString() : null,
-          };
+          attachment = chatAttachmentRef(att);
           if (!att.roomId)
             void prisma.chatAttachment
               .update({ where: { id: att.id }, data: { roomId: room.roomId } })
@@ -323,6 +322,9 @@ export async function handleChat(ws: any, msg: any, opts: Opts): Promise<void> {
             replyToUserId: replyTo?.userId ?? null,
             replyToUserName: replyTo?.userName ?? null,
             replyToBody: replyTo?.body ?? null,
+            // Without it the picture lived only in memory, and a deploy or an
+            // idle hour took it off the message (James 2026-11-08).
+            ...(attachment ? { attachmentId: attachment.id } : {}),
           } as any,
         })
         .catch(swallow);

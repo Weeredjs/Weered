@@ -7,6 +7,17 @@ import { rankIn, rankOf, roleOf } from "../lib/roomState";
 /** How long a kick keeps someone out of the room. */
 export const KICK_MS = 10 * 60_000;
 
+/** Mutes are kept on the room's row, so a deploy or an idle hour doesn't lift
+ *  them (lib/roomState.ts loadRoom reads them back). */
+function saveMuted(room: any) {
+  void prisma.room
+    .update({
+      where: { id: room.roomId },
+      data: { mutedUserIds: Array.from(room.muted as Set<string>) } as any,
+    })
+    .catch(swallow);
+}
+
 // Room lifecycle + moderation WS handlers extracted from the index.ts main
 // message handler. handleRoomClose (room:close) is dispatched PRE-preamble: it
 // self-resolves via rooms.get (it only closes already-loaded in-memory rooms,
@@ -314,6 +325,9 @@ export async function handleRoomMod(
     const allowed = [0, 5, 10, 30, 60, 120];
     const sec = Number(msg.seconds);
     room.slowSec = allowed.includes(sec) ? sec : 0;
+    void prisma.room
+      .update({ where: { id: roomId }, data: { slowSec: room.slowSec } as any })
+      .catch(swallow);
     audit(room, { type: "room:slow", actorId, actorName, note: `${room.slowSec}s` });
     publishState(room);
     return;
@@ -336,6 +350,7 @@ export async function handleRoomMod(
     const targetId = String(msg.userId || "");
     if (!targetId || targetId === actorId || !(await outranks(targetId))) return;
     room.muted.add(targetId);
+    saveMuted(room);
     for (const s of findSocketsByUser(room, targetId)) send(s, { type: "mod:muted", ...where });
     audit(room, { type: "mod:mute", actorId, actorName, targetId });
     publishState(room);
@@ -347,6 +362,7 @@ export async function handleRoomMod(
     const targetId = String(msg.userId || "");
     if (!targetId) return;
     room.muted.delete(targetId);
+    saveMuted(room);
     for (const s of findSocketsByUser(room, targetId)) send(s, { type: "mod:unmuted", ...where });
     audit(room, { type: "mod:unmute", actorId, actorName, targetId });
     publishState(room);

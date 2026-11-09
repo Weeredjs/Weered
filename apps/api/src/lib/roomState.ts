@@ -85,6 +85,27 @@ export type ChatAttachmentRef = {
   trusted: boolean;
   expiresAt?: string | null;
 };
+/** A ChatAttachment row as a message carries it: the live send and the
+ *  reload (loadRoom) both build it here, so a reloaded picture looks the same. */
+export function chatAttachmentRef(att: {
+  id: string;
+  url: string;
+  thumbUrl: string;
+  width: number;
+  height: number;
+  trusted: boolean;
+  expiresAt: Date | string | null;
+}): ChatAttachmentRef {
+  return {
+    id: att.id,
+    url: att.url,
+    thumbUrl: att.thumbUrl,
+    w: att.width,
+    h: att.height,
+    trusted: att.trusted,
+    expiresAt: att.expiresAt ? new Date(att.expiresAt).toISOString() : null,
+  };
+}
 export type ChatMsg = {
   id: string;
   user: RoomUser;
@@ -316,8 +337,10 @@ async function loadRoom(roomId: string): Promise<RoomState> {
     include: {
       members: true,
       bans: true,
-      messages: { orderBy: { ts: "asc" }, take: 80 },
-      audit: { orderBy: { ts: "asc" }, take: 80 },
+      // The newest 80, put back in order below. Taken oldest-first, a busy
+      // room came back from every restart showing its first 80 messages ever.
+      messages: { orderBy: { ts: "desc" }, take: 80 },
+      audit: { orderBy: { ts: "desc" }, take: 80 },
     },
   });
 
@@ -341,6 +364,8 @@ async function loadRoom(roomId: string): Promise<RoomState> {
     r.accentColor = (dbRoom as any).accentColor || undefined;
     r.locked = Boolean(dbRoom.locked);
     r.chatLocked = Boolean((dbRoom as any).chatLocked);
+    r.slowSec = Number((dbRoom as any).slowSec) || 0;
+    for (const id of (dbRoom as any).mutedUserIds || []) r.muted.add(String(id));
     r.pinned = Boolean((dbRoom as any).pinned);
     r.isEvent = Boolean((dbRoom as any).isEvent);
     r.ownerId = dbRoom.ownerId || undefined;
@@ -362,6 +387,33 @@ async function loadRoom(roomId: string): Promise<RoomState> {
       if (m.role === "MOD") r.mods.add(m.userId);
     }
     for (const b of dbRoom.bans) r.banned.add(b.userId);
+    dbRoom.messages.reverse();
+    dbRoom.audit.reverse();
+    // The room's pins (chat:pin saves pinnedAt). A pinned message older than
+    // the backlog loads with it: the pins bar shows pins from loaded messages.
+    const pinnedRows = await prisma.roomMessage
+      .findMany({
+        where: { roomId, pinnedAt: { not: null } } as any,
+        orderBy: { pinnedAt: "asc" } as any,
+        take: 10,
+      })
+      .catch(() => [] as typeof dbRoom.messages);
+    const inBacklog = new Set(dbRoom.messages.map((m) => m.id));
+    const olderPins = pinnedRows
+      .filter((m) => !inBacklog.has(m.id))
+      .sort((a, b) => new Date(a.ts).getTime() - new Date(b.ts).getTime());
+    dbRoom.messages.unshift(...olderPins);
+    r.pinnedMsgs = new Set(pinnedRows.map((m) => m.id));
+    // Each message's picture, while it's still up: not expired, hidden by
+    // reports or removed by staff (routes/chatMedia.ts).
+    const attIds = dbRoom.messages.map((m) => (m as any).attachmentId).filter(Boolean);
+    const pictures = new Map<string, ChatAttachmentRef>();
+    if (attIds.length) {
+      const atts = await prisma.chatAttachment
+        .findMany({ where: { id: { in: attIds }, status: "ACTIVE" } })
+        .catch(() => []);
+      for (const a of atts) pictures.set(a.id, chatAttachmentRef(a));
+    }
     // Author names come from the User record, not the copy stored on each
     // message. That copy is the name at send time, so without this a rename
     // leaves every past message showing the old name. One batched lookup for
@@ -424,6 +476,7 @@ async function loadRoom(roomId: string): Promise<RoomState> {
             body: (m as any).replyToBody || "",
           }
         : undefined,
+      attachment: pictures.get((m as any).attachmentId),
     }));
 
     try {
