@@ -15,7 +15,7 @@ import { watchSession } from "@/lib/staleSession";
 import { holdChat, releaseChat, type HeldChat } from "@/lib/chatOutbox";
 import { plural } from "../lib/plural";
 import { lightEffectsOn } from "../lib/displaySettings";
-import { rememberedRole, rememberRole } from "../lib/roleMemory";
+import { rememberedRole, rememberRole } from "../lib/roleMemory"; import { endBoot } from "../lib/bootMark";
 
 const API    = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 const WS_URL = process.env.NEXT_PUBLIC_WS_URL   || "ws://127.0.0.1:4001";
@@ -224,7 +224,7 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
     try {
       const u = localStorage.getItem("weered_user");
       if (u) { setToken("authed"); const p = JSON.parse(u); setMe(p); const role = rememberedRole(p?.globalRole); if (role) setGlobalRole(role); }
-    } catch {}
+    } catch {} endBoot();
   }, []);
   const [globalRole, setGlobalRole] = useState("");
 

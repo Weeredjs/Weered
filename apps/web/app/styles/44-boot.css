@@ -1,0 +1,17 @@
+/* A member's first paint, before the provider signs them in (lib/bootMark.ts).
+   The server's shell says "Guest"; this device already knows who it is. */
+html[data-weered-booting] [data-boot-text] {
+  display: none !important;
+}
+html:not([data-weered-booting]) [data-boot-alt] {
+  display: none !important;
+}
+html[data-weered-booting] [data-boot-alt="name"]::before {
+  content: var(--weered-boot-name, "");
+}
+html[data-weered-booting] [data-boot-alt="initial"]::before {
+  content: var(--weered-boot-initial, "");
+}
+html[data-weered-booting] [data-boot-hide] {
+  visibility: hidden !important;
+}

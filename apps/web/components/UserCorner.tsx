@@ -757,7 +757,10 @@ export default function UserCorner() {
                   style={{ width: "100%", height: "100%", objectFit: "cover" }}
                 />
               ) : (
-                initial
+                <>
+                  <span data-boot-text>{initial}</span>
+                  <span data-boot-alt="initial" />
+                </>
               )}
             </div>
             <span
@@ -1021,6 +1024,7 @@ export default function UserCorner() {
               maxWidth: "100%",
             }}
             title="Set a status"
+            data-boot-hide
           >
             {status.emoji && <span style={{ fontSize: 13, flexShrink: 0 }}>{status.emoji}</span>}
             <span
@@ -1214,16 +1218,19 @@ function FittedName({ name, effect }: { name: string; effect?: string | null }) 
         whiteSpace: "nowrap",
       }}
     >
-      {effect ? (
-        <span
-          className={nameFx(effect).className}
-          style={{ ...nameFx(effect).style, display: "inline-block", lineHeight: "inherit" }}
-        >
-          {name}
-        </span>
-      ) : (
-        name
-      )}
+      <span data-boot-text>
+        {effect ? (
+          <span
+            className={nameFx(effect).className}
+            style={{ ...nameFx(effect).style, display: "inline-block", lineHeight: "inherit" }}
+          >
+            {name}
+          </span>
+        ) : (
+          name
+        )}
+      </span>
+      <span data-boot-alt="name" />
     </div>
   );
 }

@@ -161,6 +161,18 @@ try {
   if (localStorage.getItem('weered_user')) d.setAttribute('data-weered-authed', '1');
   // A guest (a lobby's guest link) sees the lobby alone: lib/guestSession.ts.
   try { var wu = JSON.parse(localStorage.getItem('weered_user') || 'null'); if (wu && wu.isGuest) d.setAttribute('data-weered-guest', '1'); } catch (e) {}
+  // The server's shell says "Guest" until the scripts sign the member in; show
+  // this device's saved name instead (lib/bootMark.ts, styles/44-boot.css).
+  try {
+    var bu = JSON.parse(localStorage.getItem('weered_user') || 'null');
+    var bn = bu && bu.id ? String(bu.name || bu.username || '').trim() : '';
+    if (bn) {
+      d.setAttribute('data-weered-booting', '1');
+      d.style.setProperty('--weered-boot-name', JSON.stringify(bn));
+      d.style.setProperty('--weered-boot-initial', JSON.stringify(bn.slice(0, 1).toUpperCase()));
+      setTimeout(function () { d.removeAttribute('data-weered-booting'); }, 15000);
+    }
+  } catch (e) {}
   // Streamer overlay route: strip chrome + transparent body before paint
   // so OBS browser-source captures a clean composite over the game capture.
   if (location.pathname.indexOf('/overlay/') === 0 || location.pathname === '/overlay') {

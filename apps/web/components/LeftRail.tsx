@@ -988,7 +988,7 @@ export default function LeftRail() {
           })}
           {!listed.length ? (
             office ? null : (
-              <div className="weered-muted" style={{ padding: 10 }}>
+              <div className="weered-muted" style={{ padding: 10 }} data-boot-hide>
                 No users.
               </div>
             )

@@ -3,6 +3,7 @@
 import { poll } from "@/lib/floodMode";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useRouter } from "next/navigation";
 import { useWeered } from "./WeeredProvider";
 import { useOverlay } from "./overlays/OverlayProvider";
 import { NotificationsView } from "./NotificationCenter";
@@ -33,6 +34,7 @@ function hasCachedUser(): boolean {
 
 export function LogoMenu() {
   const { me, isAway, setAway, logout } = useWeered() as any;
+  const router = useRouter();
   const { openSheet } = useOverlay() as any;
   const [open, setOpen] = useState(false);
   const [view, setView] = useState<View>("menu");
@@ -129,11 +131,11 @@ export function LogoMenu() {
   }
 
   const close = () => setOpen(false);
+  // In place, not a full reload: a reload re-sent the server's signed-out
+  // shell and "GUEST" showed until the scripts loaded (James 2026-11-10).
   const goHome = () => {
     close();
-    try {
-      window.location.assign("/home");
-    } catch {}
+    router.push("/home");
   };
   const openProfile = () => {
     close();
@@ -151,9 +153,7 @@ export function LogoMenu() {
   // Your shareable card (app/rap, 2026-11-01).
   const openRapSheet = () => {
     close();
-    try {
-      window.location.assign("/rap");
-    } catch {}
+    router.push("/rap");
   };
   const toggleAway = () => {
     close();

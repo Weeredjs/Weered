@@ -56,7 +56,8 @@ export default function UniversalBar() {
       <div className="home-topbar-greet weered-ubar-greet">
         <div className="weered-ubar-hello">{hello}</div>
         <div className="weered-ubar-hey">
-          Hey, <span>{name}</span>
+          Hey, <span data-boot-text>{name}</span>
+          <span data-boot-alt="name" />
         </div>
       </div>
 
