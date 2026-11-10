@@ -115,7 +115,7 @@ describe("the search's own pages and actions", () => {
 describe("the search", () => {
   it("finds lobbies, rooms, people, crews and posts in one go", async () => {
     const f = answer({
-      lobbies: [{ id: "eve", name: "EVE Online", verified: true, members: 12 }],
+      lobbies: [{ id: "eve", name: "EVE Online", verified: true, members: 120 }],
       rooms: [{ id: "r1", name: "Night ops", lobby: { id: "eve", name: "EVE Online" } }],
       people: [{ id: "u2", name: "Nyx", usernameKey: "nyx" }],
       crews: [{ id: "c1", name: "Night Shift", tagKey: "NGHT", _count: { members: 7 } }],
@@ -129,7 +129,7 @@ describe("the search", () => {
     expect(String((f.mock.calls[0] as any[])[0])).toContain("/search?q=night");
     for (const label of ["Lobbies", "Rooms", "People", "Crews", "Posts"])
       expect(view.getByText(label)).toBeTruthy();
-    expect(view.getByText("✓ Verified · 12 members")).toBeTruthy();
+    expect(view.getByText("✓ Verified · 120 members")).toBeTruthy();
     expect(view.getByText("[NGHT] · 7 members")).toBeTruthy();
     expect(view.getByText("3 replies", { exact: false })).toBeTruthy();
   });
