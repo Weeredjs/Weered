@@ -830,6 +830,12 @@ export async function handleCrewDm(
       return;
     }
     const toId = await resolveUserId(rawToId);
+    // A note to yourself sat in your own list as an unread message forever,
+    // a 1 on the DMs button on every page (2026-11-10).
+    if (toId === fromId) {
+      send(ws, { type: "dm:rejected", reason: "You can't message yourself." });
+      return;
+    }
     try {
       const blocked = await prisma.userBlock.findFirst({
         where: {

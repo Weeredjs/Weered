@@ -55,7 +55,7 @@ const TIERS = [
     color: "#a78bfa",
     glow: "rgba(88,0,229,0.2)",
     border: "rgba(88,0,229,0.35)",
-    badge: "most popular",
+    // No "most popular": nobody has bought one yet (2026-11-10).
     features: [
       "Everything in Innocent",
       "yourname.weered.ca for your place",

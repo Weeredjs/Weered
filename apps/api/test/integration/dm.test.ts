@@ -104,4 +104,31 @@ describe("dmRoutes - send + conversation", () => {
     expect(noauth.statusCode).toBe(401);
     await app.close();
   });
+
+  it("refuses a note to yourself and keeps old ones out of the list and unread", async () => {
+    const app = await makeApp();
+    const { a, b } = await twoUsers();
+    const self = await app.inject({
+      method: "POST",
+      url: `/dm/${a}`,
+      headers: { authorization: `Bearer ${testToken(a)}` },
+      payload: { body: "note" },
+    });
+    expect(self.statusCode).toBe(400);
+    // One from before the refusal, and a real unread one from b.
+    await prisma.directMessage.create({ data: { fromId: a, toId: a, body: "." } });
+    await prisma.directMessage.create({ data: { fromId: b, toId: a, body: "hey" } });
+    const auth = { authorization: `Bearer ${testToken(a)}` };
+    const convos = (
+      await app.inject({ method: "GET", url: "/dm/conversations", headers: auth })
+    ).json();
+    expect(convos.conversations.map((c: any) => c.id)).toEqual([b]);
+    const unread = (await app.inject({ method: "GET", url: "/dm/unread", headers: auth })).json();
+    expect(unread.counts).toEqual({ [b]: 1 });
+    const previews = (
+      await app.inject({ method: "GET", url: "/dm/previews", headers: auth })
+    ).json();
+    expect(JSON.stringify(previews)).not.toContain(`"peerId":"${a}"`);
+    await app.close();
+  });
 });

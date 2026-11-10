@@ -10,6 +10,7 @@
 // second while it cruises, and stops while the strip is off screen, held still
 // or at rest (lib/rest.ts); a card's picture loads the first time it comes near.
 import React, { useEffect, useRef } from "react";
+import { memberLabel } from "../../lib/socialProof";
 import Link from "next/link";
 import { avatarBg } from "../../lib/avatarColor";
 import { hideBroken, sizedImage } from "../../lib/sizedImage";
@@ -315,9 +316,7 @@ export default function LobbyCarousel({
                 <span className="weered-drift-words">
                   <span className="weered-drift-name">{l.name}</span>
                   <span className={`weered-drift-meta${l.online > 0 ? " is-live" : ""}`}>
-                    {l.online > 0
-                      ? `${l.online} online`
-                      : `${l.members} member${l.members === 1 ? "" : "s"}`}
+                    {l.online > 0 ? `${l.online} online` : memberLabel(l.members)}
                   </span>
                 </span>
               </span>

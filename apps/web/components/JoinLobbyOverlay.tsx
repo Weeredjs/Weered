@@ -12,10 +12,11 @@ type Props = {
   onJoin: () => Promise<void>;
 };
 
+// What every lobby gives a member. Tournaments are a lobby's own perk (its
+// memberPerks); a general hangout promised them (2026-11-10).
 const DEFAULT_PERKS = [
   "Full themed lobby experience",
   "Create rooms in this lobby",
-  "Enter verified tournaments",
   "Receive lobby announcements",
   "Member badge in lobby chat",
 ];
@@ -33,6 +34,8 @@ export default function JoinLobbyOverlay({
 }: Props) {
   // "donkey's place": a name that already says whose it is.
   const possessive = /['’]s\b/i.test(lobbyName);
+  // "The Lobby" brings its own article: "Unlock the The Lobby experience".
+  const named = /^the\s/i.test(lobbyName.trim()) ? lobbyName : `the ${lobbyName}`;
   const [dismissed, setDismissed] = useState<boolean>(true);
   const [joining, setJoining] = useState(false);
 
@@ -133,7 +136,7 @@ export default function JoinLobbyOverlay({
         >
           {/* A place already says whose it is: "Unlock the donkey's place
               experience" read wrong (2026-11-09). */}
-          {possessive ? `Unlock ${lobbyName}` : `Unlock the ${lobbyName} experience`}
+          {possessive ? `Unlock ${lobbyName}` : `Unlock ${named} experience`}
         </h2>
 
         <p
@@ -147,7 +150,7 @@ export default function JoinLobbyOverlay({
           {themeable
             ? possessive
               ? "Join to unlock its look + everything below. One click, free, no commitment."
-              : `Join to unlock the full ${lobbyName} look + everything below. One click, free, no commitment.`
+              : `Join to unlock the full look of ${lobbyName} + everything below. One click, free, no commitment.`
             : `Join to unlock everything below. One click, free, no commitment.`}
         </p>
 

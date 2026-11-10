@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import { isGuestSession } from "../lib/guestSession";
+import { usePathname } from "next/navigation";
 import { claimNudge, NUDGE_DESKTOP_CSS } from "../lib/nudgeSlot";
 
 interface BeforeInstallPromptEvent extends Event {
@@ -11,6 +12,7 @@ interface BeforeInstallPromptEvent extends Event {
 
 export default function InstallPrompt() {
   const [show, setShow] = useState(false);
+  const pathname = usePathname();
   const [isIOS, setIsIOS] = useState(false);
   const deferredPrompt = useRef<BeforeInstallPromptEvent | null>(null);
 
@@ -82,7 +84,9 @@ export default function InstallPrompt() {
     localStorage.setItem("weered:install:dismissed", String(Date.now()));
   }
 
-  if (!show) return null;
+  // Home only: on every page it sat over the forum's New post and the store's
+  // balance (2026-11-10). It waits on other pages and shows when you get Home.
+  if (!show || pathname !== "/home") return null;
 
   return (
     <>

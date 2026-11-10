@@ -17,6 +17,7 @@ import { FEEDBACK_EVENT } from "../BugReportButton";
 import { startDesign } from "../../lib/shellDesign";
 import { avatarFill } from "../../lib/avatarColor";
 import { plural } from "../../lib/plural";
+import { memberLabel } from "../../lib/socialProof";
 import { hideBroken } from "../../lib/sizedImage";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "https://api.weered.ca";
@@ -603,10 +604,7 @@ function Row({
       name = item.lobby.name;
       sub = item.lobby.unlisted
         ? "Unlisted · by link only"
-        : [
-            item.lobby.verified ? "✓ Verified" : "Lobby",
-            item.lobby.members ? plural(item.lobby.members, "member") : "",
-          ]
+        : [item.lobby.verified ? "✓ Verified" : "Lobby", memberLabel(item.lobby.members)]
             .filter(Boolean)
             .join(" · ");
       tint = item.lobby.accentColor;

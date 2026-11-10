@@ -17,6 +17,7 @@ import { LogoMenu } from "./LogoMenu";
 import { onActivate } from "@/lib/a11y";
 import ShellSlot from "./shell/ShellSlot";
 import { useShellLayout } from "../lib/shellDesign";
+import { memberLabel } from "../lib/socialProof";
 import { isAnyCore, isCore, keyOf, PANEL_CORES, stockShell, type AnyCore, type PanelCore } from "../lib/shellLayout";
 import AnyCoreSection from "./shell/AnyCoreSection";
 import { useOfficeSkin } from "./useOfficeSkin";
@@ -1352,7 +1353,7 @@ function DiscoverLobbiesPanel({ currentLobbyId }: { currentLobbyId: string }) {
                   {l.verified && <span style={{ fontSize: 9, color: "rgb(110,231,183)" }}>✓</span>}
                 </div>
                 <div style={{ fontSize: 10, opacity: 0.55, marginTop: 1 }}>
-                  {(l.onlineCount || 0) > 0 ? `${l.onlineCount} online` : plural(l._count?.members || 0, "member")}
+                  {(l.onlineCount || 0) > 0 ? `${l.onlineCount} online` : memberLabel(l._count?.members)}
                 </div>
               </div>
               <span style={{ fontSize: 10, padding: "3px 8px", borderRadius: 999, border: `1px solid ${accent}55`, background: `${accent}18`, color: "rgba(243,244,246,.85)", flexShrink: 0 }}>visit</span>

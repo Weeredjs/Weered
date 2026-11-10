@@ -11,6 +11,7 @@ import { weeredToast } from "../../../lib/toast";
 import JoinLobbyOverlay from "../../../components/JoinLobbyOverlay";
 import LobbyChatDrawer from "../../../components/LobbyChatDrawer";
 import LobbyHeroBar from "../../../components/LobbyHeroBar";
+import { memberLabel } from "../../../lib/socialProof";
 import TournamentLiveStrip from "../../../components/TournamentLiveStrip";
 import FlairContestStrip from "../../../components/FlairContestStrip";
 import TimbosPanel from "../../../components/TimbosPanel";
@@ -47,7 +48,6 @@ import { useLobbyDesign } from "../../../components/lobby-design/useLobbyDesign"
 import { TAB_DEFAULT_LABEL, newBlock, type BlockType, type TabId } from "../../../lib/lobbyLayout";
 import { FONT_STACK, PRESET_BY_ID } from "../../../lib/lobbyThemePresets";
 import { useWatchHere, clearPendingStream } from "../../../lib/useWatchHere";
-import { plural } from "../../../lib/plural";
 
 // Per-vertical panels are code-split: a lobby only downloads its own module.
 const panelLoading = () => (
@@ -978,7 +978,7 @@ export default function LobbyIdPage() {
                   whiteSpace: "nowrap",
                 }}
               >
-                {plural(lobbyInfo?._count?.members ?? 0, "member")}
+                {memberLabel(lobbyInfo?._count?.members)}
               </span>
             </div>
           ) : (

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useOverlay } from "../../components/overlays/OverlayProvider";
 import { safeAccent, safeImage } from "../../lib/brandSafe";
+import { memberLabel } from "../../lib/socialProof";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 function authHeaders(): Record<string, string> {
@@ -265,7 +266,9 @@ export default function MapContent() {
         title.textContent = String(lobby.name || "");
         const meta = document.createElement("div");
         meta.style.cssText = "color:rgba(148,163,184,0.6);font-size:10px";
-        meta.textContent = `${lobby.moduleType} · ${lobby.memberCount} member${lobby.memberCount !== 1 ? "s" : ""}`;
+        meta.textContent = [lobby.moduleType, memberLabel(lobby.memberCount)]
+          .filter(Boolean)
+          .join(" · ");
         pop.append(title, meta);
 
         const marker = L.marker([lobby.lat, lobby.lng], { icon });

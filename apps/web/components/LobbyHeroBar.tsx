@@ -5,6 +5,7 @@ import StreamInterceptModal, { type StreamInfo } from "./StreamInterceptModal";
 import { onActivate } from "@/lib/a11y";
 import { noun } from "../lib/plural";
 import { descriptionLead } from "../lib/descriptionLead";
+import { showMembers } from "../lib/socialProof";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
@@ -450,14 +451,12 @@ export default function LobbyHeroBar({
             </div>
           </div>
 
-          {(typeof roomCount === "number" ||
-            typeof memberCount === "number" ||
-            (inGame ?? 0) > 0) && (
+          {(typeof roomCount === "number" || showMembers(memberCount) || (inGame ?? 0) > 0) && (
             <div style={{ display: "flex", gap: 6 }}>
               {typeof roomCount === "number" && (
                 <StatChip value={roomCount} label={noun(roomCount, "room")} />
               )}
-              {typeof memberCount === "number" && memberCount > 0 && (
+              {typeof memberCount === "number" && showMembers(memberCount) && (
                 <StatChip value={memberCount} label={noun(memberCount, "member")} />
               )}
               {(inGame ?? 0) > 0 && (

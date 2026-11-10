@@ -33,8 +33,12 @@ export default async function dmRoutes(app: FastifyInstance, opts: Opts) {
     if (!viewer) return reply.code(401).send({ error: "Unauthorized" });
     // The latest 2,000 are plenty for a conversation list; it used to read
     // every message ever exchanged (red team 2026-11-01, finding 27).
+    // Old notes to self (sending one is refused now) stay out of the list.
     const msgs = await prisma.directMessage.findMany({
-      where: { OR: [{ fromId: viewer.id }, { toId: viewer.id }] },
+      where: {
+        OR: [{ fromId: viewer.id }, { toId: viewer.id }],
+        NOT: { fromId: viewer.id, toId: viewer.id },
+      },
       orderBy: { createdAt: "desc" },
       take: 2000,
       select: { fromId: true, toId: true, body: true, createdAt: true, readAt: true },
@@ -70,7 +74,7 @@ export default async function dmRoutes(app: FastifyInstance, opts: Opts) {
     try {
       const unread = await prisma.directMessage.groupBy({
         by: ["fromId"],
-        where: { toId: viewer.id, readAt: null },
+        where: { toId: viewer.id, readAt: null, NOT: { fromId: viewer.id } },
         _count: { id: true },
       });
       const counts: Record<string, number> = {};
@@ -87,7 +91,7 @@ export default async function dmRoutes(app: FastifyInstance, opts: Opts) {
     if (!u) return reply.code(401).send({ ok: false });
 
     const recentDms = await prisma.directMessage.findMany({
-      where: { OR: [{ fromId: u.id }, { toId: u.id }] },
+      where: { OR: [{ fromId: u.id }, { toId: u.id }], NOT: { fromId: u.id, toId: u.id } },
       orderBy: { createdAt: "desc" },
       take: 50,
       select: { id: true, fromId: true, toId: true, body: true, createdAt: true, readAt: true },
@@ -201,6 +205,8 @@ export default async function dmRoutes(app: FastifyInstance, opts: Opts) {
       const body: any = (req as any).body || {};
       const text = typeof body.body === "string" ? body.body.trim().slice(0, 2000) : "";
       if (!text) return reply.code(400).send({ error: "Empty message" });
+      if (peerId === viewer.id)
+        return reply.code(400).send({ error: "You can't message yourself." });
       // The same gates as the socket path (dm:send). This route skipped all
       // three, so a blocked user could still DM through it (review 2026-10-06).
       const urlCheck = checkUrlSpam(text);

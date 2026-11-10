@@ -2,6 +2,7 @@
 
 import RoomDescribe from "./build/RoomDescribe";
 import { moduleGlyph, roomMonogram } from "../lib/roomGlyph";
+import { showMembers } from "../lib/socialProof";
 import AlertsPanel from "./build/AlertsPanel";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -978,7 +979,7 @@ export default function LobbyRoomDirectory({
             // Medium and small cards carry the footer's line beside the description.
             const slimMeta = isLive
               ? null
-              : memberCount > 0
+              : showMembers(memberCount)
                 ? `${memberCount} joined`
                 : quietAgo
                   ? `active ${quietAgo}`
@@ -1367,7 +1368,7 @@ export default function LobbyRoomDirectory({
                           </svg>
                           {isLive
                             ? `${liveCount} here now`
-                            : memberCount > 0
+                            : showMembers(memberCount)
                               ? `${memberCount} joined${quietAgo ? ` · ${quietAgo}` : ""}`
                               : quietAgo
                                 ? `active ${quietAgo}`

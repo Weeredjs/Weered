@@ -33,7 +33,7 @@ const tiers = [
     color: "#a78bfa",
     glow: "rgba(88,0,229,0.2)",
     border: "rgba(88,0,229,0.35)",
-    badge: "most popular",
+    // No "most popular": nobody has bought one yet (2026-11-10).
     // What each plan does is api lib/tiers.ts (2026-11-02); lobbies are free.
     features: [
       "Everything in Innocent",

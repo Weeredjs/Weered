@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
+import { showMembers } from "../lib/socialProof";
 
 const API_BASE = (process.env.NEXT_PUBLIC_API_BASE as string) || "http://127.0.0.1:4000";
 
@@ -297,18 +298,20 @@ function LobbyCard({ lobby, onClick }: { lobby: Lobby; onClick: () => void }) {
           {lobby.moduleType && !GENERIC_MODULES.has(lobby.moduleType.toUpperCase()) && (
             <ModuleBadge type={lobby.moduleType} />
           )}
-          <span
-            style={{
-              fontFamily: MONO,
-              fontSize: 11,
-              color: TEXT_MUTED,
-              display: "flex",
-              alignItems: "center",
-              gap: 4,
-            }}
-          >
-            {plural(lobby._count.members, "member")}
-          </span>
+          {showMembers(lobby._count.members) && (
+            <span
+              style={{
+                fontFamily: MONO,
+                fontSize: 11,
+                color: TEXT_MUTED,
+                display: "flex",
+                alignItems: "center",
+                gap: 4,
+              }}
+            >
+              {plural(lobby._count.members, "member")}
+            </span>
+          )}
           {lobby.onlineCount > 0 && (
             <span
               style={{

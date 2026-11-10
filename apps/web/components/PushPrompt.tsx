@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { isGuestSession } from "../lib/guestSession";
+import { usePathname } from "next/navigation";
 import { claimNudge, NUDGE_DESKTOP_CSS } from "../lib/nudgeSlot";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
@@ -20,6 +21,7 @@ function isIosSafariNotPwa(): boolean {
 
 export default function PushPrompt() {
   const [show, setShow] = useState(false);
+  const pathname = usePathname();
   const [mode, setMode] = useState<"push" | "ios">("push");
 
   useEffect(() => {
@@ -157,7 +159,9 @@ export default function PushPrompt() {
     }
   }, [mode]);
 
-  if (!show) return null;
+  // Home only: on every page it sat over the forum's New post and the store's
+  // balance (2026-11-10). It waits on other pages and shows when you get Home.
+  if (!show || pathname !== "/home") return null;
 
   if (mode === "ios") {
     return (
