@@ -1195,8 +1195,9 @@ export default function LobbyRoomDirectory({
                         <div
                           className="weered-room-subtitle"
                           style={{
-                            fontSize: 11,
-                            color: "rgba(148,163,184,.45)",
+                            // 11px at 45% was unreadable on the themed lobbies (2026-11-10).
+                            fontSize: 12,
+                            color: "rgba(148,163,184,.72)",
                             marginTop: slim ? 2 : 3,
                             lineHeight: 1.4,
                             overflow: "hidden",
