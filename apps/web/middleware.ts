@@ -36,12 +36,27 @@ async function lobbyFor(host: string): Promise<string | null | undefined> {
   return id;
 }
 
+/** The ECEB office's own hosts (components/useOfficeSkin.ts). */
+const OFFICE_HOST = /^(office|meet)\.eastcoastemployeebenefits\.com$/i;
+
 export async function middleware(req: NextRequest) {
   const host = (req.headers.get("x-forwarded-host") || req.headers.get("host") || "")
     .split(",")[0]
     .trim()
     .toLowerCase()
     .replace(/:\d+$/, "");
+  // The office's address is the one link a client gets (James 2026-11-11), so
+  // its root is the Review Room's door, or the office itself for someone
+  // signed in there, before any page draws. It showed Weered's front page: the
+  // client-side redirect in RootFrame never fired from "/".
+  if (OFFICE_HOST.test(host)) {
+    const path = req.nextUrl.pathname;
+    if (path === "/" || path === "/home") {
+      const to = req.cookies.get("weered_token")?.value ? "/room/mtg-eceb-office" : "/foyer";
+      return NextResponse.redirect(new URL(to, `https://${host}`), 307);
+    }
+    return NextResponse.next();
+  }
   if (!host || (OWN_HOST.test(host) && !PLACE_HOST.test(host))) return NextResponse.next();
   const path = req.nextUrl.pathname;
   const place = PLACE_HOST.test(host);

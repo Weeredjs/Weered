@@ -679,7 +679,8 @@ function ClientView({
       setErr("");
       try {
         const st = await (await fetch(`${API}/office/status`)).json();
-        if (!st?.open) {
+        // receiving: the hours, or James is in the office right now.
+        if (!(st?.receiving ?? st?.open)) {
           setErr(
             st?.schedule
               ? `The office is receiving by appointment. Walk-in hours: ${st.schedule}.`

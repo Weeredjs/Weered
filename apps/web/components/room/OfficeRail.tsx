@@ -21,6 +21,9 @@ const UI_FONT = "'Segoe UI', Inter, system-ui, -apple-system, sans-serif";
 
 type Knock = { userId: string; name: string; ts?: number };
 
+/** What a client is sent: the office's address, which opens on the Review Room's door. */
+const GUEST_LINK = "https://office.eastcoastemployeebenefits.com";
+
 function ago(ts?: number): string {
   if (!ts) return "";
   const m = Math.max(0, Math.round((Date.now() - ts) / 60000));
@@ -36,6 +39,7 @@ export default function OfficeRail({
 }) {
   const [status, setStatus] = useState<any | null>(null);
   const [busy, setBusy] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const refresh = useCallback(async () => {
     try {
@@ -72,20 +76,20 @@ export default function OfficeRail({
     };
   }, []);
 
-  const toggleDoor = async () => {
-    if (!status || busy) return;
+  // The one link a client needs (James 2026-11-11: "Just send people a quick
+  // link"). The door lets them knock whenever you're in this room (api
+  // routes/auth.ts hostInOffice), so there's no sign to flip first.
+  const copyGuestLink = async () => {
+    if (busy) return;
     setBusy(true);
     try {
-      const r = await fetch("/api/office/set", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ open: !status.open }),
-      });
-      const j = await r.json();
-      if (j?.ok) setStatus(j);
+      await navigator.clipboard.writeText(GUEST_LINK);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2200);
     } catch {}
     setBusy(false);
   };
+  const receiving = Boolean(status?.receiving ?? status?.open);
 
   return (
     <div
@@ -149,7 +153,7 @@ export default function OfficeRail({
                 borderRadius: 3,
                 border: `1px solid ${HAIRLINE}`,
                 background: "rgba(255,255,255,0.02)",
-                color: status.open ? TEXT : MUTED,
+                color: receiving ? TEXT : MUTED,
                 transition: `color 320ms ${EASE}`,
                 whiteSpace: "nowrap",
               }}
@@ -159,34 +163,35 @@ export default function OfficeRail({
                   width: 6,
                   height: 6,
                   borderRadius: 1,
-                  background: status.open ? GOOD : "rgba(163,180,202,0.35)",
+                  background: receiving ? GOOD : "rgba(163,180,202,0.35)",
                   flexShrink: 0,
                   transition: `background 320ms ${EASE}`,
                 }}
               />
-              {status.open ? "Open for consultations" : "By appointment"}
+              {receiving ? "The door is open" : "By appointment"}
             </span>
           )}
           <button
-            onClick={toggleDoor}
-            disabled={busy || !status}
+            onClick={copyGuestLink}
+            disabled={busy}
+            title={GUEST_LINK}
             style={{
               padding: "7px 16px",
               borderRadius: 3,
               border: `1px solid ${HAIRLINE}`,
               background: PANEL,
               boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06)",
-              color: busy || !status ? MUTED : TEXT,
+              color: busy ? MUTED : TEXT,
               fontFamily: UI_FONT,
               fontSize: 12,
               fontWeight: 600,
               letterSpacing: "0.02em",
-              cursor: busy || !status ? "default" : "pointer",
+              cursor: busy ? "default" : "pointer",
               whiteSpace: "nowrap",
               transition: `color 260ms ${EASE}`,
             }}
           >
-            {busy ? "…" : "Flip the sign"}
+            {copied ? "Link copied" : "Copy guest link"}
           </button>
         </div>
       </div>

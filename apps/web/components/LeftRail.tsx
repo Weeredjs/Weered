@@ -830,6 +830,17 @@ export default function LeftRail() {
                         onClick: undefined as any,
                         key: "ops",
                       },
+                      // The ECEB office, one click from anywhere (James
+                      // 2026-11-11: "I have to blind nav to it everytime").
+                      // The room lets in office staff only (api isOfficeStaff).
+                      {
+                        href: "/room/mtg-eceb-office",
+                        label: "ECEB office",
+                        icon: "⚓",
+                        active: false,
+                        onClick: undefined as any,
+                        key: "eceb-office",
+                      },
                     ]
                   : []),
               ]

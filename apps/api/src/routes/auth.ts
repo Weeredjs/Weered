@@ -486,8 +486,9 @@ export default async function authRoutes(app: FastifyInstance, opts: Opts) {
       // randomInt is rejection-sampled → no modulo bias in the guest suffix.
       const name = rawName || `Guest-${randomInt(1000, 10000)}`;
       const guestId = `guest_${randomBytes(12).toString("hex")}`;
-      // ephemeral user + token live no longer than the invite window, capped at 4h.
-      const cap = Date.now() + 90 * 60 * 1000;
+      // ephemeral user + token live no longer than the invite window, capped at
+      // 3h: a renewal review can run past 90 minutes (2026-11-11).
+      const cap = Date.now() + 3 * 60 * 60 * 1000;
       const expMs = invite.expiresAt ? Math.min(invite.expiresAt.getTime(), cap) : cap;
       const ttlSec = Math.max(60, Math.floor((expMs - Date.now()) / 1000));
 
@@ -770,11 +771,32 @@ export default async function authRoutes(app: FastifyInstance, opts: Opts) {
     }
   };
 
+  // The advisor is in the office: an office host (a host link, or office staff
+  // on their own session) is in its room right now. The door opens itself while
+  // they are (James 2026-11-11: "Just send people a quick link and the office is
+  // always set up"), so there's no sign to remember to flip.
+  const OFFICE_ROOM = "mtg-eceb-office";
+  const hostInOffice = async (): Promise<boolean> => {
+    const room = rooms?.get?.(OFFICE_ROOM);
+    if (!room?.users?.size) return false;
+    for (const [key, u] of room.users as Map<string, any>) {
+      const id = String(u?.id || key);
+      if (id.startsWith("guest_")) continue;
+      if (await isOfficeStaff(id)) return true;
+    }
+    return false;
+  };
+
   // Public: current office status (drives the ECEB-site fixture + the foyer door).
   app.get("/office/status", async (_req, reply) => {
     const st = readOfficeState();
+    const hostIn = await hostInOffice();
     return reply.send({
       ok: true,
+      // The sign (open) is the advisor's hours; receiving is whether the door
+      // lets a walk-in knock right now: hours, or the advisor is in.
+      receiving: st.open || hostIn,
+      hostIn,
       open: st.open,
       schedule: st.schedule,
       note: st.note,
@@ -805,7 +827,7 @@ export default async function authRoutes(app: FastifyInstance, opts: Opts) {
     { config: { rateLimit: { max: 20, timeWindow: "10 minutes" } } },
     async (req, reply) => {
       const st = readOfficeState();
-      if (!st.open)
+      if (!st.open && !(await hostInOffice()))
         return reply.code(403).send({ ok: false, error: "closed", schedule: st.schedule });
       const host = await prisma.user
         .findUnique({ where: { usernameKey: "eceb-host" }, select: { id: true } })
@@ -819,7 +841,8 @@ export default async function authRoutes(app: FastifyInstance, opts: Opts) {
           createdBy: host?.id ?? "cmmgisqb70000zzfhh3k9e069",
           maxUses: 1,
           uses: 0,
-          expiresAt: new Date(Date.now() + 2 * 60 * 60 * 1000),
+          // Long enough for a whole review (the guest's session follows it).
+          expiresAt: new Date(Date.now() + 3 * 60 * 60 * 1000),
         },
       });
       const visitorName =
