@@ -91,13 +91,15 @@ function Landing({ nextPath }: { nextPath: string }) {
 
         <main className="lp-hero">
           <h1 className="lp-headline">A place for anything.</h1>
+          {/* Who it's for, then what it does (2026-11-10: the line was a feature
+              list, and "Get in" read the same as "Sign in"). */}
           <p className="lp-sub">
-            Voice, video, rooms and live integrations. Yours in a minute, on your own domain if you
-            want it.
+            Your crew, your club, your business. Say what you want and it&apos;s built: rooms,
+            voice, video and your own look. On your own domain if you want it.
           </p>
           <div className="lp-cta">
             <Link href={getIn} className="lp-btn lp-btn-main">
-              Get in
+              Join free
             </Link>
             <Link href={signIn} className="lp-btn lp-btn-ghost">
               Sign in

@@ -1142,10 +1142,10 @@ export default function HomePage() {
                   <img src="/brand/logo/weered-logo-128.png" alt="Weered logo" style={{ width: 36, height: 36, objectFit: "contain" }} />
                   <div>
                     <div style={{ fontWeight: 800, fontSize: 13, color: "rgba(243,244,246,.88)", letterSpacing: "-0.1px" }}>
-                      Get Indicted. Own a lobby.
+                      Get Indicted. $6 a month.
                     </div>
                     <div style={{ fontSize: 11, color: "rgba(148,163,184,.5)", marginTop: 2 }}>
-                      Create your own branded community. Premium features. Your rules.
+                      yourname.weered.ca for your place, and the full build suite. Lobbies stay free.
                     </div>
                   </div>
                 </div>

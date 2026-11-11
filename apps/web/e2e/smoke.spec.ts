@@ -31,11 +31,11 @@ for (const path of PUBLIC_PAGES) {
 }
 
 test.describe("landing flow", () => {
-  test("renders the headline + Get in CTA", async ({ page }) => {
+  test("renders the headline + Join free CTA", async ({ page }) => {
     await page.goto("/");
     await expect(page).toHaveTitle(/Weered/i);
     await expect(page.getByRole("heading", { name: /a place for anything/i })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Get in" }).first()).toBeVisible();
+    await expect(page.getByRole("link", { name: "Join free" }).first()).toBeVisible();
   });
 
   test("shows the film under the buttons, from Caddy's /media/film/", async ({ page }) => {
@@ -46,9 +46,9 @@ test.describe("landing flow", () => {
     await expect(page.locator(".lp-film").getByRole("button")).toBeVisible();
   });
 
-  test("Get in navigates to the login page", async ({ page }) => {
+  test("Join free navigates to the login page", async ({ page }) => {
     await page.goto("/");
-    await page.getByRole("link", { name: "Get in" }).first().click();
+    await page.getByRole("link", { name: "Join free" }).first().click();
     await expect(page).toHaveURL(/\/login/);
     await expect(page.locator("body")).toContainText(/weered/i);
   });

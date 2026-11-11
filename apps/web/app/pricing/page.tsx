@@ -153,7 +153,7 @@ export default function PricingPage() {
                 <p>
                   Anyone can stand up a lobby, up to three each: your rooms, your roles and role
                   icons, your name, banner and accent, forum moderation. A new lobby shows in
-                  Explore once three people have joined it. Plans from $6 a month add
+                  Downtown once three people have joined it. Plans from $6 a month add
                   yourname.weered.ca, lobby addresses on weered.ca, AI-built modules and your own
                   domain. <Link href="/premium">The plans, in full.</Link>
                 </p>

@@ -39,7 +39,7 @@ const tiers = [
       "Everything in Innocent",
       "yourname.weered.ca for your place",
       "The full build suite: 60 AI builds a day",
-      "Your new lobbies show in Explore right away",
+      "Your new lobbies show in Downtown right away",
       "Pictures in chat right away, kept for good",
       "The Indicted icon and name colour",
     ],
@@ -106,6 +106,14 @@ const tiers = [
     ctaStyle: "locked",
   },
 ];
+
+/** Under each name, who the plan is for (the names are the flavour). */
+const PLAIN: Record<string, string> = {
+  innocent: "Everyone, free",
+  indicted: "For you",
+  felon: "For your community",
+  condemned: "For a club or a business",
+};
 
 export default function PremiumContent() {
   const [visible, setVisible] = useState(false);
@@ -217,6 +225,11 @@ export default function PremiumContent() {
           font-size: 22px;
           letter-spacing: -0.5px;
           margin-bottom: 4px;
+        }
+        .prem-for {
+          font-size: 11px;
+          color: rgba(255,255,255,0.55);
+          margin-bottom: 14px;
         }
         .prem-price {
           font-size: 32px;
@@ -339,6 +352,8 @@ export default function PremiumContent() {
                 <div className="prem-tier-name" style={{ color: tier.color }}>
                   {tier.name}
                 </div>
+                {/* Who it's for, in plain words (2026-11-10). */}
+                <div className="prem-for">{PLAIN[tier.id] || " "}</div>
                 <div className="prem-price" style={{ color: "rgba(255,255,255,0.9)" }}>
                   {tier.price}
                 </div>

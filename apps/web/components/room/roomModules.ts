@@ -10,7 +10,7 @@ export const ALL_MODULES: {
   icon: string;
   live: boolean;
 }[] = [
-  { id: "voice", icon: "🎙", label: "Humans", live: true },
+  { id: "voice", icon: "🎙", label: "People", live: true },
   { id: "youtube", icon: "__youtube__", label: "YouTube", live: true },
   { id: "twitch", icon: "__twitch__", label: "Twitch", live: true },
   { id: "browser", icon: "🌐", label: "Browser", live: true },

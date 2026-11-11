@@ -1307,7 +1307,7 @@ export default function CreateLobbyPage() {
             n={6}
             title="Launch"
             // A free account's new lobby lists once people join it (api lib/listingHold.ts).
-            kicker="Doors open the moment you hit it. Share the link: it shows in Explore once three people have joined."
+            kicker="Doors open the moment you hit it. Share the link: it shows in Downtown once three people have joined."
             accent={accent}
           >
             <div

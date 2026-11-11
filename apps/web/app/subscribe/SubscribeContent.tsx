@@ -31,6 +31,7 @@ const TIERS = [
   {
     id: "FREE",
     name: "Innocent",
+    forWho: "Everyone, free",
     price: "Free",
     sub: "for now",
     monthly: 0,
@@ -49,6 +50,7 @@ const TIERS = [
   {
     id: "INDICTED",
     name: "Indicted",
+    forWho: "For you",
     price: "$6",
     sub: "/ month",
     monthly: 6,
@@ -60,7 +62,7 @@ const TIERS = [
       "Everything in Innocent",
       "yourname.weered.ca for your place",
       "The full build suite: 60 AI builds a day",
-      "Your new lobbies show in Explore right away",
+      "Your new lobbies show in Downtown right away",
       "Pictures in chat right away, kept for good",
       "The Indicted icon and name colour",
     ],
@@ -69,6 +71,7 @@ const TIERS = [
   {
     id: "FELON",
     name: "Felon",
+    forWho: "For your community",
     price: "$14",
     sub: "/ month",
     monthly: 14,
@@ -87,6 +90,7 @@ const TIERS = [
   {
     id: "CONDEMNED",
     name: "Condemned",
+    forWho: "For a club or a business",
     price: "$25",
     sub: "/ month",
     monthly: 25,
@@ -106,6 +110,7 @@ const TIERS = [
   {
     id: "KINGPIN",
     name: "Kingpin",
+    forWho: "",
     price: "—",
     sub: "sealed",
     monthly: -1,
@@ -268,6 +273,11 @@ export default function SubscribeContent() {
           font-size: 22px;
           letter-spacing: -0.5px;
           margin-bottom: 4px;
+        }
+        .sub-for {
+          font-size: 11px;
+          color: rgba(255,255,255,0.55);
+          margin-bottom: 14px;
         }
         .sub-price {
           font-size: 32px;
@@ -469,6 +479,9 @@ export default function SubscribeContent() {
                   <div className="sub-tier-name" style={{ color: tier.color }}>
                     {tier.name}
                   </div>
+                  {/* The name is the flavour; this says who it's for in plain
+                      words (2026-11-10: a club won't pay to be a Felon blind). */}
+                  <div className="sub-for">{tier.forWho || " "}</div>
                   <div className="sub-price">{tier.price}</div>
                   <div className="sub-price-sub">{tier.sub || "\u00a0"}</div>
 
