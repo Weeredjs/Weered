@@ -62,7 +62,10 @@ export default function OfficeWindow() {
     };
     const onReady = () => setReady(true);
 
-    va.addEventListener("loadeddata", onReady, { once: true });
+    // On a slow load the clip can be in before this runs, and its loadeddata
+    // long gone: then it's ready now (it played on, invisible, 2026-11-11).
+    if (va.readyState >= 2) onReady();
+    else va.addEventListener("loadeddata", onReady, { once: true });
     va.addEventListener("timeupdate", onTime);
     vb.addEventListener("timeupdate", onTime);
 
@@ -132,10 +135,10 @@ export default function OfficeWindow() {
 
 const CSS = `
 .ow{position:fixed;inset:0;z-index:0;overflow:hidden;background:#0A1D35;pointer-events:none}
-.ow-view{position:absolute;inset:0;background:
+.ow-view{position:absolute;inset:0;z-index:0;isolation:isolate;background:
   linear-gradient(180deg,#9fb6cc 0%,#c9d6e0 38%,#41607a 52%,#24405a 70%,#1a2e44 100%);}
 .ow-clip{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;
-  transform:scale(1.035);opacity:0;transition:opacity ${FADE}s linear;
+  object-position:50% 12%;transform:scale(1.035);transform-origin:50% 12%;opacity:0;transition:opacity ${FADE}s linear;
   filter:saturate(1.06) contrast(1.03)}
 .ow-view.is-ready .ow-clip.is-front{opacity:1;z-index:2}
 .ow-view.is-ready .ow-clip.is-under{opacity:1;z-index:1;transition:none}
