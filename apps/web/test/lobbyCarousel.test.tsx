@@ -63,14 +63,16 @@ describe("LobbyCarousel", () => {
     vi.stubGlobal("cancelAnimationFrame", () => {});
   }
 
+  const pics = { bannerUrl: "/b.png", logoUrl: "/l.png" };
+
   it("links every lobby, goes round more than once when short, and loads pictures as they near", () => {
     stubBrowser();
     const view = render(
       <LobbyCarousel
         lobbies={[
-          lobby("gta6", { bannerUrl: "/b.png", online: 4 }),
-          lobby("chess"),
-          lobby("study", { logoUrl: "https://x.example/l.png" }),
+          lobby("gta6", { ...pics, online: 4 }),
+          lobby("chess", pics),
+          lobby("study", { ...pics, logoUrl: "https://x.example/l.png" }),
         ]}
       />,
     );
@@ -87,18 +89,27 @@ describe("LobbyCarousel", () => {
     expect(banner.getAttribute("src")).toBe("/b.png");
   });
 
-  it("loads pictures that arrive after a card was first shown", () => {
-    // Arriving at Home, the list shows the lobbies before their pictures
-    // (James 2026-11-06: "Images don't load when you navigate in on the
-    // already showing lobby blocks").
+  it("shows only lobbies with a banner and a logo, and one joins when its pictures arrive", () => {
+    // James 2026-11-11: "limit this just to the fully image spec'd ones". And
+    // arriving at Home, the list can show the lobbies before their pictures
+    // (James 2026-11-06).
     stubBrowser();
-    const view = render(<LobbyCarousel lobbies={[lobby("gta6"), lobby("chess")]} />);
-    view.rerender(
+    const view = render(
       <LobbyCarousel
-        lobbies={[lobby("gta6", { bannerUrl: "/b.png", logoUrl: "/l.png" }), lobby("chess")]}
+        lobbies={[
+          lobby("gta6"),
+          lobby("chess", { bannerUrl: "/b.png" }),
+          lobby("news", { logoUrl: "/l.png" }),
+        ]}
       />,
     );
-    const first = view.container.querySelector("a.weered-drift-card") as HTMLElement;
+    expect(view.container.querySelector(".weered-drift")).toBeNull();
+    view.rerender(
+      <LobbyCarousel lobbies={[lobby("gta6", pics), lobby("chess", { bannerUrl: "/b.png" })]} />,
+    );
+    const cards = view.container.querySelectorAll("a.weered-drift-card");
+    expect([...cards].every((c) => c.getAttribute("href") === "/lobby/gta6")).toBe(true);
+    const first = cards[0] as HTMLElement;
     expect(first.querySelector("img.weered-drift-banner")?.getAttribute("src")).toBe("/b.png");
     expect(first.querySelector("img.weered-drift-logo")?.getAttribute("src")).toBe("/l.png");
   });

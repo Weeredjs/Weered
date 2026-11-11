@@ -54,13 +54,20 @@ function loadPictures(card: HTMLElement) {
   });
 }
 
+/** A lobby with its pictures done: a banner and a logo. */
+export const pictured = (l: DriftLobby) => !!(l.bannerUrl && l.logoUrl);
+
 export default function LobbyCarousel({
-  lobbies,
+  lobbies: all,
   onOpen,
 }: {
   lobbies: DriftLobby[];
   onOpen?: (id: string) => void;
 }) {
+  // Only lobbies with a banner and a logo drift past (James 2026-11-11: "limit
+  // this just to the fully image spec'd ones. The blank ones look off. As I fix
+  // them up we can add them back"): one turns up the moment it has both.
+  const lobbies = all.filter(pictured);
   const strip = useRef<HTMLDivElement>(null);
   const cards = useRef<(HTMLAnchorElement | null)[]>([]);
   // The order it first showed holds: counts that change later update the
