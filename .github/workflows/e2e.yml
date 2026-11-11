@@ -52,8 +52,16 @@ jobs:
           NEXT_PUBLIC_API_BASE: http://localhost:4000
           NEXT_PUBLIC_WS_URL: ws://localhost:4001
 
+      # --with-deps goes through apt; when the runner can't reach Ubuntu's mirrors
+      # (2026-11-11: "Temporary failure resolving 'security.ubuntu.com'", for
+      # fonts) the browser alone still runs on the runner image's libraries.
       - name: Install Playwright Chromium
-        run: cd apps/web && pnpm exec playwright install --with-deps chromium
+        run: |
+          cd apps/web
+          pnpm exec playwright install --with-deps chromium || {
+            echo "::warning::apt unavailable: installing Chromium without system deps"
+            pnpm exec playwright install chromium
+          }
 
       - name: Start API + web and wait for ready
         run: |
