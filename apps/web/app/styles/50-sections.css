@@ -113,13 +113,18 @@
   box-shadow: 0 0 10px rgba(245, 197, 66, 0.45);
   animation: weered-paper-ready 2.4s ease-in-out infinite;
 }
+/* !important: the minimal chrome and the looks clear fills in the sidebar. */
 .weered-uc-paper-plus {
   margin-left: 2px;
   padding: 0 4px;
   border-radius: 999px;
-  background: #f5c542;
-  color: #1a1206;
+  background: #f5c542 !important;
+  color: #1a1206 !important;
   text-shadow: none;
+}
+html[data-weered-chrome="min"] .weered-left .weered-uc-paper.is-ready {
+  border-color: rgba(245, 197, 66, 0.9) !important;
+  box-shadow: 0 0 10px rgba(245, 197, 66, 0.45) !important;
 }
 @keyframes weered-paper-ready {
   50% {

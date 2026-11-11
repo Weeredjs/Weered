@@ -228,8 +228,10 @@ export default function PremiumContent() {
         }
         .prem-for {
           font-size: 11px;
+          line-height: 1.35;
+          min-height: 2.7em;
           color: rgba(255,255,255,0.55);
-          margin-bottom: 14px;
+          margin-bottom: 8px;
         }
         .prem-price {
           font-size: 32px;
