@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 
 // First sign-in: a brand-new account meets the layout gallery
 // (components/setup/LayoutGallery.tsx), picks a layout in a colourway, lands on
-// Home's four ways in, and is not asked again. Needs registration, so it shares
+// Home's build blocks, and is not asked again. Needs registration, so it shares
 // the auth journey's gate (the captcha-free CI stack).
 test.describe("first-run layout gallery", () => {
   test.skip(!process.env.E2E_AUTH, "needs the captcha-free CI stack (E2E_AUTH=1)");
@@ -33,9 +33,11 @@ test.describe("first-run layout gallery", () => {
     await gallery.getByRole("button", { name: /^clean in ocean$/i }).click();
     await expect(gallery).toBeHidden();
     await expect(page).toHaveURL(/\/home/);
-    // Home is its four ways in.
-    for (const way of ["search", "browse", "create", "change"])
-      await expect(page.locator(`.weered-wayin-${way}`).first()).toBeVisible();
+    // Home is the build blocks (Create and Change) and the chat; search and
+    // Downtown are the bar's, so the four tiles don't repeat them (2026-11-10).
+    await expect(page.locator(".home-build-wrap").first()).toBeVisible();
+    await expect(page.locator(".weered-ubar-search").first()).toBeVisible();
+    await expect(page.locator(".weered-wayin")).toHaveCount(0);
 
     // The answer is kept on the account, so Home stays clear.
     await page.reload();
