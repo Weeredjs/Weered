@@ -122,6 +122,10 @@
   color: #1a1206 !important;
   text-shadow: none;
 }
+html[data-weered-chrome="min"] .weered-left .weered-uc-paper .weered-uc-paper-plus,
+html .weered-left .weered-uc-paper .weered-uc-paper-plus {
+  background: #f5c542 !important;
+}
 html[data-weered-chrome="min"] .weered-left .weered-uc-paper.is-ready {
   border-color: rgba(245, 197, 66, 0.9) !important;
   box-shadow: 0 0 10px rgba(245, 197, 66, 0.45) !important;
