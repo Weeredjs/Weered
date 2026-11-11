@@ -656,5 +656,5 @@ export default async function authRoutes(app: FastifyInstance, opts: Opts) {
   });
 
   // The ECEB office: hours, the door, walk-ins and the plan module (routes/office.ts).
-  await officeRoutes(app, { authFromHeader, rooms, isOfficeStaff });
+  await officeRoutes(app, { authFromHeader, rooms, isOfficeStaff, JWT_SECRET });
 }

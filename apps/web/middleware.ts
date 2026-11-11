@@ -51,12 +51,22 @@ export async function middleware(req: NextRequest) {
   // client-side redirect in RootFrame never fired from "/".
   if (OFFICE_HOST.test(host)) {
     const path = req.nextUrl.pathname;
+    // Someone signed in here trades their session for a host pass (api
+    // /office/host-pass), which sends anyone who isn't office staff to the door.
     if (path === "/" || path === "/home") {
-      const to = req.cookies.get("weered_token")?.value ? "/room/mtg-eceb-office" : "/foyer";
+      const to = req.cookies.get("weered_token")?.value ? "/api/office/host-pass" : "/foyer";
       return NextResponse.redirect(new URL(to, `https://${host}`), 307);
     }
+    // One office (James 2026-11-11: "combine the two spaces"): the old Weered
+    // room for it goes to the Review Room too.
+    if (path.startsWith("/room/mtg-eceb"))
+      return NextResponse.redirect(new URL("/api/office/host-pass", `https://${host}`), 307);
     return NextResponse.next();
   }
+  // weered.ca's copy of the office room retires into the one office: the host
+  // pass sends office staff there and anyone else to its door.
+  if (/^(www\.)?weered\.ca$/.test(host) && req.nextUrl.pathname.startsWith("/room/mtg-eceb"))
+    return NextResponse.redirect(new URL("/api/office/host-pass", `https://${host}`), 307);
   if (!host || (OWN_HOST.test(host) && !PLACE_HOST.test(host))) return NextResponse.next();
   const path = req.nextUrl.pathname;
   const place = PLACE_HOST.test(host);

@@ -13,6 +13,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import { Room, RoomEvent, Track } from "livekit-client";
 import { PlanModule, PresentedPlanViewer } from "./PlanModule";
+import OfficeWindow from "./OfficeWindow";
 
 const API = "/api";
 const wsBase = () => `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws`;
@@ -32,6 +33,12 @@ type Scope = { office?: string; foyer?: string; lobbyId?: string | null };
 type Msg = { id: string; name: string; body: string };
 type Person = { id: string; name: string };
 type Knock = { id: string; name: string };
+
+/** What a client is sent: the office's address, which opens on this door. */
+const GUEST_LINK = "https://office.eastcoastemployeebenefits.com";
+
+/** Where this tab keeps the host pass (see Foyer). */
+const HOST_PASS_KEY = "eceb_host_pass";
 
 // The "-office" suffix convention lives in exactly one place for both views.
 function buildOfficeRoom(scope: Scope): string {
@@ -383,7 +390,27 @@ export default function Foyer() {
 
   useEffect(() => {
     const p = new URLSearchParams(location.search);
-    const h = p.get("host");
+    // The host pass: from Weered's "ECEB office" (api /office/host-pass, in the
+    // fragment, which no server or referrer sees) or an old ?host= link. It's
+    // kept for this tab, so a reload stays in the office, and the address bar
+    // is cleaned so it never sits on screen during a presentation.
+    const fromHash = new URLSearchParams(location.hash.replace(/^#/, "")).get("host");
+    let h = fromHash || p.get("host");
+    if (h) {
+      try {
+        sessionStorage.setItem(HOST_PASS_KEY, h);
+      } catch {}
+      p.delete("host");
+      const q = p.toString();
+      history.replaceState(null, "", `/foyer${q ? `?${q}` : ""}`);
+    } else {
+      try {
+        const kept = sessionStorage.getItem(HOST_PASS_KEY) || "";
+        const exp = Number(decodeJwt(kept)?.exp || 0) * 1000;
+        if (kept && exp > Date.now() + 60_000) h = kept;
+        else if (kept) sessionStorage.removeItem(HOST_PASS_KEY);
+      } catch {}
+    }
     const i = p.get("invite") || p.get("i");
     const t = p.get("title");
     if (t) {
@@ -404,9 +431,22 @@ export default function Foyer() {
     }
   }, []);
 
-  if (mode === "loading") return <div style={S.center} />;
-  if (mode === "host") return <HostView jwt={hostJwt || ""} title={title} accent={accent} />;
-  return <ClientView invite={invite} title={title} accent={accent} />;
+  // One office for the client and the advisor alike (James 2026-11-11: "Let's
+  // combine the two spaces"), every screen of it in front of the window.
+  return (
+    <>
+      <OfficeWindow />
+      <div style={{ position: "relative", zIndex: 1 }}>
+        {mode === "loading" ? (
+          <div style={S.center} />
+        ) : mode === "host" ? (
+          <HostView jwt={hostJwt || ""} title={title} accent={accent} />
+        ) : (
+          <ClientView invite={invite} title={title} accent={accent} />
+        )}
+      </div>
+    </>
+  );
 }
 
 // ============================================================================
@@ -1413,6 +1453,14 @@ function HostView({ jwt, title, accent }: { jwt: string; title: string; accent: 
     const actual = await conn.setScreen(next);
     setScreenOn(actual);
   };
+  const [copied, setCopied] = useState(false);
+  const copyGuestLink = async () => {
+    try {
+      await navigator.clipboard.writeText(GUEST_LINK);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2200);
+    } catch {}
+  };
   const sendOfficeChat = () => {
     const b = chatInput.trim();
     if (!b) return;
@@ -1468,6 +1516,10 @@ function HostView({ jwt, title, accent }: { jwt: string; title: string; accent: 
           </div>
         </div>
         <div style={{ display: "flex", gap: 8 }}>
+          {/* The one link a client needs (James 2026-11-11). */}
+          <button style={{ ...S.ctl, color: "#D9B878" }} onClick={copyGuestLink} title={GUEST_LINK}>
+            {copied ? "Link copied" : "Copy guest link"}
+          </button>
           <button
             style={{ ...S.ctl, color: locked ? INK_TEXT : "#D9B878" }}
             onClick={toggleLock}
@@ -1491,16 +1543,22 @@ function HostView({ jwt, title, accent }: { jwt: string; title: string; accent: 
       </header>
 
       <div style={S.body}>
+        {/* The stage: the plan you present, a shared screen, the faces. With
+            nothing on it, the view. */}
         <main style={S.stage}>
           <PlanModule jwt={jwt} accent={accent} />
-          <div style={S.sideHead}>My office ({officeRoster.length})</div>
-          <div ref={screenEl} style={{ ...S.screen, marginTop: 12 }} />
-          <div ref={tilesEl} style={{ ...S.tiles, marginTop: 12 }} />
-          <div style={{ ...S.sideHead, marginTop: 16 }}>Office chat</div>
-          <div style={{ ...S.chat, maxHeight: 200 }}>
+          <div ref={screenEl} style={S.screen} />
+          <div ref={tilesEl} style={S.tiles} />
+        </main>
+
+        <aside style={S.side}>
+          <div style={S.sideHead}>In the office ({officeRoster.length})</div>
+          <div style={{ ...S.chat, maxHeight: 220 }}>
+            {officeMessages.length === 0 && <div style={S.chatEmpty}>No messages yet.</div>}
             {officeMessages.map((m) => (
               <div key={m.id} style={S.msg}>
-                <b style={S.msgName}>{m.name}:</b> {m.body}
+                <span style={S.msgName}>{m.name}</span>
+                <span style={S.msgBody}>{m.body}</span>
               </div>
             ))}
           </div>
@@ -1516,9 +1574,6 @@ function HostView({ jwt, title, accent }: { jwt: string; title: string; accent: 
               Send
             </button>
           </div>
-        </main>
-
-        <aside style={S.side}>
           <div style={S.sideHead}>Knocks ({knocks.length})</div>
           <ul style={S.roster}>
             {knocks.length === 0 && (
@@ -1658,6 +1713,15 @@ function IcExit() {
   );
 }
 
+/** Frosted glass in front of the office window: the panels, the door, the desk. */
+const GLASS: CSSProperties = {
+  background: "rgba(9,23,42,.6)",
+  backdropFilter: "blur(18px) saturate(1.25)",
+  WebkitBackdropFilter: "blur(18px) saturate(1.25)",
+  border: "1px solid rgba(255,255,255,.09)",
+  boxShadow: "inset 0 1px 0 rgba(255,255,255,.07), 0 24px 60px rgba(0,0,0,.4)",
+};
+
 const S: Record<string, CSSProperties> = {
   // The Review Room shell: ink-navy ground, milled panels, hairline rules,
   // satin brass used once per surface, serif figures with tabular numerals.
@@ -1701,22 +1765,21 @@ const S: Record<string, CSSProperties> = {
     lineHeight: 1.55,
   },
   foot: { marginTop: 18, marginBottom: 0, fontSize: 12, color: MUTED_TEXT, fontFamily: UIFONT },
+  // Every surface is glass in front of the window (OfficeWindow, 2026-11-11).
   center: {
     minHeight: "100vh",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    background: "#0A1D35",
+    background: "transparent",
     color: INK_TEXT,
     fontFamily: UIFONT,
   },
   card: {
     width: 400,
     maxWidth: "92vw",
-    background: "#122A4A",
-    border: "1px solid #1E3A5F",
-    borderRadius: 8,
-    boxShadow: "inset 0 1px 0 rgba(255,255,255,.06), 0 8px 24px rgba(0,0,0,.35)",
+    ...GLASS,
+    borderRadius: 12,
     padding: "36px 36px 28px",
     textAlign: "center",
   },
@@ -1761,15 +1824,19 @@ const S: Record<string, CSSProperties> = {
   },
   live: {
     height: "100vh",
+    boxSizing: "border-box",
+    padding: 14,
     display: "flex",
     flexDirection: "column",
-    background: "#0A1D35",
+    gap: 14,
+    background: "transparent",
     color: INK_TEXT,
     fontFamily: UIFONT,
   },
   fadeWrap: {
     display: "flex",
     flexDirection: "column",
+    gap: 14,
     flex: 1,
     minHeight: 0,
     transition: `opacity 420ms ${EASE}`,
@@ -1778,7 +1845,9 @@ const S: Record<string, CSSProperties> = {
     position: "fixed",
     inset: 0,
     zIndex: 60,
-    background: "#0A1D35",
+    background: "rgba(8,20,38,.62)",
+    backdropFilter: "blur(10px)",
+    WebkitBackdropFilter: "blur(10px)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -1790,18 +1859,20 @@ const S: Record<string, CSSProperties> = {
     justifyContent: "space-between",
     alignItems: "center",
     padding: "10px 16px",
-    background: "#0A1D35",
-    borderBottom: "1px solid #1E3A5F",
+    ...GLASS,
+    borderRadius: 12,
+    flexShrink: 0,
   },
   paperBar: {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
     padding: "7px 16px",
-    background: PAPER,
+    background: "rgba(247,244,236,.94)",
     color: PAPER_INK,
-    borderBottom: "1px solid rgba(16,35,63,.18)",
-    boxShadow: "0 1px 6px rgba(0,0,0,.25)",
+    borderRadius: 12,
+    boxShadow: "0 18px 40px rgba(0,0,0,.35)",
+    flexShrink: 0,
   },
   paperTitle: { fontFamily: SERIF, fontSize: 14, color: PAPER_INK, letterSpacing: ".01em" },
   ctl: {
@@ -1839,8 +1910,16 @@ const S: Record<string, CSSProperties> = {
     color: "#7A5E22",
   },
   banner: { padding: "10px 16px", fontSize: 14, fontWeight: 600, color: INK_TEXT },
-  body: { flex: 1, display: "flex", minHeight: 0 },
-  stage: { flex: 1, padding: 16, overflow: "auto", display: "flex", flexDirection: "column" },
+  body: { flex: 1, display: "flex", gap: 14, minHeight: 0 },
+  // Clear glass: with nothing on it, the stage is the view.
+  stage: {
+    flex: 1,
+    padding: 4,
+    overflow: "auto",
+    display: "flex",
+    flexDirection: "column",
+    gap: 12,
+  },
   parlourWrap: { display: "flex", justifyContent: "center", padding: "9vh 0 24px" },
   knockBox: {
     display: "flex",
@@ -1865,11 +1944,10 @@ const S: Record<string, CSSProperties> = {
   tiles: { display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(180px,1fr))", gap: 10 },
   side: {
     width: 320,
-    borderLeft: "1px solid #1E3A5F",
     display: "flex",
     flexDirection: "column",
-    background: "linear-gradient(180deg, #143257, #112846 60%)",
-    boxShadow: "inset 0 1px 0 rgba(255,255,255,.05)",
+    ...GLASS,
+    borderRadius: 12,
     overflow: "auto",
   },
   sideHead: {

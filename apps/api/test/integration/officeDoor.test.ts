@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import authRoutes from "../../src/routes/auth";
 import { prisma } from "../../src/lib/prisma";
-import { buildTestApp, testAuthFromHeader } from "../helpers/buildTestApp";
+import { buildTestApp, testAuthFromHeader, testToken } from "../helpers/buildTestApp";
+import jwt from "jsonwebtoken";
 
 // The ECEB office's door opens itself while the advisor is in the office room
 // (James 2026-11-11: "Just send people a quick link and the office is always set
@@ -22,6 +23,7 @@ beforeAll(async () => {
       seedWelcomeDM: async () => {},
       rooms,
       isOfficeStaff: async (id?: string) => id === STAFF,
+      JWT_SECRET,
     } as any),
   );
 });
@@ -62,5 +64,31 @@ describe("the office door", () => {
     const r = await walkIn();
     expect(r.statusCode).toBe(200);
     expect(r.json().url).toMatch(/^\/foyer\?invite=m_[0-9a-f]+/);
+  });
+});
+
+describe("the host pass", () => {
+  const pass = (who?: string) =>
+    app.inject({
+      method: "GET",
+      url: "/office/host-pass",
+      headers: who ? { authorization: `Bearer ${testToken(who)}` } : {},
+    });
+
+  it("sends office staff into the office as its host, the pass in the fragment", async () => {
+    const r = await pass(STAFF);
+    expect(r.statusCode).toBe(302);
+    const to = String(r.headers.location);
+    expect(to.startsWith("https://office.eastcoastemployeebenefits.com/foyer#host=")).toBe(true);
+    const claims: any = jwt.verify(to.split("#host=")[1], JWT_SECRET);
+    expect(claims).toMatchObject({ sub: "eceb-host", host: true, scope: { office: "mtg-eceb" } });
+    expect(r.headers["cache-control"]).toBe("no-store");
+  });
+
+  it("gives anyone else the client's door, and no pass", async () => {
+    for (const r of [await pass("itest_somebody_else"), await pass()]) {
+      expect(r.statusCode).toBe(302);
+      expect(String(r.headers.location)).toBe("https://office.eastcoastemployeebenefits.com/foyer");
+    }
   });
 });

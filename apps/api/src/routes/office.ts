@@ -15,10 +15,14 @@ type Opts = {
   rooms: any;
   // GOD-or-allowlist check: lets a normal Weered session act as office host.
   isOfficeStaff: (userId?: string) => Promise<boolean>;
+  JWT_SECRET: string;
 };
 
+/** The office's address: the one link a client gets. */
+export const OFFICE_ORIGIN = "https://office.eastcoastemployeebenefits.com";
+
 export default async function officeRoutes(app: FastifyInstance, opts: Opts) {
-  const { authFromHeader, rooms, isOfficeStaff } = opts;
+  const { authFromHeader, rooms, isOfficeStaff, JWT_SECRET } = opts;
 
   // Resolve the acting office host: a magic-link token carrying the host claim,
   // OR a logged-in office-staff account (GOD / env allowlist) on a normal Weered
@@ -38,6 +42,29 @@ export default async function officeRoutes(app: FastifyInstance, opts: Opts) {
       return { id: String(u.id), name: String(u.name || ""), office: "mtg-eceb" };
     return null;
   };
+
+  // Your way into the office (James 2026-11-11: "Let's combine the two spaces.
+  // The client space and this one"): an office host's own session trades for a
+  // host pass and lands in the Review Room, the same room the client sits in,
+  // as its host. The claims scripts/host-link.sh mints. The pass rides the
+  // URL's fragment, which no server and no referrer ever sees; the page moves
+  // it to sessionStorage and cleans the address bar.
+  app.get("/office/host-pass", async (req, reply) => {
+    reply.header("Cache-Control", "no-store");
+    const u = await officeHostFromReq(req);
+    if (!u) return reply.redirect(`${OFFICE_ORIGIN}/foyer`);
+    const pass = jwt.sign(
+      {
+        sub: "eceb-host",
+        name: "James Stirling",
+        host: true,
+        scope: { office: "mtg-eceb", foyer: "mtg-eceb-foyer" },
+      },
+      JWT_SECRET,
+      { algorithm: "HS256", expiresIn: "12h" },
+    );
+    return reply.redirect(`${OFFICE_ORIGIN}/foyer#host=${pass}`);
+  });
 
   // --- OFFICE HOURS (ECEB walk-in office) ---
   // Persistent open/closed flag: the ECEB site shows a live status, and walk-in

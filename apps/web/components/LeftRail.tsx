@@ -831,14 +831,19 @@ export default function LeftRail() {
                         key: "ops",
                       },
                       // The ECEB office, one click from anywhere (James
-                      // 2026-11-11: "I have to blind nav to it everytime").
-                      // The room lets in office staff only (api isOfficeStaff).
+                      // 2026-11-11: "I have to blind nav to it everytime"):
+                      // a host pass for office staff, into the Review Room
+                      // itself, the room clients sit in (api /office/host-pass).
                       {
-                        href: "/room/mtg-eceb-office",
+                        href: "/api/office/host-pass",
                         label: "ECEB office",
                         icon: "⚓",
                         active: false,
-                        onClick: undefined as any,
+                        // A full load: it's an API redirect to another host.
+                        onClick: (e: any) => {
+                          e.preventDefault();
+                          window.location.assign("/api/office/host-pass");
+                        },
                         key: "eceb-office",
                       },
                     ]
