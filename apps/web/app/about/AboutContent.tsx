@@ -179,8 +179,7 @@ export default function AboutContent() {
               <br />
               <br />
               <em>Paper</em>: virtual currency. Earn it from trading profits, challenges, daily
-              bonuses. Spend it in the Store, use it at the poker table, trade items with other
-              users.
+              bonuses. Play it at the poker table, tip it, put it on a bounty.
               <br />
               <br />
               The feed, the chat, the rooms: they all orbit <em>presence</em>. Who is here. What

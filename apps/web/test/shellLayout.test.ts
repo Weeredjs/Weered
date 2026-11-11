@@ -238,13 +238,14 @@ describe("custom colourway", () => {
   });
 });
 
-describe("Home, re-arranged 2026-11-05", () => {
-  // The build blocks (back on top 11-06), the four ways in, every lobby
-  // drifting past (11-06), then the chat.
-  const STOCK_HOME = ["build", "search", "browse", "create", "change", "carousel", "homechat"];
-  const OFF = ["pulse", "live", "featured", "news", "upgrade", "ticker", "hero"];
+describe("Home without repeats, 2026-11-10", () => {
+  // The build blocks (Create and Change), every lobby drifting past, then the
+  // chat. Search and Downtown are the bar's, on every page.
+  const STOCK_HOME = ["build", "carousel", "homechat"];
+  const TILES = ["search", "browse", "create", "change"];
+  const OFF = [...TILES, "pulse", "live", "featured", "news", "upgrade", "ticker", "hero"];
 
-  it("is the build blocks, the four ways in, the carousel and the chat, the rest off", () => {
+  it("is the build blocks, the carousel and the chat, the rest off", () => {
     const s = stockShell();
     expect(s.home).toEqual(STOCK_HOME);
     expect(s.hidden).toEqual(expect.arrayContaining(OFF));
@@ -252,7 +253,13 @@ describe("Home, re-arranged 2026-11-05", () => {
   });
 
   it("moves a Home still in an old stock order to the new one", () => {
-    for (const home of [LEGACY_HOME, ["build", "pulse", "live", "featured", "news", "upgrade"]]) {
+    for (const home of [
+      LEGACY_HOME,
+      ["build", "pulse", "live", "featured", "news", "upgrade"],
+      ["search", "browse", "create", "change", "homechat"],
+      ["search", "browse", "create", "change", "carousel", "homechat"],
+      ["build", "search", "browse", "create", "change", "carousel", "homechat"],
+    ]) {
       const l = sanitizeShell({ ...stockShell(), home: [...home], hidden: [] })!;
       expect(l.home).toEqual(STOCK_HOME);
       expect(l.hidden).toEqual(expect.arrayContaining(OFF));
@@ -267,7 +274,7 @@ describe("Home, re-arranged 2026-11-05", () => {
       home: ["build", "pulse", "live"],
     })!;
     expect(l).toEqual(presetLayout("clean"));
-    expect(l.home.slice(0, 4)).toEqual(["search", "browse", "create", "change"]);
+    expect(l.home).toEqual(["build", "homechat"]);
   });
 
   it("keeps a Home arranged by hand, with the ways in switched off there", () => {
@@ -277,7 +284,7 @@ describe("Home, re-arranged 2026-11-05", () => {
       hidden: ["hero", "popular", "dms", "activity", "visited"],
     })!;
     expect(l.home).toEqual(["featured", "ticker", "news", "upgrade", "pulse", "live"]);
-    expect(l.hidden).toEqual(expect.arrayContaining(STOCK_HOME));
+    expect(l.hidden).toEqual(expect.arrayContaining([...STOCK_HOME, ...TILES]));
     expectWhole(l);
   });
 
@@ -290,8 +297,9 @@ describe("Home, re-arranged 2026-11-05", () => {
     })!;
     // (Presence and Recent, never named, come back in their stock places.)
     expect(l.left).toEqual(["card", "nav", "presence", "homechat", "favs", "recent"]);
-    // The carousel came after it was saved, so it lands in its stock place.
-    expect(l.home).toEqual(["pulse", "search", "carousel"]);
+    // The carousel came after it was saved, so it lands in its stock place:
+    // after the build blocks, which are off here, so first.
+    expect(l.home).toEqual(["carousel", "pulse", "search"]);
     expectWhole(l);
   });
 
@@ -300,14 +308,16 @@ describe("Home, re-arranged 2026-11-05", () => {
     expect(l.left[2]).toBe("homechat");
     l = placeItem(l, "browse", "right", 0);
     expect(l.right[0]).toBe("browse");
-    expect(l.home).toEqual(["build", "search", "create", "change", "carousel"]);
+    expect(l.home).toEqual(["build", "carousel"]);
+    expect(l.hidden).not.toContain("browse");
     expectWhole(l);
   });
 
   it("puts the carousel between the ways in and the chat, where a layout has both", () => {
     for (const id of ["weered", "social", "everything"]) {
       const home = presetLayout(id)!.home;
-      expect(home[home.indexOf("change") + 1]).toBe("carousel");
+      const before = id === "everything" ? "change" : "build";
+      expect(home[home.indexOf(before) + 1]).toBe("carousel");
       expect(home[home.indexOf("carousel") + 1]).toBe("homechat");
     }
     // Clean, Focus and Minimal keep to what they say they are.
@@ -322,14 +332,13 @@ describe("Home, re-arranged 2026-11-05", () => {
     expect(l.hidden).toContain("upgrade");
   });
 
-  it("keeps every preset whole, the four ways in first on its Home after the build blocks", () => {
+  it("keeps every preset whole, the build blocks first on its Home, no tile repeating the bar", () => {
     for (const p of SHELL_PRESETS) {
       const l = presetLayout(p.id)!;
       expectWhole(l);
-      const home = l.home[0] === "build" ? l.home.slice(1) : l.home;
-      expect(home.slice(0, 4)).toEqual(["search", "browse", "create", "change"]);
+      expect(l.home[0]).toBe("build");
+      if (p.id !== "everything") for (const t of TILES) expect(l.home).not.toContain(t);
     }
-    for (const id of ["weered", "everything"]) expect(presetLayout(id)!.home[0]).toBe("build");
     expect(
       presetLayout("everything")!.hidden.filter((h) => CORE_META[h].regions.includes("home")),
     ).toEqual([]);

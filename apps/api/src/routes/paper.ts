@@ -129,16 +129,24 @@ export default async function paperRoutes(app: FastifyInstance, opts: Opts) {
     const u = authFromHeader((req as any).headers?.authorization);
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
 
-    const user = await prisma.user.findUnique({ where: { id: u.id }, select: { paper: true } });
+    const user = await prisma.user.findUnique({
+      where: { id: u.id },
+      select: { paper: true, lastDailyAt: true },
+    });
     const txns = await prisma.paperTransaction.findMany({
       where: { userId: u.id },
       orderBy: { createdAt: "desc" },
       take: 50,
     });
+    // The daily bonus is claimed off the balance on your card (the store that
+    // held it is gone, 2026-11-10), so the wallet says whether it's waiting.
+    const last = (user as any)?.lastDailyAt ? new Date((user as any).lastDailyAt).getTime() : 0;
 
     return reply.send({
       ok: true,
       balance: (user as any)?.paper || 0,
+      dailyReady: !last || last < Date.now() - 86400000,
+      ...(last ? { dailyNextAt: new Date(last + 86400000).toISOString() } : {}),
       transactions: txns.map((t: any) => ({ ...t, createdAt: t.createdAt?.toISOString() })),
     });
   });

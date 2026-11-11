@@ -36,6 +36,13 @@
     display: none !important;
   }
 }
+/* Wider than a phone, the header's tabs are the room's one row (2026-11-10:
+   the same tabs sat at the top and the bottom). */
+@media (min-width: 768px) {
+  .weered-room-tabbar {
+    display: none !important;
+  }
+}
 
 /* Downtown on a phone: title, Create and × on one row, the search under them.
    In one row the × sat 32px off the screen's right edge and the search shrank

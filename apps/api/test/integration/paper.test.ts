@@ -42,6 +42,16 @@ describe("paperRoutes — atomic daily claim + tip overdraft guard", () => {
     });
     created.push(user.id);
     const token = testToken(user.id);
+    const wallet = async () =>
+      (
+        await app.inject({
+          method: "GET",
+          url: "/paper/wallet",
+          headers: { authorization: `Bearer ${token}` },
+        })
+      ).json();
+    // The card's balance button glows while the bonus is waiting.
+    expect((await wallet()).dailyReady).toBe(true);
 
     const N = 6;
     await Promise.all(
@@ -63,6 +73,9 @@ describe("paperRoutes — atomic daily claim + tip overdraft guard", () => {
     });
     expect(paper).toBe(25); // 25 once, never 25*N
     expect(grants).toBe(1);
+    const after = await wallet();
+    expect(after.dailyReady).toBe(false);
+    expect(typeof after.dailyNextAt).toBe("string");
   });
 
   it("processes a tip exactly once under concurrent sends (no overdraft, recipient credited once)", async () => {

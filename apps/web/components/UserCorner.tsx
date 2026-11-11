@@ -2,7 +2,7 @@
 
 import { lookBgProps, mayPickLookBg } from "@/lib/lookBg";
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import Link from "next/link";
+import { weeredToast } from "../lib/toast";
 import { useWeered } from "./WeeredProvider";
 import { useOverlay } from "./overlays/OverlayProvider";
 import RoleIcon, { TierIcon } from "./RoleIcon";
@@ -65,6 +65,15 @@ const ROLE_DISPLAY: Record<string, string> = {
   OWNER: "FOUNDER",
   MEMBER: "MEMBER",
 };
+/** What each role is, in plain words, for the hover (2026-11-10). */
+const ROLE_PLAIN: Record<string, string> = {
+  GOD: "owner of Weered",
+  ADMIN: "Weered admin",
+  STAFF: "Weered staff",
+  SUPPORT: "support, helps people out",
+  MOD: "moderator",
+  OWNER: "runs this lobby",
+};
 const ROLE_DISPLAY_WINDROSE: Record<string, string> = {
   GOD: "ADMIRAL",
   ADMIN: "FIRST MATE",
@@ -115,7 +124,7 @@ export default function UserCorner() {
 
   // Paper, off the card (James 2026-11-07: "Remove paper. Have that as a
   // button off the profile"), in a themed lobby's own money.
-  const paper = usePaperBalance();
+  const { balance: paper, dailyReady, claimDaily } = usePaperBalance();
   const [paperName, paperIcon] =
     lobbyTheme === "windrose"
       ? ["Doubloons", "🪙"]
@@ -560,17 +569,34 @@ export default function UserCorner() {
         </div>
       ) : null}
       {paper !== null && (
-        <Link
-          href="/store"
-          className="weered-uc-paper"
-          title={`${paperName}: ${paper.toLocaleString()}. Open the store`}
-          aria-label={`${paperName}: ${paper.toLocaleString()}. Open the store`}
+        <button
+          type="button"
+          className={`weered-uc-paper${dailyReady ? " is-ready" : ""}`}
+          title={
+            dailyReady
+              ? `${paperName}: ${paper.toLocaleString()}. Claim today's 25`
+              : `${paperName}: ${paper.toLocaleString()}`
+          }
+          aria-label={
+            dailyReady
+              ? `${paperName}: ${paper.toLocaleString()}. Claim today's 25`
+              : `${paperName}: ${paper.toLocaleString()}`
+          }
+          onClick={async () => {
+            const r = await claimDaily();
+            if (r.ok) weeredToast.success(`+${r.awarded} ${paperName}. Back tomorrow for more.`);
+            else if (r.nextAt) {
+              const h = Math.max(1, Math.ceil((Date.parse(r.nextAt) - Date.now()) / 3600000));
+              weeredToast(`Today's ${paperName} is claimed. More in ${h}h.`);
+            }
+          }}
           // Inline: the minimal chrome makes every child of the card relative.
           style={{ position: "absolute", top: 6, right: lobbyLogo ? 40 : 8, zIndex: 3 }}
         >
           <span aria-hidden>{paperIcon}</span>
           {paper.toLocaleString()}
-        </Link>
+          {dailyReady && <span className="weered-uc-paper-plus">+25</span>}
+        </button>
       )}
 
       <div
@@ -635,7 +661,14 @@ export default function UserCorner() {
             pointerEvents: "none",
           }}
         >
-          {idHash && <span style={{ color: "rgba(255,255,255,.55)" }}>ID · {idHash}</span>}
+          {idHash && (
+            <span
+              title="Your Weered ID: the same for you everywhere, whatever name you go by"
+              style={{ color: "rgba(255,255,255,.55)", pointerEvents: "auto" }}
+            >
+              ID · {idHash}
+            </span>
+          )}
           {(() => {
             const tier = String(me?.tier || "").toUpperCase();
             if (!tier || tier === "INNOCENT") return null;
@@ -660,7 +693,9 @@ export default function UserCorner() {
                   </span>
                 )}
                 <span
+                  title={`Your plan: ${tier.charAt(0)}${tier.slice(1).toLowerCase()}`}
                   style={{
+                    pointerEvents: "auto",
                     display: "inline-flex",
                     alignItems: "center",
                     gap: 4,
@@ -828,6 +863,7 @@ export default function UserCorner() {
                         : "rgba(243,244,246,.85)";
             return (
               <div
+                title={`Your role: ${ROLE_PLAIN[bestRole] || bestRole.toLowerCase()}`}
                 style={{
                   marginTop: 5,
                   display: "flex",

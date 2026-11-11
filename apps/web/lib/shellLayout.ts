@@ -405,13 +405,23 @@ export const itemIcon = (it: ShellItem): string =>
 // lobby drifting past between them ("between the search, browse, etc. and
 // chat put a half sized featured carousel of all 50 lobbies"), and the build
 // blocks back on top ("Add the build blocks back in at the top as well").
+//
+// Home without repeats, 2026-11-10 (James: "Clean up the home repeats... Just
+// clean."): the bar over every page already has the one search and Downtown,
+// and the build blocks are Create and Change, so the four tiles said
+// everything twice. Home is the build blocks, every lobby drifting past, and
+// the chat. The tiles stay in Design, for a sidebar or a Home of your own.
 const STOCK: Record<ShellRegion, CoreId[]> = {
   left: ["card", "nav", "presence", "favs", "recent"],
   right: ["whoshere", "rooms", "friends", "crew", "discover"],
-  home: ["build", "search", "browse", "create", "change", "carousel", "homechat"],
+  home: ["build", "carousel", "homechat"],
 };
 /** Sections that start switched off. */
 const STOCK_OFF: CoreId[] = [
+  "search",
+  "browse",
+  "create",
+  "change",
   "pulse",
   "live",
   "featured",
@@ -424,8 +434,13 @@ const STOCK_OFF: CoreId[] = [
   "activity",
   "visited",
 ];
-/** Home as stock had it from 2026-10-30 to 11-05. */
-const HOME_2026_10_30: CoreId[] = ["build", "pulse", "live", "featured", "news", "upgrade"];
+/** Home as stock had it from 2026-10-30 to 11-05, then 11-05 to 11-10. */
+const OLD_STOCK_HOMES: CoreId[][] = [
+  ["build", "pulse", "live", "featured", "news", "upgrade"],
+  ["search", "browse", "create", "change", "homechat"],
+  ["search", "browse", "create", "change", "carousel", "homechat"],
+  ["build", "search", "browse", "create", "change", "carousel", "homechat"],
+];
 /** Home as it came before 2026-10-30. A saved Home still in exactly this order
  *  was never arranged by hand, so it follows the new one; the office desk
  *  (components/useOfficeSkin.ts) keeps it. */
@@ -596,7 +611,7 @@ export function sanitizeShell(raw: unknown, follow = true): ShellLayout | null {
   // A Home still exactly as an old stock had it was never arranged by hand.
   const same = (a: unknown, b: CoreId[]) =>
     Array.isArray(a) && a.length === b.length && a.every((x: unknown, i: number) => x === b[i]);
-  const legacy = same(r.home, LEGACY_HOME) || same(r.home, HOME_2026_10_30);
+  const legacy = [LEGACY_HOME, ...OLD_STOCK_HOMES].some((h) => same(r.home, h));
   // A Home arranged by hand before the ways in existed keeps what it had
   // (James 2026-11-05: "Anyone who saved their own Home keeps it"): they start
   // switched off there, one click away in Design.
@@ -752,9 +767,11 @@ export type ShellPreset = {
   build: () => PresetBody;
 };
 
-/** Home's four ways in, first on every preset's Home (2026-11-05), under the
- *  build blocks where a Home has them (11-06). */
-const WAYS_IN: CoreId[] = ["search", "browse", "create", "change"];
+/** The way in on every preset's Home: the build blocks, which are Create and
+ *  Change. Search and Downtown are in the bar on every page (2026-11-10; the
+ *  four tiles were first from 11-05). */
+const WAYS_IN: CoreId[] = ["build"];
+const FOUR_TILES: CoreId[] = ["search", "browse", "create", "change"];
 
 export const SHELL_PRESETS: ShellPreset[] = [
   {
@@ -808,7 +825,7 @@ export const SHELL_PRESETS: ShellPreset[] = [
       right: ["whoshere", "rooms", "crew", "discover"],
       home: [
         "build",
-        ...WAYS_IN,
+        ...FOUR_TILES,
         "carousel",
         "homechat",
         "pulse",

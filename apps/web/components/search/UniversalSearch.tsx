@@ -191,14 +191,6 @@ export const GO_TO: Go[] = [
     icon: "☰",
   },
   {
-    id: "store",
-    label: "Store",
-    sub: "Spend your Paper: flair, frames and more",
-    words: "store shop buy paper money wallet balance",
-    icon: "◇",
-    mine: true,
-  },
-  {
     id: "upgrade",
     label: "Upgrade",
     sub: "Plans and pricing",
@@ -447,8 +439,6 @@ export default function UniversalSearch({
         return dock(go.id);
       case "forum":
         return router.push("/forum");
-      case "store":
-        return router.push("/store");
       case "upgrade":
         return router.push("/subscribe");
       case "feedback":

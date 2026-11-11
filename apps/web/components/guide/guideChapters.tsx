@@ -623,7 +623,7 @@ function Lobbies({ go, actions }: { go: (id: ChapterId) => void; actions: GuideA
       <Head
         id="lobbies"
         title="Your lobby, built in a minute."
-        intro="Pick what it's for, name it, choose a look, say what's inside and which rooms it opens with. Then it's live, and Design opens on it. Lobbies are free, three each. A new one shows in Explore once three people have joined it."
+        intro="Pick what it's for, name it, choose a look, say what's inside and which rooms it opens with. Then it's live, and Design opens on it. Lobbies are free, three each. A new one shows in Downtown once three people have joined it."
       />
       <div className="wg-actions">
         <Btn primary onClick={actions.build}>
@@ -983,7 +983,7 @@ function Play({ actions }: { actions: GuideActions }) {
         <Tile
           icon="💵"
           name="Paper"
-          blurb="Earned from daily bonuses, FakeOut profits and challenges. Spend it in the store or at the poker table."
+          blurb="Earned from FakeOut profits, challenges and a daily 25 (tap the balance on your card). Play it at the poker table."
         />
         <Tile
           icon="📈"
@@ -998,8 +998,7 @@ function Play({ actions }: { actions: GuideActions }) {
       </div>
       <div className="wg-actions">
         <Btn onClick={() => actions.href("/lobby/fakeout")}>Open FakeOut</Btn>
-        <Btn onClick={() => actions.href("/lobby/poker")}>Find a table</Btn>
-        <Btn onClick={() => actions.href("/store")}>The store</Btn>
+        <Btn onClick={() => actions.href("/lobby/poker")}>Find a table</Btn>{" "}
       </div>
     </>
   );

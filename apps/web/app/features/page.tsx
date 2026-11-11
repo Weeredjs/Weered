@@ -136,7 +136,7 @@ export default function FeaturesPage() {
                   items: [
                     "Web, a Tauri desktop app, mobile in progress",
                     "Notoriety reputation and Paper currency, earned",
-                    "Store, bounties, tips, tournament buy-ins",
+                    "Bounties, tips, poker and tournament buy-ins",
                   ],
                 },
               ].map((col) => (
@@ -214,8 +214,8 @@ export default function FeaturesPage() {
             <p className="mkt-p">
               Notoriety is platform-wide reputation you build by sticking around and playing
               straight. It unlocks what you can do: posting media, hosting your own lobbies, running
-              moderation. Paper is the in-platform currency, spendable on store items, tournament
-              buy-ins, and crew goods. Both are earned.
+              moderation. Paper is the in-platform currency, for poker, tournament buy-ins, tips and
+              bounties. Both are earned.
             </p>
           </div>
         </section>

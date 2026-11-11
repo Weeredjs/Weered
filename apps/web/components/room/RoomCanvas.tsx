@@ -716,7 +716,8 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
 
       <LaunchPad roomId={roomId} moduleType={lobbyContext?.moduleType} />
 
-      {voicePrompt && !voiceOff && voice.connState !== "connected" && voice.connState !== "connecting" && (
+      {/* Not while People is on stage: it has its own Join voice (2026-11-10). */}
+      {voicePrompt && !voiceOff && stageMode !== "voice" && voice.connState !== "connected" && voice.connState !== "connecting" && (
         <div className="weered-room-voice-prompt" style={{ flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 16px", gap: 12, background: "color-mix(in srgb, var(--weered-room-accent, #7c3aed) 8%, transparent)", borderBottom: "1px solid color-mix(in srgb, var(--weered-room-accent, #7c3aed) 18%, transparent)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#22c55e", boxShadow: "0 0 8px #22c55e", flexShrink: 0 }} />
@@ -773,7 +774,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
         {!stageActive && !officeStage && (
           <div className="flex items-center px-4 h-10">
             <span className="text-[9px] font-bold tracking-[0.14em] uppercase text-white/20">
-              Stage -- activate a module below
+              Stage -- pick a tab
             </span>
           </div>
         )}
@@ -1298,7 +1299,9 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
 
       </div>
 
-      <div style={{ flexShrink: 0, borderTop: "1px solid rgba(255,255,255,0.07)", padding: "10px 16px 8px", background: "transparent", zIndex: 20 }}>
+      {/* The tab row by your thumb, on a phone; a wider screen has the header's
+          (styles/43-phone.css; 2026-11-10: rooms showed both). */}
+      <div className="weered-room-tabbar" style={{ flexShrink: 0, borderTop: "1px solid rgba(255,255,255,0.07)", padding: "10px 16px 8px", background: "transparent", zIndex: 20 }}>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center" }}>
           {MODULES.map((m) => {
             const isActive = m.id === "office" ? officeStage : stageMode === m.id;
@@ -1405,13 +1408,13 @@ function RoomMemberToolbar({
         }`}
       >
         <span style={{ fontSize: 11 }}>{soloViewing ? "◉" : "○"}</span>
-        {soloViewing ? "Solo" : "Synced"}
+        {soloViewing ? "Watching solo" : "Watching together"}
       </button>
 
       <button
         type="button"
-        aria-label="What does Synced mean?"
-        title={"Synced (default): everyone in the room sees the same module when someone switches tabs (YouTube, Twitch, Voice, etc).\n\nSolo: you browse modules independently. Your switches don't broadcast and others' switches don't pull you along. Voice and chat still work as normal."}
+        aria-label="What does watching together mean?"
+        title={"Watching together (the default): when someone switches tabs (YouTube, Twitch, People and the rest), everyone in the room switches with them.\n\nWatching solo: you switch tabs on your own, and nobody pulls you along. Voice and chat work as normal."}
         className="inline-flex items-center justify-center rounded-full border border-white/[0.08] bg-white/[0.02] text-white/40 hover:text-white/70 hover:bg-white/[0.06] transition-colors"
         style={{ width: 16, height: 16, fontSize: 10, fontWeight: 700, cursor: "help", marginLeft: -2 }}
       >
