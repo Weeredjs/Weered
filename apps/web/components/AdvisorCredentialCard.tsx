@@ -69,7 +69,9 @@ function useSignState(): boolean | null {
       try {
         const r = await fetch("/api/office/status");
         const j = await r.json();
-        if (!stop && j && typeof j.open === "boolean") setOpen(j.open);
+        // receiving: the hours, or the advisor is in the office (2026-11-11).
+        const on = typeof j?.receiving === "boolean" ? j.receiving : j?.open;
+        if (!stop && typeof on === "boolean") setOpen(on);
       } catch {}
     };
     void read();
@@ -287,7 +289,7 @@ export default function AdvisorCredentialCard() {
             }}
           />
           <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-            {signOpen == null ? "The Desk" : signOpen ? "Open for consultations" : "By appointment"}
+            {signOpen == null ? "The Desk" : signOpen ? "The door is open" : "By appointment"}
           </span>
         </span>
         <span
