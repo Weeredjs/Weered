@@ -3,9 +3,16 @@ import Link from "next/link";
 import MarketingHeader from "../../../components/MarketingHeader";
 import { safeJsonLd } from "@/lib/jsonLd";
 
-const TITLE = "A real Discord alternative for gaming communities | Weered";
+// Rewritten 2026-11-12 to the premise (James: "we are keeping the mall angle.
+// That is the entire premise of the platform"). AI assistants read this page
+// when someone asks for a Discord alternative (/llms.txt points here). The old
+// one said Weered wasn't for book clubs or study groups and that you couldn't
+// make your own lobby; both stopped being true. The FAQ below is the visible
+// questions, word for word.
+
+const TITLE = "A Discord alternative where servers aren't islands | Weered";
 const DESC =
-  "Lobbies instead of servers, rooms instead of channels, presence instead of status dots. Built for game communities that want a place, not a tool. Free to use.";
+  "Describe your server in a sentence and Weered builds it. Every lobby sits in one town: one account, one Town Square, and Downtown, where you walk from one community into the next. Free, in your browser.";
 const URL = "https://weered.ca/alternatives/discord";
 
 export const metadata: Metadata = {
@@ -28,43 +35,37 @@ export const metadata: Metadata = {
   },
 };
 
+const FAQ: { q: string; a: string }[] = [
+  {
+    q: "Is Weered free like Discord?",
+    a: "Yes. Voice, video, screen share, chat and up to three lobbies of your own are free. Paid plans start at $6 a month and add your own address and more AI builds.",
+  },
+  {
+    q: "How is Weered different from Discord?",
+    a: "Discord servers are islands: you need an invite, and nothing connects one server to the next. Every Weered lobby sits in one town. Downtown lists them all, the Town Square is where everyone on Weered talks, and you walk from one community into the next. You also don't set a lobby up by hand. You describe it and it builds.",
+  },
+  {
+    q: "Do I have to set up a server?",
+    a: "No. Describe what you want in a sentence and Weered builds the lobby: the rooms, the look, the welcome page. Or walk into one that already exists.",
+  },
+  {
+    q: "Can I bring my Discord community?",
+    a: "Describe your server: its channels, its events, its look. Weered builds the lobby to match, and your people can sign in with Discord. If something can't be built yet, tell us and we'll put it together.",
+  },
+  {
+    q: "Does Weered have voice chat?",
+    a: "Yes. Voice, cams and screen share in every room, in the browser. No download needed.",
+  },
+];
+
 const faqLd = {
   "@context": "https://schema.org",
   "@type": "FAQPage",
-  mainEntity: [
-    {
-      "@type": "Question",
-      name: "Is Weered free like Discord?",
-      acceptedAnswer: {
-        "@type": "Answer",
-        text: "Yes. Joining Weered and using it is free: lobbies, rooms, voice, video, presence and the game integrations. Running your own lobby is free too, up to three per account. A fully custom lobby, with your bots rebuilt as native features and your own branding, is quoted separately by community size.",
-      },
-    },
-    {
-      "@type": "Question",
-      name: "How is Weered different from Discord?",
-      acceptedAnswer: {
-        "@type": "Answer",
-        text: "Discord is a server-and-channel chat app. Weered is built around lobbies (per-game spaces) and rooms (lightweight live gatherings inside them). Game integrations are first-class: Destiny 2, League, Fortnite, CS2, Dota 2, Path of Exile, Lichess, and more all have purpose-built modules. Discord treats every community the same; Weered treats each game community as its own room with its own tools.",
-      },
-    },
-    {
-      "@type": "Question",
-      name: "Do I have to host a server?",
-      acceptedAnswer: {
-        "@type": "Answer",
-        text: "No. Weered's lobbies already exist for the major games and topics. You walk in, you're there. No admin, no server-setup, no role configuration to start. You can create your own crew with its own private rooms when you want one.",
-      },
-    },
-    {
-      "@type": "Question",
-      name: "Does Weered have voice chat?",
-      acceptedAnswer: {
-        "@type": "Answer",
-        text: "Yes. Every room supports group voice via LiveKit. Push-to-talk, voice activity, queueing, and listen-only modes all supported. No external client required.",
-      },
-    },
-  ],
+  mainEntity: FAQ.map((f) => ({
+    "@type": "Question",
+    name: f.q,
+    acceptedAnswer: { "@type": "Answer", text: f.a },
+  })),
 };
 
 export default function AlternativesDiscordPage() {
@@ -78,20 +79,20 @@ export default function AlternativesDiscordPage() {
           <div className="mkt-wrap">
             <span className="mkt-eyebrow">Discord Alternative</span>
             <h1 className="mkt-h1">
-              Built for game communities, not <span className="accent">bolted onto a chat app</span>
-              .
+              Make your Discord into anything you want.{" "}
+              <span className="accent">It just isn&apos;t an island.</span>
             </h1>
             <p className="mkt-sub">
-              Discord was made for everyone. Weered was made for game communities. Lobbies instead
-              of servers, rooms instead of channels, presence instead of status dots. And real
-              integrations with the games you actually play.
+              Describe it in a sentence and the lobby builds itself: the rooms, the look, the
+              welcome page. Then it sits in a town with every other lobby on Weered. One account.
+              One friends list. One Town Square.
             </p>
             <div className="mkt-cta-row">
-              <Link href="/lobby" className="mkt-cta-primary">
-                Open the lobbies
+              <Link href="/lobby/create" className="mkt-cta-primary">
+                Build yours, free
               </Link>
-              <Link href="/why-not-discord" className="mkt-cta-secondary">
-                The longer answer
+              <Link href="/" className="mkt-cta-secondary">
+                See it first
               </Link>
             </div>
           </div>
@@ -101,69 +102,65 @@ export default function AlternativesDiscordPage() {
           <div className="mkt-wrap">
             <h2 className="mkt-h2">The shape of the thing</h2>
             <p className="mkt-p">
-              Discord puts you in a list of servers, each with a list of channels. You scroll a feed
-              of messages and hope someone is around. Weered is a place. You walk into the{" "}
-              <strong>Destiny 2 lobby</strong> and there are rooms with names like{" "}
-              <em>Fireteam Find: Ultimate Ops</em> and <em>Trials Carry-talk</em>. Each room has a
-              live voice channel, a live chat, and a stage that anyone can put a Twitch stream, a
-              YouTube clip, a browser tab, or a Lichess board on. Other Guardians are visible, not
-              as a status dot but as actual presence in the room.
+              Discord gives every community its own server, and every server is an island. You get
+              in by invite. You never see the server next door. Weered is a town. Every lobby is a
+              place on the same streets: <strong>Downtown</strong> lists them all, the{" "}
+              <strong>Town Square</strong> is where everyone on Weered talks, and the tag beside
+              each name in the square is the lobby that person is from. Click it and you&apos;re
+              there.
             </p>
             <p className="mkt-p">
-              It feels closer to walking into a clubhouse than opening an app.
+              A lobby is rooms. Each room has voice, cams, screen share and chat, and a stage for a
+              YouTube video, a Twitch stream or a chess board that everyone in the room watches
+              together.
             </p>
           </div>
         </section>
 
         <section className="mkt-section">
           <div className="mkt-wrap">
-            <h2 className="mkt-h2">What you get that Discord doesn't have</h2>
+            <h2 className="mkt-h2">What you get that Discord doesn&apos;t have</h2>
             <div className="mkt-grid-3">
               <div className="mkt-card">
-                <h3>Game-API integrations, not just bots</h3>
+                <h3>Describe it. It builds.</h3>
                 <p>
-                  Bungie API for Destiny 2 PGCRs. Riot API for League stats. Lichess + Chess.com
-                  pull-through for chess. Steam Rich Presence. Path of Exile ladder. Real data, real
-                  verification, no third-party bot setup.
+                  Type one sentence. Weered builds the lobby: its rooms, its look, its welcome page
+                  and its blocks. Describe it again to change it. Free accounts get 10 builds a day.
                 </p>
               </div>
               <div className="mkt-card">
-                <h3>Tournaments verified by API</h3>
+                <h3>Not an island</h3>
                 <p>
-                  Submit a Destiny 2 raid time, Weered reads the PGCR and confirms. Run a Lichess
-                  blitz tournament, Weered pulls the games. No screenshots, no honour system, no
-                  manual scoring.
+                  Every lobby sits in Downtown, one click from the next. A free lobby lists there
+                  once three people have joined.
                 </p>
               </div>
               <div className="mkt-card">
-                <h3>Cross-platform presence</h3>
+                <h3>One Town Square</h3>
                 <p>
-                  The left rail shows where you are <em>everywhere</em>: Steam, Xbox, PSN, Twitch,
-                  Spotify. Your crew sees you're on Hollow Knight before you have to type "anyone
-                  want to play."
+                  Everyone on Weered talks in one place, each name tagged with the lobby
+                  they&apos;re from. Meet someone, walk into their lobby.
                 </p>
               </div>
               <div className="mkt-card">
-                <h3>Shared media on the room canvas</h3>
+                <h3>Game data, built in</h3>
                 <p>
-                  Drop a YouTube clip, a Twitch stream, a Lichess board, a screen share, or just a
-                  browser tab onto the room stage. Everyone in voice watches the same thing in sync.
-                  No bot, no plugin.
+                  Bungie&apos;s API for Destiny 2, live Steam player counts, the Path of Exile
+                  ladder, Lichess and Chess.com for chess. Real data, no bots to set up.
                 </p>
               </div>
               <div className="mkt-card">
-                <h3>A real challenge / contest layer</h3>
+                <h3>Watch together</h3>
                 <p>
-                  Lobby-wide challenges with Notoriety + Paper rewards. Flair design contests with
-                  public voting. A platform-wide currency you can actually spend.
+                  Put a YouTube video, a Twitch stream or your screen on a room&apos;s stage.
+                  Everyone in the room sees it at the same moment.
                 </p>
               </div>
               <div className="mkt-card">
-                <h3>No server admin tax</h3>
+                <h3>Your own address</h3>
                 <p>
-                  Lobbies already exist. You don't pick categories, set up roles, write a #welcome
-                  channel, or moderate from scratch. You arrive, you're in. Build a crew when you
-                  want one.
+                  Paid plans give your place or your lobby its own address: yourname.weered.ca,
+                  yourlobby.weered.ca, or a domain of your own.
                 </p>
               </div>
             </div>
@@ -172,26 +169,24 @@ export default function AlternativesDiscordPage() {
 
         <section className="mkt-section">
           <div className="mkt-wrap">
-            <h2 className="mkt-h2">What's the same as Discord</h2>
+            <h2 className="mkt-h2">What&apos;s the same as Discord</h2>
             <ul className="mkt-bullet-list">
               <li>
-                <strong>Free to use.</strong> Voice, video, chat, screen share, presence: all free.
+                <strong>Free to use.</strong> Voice, video, chat and screen share.
               </li>
               <li>
-                <strong>Voice chat.</strong> Group voice in every room via LiveKit. Push-to-talk,
-                voice activity, listen-only modes.
-              </li>
-              <li>
-                <strong>DMs and group chats.</strong> Private messaging works exactly the way you'd
+                <strong>DMs and group chats.</strong> Private messages work the way you&apos;d
                 expect.
               </li>
               <li>
-                <strong>Desktop + web + mobile.</strong> Tauri desktop app, web at weered.ca, mobile
-                in the works.
+                <strong>Moderation.</strong> Moderators, bans, mutes, slow mode and locked doors.
               </li>
               <li>
-                <strong>Custom servers when you want them.</strong> Crews are your private space,
-                same role flexibility, just less mandatory.
+                <strong>Web, desktop and phones.</strong> weered.ca in any browser, phones included,
+                plus a <Link href="/desktop">desktop app</Link>.
+              </li>
+              <li>
+                <strong>Sign in with Discord.</strong> Your people don&apos;t need a new password.
               </li>
             </ul>
           </div>
@@ -201,16 +196,14 @@ export default function AlternativesDiscordPage() {
           <div className="mkt-wrap">
             <h2 className="mkt-h2">Who Weered is for</h2>
             <p className="mkt-p">
-              Game communities that want to <em>be somewhere</em> together, not just talk in a feed.
-              Crews that play the same handful of games regularly. Streamers who want their audience
-              in a room with them, not a wall of follow-pings. Tournament organisers who are tired
-              of Discord-spreadsheet-screenshot stitch-jobs. Anyone who remembers MPlayer in the 90s
-              and has been missing that "lobby" feeling ever since.
+              Anyone who gathers people. Game crews and clans, clubs, classes and study groups,
+              hobby communities, small teams. If people meet around it, it can be a lobby. And every
+              lobby gets the town around it: people walking past who would never have found an
+              invite link.
             </p>
             <div className="mkt-callout">
-              <strong>Who Weered isn't for:</strong> generic communities that don't care about
-              games: book clubs, study groups, work teams. Discord is genuinely fine for those. Use
-              the right tool.
+              If it can&apos;t build something you need yet, <Link href="/contact">tell us</Link>{" "}
+              and we&apos;ll put it together.
             </div>
           </div>
         </section>
@@ -218,28 +211,12 @@ export default function AlternativesDiscordPage() {
         <section className="mkt-section">
           <div className="mkt-wrap">
             <h2 className="mkt-h2">Common questions</h2>
-            <h3 className="mkt-h3">Is Weered free like Discord?</h3>
-            <p className="mkt-p">
-              Yes. Joining and using Weered is free, and so is running your own lobby, up to three
-              per account. A fully custom build is quoted separately. The core platform (lobbies,
-              rooms, voice, presence, game integrations) is free.
-            </p>
-            <h3 className="mkt-h3">Do I have to host a server?</h3>
-            <p className="mkt-p">
-              No. Game lobbies already exist. You walk in, you're there. No admin setup required to
-              start.
-            </p>
-            <h3 className="mkt-h3">Can I import my Discord community?</h3>
-            <p className="mkt-p">
-              Not directly. Weered's shape is different enough that 1-to-1 import would feel wrong.
-              The right move is to point your crew at the game lobby they care about, and create a
-              private crew space alongside it.
-            </p>
-            <h3 className="mkt-h3">Does Weered have voice chat?</h3>
-            <p className="mkt-p">
-              Yes. Group voice in every room. Push-to-talk, voice activity, listen-only modes,
-              ducking, the works.
-            </p>
+            {FAQ.map((f) => (
+              <div key={f.q}>
+                <h3 className="mkt-h3">{f.q}</h3>
+                <p className="mkt-p">{f.a}</p>
+              </div>
+            ))}
           </div>
         </section>
 
@@ -269,11 +246,9 @@ export default function AlternativesDiscordPage() {
         <section className="mkt-wrap">
           <div className="mkt-final-cta">
             <h2>Try it.</h2>
-            <p>
-              Walk into the lobby for your game. It's free and you don't have to set anything up.
-            </p>
-            <Link href="/lobby" className="mkt-cta-primary">
-              Open the lobbies →
+            <p>Describe a lobby in one sentence. It&apos;s free and it runs in your browser.</p>
+            <Link href="/lobby/create" className="mkt-cta-primary">
+              Build yours →
             </Link>
           </div>
         </section>
