@@ -14,6 +14,15 @@ import type { CSSProperties } from "react";
 import { Room, RoomEvent, Track } from "livekit-client";
 import { PlanModule, PresentedPlanViewer } from "./PlanModule";
 import OfficeWindow from "./OfficeWindow";
+import OfficeWall, { officeYt, resetOfficeYt } from "./OfficeWall";
+
+const YT_FRAMES = new Set([
+  "youtube:state",
+  "youtube:load",
+  "youtube:play",
+  "youtube:pause",
+  "youtube:stop",
+]);
 
 const API = "/api";
 const wsBase = () => `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws`;
@@ -473,6 +482,15 @@ function ClientView({
   const [micOn, setMicOn] = useState(true);
   const [camOn, setCamOn] = useState(false);
   const [screenOn, setScreenOn] = useState(false);
+  // The host's Door open: a visitor walks straight in instead of knocking
+  // (James 2026-11-12: "Have it like a space people can walk into").
+  const [doorOpen, setDoorOpen] = useState(false);
+  useEffect(() => {
+    fetch(`${API}/office/status`, { cache: "no-store" })
+      .then((r) => r.json())
+      .then((st) => setDoorOpen(!!st?.doorOpen))
+      .catch(() => {});
+  }, []);
 
   const ws = useRef<WebSocket | null>(null);
   const token = useRef("");
@@ -521,6 +539,23 @@ function ClientView({
   // The gate button reads "Let James know you're here": the knock is part of
   // arrival, sent once the WS authenticates (auth:ok), so it can never race auth.
   const autoKnock = useRef(false);
+
+  // Into the office: admitted after a knock (room:admitted), or seated straight
+  // away through an open door (the office's presence:state lists us). The
+  // server sends no room:admitted for an open door, so a walk-in sat on the
+  // knock card while already inside. Once per visit.
+  const entered = useRef(false);
+  function enterOffice() {
+    const first = !entered.current;
+    entered.current = true;
+    setInfo("");
+    if (first && phaseRef.current !== "office") beginEntry(); // visual held-door only
+    setPhase("office");
+    switchTo(officeRoom.current).catch(() => {
+      setErr("Couldn't connect to the review.");
+      setPhase("error");
+    });
+  }
 
   const conn = useRef(
     makeRoomConn({
@@ -628,6 +663,14 @@ function ClientView({
           if (m.roomId) {
             lastUsers.current[m.roomId] = m.users || [];
             if (m.roomId === currentRoom.current) refreshClientRoster();
+            // Walked in through an open door: we're on the office's list.
+            if (
+              m.roomId === officeRoom.current &&
+              !entered.current &&
+              selfId.current &&
+              (m.users || []).some((u: any) => u && u.id === selfId.current)
+            )
+              enterOffice();
           }
           break;
         case "presence:join":
@@ -654,16 +697,8 @@ function ClientView({
           }
           break;
         case "room:admitted":
-          if (m.roomId === officeRoom.current) {
-            // Server already doJoin'd us to the office. Switch LiveKit foyer -> office.
-            setInfo("");
-            if (phaseRef.current !== "office") beginEntry(); // visual held-door only
-            setPhase("office");
-            switchTo(officeRoom.current).catch(() => {
-              setErr("Couldn't connect to the review.");
-              setPhase("error");
-            });
-          }
+          // Server already doJoin'd us to the office. Switch LiveKit foyer -> office.
+          if (m.roomId === officeRoom.current) enterOffice();
           break;
         case "room:denied":
           // Overloaded: a mod-deny has NO reason; a scope/meeting rejection has one.
@@ -675,6 +710,8 @@ function ClientView({
             setPhase("foyer");
           } else if (phaseRef.current === "office") {
             // a real ejection from an active consult: tear the office down, return to foyer.
+            entered.current = false;
+            resetOfficeYt();
             clearEntryTimers();
             setEntry("in");
             setInfo("The review has ended.");
@@ -696,6 +733,8 @@ function ClientView({
           setPhase("error");
           break;
         default:
+          // The screen on the office wall (OfficeWall).
+          if (YT_FRAMES.has(m.type) && m.roomId === officeRoom.current) officeYt(m);
           break;
       }
     };
@@ -852,6 +891,8 @@ function ClientView({
     leaving.current = true;
     joining.current = false;
     autoKnock.current = false;
+    entered.current = false;
+    resetOfficeYt();
     clearEntryTimers();
     setEntry("in");
     switchEpoch.current++; // invalidate any in-flight switch
@@ -937,7 +978,7 @@ function ClientView({
                 onClick={join}
                 disabled={!name.trim()}
               >
-                {"Let James know you're here"}
+                {doorOpen ? "Walk in" : "Let James know you're here"}
               </button>
             </>
           )}
@@ -967,7 +1008,7 @@ function ClientView({
           <div style={{ textAlign: "center" }}>
             <div style={S.kicker}>East Coast Employee Benefits</div>
             <div style={S.serifH}>Welcome{name.trim() ? `, ${name.trim()}` : ""}.</div>
-            <p style={S.parlourLine}>James will see you now.</p>
+            <p style={S.parlourLine}>{doorOpen ? "Come on in." : "James will see you now."}</p>
           </div>
         </div>
       )}
@@ -1072,7 +1113,10 @@ function ClientView({
                 <div style={S.card}>
                   <div style={S.kicker}>East Coast Employee Benefits</div>
                   <div style={S.serifH}>Welcome{name.trim() ? `, ${name.trim()}` : ""}.</div>
-                  {phase === "knocking" || autoKnock.current ? (
+                  {(phase === "knocking" || autoKnock.current) && doorOpen ? (
+                    /* An open door: the "knock" seats them; this shows for a beat. */
+                    <p style={S.parlourLine}>{"The door's open. Walking you in…"}</p>
+                  ) : phase === "knocking" || autoKnock.current ? (
                     /* autoKnock armed counts as knocking: the knock IS the arrival, so
                        the manual-button parlour must never flash during the WS
                        handshake window before auth:ok confirms it. */
@@ -1100,6 +1144,7 @@ function ClientView({
             {inOffice && <PresentedPlanViewer getToken={() => token.current} accent={accent} />}
             <div ref={screenEl} style={S.screen} />
             <div ref={tilesEl} style={S.tiles} />
+            {inOffice && <OfficeWall host={false} getToken={() => token.current} send={() => {}} />}
           </main>
           <aside style={S.side}>
             <div style={S.sideHead}>
@@ -1370,6 +1415,13 @@ function HostView({ jwt, title, accent }: { jwt: string; title: string; accent: 
           case "chat:new":
             setOfficeMessages((x) => pushMsg(x, m));
             break;
+          case "youtube:state":
+          case "youtube:load":
+          case "youtube:play":
+          case "youtube:pause":
+          case "youtube:stop":
+            if (m.roomId === officeRoom) officeYt(m);
+            break;
           // Defensive: if the server did NOT recognize us as owner of the office,
           // our presence:join is parked as a knock or rejected. Make that visible.
           case "room:knock:queued":
@@ -1523,9 +1575,13 @@ function HostView({ jwt, title, accent }: { jwt: string; title: string; accent: 
           <button
             style={{ ...S.ctl, color: locked ? INK_TEXT : "#D9B878" }}
             onClick={toggleLock}
-            title={locked ? "Door is closed. Click to open." : "Door is open. Click to close."}
+            title={
+              locked
+                ? "Closed: visitors knock and you let them in. Click to open."
+                : "Open: visitors walk straight in. Click to close it for a private meeting."
+            }
           >
-            {locked ? "Door closed" : "Door open"}
+            {locked ? "Door closed: they knock" : "Door open: walk in"}
           </button>
           <button style={S.ctl} onClick={toggleMic}>
             {micOn ? "Mute" : "Unmute"}
@@ -1549,6 +1605,11 @@ function HostView({ jwt, title, accent }: { jwt: string; title: string; accent: 
           <PlanModule jwt={jwt} accent={accent} />
           <div ref={screenEl} style={S.screen} />
           <div ref={tilesEl} style={S.tiles} />
+          <OfficeWall
+            host
+            getToken={() => jwt}
+            send={(f) => sendOffice({ ...f, roomId: officeRoom })}
+          />
         </main>
 
         <aside style={S.side}>

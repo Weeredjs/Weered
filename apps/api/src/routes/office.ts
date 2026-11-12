@@ -8,6 +8,15 @@ import { randomBytes } from "crypto";
 import { readFileSync, writeFileSync } from "fs";
 import { sendPush } from "../lib/notifications";
 import { prisma } from "../lib/prisma";
+import { sendMail } from "../lib/email";
+import {
+  addNote,
+  readBoard,
+  removeNote,
+  visibleTo,
+  writeBoard,
+  type Viewer,
+} from "../lib/officeBoard";
 
 type Opts = {
   authFromHeader: (h?: string) => { id: string; name: string } | null;
@@ -179,6 +188,17 @@ export default async function officeRoutes(app: FastifyInstance, opts: Opts) {
   };
 
   // Public: current office status (drives the ECEB-site fixture + the foyer door).
+  // The door (the host's Door open / Door closed): open, a visitor walks
+  // straight in; closed, they knock. Live when the room is loaded, saved otherwise.
+  const doorOpen = async (): Promise<boolean> => {
+    const room = rooms?.get?.(OFFICE_ROOM);
+    if (room && typeof room.locked === "boolean") return !room.locked;
+    const row = await prisma.room
+      .findUnique({ where: { id: OFFICE_ROOM }, select: { locked: true } })
+      .catch(() => null);
+    return row ? !row.locked : false;
+  };
+
   app.get("/office/status", async (_req, reply) => {
     const st = readOfficeState();
     const hostIn = await hostInOffice();
@@ -188,6 +208,7 @@ export default async function officeRoutes(app: FastifyInstance, opts: Opts) {
       // lets a walk-in knock right now: hours, or the advisor is in.
       receiving: st.open || hostIn,
       hostIn,
+      doorOpen: await doorOpen(),
       open: st.open,
       schedule: st.schedule,
       note: st.note,
@@ -256,6 +277,78 @@ export default async function officeRoutes(app: FastifyInstance, opts: Opts) {
     const u = await officeHostFromReq(req);
     if (!u) return reply.code(403).send({ ok: false, error: "host_only" });
     return reply.send({ ok: true, waiting: readWaiting() });
+  });
+
+  // --- THE NOTE BOARD (lib/officeBoard.ts) ---
+  // James pins notes on the wall for every visitor; a visitor's note is for
+  // James alone, and he hears about it by push and email.
+  const boardViewer = async (req: any): Promise<Viewer | null> => {
+    const host = await officeHostFromReq(req);
+    if (host) return { host: true, id: host.id, name: host.name || "James" };
+    const u: any = authFromHeader((req.headers as any).authorization);
+    if (u?.guest && u.scope?.office === "mtg-eceb")
+      return { host: false, id: String(u.id), name: String(u.name || "Visitor") };
+    return null;
+  };
+  const OFFICE_NOTIFY_TO =
+    process.env.OFFICE_NOTIFY_TO || process.env.CONTACT_NOTIFY_TO || "james@weered.ca";
+
+  app.get("/office/board", async (req, reply) => {
+    reply.header("Cache-Control", "no-store");
+    const v = await boardViewer(req);
+    if (!v) return reply.code(401).send({ ok: false, error: "office_only" });
+    return reply.send({ ok: true, host: v.host, notes: visibleTo(readBoard(), v) });
+  });
+
+  app.post(
+    "/office/board",
+    { config: { rateLimit: { max: 12, timeWindow: "10 minutes" } } },
+    async (req, reply) => {
+      const v = await boardViewer(req);
+      if (!v) return reply.code(401).send({ ok: false, error: "office_only" });
+      const r = addNote(
+        readBoard(),
+        v,
+        (req as any).body?.body,
+        Date.now(),
+        `n_${randomBytes(6).toString("hex")}`,
+      );
+      if ("error" in r) return reply.code(400).send({ ok: false, error: r.error });
+      writeBoard(r.notes);
+      if (r.note.private) {
+        const host = await prisma.user
+          .findUnique({ where: { usernameKey: "eceb-host" }, select: { id: true } })
+          .catch(() => null);
+        if (host?.id)
+          sendPush(host.id, {
+            title: `${r.note.by} left you a note`,
+            body: r.note.body.slice(0, 120),
+            url: "/foyer",
+            tag: "office-note",
+          }).catch(() => {});
+        const esc = (s: string) =>
+          s.replace(
+            /[&<>"]/g,
+            (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!,
+          );
+        sendMail({
+          to: OFFICE_NOTIFY_TO,
+          subject: `[office] ${r.note.by} left you a note`,
+          html: `<p>${esc(r.note.by)} left a note on the office board:</p><blockquote>${esc(r.note.body).replace(/\n/g, "<br>")}</blockquote><p>${OFFICE_ORIGIN}</p>`,
+          text: `${r.note.by} left a note on the office board:\n\n${r.note.body}\n\n${OFFICE_ORIGIN}`,
+        }).catch(() => {});
+      }
+      return reply.send({ ok: true, note: r.note });
+    },
+  );
+
+  app.delete("/office/board/:id", async (req, reply) => {
+    const v = await boardViewer(req);
+    if (!v) return reply.code(401).send({ ok: false, error: "office_only" });
+    const r = removeNote(readBoard(), String((req.params as any).id || ""), v);
+    if (!r.removed) return reply.code(404).send({ ok: false, error: "not_found" });
+    writeBoard(r.notes);
+    return reply.send({ ok: true });
   });
 
   // --- IN-ROOM FATHOM PLAN MODULE (read proxy) ---
