@@ -299,6 +299,7 @@ import { startNexusPoller } from "./nexusPoller";
 import { prisma } from "./lib/prisma";
 import { canEnterGatedRoom } from "./lib/lobbyAccess";
 import { isOfficeRoom } from "./lib/officeRooms";
+import { guestMayCall } from "./lib/guestAllow";
 import { issuedBeforeCutoff } from "./lib/sessionCutoff";
 import { sessionHook } from "./lib/sessionHook";
 import { sayRestarting } from "./lib/restartNotice";
@@ -831,17 +832,10 @@ async function main() {
   // (lib/sessionHook.ts).
   app.addHook("onRequest", sessionHook);
 
-  // Guest deny-by-default: a guest token is valid ONLY on this tiny allowlist; every
-  // other HTTP route returns 403. Also enforces revocation -- a deleted/expired/banned
-  // guest row kills all its live tokens immediately.
-  const GUEST_ALLOWED_PATHS = new Set([
-    "/auth/ws-ticket",
-    "/auth/logout",
-    "/voice/token",
-    // Read-only: returns ONLY what the host explicitly presented to this guest's
-    // office scope (route re-checks guest + scope). See routes/auth.ts.
-    "/office/plan/presented",
-  ]);
+  // Guest deny-by-default: a guest token is valid ONLY on a tiny allowlist
+  // (lib/guestAllow.ts); every other HTTP route returns 403. Also enforces
+  // revocation -- a deleted/expired/banned guest row kills all its live tokens
+  // immediately.
   app.addHook("onRequest", async (req: any, reply: any) => {
     const a = req.headers.authorization;
     if (!a) return;
@@ -856,7 +850,7 @@ async function main() {
     if (!decoded?.guest) return;
     const path = String(req.url || "").split("?")[0];
     const lobbyGuestRead = isLobbyGuest(decoded) && req.method === "GET";
-    if (!GUEST_ALLOWED_PATHS.has(path) && !lobbyGuestRead) {
+    if (!guestMayCall(String(req.method || ""), path, lobbyGuestRead)) {
       return reply.code(403).send({ ok: false, error: "guest_forbidden" });
     }
     const gu = await prisma.user
