@@ -542,6 +542,20 @@ function ClientView({
   // The gate button reads "Let James know you're here": the knock is part of
   // arrival, sent once the WS authenticates (auth:ok), so it can never race auth.
   const autoKnock = useRef(false);
+  const knockTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // The arrival knock goes once the foyer seat is confirmed (the foyer's
+  // presence:state), or after 2.5 s if that never comes. The server runs one
+  // socket's messages side by side, and through an open door a foyer join that
+  // finished second would pull the visitor straight back out of the office.
+  function sendArrivalKnock() {
+    if (knockTimer.current) {
+      clearTimeout(knockTimer.current);
+      knockTimer.current = null;
+    }
+    if (!autoKnock.current || !officeRoom.current) return;
+    autoKnock.current = false;
+    sendWS({ type: "presence:join", roomId: officeRoom.current });
+  }
 
   // Into the office: admitted after a knock (room:admitted), or seated straight
   // away through an open door (the office's presence:state lists us). The
@@ -645,11 +659,12 @@ function ClientView({
       switch (m.type) {
         case "auth:ok":
           sock.send(JSON.stringify({ type: "presence:join", roomId: foyerRoom.current }));
-          // Arrival knock: the client already asked for James at the gate.
+          // Arrival knock: the client already asked for James at the gate. It
+          // follows the foyer seat (sendArrivalKnock), never races it.
           if (autoKnock.current && officeRoom.current) {
-            autoKnock.current = false;
-            sock.send(JSON.stringify({ type: "presence:join", roomId: officeRoom.current }));
             setPhase("knocking"); // optimistic; confirmed by room:knock:queued
+            if (knockTimer.current) clearTimeout(knockTimer.current);
+            knockTimer.current = setTimeout(sendArrivalKnock, 2500);
           }
           break;
         case "auth:fail":
@@ -666,6 +681,8 @@ function ClientView({
           if (m.roomId) {
             lastUsers.current[m.roomId] = m.users || [];
             if (m.roomId === currentRoom.current) refreshClientRoster();
+            // Seated in the foyer: now the arrival knock can go.
+            if (m.roomId === foyerRoom.current) sendArrivalKnock();
             // Walked in through an open door: we're on the office's list.
             if (
               m.roomId === officeRoom.current &&
@@ -866,6 +883,8 @@ function ClientView({
     // If the arrival knock hasn't been sent yet (auth still in flight), disarm it
     // so auth:ok doesn't knock on behalf of a guest who just cancelled.
     autoKnock.current = false;
+    if (knockTimer.current) clearTimeout(knockTimer.current);
+    knockTimer.current = null;
     // Leaving the office clears our pending knock (else leaves current room) per WS contract.
     sendWS({ type: "presence:leave", roomId: officeRoom.current });
     setInfo("");
@@ -894,6 +913,8 @@ function ClientView({
     leaving.current = true;
     joining.current = false;
     autoKnock.current = false;
+    if (knockTimer.current) clearTimeout(knockTimer.current);
+    knockTimer.current = null;
     entered.current = false;
     resetOfficeYt();
     clearEntryTimers();
@@ -923,6 +944,7 @@ function ClientView({
       leaving.current = true;
       switchEpoch.current++;
       clearEntryTimers();
+      if (knockTimer.current) clearTimeout(knockTimer.current);
       conn.disconnect();
       try {
         ws.current?.close();
