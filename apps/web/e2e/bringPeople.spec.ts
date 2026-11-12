@@ -197,4 +197,14 @@ test.describe("bringing people in", () => {
     await expect(bar).toHaveCount(0);
     await strangerCtx.close();
   });
+
+  // The builder's own address, followed by someone who has never signed in:
+  // Create account, headed for the builder. It said "Welcome back, sign in".
+  test("a stranger at the builder is asked to make an account", async ({ page }) => {
+    await page.goto("/lobby/create");
+    await expect(page).toHaveURL(/\/login\?mode=register&next=%2Flobby%2Fcreate/, {
+      timeout: 15000,
+    });
+    await expect(page.locator(".wl-btn")).toHaveText("Create account");
+  });
 });

@@ -32,8 +32,9 @@ export function joinSignupPath(lobbyId: string): string {
   return `/login?mode=register&next=${encodeURIComponent(back)}`;
 }
 
-/** The way to the builder. Signed out, /lobby/create itself says "Welcome back,
- *  sign in", so a stranger is sent to Create account, headed for the builder. */
+/** The way to the builder. A stranger goes straight to Create account, headed
+ *  for the builder; /lobby/create sends anyone who arrives signed out another
+ *  way to the same place. */
 export function builderPath(): string {
   let signedIn = false;
   try {

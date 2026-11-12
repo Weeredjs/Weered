@@ -191,7 +191,11 @@ export default function CreateLobbyPage() {
       signedIn = !!JSON.parse(localStorage.getItem("weered_user") || "null")?.id;
     } catch {}
     if (!signedIn) {
-      router.replace(`/login?next=${encodeURIComponent(`/lobby/create${window.location.search}`)}`);
+      // Create account, for a device that has never signed in; one that has
+      // opens on Sign in by itself (app/login). Without mode=register a
+      // stranger who followed a link to the builder met "Welcome back".
+      const back = encodeURIComponent(`/lobby/create${window.location.search}`);
+      router.replace(`/login?mode=register&next=${back}`);
       return;
     }
     setLoading(false);

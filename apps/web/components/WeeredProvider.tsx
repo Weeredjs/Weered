@@ -378,7 +378,7 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
 
     ws.onopen = () => {
       setWsState(ws.readyState);
-      fetch(`${API}/auth/ws-ticket`).then(r => {
+      fetch(`${API}/auth/ws-ticket`, { credentials: "include" }).then(r => {
         // Signed out (an expired session this page still remembers): no
         // ticket will come, so don't keep reconnecting; a reload starts over.
         if (r.status === 401 || r.status === 403) ticketDeniedRef.current = true;

@@ -19,9 +19,18 @@ export async function sessionAlive(api: string): Promise<boolean | null> {
   }
 }
 
+// True from the moment an ended session is forgotten until Sign in has loaded.
+// Nothing else sends the page anywhere in between. RequireAuth, finding no
+// remembered sign-in, used to send it to the front page, and on a slow start
+// that won: the person landed on the front page with no word of why (the
+// end-to-end test of this failed its first try in 7 runs of 12, 2026-11-12).
+let ending = false;
+export const sessionEnding = (): boolean => ending;
+
 /** Forget the remembered sign-in, then Sign in (unless already there). */
 export function forgetSession() {
   let guest = false;
+  if (location.pathname !== "/login") ending = true;
   try {
     guest = !!JSON.parse(localStorage.getItem("weered_user") || "null")?.isGuest;
     localStorage.removeItem("weered_user");

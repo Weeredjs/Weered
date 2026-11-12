@@ -2,6 +2,7 @@
 
 import React, { useLayoutEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { sessionEnding } from "../lib/staleSession";
 
 const TOKEN_KEY = "weered_user";
 
@@ -26,6 +27,11 @@ export default function RequireAuth({ children }: { children: React.ReactNode })
   useLayoutEffect(() => {
     if (isPublicPath(pathname)) {
       setOk(true);
+      return;
+    }
+    // An ended session is already on its way to Sign in (lib/staleSession.ts).
+    if (sessionEnding()) {
+      setOk(false);
       return;
     }
     try {
