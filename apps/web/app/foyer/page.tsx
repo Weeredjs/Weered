@@ -488,7 +488,10 @@ function ClientView({
   useEffect(() => {
     fetch(`${API}/office/status`, { cache: "no-store" })
       .then((r) => r.json())
-      .then((st) => setDoorOpen(!!st?.doorOpen))
+      // "Walk in" only when it's true: the door open AND the office receiving
+      // (James in, or the hours sign up). Otherwise the button leads to the
+      // hours card, so it keeps the knock's wording.
+      .then((st) => setDoorOpen(!!st?.doorOpen && !!(st?.receiving ?? st?.open)))
       .catch(() => {});
   }, []);
 
