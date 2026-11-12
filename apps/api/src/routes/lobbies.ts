@@ -28,6 +28,8 @@ import { registerLobbyPresence } from "./lobbyPresence";
 import { touchLobbyViewer } from "../lib/lobbyViewers";
 import { lobbyOnlineCount } from "../lib/lobbyCount";
 import { alertNewBuilder } from "../lib/growthSignals";
+import { homeLobbiesOf } from "../lib/lobbyHomes";
+import { lobbyUrl, pingIndexNow } from "../lib/indexNow";
 
 type Opts = {
   authFromHeader: (h?: string) => { id: string; name: string } | null;
@@ -204,6 +206,20 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
     );
     return reply.send({ ok: true, lobbies: enriched });
   });
+
+  // Where each name in the Town Square is from (lib/lobbyHomes.ts): public
+  // lobbies only, up to 50 people a call.
+  app.get(
+    "/lobbies/homes",
+    { config: { rateLimit: { max: 120, timeWindow: "1 minute" } } },
+    async (req, reply) => {
+      const ids = String((req.query as any)?.ids || "")
+        .split(",")
+        .filter(Boolean);
+      reply.header("Cache-Control", "public, max-age=300");
+      return reply.send({ ok: true, homes: await homeLobbiesOf(ids) });
+    },
+  );
 
   app.get("/me/lobbies", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);
@@ -541,6 +557,9 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
           description: lobby.description,
           ownerId: u.id,
         });
+      // Public from the start (a paid or staff account's): the search engines
+      // hear now. A held one is told when it's released (lib/listingHold.ts).
+      if (!existing && !lobby.unlisted) void pingIndexNow([lobbyUrl(lobby.id)]);
       return reply.send({ ok: true, lobby });
     },
   );

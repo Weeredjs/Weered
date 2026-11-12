@@ -27,7 +27,7 @@ export function llmsText(lobbies: Lobby[]): string {
   const lines = lobbyLines(lobbies);
   return `# Weered
 
-> Weered (weered.ca) is a free community platform that runs in the browser: voice, video, screen share and chat, in lobbies made of rooms. Think of it as making your Discord into anything you want, except the servers aren't islands. Every lobby sits in one shared town: one account, one search, one friends list, and Downtown, where anyone can walk from one community into the next.
+> Weered (weered.ca) is a free community platform that runs in the browser: voice, video, screen share and chat, in lobbies made of rooms. Think of it as making your Discord into anything you want, except the servers aren't islands. Every lobby sits in one shared town: one account, one search, one friends list, the Town Square where everyone on Weered talks (each name tagged with the lobby they're from), and Downtown, where anyone can walk from one community into the next.
 
 ## What you can do
 - Describe it: type a sentence ("a cozy book club with a reading room") and Weered builds the lobby, with its rooms, its look and its blocks. Free accounts get 10 AI builds a day.

@@ -227,7 +227,8 @@ export const CORE_META: Record<CoreId, CoreMeta> = {
   },
   homechat: {
     name: "Chat",
-    blurb: "Who's here and what they're saying: Home's chat on Home, a lobby's in a lobby.",
+    blurb:
+      "Who's here and what they're saying: the Town Square on Home, a lobby's own chat in a lobby.",
     icon: "🗨",
     regions: ["home", "left", "right"],
   },

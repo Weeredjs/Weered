@@ -130,9 +130,9 @@ export const GO_TO: Go[] = [
   },
   {
     id: "lobby",
-    label: "The Lobby",
-    sub: "Everyone's rooms and chat",
-    words: "lobby main",
+    label: "Town Square",
+    sub: "Everyone on Weered, in one place",
+    words: "town square lobby main",
     icon: "◫",
   },
   {

@@ -310,7 +310,7 @@ function ChatHere({ region, roomId }: { region: ShellRegion; roomId?: string }) 
   return (
     <section className={`weered-chathere${rail ? " is-rail" : ""}`} aria-label="Chat">
       <header className="weered-chathere-head">
-        <span className="weered-chathere-title">{rid === "lobby" ? "Home chat" : "Chat"}</span>
+        <span className="weered-chathere-title">{rid === "lobby" ? "Town Square" : "Chat"}</span>
         <span className="weered-chathere-count">
           <span className="weered-chathere-dot" aria-hidden />
           {here.length} here

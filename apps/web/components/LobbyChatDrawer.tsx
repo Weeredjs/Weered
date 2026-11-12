@@ -20,7 +20,7 @@ interface Props {
 
 export default function LobbyChatDrawer({
   roomId,
-  title = "Lobby Chat",
+  title,
   accentColor,
   defaultOpen,
   hideTab,
@@ -366,7 +366,7 @@ export default function LobbyChatDrawer({
           </div>
           <div className="lobby-drawer-header" style={{ position: "relative", zIndex: 1, gap: 8 }}>
             <span className="lobby-drawer-title">
-              {title}
+              {title ?? (effectiveRoomId === "lobby" ? "Town Square" : "Lobby Chat")}
               {fullscreen ? " · Fullscreen" : ""}
             </span>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>

@@ -463,7 +463,7 @@ export default function SetupPreview(p: Props) {
     favs: (
       <div key="favs" style={card({ paddingBottom: 6 })}>
         {title("Favorites")}
-        {["The Lobby", "Co-Work"].map((f) => (
+        {["Town Square", "Co-Work"].map((f) => (
           <div
             key={f}
             style={{ display: "flex", alignItems: "center", gap: 7, padding: "4px 10px" }}
@@ -588,7 +588,7 @@ export default function SetupPreview(p: Props) {
   };
   const draw = (it: ShellItem) => (isCore(it) ? (sections[it] ?? null) : blockMini(it));
 
-  const tiles = ["The Lobby", "Co-Work", "Chess", "Study Hall"];
+  const tiles = ["Town Square", "Co-Work", "Chess", "Study Hall"];
   const right = p.layout.right;
 
   return (

@@ -12,6 +12,10 @@ import { AttachmentBlock, ChatBody } from "./messageRender";
 import { Icons } from "./Icons";
 import { MoreMenu } from "./MoreMenu";
 import { API, ChatAtt, nameStyleFor } from "./chatShared";
+import { FromTag } from "./FromTag";
+
+/** The Town Square's room: everyone on Weered, the "lobby" room. */
+const SQUARE_ROOM = "lobby";
 
 type ChatMessageProps = {
   m: any;
@@ -652,6 +656,8 @@ export function ChatMessage(props: ChatMessageProps) {
                 </div>
               );
             })()}
+            {/* The Town Square only: where they're from, and a door into it. */}
+            {effectiveRoomId === SQUARE_ROOM && msgUserId && <FromTag userId={msgUserId} />}
             {mId && (isHovered || moreMenuMsgId === mId) && !isEditing && !deletedAt && (
               <div
                 data-reaction-ui

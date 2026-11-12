@@ -12,6 +12,7 @@ import { runSlashCommand } from "./chat/slashCommands";
 import { ChatComposer } from "./chat/ChatComposer";
 import { ChatMembers } from "./chat/ChatMembers";
 import { ChatMessage } from "./chat/ChatMessage";
+import { SquareIntro } from "./chat/SquareIntro";
 import { API, ChatAtt, authHeadersChat } from "./chat/chatShared";
 import { onActivate } from "@/lib/a11y";
 import { screenImageFile } from "@/lib/nsfwScreen";
@@ -589,7 +590,7 @@ export default function LobbyChatPanel(
           {!props.embedded && (
             <div className="flex items-center justify-between mb-2">
               <div className="text-sm font-semibold text-white/90">
-                {props.title || "Lobby Chat"}
+                {props.title || (effectiveRoomId === "lobby" ? "Town Square" : "Lobby Chat")}
               </div>
               <div className="text-xs text-white/60 truncate">
                 room: {displayRoomName ? `${displayRoomName}  (#${roomLabel})` : roomLabel}
@@ -715,6 +716,7 @@ export default function LobbyChatPanel(
             );
           })()}
 
+          {effectiveRoomId === "lobby" && <SquareIntro />}
           <div
             ref={listRef}
             data-weered-msglist

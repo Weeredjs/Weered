@@ -1257,7 +1257,7 @@ export default function HomePage() {
           ways in (the office desk keeps its own). */}
       <LobbyChatDrawer
         roomId="room:lobby"
-        title="Lobby Chat"
+        title="Town Square"
         {...(homeLayout.includes("homechat")
           ? { hideTab: true, defaultOpen: false }
           : office

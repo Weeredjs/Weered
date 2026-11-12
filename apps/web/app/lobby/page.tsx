@@ -1,6 +1,6 @@
 "use client";
 
-// /lobby is The Lobby itself, not a directory page: the room list with the
+// /lobby is the Town Square itself, not a directory page: the room list with the
 // lobby chat beside it (LobbyHall, the same view every lobby opens on). Finding
 // other lobbies is the header bar's Browse. The chat is room "lobby", the same
 // thread the old page's drawer ("room:lobby") showed, so no history moves.
@@ -45,7 +45,7 @@ function TheLobby() {
     };
   }, []);
 
-  const name = info?.name || "The Lobby";
+  const name = info?.name || "Town Square";
   const accent = info?.accentColor || undefined;
 
   return (

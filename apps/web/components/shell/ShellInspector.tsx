@@ -29,7 +29,7 @@ import { editLayout, selectItem } from "../../lib/shellDesign";
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
 /** Lobbies to read a block from: the viewer's favourites first, then the
- *  directory. Empty value = Weered's own (The Lobby, or the site-wide board). */
+ *  directory. Empty value = Weered's own (the Town Square, or the site-wide board). */
 function LobbyPicker({
   value,
   onChange,
@@ -323,7 +323,7 @@ function BlockFields({ block, accent }: { block: ShellBlock; accent: string }) {
           <LobbyPicker
             value={pr.lobbyId || ""}
             onChange={(id) => setProp("lobbyId", id)}
-            none={block.type === "feed" ? "All of Weered" : "The Lobby (Weered's own)"}
+            none={block.type === "feed" ? "All of Weered" : "The Town Square (Weered's own)"}
           />
           {field("title", "Heading (optional)")}
           {block.type !== "stats" && limit}

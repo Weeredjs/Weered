@@ -1,5 +1,6 @@
 import { prisma } from "./prisma";
 import { log, swallow } from "./logger";
+import { lobbyUrl, pingIndexNow } from "./indexNow";
 
 /**
  * Lobbies are free for everyone (James 2026-11-02: "everyone gets lobbies,
@@ -35,6 +36,8 @@ export async function releaseEarnedListings(): Promise<number> {
     data: { unlisted: false, listingHeld: false },
   });
   log.log("[listing] released", earned.map((l) => l.id).join(","));
+  // Public now: tell the search engines (lib/indexNow.ts).
+  void pingIndexNow(earned.map((l) => lobbyUrl(l.id)));
   return earned.length;
 }
 

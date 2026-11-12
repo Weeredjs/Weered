@@ -34,7 +34,7 @@ export default function JoinLobbyOverlay({
 }: Props) {
   // "donkey's place": a name that already says whose it is.
   const possessive = /['’]s\b/i.test(lobbyName);
-  // "The Lobby" brings its own article: "Unlock the The Lobby experience".
+  // A name with its own article ("The Division 2"): never "Unlock the The Division 2 experience".
   const named = /^the\s/i.test(lobbyName.trim()) ? lobbyName : `the ${lobbyName}`;
   const [dismissed, setDismissed] = useState<boolean>(true);
   const [joining, setJoining] = useState(false);

@@ -184,7 +184,7 @@ export default function GuidelinesContent() {
                 <li>
                   <strong>Stay on topic.</strong> Each lobby has a community and culture. Respect
                   it. The Destiny lobby is for Destiny. The NHL lobby is for hockey. General chat
-                  goes in The Lobby.
+                  goes in the Town Square.
                 </li>
                 <li>
                   <strong>Forum moderation is local.</strong> Lobby owners and moderators manage
