@@ -3,6 +3,7 @@ import { prisma } from "./prisma";
 import { displayName, resolveUserProfiles, namesOf } from "./userNames";
 import { swallow } from "./logger";
 import { isOfficeRoom } from "./officeRooms";
+import { doorShouldBeLocked, walkInsOn } from "./officeDoor";
 import { randomUUID } from "node:crypto";
 import { type ReactionAgg } from "./chatHelpers";
 import { hostAvatar } from "./hostAvatar";
@@ -524,12 +525,17 @@ async function loadRoom(roomId: string): Promise<RoomState> {
   // in — IS the privacy boundary for presented plans; an unlocked office lets a
   // scoped guest walk straight into another client's meeting. The original foyer
   // host flow re-locked per session; the wormhole path must not depend on that.
-  if (isOfficeRoom(roomId) && !roomId.endsWith("-foyer") && !r.locked) {
-    r.locked = true;
-    try {
-      await prisma.room.update({ where: { id: roomId }, data: { locked: true } });
-    } catch (e) {
-      swallow(e);
+  // The one exception is the walk-in office with walk-ins on, and only while no
+  // visitor is in it (lib/officeDoor.ts); a room just loaded has nobody in it.
+  if (isOfficeRoom(roomId) && !roomId.endsWith("-foyer")) {
+    const want = doorShouldBeLocked(roomId, r, walkInsOn());
+    if (r.locked !== want) {
+      r.locked = want;
+      try {
+        await prisma.room.update({ where: { id: roomId }, data: { locked: want } });
+      } catch (e) {
+        swallow(e);
+      }
     }
   }
 
@@ -1028,4 +1034,26 @@ export function leaveRoom(ws: Sock) {
   ws.roomId = undefined;
 
   room.lastActiveAt = Date.now();
+  // The last visitor out of the walk-in office: its door opens again.
+  if (isOfficeRoom(roomId)) void settleOfficeDoor(room).catch(swallow);
+}
+
+/**
+ * The walk-in office's door follows its rule (lib/officeDoor.ts) after anyone
+ * comes or goes, or the host flips Walk-ins: closed behind a visitor, open
+ * again when the last one leaves. Any other consult room only ever locks.
+ */
+export async function settleOfficeDoor(room: RoomState): Promise<void> {
+  const roomId = String((room as any)?.roomId || "");
+  if (!isOfficeRoom(roomId) || roomId.endsWith("-foyer")) return;
+  const want = doorShouldBeLocked(roomId, room as any, walkInsOn());
+  if (room.locked === want) return;
+  room.locked = want;
+  try {
+    await prisma.room.update({ where: { id: roomId }, data: { locked: want } });
+  } catch (e) {
+    swallow(e);
+  }
+  publishState(room);
+  broadcast(room, { type: "room:locked", roomId, locked: want });
 }

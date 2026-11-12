@@ -2,6 +2,10 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import authRoutes from "../../src/routes/auth";
 import { prisma } from "../../src/lib/prisma";
 import { buildTestApp, testAuthFromHeader, testToken } from "../helpers/buildTestApp";
+import { makeEmptyRoom, settleOfficeDoor } from "../../src/lib/roomState";
+import { mkdtempSync, rmSync } from "fs";
+import { tmpdir } from "os";
+import { join } from "path";
 import jwt from "jsonwebtoken";
 
 // The ECEB office's door opens itself while the advisor is in the office room
@@ -64,6 +68,61 @@ describe("the office door", () => {
     const r = await walkIn();
     expect(r.statusCode).toBe(200);
     expect(r.json().url).toMatch(/^\/foyer\?invite=m_[0-9a-f]+/);
+  });
+});
+
+describe("walk-ins", () => {
+  // The office's file in a temp folder (it's /opt/weered/office-hours.json on
+  // the droplet), and a real room state for the live door.
+  let dir = "";
+  const prevFile = process.env.OFFICE_STATE_FILE;
+  beforeAll(() => {
+    dir = mkdtempSync(join(tmpdir(), "office-"));
+    process.env.OFFICE_STATE_FILE = join(dir, "office-hours.json");
+  });
+  afterAll(() => {
+    if (prevFile === undefined) delete process.env.OFFICE_STATE_FILE;
+    else process.env.OFFICE_STATE_FILE = prevFile;
+    rmSync(dir, { recursive: true, force: true });
+  });
+  const set = (body: any, who = STAFF) =>
+    app.inject({
+      method: "POST",
+      url: "/office/set",
+      headers: { authorization: `Bearer ${testToken(who)}` },
+      payload: body,
+    });
+
+  it("are off until the host turns them on, and only the host can", async () => {
+    rooms.clear();
+    let s = await status();
+    expect(s.walkIn).toBe(false);
+    expect(s.doorOpen).toBe(false);
+    expect((await set({ walkIn: true }, "itest_somebody_else")).statusCode).toBe(403);
+    const r = await set({ walkIn: true });
+    expect(r.statusCode).toBe(200);
+    expect(r.json()).toMatchObject({ walkIn: true, doorOpen: true });
+    s = await status();
+    expect(s.walkIn).toBe(true);
+    expect(s.doorOpen).toBe(true);
+  });
+
+  it("shut the live door behind a visitor, and open it when walk-ins go back on", async () => {
+    const room = makeEmptyRoom("mtg-eceb-office");
+    room.locked = false;
+    room.users.set("guest_pat", { id: "guest_pat", name: "Pat", isGuest: true } as any);
+    rooms.set("mtg-eceb-office", room);
+    await settleOfficeDoor(room);
+    expect(room.locked).toBe(true);
+    expect((await status()).doorOpen).toBe(false);
+    // The visitor leaves: the door opens again.
+    room.users.delete("guest_pat");
+    await settleOfficeDoor(room);
+    expect(room.locked).toBe(false);
+    // Walk-ins off: shut, with nobody in.
+    expect((await set({ walkIn: false })).json()).toMatchObject({ walkIn: false, doorOpen: false });
+    expect(room.locked).toBe(true);
+    rooms.clear();
   });
 });
 

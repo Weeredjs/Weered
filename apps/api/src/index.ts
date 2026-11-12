@@ -234,6 +234,7 @@ import {
   publishStateToSocket,
   publishState,
   leaveRoom,
+  settleOfficeDoor,
   type Sock,
   type AuthedUser,
   type RoomState,
@@ -777,6 +778,9 @@ async function doJoin(ws: Sock, roomId: string) {
     };
     room.users.set(ws.user.id, userEntry);
     announcePresence(room, { type: "presence:join", roomId, user: userEntry });
+    // A visitor seated in the walk-in office: the door closes behind them, so
+    // nobody walks into their meeting (lib/officeDoor.ts).
+    if (userEntry.isGuest && isOfficeRoom(roomId)) await settleOfficeDoor(room);
   }
 
   if (ws.user && !(ws.user as any).guest) {

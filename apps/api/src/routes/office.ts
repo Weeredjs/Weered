@@ -17,6 +17,8 @@ import {
   writeBoard,
   type Viewer,
 } from "../lib/officeBoard";
+import { doorShouldBeLocked, officeStateFile, walkInsOn } from "../lib/officeDoor";
+import { settleOfficeDoor } from "../lib/roomState";
 
 type Opts = {
   authFromHeader: (h?: string) => { id: string; name: string } | null;
@@ -78,15 +80,17 @@ export default async function officeRoutes(app: FastifyInstance, opts: Opts) {
   // --- OFFICE HOURS (ECEB walk-in office) ---
   // Persistent open/closed flag: the ECEB site shows a live status, and walk-in
   // foyer invites are only mintable while the advisor is holding hours.
-  const OFFICE_STATE_FILE = "/opt/weered/office-hours.json";
+  // The file's path is lib/officeDoor.ts's (OFFICE_STATE_FILE overrides it in tests).
   const readOfficeState = () => {
     try {
-      const st = JSON.parse(readFileSync(OFFICE_STATE_FILE, "utf8"));
+      const st = JSON.parse(readFileSync(officeStateFile(), "utf8"));
       return {
         open: !!st.open,
         schedule: (st.schedule ?? null) as string | null,
         note: (st.note ?? null) as string | null,
         auto: !!st.auto,
+        // Walk-ins (lib/officeDoor.ts): off unless the host turned them on.
+        walkIn: st.walkIn === true,
       };
     } catch {
       return {
@@ -94,6 +98,7 @@ export default async function officeRoutes(app: FastifyInstance, opts: Opts) {
         schedule: null as string | null,
         note: null as string | null,
         auto: false,
+        walkIn: false,
       };
     }
   };
@@ -102,8 +107,9 @@ export default async function officeRoutes(app: FastifyInstance, opts: Opts) {
     schedule: string | null;
     note: string | null;
     auto: boolean;
+    walkIn: boolean;
   }) => {
-    writeFileSync(OFFICE_STATE_FILE, JSON.stringify(st));
+    writeFileSync(officeStateFile(), JSON.stringify(st));
   };
 
   // Auto schedule: edge-triggered Mon-Fri 9-17 America/Halifax. Fires only when a
@@ -193,10 +199,9 @@ export default async function officeRoutes(app: FastifyInstance, opts: Opts) {
   const doorOpen = async (): Promise<boolean> => {
     const room = rooms?.get?.(OFFICE_ROOM);
     if (room && typeof room.locked === "boolean") return !room.locked;
-    const row = await prisma.room
-      .findUnique({ where: { id: OFFICE_ROOM }, select: { locked: true } })
-      .catch(() => null);
-    return row ? !row.locked : false;
+    // Not loaded: nobody's in it, so it opens exactly as the rule says it
+    // will on load (lib/officeDoor.ts).
+    return !doorShouldBeLocked(OFFICE_ROOM, null, walkInsOn());
   };
 
   app.get("/office/status", async (_req, reply) => {
@@ -209,6 +214,7 @@ export default async function officeRoutes(app: FastifyInstance, opts: Opts) {
       receiving: st.open || hostIn,
       hostIn,
       doorOpen: await doorOpen(),
+      walkIn: st.walkIn,
       open: st.open,
       schedule: st.schedule,
       note: st.note,
@@ -227,9 +233,13 @@ export default async function officeRoutes(app: FastifyInstance, opts: Opts) {
       schedule: typeof body.schedule === "string" ? body.schedule.slice(0, 200) : cur.schedule,
       note: typeof body.note === "string" ? body.note.slice(0, 200) : cur.note,
       auto: typeof body.auto === "boolean" ? body.auto : cur.auto,
+      walkIn: typeof body.walkIn === "boolean" ? body.walkIn : cur.walkIn,
     };
     writeOfficeState(next);
-    return reply.send({ ok: true, ...next });
+    // Walk-ins flipped: the live door follows now, not at the next arrival.
+    const live = rooms?.get?.(OFFICE_ROOM);
+    if (live) await settleOfficeDoor(live).catch(() => {});
+    return reply.send({ ok: true, ...next, doorOpen: await doorOpen() });
   });
 
   // Public walk-in: while open, mint a single-use foyer invite so a visitor can

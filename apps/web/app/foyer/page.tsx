@@ -1504,14 +1504,32 @@ function HostView({ jwt, title, accent }: { jwt: string; title: string; accent: 
     setKnocks((k) => k.filter((x) => x.id !== id));
     sendOffice({ type: "room:adminState", roomId: officeRoom });
   };
-  const toggleLock = () => {
-    // optimistic; confirmed by room:locked broadcast
-    if (locked) {
-      sendOffice({ type: "room:unlock" });
-      setLocked(false);
-    } else {
-      sendOffice({ type: "room:lock" });
-      setLocked(true);
+  // Walk-ins (api lib/officeDoor.ts): on, the door is open while you're free and
+  // closes behind the first visitor, so nobody walks into a meeting; it opens
+  // again when they leave. Off, everyone knocks. Kept with the office's hours,
+  // so it holds across visits; `locked` (from presence) is the door right now.
+  const [walkIn, setWalkIn] = useState<boolean | null>(null);
+  useEffect(() => {
+    if (phase !== "live" || walkIn !== null) return;
+    fetch(`${API}/office/status`, { cache: "no-store" })
+      .then((r) => r.json())
+      .then((st) => setWalkIn(!!st?.walkIn))
+      .catch(() => {});
+  }, [phase, walkIn]);
+  const toggleWalkIn = async () => {
+    const next = !walkIn;
+    setWalkIn(next); // optimistic; the reply is the truth
+    try {
+      const r = await fetch(`${API}/office/set`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${jwt}` },
+        body: JSON.stringify({ walkIn: next }),
+      });
+      const j = await r.json();
+      if (r.ok && typeof j?.walkIn === "boolean") setWalkIn(j.walkIn);
+      else setWalkIn(!next);
+    } catch {
+      setWalkIn(!next);
     }
   };
 
@@ -1598,15 +1616,22 @@ function HostView({ jwt, title, accent }: { jwt: string; title: string; accent: 
             {copied ? "Link copied" : "Copy guest link"}
           </button>
           <button
-            style={{ ...S.ctl, color: locked ? INK_TEXT : "#D9B878" }}
-            onClick={toggleLock}
+            style={{ ...S.ctl, color: walkIn ? "#D9B878" : INK_TEXT }}
+            onClick={() => void toggleWalkIn()}
+            disabled={walkIn === null}
             title={
-              locked
-                ? "Closed: visitors knock and you let them in. Click to open."
-                : "Open: visitors walk straight in. Click to close it for a private meeting."
+              walkIn
+                ? "On: while you're free, visitors walk straight in, and the door closes behind them so nobody walks into a meeting. Click to make everyone knock."
+                : "Off: everyone knocks and you let them in. Click to let visitors walk in while you're free."
             }
           >
-            {locked ? "Door closed: they knock" : "Door open: walk in"}
+            {walkIn === null
+              ? "Walk-ins…"
+              : walkIn
+                ? locked
+                  ? "Walk-ins on · door shut"
+                  : "Walk-ins on"
+                : "Walk-ins off: they knock"}
           </button>
           <button style={S.ctl} onClick={toggleMic}>
             {micOn ? "Mute" : "Unmute"}
