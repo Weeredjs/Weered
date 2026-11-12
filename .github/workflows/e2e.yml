@@ -32,7 +32,7 @@ jobs:
       # Every spec signs up from this one address (apps/api routes/auth.ts).
       REGISTER_MAX_PER_HOUR: "60"
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
         with:
           version: 10.29.3

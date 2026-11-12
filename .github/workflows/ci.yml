@@ -13,7 +13,7 @@ jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
         with:
           version: 10.29.3
@@ -55,7 +55,7 @@ jobs:
       # apps/api/test/integration/setup.ts (which refuses non-test databases).
       DATABASE_URL: postgresql://weered:weered@localhost:5432/weered_test
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
         with:
           version: 10.29.3
@@ -95,7 +95,7 @@ jobs:
       DATABASE_URL: postgresql://weered:weered@localhost:5432/weered_test
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0 # Sonar needs full history for blame / new-code detection
       - uses: pnpm/action-setup@v6
