@@ -125,7 +125,19 @@ export default function LeftRail() {
     isTimbos && TIMBOS_NAV[key] ? pick(TIMBOS_NAV[key], lang) : fallback;
 
   const navLabels = {
-    lobby: tb("lobby", isWindrose ? "Port" : isDestiny ? "Tower" : isDnd ? "Tavern" : "Lobby"),
+    // Outside a lobby this link is the Town Square (lobbyHrefMain), so it says so.
+    lobby: tb(
+      "lobby",
+      isWindrose
+        ? "Port"
+        : isDestiny
+          ? "Tower"
+          : isDnd
+            ? "Tavern"
+            : (!currentLobbyId || currentLobbyId === "lobby") && !/^\/r\//i.test(pathname)
+              ? "Town Square"
+              : "Lobby",
+    ),
     home: tb("home", isWindrose ? "Home" : isDestiny ? "Relay" : isDnd ? "Hearth" : "Home"),
     forum: tb(
       "forum",

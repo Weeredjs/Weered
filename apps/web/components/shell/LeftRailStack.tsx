@@ -182,7 +182,13 @@ export default function LeftRailStack({ onOpen }: { onOpen: (at?: string) => voi
   const hereCount = (here || []).filter((u: any) => u?.id && u.id !== "operator").length;
 
   const navLinks = [
-    { key: "lobby", label: "Lobby", href: lobbyHref, active: pathname.startsWith("/lobby") },
+    {
+      key: "lobby",
+      // Outside a lobby the link is the Town Square, so it says so.
+      label: lobbyId && lobbyId !== "lobby" ? "Lobby" : "Town Square",
+      href: lobbyHref,
+      active: pathname.startsWith("/lobby"),
+    },
     {
       key: "home",
       label: "Home",
