@@ -4,6 +4,11 @@ import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import LandingFilm from "../components/LandingFilm";
+import { sizedImage } from "../lib/sizedImage";
+
+/** Downtown as a signed-out visitor sees it, photographed on the live site. A
+ *  new shot gets a new name, so a cached old one is never shown for it. */
+const TOWN_SHOT = "/brand/landing/downtown-2026-11-12.webp";
 
 function AuthRouter({ onUnauthed }: { onUnauthed: (next: string) => void }) {
   const router = useRouter();
@@ -110,6 +115,38 @@ function Landing({ nextPath }: { nextPath: string }) {
           </a>
           <LandingFilm />
         </main>
+
+        {/* The premise (James 2026-11-12: the mall is "the entire premise of the
+            platform", and the page above sold only the builder). One line and
+            the town itself: the picture is Downtown as a visitor sees it, and it
+            opens Downtown right here, no account needed. */}
+        <section className="lp-town" aria-labelledby="lp-town-h">
+          <p className="lp-kicker">One town</p>
+          <h2 id="lp-town-h" className="lp-h2">
+            Every lobby sits in one town.
+          </h2>
+          <p className="lp-town-sub">
+            Walk from one into the next. One account, one friends list, and a Town Square where
+            everyone on Weered talks.
+          </p>
+          <button
+            type="button"
+            className="lp-town-shot"
+            onClick={() => window.dispatchEvent(new CustomEvent("weered:lobby:browse"))}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element -- a screenshot, sized by lib/sizedImage */}
+            <img
+              src={sizedImage(TOWN_SHOT, 1200)}
+              srcSet={`${sizedImage(TOWN_SHOT, 828)} 828w, ${sizedImage(TOWN_SHOT, 1200)} 1200w, ${sizedImage(TOWN_SHOT, 1920)} 1920w`}
+              sizes="(max-width: 1000px) 94vw, 960px"
+              alt="Downtown: every lobby on Weered, side by side"
+              width={1600}
+              height={1000}
+              loading="lazy"
+            />
+            <span className="lp-town-go">Walk around Downtown →</span>
+          </button>
+        </section>
 
         <footer className="lp-foot">
           <span>© weered.ca</span>
@@ -316,6 +353,79 @@ const LANDING_CSS = `
   padding: 0 26px;
   font-size: 18px;
   background: rgba(124,58,237,.75);
+}
+.lp-town {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: clamp(28px, 7vh, 72px) 16px clamp(40px, 8vh, 84px);
+}
+.lp-kicker {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: .28em;
+  text-transform: uppercase;
+  color: #c4b5fd;
+}
+.lp-h2 {
+  margin: 12px 0 0;
+  font-size: clamp(34px, 6.2vw, 68px);
+  line-height: 1;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: #fff;
+  text-shadow: 0 0 50px rgba(167,139,250,.3);
+}
+.lp-town-sub {
+  margin: 18px 0 0;
+  max-width: 46ch;
+  font-size: clamp(17px, 2.2vw, 21px);
+  line-height: 1.4;
+  font-weight: 500;
+  color: rgba(255,255,255,.72);
+}
+.lp-town-shot {
+  position: relative;
+  display: block;
+  width: min(960px, 100%);
+  margin-top: clamp(26px, 4vh, 40px);
+  padding: 0;
+  border-radius: 18px;
+  overflow: hidden;
+  border: 1px solid rgba(196,181,253,.28);
+  background: #0b0716;
+  box-shadow: 0 30px 90px rgba(0,0,0,.6), 0 0 80px -20px rgba(124,58,237,.55);
+  cursor: pointer;
+  font: inherit;
+  transition: transform .2s ease, border-color .2s ease, box-shadow .25s ease;
+}
+.lp-town-shot img { display: block; width: 100%; height: auto; }
+.lp-town-shot:hover, .lp-town-shot:focus-visible {
+  transform: translateY(-3px);
+  border-color: rgba(196,181,253,.6);
+  box-shadow: 0 36px 100px rgba(0,0,0,.65), 0 0 90px -16px rgba(124,58,237,.7);
+}
+.lp-town-go {
+  position: absolute;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  min-height: 46px;
+  padding: 0 22px;
+  border-radius: 999px;
+  border: 1px solid rgba(196,181,253,.55);
+  background: linear-gradient(135deg, rgba(124,58,237,.94), rgba(91,33,182,.94));
+  color: #fff;
+  font-weight: 700;
+  font-size: 17px;
+  white-space: nowrap;
+  box-shadow: 0 12px 36px rgba(0,0,0,.5);
 }
 .lp-foot {
   position: relative;

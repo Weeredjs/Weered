@@ -20,6 +20,7 @@ import type { Lobby } from "@weered/shared";
 import { plural } from "../lib/plural";
 import { descriptionLead } from "../lib/descriptionLead";
 import { sizedImage } from "../lib/sizedImage";
+import { useLoadedImage } from "../lib/useLoadedImage";
 import { downtownOrder } from "../lib/downtownOrder";
 import { builderPath } from "../lib/afterAuth";
 
@@ -199,10 +200,12 @@ function LobbyCard({ lobby, onClick }: { lobby: Lobby; onClick: () => void }) {
   const [hovered, setHovered] = useState(false);
   const accent = lobby.accentColor || PURPLE;
   const hasBanner = !!lobby.bannerUrl;
+  // It keeps its picture until the next one has loaded (a reel never blanks it).
+  const banner = useLoadedImage(sizedImage(lobby.bannerUrl, 640));
 
   const bannerBg: React.CSSProperties = hasBanner
     ? {
-        backgroundImage: `linear-gradient(180deg, rgba(6,6,12,.15) 0%, rgba(6,6,12,.85) 70%, rgba(6,6,12,.98) 100%), url("${sizedImage(lobby.bannerUrl, 640)}")`,
+        backgroundImage: `linear-gradient(180deg, rgba(6,6,12,.15) 0%, rgba(6,6,12,.85) 70%, rgba(6,6,12,.98) 100%), url("${banner}")`,
         backgroundSize: "cover",
         backgroundPosition: "center",
       }
