@@ -1194,7 +1194,8 @@ export default function LobbyIdPage() {
                       DOWNGRADE_LOBBIES.includes(lobbyId)
                         ? 6
                         : "auto",
-                    display: "flex",
+                    // Signed out, neither works: Invite answered "unauthorized".
+                    display: me?.id ? "flex" : "none",
                     gap: 6,
                   }}
                 >

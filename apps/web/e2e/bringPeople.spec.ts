@@ -187,6 +187,8 @@ test.describe("bringing people in", () => {
     await expect(bar).toBeVisible();
     await expect(bar).toContainText(`You're looking round ${lobbyName}. Join free`);
     await expect(stranger.getByText(/Unlock the/i)).toHaveCount(0);
+    // Nothing on show that only answers "unauthorized" to someone signed out.
+    await expect(stranger.locator(".weered-lobby-invite")).toBeHidden();
     await bar.getByRole("button", { name: `Join ${lobbyName}` }).click();
     await expect(stranger).toHaveURL(signUp, { timeout: 15000 });
     // They make an account and arrive in the lobby a member: the bar is gone.
