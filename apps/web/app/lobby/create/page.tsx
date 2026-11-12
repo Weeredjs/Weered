@@ -74,8 +74,6 @@ type ApiResult = {
   message?: string;
   merged?: boolean;
   lobby?: unknown;
-  user?: { tier?: string };
-  globalRole?: string;
 };
 async function apiFetch(path: string, opts?: RequestInit): Promise<ApiResult> {
   try {
@@ -175,10 +173,14 @@ function officeDoor(): LobbyDoor {
 export default function CreateLobbyPage() {
   const router = useRouter();
 
-  // ── Who's here (same gate as before) ───────────────────────────────────
-  const [tier, setTier] = useState("INNOCENT");
+  // ── Who's here ─────────────────────────────────────────────────────────
+  // Anyone signed in builds: lobbies are free, three to an account, and the
+  // API is what counts them (routes/lobbies.ts, James 2026-11-02). A check of
+  // the account's plan stood here from when lobbies were paid. It let everyone
+  // through only because /staff/me answers any member with a role, and it
+  // showed "Upgrade to build a lobby" whenever that one call failed.
   const [loading, setLoading] = useState(true);
-  const [blocked, setBlocked] = useState<{ kind: "tier" | "limit"; message: string } | null>(null);
+  const [blocked, setBlocked] = useState(false);
 
   useEffect(() => {
     // Signed-in is the cached user: the session itself is an httpOnly cookie,
@@ -192,17 +194,7 @@ export default function CreateLobbyPage() {
       router.replace(`/login?next=${encodeURIComponent(`/lobby/create${window.location.search}`)}`);
       return;
     }
-    apiFetch("/staff/me")
-      .then((j) => {
-        if (j?.user) setTier(String(j.user?.tier || "INNOCENT").toUpperCase());
-        else if (j?.globalRole) setTier("KINGPIN");
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
-    try {
-      const u = JSON.parse(localStorage.getItem("weered_user") || "null");
-      if (u) setTier(String(u?.tier || "INNOCENT").toUpperCase());
-    } catch {}
+    setLoading(false);
   }, [router]);
 
   // ── 1. Name ─────────────────────────────────────────────────────────────
@@ -618,14 +610,6 @@ export default function CreateLobbyPage() {
       if (blocker) goTo("cz-name");
       return;
     }
-    if (tier === "INNOCENT") {
-      setBlocked({
-        kind: "tier",
-        message:
-          "Your design is saved in this browser. Upgrade, come back to this page, and hit Create.",
-      });
-      return;
-    }
     const rect = e.currentTarget.getBoundingClientRect();
     setOrigin({ x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 });
     setPhase("creating");
@@ -647,12 +631,8 @@ export default function CreateLobbyPage() {
     if (!j?.ok) {
       setPhase("idle");
       const code = String(j?.error || "");
-      if (code === "tier_required") {
-        setBlocked({ kind: "tier", message: j?.message || "" });
-        return;
-      }
       if (code === "lobby_limit") {
-        setBlocked({ kind: "limit", message: j?.message || "" });
+        setBlocked(true);
         return;
       }
       if (code === "lobby_exists") {
@@ -747,8 +727,8 @@ export default function CreateLobbyPage() {
     );
   }
 
+  // The one thing that stops a build: three lobbies already (the API says so).
   if (blocked) {
-    const limit = blocked?.kind === "limit";
     return (
       <div
         style={{
@@ -785,7 +765,7 @@ export default function CreateLobbyPage() {
               animation: "cz-float 3s ease-in-out infinite",
             }}
           >
-            {limit ? "🏰" : "⚖️"}
+            🏰
           </div>
           <h1
             style={{
@@ -796,18 +776,16 @@ export default function CreateLobbyPage() {
               letterSpacing: "-0.5px",
             }}
           >
-            {limit ? "You have three lobbies" : "Upgrade to build a lobby"}
+            You have three lobbies
           </h1>
           <p style={{ fontSize: 14, color: MUTED, margin: "0 0 24px", lineHeight: 1.5 }}>
-            {limit
-              ? // Lobbies are free, three each (api routes/lobbies.ts, 2026-11-02).
-                "That's the most one account can have. Reuse one you own, or talk to us about more."
-              : `Lobbies come with an Indicted subscription or higher: your own address, theme, rooms and game integration.${blocked?.message ? ` ${blocked.message}` : ""}`}
+            {/* Lobbies are free, three each (api routes/lobbies.ts, 2026-11-02). */}
+            That&apos;s the most one account can have. Reuse one you own, or talk to us about more.
           </p>
           <button
             type="button"
             className="cz-btn"
-            onClick={() => router.push(limit ? "/contact" : "/subscribe")}
+            onClick={() => router.push("/contact")}
             style={{
               width: "100%",
               padding: "13px 28px",
@@ -822,7 +800,7 @@ export default function CreateLobbyPage() {
               fontFamily: "inherit",
             }}
           >
-            {limit ? "Talk to us" : "View plans"}
+            Talk to us
           </button>
           <button
             type="button"
