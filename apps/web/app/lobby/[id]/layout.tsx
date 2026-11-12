@@ -1,6 +1,7 @@
 import { Metadata } from "next";
 import LobbySeoSlab from "./LobbySeoSlab";
 import SyncAuthedAttribute from "./SyncAuthedAttribute";
+import RequireAuth from "../../../components/RequireAuth";
 import { safeJsonLd } from "@/lib/jsonLd";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "https://api.weered.ca";
@@ -125,8 +126,10 @@ export default async function LobbyIdLayout(props: {
         }}
       />
       <SyncAuthedAttribute />
+      {/* Outside the gate: the gate draws a placeholder on the server, and
+          this summary is what crawlers that don't run scripts read. */}
       <LobbySeoSlab lobbyId={id} />
-      {children}
+      <RequireAuth>{children}</RequireAuth>
     </>
   );
 }

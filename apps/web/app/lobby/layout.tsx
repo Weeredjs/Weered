@@ -1,6 +1,10 @@
 import React from "react";
 import { Metadata } from "next";
-import RequireAuth from "../../components/RequireAuth";
+
+// No sign-in gate here: each route below carries its own (/lobby's page,
+// create/layout.tsx, [id]/layout.tsx). The gate renders a placeholder on the
+// server, and here it also swallowed [id]'s crawler summary (LobbySeoSlab), so
+// every lobby page reached search engines and AI crawlers as an empty shell.
 
 export const metadata: Metadata = {
   title: "Lobbies",
@@ -21,5 +25,5 @@ export const metadata: Metadata = {
 };
 
 export default function LobbyLayout({ children }: { children: React.ReactNode }) {
-  return <RequireAuth>{children}</RequireAuth>;
+  return <>{children}</>;
 }

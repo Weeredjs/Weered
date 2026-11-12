@@ -8,6 +8,7 @@
 import { useEffect, useState } from "react";
 import LobbyHall from "../../components/LobbyHall";
 import LobbyChatDrawer from "../../components/LobbyChatDrawer";
+import RequireAuth from "../../components/RequireAuth";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "https://api.weered.ca";
 const LOBBY_ID = "lobby";
@@ -19,7 +20,16 @@ type LobbyInfo = {
   moduleType?: string | null;
 };
 
+// The gate lives here, not in lobby/layout.tsx (see the note there).
 export default function LobbyPage() {
+  return (
+    <RequireAuth>
+      <TheLobby />
+    </RequireAuth>
+  );
+}
+
+function TheLobby() {
   const [info, setInfo] = useState<LobbyInfo | null>(null);
 
   useEffect(() => {
