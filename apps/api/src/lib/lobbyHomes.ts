@@ -5,8 +5,11 @@
 //
 // Only lobbies already public in Downtown: a held, unlisted or deleted lobby,
 // a member's place (u-), a Reddit mirror (r/) and the Town Square itself never
-// show. A lobby someone owns comes first (its busiest), then the one where they
-// hold the highest rank, the newest on a tie.
+// show. A lobby someone built and owns comes first (its busiest), then the one
+// where they hold the highest rank, the newest on a tie. Weered's own built-in
+// lobbies (pinned) don't count as owned: staff claimed those, nobody is from
+// them by owning one. Staff get no tag at all: they belong to the whole town,
+// and their role icon already says so.
 import { prisma } from "./prisma";
 
 export type LobbyHome = {
@@ -16,12 +19,13 @@ export type LobbyHome = {
   accentColor: string | null;
 };
 
-type Owned = LobbyHome & { ownerId: string | null; members: number };
+type Owned = LobbyHome & { ownerId: string | null; members: number; pinned: boolean };
 type Membership = { userId: string; roleLevel: number; joinedAt: number; lobby: LobbyHome };
 
 /** The Town Square's own id: everyone is in it, so it tells nothing. */
 export const SQUARE_ID = "lobby";
 export const MAX_IDS = 50;
+const STAFF_ROLES = new Set(["GOD", "STAFF", "SUPPORT"]);
 
 export function shownInSquare(id: string): boolean {
   return !!id && id !== SQUARE_ID && !id.startsWith("u-") && !id.startsWith("r/");
@@ -32,11 +36,16 @@ export function pickHomes(
   userIds: string[],
   owned: Owned[],
   memberships: Membership[],
+  staff: Set<string> = new Set(),
 ): Record<string, LobbyHome | null> {
   const out: Record<string, LobbyHome | null> = {};
   for (const uid of userIds) {
+    if (staff.has(uid)) {
+      out[uid] = null;
+      continue;
+    }
     const mine = owned
-      .filter((l) => l.ownerId === uid && shownInSquare(l.id))
+      .filter((l) => l.ownerId === uid && !l.pinned && shownInSquare(l.id))
       .sort((a, b) => b.members - a.members || a.name.localeCompare(b.name))[0];
     const member = memberships
       .filter((m) => m.userId === uid && shownInSquare(m.lobby.id))
@@ -62,16 +71,22 @@ export async function homeLobbiesOf(raw: string[]): Promise<Record<string, Lobby
     MAX_IDS,
   );
   if (!ids.length) return {};
-  const [owned, members] = await Promise.all([
+  const [owned, members, roles] = await Promise.all([
     prisma.lobby.findMany({
       where: { ownerId: { in: ids }, ...LISTED },
-      select: { ...SEL, ownerId: true, _count: { select: { members: true } } },
+      select: { ...SEL, ownerId: true, pinned: true, _count: { select: { members: true } } },
     }),
     prisma.lobbyMember.findMany({
       where: { userId: { in: ids }, lobby: LISTED },
       select: { userId: true, roleLevel: true, createdAt: true, lobby: { select: SEL } },
     }),
+    prisma.user.findMany({ where: { id: { in: ids } }, select: { id: true, globalRole: true } }),
   ]);
+  const staff = new Set(
+    roles
+      .filter((u: any) => STAFF_ROLES.has(String(u.globalRole || "").toUpperCase()))
+      .map((u: any) => u.id),
+  );
   return pickHomes(
     ids,
     owned.map((l: any) => ({
@@ -81,6 +96,7 @@ export async function homeLobbiesOf(raw: string[]): Promise<Record<string, Lobby
       accentColor: l.accentColor ?? null,
       ownerId: l.ownerId ?? null,
       members: l._count?.members ?? 0,
+      pinned: !!l.pinned,
     })),
     members.map((m: any) => ({
       userId: m.userId,
@@ -93,5 +109,6 @@ export async function homeLobbiesOf(raw: string[]): Promise<Record<string, Lobby
         accentColor: m.lobby.accentColor ?? null,
       },
     })),
+    staff,
   );
 }

@@ -14,13 +14,16 @@ describe("where someone's from", () => {
     expect(shownInSquare("destiny2")).toBe(true);
   });
 
-  it("prefers a lobby they own (the busiest), then their highest rank, then the newest", () => {
+  it("prefers a lobby they built (the busiest), then their highest rank, then the newest", () => {
     const homes = pickHomes(
-      ["kaede", "mod", "fan", "nobody"],
+      ["kaede", "mod", "fan", "founder", "staffer", "nobody"],
       [
-        { ...L("nyan", "Nyan Sakura Lounge"), ownerId: "kaede", members: 4 },
-        { ...L("tiny"), ownerId: "kaede", members: 1 },
-        { ...L("u-kaede"), ownerId: "kaede", members: 9 },
+        { ...L("nyan", "Nyan Sakura Lounge"), ownerId: "kaede", members: 4, pinned: false },
+        { ...L("tiny"), ownerId: "kaede", members: 1, pinned: false },
+        { ...L("u-kaede"), ownerId: "kaede", members: 9, pinned: false },
+        // A built-in lobby a founder claimed: owning it isn't being from it.
+        { ...L("counter-strike-2"), ownerId: "founder", members: 30, pinned: true },
+        { ...L("own-club", "Own Club"), ownerId: "staffer", members: 5, pinned: false },
       ],
       [
         { userId: "kaede", roleLevel: 1, joinedAt: 9, lobby: L("chess") },
@@ -29,11 +32,17 @@ describe("where someone's from", () => {
         { userId: "fan", roleLevel: 1, joinedAt: 10, lobby: L("chess") },
         { userId: "fan", roleLevel: 1, joinedAt: 20, lobby: L("windrose") },
         { userId: "fan", roleLevel: 1, joinedAt: 99, lobby: L("lobby") },
+        { userId: "founder", roleLevel: 1, joinedAt: 5, lobby: L("study-hall") },
       ],
+      new Set(["staffer"]),
     );
     expect(homes.kaede?.name).toBe("Nyan Sakura Lounge");
     expect(homes.mod?.id).toBe("destiny2");
     expect(homes.fan?.id).toBe("windrose");
+    // The claimed built-in lobby is skipped; their membership speaks instead.
+    expect(homes.founder?.id).toBe("study-hall");
+    // Staff belong to the whole town: no tag, even for a lobby they built.
+    expect(homes.staffer).toBeNull();
     expect(homes.nobody).toBeNull();
   });
 });
