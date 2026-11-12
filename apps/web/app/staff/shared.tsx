@@ -37,7 +37,23 @@ export type StaffUser = {
   banReason?: string;
   /** The ?ref= that brought them (api routes/signupSource.ts). */
   signupSource?: string | null;
+  /** The site that sent them ("google.com", "direct") and their first page. */
+  signupFrom?: string | null;
+  signupLanding?: string | null;
 };
+
+/** Where an account came from, in a few words ("" when nothing was kept). */
+export function cameFrom(u: {
+  signupSource?: string | null;
+  signupFrom?: string | null;
+  signupLanding?: string | null;
+}): string {
+  const parts: string[] = [];
+  if (u.signupSource) parts.push(u.signupSource);
+  if (u.signupFrom) parts.push(u.signupFrom);
+  if (u.signupLanding && u.signupLanding !== "/") parts.push(u.signupLanding);
+  return parts.join(" · ");
+}
 export type AuditLog = {
   id: string;
   actorName: string;

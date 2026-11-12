@@ -609,7 +609,11 @@ model User {
 
   // Where a new account came from: the ?ref= on the link that brought them
   // (routes/signupSource.ts; 2026-11-04, so outreach can be measured).
-  signupSource String?
+  signupSource  String?
+  // The site that sent them ("google.com", "github.com", "direct") and the
+  // page they first landed on (2026-11-12): most sign-ups carry no ?ref=.
+  signupFrom    String?
+  signupLanding String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

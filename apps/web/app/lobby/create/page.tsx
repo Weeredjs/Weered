@@ -723,7 +723,8 @@ export default function CreateLobbyPage() {
     try {
       localStorage.removeItem(DRAFT_KEY);
     } catch {}
-    setTimeout(() => router.push(`/lobby/${encodeURIComponent(slug)}?design=1`), 1900);
+    // The launch now stops on "Now bring your people" (LaunchOverlay): Design
+    // mode is the next button, not an automatic jump (2026-11-12).
   }
 
   // ── Render ──────────────────────────────────────────────────────────────
@@ -1417,6 +1418,7 @@ export default function CreateLobbyPage() {
           roomProgress={roomProgress}
           roomCount={roomCount}
           accent={accent}
+          onDesign={() => router.push(`/lobby/${encodeURIComponent(slug)}?design=1`)}
         />
       )}
 

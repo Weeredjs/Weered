@@ -11,7 +11,11 @@ const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 export default function SignupSource() {
   const { me } = useWeered() as any;
   useEffect(() => {
-    captureRef(location.search);
+    captureRef(location.search, Date.now(), {
+      referrer: document.referrer,
+      host: location.hostname,
+      path: location.pathname,
+    });
   }, []);
   const id = String(me?.id || "");
   useEffect(() => {

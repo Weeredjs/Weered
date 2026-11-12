@@ -1,5 +1,9 @@
 import { describe, it, expect, afterAll } from "vitest";
-import signupSourceRoutes, { cleanRef } from "../../src/routes/signupSource";
+import signupSourceRoutes, {
+  cleanFrom,
+  cleanLanding,
+  cleanRef,
+} from "../../src/routes/signupSource";
 import { buildTestApp, testToken, testAuthFromHeader } from "../helpers/buildTestApp";
 import { prisma } from "../../src/lib/prisma";
 
@@ -49,6 +53,37 @@ describe("POST /profile/source", () => {
     expect(await sourceOf(old)).toBeNull();
     expect((await post(app, old, "<b>x</b>")).statusCode).toBe(400);
     expect(cleanRef("a".repeat(41))).toBeNull();
+    await app.close();
+  });
+
+  it("keeps the referring site and first page, once (2026-11-12)", async () => {
+    const app = await makeApp();
+    const uid = await newUser("site");
+    const send = (payload: any) =>
+      app.inject({
+        method: "POST",
+        url: "/profile/source",
+        headers: { authorization: "Bearer " + testToken(uid) },
+        payload,
+      });
+    expect((await send({ from: "www.Google.com", landing: "/lobby/poe?x=1" })).json()).toEqual({
+      ok: true,
+      saved: true,
+    });
+    expect((await send({ from: "reddit.com", landing: "/" })).json().saved).toBe(false);
+    const row = await prisma.user.findUnique({
+      where: { id: uid },
+      select: { signupSource: true, signupFrom: true, signupLanding: true },
+    });
+    expect(row).toEqual({
+      signupSource: null,
+      signupFrom: "google.com",
+      signupLanding: "/lobby/poe",
+    });
+    expect(cleanFrom("direct")).toBe("direct");
+    expect(cleanFrom("javascript:alert(1)")).toBeNull();
+    expect(cleanLanding("https://evil.example/")).toBeNull();
+    expect((await send({ from: "<x>", landing: "nope" })).statusCode).toBe(400);
     await app.close();
   });
 });

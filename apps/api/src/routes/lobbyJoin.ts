@@ -11,6 +11,7 @@ import { areFriends, gateOf, isPlaceId } from "./places";
 import { usableInvite } from "../lib/invitePower";
 import { loginFailed, loginPaused, loginSucceeded } from "../lib/loginGuard";
 import bcrypt from "bcryptjs";
+import { tellOwnerOfJoin } from "../lib/growthSignals";
 
 /** Lobby passwords are kept like any other password: hashed, so nobody can
  *  read one back (James 2026-11-01, red team finding 21). One saved before
@@ -205,6 +206,8 @@ export function registerLobbyJoin(
         actorName: user?.name || "Unknown",
         note: `Joined lobby (${invited ? "invite" : mode})`,
       });
+      // The owner hears someone walked in (lib/growthSignals.ts).
+      void tellOwnerOfJoin({ lobbyId, joinerId: u.id, joinerName: user?.name || u.name || "" });
 
       return reply.send({ ok: true, role: member.role, roleLevel: member.roleLevel });
     },
@@ -314,6 +317,7 @@ export function registerLobbyJoin(
         actorName: reviewerName,
         note: `Approved join request from ${jr.userName}`,
       });
+      void tellOwnerOfJoin({ lobbyId: ctx.lobby.id, joinerId: jr.userId, joinerName: jr.userName });
 
       return reply.send({ ok: true });
     },

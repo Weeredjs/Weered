@@ -27,6 +27,7 @@ import { registerLobbyPresence } from "./lobbyPresence";
 
 import { touchLobbyViewer } from "../lib/lobbyViewers";
 import { lobbyOnlineCount } from "../lib/lobbyCount";
+import { alertNewBuilder } from "../lib/growthSignals";
 
 type Opts = {
   authFromHeader: (h?: string) => { id: string; name: string } | null;
@@ -532,6 +533,14 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
           })
           .catch(swallow);
       awardNotoriety(u.id, "LOBBY_CREATED").catch(swallow);
+      // Someone outside staff built one: James hears now (lib/growthSignals.ts).
+      if (!existing && !isStaff)
+        void alertNewBuilder({
+          id: lobby.id,
+          name: lobby.name,
+          description: lobby.description,
+          ownerId: u.id,
+        });
       return reply.send({ ok: true, lobby });
     },
   );
