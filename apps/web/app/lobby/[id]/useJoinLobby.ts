@@ -1,10 +1,11 @@
 "use client";
 
-// Join, from the card or from an invite. A signed-out visitor goes to make an
-// account and comes back with ?join=1, and that return joins them without a
-// second click. The card's button used to call the API signed out, get a 401
-// and do nothing at all: the invite path's main button was dead (found in the
-// 2026-11-12 review). Out of page.tsx, which sits at its 1,500-line limit.
+// Join, from the bar, the tab strip or an invite. A signed-out visitor goes to
+// make an account and comes back with ?join=1, and that return joins them
+// without a second click. The old card's button used to call the API signed
+// out, get a 401 and do nothing at all: the invite path's main button was dead
+// (found in the 2026-11-12 review). Out of page.tsx, which sits at its
+// 1,500-line limit.
 
 import { useCallback, useEffect, useRef } from "react";
 import { joinSignupPath } from "../../../lib/afterAuth";
@@ -21,7 +22,8 @@ export function useJoinLobby(o: {
   open: boolean;
   /** ?join= from the address. */
   joinParam: string | null | undefined;
-  onJoined: (membership: any) => void;
+  /** Joined: the page reads the lobby again, and with it the membership. */
+  onJoined: () => void;
 }): () => Promise<void> {
   const { api, lobbyId, meId, headers, ready, isMember, open, joinParam, onJoined } = o;
 
@@ -33,11 +35,16 @@ export function useJoinLobby(o: {
     try {
       const r = await fetch(`${api}/lobbies/${encodeURIComponent(lobbyId)}/join`, {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json", ...headers() },
         body: JSON.stringify({}),
       });
       const j = await r.json();
-      if (j.ok && j.membership) onJoined(j.membership);
+      // The reply is { ok, role, roleLevel }, with no membership in it. This
+      // waited for one since the first join button was written, so joining
+      // worked and the page never showed it: the button stayed, asking again
+      // (found 2026-11-12 by e2e/bringPeople.spec.ts).
+      if (j?.ok) onJoined();
     } catch {}
     // eslint-disable-next-line react-hooks/exhaustive-deps -- headers and onJoined are stable enough
   }, [api, meId, lobbyId]);

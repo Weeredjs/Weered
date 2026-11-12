@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { shareHref, shareText, shareable } from "../lib/shareLinks";
+import { shareHref, shareText } from "../lib/shareLinks";
 import { inviteCard, nameSize } from "../lib/shareCards";
 import { guestLobbyId } from "../lib/guestSession";
 
@@ -27,14 +27,6 @@ describe("share links", () => {
   it("says a lasting link plainly, and never leaves a name blank", () => {
     expect(shareText("The Wheel House", false)).toBe("Come into The Wheel House on Weered:");
     expect(shareText("  ", false)).toBe("Come into my lobby on Weered:");
-  });
-
-  it("only calls our own https pages shareable", () => {
-    expect(shareable(LINK)).toBe(true);
-    expect(shareable("https://nyx.weered.ca/")).toBe(true);
-    expect(shareable("http://weered.ca/x")).toBe(false);
-    expect(shareable("https://weered.ca.evil.example/x")).toBe(false);
-    expect(shareable("nope")).toBe(false);
   });
 });
 

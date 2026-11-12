@@ -138,7 +138,16 @@ export default async function authRoutes(app: FastifyInstance, opts: Opts) {
   app.post(
     "/auth/register",
     {
-      config: { rateLimit: { max: 5, timeWindow: "1 hour" } },
+      // Five new accounts an hour from one address. REGISTER_MAX_PER_HOUR raises
+      // it for the end-to-end stack only, where every test signs up from the
+      // same address and one retry used to trip it; unset (as on the live
+      // site), it is five.
+      config: {
+        rateLimit: {
+          max: Math.max(5, Number(process.env.REGISTER_MAX_PER_HOUR) || 5),
+          timeWindow: "1 hour",
+        },
+      },
       schema: {
         tags: ["auth"],
         summary: "Register a new local account",

@@ -20,6 +20,7 @@ async function apiFetch(path: string, opts?: RequestInit) {
   try {
     const r = await fetch(`${API}${path}`, {
       ...opts,
+      credentials: "include",
       headers: {
         ...(typeof opts?.body === "string" ? { "Content-Type": "application/json" } : {}),
         ...authHeaders(),

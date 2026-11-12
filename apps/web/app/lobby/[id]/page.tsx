@@ -359,7 +359,8 @@ export default function LobbyIdPage() {
   const isMember = !!membership || isStaff || isOwner;
 
   function loadLobby() {
-    fetch(`${API}/lobbies/${encodeURIComponent(lobbyId)}`, { headers: authHeaders() })
+    const at = `${API}/lobbies/${encodeURIComponent(lobbyId)}`;
+    fetch(at, { credentials: "include", headers: authHeaders() })
       .then((r) => r.json())
       .then((j) => {
         if (j.ok && j.lobby) {
@@ -485,7 +486,7 @@ export default function LobbyIdPage() {
     isMember,
     open: doorMode === "OPEN" && !doorOn,
     joinParam: searchParams?.get("join"),
-    onJoined: (m) => (setMembership(m), setMemberChecked(true)),
+    onJoined: loadLobby,
   });
   const dTheme = L?.theme || {};
   // The look reaches the rails and the lobby's rooms too (components/SpaceTheme.tsx),
@@ -1037,22 +1038,9 @@ export default function LobbyIdPage() {
                   (!lobbyInfo?.joinMode || lobbyInfo.joinMode === "OPEN") &&
                   me?.id && (
                     <button
-                      onClick={async () => {
-                        // A lobby with a front door is joined through it.
-                        if (door) return setDoorOpen(true);
-                        try {
-                          const res = await fetch(
-                            `${API}/lobbies/${encodeURIComponent(lobbyId)}/join`,
-                            {
-                              method: "POST",
-                              headers: { "Content-Type": "application/json", ...authHeaders() },
-                              body: "{}",
-                            },
-                          );
-                          const j = await res.json();
-                          if (j.ok) loadLobby();
-                        } catch {}
-                      }}
+                      // A lobby with a front door is joined through it; any
+                      // other the one way everything joins (useJoinLobby.ts).
+                      onClick={() => (door ? setDoorOpen(true) : void joinLobbyNow())}
                       style={{
                         marginLeft: 4,
                         padding: "5px 12px",

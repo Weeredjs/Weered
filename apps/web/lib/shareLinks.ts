@@ -5,18 +5,6 @@
 
 export type ShareTarget = "whatsapp" | "facebook" | "sms" | "email";
 
-/** Only our own pages are shared from here. */
-export function shareable(url: string): boolean {
-  try {
-    const u = new URL(url);
-    return (
-      u.protocol === "https:" && (u.hostname === "weered.ca" || u.hostname.endsWith(".weered.ca"))
-    );
-  } catch {
-    return false;
-  }
-}
-
 export function shareHref(target: ShareTarget, url: string, text: string): string {
   const both = `${text} ${url}`.trim();
   switch (target) {

@@ -147,6 +147,7 @@ export default function InvitePage() {
     }
     const r = await fetch(`${API}/invites/${token}/accept`, {
       method: "POST",
+      credentials: "include",
       headers: { "Content-Type": "application/json", ...authHeaders() },
       body: JSON.stringify({}),
     });
@@ -183,6 +184,7 @@ export default function InvitePage() {
     setGuestErr("");
     const r = await fetch(`${API}/auth/guest-lobby`, {
       method: "POST",
+      credentials: "include",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ inviteToken: token, name: guestName.trim() }),
     }).catch(() => null);
