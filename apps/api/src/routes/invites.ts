@@ -46,13 +46,11 @@ export default async function invitesRoutes(app: FastifyInstance, opts: Opts) {
           select: { ownerId: true },
         });
         if (!lob || lob.ownerId !== u.id) {
-          return reply
-            .code(403)
-            .send({
-              ok: false,
-              error: "not_lobby_owner",
-              message: "Only the lobby's owner can make a guest link.",
-            });
+          return reply.code(403).send({
+            ok: false,
+            error: "not_lobby_owner",
+            message: "Only the lobby's owner can make a guest link.",
+          });
         }
       }
       // Making a lobby, room or crew invite takes the power to let people in
@@ -98,10 +96,31 @@ export default async function invitesRoutes(app: FastifyInstance, opts: Opts) {
     const token = String((req as any).params?.token || "");
     const invite = await prisma.invite.findUnique({ where: { token } });
     if (!invite) return reply.code(404).send({ ok: false, error: "not_found" });
-    if (invite.expiresAt && invite.expiresAt < new Date())
-      return reply.code(410).send({ ok: false, error: "expired" });
-    if (invite.maxUses > 0 && invite.uses >= invite.maxUses)
-      return reply.code(410).send({ ok: false, error: "exhausted" });
+    // A lobby's link that has run out still says which lobby it was for, so the
+    // page can point there instead of at a dead end. Whoever holds the link was
+    // handed that lobby; its own door still decides who gets in.
+    const spent =
+      invite.expiresAt && invite.expiresAt < new Date()
+        ? "expired"
+        : invite.maxUses > 0 && invite.uses >= invite.maxUses
+          ? "exhausted"
+          : "";
+    if (spent) {
+      const lob =
+        (invite.type === "LOBBY" || invite.type === "GUEST") && invite.targetId
+          ? await prisma.lobby
+              .findFirst({
+                where: { id: invite.targetId, deletedAt: null },
+                select: { id: true, name: true },
+              })
+              .catch(() => null)
+          : null;
+      return reply.code(410).send({
+        ok: false,
+        error: spent,
+        ...(lob ? { lobbyId: lob.id, lobbyName: lob.name || lob.id } : {}),
+      });
+    }
     let targetName = "";
     if (invite.targetId) {
       if (invite.type === "ROOM") {
@@ -271,13 +290,11 @@ export default async function invitesRoutes(app: FastifyInstance, opts: Opts) {
           select: { ownerId: true },
         });
         if (!lob || lob.ownerId !== u.id) {
-          return reply
-            .code(403)
-            .send({
-              ok: false,
-              error: "not_lobby_owner",
-              message: "Only the lobby's owner can make a guest link.",
-            });
+          return reply.code(403).send({
+            ok: false,
+            error: "not_lobby_owner",
+            message: "Only the lobby's owner can make a guest link.",
+          });
         }
       }
       // Making a lobby, room or crew invite takes the power to let people in

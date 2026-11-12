@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { onAccent, safeAccent, safeImage } from "../../../lib/brandSafe";
+import { GUEST_LOBBY_KEY } from "../../../lib/guestSession";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
@@ -60,6 +61,8 @@ export default function InvitePage() {
   const token = String(params?.token || "");
 
   const [invite, setInvite] = useState<InviteInfo | null>(null);
+  // The lobby a run-out link was for (the API says, on 410).
+  const [spentLobby, setSpentLobby] = useState<{ id: string; name: string } | null>(null);
   const [state, setState] = useState<
     "loading" | "ready" | "accepting" | "done" | "error" | "expired" | "exhausted"
   >("loading");
@@ -115,9 +118,12 @@ export default function InvitePage() {
                   });
               })
               .catch(() => {});
-        } else if (j.error === "expired") setState("expired");
-        else if (j.error === "exhausted") setState("exhausted");
-        else {
+        } else if (j.error === "expired" || j.error === "exhausted") {
+          // The lobby is still there: point at it, not at a dead end.
+          if (j.lobbyId)
+            setSpentLobby({ id: String(j.lobbyId), name: String(j.lobbyName || j.lobbyId) });
+          setState(j.error);
+        } else {
           setState("error");
           setErrMsg(j.error || "Invalid invite.");
         }
@@ -184,6 +190,7 @@ export default function InvitePage() {
     if (j?.ok && j.lobbyId) {
       try {
         localStorage.setItem("weered_user", JSON.stringify(j.user));
+        localStorage.setItem(GUEST_LOBBY_KEY, String(j.lobbyId));
       } catch {
         // A private window: the session cookie still carries them in.
       }
@@ -290,18 +297,29 @@ export default function InvitePage() {
       </div>
     );
 
-  if (state === "expired")
+  if (state === "expired" || state === "exhausted") {
+    const to =
+      spentLobby ||
+      ((invite?.type === "LOBBY" || invite?.type === "GUEST") && invite.targetId
+        ? { id: String(invite.targetId), name: String(invite.targetName || invite.targetId) }
+        : null);
     return (
       <div style={containerStyle}>
         <div style={cardStyle}>
           <Logo />
-          <div style={{ fontSize: 36 }}>⏰</div>
-          <div style={{ fontWeight: 800, fontSize: 18 }}>Invite Expired</div>
-          <div style={{ opacity: 0.5, fontSize: 14, textAlign: "center" }}>
-            This invite link has passed its expiry date.
+          <div style={{ fontSize: 36 }}>{state === "expired" ? "⏰" : "🔒"}</div>
+          <div style={{ fontWeight: 800, fontSize: 18 }}>
+            {state === "expired" ? "This link has run out" : "This link is used up"}
+          </div>
+          <div style={{ opacity: 0.6, fontSize: 14, textAlign: "center", lineHeight: 1.5 }}>
+            {to
+              ? `${to.name} is still there. Have a look, and join from inside.`
+              : state === "expired"
+                ? "It was only good for a while. Ask whoever sent it for a new one."
+                : "It has been used as many times as it allows. Ask whoever sent it for a new one."}
           </div>
           <a
-            href="/lobby"
+            href={to ? `/lobby/${encodeURIComponent(to.id)}` : "/"}
             style={{
               padding: "10px 24px",
               borderRadius: 10,
@@ -313,40 +331,12 @@ export default function InvitePage() {
               fontSize: 14,
             }}
           >
-            Go to Lobby
+            {to ? `Open ${to.name}` : "Go to Weered"}
           </a>
         </div>
       </div>
     );
-
-  if (state === "exhausted")
-    return (
-      <div style={containerStyle}>
-        <div style={cardStyle}>
-          <Logo />
-          <div style={{ fontSize: 36 }}>🔒</div>
-          <div style={{ fontWeight: 800, fontSize: 18 }}>Invite Full</div>
-          <div style={{ opacity: 0.5, fontSize: 14, textAlign: "center" }}>
-            This invite has reached its maximum number of uses.
-          </div>
-          <a
-            href="/lobby"
-            style={{
-              padding: "10px 24px",
-              borderRadius: 10,
-              background: "rgba(124,58,237,.15)",
-              border: "1px solid rgba(124,58,237,.30)",
-              color: "rgb(216,180,254)",
-              textDecoration: "none",
-              fontWeight: 700,
-              fontSize: 14,
-            }}
-          >
-            Go to Lobby
-          </a>
-        </div>
-      </div>
-    );
+  }
 
   if (state === "error")
     return (

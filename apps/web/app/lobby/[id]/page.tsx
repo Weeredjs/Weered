@@ -8,7 +8,6 @@ import { weeredConfirm } from "../../../lib/confirm";
 import InviteModal from "../../../components/InviteModal";
 import { weeredReport } from "../../../lib/report";
 import { weeredToast } from "../../../lib/toast";
-import JoinLobbyOverlay from "../../../components/JoinLobbyOverlay";
 import { useJoinLobby } from "./useJoinLobby";
 import LobbyChatDrawer from "../../../components/LobbyChatDrawer";
 import LobbyHeroBar from "../../../components/LobbyHeroBar";
@@ -37,7 +36,7 @@ import LobbyHall from "../../../components/LobbyHall";
 import Downgrade, { DOWNGRADE_LOBBIES } from "../../../components/familiar/Downgrade";
 import LobbyTierCards from "../../../components/LobbyTierCards";
 import LobbyEvents from "../../../components/LobbyEvents";
-import GuestLaunchBar from "../../../components/GuestLaunchBar";
+import LobbyJoinBar from "../../../components/LobbyJoinBar";
 
 import BungieLinkPill from "../../../components/BungieLinkPill";
 import LobbyAmbient from "../../../components/LobbyAmbient";
@@ -821,12 +820,19 @@ export default function LobbyIdPage() {
           onClose={() => setInviting(false)}
         />
       )}
-      <GuestLaunchBar
-        lobbyId={lobbyId}
-        lobbyName={lobbyInfo?.name || "this lobby"}
-        loggedIn={!!me?.id}
-      />
-      {/* No join wall on preview lobbies — see lib/lobbyChrome.ts. */}
+      {/* The lobby shows; this bar asks (components/LobbyJoinBar.tsx). No bar on
+          preview lobbies (lib/lobbyChrome.ts) or under an open front door. */}
+      {memberChecked && lobbyInfo && !isForcedThemeLobby(lobbyId) && !(door && doorOpen) && (
+        <LobbyJoinBar
+          lobbyId={lobbyId}
+          lobbyName={lobbyInfo.name || lobbyId}
+          signedIn={!!me?.id}
+          isMember={isMember}
+          canJoin={doorMode === "OPEN" && !doorOn}
+          themeable={isThemeableLobby(lobbyId)}
+          onJoin={joinLobbyNow}
+        />
+      )}
       {door && doorOpen && memberChecked && !isMember && lobbyInfo && (
         <LobbyDoor
           lobbyId={lobbyId}
@@ -839,18 +845,6 @@ export default function LobbyIdPage() {
           pending={joinRequest?.status === "PENDING"}
           onJoined={loadLobby}
           onClose={() => setDoorOpen(false)}
-        />
-      )}
-      {memberChecked && !isMember && lobbyInfo && !door && !isForcedThemeLobby(lobbyId) && (
-        <JoinLobbyOverlay
-          lobbyId={lobbyId}
-          lobbyName={lobbyInfo.name || lobbyId}
-          themeable={isThemeableLobby(lobbyId)}
-          memberPerks={Array.isArray(lobbyInfo.memberPerks) ? lobbyInfo.memberPerks : []}
-          accentColor={lobbyInfo.accentColor || undefined}
-          joinMode={lobbyInfo.joinMode || "OPEN"}
-          signedIn={!!me?.id}
-          onJoin={joinLobbyNow}
         />
       )}
       {lobbyId === "windrose" && isMember && (

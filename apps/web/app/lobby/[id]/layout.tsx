@@ -51,7 +51,8 @@ export async function generateMetadata(props: {
   const override = LOBBY_OG_OVERRIDES[id];
   const title = override?.title ?? `${name} — Weered`;
   const ogDescription = override?.description ?? description;
-  const ogImage = override?.ogImage ?? `${SITE}/brand/og-image.png`;
+  // Its own card (app/og/lobby/[id]); they all shared the site's generic one.
+  const ogImage = override?.ogImage ?? `${SITE}/og/lobby/${encodeURIComponent(id)}`;
   const twitterImage = override?.twitterImage ?? ogImage;
   const url = `${SITE}/lobby/${encodeURIComponent(id)}`;
 

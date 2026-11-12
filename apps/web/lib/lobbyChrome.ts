@@ -45,7 +45,7 @@ export function isThemeableLobby(lobbyId: string): boolean {
  * from — they would open the link and get flagship purple. Keep this to demo
  * rooms: a real community's lobby should honour what its members chose.
  *
- * A forced lobby also suppresses the JoinLobbyOverlay and opens on Modules
+ * A forced lobby also shows no join bar (LobbyJoinBar) and opens on Modules
  * rather than Rooms, because a preview room has no rooms yet and "No rooms open
  * here" reads as an empty product.
  */

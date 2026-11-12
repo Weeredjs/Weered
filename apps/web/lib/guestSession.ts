@@ -25,3 +25,24 @@ export function markGuest(): void {
     else d.removeAttribute("data-weered-guest");
   } catch {}
 }
+
+/** Where a guest's lobby id is kept while they're in (set on joining, app/invite). */
+export const GUEST_LOBBY_KEY = "weered_guest_lobby";
+
+/** The lobby this guest is visiting: from the address when they're on its page,
+ *  else what was kept when they joined. */
+export function guestLobbyId(pathname: string | null | undefined): string {
+  const m = String(pathname || "").match(/^\/lobby\/([^/?#]+)/);
+  if (m) {
+    try {
+      return decodeURIComponent(m[1]);
+    } catch {
+      return m[1];
+    }
+  }
+  try {
+    return localStorage.getItem(GUEST_LOBBY_KEY) || "";
+  } catch {
+    return "";
+  }
+}

@@ -2,6 +2,8 @@
 
 import React, { useState } from "react";
 import { onActivate } from "@/lib/a11y";
+import ShareRow from "./ShareRow";
+import { shareText } from "../lib/shareLinks";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
@@ -352,6 +354,21 @@ export default function InviteModal({ type, targetId, targetName, onClose }: Pro
               >
                 {loading ? "Generating…" : "Generate Link"}
               </button>
+            )}
+
+            {/* Send it where their people are (components/ShareRow.tsx). */}
+            {link && (
+              <ShareRow
+                url={link}
+                text={
+                  type === "LOBBY"
+                    ? shareText(targetName || "", forGuests)
+                    : targetName
+                      ? `Join ${targetName} on Weered:`
+                      : "Come to Weered:"
+                }
+                compact
+              />
             )}
 
             {link && (

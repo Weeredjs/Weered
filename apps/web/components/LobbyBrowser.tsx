@@ -20,6 +20,8 @@ import type { Lobby } from "@weered/shared";
 import { plural } from "../lib/plural";
 import { descriptionLead } from "../lib/descriptionLead";
 import { sizedImage } from "../lib/sizedImage";
+import { downtownOrder } from "../lib/downtownOrder";
+import { builderPath } from "../lib/afterAuth";
 
 function hueFromId(id: string): number {
   return Math.abs([...id].reduce((a, c) => a + c.charCodeAt(0), 0)) % 360;
@@ -407,6 +409,7 @@ export default function LobbyBrowser() {
             description: l.description ?? null,
             verified: Boolean(l.verified),
             pinned: Boolean(l.pinned),
+            featured: Boolean(l.featured),
             moduleType: l.moduleType ?? null,
             accentColor: l.accentColor ?? null,
             logoUrl: l.logoUrl ?? null,
@@ -475,20 +478,17 @@ export default function LobbyBrowser() {
     close();
   }
 
-  const filtered = lobbies
-    .filter((l) => {
+  // The Town Square, then the front row woven into the rest (lib/downtownOrder.ts).
+  const filtered = downtownOrder(
+    lobbies.filter((l) => {
       if (!q.trim()) return true;
       const search = q.trim().toLowerCase();
       return (
         l.name.toLowerCase().includes(search) ||
         (l.description || "").toLowerCase().includes(search)
       );
-    })
-    .sort((a, b) => {
-      if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
-      if (b.onlineCount !== a.onlineCount) return b.onlineCount - a.onlineCount;
-      return b._count.members - a._count.members;
-    });
+    }),
+  );
 
   const live = filtered.filter((l) => l.onlineCount > 0);
 
@@ -591,7 +591,7 @@ export default function LobbyBrowser() {
           className="weered-dt-create"
           onClick={() => {
             close();
-            router.push("/lobby/create");
+            router.push(builderPath());
           }}
           style={{
             display: "flex",
@@ -627,7 +627,7 @@ export default function LobbyBrowser() {
               className="weered-dt-create-sub"
               style={{ fontSize: 10, color: "rgba(255,255,255,.35)", marginTop: 1 }}
             >
-              Your game. Your rules.
+              Say what you want. It builds.
             </div>
           </div>
         </button>

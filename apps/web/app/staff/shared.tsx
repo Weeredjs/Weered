@@ -89,6 +89,8 @@ export type StaffLobby = {
   members?: number;
   locked?: boolean;
   unlisted?: boolean;
+  /** In Downtown's front rows (Lobby.featured). */
+  frontRow?: boolean;
 };
 export type SiteConfig = {
   featuredLobbyId: string;

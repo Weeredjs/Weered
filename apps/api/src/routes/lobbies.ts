@@ -190,6 +190,8 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
         description: true,
         verified: true,
         pinned: true,
+        // Downtown's front row (web lib/downtownOrder.ts), set from Ops.
+        featured: true,
         moduleType: true,
         accentColor: true,
         logoUrl: true,

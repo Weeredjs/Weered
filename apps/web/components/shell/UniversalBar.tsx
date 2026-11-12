@@ -18,6 +18,8 @@ import UniversalSearch, { GUIDE_EVENT, INVITE_EVENT } from "../search/UniversalS
 import { useWeered } from "../WeeredProvider";
 import { useOverlay } from "../overlays/OverlayProvider";
 import { startDesign } from "../../lib/shellDesign";
+import { GUEST_LOBBY_KEY, guestLobbyId } from "../../lib/guestSession";
+import { joinSignupPath } from "../../lib/afterAuth";
 
 function greeting(): string {
   const h = new Date().getHours();
@@ -115,6 +117,30 @@ export default function UniversalBar() {
         >
           What can you do here?
         </button>
+        {/* A guest who wants to stay: the account is asked for after they've
+            talked, not before (James 2026-11-12). The visit ends, they make an
+            account, and they come back into this lobby as a member. */}
+        <button
+          type="button"
+          className="weered-btn"
+          data-guest-only
+          title="Keep your name and come back any time. Free."
+          onClick={async () => {
+            const lobby = guestLobbyId(pathname);
+            await fetch(
+              `${process.env.NEXT_PUBLIC_API_BASE || "https://api.weered.ca"}/auth/logout`,
+              { method: "POST", credentials: "include" },
+            ).catch(() => {});
+            try {
+              localStorage.removeItem("weered_user");
+              localStorage.removeItem("weered:role");
+              localStorage.removeItem(GUEST_LOBBY_KEY);
+            } catch {}
+            window.location.assign(lobby ? joinSignupPath(lobby) : "/login?mode=register");
+          }}
+        >
+          Make an account
+        </button>
         {/* A guest has no account menu: this is their way out. */}
         <button
           type="button"
@@ -131,6 +157,7 @@ export default function UniversalBar() {
             try {
               localStorage.removeItem("weered_user");
               localStorage.removeItem("weered:role");
+              localStorage.removeItem(GUEST_LOBBY_KEY);
             } catch {}
             window.location.assign("/");
           }}

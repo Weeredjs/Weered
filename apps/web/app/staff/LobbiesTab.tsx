@@ -68,6 +68,23 @@ export function LobbiesTab({ myRole }: { myRole: GlobalRole }) {
     } else setMsg(j.error || "Failed.");
   }
 
+  // Downtown's front rows: woven in among the busiest, so the town shows its range.
+  async function toggleFrontRow(id: string, on: boolean) {
+    const j = await apiFetch(`/staff/lobbies/${encodeURIComponent(id)}/front-row`, {
+      method: "POST",
+      body: JSON.stringify({ on: !on }),
+    });
+    if (j.ok) {
+      setMsg(`${id} ${!on ? "is in" : "left"} Downtown's front row`);
+      setLobbies((prev) => prev.map((l) => (l.id === id ? { ...l, frontRow: !on } : l)));
+    } else
+      setMsg(
+        j.error === "lobby_unlisted"
+          ? "Unlisted lobbies aren't in Downtown."
+          : j.error || "Failed.",
+      );
+  }
+
   async function setFeatured(id: string) {
     const clearing = featuredId === id;
     const j = await apiFetch("/staff/featured", {
@@ -215,6 +232,7 @@ export function LobbiesTab({ myRole }: { myRole: GlobalRole }) {
                     {l.onlineCount} in now
                     {l.locked ? " · chat locked" : ""}
                     {l.unlisted ? " · unlisted" : ""}
+                    {l.frontRow ? " · front row" : ""}
                   </div>
                 </div>
               </div>
@@ -243,6 +261,18 @@ export function LobbiesTab({ myRole }: { myRole: GlobalRole }) {
                     onClick={() => togglePin(l.id, l.pinned)}
                   >
                     {l.pinned ? "Unpin" : "Pin"}
+                  </button>
+                  <button
+                    style={{
+                      ...(l.frontRow ? S.success : S.btn),
+                      fontSize: 11,
+                      padding: "4px 8px",
+                    }}
+                    onClick={() => void toggleFrontRow(l.id, !!l.frontRow)}
+                    disabled={l.unlisted && !l.frontRow}
+                    title="Downtown's front rows: woven in among the busiest lobbies"
+                  >
+                    {l.frontRow ? "✓ Front row" : "Front row"}
                   </button>
                   <button
                     style={{ ...(l.locked ? S.success : S.warn), fontSize: 11, padding: "4px 8px" }}

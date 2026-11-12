@@ -197,3 +197,51 @@ describe("using an invite", () => {
     expect(r.json().error).toBe("wrong_password");
   });
 });
+
+// A link that has run out still says which lobby it was for, so the page can
+// point there instead of at a dead end (2026-11-12, with the share buttons).
+describe("a spent invite", () => {
+  const spend = async (
+    who: string,
+    type: string,
+    targetId: string | null,
+    how: "expired" | "used",
+  ) => {
+    const inv = await prisma.invite.create({
+      data: {
+        type: type as any,
+        targetId,
+        createdBy: id[who],
+        maxUses: 1,
+        uses: how === "used" ? 1 : 0,
+        expiresAt: how === "expired" ? new Date(Date.now() - 60_000) : null,
+      },
+    });
+    return app.inject({ method: "GET", url: `/invites/${inv.token}` });
+  };
+
+  it("names its lobby when it has expired or been used up", async () => {
+    const a = await spend("owner", "LOBBY", OPEN, "expired");
+    expect(a.statusCode).toBe(410);
+    expect(a.json()).toMatchObject({
+      ok: false,
+      error: "expired",
+      lobbyId: OPEN,
+      lobbyName: "open",
+    });
+    const b = await spend("owner", "GUEST", OPEN, "used");
+    expect(b.statusCode).toBe(410);
+    expect(b.json()).toMatchObject({ error: "exhausted", lobbyId: OPEN });
+  });
+
+  it("names nothing for an office link, a platform invite or a lobby that's gone", async () => {
+    for (const r of [
+      await spend("owner", "GUEST", "mtg-eceb", "expired"),
+      await spend("owner", "PLATFORM", null, "expired"),
+      await spend("owner", "LOBBY", `itest-inv-gone-${stamp}`, "used"),
+    ]) {
+      expect(r.statusCode).toBe(410);
+      expect(r.json().lobbyId).toBeUndefined();
+    }
+  });
+});

@@ -29,6 +29,8 @@ export interface Lobby {
   description: string | null;
   verified: boolean;
   pinned: boolean;
+  /** In Downtown's front rows (apps/web lib/downtownOrder.ts). */
+  featured?: boolean;
   moduleType: ModuleType | string | null;
   accentColor: string | null;
   logoUrl: string | null;

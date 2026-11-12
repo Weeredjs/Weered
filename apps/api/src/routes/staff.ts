@@ -953,6 +953,7 @@ export default async function staffRoutes(app: FastifyInstance, opts: Opts) {
         description: true,
         verified: true,
         pinned: true,
+        featured: true,
         moduleType: true,
         accentColor: true,
         logoUrl: true,
@@ -983,6 +984,7 @@ export default async function staffRoutes(app: FastifyInstance, opts: Opts) {
       description: l.description || "",
       verified: l.verified,
       pinned: l.pinned,
+      frontRow: l.featured,
       moduleType: l.moduleType,
       members: l._count.members,
       onlineCount: online.get(l.id)?.size || 0,
@@ -1005,6 +1007,28 @@ export default async function staffRoutes(app: FastifyInstance, opts: Opts) {
       data: { pinned: Boolean(pinned) },
     });
     return reply.send({ ok: true, pinned: Boolean(pinned) });
+  });
+
+  // Downtown's front row: these lobbies are woven into its first rows, so the
+  // town shows its range and not only its busiest games (web
+  // lib/downtownOrder.ts). An unlisted lobby can't be in it: it isn't in
+  // Downtown at all.
+  app.post("/staff/lobbies/:id/front-row", async (req, reply) => {
+    const u = authFromHeader((req as any).headers?.authorization);
+    if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
+    const role = await getGlobalRole(u.id);
+    if (!canAssignRoles(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
+    const lobbyId = String((req.params as any).id || "");
+    const on = Boolean((req.body as any)?.on);
+    const lobby = await prisma.lobby.findUnique({
+      where: { id: lobbyId },
+      select: { id: true, name: true, unlisted: true },
+    });
+    if (!lobby) return reply.code(404).send({ ok: false, error: "lobby_not_found" });
+    if (on && lobby.unlisted) return reply.code(400).send({ ok: false, error: "lobby_unlisted" });
+    await prisma.lobby.update({ where: { id: lobbyId }, data: { featured: on } });
+    await globalAudit(u.id, u.name, on ? "front_row_on" : "front_row_off", lobbyId, lobby.name);
+    return reply.send({ ok: true, frontRow: on });
   });
 
   app.post("/staff/lobbies/:id/clear-branding", async (req, reply) => {
