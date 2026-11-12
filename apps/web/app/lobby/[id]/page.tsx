@@ -877,6 +877,8 @@ export default function LobbyIdPage() {
       )}
       <div
         className="weered-lobby-page"
+        // Who the page takes the viewer for, once it knows (e2e/bringPeople.spec.ts).
+        data-viewer={memberChecked && lobbyInfo ? (isMember ? "member" : "visitor") : undefined}
         style={
           {
             display: "flex",
