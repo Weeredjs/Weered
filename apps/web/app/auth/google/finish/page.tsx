@@ -2,6 +2,7 @@
 
 import { useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { takeAfterAuth } from "@/lib/afterAuth";
 
 function GoogleFinish() {
   const router = useRouter();
@@ -19,7 +20,8 @@ function GoogleFinish() {
         }
       }
     } catch {}
-    router.replace("/home");
+    // Back where they were headed (an invite to a lobby), else Home.
+    router.replace(takeAfterAuth("/home"));
   }, [router, sp]);
 
   return (

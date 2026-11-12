@@ -8,6 +8,7 @@ import React, { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { onAccent, safeAccent, safeImage } from "../../lib/brandSafe";
 import { sessionAlive } from "../../lib/staleSession";
+import { rememberAfterAuth } from "../../lib/afterAuth";
 
 /** The lobby a sign-in is for (?lobby=), as its page shows it. */
 type Brand = {
@@ -280,6 +281,8 @@ function LoginForm() {
 
   async function googleLogin() {
     const API = process.env.NEXT_PUBLIC_API_BASE || "https://api.weered.ca";
+    // Where they were headed comes back with them (lib/afterAuth.ts).
+    rememberAfterAuth(nextPath);
     window.location.href = `${API}/auth/google`;
   }
 
@@ -297,6 +300,7 @@ function LoginForm() {
     };
   }, []);
   function discordLogin() {
+    rememberAfterAuth(nextPath);
     window.location.href = `${process.env.NEXT_PUBLIC_API_BASE || "https://api.weered.ca"}/auth/discord`;
   }
 

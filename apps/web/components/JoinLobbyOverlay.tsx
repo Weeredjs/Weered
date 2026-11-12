@@ -9,6 +9,8 @@ type Props = {
   memberPerks: string[];
   accentColor?: string;
   joinMode: string;
+  /** Signed out, Join leads to a free account first, and the card says so. */
+  signedIn?: boolean;
   onJoin: () => Promise<void>;
 };
 
@@ -30,6 +32,7 @@ export default function JoinLobbyOverlay({
   memberPerks,
   accentColor,
   joinMode,
+  signedIn,
   onJoin,
 }: Props) {
   // "donkey's place": a name that already says whose it is.
@@ -260,7 +263,9 @@ export default function JoinLobbyOverlay({
             textAlign: "center",
           }}
         >
-          Joining is one click. Free. You can leave anytime.
+          {signedIn === false
+            ? "Free. Make an account in thirty seconds and you're in."
+            : "Joining is one click. Free. You can leave anytime."}
         </p>
       </div>
 

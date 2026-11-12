@@ -235,6 +235,7 @@ import {
   publishState,
   leaveRoom,
   settleOfficeDoor,
+  SQUARE_NAME,
   type Sock,
   type AuthedUser,
   type RoomState,
@@ -591,7 +592,7 @@ async function doJoin(ws: Sock, roomId: string) {
     send(ws, { type: "room:denied", roomId, reason: "lobby_deleted" });
     return false;
   }
-  if (roomId === "lobby" && !room.name) room.name = "Home Lobby";
+  if (roomId === "lobby" && !room.name) room.name = SQUARE_NAME;
 
   {
     const _u = ws.user as any;

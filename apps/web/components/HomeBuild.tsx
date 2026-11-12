@@ -16,6 +16,7 @@ import { useShellLook } from "../lib/shellDesign";
 import { makePlace, myPlace, placeAddress, type Place } from "../lib/place";
 import { GATES, setPlaceGate, type Gate } from "./PlaceGate";
 import { useWeered } from "./WeeredProvider";
+import { sizedImage } from "../lib/sizedImage";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "https://api.weered.ca";
 
@@ -192,7 +193,12 @@ export default function HomeBuild({
                   <Link href={`/lobby/${encodeURIComponent(l.id || "")}`} title={l.name || l.id}>
                     {l.logoUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element -- a lobby's own logo
-                      <img src={l.logoUrl} alt="" referrerPolicy="no-referrer" />
+                      <img
+                        src={sizedImage(l.logoUrl, 96)}
+                        alt=""
+                        loading="lazy"
+                        referrerPolicy="no-referrer"
+                      />
                     ) : (
                       <span className="home-build-mine-dot" aria-hidden>
                         {(l.name || l.id || "?").slice(0, 1).toUpperCase()}

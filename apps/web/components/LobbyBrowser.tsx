@@ -19,6 +19,7 @@ const MONO = "'SF Mono', 'Cascadia Mono', 'Fira Code', 'Consolas', monospace";
 import type { Lobby } from "@weered/shared";
 import { plural } from "../lib/plural";
 import { descriptionLead } from "../lib/descriptionLead";
+import { sizedImage } from "../lib/sizedImage";
 
 function hueFromId(id: string): number {
   return Math.abs([...id].reduce((a, c) => a + c.charCodeAt(0), 0)) % 360;
@@ -55,7 +56,8 @@ function LobbyLogo({ lobby, size }: { lobby: Lobby; size: number }) {
   if (lobby.logoUrl && ok) {
     return (
       <img
-        src={lobby.logoUrl}
+        src={sizedImage(lobby.logoUrl, size > 48 ? 128 : 96)}
+        loading="lazy"
         alt={lobby.name + " logo"}
         width={size}
         height={size}
@@ -198,7 +200,7 @@ function LobbyCard({ lobby, onClick }: { lobby: Lobby; onClick: () => void }) {
 
   const bannerBg: React.CSSProperties = hasBanner
     ? {
-        backgroundImage: `linear-gradient(180deg, rgba(6,6,12,.15) 0%, rgba(6,6,12,.85) 70%, rgba(6,6,12,.98) 100%), url(${lobby.bannerUrl})`,
+        backgroundImage: `linear-gradient(180deg, rgba(6,6,12,.15) 0%, rgba(6,6,12,.85) 70%, rgba(6,6,12,.98) 100%), url("${sizedImage(lobby.bannerUrl, 640)}")`,
         backgroundSize: "cover",
         backgroundPosition: "center",
       }

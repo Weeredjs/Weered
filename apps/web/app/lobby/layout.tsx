@@ -7,19 +7,17 @@ import { Metadata } from "next";
 // every lobby page reached search engines and AI crawlers as an empty shell.
 
 export const metadata: Metadata = {
-  title: "Lobbies",
-  description:
-    "Browse all Weered lobbies — Destiny 2, League of Legends, Fortnite, Path of Exile, CS2, D&D, paper trading, and more. Find your community.",
+  title: "Town Square",
+  description: "The Town Square: everyone on Weered talks here, and every lobby is one door away.",
   openGraph: {
-    title: "Lobbies — Weered",
-    description:
-      "Browse all Weered lobbies — gaming, trading, tabletop, and community spaces with voice chat, LFG, and game integrations.",
+    title: "Town Square — Weered",
+    description: "Everyone on Weered talks here, and every lobby is one door away.",
     url: "https://weered.ca/lobby",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Lobbies — Weered",
-    description: "Browse all Weered lobbies — gaming, trading, tabletop, and community spaces.",
+    title: "Town Square — Weered",
+    description: "Everyone on Weered talks here, and every lobby is one door away.",
   },
   alternates: { canonical: "https://weered.ca/lobby" },
 };

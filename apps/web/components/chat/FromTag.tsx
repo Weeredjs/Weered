@@ -7,6 +7,7 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { cachedHome, homeOf, type LobbyHome } from "../../lib/lobbyHomes";
+import { sizedImage } from "../../lib/sizedImage";
 
 /** A lobby's accent as a soft border, or the house violet. */
 function edge(accent: string | null): string {
@@ -66,7 +67,7 @@ export function FromTag({ userId }: { userId: string }) {
       {home.logoUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
-          src={home.logoUrl}
+          src={sizedImage(home.logoUrl, 32)}
           alt=""
           width={14}
           height={14}

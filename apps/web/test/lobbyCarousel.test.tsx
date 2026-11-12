@@ -27,9 +27,21 @@ describe("sizedImage", () => {
     expect(sizedImage("https://api.weered.ca/banners/x.webp", 96)).toBe(
       "/_next/image?url=https%3A%2F%2Fapi.weered.ca%2Fbanners%2Fx.webp&w=96&q=75",
     );
-    // Our /brand files load as they are, as do SVGs (the resizer refuses them).
-    expect(sizedImage("/brand/lobbies/a.png")).toBe("/brand/lobbies/a.png");
+    // Our own /brand pictures too: the built-in lobbies' banners are 2 MB PNGs.
+    expect(sizedImage("/brand/lobbies/a.png")).toBe(
+      "/_next/image?url=%2Fbrand%2Flobbies%2Fa.png&w=640&q=75",
+    );
+    expect(sizedImage("/brand/layouts/weered-violet.webp", 256)).toBe(
+      "/_next/image?url=%2Fbrand%2Flayouts%2Fweered-violet.webp&w=256&q=75",
+    );
+    // Left alone: SVGs and GIFs, a local path with a query, an already-sized one.
     expect(sizedImage("https://weered.ca/brand/x.svg")).toBe("https://weered.ca/brand/x.svg");
+    expect(sizedImage("/brand/roles/godfather.svg")).toBe("/brand/roles/godfather.svg");
+    expect(sizedImage("/brand/party.gif")).toBe("/brand/party.gif");
+    expect(sizedImage("/brand/eceb-logo-white.png?v=2")).toBe("/brand/eceb-logo-white.png?v=2");
+    expect(sizedImage("/_next/image?url=%2Fa.png&w=96&q=75")).toBe(
+      "/_next/image?url=%2Fa.png&w=96&q=75",
+    );
     expect(sizedImage("https://images.unsplash.com/p.jpg")).toBe(
       "https://images.unsplash.com/p.jpg",
     );
@@ -86,7 +98,8 @@ describe("LobbyCarousel", () => {
     expect(view.getAllByText("4 online").length).toBeGreaterThan(0);
     // The middle card, painted once on mount, has its banner loading.
     const banner = cards[0].querySelector("img.weered-drift-banner") as HTMLImageElement;
-    expect(banner.getAttribute("src")).toBe("/b.png");
+    // Through the resizer, like every /brand picture (lib/sizedImage.ts).
+    expect(banner.getAttribute("src")).toBe("/_next/image?url=%2Fb.png&w=640&q=75");
   });
 
   it("shows only lobbies with a banner and a logo, and one joins when its pictures arrive", () => {
@@ -110,8 +123,12 @@ describe("LobbyCarousel", () => {
     const cards = view.container.querySelectorAll("a.weered-drift-card");
     expect([...cards].every((c) => c.getAttribute("href") === "/lobby/gta6")).toBe(true);
     const first = cards[0] as HTMLElement;
-    expect(first.querySelector("img.weered-drift-banner")?.getAttribute("src")).toBe("/b.png");
-    expect(first.querySelector("img.weered-drift-logo")?.getAttribute("src")).toBe("/l.png");
+    expect(first.querySelector("img.weered-drift-banner")?.getAttribute("src")).toBe(
+      "/_next/image?url=%2Fb.png&w=640&q=75",
+    );
+    expect(first.querySelector("img.weered-drift-logo")?.getAttribute("src")).toBe(
+      "/_next/image?url=%2Fl.png&w=96&q=75",
+    );
   });
 
   it("draws nothing without lobbies", () => {

@@ -13,6 +13,7 @@ import MarkdownComposer from "./MarkdownComposer";
 import StartggCard from "../StartggCard";
 import SectionSidebar, { SectionManageModal, type Section } from "./ForumSections";
 import { ForumViewToggle, PostCardPreview, PostThumb, useForumView } from "./PostPreview";
+import { sizedImage } from "../../lib/sizedImage";
 
 type Post = {
   id: string;
@@ -859,7 +860,8 @@ export default function ForumPage({
                           >
                             {post.lobby.logoUrl && (
                               <img
-                                src={post.lobby.logoUrl}
+                                src={sizedImage(post.lobby.logoUrl, 32)}
+                                loading="lazy"
                                 alt=""
                                 style={{
                                   width: 12,

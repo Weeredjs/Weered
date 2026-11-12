@@ -187,7 +187,7 @@ export default function LeftRailStack({ onOpen }: { onOpen: (at?: string) => voi
       // Outside a lobby the link is the Town Square, so it says so.
       label: lobbyId && lobbyId !== "lobby" ? "Lobby" : "Town Square",
       href: lobbyHref,
-      active: pathname.startsWith("/lobby"),
+      active: pathname.startsWith("/lobby") && !pathname.startsWith("/lobby/create"),
     },
     {
       key: "home",

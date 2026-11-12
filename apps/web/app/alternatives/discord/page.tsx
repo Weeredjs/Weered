@@ -14,6 +14,10 @@ const TITLE = "A Discord alternative where servers aren't islands | Weered";
 const DESC =
   "Describe your server in a sentence and Weered builds it. Every lobby sits in one town: one account, one Town Square, and Downtown, where you walk from one community into the next. Free, in your browser.";
 const URL = "https://weered.ca/alternatives/discord";
+// Create account, headed for the builder. /lobby/create itself greets a signed-out
+// visitor with "Welcome back, sign in" (found in the 2026-11-12 review); someone
+// already signed in is passed straight through to the builder.
+const BUILD = "/login?mode=register&next=%2Flobby%2Fcreate";
 
 export const metadata: Metadata = {
   title: { absolute: TITLE },
@@ -88,7 +92,7 @@ export default function AlternativesDiscordPage() {
               One friends list. One Town Square.
             </p>
             <div className="mkt-cta-row">
-              <Link href="/lobby/create" className="mkt-cta-primary">
+              <Link href={BUILD} className="mkt-cta-primary">
                 Build yours, free
               </Link>
               <Link href="/" className="mkt-cta-secondary">
@@ -247,7 +251,7 @@ export default function AlternativesDiscordPage() {
           <div className="mkt-final-cta">
             <h2>Try it.</h2>
             <p>Describe a lobby in one sentence. It&apos;s free and it runs in your browser.</p>
-            <Link href="/lobby/create" className="mkt-cta-primary">
+            <Link href={BUILD} className="mkt-cta-primary">
               Build yours →
             </Link>
           </div>

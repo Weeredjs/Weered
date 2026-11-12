@@ -18,7 +18,7 @@ import { startDesign } from "../../lib/shellDesign";
 import { avatarFill } from "../../lib/avatarColor";
 import { plural } from "../../lib/plural";
 import { memberLabel } from "../../lib/socialProof";
-import { hideBroken } from "../../lib/sizedImage";
+import { hideBroken, sizedImage } from "../../lib/sizedImage";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "https://api.weered.ca";
 
@@ -664,6 +664,6 @@ function Row({
 }
 
 function Logo({ src, name }: { src?: string | null; name: string }) {
-  if (src) return <img src={src} alt="" onError={hideBroken} />;
+  if (src) return <img src={sizedImage(src, 96)} alt="" loading="lazy" onError={hideBroken} />;
   return <>{(name || "?").charAt(0).toUpperCase()}</>;
 }

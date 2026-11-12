@@ -4,6 +4,10 @@ import { displayName, resolveUserProfiles, namesOf } from "./userNames";
 import { swallow } from "./logger";
 import { isOfficeRoom } from "./officeRooms";
 import { doorShouldBeLocked, walkInsOn } from "./officeDoor";
+
+/** The room everyone on Weered shares (id "lobby"). Its name reaches presence
+ *  lines ("Online in Town Square") and last-seen notes; it was "Home Lobby". */
+export const SQUARE_NAME = "Town Square";
 import { randomUUID } from "node:crypto";
 import { type ReactionAgg } from "./chatHelpers";
 import { hostAvatar } from "./hostAvatar";
@@ -328,7 +332,7 @@ async function loadRoom(roomId: string): Promise<RoomState> {
       .upsert({
         where: { id: roomId },
         update: {},
-        create: { id: roomId, name: "Home Lobby", pinned: true, locked: false, ownerId: null },
+        create: { id: roomId, name: SQUARE_NAME, pinned: true, locked: false, ownerId: null },
       })
       .catch(swallow);
   }
@@ -381,7 +385,7 @@ async function loadRoom(roomId: string): Promise<RoomState> {
     const vm = String((dbRoom as any).voiceMode || "OPEN").toUpperCase();
     r.voiceMode = vm === "QUEUED" || vm === "LISTEN_ONLY" ? vm : "OPEN";
     if (roomId === "lobby") {
-      r.name = "Home Lobby";
+      r.name = SQUARE_NAME;
       r.pinned = true;
     }
     for (const m of dbRoom.members) {

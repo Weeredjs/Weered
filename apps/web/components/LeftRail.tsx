@@ -786,7 +786,7 @@ export default function LeftRail() {
                   href: lobbyHrefMain,
                   label: navLabels.lobby,
                   icon: navIcons.lobby,
-                  active: isLobbyActive,
+                  active: isLobbyActive && !pathname.startsWith("/lobby/create"),
                   onClick: undefined as any,
                   key: "lobby",
                 },

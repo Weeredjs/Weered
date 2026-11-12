@@ -66,7 +66,7 @@ export default function NotFound() {
         .nf-shield {
           width: 68px;
           height: 68px;
-          opacity: 0.42;
+          opacity: 1;
           margin: 0 auto 20px;
           display: block;
           animation: nfDrift 6s ease-in-out infinite;
@@ -157,7 +157,7 @@ export default function NotFound() {
 
       <div className="nf-root">
         <div className="nf-card">
-          <img src="/brand/logo/weered-shieldlogo-512.png" alt="Weered" className="nf-shield" />
+          <img src="/brand/logo/weered-logo-128.png" alt="Weered" className="nf-shield" />
           <div className="nf-404">404</div>
           <div className="nf-title">Wrong turn, exile.</div>
           <p className="nf-sub">

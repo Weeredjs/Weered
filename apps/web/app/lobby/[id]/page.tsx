@@ -9,6 +9,7 @@ import InviteModal from "../../../components/InviteModal";
 import { weeredReport } from "../../../lib/report";
 import { weeredToast } from "../../../lib/toast";
 import JoinLobbyOverlay from "../../../components/JoinLobbyOverlay";
+import { useJoinLobby } from "./useJoinLobby";
 import LobbyChatDrawer from "../../../components/LobbyChatDrawer";
 import LobbyHeroBar from "../../../components/LobbyHeroBar";
 import { memberLabel } from "../../../lib/socialProof";
@@ -475,6 +476,18 @@ export default function LobbyIdPage() {
     if (!doorOn || !memberChecked || isMember) return;
     setDoorOpen(doorLock || doorMode !== "OPEN" || !doorDismissed(lobbyId));
   }, [doorOn, doorLock, doorMode, memberChecked, isMember, lobbyId]);
+
+  const joinLobbyNow = useJoinLobby({
+    api: API,
+    lobbyId,
+    meId: me?.id || "",
+    headers: authHeaders,
+    ready: memberChecked && !!lobbyInfo,
+    isMember,
+    open: doorMode === "OPEN" && !doorOn,
+    joinParam: searchParams?.get("join"),
+    onJoined: (m) => (setMembership(m), setMemberChecked(true)),
+  });
   const dTheme = L?.theme || {};
   // The look reaches the rails and the lobby's rooms too (components/SpaceTheme.tsx),
   // the draft's while designing.
@@ -836,20 +849,8 @@ export default function LobbyIdPage() {
           memberPerks={Array.isArray(lobbyInfo.memberPerks) ? lobbyInfo.memberPerks : []}
           accentColor={lobbyInfo.accentColor || undefined}
           joinMode={lobbyInfo.joinMode || "OPEN"}
-          onJoin={async () => {
-            try {
-              const r = await fetch(`${API}/lobbies/${encodeURIComponent(lobbyId)}/join`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json", ...authHeaders() },
-                body: JSON.stringify({}),
-              });
-              const j = await r.json();
-              if (j.ok && j.membership) {
-                setMembership(j.membership);
-                setMemberChecked(true);
-              }
-            } catch {}
-          }}
+          signedIn={!!me?.id}
+          onJoin={joinLobbyNow}
         />
       )}
       {lobbyId === "windrose" && isMember && (

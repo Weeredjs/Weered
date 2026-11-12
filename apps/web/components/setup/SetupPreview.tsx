@@ -496,7 +496,7 @@ export default function SetupPreview(p: Props) {
     recent: (
       <div key="recent" style={card({ paddingBottom: 6 })}>
         {title("Recent")}
-        {["Home Lobby", "Dev Chat"].map((r) => (
+        {["Town Square", "Dev Chat"].map((r) => (
           <div key={r} style={{ padding: "4px 11px" }}>
             <div style={{ fontSize: 10.5, fontWeight: 600, color: "rgba(255,255,255,.8)" }}>
               {r}
@@ -518,7 +518,7 @@ export default function SetupPreview(p: Props) {
     crew: (
       <div key="crew" style={card({ paddingBottom: 6 })}>
         {title("Crew · 2 online")}
-        {person(display, "[8MTR] Home Lobby", p.avatarColor)}
+        {person(display, "[8MTR] Town Square", p.avatarColor)}
         {person("donkey", "[8MTR] Destiny 2", "#7c3aed", true)}
       </div>
     ),
