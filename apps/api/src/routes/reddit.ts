@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { fetchWithTimeout } from "../lib/fetchWithTimeout";
 import { BoundedMap } from "../lib/boundedMap";
+import { elementBlocks, findTags, firstInner, readCapped, tagAttrs } from "../lib/htmlScan";
 
 const ALLOWED_SUBS: Record<string, string> = {
   gta6: "GTA6",
@@ -83,18 +84,24 @@ function extractMedia(contentHtml: string): {
 
 function parseAtom(xml: string): RedditPost[] {
   const posts: RedditPost[] = [];
-  const entryRx = /<entry>([\s\S]*?)<\/entry>/g;
-  let m: RegExpExecArray | null;
-  while ((m = entryRx.exec(xml)) !== null) {
-    const block = m[1];
-    const title = decode((/<title>([\s\S]*?)<\/title>/.exec(block)?.[1] || "").trim());
-    const url = (/<link[^>]*href="([^"]+)"/.exec(block)?.[1] || "").trim();
+  // One pass per tag (lib/htmlScan.ts), as everywhere a feed is read.
+  for (const block of elementBlocks(xml, ["entry"], { limit: 100 })) {
+    const title = decode((firstInner(block, "title", 1000) || "").trim());
+    const url = (
+      findTags(block, "link", { limit: 5 })
+        .map(tagAttrs)
+        .find((a) => a.href)?.href || ""
+    ).trim();
     const author = decode(
-      (/<author>[\s\S]*?<name>(?:\/u\/)?([^<]+)<\/name>/.exec(block)?.[1] || "").trim(),
+      (firstInner(firstInner(block, "author", 1000) || "", "name", 200) || "")
+        .replace(/^\/u\//, "")
+        .trim(),
     );
-    const updatedAt = (/<updated>([^<]+)<\/updated>/.exec(block)?.[1] || "").trim();
-    const flair = decode((/<category[^>]*term="([^"]+)"/.exec(block)?.[1] || "").trim());
-    const contentHtml = /<content[^>]*>([\s\S]*?)<\/content>/.exec(block)?.[1] || "";
+    const updatedAt = (firstInner(block, "updated", 100) || "").trim();
+    const flair = decode(
+      (findTags(block, "category", { limit: 3 }).map(tagAttrs)[0]?.term || "").trim(),
+    );
+    const contentHtml = firstInner(block, "content", 40_000) || "";
     const idMatch = /comments\/([a-z0-9]+)\//.exec(url);
     const id = idMatch ? idMatch[1] : url;
     if (!title || !url || !url.includes("/comments/")) continue;
@@ -140,7 +147,7 @@ export default async function redditRoutes(app: FastifyInstance) {
           });
         return reply.code(502).send({ ok: false, error: "reddit_upstream", status: res.status });
       }
-      const xml = await res.text();
+      const xml = await readCapped(res, 2_000_000);
       const posts = parseAtom(xml).slice(0, 25);
       cache.set(cacheKey, { posts, cachedAt: Date.now() });
       return reply.send({ ok: true, sub, posts, updatedAt: new Date().toISOString() });

@@ -3,6 +3,7 @@ import { log, swallow } from "./logger";
 import { rooms } from "./roomState";
 import { fetchSafe } from "./ssrfGuard";
 import { decodeEntities, stripTags } from "./htmlText";
+import { elementBlocks, findTags, firstInner, readCapped, tagAttrs } from "./htmlScan";
 import { getTwitchAppToken } from "./presence";
 import { createNotification } from "./notifications";
 import { WEERED_AUTHOR, hostAuthor, postToLobbyChat } from "./lobbyPost";
@@ -222,17 +223,21 @@ const text = (s: string | undefined) =>
 
 /** RSS 2.0 items and Atom entries, newest first as the feed lists them. */
 export function parseFeed(xml: string): FeedItem[] {
+  // lib/htmlScan.ts: one pass over the feed, whatever a stranger's server sent.
+  // The patterns this replaced rescanned to the end from every unclosed tag,
+  // so a feed of "<title>" with no close held the API for minutes per check
+  // (fan-out audit, 2026-11-13).
   const out: FeedItem[] = [];
-  const channel = text(/<title[^>]*>([\s\S]*?)<\/title>/i.exec(xml)?.[1]);
-  const blocks = xml.match(/<(item|entry)[\s>][\s\S]*?<\/\1>/gi) || [];
-  for (const b of blocks.slice(0, 30)) {
-    const title = text(/<title[^>]*>([\s\S]*?)<\/title>/i.exec(b)?.[1]);
+  const channel = text(firstInner(xml, "title", 400));
+  for (const b of elementBlocks(xml, ["item", "entry"], { limit: 30 })) {
+    const title = text(firstInner(b, "title", 1000));
+    const links = findTags(b, "link", { limit: 20 }).map(tagAttrs);
     const link =
-      /<link[^>]*rel="alternate"[^>]*href="([^"]+)"/i.exec(b)?.[1] ||
-      /<link[^>]*href="([^"]+)"/i.exec(b)?.[1] ||
-      text(/<link[^>]*>([\s\S]*?)<\/link>/i.exec(b)?.[1]);
-    const id = text(/<(guid|id)[^>]*>([\s\S]*?)<\/\1>/i.exec(b)?.[2]) || link;
-    const author = text(/<author>[\s\S]*?<name>([\s\S]*?)<\/name>/i.exec(b)?.[1]);
+      links.find((a) => (a.rel || "").toLowerCase() === "alternate" && a.href)?.href ||
+      links.find((a) => a.href)?.href ||
+      text(firstInner(b, "link", 2000));
+    const id = text(firstInner(b, "guid", 400) ?? firstInner(b, "id", 400)) || link;
+    const author = text(firstInner(firstInner(b, "author", 2000) || "", "name", 200));
     if (!id || !/^https?:\/\//i.test(link || "")) continue;
     out.push({
       id: id.slice(0, 300),
@@ -252,7 +257,7 @@ async function youtubeFeedUrl(target: string, state: any): Promise<string> {
   if (!channelId) {
     const page = target.startsWith("@") ? `https://www.youtube.com/${target}` : target;
     const res = await fetchSafe(page, { headers: { ...UA, "Accept-Language": "en" } }, 8000);
-    const html = (await res.text()).slice(0, 2_000_000);
+    const html = await readCapped(res, 2_000_000);
     channelId =
       /<link rel="canonical" href="https:\/\/www\.youtube\.com\/channel\/(UC[\w-]{22})"/.exec(
         html,
@@ -337,7 +342,9 @@ async function runFeeds(now: number) {
           spec.source === "youtube" ? await youtubeFeedUrl(spec.target, state) : spec.target;
         const res = await fetchSafe(url, { headers: UA }, 8000);
         if (!res.ok) throw new Error(`the feed answered ${res.status}`);
-        const items = parseFeed((await res.text()).slice(0, 3_000_000));
+        // Read at most 1 MB, and stop there: a compressed body can unpack to
+        // gigabytes, and the whole of it used to be read before the cut.
+        const items = parseFeed(await readCapped(res, 1_000_000));
         const seen = new Set<string>(Array.isArray(state.seen) ? state.seen : []);
         const fresh = state.primed
           ? items

@@ -1,6 +1,8 @@
 import { swallow } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 import { fetchSafe } from "../lib/ssrfGuard";
+import { parseMeta } from "../lib/embedCheck";
+import { readCapped } from "../lib/htmlScan";
 import { fetchWithTimeout } from "../lib/fetchWithTimeout";
 import { prisma } from "../lib/prisma";
 
@@ -132,21 +134,6 @@ export default async function activityRoutes(app: FastifyInstance, opts: Opts) {
     return reply.send({ ok: true, feed: feed.slice(0, 20) });
   });
 
-  const NAMED_ENTITIES: Record<string, string> = {
-    amp: "&",
-    lt: "<",
-    gt: ">",
-    quot: '"',
-    apos: "'",
-    nbsp: " ",
-  };
-  function decodeEntities(s: string): string {
-    return String(s || "")
-      .replace(/&#x([0-9a-f]+);/gi, (_m, h) => String.fromCodePoint(Number.parseInt(h, 16)))
-      .replace(/&#(\d+);/g, (_m, d) => String.fromCodePoint(Number.parseInt(d, 10)))
-      .replace(/&([a-z]+);/gi, (m, name) => NAMED_ENTITIES[String(name).toLowerCase()] ?? m);
-  }
-
   const unfurlCache = new Map<string, { data: any; expiresAt: number }>();
   const UNFURL_CACHE_MAX = 500;
   function cacheUnfurl(key: string, data: any) {
@@ -159,109 +146,95 @@ export default async function activityRoutes(app: FastifyInstance, opts: Opts) {
     unfurlCache.set(key, { data, expiresAt: Date.now() + 30 * 60 * 1000 });
   }
 
-  app.get("/unfurl", async (req, reply) => {
-    const url = String((req as any).query?.url || "");
-    if (!url || !url.startsWith("http")) return reply.send({ ok: false });
+  app.get(
+    "/unfurl",
+    { config: { rateLimit: { max: 40, timeWindow: "1 minute" } } },
+    async (req, reply) => {
+      const url = String((req as any).query?.url || "");
+      if (!url || !url.startsWith("http")) return reply.send({ ok: false });
 
-    const cached = unfurlCache.get(url);
-    if (cached && cached.expiresAt > Date.now()) return reply.send(cached.data);
+      const cached = unfurlCache.get(url);
+      if (cached && cached.expiresAt > Date.now()) return reply.send(cached.data);
 
-    if (/^https?:\/\/(www\.)?(youtube\.com|youtu\.be)\//i.test(url)) {
-      try {
-        const oe = await fetchWithTimeout(
-          `https://www.youtube.com/oembed?url=${encodeURIComponent(url)}&format=json`,
-          {
-            headers: { "User-Agent": "Mozilla/5.0 (compatible; Twitterbot/1.0)" },
-          },
-        );
-        if (oe.ok) {
-          const j: any = await oe.json();
-          const result = {
-            ok: true,
-            title: j.title || "",
-            description: j.author_name ? `by ${j.author_name}` : "",
-            image: j.thumbnail_url || "",
-            siteName: "YouTube",
-            url,
-          };
-          if (result.title) {
-            cacheUnfurl(url, result);
+      if (/^https?:\/\/(www\.)?(youtube\.com|youtu\.be)\//i.test(url)) {
+        try {
+          const oe = await fetchWithTimeout(
+            `https://www.youtube.com/oembed?url=${encodeURIComponent(url)}&format=json`,
+            {
+              headers: { "User-Agent": "Mozilla/5.0 (compatible; Twitterbot/1.0)" },
+            },
+          );
+          if (oe.ok) {
+            const j: any = await oe.json();
+            const result = {
+              ok: true,
+              title: j.title || "",
+              description: j.author_name ? `by ${j.author_name}` : "",
+              image: j.thumbnail_url || "",
+              siteName: "YouTube",
+              url,
+            };
+            if (result.title) {
+              cacheUnfurl(url, result);
+            }
+            return reply.send(result);
           }
-          return reply.send(result);
+        } catch (e) {
+          swallow(e);
         }
-      } catch (e) {
-        swallow(e);
       }
-    }
 
-    try {
-      // The URL came from a forum post or a chat message, so it is a stranger's
-      // choice of where this server makes a request. fetchPublic refuses
-      // loopback, private and cloud-metadata addresses, and re-checks every
-      // redirect — "follow" would otherwise let a public URL bounce the
-      // droplet into its own network.
-      const res = await fetchSafe(
-        url,
-        {
-          headers: {
-            "User-Agent": "Mozilla/5.0 (compatible; Twitterbot/1.0)",
-            Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-            "Accept-Language": "en-US,en;q=0.9",
+      try {
+        // The URL came from a forum post or a chat message, so it is a stranger's
+        // choice of where this server makes a request. fetchPublic refuses
+        // loopback, private and cloud-metadata addresses, and re-checks every
+        // redirect — "follow" would otherwise let a public URL bounce the
+        // droplet into its own network.
+        const res = await fetchSafe(
+          url,
+          {
+            headers: {
+              "User-Agent": "Mozilla/5.0 (compatible; Twitterbot/1.0)",
+              Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+              "Accept-Language": "en-US,en;q=0.9",
+            },
           },
-        },
-        4000,
-        // A link preview has no business on port 22 or 6379; restricting to the
-        // web ports also removes most of this endpoint's value as a port
-        // scanner. Not the default in the guard, because CRCON links need it off.
-        { webPortsOnly: true },
-      );
+          4000,
+          // A link preview has no business on port 22 or 6379; restricting to the
+          // web ports also removes most of this endpoint's value as a port
+          // scanner. Not the default in the guard, because CRCON links need it off.
+          { webPortsOnly: true },
+        );
 
-      if (!res.ok) return reply.send({ ok: false });
-      const contentType = res.headers.get("content-type") || "";
-      if (!contentType.includes("text/html")) return reply.send({ ok: false });
+        if (!res.ok) return reply.send({ ok: false });
+        const contentType = res.headers.get("content-type") || "";
+        if (!contentType.includes("text/html")) return reply.send({ ok: false });
 
-      const html = await res.text();
-      const first4k = html.slice(0, 16000);
+        // The head only, read as it arrives and no further than 64 KB, and its
+        // tags found by lib/embedCheck.ts parseMeta (one pass, lib/htmlScan.ts).
+        // The whole body used to be read, unpacked and searched with patterns
+        // that held the API for seconds on a page built for them (fan-out audit,
+        // 2026-11-13).
+        const html = await readCapped(res, 64 * 1024, /<\/head\s*>/i);
+        const m = parseMeta(html, new URL(res.url || url));
 
-      const og = (prop: string) => {
-        const m =
-          first4k.match(
-            new RegExp(`<meta[^>]+property=["']og:${prop}["'][^>]+content=["']([^"']+)["']`, "i"),
-          ) ||
-          first4k.match(
-            new RegExp(`<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:${prop}["']`, "i"),
-          );
-        return m?.[1] || "";
-      };
-      const meta = (name: string) => {
-        const m =
-          first4k.match(
-            new RegExp(`<meta[^>]+name=["']${name}["'][^>]+content=["']([^"']+)["']`, "i"),
-          ) ||
-          first4k.match(
-            new RegExp(`<meta[^>]+content=["']([^"']+)["'][^>]+name=["']${name}["']`, "i"),
-          );
-        return m?.[1] || "";
-      };
+        const result = {
+          ok: true,
+          title: m.title || "",
+          description: m.description || "",
+          image: m.image || "",
+          siteName: m.site || "",
+          url,
+        };
 
-      const titleTag = first4k.match(/<title[^>]*>([^<]+)<\/title>/i)?.[1] || "";
+        if (result.title || result.description) {
+          cacheUnfurl(url, result);
+        }
 
-      const result = {
-        ok: true,
-        title: decodeEntities(og("title") || meta("title") || titleTag || ""),
-        description: decodeEntities(og("description") || meta("description") || ""),
-        image: og("image") || "",
-        siteName: decodeEntities(og("site_name") || ""),
-        url: og("url") || url,
-      };
-
-      if (result.title || result.description) {
-        cacheUnfurl(url, result);
+        return reply.send(result);
+      } catch {
+        return reply.send({ ok: false });
       }
-
-      return reply.send(result);
-    } catch {
-      return reply.send({ ok: false });
-    }
-  });
+    },
+  );
 }

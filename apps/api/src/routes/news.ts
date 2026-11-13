@@ -5,6 +5,7 @@ import { fetchWithTimeout } from "../lib/fetchWithTimeout";
 import { prisma } from "../lib/prisma";
 import { assertSafeUrl } from "../lib/ssrfGuard";
 import { BoundedMap } from "../lib/boundedMap";
+import { elementBlocks, findTags, firstInner, readCapped, tagAttrs } from "../lib/htmlScan";
 
 // Rows stored before titles were decoded at ingestion still hold entities
 // (&#8216;); decoding again on the way out is harmless for clean ones.
@@ -86,43 +87,45 @@ export default async function newsRoutes(app: FastifyInstance) {
         redirect: "follow",
       });
       if (!res.ok) return reply.code(502).send({ ok: false, error: "fetch_failed" });
-      const html = await res.text();
+      // At most 1 MB, and every tag found in one pass (lib/htmlScan.ts). The
+      // patterns this replaced rescanned to the end of the page from every
+      // unclosed tag (fan-out audit, 2026-11-13).
+      const html = await readCapped(res, 1_000_000);
 
-      const ogTitle =
-        html.match(/<meta[^>]+property="og:title"[^>]+content="([^"]+)"/i)?.[1] ||
-        html.match(/<title>(?:<!\[CDATA\[)?(.*?)(?:\]\]>)?<\/title>/i)?.[1] ||
-        "";
-      const ogImage =
-        html.match(/<meta[^>]+property="og:image"[^>]+content="([^"]+)"/i)?.[1] ||
-        html.match(/<meta[^>]+name="twitter:image"[^>]+content="([^"]+)"/i)?.[1] ||
-        null;
-      const ogDesc =
-        html.match(/<meta[^>]+property="og:description"[^>]+content="([^"]+)"/i)?.[1] ||
-        html.match(/<meta[^>]+name="description"[^>]+content="([^"]+)"/i)?.[1] ||
-        "";
-      const ogSiteName =
-        html.match(/<meta[^>]+property="og:site_name"[^>]+content="([^"]+)"/i)?.[1] || "";
+      const metas: Record<string, string> = {};
+      for (const a of findTags(html, "meta").map(tagAttrs)) {
+        const key = (a.property || a.name || "").toLowerCase();
+        if (key && a.content !== undefined && !(key in metas)) metas[key] = a.content;
+      }
+      const cdata = (s: string | undefined) =>
+        s?.startsWith("<![CDATA[") && s.endsWith("]]>") ? s.slice(9, -3) : s;
+      const ogTitle = metas["og:title"] || cdata(firstInner(html, "title", 400)) || "";
+      const ogImage = metas["og:image"] || metas["twitter:image"] || null;
+      const ogDesc = metas["og:description"] || metas.description || "";
+      const ogSiteName = metas["og:site_name"] || "";
       const pubDate =
-        html.match(/<meta[^>]+property="article:published_time"[^>]+content="([^"]+)"/i)?.[1] ||
-        html.match(/<time[^>]+datetime="([^"]+)"/i)?.[1] ||
+        metas["article:published_time"] ||
+        findTags(html, "time", { limit: 5 })
+          .map(tagAttrs)
+          .find((a) => a.datetime)?.datetime ||
         null;
-      const author =
-        html.match(/<meta[^>]+name="author"[^>]+content="([^"]+)"/i)?.[1] ||
-        html.match(/<meta[^>]+property="article:author"[^>]+content="([^"]+)"/i)?.[1] ||
-        null;
+      const author = metas.author || metas["article:author"] || null;
 
       let body = "";
-      const articleMatch = html.match(/<article[^>]*>([\s\S]*?)<\/article>/i);
-      const mainMatch = html.match(/<main[^>]*>([\s\S]*?)<\/main>/i);
-      const rawBody = articleMatch?.[1] || mainMatch?.[1] || "";
+      const rawBody =
+        firstInner(html, "article", 1_000_000) || firstInner(html, "main", 1_000_000) || "";
 
       if (rawBody) {
         const blocks: string[] = [];
-        const blockRx = /<(h[1-6]|p|figcaption|blockquote)[^>]*>([\s\S]*?)<\/\1>/gi;
-        let bm: RegExpExecArray | null;
-        while ((bm = blockRx.exec(rawBody)) !== null) {
-          const tag = bm[1].toLowerCase();
-          const text = htmlToText(bm[2]);
+        for (const b of elementBlocks(
+          rawBody,
+          ["h1", "h2", "h3", "h4", "h5", "h6", "p", "figcaption", "blockquote"],
+          { limit: 400, blockMax: 20_000 },
+        )) {
+          const tag = (/^<([a-z0-9]+)/i.exec(b)?.[1] || "p").toLowerCase();
+          const gt = b.indexOf(">");
+          const closeAt = b.lastIndexOf("</");
+          const text = htmlToText(b.slice(gt + 1, closeAt > gt ? closeAt : b.length));
           if (!text || text.length < 10) continue;
           if (tag.startsWith("h")) {
             blocks.push(`## ${text}`);
@@ -175,18 +178,15 @@ export default async function newsRoutes(app: FastifyInstance) {
           "emoji",
           "smiley",
         ];
-        const imgRx = /<img[^>]+src=["']([^"']+)["'][^>]*>/gi;
-        const imgAltRx = /\balt=["']([^"']*)["']/i;
         const images: { src: string; alt: string }[] = [];
-        let im: RegExpExecArray | null;
-        while ((im = imgRx.exec(rawBody)) !== null) {
-          const src = im[1];
+        for (const a of findTags(rawBody, "img", { limit: 200 }).map(tagAttrs)) {
+          const src = a.src || "";
           if (!src || src.length < 20) continue;
           const srcLower = src.toLowerCase();
           if (AD_PATTERNS.some((p) => srcLower.includes(p))) continue;
           if (!srcLower.startsWith("http") && !srcLower.startsWith("//")) continue;
           if (/\b[12]x[12]\b/.test(src)) continue;
-          images.push({ src, alt: (imgAltRx.exec(im[0]) || [])[1] || "" });
+          images.push({ src, alt: a.alt || "" });
         }
         if (images.length && body) {
           const paras = body.split("\n\n");

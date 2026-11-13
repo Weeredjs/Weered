@@ -11,6 +11,7 @@
 // a game's mix is kept 15 minutes.
 import { fetchWithTimeout } from "./fetchWithTimeout";
 import { decodeEntities, stripTags } from "./htmlText";
+import { elementBlocks, findTags, firstInner, readCapped, tagAttrs } from "./htmlScan";
 import { swallow } from "./logger";
 import { BoundedMap } from "./boundedMap";
 
@@ -81,18 +82,18 @@ const plain = (s: string | undefined) =>
     .replace(/\s+/g, " ")
     .replace(/ ([.,;:!?)])/g, "$1")
     .trim();
-const tagText = (block: string, name: string) =>
-  new RegExp(`<${name}(?:\\s[^>]*)?>([\\s\\S]*?)</${name}>`, "i").exec(block)?.[1];
+// One pass per tag (lib/htmlScan.ts), as everywhere a feed is read.
+const tagText = (block: string, name: string) => firstInner(block, name, 4000);
 
 /** RSS items and Atom entries, with their date, picture and any YouTube id. */
 export function parsePress(xml: string, source: string): GameNewsItem[] {
   const out: GameNewsItem[] = [];
-  const blocks = xml.match(/<(item|entry)[\s>][\s\S]*?<\/\1>/gi) || [];
-  for (const b of blocks.slice(0, 120)) {
+  for (const b of elementBlocks(xml, ["item", "entry"], { limit: 120 })) {
     const title = plain(tagText(b, "title"));
+    const links = findTags(b, "link", { limit: 20 }).map(tagAttrs);
     const url = httpsUrl(
-      /<link[^>]*rel="alternate"[^>]*href="([^"]+)"/i.exec(b)?.[1] ||
-        /<link[^>]*href="([^"]+)"/i.exec(b)?.[1] ||
+      links.find((a) => (a.rel || "").toLowerCase() === "alternate" && a.href)?.href ||
+        links.find((a) => a.href)?.href ||
         plain(tagText(b, "link")),
     );
     const date = iso(
@@ -181,7 +182,7 @@ async function pressStories(): Promise<GameNewsItem[]> {
       PRESS.map(async (p) => {
         try {
           const r = await fetchWithTimeout(p.url, { headers: UA }, 10_000);
-          return r.ok ? parsePress(await r.text(), p.source) : [];
+          return r.ok ? parsePress(await readCapped(r, 2_000_000), p.source) : [];
         } catch (e) {
           swallow(e);
           return [];

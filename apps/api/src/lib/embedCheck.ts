@@ -10,6 +10,7 @@
 // (private addresses and redirect tricks refused).
 import { fetchSafe } from "./ssrfGuard";
 import { decodeEntities, stripTags } from "./htmlText";
+import { findTags, firstInner, readCapped, tagAttrs } from "./htmlScan";
 
 export type EmbedCheck =
   | { ok: false; error: string }
@@ -83,51 +84,8 @@ export function knownEmbed(u: URL): string | null {
   return null;
 }
 
-const NAME_CH = /[a-zA-Z_:.-]/;
-const SPACE_CH = /\s/;
-const TAG_MAX = 8192;
-
-/**
- * A tag's attributes, read in one pass. The regex this replaced backtracked on
- * a long run of name characters with no "=", so one page built for it held the
- * API's event loop for tens of seconds per request (red team 2026-11-01,
- * finding 6). Each character is now looked at a fixed number of times, and a
- * tag is cut at 8 KB, far past any real meta or link tag.
- */
-function tagAttrs(tag: string): Record<string, string> {
-  const out: Record<string, string> = {};
-  const s = tag.length > TAG_MAX ? tag.slice(0, TAG_MAX) : tag;
-  let i = 1;
-  while (i < s.length && !SPACE_CH.test(s[i]) && s[i] !== ">" && s[i] !== "/") i++;
-  while (i < s.length) {
-    while (i < s.length && !NAME_CH.test(s[i])) {
-      if (s[i] === ">") return out;
-      i++;
-    }
-    const start = i;
-    while (i < s.length && NAME_CH.test(s[i])) i++;
-    const name = s.slice(start, i).toLowerCase();
-    let j = i;
-    while (j < s.length && SPACE_CH.test(s[j])) j++;
-    if (s[j] !== "=") continue;
-    j++;
-    while (j < s.length && SPACE_CH.test(s[j])) j++;
-    const q = s[j];
-    if (q === '"' || q === "'") {
-      const close = s.indexOf(q, j + 1);
-      if (close < 0) return out;
-      out[name] = s.slice(j + 1, close);
-      i = close + 1;
-    } else {
-      const v = j;
-      while (j < s.length && !SPACE_CH.test(s[j]) && s[j] !== '"' && s[j] !== "'" && s[j] !== ">")
-        j++;
-      if (j > v) out[name] = s.slice(v, j);
-      i = Math.max(j, i);
-    }
-  }
-  return out;
-}
+// Tags are found and read by lib/htmlScan.ts, which looks at each character a
+// fixed number of times (red team 2026-11-01 finding 6; fan-out audit 2026-11-13).
 
 const clean = (s: string | undefined, max: number) =>
   s
@@ -146,26 +104,26 @@ function httpsUrl(v: string | undefined, base: URL): string | undefined {
 
 /** Title, description, picture, icon and site name from a page's <head>. */
 export function parseMeta(html: string, base: URL) {
-  const end = html.search(/<\/head>/i);
+  const end = html.search(/<\/head\s*>/i);
   const head = (end > 0 ? html.slice(0, end) : html).slice(0, MAX_HEAD);
   const meta: Record<string, string> = {};
-  for (const m of head.matchAll(/<meta\b[^>]*>/gi)) {
-    const a = tagAttrs(m[0]);
+  for (const tag of findTags(head, "meta")) {
+    const a = tagAttrs(tag);
     const key = (a.property || a.name || "").toLowerCase();
     if (key && a.content !== undefined && !(key in meta)) meta[key] = a.content;
   }
   let icon: string | undefined;
-  for (const m of head.matchAll(/<link\b[^>]*>/gi)) {
-    const a = tagAttrs(m[0]);
+  for (const tag of findTags(head, "link")) {
+    const a = tagAttrs(tag);
     const rel = (a.rel || "").toLowerCase().split(/\s+/);
     if (a.href && (rel.includes("icon") || rel.includes("apple-touch-icon"))) {
       icon = httpsUrl(a.href, base);
       if (icon && rel.includes("apple-touch-icon")) break;
     }
   }
-  const t = head.match(/<title[^>]*>([\s\S]{0,400}?)<\/title>/i);
+  const title = firstInner(head, "title", 400);
   return {
-    title: clean(meta["og:title"] || meta["twitter:title"] || t?.[1], 140),
+    title: clean(meta["og:title"] || meta["twitter:title"] || title, 140),
     description: clean(
       meta["og:description"] || meta.description || meta["twitter:description"],
       280,
@@ -176,25 +134,7 @@ export function parseMeta(html: string, base: URL) {
   };
 }
 
-async function readHead(res: Response): Promise<string> {
-  if (!res.body) return "";
-  const reader = res.body.getReader();
-  const dec = new TextDecoder("utf-8");
-  let out = "";
-  let n = 0;
-  try {
-    while (n < MAX_HEAD) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      n += value.byteLength;
-      out += dec.decode(value, { stream: true });
-      if (/<\/head>/i.test(out)) break;
-    }
-  } finally {
-    reader.cancel().catch(() => {});
-  }
-  return out;
-}
+const readHead = (res: Response) => readCapped(res, MAX_HEAD, /<\/head\s*>/i);
 
 const cache = new Map<string, { at: number; ttl: number; value: EmbedCheck }>();
 function remember(key: string, value: EmbedCheck, ttl: number): EmbedCheck {

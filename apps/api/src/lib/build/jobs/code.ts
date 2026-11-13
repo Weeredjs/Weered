@@ -1,5 +1,6 @@
 import { B, E, S, VOICE, clip, clipText, oneOf } from "../common";
 import type { BuildJob } from "../job";
+import { findTags } from "../../htmlScan";
 
 // Custom blocks and games: the AI writes a small page that runs in the walled-
 // off box (web lib/blockSandbox.ts): no network, no Weered cookies or storage,
@@ -50,11 +51,19 @@ summary: one short plain sentence (20 words at most) saying what you made.
 
 ${VOICE}`;
 
-const FORBIDDEN: [RegExp, string][] = [
+// A tag's own text, every one of that name, open or closed. Found in one pass
+// (lib/htmlScan.ts): the patterns this replaced rescanned from every opening
+// with no ">" (fan-out audit, 2026-11-13).
+const tags = (code: string, name: string) =>
+  findTags(code, name, { limit: 5000, tagMax: CODE_MAX, unclosed: true });
+const anyTag = (name: string, re: RegExp) => (code: string) =>
+  tags(code, name).some((t) => re.test(t));
+
+const FORBIDDEN: [RegExp | ((code: string) => boolean), string][] = [
   [/type\s*=\s*["']?password/i, "a password field"],
   [/<form\b/i, "a form"],
   [/<iframe\b|<frame\b|<object\b|<embed\b/i, "an embedded page"],
-  [/<script[^>]*\bsrc\s*=/i, "an outside script"],
+  [anyTag("script", /\bsrc\s*=/i), "an outside script"],
   [/<link\b|@import\b/i, "outside styles"],
   [/\b(fetch|XMLHttpRequest|WebSocket|EventSource|importScripts|sendBeacon)\b/, "network calls"],
   [/document\.cookie|localStorage|sessionStorage|indexedDB/i, "browser storage"],
@@ -63,8 +72,8 @@ const FORBIDDEN: [RegExp, string][] = [
   // an outside page inside a lobby is a fake sign-in waiting to happen. (The
   // frame also reloads itself if it ever navigates: CustomBlockFrame.tsx.)
   [/\blocation\s*(=[^=]|\.\s*(href|assign|replace)\b)/, "leaving the page"],
-  [/<meta\b[^>]*http-equiv/i, "leaving the page"],
-  [/<a\b[^>]*\bhref\s*=\s*["']?\s*(https?:|\/\/|javascript:|data:)/i, "outside links"],
+  [anyTag("meta", /http-equiv/i), "leaving the page"],
+  [anyTag("a", /\bhref\s*=\s*["']?\s*(https?:|\/\/|javascript:|data:)/i), "outside links"],
   [/\bjavascript\s*:/i, "leaving the page"],
 ];
 
@@ -83,8 +92,8 @@ export function cleanCode(raw: unknown, fallbackHeight: "s" | "m" | "l"): CodeRe
     return { ok: false, reason: "That one came out too big for the box. Ask for a smaller version." };
   const code = whole;
   if (code.length < 20) return { ok: false, reason: "That one came back empty. Try again." };
-  for (const [re, what] of FORBIDDEN)
-    if (re.test(code)) return { ok: false, reason: `That one used ${what}, which the box doesn't allow. Try again.` };
+  for (const [rule, what] of FORBIDDEN)
+    if (typeof rule === "function" ? rule(code) : rule.test(code)) return { ok: false, reason: `That one used ${what}, which the box doesn't allow. Try again.` };
   return {
     ok: true,
     title: clip(r.title, 60) || "Custom block",
