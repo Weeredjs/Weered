@@ -12,6 +12,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
+import { isHostOf } from "../../lib/hostOf";
 
 const API = "/api";
 const SERIF = "Georgia, 'Iowan Old Style', Cambria, 'Times New Roman', serif";
@@ -99,7 +100,7 @@ export function youtubeId(input: string): string | null {
     const host = url.hostname.replace(/^www\.|^m\./, "");
     let id: string | null = null;
     if (host === "youtu.be") id = url.pathname.slice(1).split("/")[0];
-    else if (host.endsWith("youtube.com") || host.endsWith("youtube-nocookie.com")) {
+    else if (isHostOf(host, "youtube.com") || isHostOf(host, "youtube-nocookie.com")) {
       id = url.searchParams.get("v");
       const m = url.pathname.match(/^\/(shorts|embed|live|v)\/([^/?#]+)/);
       if (!id && m) id = m[2];

@@ -1,6 +1,7 @@
 import { shownLookBg } from "./lib/lookBg";
 import { decodeEntities, stripTags } from "./lib/htmlText";
 import { log, logger, swallow } from "./lib/logger";
+import { shortMessage } from "./lib/zodSafe";
 import { lobbyLevelOf } from "./lib/lobbyAccess";
 // Before anything decodes an image: switches off the vulnerable HEIF/AVIF loader.
 import "./lib/sharpSafety";
@@ -947,7 +948,7 @@ async function main() {
     if (status === 400 && (e.validation || e.code === "FST_ERR_VALIDATION")) {
       return reply
         .status(400)
-        .send({ ok: false, error: "validation_error", message: e.message || "Invalid request" });
+        .send({ ok: false, error: "validation_error", message: shortMessage(e.message) });
     }
     if (status >= 500 && process.env.SENTRY_DSN_API) {
       Sentry.captureException(err, { tags: { route: req.routeOptions?.url || req.url } });

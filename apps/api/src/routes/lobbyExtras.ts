@@ -85,13 +85,17 @@ export function cleanFeed(raw: unknown): FeedSpec | null {
   return { source, target, message };
 }
 
-const slugOf = (s: string) =>
+// On a short string, and with a split where "trim the dashes" was a pattern
+// whose time grew with the square of the input (2026-11-12).
+export const slugOf = (s: string) =>
   s
+    .slice(0, 200)
     .toLowerCase()
     .normalize("NFKD")
     .replace(/[̀-ͯ]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
+    .split(/[^a-z0-9]+/)
+    .filter(Boolean)
+    .join("-")
     .slice(0, 48) || "page";
 
 const view = (a: any) => ({

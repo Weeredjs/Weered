@@ -37,8 +37,9 @@ export default function OfficeWindow() {
 
     const play = (v: HTMLVideoElement) => {
       v.muted = true;
-      const p = v.play();
-      if (p && typeof p.catch === "function") p.catch(() => {});
+      // A browser may refuse to start a clip (data saver, a background tab):
+      // the still frame stays, and nothing is thrown.
+      void Promise.resolve(v.play()).catch(() => {});
     };
     const onTime = () => {
       if (handing || !current.duration) return;

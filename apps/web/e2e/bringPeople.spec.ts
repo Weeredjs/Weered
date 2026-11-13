@@ -1,4 +1,5 @@
 import { test, expect, type BrowserContext, type Page } from "@playwright/test";
+import { sixDigits, stamp } from "./names";
 
 // Bringing people in (2026-11-12). An owner builds a lobby and the builder
 // stops on "Now bring your people": a guest link that goes to WhatsApp,
@@ -20,8 +21,6 @@ const API = process.env.E2E_API_URL || "http://localhost:4000";
 test.describe("bringing people in", () => {
   test.skip(!process.env.E2E_AUTH, "needs the captcha-free CI stack (E2E_AUTH=1)");
   test.setTimeout(180_000);
-
-  const stamp = () => `${Date.now()}${Math.floor(Math.random() * 1e6)}`;
 
   async function register(page: Page, username: string) {
     await expect(page.locator(".wl-btn")).toHaveText("Create account");
@@ -111,7 +110,7 @@ test.describe("bringing people in", () => {
 
     // The builder, by hand: a name is all it needs. A name of its own each
     // run, because the builder makes the address from it.
-    const lobbyName = `Wheel House ${Math.floor(100000 + Math.random() * 900000)}`;
+    const lobbyName = `Wheel House ${sixDigits()}`;
     const lobbyId = lobbyName.toLowerCase().replaceAll(" ", "-");
     await page.goto("/lobby/create");
     await page.locator("#cz-lobby-name").fill(lobbyName);

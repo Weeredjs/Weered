@@ -228,7 +228,7 @@ function Body({ block, wide }: { block: ShellBlock; wide: boolean }) {
               : "Paste a YouTube link in Design."}
           </Hint>
         );
-      const spotify = src.includes("spotify.com");
+      const spotify = src.startsWith("https://open.spotify.com/");
       return (
         <div
           className={spotify ? "wsb-embed wsb-embed-spotify" : "wsb-embed"}

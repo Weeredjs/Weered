@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { stamp as uniqueStamp } from "./names";
 
 // A page sits in a box under the bar at the top of every page (ShellGate). The
 // box never scrolled, so the foot of a page taller than the window was cut off:
@@ -16,7 +17,7 @@ test.describe("a page taller than the frame", () => {
 
   test("scrolls to its foot: a crew's leader reaches Save", async ({ page }) => {
     test.setTimeout(90_000);
-    const stamp = `${Date.now()}${Math.floor(Math.random() * 1e6)}`;
+    const stamp = uniqueStamp();
     const username = ("cs" + stamp).toLowerCase().slice(0, 24);
 
     await page.goto("/login?mode=register&next=%2Fhome");

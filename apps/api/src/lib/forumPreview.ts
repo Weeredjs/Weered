@@ -32,7 +32,12 @@ export function listedBody(p: { body: string; removedAt?: Date | string | null }
 
 /** The post's words as plain text, cut at a word near `max`. */
 export function forumExcerpt(body: string, max = 240): string {
+  // The start of the post is all a preview needs. Every list of posts runs
+  // these patterns on every post in it, and several of them slow down with the
+  // square of what they're given: a crafted 10,000-character post would have
+  // slowed every list it appeared in.
   const text = String(body || "")
+    .slice(0, 4000)
     .replace(/```[\s\S]*?(```|$)/g, " ")
     .replace(/!\[[^\]]*\]\([^)]*\)/g, " ")
     .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")

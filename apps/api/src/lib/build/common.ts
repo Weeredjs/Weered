@@ -83,10 +83,11 @@ export function givenUrl(v: unknown, given: string): string | undefined {
 /** A Twitch channel the person named. */
 export function givenChannel(v: unknown, given: string): string | undefined {
   const s = String(v ?? "")
+    .slice(0, 200)
     .trim()
     .replace(/^@/, "")
     .replace(/^https?:\/\/(www\.)?twitch\.tv\//i, "")
-    .replace(/\/.*$/, "");
+    .split("/", 1)[0];
   if (!/^[a-z0-9_]{3,25}$/i.test(s)) return undefined;
   return given.toLowerCase().includes(s.toLowerCase()) ? s : undefined;
 }

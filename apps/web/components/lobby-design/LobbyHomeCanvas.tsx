@@ -9,6 +9,7 @@ import dynamic from "next/dynamic";
 import type { Block, LobbyLayout, TabId } from "../../lib/lobbyLayout";
 import { SIZE_SPAN, BLOCK_CATALOG } from "../../lib/lobbyLayout";
 import { onActivate } from "../../lib/a11y";
+import { isHostOf } from "../../lib/hostOf";
 import WebpageEmbed from "../WebpageEmbed";
 import FrontDeskBlock from "./FrontDeskBlock";
 import OwnerBlock from "./OwnerBlock";
@@ -264,15 +265,28 @@ function Title({
   );
 }
 
+// A YouTube link only (lib/hostOf.ts), and only an id or a list made of the
+// characters YouTube uses: what goes into the player's address is ours.
+const YT_PART = /^[A-Za-z0-9_-]{1,64}$/;
 export function youTubeEmbed(url: string): string | null {
   try {
     const u = new URL(url);
-    const list = u.searchParams.get("list");
+    const short = isHostOf(u.hostname, "youtu.be");
+    if (
+      !short &&
+      !isHostOf(u.hostname, "youtube.com") &&
+      !isHostOf(u.hostname, "youtube-nocookie.com")
+    )
+      return null;
+    const given = u.searchParams.get("list") || "";
+    const list = YT_PART.test(given) ? given : "";
     let id = "";
-    if (u.hostname.includes("youtu.be")) id = u.pathname.slice(1);
+    if (short) id = u.pathname.slice(1).split("/")[0];
     else if (u.pathname.startsWith("/watch")) id = u.searchParams.get("v") || "";
     else if (u.pathname.startsWith("/embed/")) id = u.pathname.split("/")[2] || "";
     else if (u.pathname.startsWith("/shorts/")) id = u.pathname.split("/")[2] || "";
+    // "/embed/videoseries?list=" is a playlist, not a video of that name.
+    if (id === "videoseries" || !YT_PART.test(id)) id = "";
     if (id) return `https://www.youtube-nocookie.com/embed/${id}${list ? `?list=${list}` : ""}`;
     if (list) return `https://www.youtube-nocookie.com/embed/videoseries?list=${list}`;
   } catch {}
@@ -282,7 +296,7 @@ export function youTubeEmbed(url: string): string | null {
 export function spotifyEmbed(url: string): string | null {
   try {
     const u = new URL(url);
-    if (!u.hostname.endsWith("spotify.com")) return null;
+    if (!isHostOf(u.hostname, "spotify.com")) return null;
     const m = u.pathname.match(/\/(playlist|album|track|artist|show|episode)\/([A-Za-z0-9]+)/);
     return m ? `https://open.spotify.com/embed/${m[1]}/${m[2]}` : null;
   } catch {
@@ -641,7 +655,7 @@ function BlockBody({ block, rooms, ...p }: CanvasProps & { block: Block; rooms: 
               : "Paste a YouTube link in Design mode."}
           </div>
         );
-      const spotify = src.includes("spotify.com");
+      const spotify = src.startsWith("https://open.spotify.com/");
       return (
         <div>
           {pr.title && (

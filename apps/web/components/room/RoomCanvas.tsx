@@ -35,6 +35,7 @@ import {
 import { applyChrome, currentChrome, rememberSkin } from "../../lib/lobbyThemes";
 import { hydrateLobbyLang, clearLobbyLang } from "../../lib/lobbyLang";
 import { isOfficeRoomId } from "@/lib/officeRooms";
+import { isHostOf } from "@/lib/hostOf";
 
 // A short "knock-knock" chime for office walk-ins — synthesized (no asset to
 // ship/cache). Best-effort: silently no-ops if WebAudio is unavailable or the
@@ -421,8 +422,9 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
         const id = u.pathname.replace("/shorts/", "").split("/")[0];
         if (id) return `https://www.youtube.com/embed/${id}?autoplay=0`;
       }
-      if (u.hostname.includes("youtu.be")) {
-        return `https://www.youtube.com/embed${u.pathname}?autoplay=0`;
+      if (isHostOf(u.hostname, "youtu.be")) {
+        const id = u.pathname.slice(1).split("/")[0];
+        if (/^[A-Za-z0-9_-]{6,20}$/.test(id)) return `https://www.youtube.com/embed/${id}?autoplay=0`;
       }
       if ((u.hostname === "youtube.com" || u.hostname.endsWith(".youtube.com"))) {
         return "__youtube_blocked__";
@@ -487,7 +489,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
         const id = u.pathname.replace("/shorts/", "").split("/")[0];
         if (id) return `https://img.youtube.com/vi/${id}/hqdefault.jpg`;
       }
-      if (u.hostname.includes("youtu.be")) {
+      if (isHostOf(u.hostname, "youtu.be")) {
         const id = u.pathname.replace("/", "");
         if (id) return `https://img.youtube.com/vi/${id}/hqdefault.jpg`;
       }
@@ -953,7 +955,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
                     let url = raw;
                     try {
                       const u = new URL(raw);
-                      if (u.hostname.endsWith("lichess.org")) {
+                      if (isHostOf(u.hostname, "lichess.org")) {
                         const path = u.pathname.replace(/\/$/, "");
                         if (path === "/tv" || path.startsWith("/tv/")) {
                           url = `https://lichess.org${path.includes("/frame") ? path : path + "/frame"}?theme=brown&bg=dark`;

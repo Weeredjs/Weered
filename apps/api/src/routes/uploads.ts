@@ -31,6 +31,10 @@ export default async function uploadsRoutes(app: FastifyInstance, opts: Opts) {
     webp: Buffer,
     uid: string,
   ): string => {
+    // The name is the account's id and the time. The id comes from the session,
+    // never from the request; this holds it to the characters an id has, so
+    // nothing else can ever reach a file path.
+    if (!/^[A-Za-z0-9_-]{1,64}$/.test(uid)) throw new Error("bad_uid");
     const filename = `${uid}-${Date.now()}.webp`;
     writeFileSync(join(dir, filename), webp);
     // Only ever their own previous file (lib/ownImages.ts): the old address

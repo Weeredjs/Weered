@@ -29,6 +29,7 @@ interface Props {
 import { avatarBg as avatarColor } from "../../lib/avatarColor";
 import GtaModulePanel from "./GtaModulePanel";
 import DndStage from "./DndStage";
+import { isHostOf } from "../../lib/hostOf";
 
 // Decode HTML entities in untrusted external titles WITHOUT executing markup:
 // a <textarea> is RCDATA, so any tags inside become inert text (no XSS).
@@ -66,8 +67,8 @@ function extractVideoId(input: string): string | null {
   if (/^[a-zA-Z0-9_-]{11}$/.test(s)) return s;
   try {
     const url = new URL(s.startsWith("http") ? s : `https://${s}`);
-    if (url.hostname.includes("youtu.be")) return url.pathname.slice(1).split("?")[0];
-    if (url.hostname.includes("youtube.com")) return url.searchParams.get("v");
+    if (isHostOf(url.hostname, "youtu.be")) return url.pathname.slice(1).split("/")[0];
+    if (isHostOf(url.hostname, "youtube.com")) return url.searchParams.get("v");
   } catch {}
   return null;
 }

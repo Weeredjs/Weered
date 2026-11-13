@@ -59,13 +59,19 @@ const HOSTNAME = /^(?=.{4,253}$)([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2
 const ORIGIN_HOST = "weered.ca";
 
 export function normalizeHost(raw: unknown): string | null {
+  // A name is 253 characters at most, so nothing longer is ever read. The
+  // pattern that cut the path off took time that grew with the square of the
+  // input: a megabyte of "?" in the domain box held the whole API for minutes,
+  // and anyone with a lobby could send it (found 2026-11-12). The path is now
+  // cut with a plain split, on a short string.
   let h = String(raw || "")
+    .slice(0, 400)
     .trim()
     .toLowerCase();
   h = h
     .replace(/^https?:\/\//, "")
-    .replace(/[/?#].*$/, "")
-    .replace(/:\d+$/, "")
+    .split(/[/?#]/, 1)[0]
+    .replace(/:\d{1,5}$/, "")
     .replace(/\.$/, "");
   if (!HOSTNAME.test(h)) return null;
   if (RESERVED_HOST.test(h)) return null;

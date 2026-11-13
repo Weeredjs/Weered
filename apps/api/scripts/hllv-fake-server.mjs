@@ -503,7 +503,9 @@ const server = net.createServer((sock) => {
           reply(id, req, 400, "", "Bad Request");
           continue;
         }
-        const fn = INFO[q?.Name];
+        // Only a command of ours: a name like "constructor" finds a function on
+        // every object, and "__proto__" something that is not one.
+        const fn = Object.hasOwn(INFO, String(q?.Name)) ? INFO[q.Name] : null;
         if (!fn) reply(id, req, 400, "", "Bad Request");
         else reply(id, req, 200, JSON.stringify(fn()));
         continue;

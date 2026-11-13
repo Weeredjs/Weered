@@ -5,6 +5,7 @@ import { blockedWith } from "../lib/blocks";
 import { hideSpoilers } from "../lib/spoilers";
 import { checkChatRateLimit, checkUrlSpam } from "../lib/chatHelpers";
 import { z } from "zod";
+import { shortStringList } from "../lib/zodSafe";
 
 type Opts = {
   authFromHeader: (h?: string) => { id: string; name: string } | null;
@@ -150,7 +151,8 @@ export default async function groupRoutes(app: FastifyInstance, opts: Opts) {
       schema: {
         tags: ["groups"],
         body: z
-          .object({ name: z.string().optional(), memberIds: z.array(z.string()).optional() })
+          // A bounded list, never zod's own array type: lib/zodSafe.ts says why.
+          .object({ name: z.string().optional(), memberIds: shortStringList(500).optional() })
           .passthrough(),
       },
     },

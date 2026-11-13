@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import EmptyState from "./EmptyState";
 import LoadingState from "./LoadingState";
 import { plural } from "../lib/plural";
+import { isHostOf } from "../lib/hostOf";
 
 type RedditPost = {
   id: string;
@@ -35,7 +36,7 @@ function fmtTime(utc: number) {
 function isExternalUrl(url?: string) {
   if (!url) return false;
   try {
-    return !new URL(url).hostname.includes("reddit.com");
+    return !isHostOf(new URL(url).hostname, "reddit.com");
   } catch {
     return false;
   }

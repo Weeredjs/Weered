@@ -444,10 +444,11 @@ export const feedJob: BuildJob<FeedSpec | null> = {
     let target = "";
     if (source === "twitch") {
       const s = String(r.target ?? "")
+        .slice(0, 200)
         .trim()
         .replace(/^@/, "")
         .replace(/^https?:\/\/(www\.)?twitch\.tv\//i, "")
-        .replace(/\/.*$/, "");
+        .split("/", 1)[0];
       if (/^[a-z0-9_]{3,25}$/i.test(s) && c.given.toLowerCase().includes(s.toLowerCase()))
         target = s.toLowerCase();
     } else if (source === "youtube" && /^@[A-Za-z0-9._-]{3,30}$/.test(String(r.target ?? "").trim())) {

@@ -122,4 +122,39 @@ describe("groups - create + message", () => {
     expect(await prisma.groupMessage.count({ where: { threadId } })).toBe(2);
     await app.close();
   });
+
+  // The body's shape is checked before anyone is asked who they are. A list of
+  // 200,000 wrong values, sent signed out, used to make 200,000 issues and a
+  // reply tens of megabytes long (lib/zodSafe.ts, 2026-11-12).
+  it("refuses an enormous member list at once, with a short reply, signed in or not", async () => {
+    const app = await makeApp();
+    const t = performance.now();
+    const res = await app.inject({
+      method: "POST",
+      url: "/groups",
+      payload: { name: "x", memberIds: new Array(200_000).fill(1) },
+    });
+    const ms = performance.now() - t;
+    expect(res.statusCode).toBe(400);
+    expect(res.body.length).toBeLessThan(2000);
+    expect(ms).toBeLessThan(1500);
+
+    // What the page sends still makes a group.
+    const owner = await newUser("zo");
+    const mate = await newUser("zm");
+    const ok = await app.inject({
+      method: "POST",
+      url: "/groups",
+      headers: { authorization: `Bearer ${testToken(owner)}` },
+      payload: { name: "ok", memberIds: [mate] },
+    });
+    expect(ok.statusCode).toBe(200);
+    const made = await prisma.groupThread.findFirst({
+      where: { createdById: owner },
+      orderBy: { createdAt: "desc" },
+      select: { id: true },
+    });
+    if (made) threads.push(made.id);
+    await app.close();
+  });
 });

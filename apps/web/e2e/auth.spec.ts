@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { stamp as uniqueStamp } from "./names";
 
 // Authenticated journey. Registration needs a captcha-free backend, which only
 // the CI stack provides (no TURNSTILE_SECRET) -> gated behind E2E_AUTH so it
@@ -8,7 +9,7 @@ test.describe("auth journey", () => {
   test.skip(!process.env.E2E_AUTH, "needs the captcha-free CI stack (E2E_AUTH=1)");
 
   test("register a new account and reach the authenticated app", async ({ page }) => {
-    const stamp = `${Date.now()}${Math.floor(Math.random() * 1e6)}`;
+    const stamp = uniqueStamp();
     const username = ("e2e" + stamp).toLowerCase().slice(0, 24);
 
     await page.goto("/login?mode=register&next=%2Fhome");

@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { stamp as uniqueStamp } from "./names";
 
 // First sign-in: a brand-new account meets the layout gallery
 // (components/setup/LayoutGallery.tsx), picks a layout in a colourway, lands on
@@ -8,7 +9,7 @@ test.describe("first-run layout gallery", () => {
   test.skip(!process.env.E2E_AUTH, "needs the captcha-free CI stack (E2E_AUTH=1)");
 
   test("a new account picks a layout once, and its answer is kept", async ({ page }) => {
-    const stamp = `${Date.now()}${Math.floor(Math.random() * 1e6)}`;
+    const stamp = uniqueStamp();
     const username = ("su" + stamp).toLowerCase().slice(0, 24);
 
     await page.goto("/login?mode=register&next=%2Fhome");
