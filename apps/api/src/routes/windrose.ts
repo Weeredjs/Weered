@@ -973,8 +973,11 @@ Rules:
         const claimantName =
           (await prisma.user.findUnique({ where: { id: u.id }, select: { name: true } }))?.name ||
           u.id;
-        const updated = await prisma.windroseBounty.update({
-          where: { id },
+        // Every bounty move claims its state with a guarded write first, so two
+        // requests at once cannot both pass the status check (fan-out audit,
+        // 2026-11-13: parallel cancels each refunded the escrow).
+        const moved = await prisma.windroseBounty.updateMany({
+          where: { id, status: "OPEN" },
           data: {
             status: "CLAIMED",
             claimantId: u.id,
@@ -984,6 +987,11 @@ Rules:
             claimedAt: new Date(),
           },
         });
+        if (moved.count === 0)
+          return reply
+            .code(409)
+            .send({ ok: false, error: "not_claimable", message: "This bounty is no longer open." });
+        const updated = await prisma.windroseBounty.findUnique({ where: { id } });
         wrCache.delete("wr:activity");
         try {
           broadcastToLobby?.("windrose", {
@@ -1025,6 +1033,11 @@ Rules:
       if (b.posterId !== u.id) return reply.code(403).send({ ok: false, error: "forbidden" });
       if (b.status !== "CLAIMED" || !b.claimantId)
         return reply.code(400).send({ ok: false, error: "not_claimed" });
+      const moved = await prisma.windroseBounty.updateMany({
+        where: { id, posterId: u.id, status: "CLAIMED", claimantId: b.claimantId },
+        data: { status: "SETTLED", settledAt: new Date() },
+      });
+      if (moved.count === 0) return reply.code(409).send({ ok: false, error: "not_claimed" });
       const credit = await awardPaper(
         b.claimantId,
         "EARN_GIFT",
@@ -1032,12 +1045,17 @@ Rules:
         `Bounty claim · ${b.targetHandle}`,
         b.id,
       );
-      if (!credit) return reply.code(500).send({ ok: false, error: "payout_failed" });
+      if (!credit) {
+        await prisma.windroseBounty
+          .updateMany({
+            where: { id, status: "SETTLED" },
+            data: { status: "CLAIMED", settledAt: null },
+          })
+          .catch(swallow);
+        return reply.code(500).send({ ok: false, error: "payout_failed" });
+      }
       try {
-        const updated = await prisma.windroseBounty.update({
-          where: { id },
-          data: { status: "SETTLED", settledAt: new Date() },
-        });
+        const updated = await prisma.windroseBounty.findUnique({ where: { id } });
         wrCache.delete("wr:bounties:leaderboard");
         wrCache.delete("wr:activity");
         if (b.claimantId) {
@@ -1071,8 +1089,8 @@ Rules:
       if (b.status !== "CLAIMED") return reply.code(400).send({ ok: false, error: "not_claimed" });
       try {
         const rejectedClaimantId = b.claimantId;
-        const updated = await prisma.windroseBounty.update({
-          where: { id },
+        const moved = await prisma.windroseBounty.updateMany({
+          where: { id, posterId: u.id, status: "CLAIMED", claimantId: b.claimantId },
           data: {
             status: "OPEN",
             claimantId: null,
@@ -1082,6 +1100,8 @@ Rules:
             claimedAt: null,
           },
         });
+        if (moved.count === 0) return reply.code(409).send({ ok: false, error: "not_claimed" });
+        const updated = await prisma.windroseBounty.findUnique({ where: { id } });
         wrCache.delete("wr:activity");
         if (rejectedClaimantId) {
           sendPush(rejectedClaimantId, {
@@ -1115,7 +1135,17 @@ Rules:
         return reply.code(400).send({
           ok: false,
           error: "not_open",
-          message: "Can only cancel while open (uncclaimed).",
+          message: "Can only cancel while open (unclaimed).",
+        });
+      const moved = await prisma.windroseBounty.updateMany({
+        where: { id, posterId: u.id, status: "OPEN" },
+        data: { status: "CANCELLED", cancelledAt: new Date() },
+      });
+      if (moved.count === 0)
+        return reply.code(409).send({
+          ok: false,
+          error: "not_open",
+          message: "Can only cancel while open (unclaimed).",
         });
       const refund = await awardPaper(
         u.id,
@@ -1124,12 +1154,17 @@ Rules:
         `Bounty cancelled · refund`,
         b.id,
       );
-      if (!refund) return reply.code(500).send({ ok: false, error: "refund_failed" });
+      if (!refund) {
+        await prisma.windroseBounty
+          .updateMany({
+            where: { id, status: "CANCELLED" },
+            data: { status: "OPEN", cancelledAt: null },
+          })
+          .catch(swallow);
+        return reply.code(500).send({ ok: false, error: "refund_failed" });
+      }
       try {
-        const updated = await prisma.windroseBounty.update({
-          where: { id },
-          data: { status: "CANCELLED", cancelledAt: new Date() },
-        });
+        const updated = await prisma.windroseBounty.findUnique({ where: { id } });
         wrCache.delete("wr:bounties:leaderboard");
         wrCache.delete("wr:activity");
         return reply.send({ ok: true, bounty: updated, balance: refund.balance });
@@ -1150,6 +1185,12 @@ Rules:
       });
       if (stale.length === 0) return;
       for (const b of stale) {
+        // Claim first: a claim or cancel landing mid-sweep wins or loses whole.
+        const moved = await prisma.windroseBounty.updateMany({
+          where: { id: b.id, status: "OPEN" },
+          data: { status: "CANCELLED", cancelledAt: new Date() },
+        });
+        if (moved.count === 0) continue;
         const refund = await awardPaper(
           b.posterId,
           "ADJUSTMENT",
@@ -1157,28 +1198,21 @@ Rules:
           `Bounty expired · refund`,
           b.id,
         );
-        if (!refund) continue;
-        try {
-          await prisma.windroseBounty.update({
-            where: { id: b.id },
-            data: { status: "CANCELLED", cancelledAt: new Date() },
-          });
-          sendPush(b.posterId, {
-            title: "Bounty expired",
-            body: `Your ${b.amount.toLocaleString()} Paper on ${b.targetHandle} went unclaimed. Refunded to your wallet.`,
-            url: "/lobby/windrose",
-            tag: `windrose:bounty:${b.id}:expired`,
-          }).catch(swallow);
-        } catch (e) {
-          await awardPaper(
-            b.posterId,
-            "ADJUSTMENT",
-            -b.amount,
-            `Bounty expire rollback`,
-            b.id,
-          ).catch(swallow);
-          log.error("[windrose/bounties expire]", e);
+        if (!refund) {
+          await prisma.windroseBounty
+            .updateMany({
+              where: { id: b.id, status: "CANCELLED" },
+              data: { status: "OPEN", cancelledAt: null },
+            })
+            .catch(swallow);
+          continue;
         }
+        sendPush(b.posterId, {
+          title: "Bounty expired",
+          body: `Your ${b.amount.toLocaleString()} Paper on ${b.targetHandle} went unclaimed. Refunded to your wallet.`,
+          url: "/lobby/windrose",
+          tag: `windrose:bounty:${b.id}:expired`,
+        }).catch(swallow);
       }
       wrCache.delete("wr:bounties:leaderboard");
       wrCache.delete("wr:activity");

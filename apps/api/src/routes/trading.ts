@@ -5,6 +5,8 @@ import { fetchWithTimeout } from "../lib/fetchWithTimeout";
 import { prisma } from "../lib/prisma";
 import { setTradableSymbols } from "../lib/binanceFeed";
 import { z } from "zod";
+import { payFakeoutProfit } from "../lib/fakeoutPaper";
+import { canManageLobby } from "../lib/lobbyAccess";
 
 type Opts = {
   authFromHeader: (h?: string) => { id: string; name: string } | null;
@@ -22,6 +24,24 @@ type Opts = {
   operatorCommentateOnTrade?: (lobbyId: string, context: string) => Promise<void>;
 };
 
+/**
+ * Change an open position only if it is still the one that was read: open, and
+ * the same size. Two orders at once otherwise each closed the same long and each
+ * got its value back (fan-out audit, 2026-11-13). Throws inside the transaction,
+ * so the whole order rolls back.
+ */
+export async function movePosition(
+  tx: any,
+  pos: { id: string; quantity: number },
+  data: Record<string, unknown>,
+): Promise<void> {
+  const r = await tx.paperPosition.updateMany({
+    where: { id: pos.id, status: "OPEN", quantity: pos.quantity },
+    data,
+  });
+  if (r.count === 0) throw new Error("POSITION_MOVED");
+}
+
 export default async function tradingRoutes(app: FastifyInstance, opts: Opts) {
   const {
     authFromHeader,
@@ -33,6 +53,20 @@ export default async function tradingRoutes(app: FastifyInstance, opts: Opts) {
     operatorCommentateOnTrade,
   } = opts;
   const BINANCE_REST = "https://api.binance.com";
+  const fakeoutDeps = { db: prisma as any, awardPaper };
+
+  /**
+   * A FakeOut account belongs to a real place: a lobby, or a room (the panel
+   * passes either). Any made-up id used to open a fresh funded account.
+   */
+  async function placeExists(id: string): Promise<boolean> {
+    if (!id || id.length > 128) return false;
+    const [lobby, room] = await Promise.all([
+      prisma.lobby.findUnique({ where: { id }, select: { id: true } }).catch(() => null),
+      prisma.room.findUnique({ where: { id }, select: { id: true } }).catch(() => null),
+    ]);
+    return !!(lobby || room);
+  }
 
   function getLivePrice(symbol: string): number | null {
     const p = livePrices.get(symbol.toLowerCase());
@@ -141,6 +175,8 @@ export default async function tradingRoutes(app: FastifyInstance, opts: Opts) {
     });
 
     if (!account) {
+      if (!(await placeExists(lobbyId)))
+        return reply.code(404).send({ ok: false, error: "not_found" });
       account = await prisma.paperAccount.create({
         data: {
           userId: u.id,
@@ -256,6 +292,8 @@ export default async function tradingRoutes(app: FastifyInstance, opts: Opts) {
         include: { positions: { where: { status: "OPEN", symbol } } },
       });
       if (!account) {
+        if (!(await placeExists(lobbyId)))
+          return reply.code(404).send({ ok: false, error: "not_found" });
         account = await prisma.paperAccount.create({
           data: {
             userId: u.id,
@@ -379,22 +417,20 @@ export default async function tradingRoutes(app: FastifyInstance, opts: Opts) {
               const newQty = existing.quantity + quantity;
               const newEntry =
                 (existing.entryPrice * existing.quantity + currentPrice * quantity) / newQty;
-              await tx.paperPosition.update({
-                where: { id: existing.id },
-                data: { quantity: newQty, entryPrice: newEntry, entryValue: newEntry * newQty },
+              await movePosition(tx, existing, {
+                quantity: newQty,
+                entryPrice: newEntry,
+                entryValue: newEntry * newQty,
               });
             } else {
               const shortPos = account.positions.find((p: any) => p.side === "SELL");
               if (shortPos) {
                 const pnl = (shortPos.entryPrice - currentPrice) * shortPos.quantity;
-                await tx.paperPosition.update({
-                  where: { id: shortPos.id },
-                  data: {
-                    status: "CLOSED",
-                    exitPrice: currentPrice,
-                    realizedPnl: pnl,
-                    closedAt: new Date(),
-                  },
+                await movePosition(tx, shortPos, {
+                  status: "CLOSED",
+                  exitPrice: currentPrice,
+                  realizedPnl: pnl,
+                  closedAt: new Date(),
                 });
                 await tx.paperAccount.update({
                   where: { id: account.id },
@@ -457,14 +493,11 @@ export default async function tradingRoutes(app: FastifyInstance, opts: Opts) {
             if (longPos) {
               if (quantity >= longPos.quantity) {
                 const pnl = (currentPrice - longPos.entryPrice) * longPos.quantity;
-                await tx.paperPosition.update({
-                  where: { id: longPos.id },
-                  data: {
-                    status: "CLOSED",
-                    exitPrice: currentPrice,
-                    realizedPnl: pnl,
-                    closedAt: new Date(),
-                  },
+                await movePosition(tx, longPos, {
+                  status: "CLOSED",
+                  exitPrice: currentPrice,
+                  realizedPnl: pnl,
+                  closedAt: new Date(),
                 });
                 await tx.paperAccount.update({
                   where: { id: account.id },
@@ -503,9 +536,9 @@ export default async function tradingRoutes(app: FastifyInstance, opts: Opts) {
               } else {
                 const pnl = (currentPrice - longPos.entryPrice) * quantity;
                 const newQty = longPos.quantity - quantity;
-                await tx.paperPosition.update({
-                  where: { id: longPos.id },
-                  data: { quantity: newQty, entryValue: longPos.entryPrice * newQty },
+                await movePosition(tx, longPos, {
+                  quantity: newQty,
+                  entryValue: longPos.entryPrice * newQty,
                 });
                 await tx.paperAccount.update({
                   where: { id: account.id },
@@ -534,9 +567,10 @@ export default async function tradingRoutes(app: FastifyInstance, opts: Opts) {
                 const newEntry =
                   (existingShort.entryPrice * existingShort.quantity + currentPrice * quantity) /
                   newQty;
-                await tx.paperPosition.update({
-                  where: { id: existingShort.id },
-                  data: { quantity: newQty, entryPrice: newEntry, entryValue: newEntry * newQty },
+                await movePosition(tx, existingShort, {
+                  quantity: newQty,
+                  entryPrice: newEntry,
+                  entryValue: newEntry * newQty,
                 });
               } else {
                 await tx.paperPosition.create({
@@ -564,13 +598,22 @@ export default async function tradingRoutes(app: FastifyInstance, opts: Opts) {
             required: cost,
           });
         }
+        if (e && e.message === "POSITION_MOVED") {
+          return reply.code(409).send({ ok: false, error: "position_changed" });
+        }
         throw e;
       }
 
-      // Economy awards fire only after the trade is durably committed.
-      for (const a of pendingAwards) {
-        awardPaper(u.id, "EARN_FAKEOUT", a.paper, a.desc, a.refId).catch(swallow);
-        if (mode === "RANKED") awardNotoriety(u.id, "FAKEOUT_PROFIT").catch(swallow);
+      // Economy awards fire only after the trade is durably committed, and only
+      // for a new high of the account's realized profit (lib/fakeoutPaper).
+      if (pendingAwards.length > 0) {
+        const desc = pendingAwards[pendingAwards.length - 1].desc;
+        payFakeoutProfit(fakeoutDeps, u.id, account.id, paperMul, desc)
+          .then((paid) => {
+            if (paid > 0 && mode === "RANKED")
+              awardNotoriety(u.id, "FAKEOUT_PROFIT").catch(swallow);
+          })
+          .catch(swallow);
       }
       await prisma.paperOrder.create({
         data: {
@@ -680,15 +723,18 @@ export default async function tradingRoutes(app: FastifyInstance, opts: Opts) {
     const accountMode: PaperMode = pos.account?.mode === "RANKED" ? "RANKED" : "CASUAL";
     const paperMul = paperRateMultiplierFor(accountMode);
     if (pnl > 0) {
-      const paperEarned = Math.max(1, Math.floor(pnl / 100)) * paperMul;
-      awardPaper(
+      payFakeoutProfit(
+        fakeoutDeps,
         u.id,
-        "EARN_FAKEOUT",
-        paperEarned,
+        pos.accountId,
+        paperMul,
         `FakeOut profit: $${pnl.toFixed(2)} on ${pos.symbol}`,
-        positionId,
-      ).catch(swallow);
-      if (accountMode === "RANKED") awardNotoriety(u.id, "FAKEOUT_PROFIT").catch(swallow);
+      )
+        .then((paid) => {
+          if (paid > 0 && accountMode === "RANKED")
+            awardNotoriety(u.id, "FAKEOUT_PROFIT").catch(swallow);
+        })
+        .catch(swallow);
     }
 
     if (operatorCommentateOnTrade && Math.abs(pnl) >= 500) {
@@ -989,16 +1035,34 @@ export default async function tradingRoutes(app: FastifyInstance, opts: Opts) {
     if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
     const lobbyId = String((req as any).params?.lobbyId || "");
     const body: any = (req as any).body || {};
+    // A competition goes up in a lobby by someone who runs it, with a sane
+    // balance and real dates (fan-out audit, 2026-11-13: anyone could post one
+    // anywhere, with any balance).
+    if (!(await canManageLobby(u.id, lobbyId)))
+      return reply.code(403).send({ ok: false, error: "forbidden" });
+    const startBalance = Number.parseFloat(body.startBalance) || 100000;
+    if (!Number.isFinite(startBalance) || startBalance < 1000 || startBalance > 10_000_000)
+      return reply.code(400).send({ ok: false, error: "invalid_start_balance" });
+    const startTime = new Date(body.startTime || Date.now());
+    const endTime = new Date(body.endTime);
+    if (
+      Number.isNaN(startTime.getTime()) ||
+      Number.isNaN(endTime.getTime()) ||
+      endTime <= startTime ||
+      endTime.getTime() - startTime.getTime() > 90 * 24 * 60 * 60 * 1000
+    )
+      return reply.code(400).send({ ok: false, error: "invalid_dates" });
+    const name = String(body.name || "Trading Competition").slice(0, 100);
 
     const comp = await prisma.tradingCompetition.create({
       data: {
         lobbyId,
-        name: String(body.name || "Trading Competition").slice(0, 100),
+        name,
         description: String(body.description || "").slice(0, 500),
-        startBalance: Number.parseFloat(body.startBalance) || 100000,
-        startTime: new Date(body.startTime || Date.now()),
-        endTime: new Date(body.endTime),
-        status: new Date(body.startTime || Date.now()) <= new Date() ? "ACTIVE" : "UPCOMING",
+        startBalance,
+        startTime,
+        endTime,
+        status: startTime <= new Date() ? "ACTIVE" : "UPCOMING",
         createdById: u.id,
       },
     });
@@ -1207,13 +1271,17 @@ export default async function tradingRoutes(app: FastifyInstance, opts: Opts) {
                   entryValue: cost,
                 },
               });
-              await tx.paperOrder.update({
-                where: { id: order.id },
+              // Only a still-pending order fills: one cancelled meanwhile, or one
+              // an overlapping tick already filled, rolls the whole fill back.
+              const filled = await tx.paperOrder.updateMany({
+                where: { id: order.id, status: "PENDING" },
                 data: { status: "FILLED", filledPrice: fillPrice, filledAt: new Date() },
               });
+              if (filled.count === 0) throw new Error("ORDER_GONE");
             });
           } catch (e: any) {
             if (e && e.message === "INSUFFICIENT_FUNDS") continue; // can't afford now; leave PENDING for a later tick
+            if (e && e.message === "ORDER_GONE") continue;
             throw e;
           }
 
@@ -1263,41 +1331,44 @@ export default async function tradingRoutes(app: FastifyInstance, opts: Opts) {
             : (pos.entryPrice - exitPrice) * pos.quantity;
 
         try {
-          await prisma.paperPosition.update({
-            where: { id: pos.id },
-            data: {
+          await prisma.$transaction(async (tx: any) => {
+            await movePosition(tx, pos, {
               status: "CLOSED",
               exitPrice,
               realizedPnl: pnl,
               closedAt: new Date(),
               closeReason: trigger,
-            },
+            });
+            await tx.paperAccount.update({
+              where: { id: pos.accountId },
+              data: {
+                cashBalance: { increment: pos.entryValue + pnl },
+                realizedPnl: { increment: pnl },
+              },
+            });
           });
-          await prisma.paperAccount.update({
-            where: { id: pos.accountId },
-            data: {
-              cashBalance: { increment: pos.entryValue + pnl },
-              realizedPnl: { increment: pnl },
-            },
-          });
-        } catch (e) {
-          log.error("[trading] sl/tp close error:", e);
+        } catch (e: any) {
+          // Closed or resized by the owner meanwhile: their close stands.
+          if (e?.message !== "POSITION_MOVED") log.error("[trading] sl/tp close error:", e);
           continue;
         }
 
         const accountMode: PaperMode = pos.account?.mode === "RANKED" ? "RANKED" : "CASUAL";
         const paperMul = paperRateMultiplierFor(accountMode);
         if (pnl > 0) {
-          const paperEarned = Math.max(1, Math.floor(pnl / 100)) * paperMul;
-          awardPaper(
-            pos.account.userId,
-            "EARN_FAKEOUT",
-            paperEarned,
+          const owner = pos.account.userId;
+          payFakeoutProfit(
+            fakeoutDeps,
+            owner,
+            pos.accountId,
+            paperMul,
             `FakeOut ${trigger === "TAKE_PROFIT" ? "TP" : "SL"} hit: $${pnl.toFixed(2)} on ${pos.symbol}`,
-            pos.id,
-          ).catch(swallow);
-          if (accountMode === "RANKED")
-            awardNotoriety(pos.account.userId, "FAKEOUT_PROFIT").catch(swallow);
+          )
+            .then((paid) => {
+              if (paid > 0 && accountMode === "RANKED")
+                awardNotoriety(owner, "FAKEOUT_PROFIT").catch(swallow);
+            })
+            .catch(swallow);
         }
 
         notifyUser(pos.account.userId, {
