@@ -190,9 +190,19 @@ export default async function chatMediaRoutes(app: FastifyInstance, opts: Opts) 
     if (!/^[a-f0-9]{20}(\.t)?\.webp$/.test(file)) return reply.code(404).send();
     const fp = path.join(UP_DIR, file);
     if (!fs.existsSync(fp)) return reply.code(404).send();
+    // A picture hidden by reports is not served until staff have looked at
+    // it: it went on showing to everyone who opened the room (fan-out audit,
+    // 2026-11-13). Cached an hour rather than for good, so a hide takes hold.
+    const att = await prisma.chatAttachment
+      .findFirst({
+        where: { url: `/chat/media/${file.replace(".t.webp", ".webp")}` },
+        select: { status: true },
+      })
+      .catch(() => null);
+    if (att && att.status !== "ACTIVE") return reply.code(404).send();
     reply.header("Content-Type", "image/webp");
     reply.header("X-Content-Type-Options", "nosniff");
-    reply.header("Cache-Control", "public, max-age=31536000, immutable");
+    reply.header("Cache-Control", "public, max-age=3600");
     reply.header("Content-Disposition", "inline");
     return reply.send(fs.createReadStream(fp));
   });

@@ -36,7 +36,9 @@ export default async function youtubeRoutes(app: FastifyInstance) {
         const data = await res.json();
         if (data.error) {
           log.error("[yt-search] API error:", data.error.message);
-          return reply.code(500).send({ results: [], error: data.error.message });
+          // Google's own words stay in the log: they name the project and the
+          // quota (fan-out audit, 2026-11-13).
+          return reply.code(503).send({ results: [], error: "search_unavailable" });
         }
         const results = (data.items || []).map((item: any) => ({
           videoId: item.id?.videoId,

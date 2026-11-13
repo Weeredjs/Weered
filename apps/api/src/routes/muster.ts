@@ -90,7 +90,11 @@ export default async function musterRoutes(app: FastifyInstance, opts: Opts = {}
       RCON_TIMEOUT,
     );
     const rows: any[] = Array.isArray(players?.players) ? players.players : [];
+    // A Hell Let Loose server holds 100 players. A server that claims a
+    // quarter of a million made the poller write a row for each, every two
+    // minutes (fan-out audit, 2026-11-13).
     return rows
+      .slice(0, 200)
       .map((p) => ({
         name: String(p?.name || "").slice(0, 40),
         clan: p?.clanTag ? String(p.clanTag).slice(0, 12) : "",

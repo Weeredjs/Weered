@@ -63,10 +63,15 @@ export default async function authRoutes(app: FastifyInstance, opts: Opts) {
     process.env.GOOGLE_CALLBACK_URL || "https://api.weered.ca/auth/google/callback";
   const WEB_URL = process.env.APP_URL || "https://weered.ca";
 
+  // Where sign-in may send the browser back to, carrying the new session.
+  // exp:// is the phone app while it is being built (Expo), and it named any
+  // host at all: a link could send someone's session to the attacker's
+  // machine. It is accepted only on a development server now (fan-out audit,
+  // 2026-11-13).
   const REDIRECT_ALLOW = [
     /^https:\/\/([a-z0-9-]+\.)?weered\.ca(\/.*)?$/i,
     /^weered:\/\/[^\s]*$/i,
-    /^exp:\/\/[0-9a-z.\-:]+\/--\/[^\s]*$/i,
+    ...(process.env.NODE_ENV === "development" ? [/^exp:\/\/[0-9a-z.\-:]+\/--\/[^\s]*$/i] : []),
   ];
   const isAllowedRedirect = (u: string) => REDIRECT_ALLOW.some((re) => re.test(u));
   const GOOGLE_STATE_COOKIE = "weered_oauth_g";
@@ -448,6 +453,21 @@ export default async function authRoutes(app: FastifyInstance, opts: Opts) {
         .trim()
         .slice(0, 40);
       if (!inviteToken) return reply.code(400).send({ ok: false, error: "missing_invite" });
+      // The name other visitors see, cleaned as every guest name is
+      // (lib/displayName.ts), and never the host's own: a visitor named
+      // "James Stirling" could chat to waiting clients as the advisor
+      // (fan-out audit, 2026-11-13).
+      const cleanedName = rawName ? await cleanDisplayName(rawName) : "";
+      const hostName = "James Stirling".toLowerCase().replace(/[^a-z0-9]/g, "");
+      if (
+        cleanedName === null ||
+        (cleanedName && cleanedName.toLowerCase().replace(/[^a-z0-9]/g, "") === hostName)
+      )
+        return reply.code(400).send({
+          ok: false,
+          error: "name_reserved",
+          message: "That name is kept. Type your own.",
+        });
 
       const invite = await prisma.invite.findUnique({ where: { token: inviteToken } });
       // The office's own links only: a lobby's guest link is routes/guestJoin.ts.
@@ -480,7 +500,7 @@ export default async function authRoutes(app: FastifyInstance, opts: Opts) {
       }
 
       // randomInt is rejection-sampled → no modulo bias in the guest suffix.
-      const name = rawName || `Guest-${randomInt(1000, 10000)}`;
+      const name = cleanedName || `Guest-${randomInt(1000, 10000)}`;
       const guestId = `guest_${randomBytes(12).toString("hex")}`;
       // ephemeral user + token live no longer than the invite window, capped at
       // 3h: a renewal review can run past 90 minutes (2026-11-11).
