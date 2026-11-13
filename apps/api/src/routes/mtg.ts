@@ -1,6 +1,7 @@
 import { swallow } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 import { fetchWithTimeout } from "../lib/fetchWithTimeout";
+import { BoundedMap } from "../lib/boundedMap";
 
 type Opts = {};
 
@@ -133,7 +134,9 @@ function parseUrl(raw: string): { source: "moxfield" | "archidekt"; id: string }
 }
 
 export default async function mtgRoutes(app: FastifyInstance, _opts: Opts) {
-  const cache = new Map<string, { ok: boolean; data: DeckLite | null; expiresAt: number }>();
+  const cache = new BoundedMap<string, { ok: boolean; data: DeckLite | null; expiresAt: number }>(
+    500,
+  );
 
   app.get("/mtg/deck", async (req, reply) => {
     const url = String((req.query as any)?.url || "")

@@ -1,3 +1,4 @@
+import { BoundedMap } from "./boundedMap";
 export type PublicActivity = {
   id: string;
   ts: number;
@@ -61,7 +62,7 @@ export function anonymousFor(lobbyId?: string): string {
   return "someone";
 }
 
-const _lastByKey = new Map<string, number>();
+const _lastByKey = new BoundedMap<string, number>(20_000);
 export function shouldEmit(key: string, minGapMs: number): boolean {
   const now = Date.now();
   const prev = _lastByKey.get(key) || 0;

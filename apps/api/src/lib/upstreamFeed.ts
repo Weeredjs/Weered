@@ -1,3 +1,4 @@
+import { BoundedMap } from "./boundedMap";
 // What we keep of a feed from someone else's API, and when to leave that API
 // alone.
 //
@@ -30,7 +31,7 @@ export function makeFeed(
   const staleMs = opts.staleMs ?? 30 * 60_000;
   const limit = opts.failures ?? 3;
   const now = opts.now ?? Date.now;
-  const kept = new Map<string, { data: any; at: number }>();
+  const kept = new BoundedMap<string, { data: any; at: number }>(200);
   let fails = 0;
   let restUntil = 0;
 

@@ -4,6 +4,7 @@ import type { FastifyInstance } from "fastify";
 import { fetchWithTimeout } from "../lib/fetchWithTimeout";
 import { prisma } from "../lib/prisma";
 import { assertSafeUrl } from "../lib/ssrfGuard";
+import { BoundedMap } from "../lib/boundedMap";
 
 // Rows stored before titles were decoded at ingestion still hold entities
 // (&#8216;); decoding again on the way out is harmless for clean ones.
@@ -13,7 +14,7 @@ const plainTitle = <T extends { title: string }>(a: T): T => ({
 });
 
 export default async function newsRoutes(app: FastifyInstance) {
-  const newsCache = new Map<string, { articles: any[]; cachedAt: number }>();
+  const newsCache = new BoundedMap<string, { articles: any[]; cachedAt: number }>(100);
   const NEWS_CACHE_TTL = 5 * 60 * 1000;
 
   app.get("/news/feed", async (req, reply) => {
@@ -55,7 +56,7 @@ export default async function newsRoutes(app: FastifyInstance) {
     return reply.send({ ok: true, articles });
   });
 
-  const readerCache = new Map<string, { data: any; cachedAt: number }>();
+  const readerCache = new BoundedMap<string, { data: any; cachedAt: number }>(200);
   const READER_CACHE_TTL = 30 * 60 * 1000;
 
   app.get("/news/reader", async (req, reply) => {

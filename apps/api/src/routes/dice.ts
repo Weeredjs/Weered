@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
+import { BoundedMap } from "../lib/boundedMap";
 
 type Opts = {
   authFromHeader: (h?: string) => { id: string; name: string } | null;
@@ -95,7 +96,7 @@ function rollDice(parsed: Parsed): Rolled {
 
 const ROLL_WINDOW_MS = 60_000;
 const ROLL_MAX_PER_WINDOW = 12;
-const rollWindow = new Map<string, number[]>();
+const rollWindow = new BoundedMap<string, number[]>(20_000);
 
 function rateLimitOk(
   userId: string,

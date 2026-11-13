@@ -23,6 +23,8 @@ const TRUST_NOTORIETY = Number(process.env.MEDIA_TRUST_NOTORIETY || 1000);
 const FREE_TTL_DAYS = Number(process.env.MEDIA_FREE_TTL_DAYS || 7);
 const PAID_TIERS = new Set(["INDICTED", "FELON", "CONDEMNED", "KINGPIN"]);
 const AUTO_HIDE_REPORTS = 3;
+// Where a picture is served from, for the link staff open from a report.
+const SITE_BASE = process.env.NEXT_PUBLIC_API_BASE || "https://api.weered.ca";
 
 function ensureDir() {
   try {
@@ -207,11 +209,43 @@ export default async function chatMediaRoutes(app: FastifyInstance, opts: Opts) 
       const id = String((req as any).params?.id || "");
       const att = await prisma.chatAttachment.findUnique({ where: { id } });
       if (!att || att.status === "REMOVED") return reply.code(404).send({ ok: false });
+      // One report per account per picture (hardening pass, 2026-11-13). A
+      // report is a row in the staff's own report queue, filed against the
+      // uploader with the picture attached, and the count is the number of
+      // different accounts that reported it, so repeats and races add nothing.
+      const context = `attachment:${id}`;
+      const about = { targetType: "USER" as const, targetId: att.uploaderId, context };
+      if (att.uploaderId !== u.id) {
+        const mine = await prisma.report.findFirst({
+          where: { ...about, reporterId: u.id },
+          select: { id: true },
+        });
+        if (!mine) {
+          const recent = await prisma.report.count({
+            where: { reporterId: u.id, createdAt: { gt: new Date(Date.now() - 10 * 60_000) } },
+          });
+          if (recent >= 5) return reply.code(429).send({ ok: false, error: "report_rate_limit" });
+          await prisma.report.create({
+            data: {
+              ...about,
+              reporterId: u.id,
+              reason: "OTHER",
+              note: "Reported a picture in chat.",
+              bodySnapshot: `${SITE_BASE}${att.url}`,
+            },
+          });
+        }
+      }
+      const reporters = await prisma.report.findMany({
+        where: about,
+        distinct: ["reporterId"],
+        select: { reporterId: true },
+      });
       const updated = await prisma.chatAttachment.update({
         where: { id },
         data: {
-          reports: { increment: 1 },
-          ...(att.reports + 1 >= AUTO_HIDE_REPORTS && att.status === "ACTIVE"
+          reports: reporters.length,
+          ...(reporters.length >= AUTO_HIDE_REPORTS && att.status === "ACTIVE"
             ? { status: "HIDDEN" }
             : {}),
         },
@@ -335,6 +369,7 @@ export default async function chatMediaRoutes(app: FastifyInstance, opts: Opts) 
       log.warn("[media] sweep error:", e?.message || e);
     }
   };
-  setTimeout(sweep, 60_000);
-  setInterval(sweep, 12 * 3600_000);
+  // unref: these must not hold a test run (or a shutdown) open.
+  setTimeout(sweep, 60_000).unref();
+  setInterval(sweep, 12 * 3600_000).unref();
 }

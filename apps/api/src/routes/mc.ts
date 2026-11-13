@@ -1,6 +1,22 @@
 import type { FastifyInstance } from "fastify";
 import crypto from "node:crypto";
 import { prisma } from "../lib/prisma";
+import { sizeProblem } from "../lib/fieldSize";
+import { swallow } from "../lib/logger";
+
+// What the mod sends, and how long each may be. A Minecraft name is 16
+// characters and a UUID 36; a server address is a host name and a port. These
+// were stored at any length (hardening pass, 2026-11-13).
+const MC_LIMITS = {
+  code: 16,
+  mcUuid: 64,
+  mcUsername: 32,
+  serverAddress: 255,
+  serverName: 100,
+  worldName: 100,
+} as const;
+const text = (v: unknown): string =>
+  typeof v === "string" || typeof v === "number" ? String(v) : "";
 
 function randomToken(len = 32): string {
   return crypto.randomBytes(len).toString("base64url");
@@ -38,9 +54,17 @@ export default async function mcRoutes(app: FastifyInstance, opts: Opts) {
     "/mc/pair/start",
     {
       schema: { tags: ["mc"] },
+      // No account yet at this step, so the limit is by address: each code is
+      // a row.
+      config: { rateLimit: { max: 10, timeWindow: "1 minute" } },
     },
     async (_req, reply) => {
       const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
+      // Codes live five minutes; day-old ones are swept here so the table
+      // holds what is in use, not every code ever handed out.
+      await prisma.mcPairingCode
+        .deleteMany({ where: { expiresAt: { lt: new Date(Date.now() - 24 * 3600_000) } } })
+        .catch(swallow);
       for (let attempt = 0; attempt < 5; attempt++) {
         const code = randomCode();
         try {
@@ -61,14 +85,15 @@ export default async function mcRoutes(app: FastifyInstance, opts: Opts) {
     "/mc/pair/confirm",
     {
       schema: { tags: ["mc"] },
+      config: { rateLimit: { max: 20, timeWindow: "1 minute" } },
     },
     async (req, reply) => {
       const u = authFromHeader((req as any).headers?.authorization);
       if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
       const body = req.body as any;
-      const code = String(body?.code || "")
-        .trim()
-        .toUpperCase();
+      const big = sizeProblem(body, MC_LIMITS);
+      if (big) return reply.code(400).send({ ok: false, ...big });
+      const code = text(body?.code).trim().toUpperCase();
       if (!code) return reply.code(400).send({ ok: false, error: "missing_code" });
 
       const row = await prisma.mcPairingCode.findUnique({ where: { code } });
@@ -78,8 +103,8 @@ export default async function mcRoutes(app: FastifyInstance, opts: Opts) {
         return reply.code(400).send({ ok: false, error: "code_expired" });
       }
 
-      const mcUuid = body?.mcUuid ? String(body.mcUuid) : null;
-      const mcUsername = body?.mcUsername ? String(body.mcUsername) : null;
+      const mcUuid = text(body?.mcUuid) || null;
+      const mcUsername = text(body?.mcUsername) || null;
 
       const token = randomToken(32);
       await prisma.userGameAccount.upsert({
@@ -113,12 +138,12 @@ export default async function mcRoutes(app: FastifyInstance, opts: Opts) {
     "/mc/pair/poll",
     {
       schema: { tags: ["mc"] },
+      // The mod asks every couple of seconds for the code's five minutes.
+      config: { rateLimit: { max: 120, timeWindow: "1 minute" } },
     },
     async (req, reply) => {
       const body = req.body as any;
-      const code = String(body?.code || "")
-        .trim()
-        .toUpperCase();
+      const code = text(body?.code).trim().toUpperCase().slice(0, MC_LIMITS.code);
       if (!code) return reply.code(400).send({ ok: false, error: "missing_code" });
 
       const row = await prisma.mcPairingCode.findUnique({ where: { code } });
@@ -162,25 +187,43 @@ export default async function mcRoutes(app: FastifyInstance, opts: Opts) {
     "/mc/presence",
     {
       schema: { tags: ["mc"] },
+      config: { rateLimit: { max: 60, timeWindow: "1 minute" } },
     },
     async (req, reply) => {
       const auth = await userFromModToken((req as any).headers?.authorization);
       if (!auth) return reply.code(401).send({ ok: false, error: "unauthorized" });
 
       const body = req.body as any;
-      const serverAddress = String(body?.serverAddress || "").trim();
+      const big = sizeProblem(body, MC_LIMITS);
+      if (big) return reply.code(400).send({ ok: false, ...big });
+      const serverAddress = text(body?.serverAddress).trim();
       if (!serverAddress) return reply.code(400).send({ ok: false, error: "missing_server" });
 
-      const mcUuid = body?.mcUuid ? String(body.mcUuid) : auth.mcUuid || "";
-      const mcUsername = body?.mcUsername ? String(body.mcUsername) : "";
+      const mcUuid = text(body?.mcUuid) || auth.mcUuid || "";
+      const mcUsername = text(body?.mcUsername);
+      const serverName = text(body?.serverName) || null;
+      const worldName = text(body?.worldName) || null;
+
+      // A player is on one server at a time. Rows for the servers they have
+      // left were kept for good (only "leave" removed one, and a crash or a
+      // closed laptop never sends it): one per address ever reported.
+      await prisma.mcPresence
+        .deleteMany({
+          where: {
+            userId: auth.userId,
+            serverAddress: { not: serverAddress },
+            lastSeenAt: { lt: new Date(Date.now() - 10 * 60_000) },
+          },
+        })
+        .catch(swallow);
 
       await prisma.mcPresence.upsert({
         where: { userId_serverAddress: { userId: auth.userId, serverAddress } },
         update: {
           lastSeenAt: new Date(),
-          serverName: body?.serverName || null,
+          serverName,
           isRealm: !!body?.isRealm,
-          worldName: body?.worldName || null,
+          worldName,
           mcUuid,
           mcUsername,
         },
@@ -189,9 +232,9 @@ export default async function mcRoutes(app: FastifyInstance, opts: Opts) {
           mcUuid,
           mcUsername,
           serverAddress,
-          serverName: body?.serverName || null,
+          serverName,
           isRealm: !!body?.isRealm,
-          worldName: body?.worldName || null,
+          worldName,
         },
       });
 
@@ -214,7 +257,7 @@ export default async function mcRoutes(app: FastifyInstance, opts: Opts) {
     if (!auth) return reply.code(401).send({ ok: false, error: "unauthorized" });
 
     const q: any = (req as any).query || {};
-    const serverAddress = String(q.serverAddress || "").trim();
+    const serverAddress = text(q.serverAddress).trim().slice(0, MC_LIMITS.serverAddress);
     if (!serverAddress) return reply.code(400).send({ ok: false, error: "missing_server" });
 
     const fresh = new Date(Date.now() - 3 * 60 * 1000);
@@ -256,7 +299,7 @@ export default async function mcRoutes(app: FastifyInstance, opts: Opts) {
       const auth = await userFromModToken((req as any).headers?.authorization);
       if (!auth) return reply.code(401).send({ ok: false, error: "unauthorized" });
       const body = req.body as any;
-      const serverAddress = String(body?.serverAddress || "").trim();
+      const serverAddress = text(body?.serverAddress).trim().slice(0, MC_LIMITS.serverAddress);
       if (!serverAddress) return reply.send({ ok: true });
       await prisma.mcPresence.deleteMany({
         where: { userId: auth.userId, serverAddress },

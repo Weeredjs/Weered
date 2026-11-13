@@ -19,6 +19,7 @@ import {
 } from "../lib/officeBoard";
 import { doorShouldBeLocked, officeStateFile, walkInsOn } from "../lib/officeDoor";
 import { settleOfficeDoor } from "../lib/roomState";
+import { BoundedMap } from "../lib/boundedMap";
 
 type Opts = {
   authFromHeader: (h?: string) => { id: string; name: string } | null;
@@ -267,8 +268,11 @@ export default async function officeRoutes(app: FastifyInstance, opts: Opts) {
           expiresAt: new Date(Date.now() + 3 * 60 * 60 * 1000),
         },
       });
+      // A name, not a page: this goes to the host's phone as a notification.
       const visitorName =
-        typeof (req as any).body?.name === "string" ? (req as any).body.name : "Visitor";
+        (typeof (req as any).body?.name === "string" ? (req as any).body.name : "")
+          .trim()
+          .slice(0, 40) || "Visitor";
       pushWaiting(visitorName);
       if (host?.id) {
         sendPush(host.id, {
@@ -384,6 +388,7 @@ export default async function officeRoutes(app: FastifyInstance, opts: Opts) {
   };
   const engineGet = async (path: string, book: string) => {
     const res = await fetch(`${ENGINE_BASE}${path}`, {
+      signal: AbortSignal.timeout(90_000),
       headers: {
         Authorization: `Bearer ${mintOfficeToken(["office:read"], book)}`,
         Origin: "https://office.eastcoastemployeebenefits.com",
@@ -393,6 +398,7 @@ export default async function officeRoutes(app: FastifyInstance, opts: Opts) {
   };
   const engineSend = async (method: string, path: string, body: any, book: string) => {
     const res = await fetch(`${ENGINE_BASE}${path}`, {
+      signal: AbortSignal.timeout(90_000),
       method,
       headers: {
         Authorization: `Bearer ${mintOfficeToken(["office:read", "office:write"], book)}`,
@@ -907,7 +913,7 @@ export default async function officeRoutes(app: FastifyInstance, opts: Opts) {
   // The host "presents" a plan snapshot to the room; admitted guests poll it
   // read-only. Guests only ever see exactly what the host chose to present.
   // In-memory by design: ephemeral meeting state (host re-presents after a restart).
-  const presentedPlans = new Map<string, { data: any; seq: number; at: number }>();
+  const presentedPlans = new BoundedMap<string, { data: any; seq: number; at: number }>(50);
   let presentedSeq = 0;
 
   app.post("/office/plan/present", async (req, reply) => {

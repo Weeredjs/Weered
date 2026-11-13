@@ -124,6 +124,7 @@ export async function sendExpoPush(
   }));
   try {
     const res = await fetch("https://exp.host/--/api/v2/push/send", {
+      signal: AbortSignal.timeout(15_000),
       method: "POST",
       headers: { "Content-Type": "application/json", Accept: "application/json" },
       body: JSON.stringify(messages),

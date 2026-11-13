@@ -26,6 +26,7 @@ type NexusMod = {
 async function nexusFetch<T>(apiKey: string, path: string): Promise<T | null> {
   try {
     const res = await fetch(`${NEXUS_BASE}${path}`, {
+      signal: AbortSignal.timeout(15_000),
       headers: { apikey: apiKey, "User-Agent": USER_AGENT, Accept: "application/json" },
     });
     if (!res.ok) {

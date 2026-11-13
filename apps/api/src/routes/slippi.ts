@@ -3,6 +3,7 @@ import { log, swallow } from "../lib/logger";
 import { prisma } from "../lib/prisma";
 import { canManageLobby } from "../lib/lobbyAccess";
 import { fetchWithTimeout } from "../lib/fetchWithTimeout";
+import { BoundedMap } from "../lib/boundedMap";
 
 // Slippi ranked board.
 //
@@ -358,7 +359,7 @@ export default async function slippiRoutes(app: FastifyInstance, opts: Opts) {
   });
 
   /** Moderator: re-read the whole board now (rate-limited to once a minute). */
-  const lastForce = new Map<string, number>();
+  const lastForce = new BoundedMap<string, number>(5_000);
   app.post("/slippi/:lobbyId/refresh", async (req: any, reply) => {
     const u = userOf(req);
     if (!u) return reply.code(401).send({ error: "auth_required" });

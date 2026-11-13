@@ -4,6 +4,7 @@ import { canManageLobby } from "../lib/lobbyAccess";
 import { fetchWithTimeout } from "../lib/fetchWithTimeout";
 import { log, swallow } from "../lib/logger";
 import { parseStartggRef } from "./startgg";
+import { BoundedMap } from "../lib/boundedMap";
 
 /**
  * The station board — the venue floor, not the bracket.
@@ -45,7 +46,7 @@ type Callable = {
   state: number;
 };
 
-const callableCache = new Map<string, { at: number; rows: Callable[] }>();
+const callableCache = new BoundedMap<string, { at: number; rows: Callable[] }>(500);
 
 async function startggCallable(slug: string): Promise<Callable[]> {
   const hit = callableCache.get(slug);

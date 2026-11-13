@@ -4,6 +4,7 @@ import { getAI } from "./ai";
 import { buildOperatorSystemPrompt } from "./operatorPrompt";
 import { takeAiBudget } from "./aiBudget";
 import { dmDeliver, getOperatorUserId } from "./notifications";
+import { BoundedMap } from "./boundedMap";
 
 /**
  * The Operator answers its DMs the way it answers @operator in a room. The
@@ -16,7 +17,7 @@ const HISTORY = 8;
 // over the same history and send six near-identical replies.
 const inFlight = new Set<string>();
 // The "out of questions" note goes once a day, not once per DM.
-const toldOut = new Map<string, string>();
+const toldOut = new BoundedMap<string, string>(50_000);
 
 type Turn = { role: "user" | "assistant"; content: string };
 

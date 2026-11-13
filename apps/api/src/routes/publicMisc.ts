@@ -3,6 +3,7 @@ import { publicModuleConfig } from "../lib/publicModuleConfig";
 import type { FastifyInstance } from "fastify";
 import { fetchWithTimeout } from "../lib/fetchWithTimeout";
 import { prisma } from "../lib/prisma";
+import { BoundedMap } from "../lib/boundedMap";
 
 // Public, unauthenticated read endpoints extracted from index.ts.
 // getSiteConfig + applyWindroseReel are shared (injected). The feed-ingestion
@@ -107,7 +108,7 @@ export default async function publicMiscRoutes(app: FastifyInstance, opts: Opts)
   });
 
   const DESTINY2_APPID = "1085660";
-  const d2Cache = new Map<string, { data: any; expiresAt: number }>();
+  const d2Cache = new BoundedMap<string, { data: any; expiresAt: number }>(80);
   function d2CacheGet(key: string) {
     const c = d2Cache.get(key);
     if (c && c.expiresAt > Date.now()) return c.data;

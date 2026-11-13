@@ -13,6 +13,7 @@ import {
   sideOf,
   parseLayer,
 } from "../lib/hllVocab";
+import { BoundedMap } from "../lib/boundedMap";
 
 // Hell Let Loose, linked over RCON — both games.
 //
@@ -252,7 +253,7 @@ function splitHost(stored: string): { host: string; port: number } {
 export default async function hllvRoutes(app: FastifyInstance, opts: Opts = {}) {
   const authFromHeader = opts.authFromHeader;
 
-  const cache = new Map<string, { data: any; expiresAt: number }>();
+  const cache = new BoundedMap<string, { data: any; expiresAt: number }>(500);
   const cacheGet = (k: string) => {
     const c = cache.get(k);
     return c && c.expiresAt > Date.now() ? c.data : null;

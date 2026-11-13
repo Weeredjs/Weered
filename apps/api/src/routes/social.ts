@@ -4,6 +4,7 @@ import { log, swallow } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
 import { z } from "zod";
+import { BoundedMap } from "../lib/boundedMap";
 
 type Opts = {
   authFromHeader: (h?: string) => { id: string; name: string } | null;
@@ -247,7 +248,7 @@ export default async function socialRoutes(app: FastifyInstance, opts: Opts) {
 
   // Direct room invite: "come hang where I am". Target's invitePolicy
   // gates it; 5-min dedupe per sender+target+room.
-  const _inviteSentAt = new Map<string, number>();
+  const _inviteSentAt = new BoundedMap<string, number>(50_000);
   app.post(
     "/friends/:userId/invite",
     {

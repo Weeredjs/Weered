@@ -15,6 +15,7 @@ import { lobbyWordsProblem } from "../lib/lobbyFields";
 import { logLobbyAudit } from "../lib/lobbyAudit";
 import { sendMail } from "../lib/email";
 import { isPlaceId } from "./places";
+import { BoundedMap } from "../lib/boundedMap";
 
 // Custom-build meeting requests go here, not on the public board.
 const MEETING_NOTIFY_TO = process.env.MEETING_NOTIFY_TO || "james@weered.ca";
@@ -133,7 +134,7 @@ async function addressesOf(host: string): Promise<string[]> {
 
 // Small in-process cache so Caddy's ask and the middleware don't hit the
 // database on every request. Busted on any domain write.
-const hostCache = new Map<string, { lobbyId: string | null; at: number }>();
+const hostCache = new BoundedMap<string, { lobbyId: string | null; at: number }>(5_000);
 const HOST_TTL_MS = 60_000;
 async function lobbyForHost(host: string): Promise<string | null> {
   const hit = hostCache.get(host);

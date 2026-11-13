@@ -51,6 +51,11 @@ async function esiGet<T = any>(path: string): Promise<T | null> {
   }
 }
 
+// A character, corporation or alliance id is a number. The id used to go into
+// the address asked of EVE's API as typed, so a stranger could add path to it,
+// and one that was not a number answered with a server error.
+const EVE_ID = /^\d{1,12}$/;
+
 async function zkillGet<T = any>(path: string): Promise<T | null> {
   try {
     const r = await fetchWithTimeout(`${ZKILL_BASE}${path}`, {
@@ -301,6 +306,7 @@ export default async function eveRoutes(app: FastifyInstance, opts: Opts) {
 
   app.get("/eve/character/:id", async (req, reply) => {
     const id = String((req as any).params?.id || "");
+    if (!EVE_ID.test(id)) return reply.code(400).send({ ok: false, error: "bad_id" });
     const info: any = await esiGet(`/characters/${id}/`);
     if (!info) return reply.code(404).send({ ok: false, error: "not_found" });
     const corpId = info.corporation_id || null;
@@ -328,7 +334,9 @@ export default async function eveRoutes(app: FastifyInstance, opts: Opts) {
 
   app.get("/eve/kills/character/:id", async (req, reply) => {
     const id = String((req as any).params?.id || "");
-    const data: any[] = (await zkillGet(`/characterID/${id}/`)) || [];
+    if (!EVE_ID.test(id)) return reply.code(400).send({ ok: false, error: "bad_id" });
+    const got = await zkillGet(`/characterID/${id}/`);
+    const data: any[] = Array.isArray(got) ? got : [];
     return reply.send({ ok: true, kills: data.slice(0, 25) });
   });
 
@@ -394,6 +402,7 @@ export default async function eveRoutes(app: FastifyInstance, opts: Opts) {
 
   app.get("/eve/corp/:id", async (req, reply) => {
     const id = String((req as any).params?.id || "");
+    if (!EVE_ID.test(id)) return reply.code(400).send({ ok: false, error: "bad_id" });
     const info: any = await esiGet(`/corporations/${id}/`);
     if (!info) return reply.code(404).send({ ok: false, error: "not_found" });
     return reply.send({
@@ -411,6 +420,7 @@ export default async function eveRoutes(app: FastifyInstance, opts: Opts) {
 
   app.get("/eve/alliance/:id", async (req, reply) => {
     const id = String((req as any).params?.id || "");
+    if (!EVE_ID.test(id)) return reply.code(400).send({ ok: false, error: "bad_id" });
     const info: any = await esiGet(`/alliances/${id}/`);
     if (!info) return reply.code(404).send({ ok: false, error: "not_found" });
     return reply.send({

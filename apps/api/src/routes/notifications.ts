@@ -81,15 +81,21 @@ export default async function notificationsRoutes(app: FastifyInstance, opts: Op
     "/push/debug",
     {
       schema: { tags: ["notifications"] },
+      // Anyone can call this and what they send goes into the log: a few a
+      // minute, and a few hundred characters of each, is all a phone's push
+      // set-up ever needs to say.
+      config: { rateLimit: { max: 12, timeWindow: "1 minute" } },
     },
     async (req, reply) => {
       const u = authFromHeader((req as any).headers?.authorization);
       const body = (req as any).body || {};
+      const short = (v: unknown) =>
+        v == null ? undefined : (typeof v === "string" ? v : JSON.stringify(v) || "").slice(0, 300);
       log.log("[push/debug]", {
         userId: u?.id || null,
-        stage: body.stage,
-        error: body.error,
-        info: body.info,
+        stage: short(body.stage),
+        error: short(body.error),
+        info: short(body.info),
       });
       return reply.send({ ok: true });
     },

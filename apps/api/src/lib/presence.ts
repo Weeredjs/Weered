@@ -33,7 +33,7 @@ export async function getTwitchAppToken(): Promise<string | null> {
   if (twitchAppToken && twitchAppToken.expiresAt > Date.now() + 60_000) return twitchAppToken.token;
   try {
     const url = `https://id.twitch.tv/oauth2/token?client_id=${TWITCH_CLIENT_ID}&client_secret=${TWITCH_CLIENT_SECRET}&grant_type=client_credentials`;
-    const res = await fetch(url, { method: "POST" });
+    const res = await fetch(url, { signal: AbortSignal.timeout(15_000), method: "POST" });
     if (!res.ok) return null;
     const j: any = await res.json();
     if (!j?.access_token) return null;
@@ -54,6 +54,7 @@ export async function pollTwitchPresenceBatch(logins: string[]): Promise<Record<
   try {
     const qs = logins.map((l) => `user_login=${encodeURIComponent(l)}`).join("&");
     const res = await fetch(`https://api.twitch.tv/helix/streams?${qs}&first=100`, {
+      signal: AbortSignal.timeout(15_000),
       headers: { "Client-ID": TWITCH_CLIENT_ID, Authorization: `Bearer ${token}` },
     });
     if (!res.ok) return {};
@@ -85,7 +86,7 @@ export async function pollSteamPresenceBatch(steamIds: string[]): Promise<Record
   if (!STEAM_API_KEY || steamIds.length === 0) return {};
   try {
     const url = `https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key=${STEAM_API_KEY}&steamids=${steamIds.join(",")}`;
-    const res = await fetch(url);
+    const res = await fetch(url, { signal: AbortSignal.timeout(15_000) });
     if (!res.ok) return {};
     const j: any = await res.json();
     const players: any[] = j?.response?.players || [];

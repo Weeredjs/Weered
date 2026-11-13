@@ -12,6 +12,7 @@
 import { fetchWithTimeout } from "./fetchWithTimeout";
 import { decodeEntities, stripTags } from "./htmlText";
 import { swallow } from "./logger";
+import { BoundedMap } from "./boundedMap";
 
 export type GameNewsItem = {
   title: string;
@@ -218,7 +219,7 @@ async function steamAnnouncements(appId: number): Promise<GameNewsItem[]> {
   }
 }
 
-const games = new Map<string, { at: number; items: GameNewsItem[] }>();
+const games = new BoundedMap<string, { at: number; items: GameNewsItem[] }>(200);
 
 /** A game's stage: its announcements and the press that names it, newest first. */
 export async function gameNews(key: string): Promise<GameNewsItem[] | null> {

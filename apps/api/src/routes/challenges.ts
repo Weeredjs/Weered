@@ -587,7 +587,9 @@ export default async function challengesRoutes(app: FastifyInstance, opts: Opts)
     async (req, reply) => {
       const u = authFromHeader((req as any).headers?.authorization);
       if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
-      if (!["GOD", "ADMIN", "STAFF"].includes(u.globalRole || "")) {
+      // The role is read from the account. A session never carried one, so
+      // reading it off the session (as this did) refused staff every time.
+      if (!isStaffRole(await getGlobalRole(u.id))) {
         return reply.code(403).send({ ok: false, error: "forbidden" });
       }
 

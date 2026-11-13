@@ -3,6 +3,7 @@ import type { FastifyInstance } from "fastify";
 import { fetchWithTimeout } from "../lib/fetchWithTimeout";
 import { prisma } from "../lib/prisma";
 import crypto from "node:crypto";
+import { BoundedMap } from "../lib/boundedMap";
 
 const POE_CLIENT_ID = process.env.POE_CLIENT_ID || "";
 const POE_CLIENT_SECRET = process.env.POE_CLIENT_SECRET || "";
@@ -166,9 +167,9 @@ async function serviceGet(path: string): Promise<{ status: number; body: any }> 
   }
 }
 
-const _leaguesCache = new Map<string, { data: any[]; exp: number }>();
-const _ladderCache = new Map<string, { data: any; exp: number }>();
-const _cxCache = new Map<string, { data: any; exp: number }>();
+const _leaguesCache = new BoundedMap<string, { data: any[]; exp: number }>(50);
+const _ladderCache = new BoundedMap<string, { data: any; exp: number }>(60);
+const _cxCache = new BoundedMap<string, { data: any; exp: number }>(100);
 let _cxStatic: {
   map: Record<string, { name: string; icon: string; cat: string }>;
   exp: number;
@@ -339,13 +340,13 @@ async function buildPassiveTree(): Promise<any> {
   _treeCache = { data, exp: Date.now() + 7 * 24 * 3600_000 };
   return data;
 }
-const _charCache = new Map<string, { data: any; exp: number }>();
+const _charCache = new BoundedMap<string, { data: any; exp: number }>(300);
 
 // PoE2 economy — poe2scout.com (GGG's cxapi currency-exchange feed is PoE1-only).
 // Prices are denominated in Exalted Orbs (PoE2's base currency); we also pull the
 // exalted-per-divine cross-rate so the UI shows a Divine banner + divine column,
 // matching the PoE1 economy response shape. Cached 15 min.
-const _poe2EcoCache = new Map<string, { data: any; exp: number }>();
+const _poe2EcoCache = new BoundedMap<string, { data: any; exp: number }>(100);
 async function poe2Economy(league: string): Promise<any> {
   const hit = _poe2EcoCache.get(league);
   if (hit && hit.exp > Date.now()) return hit.data;

@@ -6,6 +6,7 @@ import { existsSync, mkdirSync, writeFileSync, readFileSync } from "fs";
 import { join } from "path";
 import sharp from "sharp";
 import { isAllowedRaster } from "../lib/sharpSafety";
+import { BoundedMap } from "../lib/boundedMap";
 
 type Opts = {
   authFromHeader: (h?: string) => { id: string; name?: string } | null;
@@ -58,7 +59,7 @@ function slugify(title: string): string {
   return `${base}-${suffix}`;
 }
 
-const uploadCooldown = new Map<string, number>();
+const uploadCooldown = new BoundedMap<string, number>(20_000);
 const UPLOAD_COOLDOWN_MS = 5 * 60 * 1000;
 
 function decodeDataUrl(dataUrl: string): { ext: string; buffer: Buffer } | null {

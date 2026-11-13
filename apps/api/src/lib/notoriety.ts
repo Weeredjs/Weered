@@ -1,6 +1,7 @@
 import { prisma } from "./prisma";
 import { send } from "./roomState";
 import { log, swallow } from "./logger";
+import { BoundedMap } from "./boundedMap";
 
 // Notoriety economy (config + ledger + rank-ups) extracted from index.ts.
 // wss (rank-up WS push) + createNotification injected from main().
@@ -69,7 +70,7 @@ export function getNotorietyRank(n: number): {
   return { ...rank, next };
 }
 
-export const notorietyCooldowns = new Map<string, number>();
+export const notorietyCooldowns = new BoundedMap<string, number>(100_000);
 
 export async function awardNotoriety(
   userId: string,

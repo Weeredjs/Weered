@@ -5,6 +5,8 @@ import { assertSafeUrl, fetchSafe } from "../lib/ssrfGuard";
 import { steamNewsUrl } from "../lib/steamNews";
 import { z } from "zod";
 import { prisma } from "../lib/prisma";
+import { canAccessStaff, getGlobalRole } from "../lib/lobbyAuth";
+import { BoundedMap } from "../lib/boundedMap";
 
 /**
  * URLs a server owner types, checked before they are stored.
@@ -71,7 +73,7 @@ export default async function windroseRoutes(app: FastifyInstance, opts: Opts) {
   const STEAM_API_KEY = process.env.STEAM_API_KEY || "";
 
   const WINDROSE_APPID = "3041230";
-  const wrCache = new Map<string, { data: any; expiresAt: number }>();
+  const wrCache = new BoundedMap<string, { data: any; expiresAt: number }>(300);
   function wrCacheGet(key: string) {
     const c = wrCache.get(key);
     if (c && c.expiresAt > Date.now()) return c.data;
@@ -716,7 +718,8 @@ Rules:
       const existing = await prisma.communityServer.findUnique({ where: { id } });
       if (!existing) return reply.code(404).send({ ok: false, error: "not_found" });
       const isOwner = existing.ownerId === u.id;
-      const isStaff = ["GOD", "STAFF", "SUPPORT"].includes(u.globalRole || "");
+      // By the account's role: a session never carried one, so staff were refused.
+      const isStaff = !isOwner && canAccessStaff(await getGlobalRole(u.id));
       if (!isOwner && !isStaff) return reply.code(403).send({ ok: false, error: "forbidden" });
       const body: any = (req as any).body || {};
       const data: any = {};
@@ -761,7 +764,8 @@ Rules:
       const existing = await prisma.communityServer.findUnique({ where: { id } });
       if (!existing) return reply.code(404).send({ ok: false, error: "not_found" });
       const isOwner = existing.ownerId === u.id;
-      const isStaff = ["GOD", "STAFF", "SUPPORT"].includes(u.globalRole || "");
+      // By the account's role: a session never carried one, so staff were refused.
+      const isStaff = !isOwner && canAccessStaff(await getGlobalRole(u.id));
       if (!isOwner && !isStaff) return reply.code(403).send({ ok: false, error: "forbidden" });
       try {
         await prisma.communityServer.delete({ where: { id } });

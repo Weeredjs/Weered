@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { fetchWithTimeout } from "../lib/fetchWithTimeout";
+import { BoundedMap } from "../lib/boundedMap";
 
 type Opts = {};
 
@@ -24,7 +25,9 @@ export default async function scryfallRoutes(app: FastifyInstance, _opts: Opts) 
     cmc: number;
   };
 
-  const cache = new Map<string, { ok: boolean; data: CardLite | null; expiresAt: number }>();
+  const cache = new BoundedMap<string, { ok: boolean; data: CardLite | null; expiresAt: number }>(
+    2_000,
+  );
   let lastFetchAt = 0;
 
   function cacheKey(name: string) {

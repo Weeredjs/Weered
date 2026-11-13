@@ -509,6 +509,7 @@ export async function syncManifest(
 
     log.log("[manifest] Fetching manifest metadata...");
     const metaRes = await fetch(`${BUNGIE_BASE}/Platform/Destiny2/Manifest/`, {
+      signal: AbortSignal.timeout(120_000),
       headers: { "X-API-Key": apiKey },
     });
     if (!metaRes.ok) throw new Error(`Manifest metadata failed: ${metaRes.status}`);
@@ -565,7 +566,7 @@ export async function syncManifest(
       try {
         const url = `${BUNGIE_BASE}${jsonPath}`;
         log.log(`[manifest] Downloading ${name}...`);
-        const res = await fetch(url);
+        const res = await fetch(url, { signal: AbortSignal.timeout(120_000) });
         if (!res.ok) {
           log.error(`[manifest] ${name} failed: ${res.status}`);
           continue;

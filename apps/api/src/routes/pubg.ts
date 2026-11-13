@@ -1,11 +1,12 @@
 import { log } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 import { fetchWithTimeout } from "../lib/fetchWithTimeout";
+import { BoundedMap } from "../lib/boundedMap";
 
 export default async function pubgRoutes(app: FastifyInstance) {
   const PUBG_API_BASE = "https://api.pubg.com";
   const PUBG_API_KEY = process.env.PUBG_API_KEY || "";
-  const pubgCache = new Map<string, { data: any; expiresAt: number }>();
+  const pubgCache = new BoundedMap<string, { data: any; expiresAt: number }>(300);
 
   function pubgCacheGet(key: string) {
     const c = pubgCache.get(key);

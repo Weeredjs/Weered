@@ -48,6 +48,7 @@ export async function fetchHackerNews(): Promise<RawItem[]> {
   try {
     const res = await fetch(
       "https://hn.algolia.com/api/v1/search?tags=story&hitsPerPage=15&numericFilters=points>50",
+      { signal: AbortSignal.timeout(15_000) },
     );
     const data = await res.json();
     return (data.hits || [])
@@ -73,6 +74,7 @@ export async function fetchESPNRss(
 ): Promise<RawItem[]> {
   try {
     const res = await fetch(feedUrl, {
+      signal: AbortSignal.timeout(15_000),
       headers: { "User-Agent": "Mozilla/5.0 (compatible; Weered/1.0)" },
     });
     const xml = await res.text();
@@ -113,6 +115,7 @@ export async function fetchItunesPodcasts(): Promise<RawItem[]> {
     const term = terms[Math.floor(Math.random() * terms.length)];
     const res = await fetch(
       `https://itunes.apple.com/search?media=podcast&entity=podcastEpisode&term=${term}&limit=10&sort=recent`,
+      { signal: AbortSignal.timeout(15_000) },
     );
     const data = await res.json();
     return (data.results || [])
@@ -138,7 +141,9 @@ export async function fetchYouTubeRss(
   category: string,
 ): Promise<RawItem[]> {
   try {
-    const res = await fetch(`https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`);
+    const res = await fetch(`https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`, {
+      signal: AbortSignal.timeout(15_000),
+    });
     const xml = await res.text();
     const items: RawItem[] = [];
     const entryRx = /<entry>([\s\S]*?)<\/entry>/g;

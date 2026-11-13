@@ -11,6 +11,7 @@ import { z } from "zod";
 import { RoomRole } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { lobbyOnlineCount } from "../lib/lobbyCount";
+import { BoundedMap } from "../lib/boundedMap";
 
 type Opts = {
   authFromHeader: (h?: string) => { id: string; name: string } | null;
@@ -94,7 +95,7 @@ export default async function roomsRoutes(app: FastifyInstance, opts: Opts) {
     return { ok: true, rooms: [...lobbyOut, ...roomOut] };
   });
 
-  const roomCreateWindow = new Map<string, number[]>();
+  const roomCreateWindow = new BoundedMap<string, number[]>(20_000);
   const ROOM_CREATE_WINDOW_MS = 60 * 60 * 1000;
   const ROOM_CREATE_MAX_PER_HR = 8;
   const ROOM_USER_ACTIVE_CAP = 25;
@@ -640,8 +641,8 @@ export default async function roomsRoutes(app: FastifyInstance, opts: Opts) {
   });
 
   const NPC_DAILY_CAP_PER_USER = 100;
-  const npcCooldowns = new Map<string, number>();
-  const npcDailyCounts = new Map<string, { date: string; n: number }>();
+  const npcCooldowns = new BoundedMap<string, number>(20_000);
+  const npcDailyCounts = new BoundedMap<string, { date: string; n: number }>(20_000);
   app.post(
     "/rooms/:roomId/npcs/:npcId/messages",
     {

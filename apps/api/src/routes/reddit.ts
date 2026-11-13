@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { fetchWithTimeout } from "../lib/fetchWithTimeout";
+import { BoundedMap } from "../lib/boundedMap";
 
 const ALLOWED_SUBS: Record<string, string> = {
   gta6: "GTA6",
@@ -17,7 +18,7 @@ type RedditPost = {
   hasVideo: boolean;
 };
 
-const cache = new Map<string, { posts: RedditPost[]; cachedAt: number }>();
+const cache = new BoundedMap<string, { posts: RedditPost[]; cachedAt: number }>(200);
 const TTL = 5 * 60 * 1000;
 
 function decodeOnce(s: string): string {

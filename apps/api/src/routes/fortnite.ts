@@ -3,6 +3,7 @@ import type { FastifyInstance } from "fastify";
 import { fetchWithTimeout } from "../lib/fetchWithTimeout";
 import { z } from "zod";
 import { prisma } from "../lib/prisma";
+import { BoundedMap } from "../lib/boundedMap";
 
 type Opts = {
   authFromHeader: (h?: string) => { id: string } | null;
@@ -16,7 +17,7 @@ export default async function fortniteRoutes(app: FastifyInstance, opts: Opts) {
   const { authFromHeader, sendPush } = opts;
   const FN_API_BASE = "https://fortnite-api.com";
   const FN_API_KEY = process.env.FORTNITE_API_KEY || "";
-  const fnCache = new Map<string, { data: any; expiresAt: number }>();
+  const fnCache = new BoundedMap<string, { data: any; expiresAt: number }>(300);
 
   function fnCacheGet(key: string) {
     const c = fnCache.get(key);

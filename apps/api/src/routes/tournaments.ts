@@ -1078,6 +1078,25 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
     }
   }
 
+  /**
+   * A match belongs to the two entries playing it, and to staff. Reporting a
+   * result, disputing one and marking a match live all ask this (hardening
+   * pass, 2026-11-13).
+   */
+  async function mayActOnMatch(
+    userId: string,
+    m: { entryAId: string | null; entryBId: string | null },
+  ): Promise<boolean> {
+    if (await isStaffUser(userId)) return true;
+    const ids = [m.entryAId, m.entryBId].filter((x): x is string => Boolean(x));
+    if (!ids.length) return false;
+    const mine = await prisma.tournamentEntry.findFirst({
+      where: { id: { in: ids }, userId },
+      select: { id: true },
+    });
+    return !!mine;
+  }
+
   async function notifyMatchReady(matchId: string) {
     if (!createNotification) return;
     try {
@@ -1228,6 +1247,8 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
       const matchId = String((req as any).params?.matchId || "");
       const m = await prisma.tournamentMatch.findUnique({ where: { id: matchId } });
       if (!m) return reply.code(404).send({ ok: false, error: "not_found" });
+      if (!(await mayActOnMatch(u.id, m)))
+        return reply.code(403).send({ ok: false, error: "forbidden" });
       if (m.status !== "REPORTED")
         return reply.code(400).send({ ok: false, error: "not_reported" });
       await prisma.tournamentMatch.update({
@@ -1252,6 +1273,8 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
       const matchId = String((req as any).params?.matchId || "");
       const m = await prisma.tournamentMatch.findUnique({ where: { id: matchId } });
       if (!m) return reply.code(404).send({ ok: false, error: "not_found" });
+      if (!(await mayActOnMatch(u.id, m)))
+        return reply.code(403).send({ ok: false, error: "forbidden" });
       if (m.status !== "READY" && m.status !== "LIVE")
         return reply.code(400).send({ ok: false, error: "not_ready" });
       await prisma.tournamentMatch.update({

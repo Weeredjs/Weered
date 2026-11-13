@@ -1,11 +1,12 @@
 import { log } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 import { fetchWithTimeout } from "../lib/fetchWithTimeout";
+import { BoundedMap } from "../lib/boundedMap";
 
 export default async function youtubeRoutes(app: FastifyInstance) {
   // YT Data API default quota is ~100 search calls/day TOTAL. Cache aggressively
   // and rate-limit per IP so one client can't exhaust the daily quota.
-  const ytCache = new Map<string, { results: any[]; expiresAt: number }>();
+  const ytCache = new BoundedMap<string, { results: any[]; expiresAt: number }>(300);
   const YT_TTL = 60 * 60 * 1000;
 
   app.get(

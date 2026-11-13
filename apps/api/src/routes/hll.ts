@@ -6,6 +6,7 @@ import { isStaffUser } from "../lib/isStaffUser";
 import { assertSafeUrl } from "../lib/ssrfGuard";
 import { steamNewsUrl } from "../lib/steamNews";
 import { awardNotoriety } from "../lib/notoriety";
+import { BoundedMap } from "../lib/boundedMap";
 
 // Hell Let Loose. There is no official Team17 API (servers are GSP-rented) —
 // the data plane is BattleMetrics (public server list: name/players/map/region)
@@ -78,7 +79,7 @@ type Rally = {
 export default async function hllRoutes(app: FastifyInstance, opts: Opts = {}) {
   const authFromHeader = opts.authFromHeader;
 
-  const cache = new Map<string, { data: any; expiresAt: number }>();
+  const cache = new BoundedMap<string, { data: any; expiresAt: number }>(500);
   function cacheGet(key: string) {
     const c = cache.get(key);
     if (c && c.expiresAt > Date.now()) return c.data;

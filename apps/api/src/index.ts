@@ -311,6 +311,7 @@ import { allowEmptyJsonBody } from "./lib/emptyJson";
 import { mayEnterStaffRoom } from "./lib/staffRooms";
 import { withinBudget } from "./lib/roomGate";
 import { awardPaper } from "./lib/economy";
+import { BoundedMap } from "./lib/boundedMap";
 
 const JWT_SECRET = (() => {
   const s = process.env.JWT_SECRET;
@@ -1447,6 +1448,7 @@ async function main() {
   ): Promise<any[]> {
     try {
       const res = await fetch(feedUrl, {
+        signal: AbortSignal.timeout(15_000),
         headers: { "User-Agent": "Mozilla/5.0 (compatible; Weered/1.0)" },
       });
       const xml = await res.text();
@@ -2069,19 +2071,19 @@ async function main() {
 
   await app.register(pgaRoutes);
 
-  const ytCache: Record<string, { data: any; ts: number }> = {};
+  const ytCache = new BoundedMap<string, { data: any; ts: number }>(300);
 
   app.get<{ Params: { channelId: string } }>("/youtube/channel/:channelId", async (req, reply) => {
     const { channelId } = req.params;
-    if (!/^UC[\w-]{20,}$/.test(channelId))
+    if (!/^UC[\w-]{20,30}$/.test(channelId))
       return reply.code(400).send({ ok: false, error: "invalid_channel_id" });
 
-    const cached = ytCache[channelId];
+    const cached = ytCache.get(channelId);
     if (cached && Date.now() - cached.ts < 5 * 60 * 1000) return reply.send(cached.data);
 
     try {
       const feedUrl = `https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`;
-      const res = await fetch(feedUrl);
+      const res = await fetch(feedUrl, { signal: AbortSignal.timeout(15_000) });
       if (!res.ok) return reply.code(502).send({ ok: false, error: "youtube_fetch_failed" });
       const xml = await res.text();
 
@@ -2113,7 +2115,7 @@ async function main() {
       }
 
       const payload = { ok: true, channelId, videos: entries };
-      ytCache[channelId] = { data: payload, ts: Date.now() };
+      ytCache.set(channelId, { data: payload, ts: Date.now() });
       return reply.send(payload);
     } catch (e) {
       log.error("[youtube rss]", e);
@@ -2294,7 +2296,7 @@ async function main() {
     }
   }
 
-  const _operatorLastByLobby = new Map<string, number>();
+  const _operatorLastByLobby = new BoundedMap<string, number>(5_000);
   async function operatorCommentateOnTrade(lobbyId: string, context: string) {
     if (countLobbyActiveUsers(lobbyId) === 0) return;
     const now = Date.now();

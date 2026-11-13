@@ -1,9 +1,10 @@
 import type { FastifyInstance } from "fastify";
 import { fetchWithTimeout } from "../lib/fetchWithTimeout";
+import { BoundedMap } from "../lib/boundedMap";
 
 export default async function tenorRoutes(app: FastifyInstance) {
   const GIPHY_KEY = process.env.GIPHY_API_KEY || "";
-  const gifCache = new Map<string, { data: any; expiresAt: number }>();
+  const gifCache = new BoundedMap<string, { data: any; expiresAt: number }>(200);
 
   async function giphyFetch(endpoint: "trending" | "search", params: Record<string, string>) {
     if (!GIPHY_KEY) return { data: [] };

@@ -1,6 +1,7 @@
 import { fetchWithTimeout } from "../lib/fetchWithTimeout";
 import type { FastifyInstance } from "fastify";
 import { PrismaClient } from "@prisma/client";
+import { BoundedMap } from "../lib/boundedMap";
 
 type Opts = {
   authFromHeader: (h?: string) => { id: string; name?: string } | null;
@@ -18,14 +19,14 @@ type Opts = {
 
 const STEAM_API_KEY = process.env.STEAM_API_KEY || "";
 
-const playersCache = new Map<string, { count: number; ts: number }>();
+const playersCache = new BoundedMap<string, { count: number; ts: number }>(2_000);
 const PLAYERS_TTL_MS = 60_000;
 
 type OwnedRow = { owned: boolean; hoursPlayed: number; lastPlayed: number | null; ts: number };
-const ownedCache = new Map<string, OwnedRow>();
+const ownedCache = new BoundedMap<string, OwnedRow>(5_000);
 const OWNED_TTL_MS = 60 * 60 * 1000;
 
-const schemaCache = new Map<string, { schema: any; ts: number }>();
+const schemaCache = new BoundedMap<string, { schema: any; ts: number }>(500);
 const SCHEMA_TTL_MS = 24 * 60 * 60 * 1000;
 
 type AchievementsRow = {
@@ -35,7 +36,7 @@ type AchievementsRow = {
   unlocked: number;
   ts: number;
 };
-const achievementsCache = new Map<string, AchievementsRow>();
+const achievementsCache = new BoundedMap<string, AchievementsRow>(5_000);
 const ACHIEVEMENTS_TTL_MS = 30 * 60 * 1000;
 
 const prisma = new PrismaClient();
@@ -46,7 +47,7 @@ function isValidAppId(s: string): boolean {
 
 export default async function steamRoutes(app: FastifyInstance, opts: Opts) {
   const { authFromHeader, createNotification } = opts;
-  const inviteWindow = new Map<string, number[]>();
+  const inviteWindow = new BoundedMap<string, number[]>(20_000);
   const INVITE_LIMIT = 3;
   const INVITE_WINDOW_MS = 60_000;
 
@@ -281,7 +282,7 @@ export default async function steamRoutes(app: FastifyInstance, opts: Opts) {
   });
 
   type PlayingRow = { items: any[]; ts: number };
-  const playingCache = new Map<string, PlayingRow>();
+  const playingCache = new BoundedMap<string, PlayingRow>(500);
   const PLAYING_TTL_MS = 30_000;
 
   app.get("/steam/playing/:appId", async (req, reply) => {

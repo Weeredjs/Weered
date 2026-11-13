@@ -26,6 +26,7 @@ import { fetchSafe } from "../lib/ssrfGuard";
 import { swallow } from "../lib/logger";
 import { hasLobbyPerm } from "../lib/lobbyPerms";
 import { logLobbyAudit } from "../lib/lobbyAudit";
+import { BoundedMap } from "../lib/boundedMap";
 
 const CACHE_MS = 20_000;
 const FETCH_MS = 8_000;
@@ -343,7 +344,7 @@ async function pollServer(s: Configured): Promise<AcServer> {
   return shell;
 }
 
-const cache = new Map<string, { data: AcServer[]; exp: number }>();
+const cache = new BoundedMap<string, { data: AcServer[]; exp: number }>(2_000);
 
 type Opts = {
   lobbyAdminAccess: (

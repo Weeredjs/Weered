@@ -14,6 +14,7 @@ import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
 import { fetchWithTimeout } from "../lib/fetchWithTimeout";
 import { hasLobbyPerm } from "../lib/lobbyPerms";
+import { BoundedMap } from "../lib/boundedMap";
 
 type Opts = {
   authFromHeader: (h?: string) => any;
@@ -272,7 +273,7 @@ type Entry = {
   error: string | null;
   inflight: Promise<any> | null;
 };
-const cache = new Map<string, Entry>();
+const cache = new BoundedMap<string, Entry>(300);
 const keyOf = (ref: Ref) => `${ref.kind}/${ref.slug}`;
 
 async function fetchPayload(ref: Ref): Promise<any | null> {
@@ -381,7 +382,7 @@ export async function entrantSlugs(tournamentSlug: string): Promise<Set<string>>
 
 /** Entrant sets get their own cache: the walk costs up to 4 GraphQL calls, and
  *  an entrant list changes far more slowly than a stream queue. */
-const entrantCache = new Map<string, { at: number; slugs: Set<string> }>();
+const entrantCache = new BoundedMap<string, { at: number; slugs: Set<string> }>(300);
 const ENTRANT_TTL_MS = 10 * 60_000;
 
 async function entrantsCached(tournamentSlug: string): Promise<Set<string>> {

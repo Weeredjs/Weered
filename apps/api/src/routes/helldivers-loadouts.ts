@@ -1,18 +1,14 @@
 import { log, swallow } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
+import { getGlobalRole, isStaffRole } from "../lib/lobbyAuth";
 
 type Opts = {
-  authFromHeader: (h?: string) => { id: string; name?: string; globalRole?: string } | null;
+  authFromHeader: (h?: string) => { id: string; name?: string } | null;
 };
 
 const FACTIONS = new Set(["TERMINIDS", "AUTOMATONS", "ILLUMINATE", "ANY"]);
 const SLUG_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789";
-
-function isStaff(role?: string) {
-  const r = String(role || "").toUpperCase();
-  return r === "STAFF" || r === "ADMIN" || r === "MODERATOR" || r === "OWNER";
-}
 
 function slugify(s: string) {
   return (
@@ -260,7 +256,10 @@ export default async function helldiversLoadoutsRoutes(app: FastifyInstance, opt
       const loadout = await prisma.helldiversLoadout.findUnique({ where: { slug } });
       if (!loadout) return reply.code(404).send({ ok: false, error: "not_found" });
 
-      if (loadout.authorId !== auth.id && !isStaff(auth.globalRole)) {
+      // Staff by the account's role. This read a role off the session, which
+      // never carried one, and compared it with role names that don't exist,
+      // so staff could not remove anyone's loadout.
+      if (loadout.authorId !== auth.id && !isStaffRole(await getGlobalRole(auth.id))) {
         return reply.code(403).send({ ok: false, error: "forbidden" });
       }
 
