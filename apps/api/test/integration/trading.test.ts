@@ -1,9 +1,11 @@
-import { describe, it, expect, afterEach, afterAll } from "vitest";
+import { describe, it, expect, afterEach, afterAll, beforeAll } from "vitest";
 import tradingRoutes from "../../src/routes/trading";
 import { buildTestApp, testToken, testAuthFromHeader } from "../helpers/buildTestApp";
 import { prisma } from "../../src/lib/prisma";
 
-const LOBBY = "tlobby";
+// A real lobby: FakeOut accounts belong to one (fan-out audit, 2026-11-13).
+const LOBBY = "tlobby_" + Date.now().toString(36);
+let lobbyOwner = "";
 function makeApp() {
   return buildTestApp((app: any) =>
     tradingRoutes(app, {
@@ -48,8 +50,31 @@ describe("trading - place order (FakeOut paper money path)", () => {
     }
     users.length = 0;
   });
+  beforeAll(async () => {
+    const o = await prisma.user.create({
+      data: { usernameKey: "itest_trd_owner_" + LOBBY, name: "owner" },
+      select: { id: true },
+    });
+    lobbyOwner = o.id;
+    await prisma.lobby.create({ data: { id: LOBBY, name: "Trading test", ownerId: o.id } });
+  });
   afterAll(async () => {
+    await prisma.lobby.delete({ where: { id: LOBBY } }).catch(() => {});
+    await prisma.user.delete({ where: { id: lobbyOwner } }).catch(() => {});
     await prisma.$disconnect();
+  });
+
+  it("refuses an account for a lobby or room that does not exist", async () => {
+    const app = await makeApp();
+    const uid = await newUser("nowhere");
+    const r = await app.inject({
+      method: "POST",
+      url: "/trading/order/no-such-place-anywhere",
+      headers: { authorization: `Bearer ${testToken(uid)}` },
+      payload: { symbol: "BTCUSDT", side: "BUY", quantity: 0.01 },
+    });
+    expect(r.statusCode).toBe(404);
+    await app.close();
   });
 
   it("validates side, quantity, and limit price (400s) + 401", async () => {
