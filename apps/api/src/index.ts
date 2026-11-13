@@ -2,6 +2,7 @@ import { shownLookBg } from "./lib/lookBg";
 import { decodeEntities, stripTags } from "./lib/htmlText";
 import { log, logger, swallow } from "./lib/logger";
 import { shortMessage } from "./lib/zodSafe";
+import { makeVerifyToken } from "./lib/sessionToken";
 import { lobbyLevelOf } from "./lib/lobbyAccess";
 // Before anything decodes an image: switches off the vulnerable HEIF/AVIF loader.
 import "./lib/sharpSafety";
@@ -437,28 +438,10 @@ function removeKnock(room: RoomState, userId: string) {
   room.knocks = room.knocks.filter((k) => k.userId !== userId);
 }
 
-function verifyToken(token?: string): AuthedUser | null {
-  if (!token) return null;
-  try {
-    const decoded: any = jwt.verify(token, JWT_SECRET, { algorithms: ["HS256"] });
-    const id = String(decoded?.sub || decoded?.id || "");
-    const name = String(decoded?.name || decoded?.username || "");
-    if (!id || !name) return null;
-    const out: AuthedUser = { id, name };
-    // Issue time, for the account's sign-out-everywhere cut-off (lib/sessionCutoff).
-    (out as any).iat = Number(decoded?.iat) || 0;
-    if (decoded?.guest) {
-      (out as any).guest = true;
-      (out as any).scope = decoded?.scope ?? null;
-    } else if (decoded?.host) {
-      (out as any).host = true;
-      (out as any).scope = decoded?.scope ?? null;
-    }
-    return out;
-  } catch {
-    return null;
-  }
-}
+// A session token, never a socket ticket: lib/sessionToken.ts says why. The
+// socket's own sign-in passes forSocket (see handleAuthHello below).
+const verifyAnyToken = makeVerifyToken(JWT_SECRET);
+const verifyToken = (token?: string): AuthedUser | null => verifyAnyToken(token);
 
 function authFromHeader(authHeader?: string): AuthedUser | null {
   if (!authHeader) return null;
@@ -1713,7 +1696,8 @@ async function main() {
 
         if (msg.type === "auth:hello") {
           await handleAuthHello(ws, msg, {
-            verifyToken,
+            // The one place a socket ticket is good (lib/sessionToken.ts).
+            verifyToken: (t?: string) => verifyAnyToken(t, true),
             hydrateGlobalRole,
             isGloballyBanned,
             sessionEnded,

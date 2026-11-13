@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import jwt from "jsonwebtoken";
 import { readCookieToken, setAuthCookie } from "../lib/authCookie";
+import { TICKET_CLAIM } from "../lib/sessionToken";
 
 // GET /auth/ws-ticket: a 60-second ticket the socket signs in with. The web
 // asks for one on every page load (and its session check does,
@@ -30,7 +31,7 @@ export function rollSession(req: any, reply: any, secret: string): boolean {
   } catch {
     return false;
   }
-  if (!d?.sub || !d.name || d.guest || d.host || d.scope) return false;
+  if (!d?.sub || !d.name || d.guest || d.host || d.scope || d[TICKET_CLAIM]) return false;
   if (Date.now() / 1000 - Number(d.iat || 0) < ROLL_AFTER_S) return false;
   setAuthCookie(reply, jwt.sign({ sub: d.sub, name: d.name }, secret, { expiresIn: "7d" }));
   return true;
@@ -42,7 +43,9 @@ export default function wsTicketRoute(app: FastifyInstance, opts: Opts) {
     const u = authFromHeader((req.headers as any).authorization);
     if (!u) return reply.code(401).send({ ok: false });
     rollSession(req, reply, JWT_SECRET);
-    const claims: any = { sub: u.id, name: u.name };
+    // Marked as a ticket: it signs a socket in and is refused everywhere else,
+    // this route included, so it can't be traded for another (lib/sessionToken.ts).
+    const claims: any = { sub: u.id, name: u.name, [TICKET_CLAIM]: 1 };
     if ((u as any).guest) {
       claims.guest = true;
       claims.scope = (u as any).scope ?? null;
