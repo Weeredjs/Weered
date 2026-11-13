@@ -32,6 +32,12 @@ main() {
   if [ -z "$MODE" ]; then
     prev="$(cat "$STATE" 2>/dev/null || true)"
     if [ -n "$prev" ] && git cat-file -e "$prev^{commit}" 2>/dev/null; then
+      # New or updated packages since the last deploy: install them first, or
+      # the new code runs against the old ones. A failed install stops here.
+      if ! git diff --quiet "$prev" HEAD -- pnpm-lock.yaml; then
+        log "Lockfile changed since ${prev:0:8}: installing packages"
+        pnpm install --frozen-lockfile
+      fi
       MODE="$(bash scripts/deploy-mode.sh "$prev" HEAD)"
       log "Changed since ${prev:0:8}: mode $MODE"
     else

@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { isOwnPicture, pictureHost } from "../chat/chatShared";
 
 function escapeHtml(s: string): string {
   return s
@@ -51,7 +52,12 @@ function renderInline(s: string): string {
     if (m[1] !== undefined) {
       out += `<code style="${CODE_STYLE}">${escapeHtml(m[1])}</code>`;
     } else if (m[3] !== undefined) {
-      out += `<img src="${escapeHtml(safeUrl(m[3]))}" alt="${escapeHtml(m[2] || "")}" style="${IMG_STYLE}" />`;
+      const src = safeUrl(m[3]);
+      // Pictures uploaded here are drawn; one on another site is a link
+      // (components/chat/chatShared isOwnPicture, fan-out audit 2026-11-13).
+      out += isOwnPicture(src)
+        ? `<img src="${escapeHtml(src)}" alt="${escapeHtml(m[2] || "")}" style="${IMG_STYLE}" />`
+        : `<a href="${escapeHtml(src)}" target="_blank" rel="noopener noreferrer" style="${LINK_STYLE}">Picture${m[2] ? `: ${escapeHtml(m[2])}` : ""} (${escapeHtml(pictureHost(src))})</a>`;
     } else {
       out += `<a href="${escapeHtml(safeUrl(m[5]))}" target="_blank" rel="noopener noreferrer" style="${LINK_STYLE}">${emphasis(escapeHtml(m[4]))}</a>`;
     }

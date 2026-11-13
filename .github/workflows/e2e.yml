@@ -33,7 +33,7 @@ jobs:
       REGISTER_MAX_PER_HOUR: "60"
     steps:
       - uses: actions/checkout@v6
-      - uses: pnpm/action-setup@v6
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6
         with:
           version: 10.29.3
       - uses: actions/setup-node@v6

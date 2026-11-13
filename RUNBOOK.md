@@ -86,7 +86,7 @@ cd /opt/weered && bash scripts/smoke.sh   # full read-only health check
 
 **Gotchas (these will bite you):**
 
-- The API runs the **esbuild bundle** (`node dist/index.js`), not tsx. A `pm2 restart weered-api` rebuilds it automatically (its start script is `pnpm build && node dist/index.js`).
+- The API runs the **esbuild bundle** (`node dist/index.js`), not tsx. The deploy builds it after the guardrails pass; a `pm2 restart weered-api` only runs the last built bundle (its start script is `node dist/index.js`, since 2026-11-13). To rebuild by hand: `cd apps/api && pnpm build`.
 - The web app **must** be rebuilt after any web code change: `cd apps/web && pnpm next build` then restart. `deploy.sh` does this.
 - **CORS lives only in Caddy.** Never add `@fastify/cors` or `Access-Control-Allow-Origin` headers in routes — duplicates silently break the browser.
 - **Prisma:** use `pnpm prisma db push` (never `migrate deploy` — the migrations dir is empty). Never `prisma generate --no-engine`.
@@ -168,7 +168,7 @@ tar -xzf /root/weered-pg-backups/uploads-LATEST.tar.gz -C /opt/weered/apps/api
 4. Restore `apps/api/.env` (from `/root/weered-env-backups/` or a known copy) and recreate `apps/web/.env.local` (3 `NEXT_PUBLIC_*` values).
 5. `cd /opt/weered && docker compose up -d postgres redis livekit` (use `docker-compose.yml`, **not** `compose.resolved.yml` — that one has a Windows path).
 6. `CREATE DATABASE "=public";` then restore the SQL dump + uploads (6a).
-7. `pnpm install --frozen-lockfile`; `cd apps/api && pnpm prisma generate && pnpm prisma db push`; `cd apps/web && pnpm next build`.
+7. `pnpm install --frozen-lockfile`; `cd apps/api && pnpm prisma generate && pnpm prisma db push && pnpm build`; `cd apps/web && pnpm next build`.
 8. `pm2 start "pnpm start" --name weered-api --cwd /opt/weered/apps/api`; `pm2 start "pnpm next start -p 3000" --name weered-web --cwd /opt/weered/apps/web`; `pm2 save`.
 9. Install the **live** Caddyfile to `/etc/caddy/Caddyfile`; `systemctl restart caddy`.
 10. In **DigitalOcean → Networking → Domains → weered.ca**, point the A records (`@`, `www`, `api`, `ws`, `livekit`) at the new IP. TLS auto-issues via Caddy/Let's Encrypt on first request.

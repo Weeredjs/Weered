@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - uses: pnpm/action-setup@v6
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6
         with:
           version: 10.29.3
       - uses: actions/setup-node@v6
@@ -56,7 +56,7 @@ jobs:
       DATABASE_URL: postgresql://weered:weered@localhost:5432/weered_test
     steps:
       - uses: actions/checkout@v6
-      - uses: pnpm/action-setup@v6
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6
         with:
           version: 10.29.3
       - uses: actions/setup-node@v6
@@ -98,7 +98,7 @@ jobs:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0 # Sonar needs full history for blame / new-code detection
-      - uses: pnpm/action-setup@v6
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6
         with:
           version: 10.29.3
       - uses: actions/setup-node@v6
@@ -122,7 +122,7 @@ jobs:
       - name: SonarCloud scan (skipped until SONAR_TOKEN is configured)
         if: ${{ env.SONAR_TOKEN != '' }}
         continue-on-error: true
-        uses: SonarSource/sonarqube-scan-action@v6
+        uses: SonarSource/sonarqube-scan-action@fd88b7d7ccbaefd23d8f36f73b59db7a3d246602 # v6
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: https://sonarcloud.io

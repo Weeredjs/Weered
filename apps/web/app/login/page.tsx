@@ -9,6 +9,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { onAccent, safeAccent, safeImage } from "../../lib/brandSafe";
 import { sessionAlive } from "../../lib/staleSession";
 import { rememberAfterAuth } from "../../lib/afterAuth";
+import { isSitePath } from "../../lib/shellLayout";
 
 /** The lobby a sign-in is for (?lobby=), as its page shows it. */
 type Brand = {
@@ -130,8 +131,10 @@ function LoginForm() {
 
   const nextPath = React.useMemo(() => {
     const n = sp?.get("next") || "";
-    // A path on this site only: "//elsewhere" is another site (red team finding 22).
-    if (n.startsWith("/") && !n.startsWith("//") && !n.startsWith("/\\")) return n;
+    // A path on this site only: "//elsewhere" is another site (red team finding
+    // 22), and so is "/<tab>/elsewhere", since browsers drop tabs and newlines
+    // from a URL (fan-out audit, 2026-11-13). isSitePath allows neither.
+    if (isSitePath(n)) return n;
     // Signing in for a lobby lands in it.
     return brandId ? `/lobby/${encodeURIComponent(brandId)}` : "/home";
   }, [sp, brandId]);

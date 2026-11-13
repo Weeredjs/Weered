@@ -116,3 +116,7 @@ office-board.json
 # on the server only.
 services/livekit/livekit.yaml
 services/livekit/*.bak*
+
+# Member map uploads (written by the API at run time; never commit them)
+apps/web/public/maps/*
+!apps/web/public/maps/.gitkeep

@@ -43,6 +43,33 @@ export const hideSpoilers = (text: string) =>
   String(text || "").replace(/\|\|[^|\n]+?\|\|/g, "[spoiler]");
 export const IMG_EXT = /\.(png|jpe?g|gif|webp)(\?[^\s]*)?$/i;
 export const TENOR_RE = /https?:\/\/media\.tenor\.com\/[^\s]+/i;
+
+/**
+ * A picture drawn straight into a message: one uploaded here (it went through
+ * the picture check) or a Tenor GIF. A picture on any other host is shown only
+ * when the reader asks, so the picture check means something and a stranger's
+ * server does not learn who read the message (fan-out audit, 2026-11-13).
+ */
+export function isOwnPicture(url: string): boolean {
+  const s = String(url || "").trim();
+  if (/^\/(?![/\\])/.test(s)) return true;
+  try {
+    const u = new URL(s);
+    if (u.protocol !== "https:" && u.protocol !== "http:") return false;
+    const h = u.hostname.toLowerCase();
+    return h === "weered.ca" || h.endsWith(".weered.ca") || h === "media.tenor.com";
+  } catch {
+    return false;
+  }
+}
+
+export function pictureHost(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return "another site";
+  }
+}
 export const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
 export type InlineTok = {

@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import LandingFilm from "../components/LandingFilm";
 import { sizedImage } from "../lib/sizedImage";
+import { isSitePath } from "../lib/shellLayout";
 
 /** Downtown as a signed-out visitor sees it, photographed on the live site. A
  *  new shot gets a new name, so a cached old one is never shown for it. */
@@ -16,7 +17,7 @@ function AuthRouter({ onUnauthed }: { onUnauthed: (next: string) => void }) {
 
   useEffect(() => {
     const n = sp?.get("next") || "";
-    const next = n.startsWith("/") && !n.startsWith("//") && !n.startsWith("/\\") ? n : "/home";
+    const next = isSitePath(n) ? n : "/home"; // no "//", tab or newline tricks
     try {
       const tok = localStorage.getItem("weered_user") || "";
       if (tok) router.replace(next);

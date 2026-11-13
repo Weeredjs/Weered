@@ -39,14 +39,19 @@ jobs:
     runs-on: ${{ matrix.platform }}
 
     steps:
+      # Third-party actions are pinned to a commit (the tag in a comment): this
+      # job holds the updater signing key and a write token, and a moved tag
+      # would run someone else's code with both (fan-out audit, 2026-11-13).
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          persist-credentials: false
 
       - name: Install pnpm
         # Must run BEFORE setup-node — setup-node@v5 auto-caches pnpm if it
         # finds a lockfile, and needs pnpm already on PATH to do that.
         # Version is read from package.json's "packageManager" field.
-        uses: pnpm/action-setup@v6
+        uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6
 
       - name: Install Node
         uses: actions/setup-node@v6
@@ -55,12 +60,13 @@ jobs:
           cache: pnpm
 
       - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
         with:
+          toolchain: stable
           targets: ${{ matrix.target }}
 
       - name: Cache Rust target dir
-        uses: swatinem/rust-cache@v2
+        uses: swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
         with:
           workspaces: "apps/desktop/src-tauri -> target"
 
@@ -83,7 +89,7 @@ jobs:
       # moved off the separate Weered-releases repo once the source repo
       # went public, 2026-06-17.)
       - name: Build, sign + publish Tauri app
-        uses: tauri-apps/tauri-action@v0
+        uses: tauri-apps/tauri-action@84b9d35b5fc46c1e45415bdb6144030364f7ebc5 # v0
         env:
           # Default token is fine — this step doesn't create a release.
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

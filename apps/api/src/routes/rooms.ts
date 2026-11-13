@@ -13,6 +13,7 @@ import bcrypt from "bcryptjs";
 import { lobbyOnlineCount } from "../lib/lobbyCount";
 import { BoundedMap } from "../lib/boundedMap";
 import { getAI } from "../lib/ai";
+import { isSafeLink } from "../lib/brandValues";
 
 type Opts = {
   authFromHeader: (h?: string) => { id: string; name: string } | null;
@@ -381,10 +382,18 @@ export default async function roomsRoutes(app: FastifyInstance, opts: Opts) {
       const body: any = (req as any).body || {};
       const data: any = {};
       if (typeof body.description === "string") data.description = body.description.slice(0, 500);
-      if (typeof body.iconUrl === "string" || body.iconUrl === null)
-        data.iconUrl = body.iconUrl ? String(body.iconUrl).slice(0, 600) : null;
-      if (typeof body.bannerUrl === "string" || body.bannerUrl === null)
-        data.bannerUrl = body.bannerUrl ? String(body.bannerUrl).slice(0, 600) : null;
+      // A picture address is https or a path here, under 500 characters, with
+      // nothing that could leave an attribute; anything else is refused, not
+      // cut short (fan-out audit, 2026-11-13).
+      for (const key of ["iconUrl", "bannerUrl"] as const) {
+        if (body[key] === null || body[key] === "") data[key] = null;
+        else if (typeof body[key] === "string") {
+          const v = body[key].trim();
+          if (!isSafeLink(v) || !/^(https:\/\/|\/(?![/\\]))/i.test(v))
+            return reply.code(400).send({ ok: false, error: `bad_${key}` });
+          data[key] = v;
+        }
+      }
       if (typeof body.accentColor === "string" || body.accentColor === null) {
         const v = body.accentColor ? String(body.accentColor).trim() : null;
         if (v && !/^#[0-9a-f]{6}$/i.test(v))

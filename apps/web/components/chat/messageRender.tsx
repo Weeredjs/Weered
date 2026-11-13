@@ -1,7 +1,16 @@
 "use client";
 
 import React from "react";
-import { URL_RE, IMG_EXT, TENOR_RE, API, InlineTok, ChatAtt } from "./chatShared";
+import {
+  URL_RE,
+  IMG_EXT,
+  TENOR_RE,
+  API,
+  InlineTok,
+  ChatAtt,
+  isOwnPicture,
+  pictureHost,
+} from "./chatShared";
 import {
   detectWeeredEmbed,
   WeeredEmbedKind,
@@ -163,6 +172,54 @@ export function AttachmentBlock({
   );
 }
 
+/** A picture from another site: drawn only once the reader asks for it. */
+function OutsidePicture({ src }: { src: string }) {
+  const [shown, setShown] = React.useState(false);
+  if (!shown)
+    return (
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          setShown(true);
+        }}
+        style={{
+          display: "block",
+          marginTop: 4,
+          padding: "6px 10px",
+          borderRadius: 8,
+          border: "1px solid rgba(255,255,255,.14)",
+          background: "rgba(255,255,255,.05)",
+          color: "inherit",
+          fontSize: 12,
+          cursor: "pointer",
+        }}
+      >
+        Show picture from {pictureHost(src)}
+      </button>
+    );
+  return (
+    <a href={src} target="_blank" rel="noopener noreferrer">
+      <img
+        src={src}
+        alt="Chat image"
+        referrerPolicy="no-referrer"
+        style={{
+          maxWidth: 280,
+          maxHeight: 200,
+          borderRadius: 8,
+          marginTop: 4,
+          border: "1px solid rgba(255,255,255,.1)",
+          display: "block",
+        }}
+        onError={(e) => {
+          e.currentTarget.style.display = "none";
+        }}
+      />
+    </a>
+  );
+}
+
 export function ChatBody({
   text,
   onMentionClick,
@@ -206,26 +263,30 @@ export function ChatBody({
   return (
     <>
       <div style={{ opacity: 0.95, wordBreak: "break-word" }}>{blockNodes}</div>
-      {imageUrls.map((src, i) => (
-        <a key={`img-${i}`} href={src} target="_blank" rel="noopener noreferrer">
-          <img
-            src={src}
-            alt="Chat image"
-            loading="lazy"
-            style={{
-              maxWidth: 280,
-              maxHeight: 200,
-              borderRadius: 8,
-              marginTop: 4,
-              border: "1px solid rgba(255,255,255,.1)",
-              display: "block",
-            }}
-            onError={(e) => {
-              e.currentTarget.style.display = "none";
-            }}
-          />
-        </a>
-      ))}
+      {imageUrls.map((src, i) =>
+        isOwnPicture(src) ? (
+          <a key={`img-${i}`} href={src} target="_blank" rel="noopener noreferrer">
+            <img
+              src={src}
+              alt="Chat image"
+              loading="lazy"
+              style={{
+                maxWidth: 280,
+                maxHeight: 200,
+                borderRadius: 8,
+                marginTop: 4,
+                border: "1px solid rgba(255,255,255,.1)",
+                display: "block",
+              }}
+              onError={(e) => {
+                e.currentTarget.style.display = "none";
+              }}
+            />
+          </a>
+        ) : (
+          <OutsidePicture key={`img-${i}`} src={src} />
+        ),
+      )}
       {weeredEmbeds.slice(0, 2).map((e, i) => {
         if (e.kind === "bounty")
           return <WeeredBountyEmbed key={`wb-${i}`} id={e.id} href={e.url} />;

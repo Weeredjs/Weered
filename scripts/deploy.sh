@@ -80,6 +80,11 @@ if has_web; then
 fi
 
 if has_api; then
+  # Built here, after the guardrails, so a restart (a crash, a reboot) only
+  # replays the last checked bundle; the start script no longer builds. A
+  # failed build stops the deploy with the live API untouched.
+  echo ">>> Building weered-api"
+  (cd "$ROOT/apps/api" && pnpm build)
   echo ">>> Restarting weered-api"
   NODE_OPTIONS="--max-old-space-size=1536" pm2 restart weered-api --update-env
 fi
