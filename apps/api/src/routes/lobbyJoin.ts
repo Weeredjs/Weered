@@ -12,6 +12,7 @@ import { usableInvite } from "../lib/invitePower";
 import { loginFailed, loginPaused, loginSucceeded } from "../lib/loginGuard";
 import bcrypt from "bcryptjs";
 import { tellOwnerOfJoin } from "../lib/growthSignals";
+import { endLobbyTier } from "../lib/lobbyTierEnd";
 
 /** Lobby passwords are kept like any other password: hashed, so nobody can
  *  read one back (James 2026-11-01, red team finding 21). One saved before
@@ -239,10 +240,8 @@ export function registerLobbyJoin(
 
       await prisma.lobbyMember.delete({ where: { id: member.id } });
 
-      await prisma.lobbyTierSub.updateMany({
-        where: { lobbyId, userId: u.id, status: "active" },
-        data: { status: "canceled", cancelAtPeriodEnd: true },
-      });
+      // Stripe stops billing at the period's end; its webhook ends the tier.
+      await endLobbyTier(lobbyId, u.id);
 
       const user = await prisma.user.findUnique({ where: { id: u.id }, select: { name: true } });
       await logLobbyAudit({

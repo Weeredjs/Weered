@@ -428,7 +428,13 @@ export default async function billingRoutes(app: FastifyInstance, opts: Opts) {
       const existingSub = await prisma.lobbyTierSub.findUnique({
         where: { lobbyId_userId: { lobbyId, userId: u.id } },
       });
-      if (existingSub && existingSub.status === "active") {
+      // Any live status, not only "active": a second checkout while past_due
+      // started a second subscription, and the webhook then remembered the
+      // paid level as the one to return to (fan-out audit, 2026-11-13).
+      if (
+        existingSub?.stripeSubId &&
+        ["active", "trialing", "past_due"].includes(String(existingSub.status))
+      ) {
         return reply.code(400).send({ ok: false, error: "already_subscribed" });
       }
 

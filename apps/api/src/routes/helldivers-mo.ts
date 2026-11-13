@@ -17,7 +17,7 @@ type Opts = {
 };
 
 export default async function helldiversMoRoutes(app: FastifyInstance, opts: Opts) {
-  const { authFromHeader, awardPaper, awardNotoriety } = opts;
+  const { authFromHeader, awardNotoriety } = opts;
 
   app.get("/helldivers/steam-players", async (_req, reply) => {
     const r = await getHelldiversSteamPlayers();
@@ -94,15 +94,9 @@ export default async function helldiversMoRoutes(app: FastifyInstance, opts: Opt
       }
 
       try {
-        if (def.paperReward && awardPaper) {
-          await awardPaper(
-            u.id,
-            "CHALLENGE_REWARD",
-            Number(def.paperReward),
-            `Helldivers 2 Major Order: ${moId}`,
-            def.id,
-          );
-        }
+        // No Paper here: completion is self-reported, one click, so paying it
+        // would hand Paper to anyone who asks (fan-out audit, 2026-11-13; the
+        // payout had never worked, its type was not a Paper type).
         // Route notoriety through the central awardNotoriety (ledgered notorietyEvent
         // + atomic increment + rank-up notifications) instead of a raw, unledgered
         // prisma.user.update increment. Per-MO idempotency is held by the enrollment
@@ -117,7 +111,7 @@ export default async function helldiversMoRoutes(app: FastifyInstance, opts: Opt
 
       return reply.send({
         ok: true,
-        paper: def.paperReward,
+        paper: 0,
         notoriety: def.notorietyReward,
       });
     },

@@ -55,6 +55,75 @@ export type PokerTable = {
 
 export const pokerTables = new Map<string, PokerTable>();
 
+/**
+ * A turn left untaken for this long is taken for the player: a check if
+ * nothing is owed, else a fold. With no clock, someone could sit on their turn
+ * and freeze everyone's chips (fan-out audit, 2026-11-13).
+ */
+export const TURN_LIMIT_MS = 45_000;
+const turnSeen = new WeakMap<PokerTable, { key: string; at: number }>();
+
+export function sweepStalledTurns(now = Date.now()): number {
+  let acted = 0;
+  for (const table of pokerTables.values()) {
+    if (!table.handInProgress) {
+      turnSeen.delete(table);
+      continue;
+    }
+    const seat = table.seats[table.turnIndex];
+    const key = [
+      table.phase,
+      table.turnIndex,
+      table.currentBet,
+      table.pot,
+      seat?.userId ?? "-",
+      seat?.bet ?? 0,
+    ].join(":");
+    const seen = turnSeen.get(table);
+    if (!seen || seen.key !== key) {
+      turnSeen.set(table, { key, at: now });
+      continue;
+    }
+    if (now - seen.at < TURN_LIMIT_MS) continue;
+    turnSeen.delete(table);
+    if (seat && !seat.folded && !seat.allIn) {
+      const owes = table.currentBet - seat.bet > 0;
+      if (owes) seat.folded = true;
+      table.lastAction = { userId: seat.userId, action: owes ? "fold" : "check" };
+    }
+    try {
+      advancePokerGame(table);
+    } catch (e) {
+      swallow(e);
+    }
+    acted++;
+  }
+  return acted;
+}
+
+/**
+ * What every seated player gets back if the server stops: their stack, their
+ * bet this round, and what they put in this hand (the hand is void). Chips are
+ * Paper already taken at the buy-in, and a restart used to lose them all.
+ * Seats are emptied first, so nothing can be paid twice.
+ */
+export function takeAllStacks(): Array<{ userId: string; tableId: string; amount: number }> {
+  const out: Array<{ userId: string; tableId: string; amount: number }> = [];
+  for (const table of pokerTables.values()) {
+    for (let i = 0; i < table.seats.length; i++) {
+      const seat = table.seats[i];
+      if (!seat) continue;
+      table.seats[i] = null;
+      const inHand = table.handInProgress ? Math.max(0, seat.committed || 0) : 0;
+      const amount = Math.max(0, seat.chips) + Math.max(0, seat.bet) + inHand;
+      if (amount > 0) out.push({ userId: seat.userId, tableId: table.tableId, amount });
+    }
+    table.pot = 0;
+    table.handInProgress = false;
+  }
+  return out;
+}
+
 export function determineWinners(seats: (PokerSeat | null)[], communityCards: Card[]): number[] {
   let bestEval: { rank: number; kickers: number[] } | null = null;
   let winnerIndices: number[] = [];

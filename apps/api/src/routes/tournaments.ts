@@ -473,6 +473,12 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
       if (tournament.status === "COMPLETED" || tournament.status === "CANCELED") {
         return reply.code(400).send({ ok: false, error: "already_finalized" });
       }
+      // Finish once (two clicks at once would each pay the prizes).
+      const claim = await prisma.tournament.updateMany({
+        where: { id, status: { notIn: ["COMPLETED", "CANCELED"] } },
+        data: { status: "COMPLETED" },
+      });
+      if (claim.count === 0) return reply.code(400).send({ ok: false, error: "already_finalized" });
 
       let entries: any[];
       if (tournament.format === "LEADERBOARD") {
@@ -552,7 +558,7 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
         if (awardPaper && p.paper > 0) {
           await awardPaper(
             e.userId,
-            "TOURNAMENT_PRIZE",
+            "EARN_COMPETITION",
             p.paper,
             `${tournament.title} · ${t}`,
             id,

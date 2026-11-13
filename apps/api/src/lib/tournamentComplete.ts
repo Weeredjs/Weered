@@ -1,6 +1,7 @@
 import { log, swallow } from "./logger";
 import type { PrismaClient } from "@prisma/client";
 import { grantFlairToUser } from "./flair";
+import { isStaffUser } from "./isStaffUser";
 
 type CreateNotification = (opts: {
   userId: string;
@@ -45,6 +46,16 @@ export async function completeTournament(
   if (tournament.status === "COMPLETED" || tournament.status === "CANCELED") {
     return { ok: false, error: "already_finalized" };
   }
+  // Finish once: two finishes at the same moment would each pay the prizes.
+  const claim = await prisma.tournament.updateMany({
+    where: { id: tournamentId, status: { notIn: ["COMPLETED", "CANCELED"] } },
+    data: { status: "COMPLETED" },
+  });
+  if (claim.count === 0) return { ok: false, error: "already_finalized" };
+  // Paper prizes come from tournaments Weered staff set up. A member's own
+  // tournament, filled with their own second accounts, would otherwise print
+  // Paper (fan-out audit, 2026-11-13). Ranks, badges and notoriety stand.
+  const paysPaper = await isStaffUser(tournament.createdById).catch(() => false);
 
   let entries: any[];
   if (tournament.format === "LEADERBOARD" || tournament.format === "CHALLENGE_RACE") {
@@ -122,10 +133,11 @@ export async function completeTournament(
     const p = defaultPayout(t, total);
     payouts.push({ userId: e.userId, displayName: e.displayName, rank: i + 1, tier: t, ...p });
 
+    if (!paysPaper) p.paper = 0;
     if (awardPaper && p.paper > 0) {
       await awardPaper(
         e.userId,
-        "TOURNAMENT_PRIZE",
+        "EARN_COMPETITION",
         p.paper,
         `${tournament.title} · ${t}`,
         tournamentId,

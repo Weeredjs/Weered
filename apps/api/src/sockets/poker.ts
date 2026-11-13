@@ -186,6 +186,12 @@ export async function handlePoker(ws: any, msg: any, opts: Opts): Promise<void> 
     // leave finds nothing, then credit via the atomic, guarded awardPaper.
     const chipsToReturn = seat.chips;
     const wasTheirTurn = table.turnIndex === seatIdx;
+    // A bet made this round stays in the pot for whoever wins it; nulling the
+    // seat used to make it vanish.
+    if (table.handInProgress && seat.bet > 0) {
+      table.pot += seat.bet;
+      seat.bet = 0;
+    }
     table.seats[seatIdx] = null;
 
     if (chipsToReturn > 0) {

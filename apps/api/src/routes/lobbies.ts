@@ -31,6 +31,7 @@ import { lobbyOnlineCount } from "../lib/lobbyCount";
 import { alertNewBuilder } from "../lib/growthSignals";
 import { homeLobbiesOf } from "../lib/lobbyHomes";
 import { lobbyUrl, pingIndexNow } from "../lib/indexNow";
+import { endLobbyTier } from "../lib/lobbyTierEnd";
 
 type Opts = {
   authFromHeader: (h?: string) => { id: string; name: string } | null;
@@ -1104,6 +1105,7 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
       await prisma.lobbyMember.delete({
         where: { lobbyId_userId: { lobbyId: ctx.lobby.id, userId: targetUserId } },
       });
+      await endLobbyTier(ctx.lobby.id, targetUserId);
       await logLobbyAudit({
         lobbyId: ctx.lobby.id,
         type: "member_kicked",
@@ -1159,6 +1161,7 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
       await prisma.lobbyMember.deleteMany({
         where: { lobbyId: ctx.lobby.id, userId: targetUserId },
       });
+      await endLobbyTier(ctx.lobby.id, targetUserId);
       await prisma.lobbyBan.upsert({
         where: { lobbyId_userId: { lobbyId: ctx.lobby.id, userId: targetUserId } },
         update: { reason },

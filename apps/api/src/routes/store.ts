@@ -259,11 +259,17 @@ export default async function storeRoutes(app: FastifyInstance, opts: Opts) {
       if (ui.item.category !== "CONSUMABLE")
         return reply.code(400).send({ ok: false, error: "not_consumable" });
       if (ui.consumed) return reply.code(400).send({ ok: false, error: "already_consumed" });
+      const listed = await prisma.marketListing.findFirst({
+        where: { userItemId, status: "ACTIVE" },
+        select: { id: true },
+      });
+      if (listed) return reply.code(400).send({ ok: false, error: "listed" });
 
-      await prisma.userItem.update({
-        where: { id: userItemId },
+      const used = await prisma.userItem.updateMany({
+        where: { id: userItemId, userId: u.id, consumed: false },
         data: { consumed: true, consumedAt: new Date() },
       });
+      if (used.count === 0) return reply.code(400).send({ ok: false, error: "already_consumed" });
 
       return reply.send({ ok: true, consumed: true, unlockTarget: ui.item.unlockTarget });
     },
@@ -427,8 +433,11 @@ export default async function storeRoutes(app: FastifyInstance, opts: Opts) {
             where: { id: listing.sellerId },
             data: { paper: { increment: listing.price } },
           });
-          await tx.userItem.update({
-            where: { id: listing.userItemId },
+          // The item must still be the seller's and unused: one consumed, or
+          // sold under a second listing, is not handed over (fan-out audit,
+          // 2026-11-13). Throwing rolls the payment and the claim back.
+          const moved = await tx.userItem.updateMany({
+            where: { id: listing.userItemId, userId: listing.sellerId, consumed: false },
             data: {
               userId: u.id,
               acquiredFrom: listing.sellerId,
@@ -437,6 +446,7 @@ export default async function storeRoutes(app: FastifyInstance, opts: Opts) {
               equipped: false,
             },
           });
+          if (moved.count === 0) throw new Error("__ITEM_GONE__");
 
           const buyerFresh = await tx.user.findUnique({
             where: { id: u.id },
@@ -478,6 +488,16 @@ export default async function storeRoutes(app: FastifyInstance, opts: Opts) {
       } catch (e) {
         if ((e as any)?.message === "__INSUFFICIENT__")
           return reply.code(400).send({ ok: false, error: "insufficient_paper" });
+        if ((e as any)?.message === "__ITEM_GONE__") {
+          // The listing can never be filled: take it down.
+          await prisma.marketListing
+            .updateMany({
+              where: { id: listingId, status: "ACTIVE" },
+              data: { status: "CANCELLED" },
+            })
+            .catch(swallow);
+          return reply.code(404).send({ ok: false, error: "not_found" });
+        }
         log.error("[market] purchase error:", e);
         return reply.code(500).send({ ok: false, error: "purchase_failed" });
       }

@@ -275,6 +275,8 @@ import {
   broadcastPokerState,
   advancePokerGame,
   startPokerHand,
+  sweepStalledTurns,
+  takeAllStacks,
 } from "./lib/pokerTable";
 import {
   setNotorietyDeps,
@@ -2463,7 +2465,25 @@ async function main() {
     "default symbols",
   );
 
+  setInterval(() => {
+    try {
+      sweepStalledTurns();
+    } catch (e) {
+      swallow(e);
+    }
+  }, 5_000).unref();
+
   process.on("SIGINT", async () => {
+    // Poker chips are Paper taken at the buy-in: hand them back before going.
+    for (const s of takeAllStacks()) {
+      await awardPaper(
+        s.userId,
+        "POKER_CASHOUT",
+        s.amount,
+        `Poker table ${s.tableId} closed for a restart`,
+        s.tableId,
+      ).catch(swallow);
+    }
     await sayRestarting(wss); // pages come straight back (lib/restartNotice.ts)
     for (const [, ws] of binanceSubs) {
       try {
