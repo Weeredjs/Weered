@@ -6,7 +6,7 @@ import { paidThroughStripe } from "../lib/stripeTier";
 import { mayActOn, mayGiveRole } from "../lib/roleLadder";
 import { isProtectedRoom } from "../lib/roomKinds";
 import { sendToEveryone } from "../lib/notifications";
-import { cutoffNow } from "../lib/sessionCutoff";
+import { cutoffNow, forgetAccount } from "../lib/sessionCutoff";
 import { refreshFlood } from "../lib/flood";
 import { GlobalRole, ReportStatus, SubTier } from "@prisma/client";
 
@@ -368,6 +368,7 @@ export default async function staffRoutes(app: FastifyInstance, opts: Opts) {
         tokensValidAfter: cutoffNow(),
       },
     });
+    forgetAccount(targetId);
 
     for (const room of rooms.values()) {
       if (room.users.has(targetId) || room.mods.has(targetId)) {

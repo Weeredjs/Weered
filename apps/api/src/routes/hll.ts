@@ -3,7 +3,8 @@ import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
 import { createNotification } from "../lib/notifications";
 import { isStaffUser } from "../lib/isStaffUser";
-import { assertSafeUrl } from "../lib/ssrfGuard";
+import { assertSafeUrl, fetchSafe } from "../lib/ssrfGuard";
+import { readCapped } from "../lib/htmlScan";
 import { steamNewsUrl } from "../lib/steamNews";
 import { awardNotoriety } from "../lib/notoriety";
 import { BoundedMap } from "../lib/boundedMap";
@@ -299,13 +300,12 @@ export default async function hllRoutes(app: FastifyInstance, opts: Opts = {}) {
       // request to loopback or the metadata address and have fields of the reply
       // echoed back (found 2026-09-26). A real CRCON API does not redirect, and
       // the Bearer key must never be carried to a second host.
-      const res = await fetch(`${base}/api/${encodeURIComponent(cmd)}`, {
-        headers,
-        redirect: "manual",
-        signal: AbortSignal.timeout(8000),
-      });
+      // fetchSafe connects only to an address it checked (no DNS rebinding),
+      // re-checks any redirect and drops the key if one leaves the host. The
+      // reply is read no further than 1 MB (fan-out audit, 2026-11-13).
+      const res = await fetchSafe(`${base}/api/${encodeURIComponent(cmd)}`, { headers }, 8000);
       if (!res.ok) return null;
-      const j = await res.json();
+      const j = JSON.parse(await readCapped(res, 1_000_000));
       if (j && typeof j === "object" && "result" in j) {
         if (j.failed) return null;
         return j.result;

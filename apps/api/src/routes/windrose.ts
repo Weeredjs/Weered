@@ -2,6 +2,7 @@ import { log, swallow } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 import { fetchWithTimeout } from "../lib/fetchWithTimeout";
 import { assertSafeUrl, fetchSafe } from "../lib/ssrfGuard";
+import { readCapped } from "../lib/htmlScan";
 import { steamNewsUrl } from "../lib/steamNews";
 import { z } from "zod";
 import { prisma } from "../lib/prisma";
@@ -1303,7 +1304,8 @@ Rules:
               .catch(swallow);
             continue;
           }
-          const text = await res.text().catch(() => "");
+          // Read no further than a reply can be (fan-out audit, 2026-11-13).
+          const text = await readCapped(res, STATE_MAX_CHARS + 1).catch(() => "");
           let json: any = null;
           if (text.length <= STATE_MAX_CHARS) {
             try {

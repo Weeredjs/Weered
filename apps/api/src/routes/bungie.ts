@@ -19,7 +19,14 @@ import {
   ARMOR_BUCKETS,
   ARMOR_STAT_HASHES,
 } from "../manifest";
-import { signOAuthState, verifyOAuthState } from "../lib/oauthState";
+import {
+  finishLink,
+  linkCookie,
+  linkCookieName,
+  linkNonce,
+  signOAuthState,
+} from "../lib/oauthState";
+import { readCookie } from "../lib/authCookie";
 
 type Opts = {
   authFromHeader: (h?: string) => { id: string; name?: string } | null;
@@ -835,7 +842,10 @@ export default async function bungieRoutes(app: FastifyInstance, opts: Opts) {
     if (!u) return reply.code(401).send({ error: "Login first" });
     if (!BUNGIE_CLIENT_ID) return reply.code(500).send({ error: "Bungie OAuth not configured" });
 
-    const state = signOAuthState(u.id);
+    // Finished only in this browser (lib/oauthState.ts linkCookie).
+    const nonce = linkNonce();
+    const state = signOAuthState(u.id, nonce);
+    reply.header("Set-Cookie", linkCookie("bungie", nonce));
     const url = `https://www.bungie.net/en/OAuth/Authorize?client_id=${BUNGIE_CLIENT_ID}&response_type=code&state=${state}`;
     return reply.redirect(url);
   });
@@ -845,7 +855,7 @@ export default async function bungieRoutes(app: FastifyInstance, opts: Opts) {
     const state = String((req as any).query?.state || "");
     if (!code) return reply.code(400).send({ error: "Missing code" });
 
-    const userId = verifyOAuthState(state);
+    const userId = finishLink(state, readCookie(req, linkCookieName("bungie")));
     if (!userId) return reply.code(400).send({ error: "Invalid state" });
 
     try {

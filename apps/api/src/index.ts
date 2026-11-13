@@ -304,7 +304,7 @@ import { prisma } from "./lib/prisma";
 import { canEnterGatedRoom } from "./lib/lobbyAccess";
 import { isOfficeRoom } from "./lib/officeRooms";
 import { guestMayCall, hostMayCall } from "./lib/guestAllow";
-import { issuedBeforeCutoff } from "./lib/sessionCutoff";
+import { accountChecks, issuedBeforeCutoff } from "./lib/sessionCutoff";
 import { sessionHook } from "./lib/sessionHook";
 import { sayRestarting } from "./lib/restartNotice";
 import { allowEmptyJsonBody } from "./lib/emptyJson";
@@ -871,7 +871,7 @@ async function main() {
   // Tokens issued before the account's tokensValidAfter cut-off (a password
   // reset) are refused here too; the cut-off is cached with the account.
   const ACCOUNT_CHECK_MS = 15_000;
-  const accountOk = new Map<string, { ok: boolean; validAfter: Date | null; at: number }>();
+  const accountOk = accountChecks; // lib/sessionCutoff.ts: forgotten on every sign-out
   app.addHook("onRequest", async (req: any, reply: any) => {
     const au = authFromHeader(req.headers.authorization);
     if (!au || (au as any).guest || (au as any).host) return;

@@ -1,6 +1,6 @@
 import bcrypt from "bcryptjs";
 import { randomBytes } from "crypto";
-import { cutoffNow } from "./sessionCutoff";
+import { cutoffNow, forgetAccount } from "./sessionCutoff";
 
 /**
  * Which account a sign-in with Google or Discord belongs to (red team
@@ -49,6 +49,7 @@ export async function accountForIdentity(
       ...(proven ? {} : { tokensValidAfter: cutoffNow() }),
     },
   });
+  if (!proven) forgetAccount(holder.id);
   if (local && !proven) {
     await db.localAuth.update({
       where: { id: local.id },

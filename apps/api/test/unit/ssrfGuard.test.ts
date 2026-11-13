@@ -1,5 +1,10 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { assertSafeUrl, fetchSafe } from "../../src/lib/ssrfGuard";
+import {
+  assertSafeUrl,
+  fetchSafe,
+  fetchSafeTransport,
+  pinnedLookup,
+} from "../../src/lib/ssrfGuard";
 
 // Security-critical: assertSafeUrl gates every client-influenced outbound fetch.
 // These cases need no network (literal IPs / bad schemes are decided before DNS).
@@ -51,12 +56,11 @@ describe("assertSafeUrl (SSRF guard)", () => {
 // fetchSafe follows redirects by hand so each hop is re-checked. Literal public
 // IPs keep these off the network; fetch itself is stubbed.
 describe("fetchSafe (redirects re-checked hop by hop)", () => {
-  afterEach(() => vi.unstubAllGlobals());
+  afterEach(() => fetchSafeTransport.reset());
 
   function redirectingFetch(to: string) {
     const calls: { url: string; auth: string | null }[] = [];
-    vi.stubGlobal(
-      "fetch",
+    fetchSafeTransport.set(
       vi.fn(async (url: string, init: RequestInit) => {
         calls.push({ url: String(url), auth: new Headers(init?.headers).get("authorization") });
         if (calls.length === 1)
@@ -87,5 +91,29 @@ describe("fetchSafe (redirects re-checked hop by hop)", () => {
     await fetchSafe("http://203.0.113.10/status", { headers: { Authorization: "Bearer k" } });
     expect(calls[1].url).toBe("http://203.0.113.10/moved");
     expect(calls[1].auth).toBe("Bearer k");
+  });
+});
+
+// The connection itself is made to an address that was checked: a name that
+// answers a public address to the first lookup and an inward one to the next
+// (DNS rebinding) never reaches the inward one (fan-out audit, 2026-11-13).
+describe("pinnedLookup", () => {
+  const ask = (host: string, all = false) =>
+    new Promise<{ err: any; address: any }>((resolve) =>
+      pinnedLookup(host, { all }, (err, address) => resolve({ err, address })),
+    );
+
+  it("refuses names and literals that are inside", async () => {
+    for (const h of ["localhost", "127.0.0.1", "169.254.169.254", "[::1]", "10.0.0.5"]) {
+      const r = await ask(h);
+      expect(r.err?.message, h).toBe("private_host");
+    }
+  });
+
+  it("passes a public literal through as itself", async () => {
+    expect((await ask("203.0.113.10")).address).toBe("203.0.113.10");
+    expect((await ask("203.0.113.10", true)).address).toEqual([
+      { address: "203.0.113.10", family: 4 },
+    ]);
   });
 });

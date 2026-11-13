@@ -85,7 +85,9 @@ export async function moderateProfileImage(
   let webp: Buffer;
   try {
     if (!isAllowedRaster(buf)) throw new Error("unsupported_image");
-    const img = sharp(buf, { animated: false }).rotate(); // bake EXIF orientation, then drop EXIF on re-encode
+    // 40 megapixels is past any real photo; a small file that unpacks to
+    // hundreds of millions of pixels is refused before it is decoded.
+    const img = sharp(buf, { animated: false, limitInputPixels: 40_000_000 }).rotate(); // bake EXIF orientation, then drop EXIF on re-encode
     const resized = opts.square
       ? img.resize(maxDim, maxDim, {
           fit: "cover",
@@ -122,4 +124,29 @@ export async function moderateProfileImage(
 
   const meta = await sharp(webp).metadata();
   return { ok: true, webp, phash, width: meta.width || 0, height: meta.height || 0 };
+}
+
+/**
+ * Every picture a member uploads, anywhere on the site, goes through this:
+ * the member's media ban first, then moderateProfileImage (a real raster,
+ * re-made as webp, the blocked-picture list, the screen). Profile pictures
+ * always did; maps, contest entries, forum and build pictures went round it,
+ * so a picture staff had removed from chat could come straight back as a forum
+ * image (fan-out audit, 2026-11-13).
+ */
+export async function screenUpload(
+  buf: Buffer,
+  opts: { userId: string; maxDim: number; square?: boolean; quality?: number },
+): Promise<ProfileImageResult> {
+  const me: any = await prisma.user
+    .findUnique({ where: { id: opts.userId }, select: { mediaBannedUntil: true } as any })
+    .catch(() => null);
+  if (me?.mediaBannedUntil && new Date(me.mediaBannedUntil).getTime() > Date.now())
+    return {
+      ok: false,
+      code: 403,
+      error: "media_banned",
+      message: "Your upload privileges are suspended.",
+    };
+  return moderateProfileImage(buf, opts);
 }

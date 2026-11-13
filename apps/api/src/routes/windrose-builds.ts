@@ -6,6 +6,7 @@ import { existsSync, mkdirSync, writeFileSync, readFileSync } from "fs";
 import { join } from "path";
 import sharp from "sharp";
 import { isAllowedRaster } from "../lib/sharpSafety";
+import { screenUpload } from "../lib/imageModeration";
 import { BoundedMap } from "../lib/boundedMap";
 import { safeFileName } from "../lib/safeFileName";
 
@@ -258,9 +259,16 @@ export default async function windroseBuildsRoutes(app: FastifyInstance, opts: O
           message: "Each upload must be under 8MB before compression.",
         });
       }
+      // Screened like every member upload (lib/imageModeration.ts; fan-out
+      // audit, 2026-11-13); the build pipeline then works on the clean webp.
+      const mod = await screenUpload(decoded.buffer, { userId: u.id, maxDim: PRIMARY_MAX_DIM });
+      if (!mod.ok)
+        return reply
+          .code(mod.code)
+          .send({ ok: false, error: mod.error, message: mod.message, index: i });
       try {
         const meta = await processBuildImage(
-          decoded.buffer,
+          mod.webp,
           u.id,
           slug,
           i,

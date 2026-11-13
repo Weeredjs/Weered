@@ -6,7 +6,7 @@ import { cleanFrame, cleanNameEffect } from "../lib/looks";
 import { fetchWithTimeout } from "../lib/fetchWithTimeout";
 import { prisma } from "../lib/prisma";
 import { ownImageOk } from "../lib/ownImages";
-import { cutoffNow } from "../lib/sessionCutoff";
+import { cutoffNow, forgetAccount } from "../lib/sessionCutoff";
 import { Prisma } from "@prisma/client";
 
 // Profile routes (extracted from index.ts): public profile view, profile edit,
@@ -791,6 +791,7 @@ export default async function profileRoutes(app: FastifyInstance, opts: Opts) {
 
           await tx.userGameAccount.deleteMany({ where: { userId } });
         });
+        forgetAccount(userId);
 
         try {
           for (const sock of getWss().clients) {

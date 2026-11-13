@@ -63,7 +63,11 @@ export default async function officeRoutes(app: FastifyInstance, opts: Opts) {
   // it to sessionStorage and cleans the address bar.
   app.get("/office/host-pass", async (req, reply) => {
     reply.header("Cache-Control", "no-store");
-    const u = await officeHostFromReq(req);
+    // A real office-staff sign-in only. A host pass used to be able to trade
+    // itself for a fresh one, so one that leaked worked forever (fan-out
+    // audit, 2026-11-13). The pass itself still lasts 12 hours.
+    const me: any = authFromHeader((req.headers as any).authorization);
+    const u = me && !me.host && !me.guest && (await isOfficeStaff(me.id)) ? me : null;
     if (!u) return reply.redirect(`${OFFICE_ORIGIN}/foyer`);
     const pass = jwt.sign(
       {

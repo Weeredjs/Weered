@@ -5,6 +5,7 @@ import { join } from "path";
 import { createHash } from "crypto";
 import sharp from "sharp";
 import { isAllowedRaster } from "../lib/sharpSafety";
+import { screenUpload } from "../lib/imageModeration";
 import { prisma } from "../lib/prisma";
 import { canManageLobby } from "../lib/lobbyAccess";
 import { z } from "zod";
@@ -986,9 +987,14 @@ export default async function forumRoutes(app: FastifyInstance, opts: Opts) {
       if (raw.length > 12 * 1024 * 1024) return reply.code(400).send({ error: "File too large" });
       if (!isAllowedRaster(raw))
         return reply.code(400).send({ error: "Use a PNG, JPEG, GIF or WebP image" });
+      // Screened like every member upload: the member's media ban, the
+      // blocked-picture list and the screen (lib/imageModeration.ts; fan-out
+      // audit, 2026-11-13). What follows sizes the clean webp it returns.
+      const mod = await screenUpload(raw, { userId: u.id, maxDim: FORUM_MAX_DIM });
+      if (!mod.ok) return reply.code(mod.code).send({ error: mod.message });
 
       try {
-        let pipeline = sharp(raw, { failOn: "none" }).rotate();
+        let pipeline = sharp(mod.webp, { failOn: "none" }).rotate();
         pipeline = pipeline.resize({
           width: FORUM_MAX_DIM,
           height: FORUM_MAX_DIM,
@@ -997,7 +1003,7 @@ export default async function forumRoutes(app: FastifyInstance, opts: Opts) {
         });
         let out = await pipeline.webp({ quality: 80 }).toBuffer();
         if (out.length > 1_000_000) {
-          out = await sharp(raw, { failOn: "none" })
+          out = await sharp(mod.webp, { failOn: "none" })
             .rotate()
             .resize({
               width: FORUM_MAX_DIM,

@@ -23,6 +23,7 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
 import { fetchSafe } from "../lib/ssrfGuard";
+import { readCapped } from "../lib/htmlScan";
 import { swallow } from "../lib/logger";
 import { hasLobbyPerm } from "../lib/lobbyPerms";
 import { logLobbyAudit } from "../lib/lobbyAudit";
@@ -300,7 +301,8 @@ async function pollServer(s: Configured): Promise<AcServer> {
       FETCH_MS,
     );
     if (!r.ok) return shell;
-    const j: any = await r.json();
+    // A server's own reply, read no further than one can be.
+    const j: any = JSON.parse(await readCapped(r, 256 * 1024));
     shell.online = true;
     shell.name = typeof j?.name === "string" ? j.name.slice(0, 160) : null;
     shell.track = typeof j?.track === "string" ? j.track : null;
@@ -328,7 +330,7 @@ async function pollServer(s: Configured): Promise<AcServer> {
         FETCH_MS,
       );
       if (r2.ok) {
-        const j2: any = await r2.json();
+        const j2: any = JSON.parse(await readCapped(r2, 512 * 1024));
         const cars = Array.isArray(j2?.Cars) ? j2.Cars : [];
         for (const c of cars) {
           const name = typeof c?.DriverName === "string" ? c.DriverName.trim() : "";

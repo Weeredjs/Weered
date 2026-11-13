@@ -1,5 +1,6 @@
 import { log, swallow } from "../lib/logger";
 import { allowEmptyJsonBody } from "../lib/emptyJson";
+import { screenUpload } from "../lib/imageModeration";
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
 import { existsSync, mkdirSync, writeFileSync, unlinkSync } from "node:fs";
@@ -59,9 +60,15 @@ export default async function mapsRoutes(app: FastifyInstance, opts: Opts) {
 
     const match = dataUrl.match(/^data:image\/(png|jpeg|jpg|webp);base64,(.+)$/);
     if (!match) return reply.code(400).send({ error: "invalid_format" });
-    const ext = match[1] === "jpeg" ? "jpg" : match[1];
-    const buffer = Buffer.from(match[2], "base64");
-    if (buffer.length > MAP_MAX_BYTES) return reply.code(400).send({ error: "too_large" });
+    const raw = Buffer.from(match[2], "base64");
+    if (raw.length > MAP_MAX_BYTES) return reply.code(400).send({ error: "too_large" });
+    // Screened and re-made like every member upload (lib/imageModeration.ts):
+    // the bytes sent used to be stored and served as they came (fan-out
+    // audit, 2026-11-13).
+    const mod = await screenUpload(raw, { userId: u.id, maxDim: 4096, quality: 85 });
+    if (!mod.ok) return reply.code(mod.code).send({ error: mod.error, message: mod.message });
+    const ext = "webp";
+    const buffer = mod.webp;
 
     ensureDir();
 

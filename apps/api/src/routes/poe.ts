@@ -4,6 +4,8 @@ import { fetchWithTimeout } from "../lib/fetchWithTimeout";
 import { prisma } from "../lib/prisma";
 import crypto from "node:crypto";
 import { BoundedMap } from "../lib/boundedMap";
+import { linkCookie, linkCookieName } from "../lib/oauthState";
+import { readCookie } from "../lib/authCookie";
 
 const POE_CLIENT_ID = process.env.POE_CLIENT_ID || "";
 const POE_CLIENT_SECRET = process.env.POE_CLIENT_SECRET || "";
@@ -424,6 +426,8 @@ export default async function poeRoutes(app: FastifyInstance, opts: Opts) {
     const verifier = b64url(crypto.randomBytes(48));
     const challenge = b64url(crypto.createHash("sha256").update(verifier).digest());
     putPkce(state, u.id, verifier);
+    // Finished only in this browser (lib/oauthState.ts linkCookie).
+    reply.header("Set-Cookie", linkCookie("poe", state));
 
     const redirectUri = POE_REDIRECT;
     const url =
@@ -442,7 +446,7 @@ export default async function poeRoutes(app: FastifyInstance, opts: Opts) {
     const state = String((req as any).query?.state || "");
     const err = String((req as any).query?.error || "");
     if (err) return reply.redirect(`${SITE_URL}/lobby/poe?poe=denied`);
-    const pk = takePkce(state);
+    const pk = readCookie(req, linkCookieName("poe")) === state ? takePkce(state) : null;
     if (!pk || !code) return reply.redirect(`${SITE_URL}/lobby/poe?poe=error`);
     const userId = pk.userId;
 

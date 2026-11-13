@@ -3,7 +3,14 @@ import type { FastifyInstance } from "fastify";
 import { fetchWithTimeout } from "../lib/fetchWithTimeout";
 import { decodeEntities } from "../lib/htmlText";
 import { prisma } from "../lib/prisma";
-import { signOAuthState, verifyOAuthState } from "../lib/oauthState";
+import {
+  finishLink,
+  linkCookie,
+  linkCookieName,
+  linkNonce,
+  signOAuthState,
+} from "../lib/oauthState";
+import { readCookie } from "../lib/authCookie";
 
 const ESI_USER_AGENT = "Weered/1.0 (james@weered.ca)";
 const ESI_BASE = "https://esi.evetech.net/latest";
@@ -122,7 +129,10 @@ export default async function eveRoutes(app: FastifyInstance, opts: Opts) {
     if (!u) return reply.code(401).send({ error: "Login first" });
     if (!EVE_CLIENT_ID) return reply.code(500).send({ error: "EVE OAuth not configured" });
 
-    const state = signOAuthState(u.id);
+    // Finished only in this browser (lib/oauthState.ts linkCookie).
+    const nonce = linkNonce();
+    const state = signOAuthState(u.id, nonce);
+    reply.header("Set-Cookie", linkCookie("eve", nonce));
     const redirectUri = `${API_URL}/auth/eve/callback`;
     const url = `${OAUTH_BASE}/authorize?response_type=code&redirect_uri=${encodeURIComponent(redirectUri)}&client_id=${EVE_CLIENT_ID}&scope=${encodeURIComponent(EVE_SCOPES)}&state=${state}`;
     return reply.redirect(url);
@@ -133,7 +143,7 @@ export default async function eveRoutes(app: FastifyInstance, opts: Opts) {
     const state = String((req as any).query?.state || "");
     if (!code) return reply.code(400).send({ error: "Missing code" });
 
-    const userId = verifyOAuthState(state);
+    const userId = finishLink(state, readCookie(req, linkCookieName("eve")));
     if (!userId) return reply.code(400).send({ error: "Invalid state" });
 
     try {

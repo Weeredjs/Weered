@@ -9,6 +9,7 @@ import sharp from "sharp";
 import { prisma } from "../lib/prisma";
 import { grantFlairToUser, mintFlairItem } from "../lib/flair";
 import { safeFileName } from "../lib/safeFileName";
+import { screenUpload } from "../lib/imageModeration";
 
 type Opts = {
   authFromHeader: (h?: string) => { id: string; name?: string; globalRole?: string } | null;
@@ -413,8 +414,13 @@ export default async function flairContestsRoutes(app: FastifyInstance, opts: Op
       width: number;
       height: number;
     };
+    // Screened like every member upload (lib/imageModeration.ts screenUpload);
+    // the pipeline below then works on the clean webp it returns.
+    const mod = await screenUpload(decoded.buffer, { userId: u.id, maxDim: MAX_DIM });
+    if (!mod.ok)
+      return reply.code(mod.code).send({ ok: false, error: mod.error, message: mod.message });
     try {
-      processed = await processSubmissionImage(decoded.buffer, u.id, id);
+      processed = await processSubmissionImage(mod.webp, u.id, id);
     } catch (e: any) {
       log.error("[flair-contests] image processing failed:", e?.message || e);
       return reply.code(400).send({ ok: false, error: "image_processing_failed" });

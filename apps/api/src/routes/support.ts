@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 import bcrypt from "bcryptjs";
 import { prisma } from "../lib/prisma";
 import { APPEAL_COOLDOWN_MS } from "../lib/banAppeal";
+import { loginFailed, loginPaused, loginSucceeded, noAccountDelay } from "../lib/loginGuard";
 import { createNotification } from "../lib/notifications";
 import { cleanContact, takeContactMessage } from "../lib/contactMessage";
 
@@ -59,20 +60,30 @@ export default async function supportRoutes(app: FastifyInstance, opts: Opts) {
           message: "Tell us at least 20 characters of context.",
         });
 
+      // The same pause per name as signing in (lib/loginGuard.ts), and one
+      // answer for "wrong password" and "right password, not banned": this was
+      // a way to test passwords that sign-in's pause did not cover (fan-out
+      // audit, 2026-11-13).
+      const refused = () => reply.code(401).send({ ok: false, error: "invalid_credentials" });
+      if (loginPaused(username))
+        return reply.code(429).send({ ok: false, error: "too_many_attempts" });
       const la = await prisma.localAuth.findUnique({ where: { username } }).catch(() => null);
-      if (!la) return reply.code(401).send({ ok: false, error: "invalid_credentials" });
+      if (!la) {
+        await noAccountDelay(password);
+        return refused();
+      }
       const ok = await bcrypt.compare(password, la.passwordHash);
-      if (!ok) return reply.code(401).send({ ok: false, error: "invalid_credentials" });
+      if (!ok) {
+        loginFailed(username);
+        return refused();
+      }
 
       const user = await prisma.user.findUnique({
         where: { id: la.userId },
         select: { id: true, banned: true, banReason: true },
       });
-      if (!user) return reply.code(401).send({ ok: false, error: "invalid_credentials" });
-      if (!user.banned)
-        return reply
-          .code(400)
-          .send({ ok: false, error: "not_banned", message: "Your account is not banned." });
+      if (!user || !user.banned) return refused();
+      loginSucceeded(username);
 
       const open = await prisma.banAppeal.findFirst({
         where: { userId: user.id, status: "PENDING" },
@@ -150,10 +161,6 @@ export default async function supportRoutes(app: FastifyInstance, opts: Opts) {
     if (!canAccessStaff(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
 
     const decision = String(req.body?.decision || "").toUpperCase();
-    // Support reads and denies appeals; lifting a ban is staff's, as setting
-    // one is (fan-out audit, 2026-11-13).
-    if (decision === "APPROVED" && !["STAFF", "ADMIN", "GOD"].includes(String(role)))
-      return reply.code(403).send({ ok: false, error: "staff_only" });
     if (decision !== "APPROVED" && decision !== "DENIED") {
       return reply.code(400).send({
         ok: false,

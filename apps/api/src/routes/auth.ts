@@ -9,7 +9,7 @@ import { OAuth2Client } from "google-auth-library";
 import { prisma } from "../lib/prisma";
 import { bannedMessage } from "../lib/banAppeal";
 import { registrationBlock } from "../lib/registration";
-import { cutoffNow } from "../lib/sessionCutoff";
+import { cutoffNow, forgetAccount } from "../lib/sessionCutoff";
 import { isOfficeRoom } from "../lib/officeRooms";
 import { accountForGoogle } from "../lib/googleLink";
 import { cleanDisplayName } from "../lib/displayName";
@@ -374,6 +374,7 @@ export default async function authRoutes(app: FastifyInstance, opts: Opts) {
         where: { id: la.userId },
         data: { tokensValidAfter: cutoffNow() },
       });
+      forgetAccount(la.userId);
       return reply.send({ ok: true });
     },
   );
