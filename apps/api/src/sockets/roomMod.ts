@@ -4,6 +4,7 @@ import { RoomRole } from "@prisma/client";
 import { removeFromVoice } from "../lib/livekitAdmin";
 import { rankIn, rankOf, roleOf } from "../lib/roomState";
 import { roomForOneMore } from "../lib/socketFrames";
+import { mayActOn } from "../lib/roleLadder";
 
 /** How long a kick keeps someone out of the room. */
 export const KICK_MS = 10 * 60_000;
@@ -254,6 +255,10 @@ export async function handleRoomMod(
     if (!canAccessStaff(kickRole)) return;
     const targetId = String(msg.userId || "");
     if (!targetId || targetId === kickActorId) return;
+    // The same rank rule as the HTTP kick (lib/roleLadder.ts): support may
+    // not throw staff, or the owner, off every connection (fan-out audit,
+    // 2026-11-13).
+    if (!mayActOn(kickRole, await getGlobalRole(targetId))) return;
     for (const r of rooms.values()) {
       if (r.users.has(targetId) || r.mods.has(targetId)) {
         // Kept out a while, like a room kick (a refresh walked them back in).

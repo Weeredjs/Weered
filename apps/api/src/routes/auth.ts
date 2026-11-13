@@ -458,6 +458,12 @@ export default async function authRoutes(app: FastifyInstance, opts: Opts) {
       ) {
         return reply.code(404).send({ ok: false, error: "invalid_invite" });
       }
+      // Only the office makes the office's links (the walk-in door, the host's
+      // link script, office staff). An invite anyone else made, through a
+      // lobby of the same name, never opens it (fan-out audit, 2026-11-13).
+      if (!(await isOfficeStaff(invite.createdBy))) {
+        return reply.code(404).send({ ok: false, error: "invalid_invite" });
+      }
       if (invite.expiresAt && invite.expiresAt.getTime() < Date.now()) {
         return reply.code(410).send({ ok: false, error: "expired" });
       }

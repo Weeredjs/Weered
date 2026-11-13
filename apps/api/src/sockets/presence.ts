@@ -7,6 +7,10 @@ import { guestMayEnter } from "../lib/guestScope";
 import { isStaffRoomId, mayEnterStaffRoom } from "../lib/staffRooms";
 import bcrypt from "bcryptjs";
 import { lobbyOnlineCount } from "../lib/lobbyCount";
+import { BoundedMap } from "../lib/boundedMap";
+
+/** Wrong room-password guesses, by room and account (see the join below). */
+const passwordGuesses = new BoundedMap<string, number[]>(20_000);
 
 // Presence WS handlers extracted from the index.ts main message handler:
 // the rooms:list/lobby:rooms/room:list trio + presence:join/idle/leave. Void
@@ -199,11 +203,25 @@ export async function handlePresence(ws: any, msg: any, opts: Opts): Promise<voi
         send(ws, { type: "room:password:required", roomId });
         return;
       }
+      // Five wrong guesses per room per account in ten minutes, then no more
+      // tries: each one costs a slow hash on the API's only thread, and a
+      // short password fell in minutes (fan-out audit, 2026-11-13).
+      const guessKey = `${roomId}|${uid}`;
+      const guesses = (passwordGuesses.get(guessKey) || []).filter(
+        (t) => Date.now() - t < 10 * 60_000,
+      );
+      if (guesses.length >= 5 || suppliedPassword.length > 200) {
+        send(ws, { type: "room:password:wrong", roomId, locked: true });
+        return;
+      }
       const passwordOk = await bcrypt.compare(suppliedPassword, room.passwordHash);
       if (!passwordOk) {
+        guesses.push(Date.now());
+        passwordGuesses.set(guessKey, guesses);
         send(ws, { type: "room:password:wrong", roomId });
         return;
       }
+      passwordGuesses.delete(guessKey);
     }
 
     if (room.locked && !(await passes())) {

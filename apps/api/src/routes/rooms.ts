@@ -12,6 +12,7 @@ import { RoomRole } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { lobbyOnlineCount } from "../lib/lobbyCount";
 import { BoundedMap } from "../lib/boundedMap";
+import { getAI } from "../lib/ai";
 
 type Opts = {
   authFromHeader: (h?: string) => { id: string; name: string } | null;
@@ -704,6 +705,10 @@ export default async function roomsRoutes(app: FastifyInstance, opts: Opts) {
 
       const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY;
       if (!ANTHROPIC_KEY) return reply.code(500).send({ ok: false, error: "ai_not_configured" });
+      // The same switches as every other AI call (lib/ai.ts getAI): Ops can
+      // turn AI off, and flood mode rests it. This one called the model
+      // directly and kept spending through both (fan-out audit, 2026-11-13).
+      if (!(await getAI())) return reply.code(503).send({ ok: false, error: "ai_resting" });
 
       try {
         const aiRes = await fetchWithTimeout(

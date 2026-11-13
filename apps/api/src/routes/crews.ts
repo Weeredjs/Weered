@@ -4,6 +4,8 @@ import { prisma } from "../lib/prisma";
 import { resolveUserNames, displayName } from "../lib/userNames";
 import { cleanCrewTag, isUniqueClash, looksLikeTag } from "../lib/crewTag";
 import { crewImageOk } from "../lib/ownImages";
+import { blockedEitherWay } from "../lib/blocks";
+import { isOfficeRoom } from "../lib/officeRooms";
 import { z } from "zod";
 
 const tagTaken = (tag: string) => ({
@@ -114,8 +116,18 @@ export default async function crewsRoutes(app: FastifyInstance, opts: Opts) {
           let roomName: string | null = null;
           for (const [rid, rs] of rooms) {
             if (rs.users.has(cm.userId)) {
-              roomId = rid;
-              roomName = rs.name || rid;
+              // Where a crewmate is, only when it's a room anyone could walk
+              // into: never the office, a locked, password or rank-gated room
+              // (fan-out audit, 2026-11-13).
+              const open =
+                !isOfficeRoom(rid) &&
+                !(rs as any).locked &&
+                !(rs as any).passwordHash &&
+                !(Number((rs as any).minLevel) > 0);
+              if (open) {
+                roomId = rid;
+                roomName = rs.name || rid;
+              }
               break;
             }
           }
@@ -232,6 +244,9 @@ export default async function crewsRoutes(app: FastifyInstance, opts: Opts) {
         select: { id: true, name: true },
       });
       if (!target) return reply.code(404).send({ error: "User not found" });
+      // Nobody is put in the crew of someone they blocked, or who blocked them
+      // (fan-out audit, 2026-11-13).
+      if (await blockedEitherWay(u.id, userId)) return reply.code(403).send({ error: "blocked" });
       await db.crewMember.upsert({
         where: { crewId_userId: { crewId, userId } },
         update: {},

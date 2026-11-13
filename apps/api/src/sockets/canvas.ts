@@ -1,5 +1,5 @@
 import { swallow } from "../lib/logger";
-import { mayAct } from "../lib/roomGate";
+import { mayAct, withinBudget } from "../lib/roomGate";
 // Canvas/tabletop WS handlers extracted from the index.ts main message handler.
 // Pure in-memory room-module relays. Deps injected by reference (rooms is the
 // SAME live Map the rest of the WS layer mutates). Returns true if it consumed
@@ -21,7 +21,11 @@ export function handleCanvas(ws: any, msg: any, opts: Opts): boolean {
     if (!roomId) return true;
     const room = rooms.get(roomId);
     if (!room) return true;
-    if (!room.users.has(ws.user.id)) return true;
+    // A muted member doesn't change what the room sees either, a module's
+    // name is a short word, and the room is told at most once a second
+    // (fan-out audit, 2026-11-13: a quarter megabyte, at socket speed).
+    if (!mayAct(room, ws.user) || !withinBudget(ws, "module", 10, 10_000)) return true;
+    if (typeof msg.mode === "string" && msg.mode.length > 40) return true;
     const mode = String(msg.mode || "").trim() || null;
     if (!mode) {
       room.activeModule = null;
@@ -65,7 +69,7 @@ export function handleCanvas(ws: any, msg: any, opts: Opts): boolean {
     if (!roomId) return true;
     const room = rooms.get(roomId);
     if (!room) return true;
-    if (!room.users.has(ws.user.id)) return true;
+    if (!mayAct(room, ws.user) || !withinBudget(ws, "module", 10, 10_000)) return true;
     room.activeModule = null;
     room.ytState = null;
     broadcast(room, { type: "module:state", roomId, activeModule: null });

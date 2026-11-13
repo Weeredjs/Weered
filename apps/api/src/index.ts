@@ -1657,6 +1657,43 @@ async function main() {
     })();
   }, 60 * 1000);
 
+  setInterval(() => {
+    void (async () => {
+      // Members too (fan-out audit, 2026-11-13): a socket opened before a
+      // password reset, a ban or a deletion kept working until the next
+      // restart, still receiving and sending as the account. HTTP checks every
+      // request; the socket is now checked once a minute.
+      try {
+        const memberSockets = [...wss.clients].filter(
+          (c: any) => c.user?.id && !c.user.guest && !c.user.host,
+        );
+        if (!memberSockets.length) return;
+        const ids = [...new Set(memberSockets.map((c: any) => c.user.id as string))];
+        const rows = await prisma.user.findMany({
+          where: { id: { in: ids } },
+          select: { id: true, banned: true, deletedAt: true, tokensValidAfter: true },
+        });
+        const byId = new Map(rows.map((r) => [r.id, r]));
+        for (const c of memberSockets) {
+          const row = byId.get((c as any).user.id);
+          const ended =
+            !row ||
+            row.banned ||
+            !!row.deletedAt ||
+            issuedBeforeCutoff((c as any).tokenIat, row.tokensValidAfter);
+          if (!ended) continue;
+          try {
+            (c as any).close(4001, "session_revoked");
+          } catch (e) {
+            swallow(e);
+          }
+        }
+      } catch (e) {
+        swallow(e);
+      }
+    })();
+  }, 60 * 1000);
+
   // 30s heartbeat: ping every client, terminate any that didn't pong since the
   // previous tick. Reaps stale half-open sockets that otherwise tax all the
   // wss.clients-iterating fanout sites. Browsers/ws auto-reply to ping.
@@ -1896,11 +1933,21 @@ async function main() {
         const actorId = ws.user.id;
         const actorName = ws.user.name;
         const actorGlobalRole = ws.user.globalRole || "USER";
-        const actorIsMod = roomId ? isModOrOwner(room, actorId, actorGlobalRole) : false;
+        // In the office's rooms only the office (its host pass, or office
+        // staff) moderates: a global staff role used to be enough to unlock the
+        // consult room or admit a visitor (fan-out audit, 2026-11-13).
+        const officeGate =
+          !!roomId &&
+          isOfficeRoom(roomId) &&
+          !(ws.user as any).host &&
+          !(await isOfficeStaff(actorId));
+        const actorIsMod =
+          roomId && !officeGate ? isModOrOwner(room, actorId, actorGlobalRole) : false;
         // The room's owner, its lobby's owner, or Weered's staff.
-        const actorIsOwner = roomId
-          ? roleOf(room, actorId) === "owner" || isElevatedGlobal(actorGlobalRole)
-          : false;
+        const actorIsOwner =
+          roomId && !officeGate
+            ? roleOf(room, actorId) === "owner" || isElevatedGlobal(actorGlobalRole)
+            : false;
 
         if (isCrewOrDm) {
           await handleCrewDm(ws, msg, {

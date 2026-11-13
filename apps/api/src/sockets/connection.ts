@@ -140,6 +140,9 @@ export async function handleAuthHello(
       return;
     }
     ws.user = hydrated;
+    // When its token was issued, for the minute sweep in index.ts: a password
+    // reset after this moment ends the socket too.
+    (ws as any).tokenIat = Number((u as any).iat) || 0;
     send(ws, {
       type: "auth:ok",
       ...(floodOn() ? { flood: true } : {}),

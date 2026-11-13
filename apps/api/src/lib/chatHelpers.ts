@@ -1,11 +1,13 @@
 import { prisma } from "./prisma";
 import { log, swallow } from "./logger";
+import { blockedEitherWay } from "./blocks";
 
 export type ReactionAgg = { emoji: string; count: number; users: string[] };
 
 // Chat/mention/reaction helpers extracted from index.ts (prisma + regex only).
 
 export const MENTION_RE = /@([a-zA-Z0-9][a-zA-Z0-9_-]{1,31})/g;
+export const MENTIONS_MAX = 10;
 export const RESERVED_MENTIONS = new Set([
   "operator",
   "everyone",
@@ -27,6 +29,9 @@ export async function resolveMentions(
     const h = match[1].toLowerCase();
     if (RESERVED_MENTIONS.has(h)) continue;
     handles.add(h);
+    // Ten people per message. Each one is a notification and a push to a
+    // phone, and one message could name a thousand (fan-out audit, 2026-11-13).
+    if (handles.size >= MENTIONS_MAX) break;
   }
   if (handles.size === 0) return [];
   try {
@@ -34,9 +39,14 @@ export async function resolveMentions(
       where: { usernameKey: { in: Array.from(handles) } },
       select: { id: true, name: true, usernameKey: true },
     });
-    return users
-      .filter((u) => u.id !== senderId)
-      .map((u) => ({ id: u.id, name: u.name || u.usernameKey }));
+    const out: { id: string; name: string }[] = [];
+    for (const u of users) {
+      if (u.id === senderId) continue;
+      // Someone who blocked the sender, or whom the sender blocked, isn't told.
+      if (await blockedEitherWay(senderId, u.id)) continue;
+      out.push({ id: u.id, name: u.name || u.usernameKey });
+    }
+    return out;
   } catch {
     return [];
   }

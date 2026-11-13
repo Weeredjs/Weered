@@ -1,4 +1,5 @@
 import { ModuleType } from "@prisma/client";
+import { isOfficeRoom } from "./officeRooms";
 
 // What a lobby's address and words may be: one set of limits for the route
 // that makes a lobby and the routes that edit one.
@@ -51,6 +52,10 @@ export function lobbyAddressProblem(id: unknown, staff = false): FieldProblem | 
     return { error: "bad_address", message: "A lobby needs an address." };
   // Staff too: nobody can open a lobby that sits under the builder's address.
   if (LOBBY_ROUTE_NAMES.includes(id.trim().toLowerCase()))
+    return { error: "name_reserved", message: "Weered uses that address itself. Try another." };
+  // The office's rooms are never a lobby: a lobby by that name could make
+  // guest links that open the office (fan-out audit, 2026-11-13).
+  if (isOfficeRoom(id.trim().toLowerCase()))
     return { error: "name_reserved", message: "Weered uses that address itself. Try another." };
   if (staff) {
     return id.length > LOBBY_LIMITS.staffAddress
