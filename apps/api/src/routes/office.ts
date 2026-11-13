@@ -74,6 +74,7 @@ export default async function officeRoutes(app: FastifyInstance, opts: Opts) {
         sub: "eceb-host",
         name: "James Stirling",
         host: true,
+        by: u.id, // lib/hostPass.ts: the pass stands while this account does
         scope: { office: "mtg-eceb", foyer: "mtg-eceb-foyer" },
       },
       JWT_SECRET,

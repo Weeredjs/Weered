@@ -2,7 +2,7 @@ import { isStaffRole } from "../lib/lobbyAuth";
 import { log, swallow } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 import { PrismaClient } from "@prisma/client";
-import { existsSync, mkdirSync, writeFileSync, readFileSync } from "fs";
+import { existsSync, mkdirSync, writeFileSync, readFileSync, unlinkSync } from "fs";
 import { join } from "path";
 import sharp from "sharp";
 import { isAllowedRaster } from "../lib/sharpSafety";
@@ -614,7 +614,7 @@ export default async function windroseBuildsRoutes(app: FastifyInstance, opts: O
     const slug = String((req as any).params?.slug || "");
     const b = await prisma.windroseBuild.findUnique({
       where: { slug },
-      select: { id: true, authorId: true },
+      select: { id: true, authorId: true, images: true, thumbnailUrl: true },
     });
     if (!b) return reply.code(404).send({ ok: false, error: "not_found" });
     let isStaff = false;
@@ -625,6 +625,27 @@ export default async function windroseBuildsRoutes(app: FastifyInstance, opts: O
     if (b.authorId !== u.id && !isStaff)
       return reply.code(403).send({ ok: false, error: "forbidden" });
     await prisma.windroseBuild.delete({ where: { id: b.id } });
+    // Its pictures go with it: a build taken down for its screenshot used to
+    // leave the file public at its address (fan-out audit, 2026-11-13). Only
+    // files named for this author are touched.
+    const urls = new Set<string>();
+    if (Array.isArray(b.images))
+      for (const im of b.images as any[]) {
+        if (typeof im?.url === "string") urls.add(im.url);
+        if (typeof im?.thumbUrl === "string") urls.add(im.thumbUrl);
+      }
+    if (b.thumbnailUrl) urls.add(b.thumbnailUrl);
+    for (const url of urls) {
+      const base = url.split("?")[0].split("/").pop() || "";
+      const name = safeFileName(base);
+      const mine = name.startsWith(`${b.authorId}-`) || name.startsWith(`thumb-${b.authorId}-`);
+      if (!name || name !== base || !mine) continue;
+      try {
+        unlinkSync(join(BUILDS_DIR, name));
+      } catch (e) {
+        swallow(e);
+      }
+    }
     return reply.send({ ok: true });
   });
 

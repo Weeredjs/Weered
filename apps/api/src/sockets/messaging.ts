@@ -8,6 +8,7 @@ import { answerOperatorDm } from "../lib/operatorDm";
 import { answerMention } from "../lib/lobbyHost";
 import { isLobbyGuest } from "../lib/guestScope";
 import { hideSpoilers } from "../lib/spoilers";
+import { blockedEitherWay } from "../lib/blocks";
 
 // Chat WS handlers extracted from the index.ts main message handler:
 // chat:pin/unpin/typing/send/edit/delete. Void async handler (dispatcher
@@ -690,6 +691,13 @@ export async function handleCrewDm(
       if (row.deletedAt) return;
       if (row.body === newBody) return;
       if (Date.now() - new Date(row.createdAt).getTime() > 15 * 60 * 1000) return;
+      // Still in the crew, and the same link and pace rules as a new message.
+      const stillIn = await prisma.crewMember.findFirst({
+        where: { crewId: row.crewId, userId: meId },
+        select: { id: true },
+      });
+      if (!stillIn) return;
+      if (!checkUrlSpam(newBody).ok || !checkChatRateLimit(meId).ok) return;
       const editedAt = new Date();
       await prisma.crewMessage.update({ where: { id: msgId }, data: { body: newBody, editedAt } });
       const members = await prisma.crewMember.findMany({
@@ -957,6 +965,20 @@ export async function handleCrewDm(
       if ((dm as any).deletedAt) return;
       if (dm.body === newBody) return;
       if (Date.now() - new Date(dm.createdAt).getTime() > 15 * 60 * 1000) return;
+      // An edit is a new message to the reader: the same block, link and pace
+      // rules as dm:send (fan-out audit, 2026-11-13: a blocked sender kept
+      // rewriting their last message, live, on the blocker's screen).
+      if (await blockedEitherWay(dm.fromId, dm.toId)) return;
+      const urlCheck = checkUrlSpam(newBody);
+      if (!urlCheck.ok) {
+        send(ws, { type: "dm:rejected", reason: urlCheck.reason });
+        return;
+      }
+      const rate = checkChatRateLimit(meId);
+      if (!rate.ok) {
+        send(ws, { type: "dm:rejected", reason: rate.reason, retryInMs: rate.retryInMs });
+        return;
+      }
       const editedAt = new Date();
       await prisma.directMessage.update({
         where: { id: msgId },
@@ -1019,6 +1041,7 @@ export async function handleCrewDm(
       if (!dm) return;
       if ((dm as any).deletedAt) return;
       if (dm.fromId !== meId && dm.toId !== meId) return;
+      if (await blockedEitherWay(dm.fromId, dm.toId)) return;
       const res = await toggleReactionOnTarget("DIRECT_MESSAGE", msgId, meId, emoji);
       if (!res.ok) {
         send(ws, { type: "reaction:rejected", msgId, reason: res.reason });

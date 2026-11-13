@@ -1,6 +1,8 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
 import { latLngToCell, cellToBoundary, cellToLatLng, gridDisk } from "h3-js";
+import { BoundedMap } from "../lib/boundedMap";
+import { blockedWith } from "../lib/blocks";
 
 type Opts = {
   authFromHeader: (h?: string) => { id: string; name?: string } | null;
@@ -9,6 +11,9 @@ type Opts = {
 export default async function geoRoutes(app: FastifyInstance, opts: Opts) {
   const { authFromHeader } = opts;
   const H3_RES = 7;
+  const MOVES_PER_DAY = 3;
+  const MOVE_WINDOW_MS = 24 * 60 * 60 * 1000;
+  const spotMoves = new BoundedMap<string, number[]>(20_000);
 
   app.post(
     "/me/location",
@@ -32,6 +37,23 @@ export default async function geoRoutes(app: FastifyInstance, opts: Opts) {
         return reply.code(400).send({ error: "Invalid coordinates" });
       }
       const h3Index = latLngToCell(lat, lng, H3_RES);
+      // A few moves a day: setting your spot anywhere, then asking who is
+      // nearby, swept a city cell by cell (fan-out audit, 2026-11-13).
+      const before = await prisma.user.findUnique({
+        where: { id: viewer.id },
+        select: { locationH3: true },
+      });
+      // Clearing the spot and sharing again counts too.
+      if (before?.locationH3 !== h3Index) {
+        const now = Date.now();
+        const recent = (spotMoves.get(viewer.id) || []).filter((t) => now - t < MOVE_WINDOW_MS);
+        if (recent.length >= MOVES_PER_DAY)
+          return reply.code(429).send({
+            error: "too_many_moves",
+            message: "Your spot can move a few times a day. Try again tomorrow.",
+          });
+        spotMoves.set(viewer.id, [...recent, now]);
+      }
       await prisma.user.update({
         where: { id: viewer.id },
         data: {
@@ -180,7 +202,12 @@ export default async function geoRoutes(app: FastifyInstance, opts: Opts) {
           locationH3: true,
         },
       });
-      const others = nearby.filter((u) => u.id !== viewer.id).slice(0, 50);
+      // Nobody with a block either way shows up on the other's map.
+      const blocked = await blockedWith(
+        viewer.id,
+        nearby.map((u) => u.id),
+      );
+      const others = nearby.filter((u) => u.id !== viewer.id && !blocked.has(u.id)).slice(0, 50);
       const userIds = others.map((u) => u.id);
       const memberships = userIds.length
         ? await prisma.lobbyMember.findMany({

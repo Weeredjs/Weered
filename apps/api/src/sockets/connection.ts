@@ -37,6 +37,8 @@ export async function handleAuthHello(
     isGloballyBanned: (userId: string) => Promise<boolean>;
     /** True when the account is deleted or the token predates its sign-out cut-off. */
     sessionEnded?: (userId: string, iat: number) => Promise<boolean>;
+    /** An office host pass still stands (lib/hostPass.ts). */
+    hostPassOk?: (decoded: any) => Promise<boolean>;
     send: (ws: any, msg: any) => void;
     awardNotoriety: (userId: string, action: string) => Promise<number | null>;
     wss: any;
@@ -47,6 +49,7 @@ export async function handleAuthHello(
     hydrateGlobalRole,
     isGloballyBanned,
     sessionEnded,
+    hostPassOk,
     send,
     awardNotoriety,
     wss,
@@ -93,6 +96,10 @@ export async function handleAuthHello(
       return;
     }
     if ((u as any).host) {
+      if (hostPassOk && !(await hostPassOk(u))) {
+        send(ws, { type: "auth:fail", reason: "This pass is no longer valid." });
+        return;
+      }
       ws.user = { ...u, globalRole: "USER", tier: "INNOCENT" } as any;
       send(ws, {
         type: "auth:ok",

@@ -430,13 +430,14 @@ export default async function windroseRoutes(app: FastifyInstance, opts: Opts) {
     }
   });
 
-  app.get("/windrose/captains-log", async (_req, reply) => {
-    const cacheKey = "wr:captains-log";
-    const cached = wrCacheGet(cacheKey);
-    if (cached) return reply.send(cached);
+  // One recap at a time: a cold cache used to send every waiting request to the
+  // model at once, and a failure was not remembered, so each retry paid again
+  // (fan-out audit, 2026-11-13). Requests that arrive while one is being
+  // written wait for it; a failure is kept for five minutes.
+  let captainsLogInFlight: Promise<any> | null = null;
+  async function buildCaptainsLog(cacheKey: string): Promise<any> {
     try {
-      if (!isAIAvailable())
-        return reply.send({ ok: false, error: "ai_unavailable", summary: null });
+      if (!isAIAvailable()) return { ok: false, error: "ai_unavailable", summary: null };
 
       const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
       const since = new Date(Date.now() - WEEK_MS);
@@ -517,7 +518,7 @@ export default async function windroseRoutes(app: FastifyInstance, opts: Opts) {
       };
 
       const ai = await getAI();
-      if (!ai) return reply.send({ ok: false, error: "ai_unavailable", summary: null });
+      if (!ai) return { ok: false, error: "ai_unavailable", summary: null };
 
       const system = `You are The Operator — a gold-robot AI concierge on Weered, with a GTA/mafia aesthetic flavour. The context is WINDROSE, a pirate SURVIVAL CO-OP game (PvE — no player-vs-player combat in the base game). Your job: write a sharp, punchy weekly recap of what's gone down in the Windrose community hub.
 
@@ -544,7 +545,7 @@ Rules:
         messages: [{ role: "user", content: user }],
       });
       const summary = res?.content?.[0]?.text?.trim() || "";
-      if (!summary) return reply.send({ ok: false, error: "empty_summary", summary: null });
+      if (!summary) return { ok: false, error: "empty_summary", summary: null };
 
       const result = {
         ok: true,
@@ -560,11 +561,28 @@ Rules:
         generatedAt: new Date().toISOString(),
       };
       wrCacheSet(cacheKey, result, 6 * 60 * 60 * 1000);
-      return reply.send(result);
+      return result;
     } catch (e) {
       log.error("[windrose/captains-log]", e);
-      return reply.send({ ok: false, error: "generation_failed", summary: null });
+      return { ok: false, error: "generation_failed", summary: null };
     }
+  }
+
+  app.get("/windrose/captains-log", async (_req, reply) => {
+    const cacheKey = "wr:captains-log";
+    const cached = wrCacheGet(cacheKey);
+    if (cached) return reply.send(cached);
+    if (!captainsLogInFlight) {
+      captainsLogInFlight = buildCaptainsLog(cacheKey)
+        .then((r) => {
+          if (!r?.ok) wrCacheSet(cacheKey, r, 5 * 60 * 1000);
+          return r;
+        })
+        .finally(() => {
+          captainsLogInFlight = null;
+        });
+    }
+    return reply.send(await captainsLogInFlight);
   });
 
   app.get("/windrose/news", async (req, reply) => {

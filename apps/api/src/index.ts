@@ -307,6 +307,7 @@ import { canEnterGatedRoom } from "./lib/lobbyAccess";
 import { isOfficeRoom } from "./lib/officeRooms";
 import { guestMayCall, hostMayCall } from "./lib/guestAllow";
 import { accountChecks, issuedBeforeCutoff } from "./lib/sessionCutoff";
+import { hostPassStands } from "./lib/hostPass";
 import { sessionHook } from "./lib/sessionHook";
 import { sayRestarting } from "./lib/restartNotice";
 import { allowEmptyJsonBody } from "./lib/emptyJson";
@@ -840,6 +841,8 @@ async function main() {
     // A host pass is fenced the same way (lib/guestAllow.ts hostMayCall).
     if (decoded?.host) {
       if (!hostMayCall(path)) return reply.code(403).send({ ok: false, error: "host_forbidden" });
+      if (!(await hostPassStands(decoded, isOfficeStaff)))
+        return reply.code(401).send({ ok: false, error: "pass_revoked" });
       return;
     }
     if (!decoded?.guest) return;
@@ -1777,6 +1780,7 @@ async function main() {
             hydrateGlobalRole,
             isGloballyBanned,
             sessionEnded,
+            hostPassOk: (d: any) => hostPassStands(d, isOfficeStaff),
             send,
             awardNotoriety,
             wss,
