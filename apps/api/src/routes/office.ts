@@ -913,7 +913,10 @@ export default async function officeRoutes(app: FastifyInstance, opts: Opts) {
   // The host "presents" a plan snapshot to the room; admitted guests poll it
   // read-only. Guests only ever see exactly what the host chose to present.
   // In-memory by design: ephemeral meeting state (host re-presents after a restart).
-  const presentedPlans = new BoundedMap<string, { data: any; seq: number; at: number }>(50);
+  const presentedPlans = new BoundedMap<
+    string,
+    { data: any; seq: number; at: number; audience?: Set<string> }
+  >(50);
   let presentedSeq = 0;
 
   app.post("/office/plan/present", async (req, reply) => {
@@ -958,7 +961,13 @@ export default async function officeRoutes(app: FastifyInstance, opts: Opts) {
       // deck (~50-80k of HTML) alongside the JSON sections.
       if (JSON.stringify(data).length > 400_000)
         return reply.code(400).send({ ok: false, error: "too_large" });
-      presentedPlans.set(office, { data, seq: ++presentedSeq, at: Date.now() });
+      // Who it was presented to: the visitors in the room right now. Someone
+      // who walks in later (through a door that reopened when the client's
+      // connection dropped) does not get the last client's plan (fan-out
+      // audit, 2026-11-13). Presenting again shows it to whoever is in then.
+      const seated = rooms?.get(`${office}-office`)?.users;
+      const audience = new Set<string>(seated ? [...seated.keys()].map(String) : []);
+      presentedPlans.set(office, { data, seq: ++presentedSeq, at: Date.now(), audience });
     } else {
       presentedPlans.delete(office);
     }
@@ -985,6 +994,10 @@ export default async function officeRoutes(app: FastifyInstance, opts: Opts) {
       const gid = String(uu.id || "");
       const room = rooms?.get(`${office}-office`);
       if (!room || !room.users || !room.users.has(gid)) {
+        return reply.send({ ok: true, seq: 0, data: null });
+      }
+      const shown = office ? presentedPlans.get(office) : undefined;
+      if (shown && !shown.audience?.has(gid)) {
         return reply.send({ ok: true, seq: 0, data: null });
       }
     }

@@ -247,7 +247,11 @@ export async function handlePoker(ws: any, msg: any, opts: Opts): Promise<void> 
     const action = String(msg.action || "")
       .trim()
       .toLowerCase();
-    const amount = Number(msg.amount || 0);
+    // Chips are whole numbers. NaN or a fraction got into the stacks and broke
+    // the table for everyone at it (fan-out audit, 2026-11-13).
+    const raw = Number(msg.amount || 0);
+    if (!Number.isFinite(raw) || raw < 0) return;
+    const amount = Math.floor(raw);
     if (!ws.user || !tableId || !action) return;
 
     const table = pokerTables.get(tableId);

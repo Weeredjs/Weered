@@ -3,6 +3,7 @@ import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
 import { z } from "zod";
 import { isStaffUser as sharedIsStaffUser } from "../lib/isStaffUser";
+import { isStaffRole } from "../lib/lobbyAuth";
 import { isRealDate, sizeProblem } from "../lib/fieldSize";
 
 // What a tournament may hold (lib/fieldSize.ts). The longest live title is 34
@@ -55,7 +56,9 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
     canAccessStaff,
   } = opts;
 
-  const isStaffUser = (userId: string) => sharedIsStaffUser(userId, getGlobalRole, canAccessStaff);
+  // Staff, admin or the owner: support answers people and moderates, it does
+  // not run prizes or pay-outs (fan-out audit, 2026-11-13).
+  const isStaffUser = (userId: string) => sharedIsStaffUser(userId, getGlobalRole, isStaffRole);
 
   async function enrichRewards(rows: any[]): Promise<void> {
     const ids = new Set<string>();

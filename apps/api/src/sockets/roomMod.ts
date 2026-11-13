@@ -58,11 +58,12 @@ export async function handleRoomClose(
     if (!isModOrOwner(room, ws.user.id, ws.user?.globalRole)) return;
     // Closing deletes the room and its history: its owner or staff, never a
     // moderator, and never a lobby's own chat (red team 2026-11-01, finding 20).
+    // A pinned room too (fan-out audit, 2026-11-13).
+    if (rankIn(room, ws.user.id, ws.user?.globalRole) < 4) {
+      send(ws, { type: "mod:error", roomId, reason: "Only the owner can close this room." });
+      return;
+    }
     if (!room.pinned) {
-      if (rankIn(room, ws.user.id, ws.user?.globalRole) < 4) {
-        send(ws, { type: "mod:error", roomId, reason: "Only the owner can close this room." });
-        return;
-      }
       const lobbyChat = await prisma.lobby
         .findUnique({ where: { id: roomId }, select: { id: true } })
         .catch(() => null);
@@ -162,6 +163,15 @@ export async function handleRoomMod(
     rooms,
     wss,
   } = opts;
+
+  // Someone banned from the room moderates nothing in it, and nobody lifts
+  // their own ban or mute (fan-out audit, 2026-11-13).
+  if (room?.banned?.has(actorId) && !isOwner(room, actorId)) return;
+  if (
+    (msg.type === "mod:unban" || msg.type === "mod:unmute") &&
+    String(msg.userId || "") === actorId
+  )
+    return;
 
   if (msg.type === "room:getAdminState") {
     // It broadcasts the room's full state to everyone in it, so only someone in
@@ -422,6 +432,14 @@ export async function handleRoomMod(
     room.users.delete(targetId);
     room.mods.delete(targetId);
     if (room.roomId !== "lobby") {
+      // A banned moderator stops being one, saved too: the role used to come
+      // back with the room after a restart (fan-out audit, 2026-11-13).
+      void prisma.roomMember
+        .updateMany({
+          where: { roomId: room.roomId, userId: targetId },
+          data: { role: RoomRole.MEMBER },
+        })
+        .catch(swallow);
       void prisma.roomBan
         .upsert({
           where: { roomId_userId: { roomId: room.roomId, userId: targetId } },

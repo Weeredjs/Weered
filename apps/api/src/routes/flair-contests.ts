@@ -2,6 +2,7 @@ import { FlairKind } from "@prisma/client";
 import { log, swallow } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 import { isStaffUser as sharedIsStaffUser } from "../lib/isStaffUser";
+import { isStaffRole } from "../lib/lobbyAuth";
 import { existsSync, mkdirSync, writeFileSync, readFileSync, unlinkSync } from "fs";
 import { join } from "path";
 import sharp from "sharp";
@@ -117,7 +118,9 @@ export default async function flairContestsRoutes(app: FastifyInstance, opts: Op
     createNotification,
   } = opts;
 
-  const isStaffUser = (userId: string) => sharedIsStaffUser(userId, getGlobalRole, canAccessStaff);
+  // Staff, admin or the owner: support answers people and moderates, it does
+  // not run prizes or pay-outs (fan-out audit, 2026-11-13).
+  const isStaffUser = (userId: string) => sharedIsStaffUser(userId, getGlobalRole, isStaffRole);
 
   async function canManageContest(
     userId: string,

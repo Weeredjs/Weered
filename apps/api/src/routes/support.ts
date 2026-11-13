@@ -150,6 +150,10 @@ export default async function supportRoutes(app: FastifyInstance, opts: Opts) {
     if (!canAccessStaff(role)) return reply.code(403).send({ ok: false, error: "forbidden" });
 
     const decision = String(req.body?.decision || "").toUpperCase();
+    // Support reads and denies appeals; lifting a ban is staff's, as setting
+    // one is (fan-out audit, 2026-11-13).
+    if (decision === "APPROVED" && !["STAFF", "ADMIN", "GOD"].includes(String(role)))
+      return reply.code(403).send({ ok: false, error: "staff_only" });
     if (decision !== "APPROVED" && decision !== "DENIED") {
       return reply.code(400).send({
         ok: false,
