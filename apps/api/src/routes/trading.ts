@@ -244,7 +244,7 @@ export default async function tradingRoutes(app: FastifyInstance, opts: Opts) {
       if (!symbol || !["BUY", "SELL"].includes(side)) {
         return reply.code(400).send({ ok: false, error: "invalid_params" });
       }
-      if (!quantity || quantity <= 0) {
+      if (!Number.isFinite(quantity) || quantity <= 0) {
         return reply.code(400).send({ ok: false, error: "invalid_quantity" });
       }
 
@@ -270,9 +270,31 @@ export default async function tradingRoutes(app: FastifyInstance, opts: Opts) {
       }
 
       if (orderType === "LIMIT" || orderType === "STOP") {
-        if (!limitPrice || limitPrice <= 0) {
+        if (!limitPrice || !Number.isFinite(limitPrice) || limitPrice <= 0) {
           return reply.code(400).send({ ok: false, error: "limit_price_required" });
         }
+        // A pending order names a market that trades, at a price near where it
+        // trades now, and an account keeps a handful of them. It fills at the
+        // market's price when its trigger is met (the worker below), never at
+        // the price the member typed: that let a stop "fill" at a millionth of
+        // the real price (fan-out audit, 2026-11-13).
+        const mark = getLivePrice(symbol);
+        if (!mark) return reply.code(400).send({ ok: false, error: "symbol_not_trading" });
+        if (limitPrice < mark * 0.5 || limitPrice > mark * 2)
+          return reply.code(400).send({
+            ok: false,
+            error: "price_out_of_range",
+            message: "A limit or stop price must be within half and double the current price.",
+          });
+        const pendingNow = await prisma.paperOrder.count({
+          where: { accountId: account.id, status: "PENDING" },
+        });
+        if (pendingNow >= 25)
+          return reply.code(400).send({
+            ok: false,
+            error: "too_many_pending",
+            message: "An account can hold 25 pending orders. Cancel one to place another.",
+          });
         const order = await prisma.paperOrder.create({
           data: {
             accountId: account.id,
@@ -1161,8 +1183,10 @@ export default async function tradingRoutes(app: FastifyInstance, opts: Opts) {
         }
 
         if (shouldFill) {
-          const fillPrice = order.price;
+          // Filled at the market, as a real order is (see the order route).
+          const fillPrice = cp;
           const cost = fillPrice * order.quantity;
+          if (!Number.isFinite(cost) || cost <= 0) continue;
 
           // Guarded margin debit + fill in one transaction: a concurrent market order
           // can't overdraft the account, and a filled order can't be double-counted.

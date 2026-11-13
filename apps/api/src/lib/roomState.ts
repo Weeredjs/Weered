@@ -14,6 +14,7 @@ import { hostAvatar } from "./hostAvatar";
 import { lobbyLevelOf } from "./lobbyAccess";
 import { floodOn } from "./flood";
 import { openFrame } from "./socketFrames";
+import { removeFromVoice } from "./livekitAdmin";
 
 // In-memory room/WS state engine extracted from index.ts. wss is injected
 // once from main() so the lobby-activity ping can still reach all clients.
@@ -1017,6 +1018,9 @@ export function leaveRoom(ws: Sock) {
     if (!userHasOtherSocket) {
       const existed = room.users.delete(ws.user.id);
       if (existed) announcePresence(room, { type: "presence:leave", roomId, userId: ws.user.id });
+      // Out of the office's room, out of its call: the call is a separate
+      // connection, and a visitor who walked out stayed in it.
+      if (isOfficeRoom(roomId)) void removeFromVoice(roomId, ws.user.id).catch(swallow);
       const userId = ws.user.id;
       const location = (room as any).name || roomId;
       prisma.user

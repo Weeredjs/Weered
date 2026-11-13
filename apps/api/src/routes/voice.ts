@@ -155,6 +155,12 @@ export default async function voiceRoutes(app: FastifyInstance, opts: Opts) {
       if ((room.locked || room.passwordHash) && !isOwnerOrMod && !room.users?.has(u.id)) {
         return reply.code(403).send({ ok: false, error: "not_admitted" });
       }
+      // The office's rooms: only someone seated in the room gets its call,
+      // door open or not. With the door open, a visitor could take a pass
+      // without ever walking in, so the door never closed behind them.
+      if (isOfficeRoom(lookup) && !isOwnerOrMod && !room.users?.has(u.id)) {
+        return reply.code(403).send({ ok: false, error: "not_admitted" });
+      }
 
       let canPublish = true;
       try {
@@ -170,9 +176,15 @@ export default async function voiceRoutes(app: FastifyInstance, opts: Opts) {
         swallow(e);
       }
 
+      // Ten minutes to connect. A pass is checked only when someone connects,
+      // and the SDK's default life is six hours: a visitor who kept one could
+      // rejoin a call long after leaving it, or after a kick or a ban. The
+      // voice server renews the pass of someone already in a call itself, so a
+      // call in progress is unaffected (fan-out audit, 2026-11-13).
       const at = new AccessToken(lk.key, lk.secret, {
         identity: u.id,
         name: u.name,
+        ttl: "10m",
       });
       at.addGrant({
         roomJoin: true,

@@ -144,3 +144,73 @@ describe("challenges - enroll", () => {
     await app.close();
   });
 });
+
+// A challenge's rewards are minted on completion (fan-out audit, 2026-11-13):
+// a member who made one sets small rewards and no badge, and cannot move its
+// start back so that past games count.
+describe("challenges - who sets the rewards", () => {
+  afterEach(async () => {
+    for (const d of defs)
+      await prisma.challengeInstance.deleteMany({ where: { definitionId: d } }).catch(() => {});
+    if (defs.length)
+      await prisma.challengeDefinition.deleteMany({ where: { id: { in: defs } } }).catch(() => {});
+    if (users.length)
+      await prisma.user.deleteMany({ where: { id: { in: users } } }).catch(() => {});
+    defs.length = 0;
+    users.length = 0;
+  });
+  afterAll(async () => {
+    await prisma.$disconnect();
+  });
+
+  it("a member's own challenge gets at most 500 Paper and no badge", async () => {
+    const app = await makeApp();
+    const me = await newUser("maker");
+    const def = await prisma.challengeDefinition.create({
+      data: { title: "Mine", createdById: me, objectives: [{ id: "kills", target: 1 }] },
+      select: { id: true },
+    });
+    defs.push(def.id);
+    const r = await app.inject({
+      method: "PATCH",
+      url: `/challenges/definitions/${def.id}`,
+      headers: { authorization: "Bearer " + testToken(me) },
+      payload: {
+        paperReward: 2_000_000_000,
+        notorietyReward: -50,
+        badgeId: "any-badge",
+        requireCount: -1,
+      },
+    });
+    expect(r.statusCode).toBe(200);
+    const row = await prisma.challengeDefinition.findUnique({ where: { id: def.id } });
+    expect(row?.paperReward).toBe(500);
+    expect(row?.notorietyReward).toBe(0);
+    expect(row?.badgeId).toBeNull();
+    expect(row?.requireCount).toBeNull();
+    await app.close();
+  });
+
+  it("a member cannot start their challenge before it was made", async () => {
+    const app = await makeApp();
+    const me = await newUser("maker2");
+    const def = await prisma.challengeDefinition.create({
+      data: { title: "Mine", createdById: me, objectives: [{ id: "kills", target: 1 }] },
+      select: { id: true },
+    });
+    defs.push(def.id);
+    const inst = await prisma.challengeInstance.create({
+      data: { definitionId: def.id, status: "ACTIVE", startsAt: new Date() },
+      select: { id: true },
+    });
+    const r = await app.inject({
+      method: "PATCH",
+      url: `/challenges/instances/${inst.id}`,
+      headers: { authorization: "Bearer " + testToken(me) },
+      payload: { startsAt: "2000-01-01" },
+    });
+    expect(r.statusCode).toBe(400);
+    expect(r.json().error).toBe("start_in_past");
+    await app.close();
+  });
+});

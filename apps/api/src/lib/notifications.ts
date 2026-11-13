@@ -100,6 +100,9 @@ export async function sendWebPush(
       await webpush.sendNotification(
         { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
         JSON.stringify(data),
+        // A push service answers in well under a second; one that doesn't
+        // must not hold a connection open for good.
+        { timeout: 10_000 },
       );
     } catch (e: any) {
       if (e.statusCode === 404 || e.statusCode === 410) {

@@ -3,7 +3,7 @@ import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
 import { z } from "zod";
 import { LobbyRole, GlobalRole } from "@prisma/client";
-import { sizeProblem } from "../lib/fieldSize";
+import { isRealDate, sizeProblem } from "../lib/fieldSize";
 
 // What a challenge may hold (lib/fieldSize.ts). The longest live title is 74
 // characters, description 239, and objectives 750 as JSON.
@@ -162,6 +162,33 @@ export default async function challengesRoutes(app: FastifyInstance, opts: Opts)
     return reply.send({ ok: true, leaderboard });
   });
 
+  /**
+   * A challenge's rewards are minted when it is completed, so who may set
+   * them is a question about money (fan-out audit, 2026-11-13). Staff set any
+   * reward up to a ceiling. A lobby owner or moderator, or the member who made
+   * the challenge, sets small ones (the largest a member had set was 100
+   * Paper) and no badge: badges are staff's to give. A reward is a whole
+   * number of zero or more; requireCount is 1 to 50 or none.
+   */
+  function rewardFields(body: any, staff: boolean): Record<string, unknown> {
+    const out: Record<string, unknown> = {};
+    const cap = staff ? 1_000_000 : 500;
+    const amount = (v: unknown) => {
+      const n = Number.parseInt(String(v ?? ""), 10);
+      return Number.isFinite(n) ? Math.max(0, Math.min(cap, n)) : 0;
+    };
+    if (body.notorietyReward !== undefined) out.notorietyReward = amount(body.notorietyReward);
+    if (body.paperReward !== undefined) out.paperReward = amount(body.paperReward);
+    if (body.crewRepReward !== undefined) out.crewRepReward = amount(body.crewRepReward);
+    if (body.badgeId !== undefined && staff)
+      out.badgeId = body.badgeId ? String(body.badgeId) : null;
+    if (body.requireCount !== undefined) {
+      const n = Number.parseInt(String(body.requireCount ?? ""), 10);
+      out.requireCount = Number.isFinite(n) && n > 0 ? Math.min(50, n) : null;
+    }
+    return out;
+  }
+
   async function canManageChallenge(
     userId: string,
     def: { lobbyId: string | null; createdById: string },
@@ -212,11 +239,12 @@ export default async function challengesRoutes(app: FastifyInstance, opts: Opts)
           createdById: u.id,
           objectives: body.objectives || [],
           requireAll: body.requireAll !== false,
-          requireCount: body.requireCount || null,
-          notorietyReward: Number.parseInt(body.notorietyReward) || 0,
-          paperReward: Number.parseInt(body.paperReward) || 0,
-          crewRepReward: Number.parseInt(body.crewRepReward) || 0,
-          badgeId: body.badgeId || null,
+          requireCount: null,
+          notorietyReward: 0,
+          paperReward: 0,
+          crewRepReward: 0,
+          badgeId: null,
+          ...rewardFields(body, isStaff),
           isRecurring: body.isRecurring === true,
           recurSchedule: body.recurSchedule || null,
           requiredModifiers: Array.isArray(body.requiredModifiers) ? body.requiredModifiers : [],
@@ -422,15 +450,7 @@ export default async function challengesRoutes(app: FastifyInstance, opts: Opts)
       if (body.difficulty !== undefined)
         data.difficulty = Math.max(1, Math.min(5, Number.parseInt(body.difficulty) || 1));
       if (body.requireAll !== undefined) data.requireAll = !!body.requireAll;
-      if (body.requireCount !== undefined)
-        data.requireCount = body.requireCount ? Number.parseInt(body.requireCount) : null;
-      if (body.notorietyReward !== undefined)
-        data.notorietyReward = Math.max(0, Number.parseInt(body.notorietyReward) || 0);
-      if (body.paperReward !== undefined)
-        data.paperReward = Math.max(0, Number.parseInt(body.paperReward) || 0);
-      if (body.crewRepReward !== undefined)
-        data.crewRepReward = Math.max(0, Number.parseInt(body.crewRepReward) || 0);
-      if (body.badgeId !== undefined) data.badgeId = body.badgeId || null;
+      Object.assign(data, rewardFields(body, isStaffRole(await getGlobalRole(u.id))));
       if (body.isRecurring !== undefined) data.isRecurring = !!body.isRecurring;
       if (body.recurSchedule !== undefined) data.recurSchedule = body.recurSchedule || null;
       if (body.requiredModifiers !== undefined)
@@ -531,8 +551,24 @@ export default async function challengesRoutes(app: FastifyInstance, opts: Opts)
       }
       const body = (req as any).body || {};
       const data: any = {};
-      if (body.startsAt !== undefined) data.startsAt = new Date(body.startsAt);
-      if (body.endsAt !== undefined) data.endsAt = body.endsAt ? new Date(body.endsAt) : null;
+      if (body.startsAt !== undefined) {
+        if (!isRealDate(body.startsAt))
+          return reply.code(400).send({ ok: false, error: "bad_date" });
+        data.startsAt = new Date(body.startsAt);
+        // Activity before the challenge existed does not count towards it:
+        // moving the start back made every past game a completion.
+        if (data.startsAt < instance.createdAt && !isStaffRole(await getGlobalRole(u.id)))
+          return reply.code(400).send({
+            ok: false,
+            error: "start_in_past",
+            message: "A challenge can't start before it was made.",
+          });
+      }
+      if (body.endsAt !== undefined) {
+        if (body.endsAt && !isRealDate(body.endsAt))
+          return reply.code(400).send({ ok: false, error: "bad_date" });
+        data.endsAt = body.endsAt ? new Date(body.endsAt) : null;
+      }
       if (
         body.status !== undefined &&
         ["ACTIVE", "PAUSED", "COMPLETED", "ARCHIVED"].includes(body.status)

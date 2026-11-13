@@ -12,6 +12,30 @@ type Opts = {
   ) => Promise<void>;
 };
 
+/** The push services browsers use (Chrome, Firefox, Edge, Safari). */
+const PUSH_HOSTS = [
+  /^fcm\.googleapis\.com$/,
+  /^android\.googleapis\.com$/,
+  /^updates\.push\.services\.mozilla\.com$/,
+  /^[a-z0-9-]+\.notify\.windows\.com$/,
+  /^web\.push\.apple\.com$/,
+];
+export function isPushEndpoint(v: unknown): boolean {
+  if (typeof v !== "string" || v.length > 2000) return false;
+  try {
+    const u = new URL(v);
+    return (
+      u.protocol === "https:" &&
+      (u.port === "" || u.port === "443") &&
+      PUSH_HOSTS.some((h) => h.test(u.hostname))
+    );
+  } catch {
+    return false;
+  }
+}
+const isShortKey = (v: unknown, max: number) =>
+  typeof v === "string" && v.length > 0 && v.length <= max && /^[A-Za-z0-9_=-]+$/.test(v);
+
 export default async function notificationsRoutes(app: FastifyInstance, opts: Opts) {
   const { authFromHeader, VAPID_PUBLIC, sendPush } = opts;
 
@@ -26,6 +50,29 @@ export default async function notificationsRoutes(app: FastifyInstance, opts: Op
       const { endpoint, keys } = req.body as any;
       if (!endpoint || !keys?.p256dh || !keys?.auth)
         return reply.code(400).send({ ok: false, error: "missing fields" });
+      // A push goes to the browser's own push service and nowhere else: this
+      // server posts to the address it is given, so it must be one of theirs
+      // (fan-out audit, 2026-11-13).
+      if (!isPushEndpoint(endpoint) || !isShortKey(keys.p256dh, 200) || !isShortKey(keys.auth, 100))
+        return reply.code(400).send({ ok: false, error: "not_a_push_service" });
+      const mine = await prisma.pushSubscription.count({ where: { userId: viewer.id } });
+      if (mine >= 20)
+        await prisma.pushSubscription
+          .deleteMany({
+            where: {
+              id: {
+                in: (
+                  await prisma.pushSubscription.findMany({
+                    where: { userId: viewer.id },
+                    orderBy: { createdAt: "asc" },
+                    take: mine - 19,
+                    select: { id: true },
+                  })
+                ).map((s) => s.id),
+              },
+            },
+          })
+          .catch(() => {});
       await prisma.pushSubscription.upsert({
         where: { endpoint },
         create: { userId: viewer.id, endpoint, p256dh: keys.p256dh, auth: keys.auth },
@@ -121,6 +168,7 @@ export default async function notificationsRoutes(app: FastifyInstance, opts: Op
     "/push/test",
     {
       schema: { tags: ["notifications"] },
+      config: { rateLimit: { max: 6, timeWindow: "1 minute" } },
     },
     async (req, reply) => {
       const u = authFromHeader((req as any).headers?.authorization);
