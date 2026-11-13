@@ -1,6 +1,7 @@
 import { log, swallow } from "../lib/logger";
 import { allowEmptyJsonBody } from "../lib/emptyJson";
 import { screenUpload } from "../lib/imageModeration";
+import { roomIfEnterable } from "../lib/roomAccess";
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
 import { existsSync, mkdirSync, writeFileSync, unlinkSync } from "node:fs";
@@ -19,7 +20,10 @@ function ensureDir() {
   if (!existsSync(MAP_PUBLIC_DIR)) mkdirSync(MAP_PUBLIC_DIR, { recursive: true });
 }
 
+// A RoomMember row outlives a ban, a kick and the lobby: the room's own entry
+// rules come first (lib/roomAccess.ts; fan-out audit, 2026-11-13).
 async function isRoomDM(roomId: string, userId: string): Promise<boolean> {
+  if (!(await roomIfEnterable(roomId, { id: userId }))) return false;
   const m = await prisma.roomMember.findUnique({
     where: { roomId_userId: { roomId, userId } },
     select: { role: true },
@@ -28,6 +32,7 @@ async function isRoomDM(roomId: string, userId: string): Promise<boolean> {
 }
 
 async function isRoomMember(roomId: string, userId: string): Promise<boolean> {
+  if (!(await roomIfEnterable(roomId, { id: userId }))) return false;
   const m = await prisma.roomMember.findUnique({
     where: { roomId_userId: { roomId, userId } },
     select: { id: true },

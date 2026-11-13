@@ -48,6 +48,30 @@ export async function roomIfEnterable(
       if (ban && !(await isStaffUser(user.id))) return null;
     }
     if (!(await canEnterGatedRoom(user, room.lobbyId, room.minLevel || 0))) return null;
+    // The room's own door too (fan-out audit, 2026-11-13): someone banned from
+    // the room, or a room with a password or a lock that this person never
+    // got through, is not entered by asking a route instead of the socket.
+    const staff = await isStaffUser(user.id);
+    if (!staff) {
+      const [ban, door] = await Promise.all([
+        prisma.roomBan.findUnique({
+          where: { roomId_userId: { roomId, userId: user.id } },
+          select: { id: true },
+        }),
+        prisma.room.findUnique({
+          where: { id: roomId },
+          select: { passwordHash: true, locked: true },
+        }),
+      ]);
+      if (ban) return null;
+      if ((door?.passwordHash || door?.locked) && room.ownerId !== user.id) {
+        const member = await prisma.roomMember.findUnique({
+          where: { roomId_userId: { roomId, userId: user.id } },
+          select: { id: true },
+        });
+        if (!member) return null;
+      }
+    }
     return room;
   } catch (e) {
     swallow(e);
