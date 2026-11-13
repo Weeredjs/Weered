@@ -1,4 +1,5 @@
 "use client";
+import { pollLive } from "@/lib/floodMode";
 
 import React, { useCallback, useEffect, useState } from "react";
 import dynamic from "next/dynamic";
@@ -75,8 +76,8 @@ export default function VaModulesPanel({
 
   useEffect(() => {
     void load();
-    const t = setInterval(load, 30_000);
-    return () => clearInterval(t);
+    const t = pollLive(load, 30_000);
+    return () => t();
   }, [load]);
 
   const go = useCallback((t: string) => {

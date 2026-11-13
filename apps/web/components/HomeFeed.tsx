@@ -1,4 +1,5 @@
 "use client";
+import { pollLive } from "@/lib/floodMode";
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -51,8 +52,8 @@ function useLiveFeed(category: Category, sort: "hot" | "new", domain?: string) {
   useEffect(() => {
     setLoading(true);
     void load();
-    const timer = setInterval(load, 60_000);
-    return () => clearInterval(timer);
+    const timer = pollLive(load, 60_000);
+    return () => timer();
   }, [category, sort]);
 
   return { items, loading, updatedAt };

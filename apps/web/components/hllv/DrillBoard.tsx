@@ -1,4 +1,5 @@
 "use client";
+import { pollLive } from "@/lib/floodMode";
 // One drill's attendance: who on the roll was there, by the server's count,
 // with an officer's hand on top. Refreshes itself while the drill runs.
 import React, { useEffect, useState } from "react";
@@ -72,8 +73,8 @@ export default function DrillBoard({
   };
   useEffect(() => {
     void load();
-    const iv = setInterval(load, 30_000);
-    return () => clearInterval(iv);
+    const iv = pollLive(load, 30_000);
+    return () => iv();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [drillId]);
 

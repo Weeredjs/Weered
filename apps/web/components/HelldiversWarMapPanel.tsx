@@ -1,4 +1,5 @@
 "use client";
+import { pollLive } from "@/lib/floodMode";
 
 import React, { useEffect, useMemo, useState } from "react";
 import { onActivate } from "@/lib/a11y";
@@ -84,10 +85,10 @@ export default function HelldiversWarMapPanel({ style }: { style?: React.CSSProp
       }
     }
     void load();
-    const t = setInterval(load, 60_000);
+    const t = pollLive(load, 60_000);
     return () => {
       alive = false;
-      clearInterval(t);
+      t();
     };
   }, []);
 

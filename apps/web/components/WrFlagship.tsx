@@ -1,4 +1,5 @@
 "use client";
+import { pollLive } from "@/lib/floodMode";
 import { useState, useEffect, useCallback } from "react";
 import { BrassDivider, PAL, Rivet, S, WR_FONT_DISPLAY, WR_FONT_MONO, apiFetch } from "./WrShared";
 import { timeAgo } from "./WrBounties";
@@ -26,8 +27,8 @@ export function LivePlayers() {
 
   useEffect(() => {
     void load();
-    const t = setInterval(load, 60_000);
-    return () => clearInterval(t);
+    const t = pollLive(load, 60_000);
+    return () => t();
   }, [load]);
 
   const display = count === null ? "—" : count.toLocaleString();
@@ -269,8 +270,8 @@ export function ActivityTicker() {
 
   useEffect(() => {
     void load();
-    const t = setInterval(load, 60_000);
-    return () => clearInterval(t);
+    const t = pollLive(load, 60_000);
+    return () => t();
   }, [load]);
 
   const shown = expanded ? events || [] : (events || []).slice(0, 8);

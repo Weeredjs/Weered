@@ -1,4 +1,5 @@
 "use client";
+import { pollLive } from "@/lib/floodMode";
 
 import React, { useCallback, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
@@ -156,7 +157,7 @@ function SquadFinder({ lobbyId }: { lobbyId: string }) {
       .catch(() => setLoading(false));
   }, [lobbyId]);
 
-  useEffect(() => { load(); const i = setInterval(load, 12000); return () => clearInterval(i); }, [load]);
+  useEffect(() => { load(); const i = pollLive(load, 12000); return () => i(); }, [load]);
 
   async function create() {
     const fullActivity = `${activity} · ${zone}${shell !== "Any Shell" ? ` (${shell})` : ""}`;

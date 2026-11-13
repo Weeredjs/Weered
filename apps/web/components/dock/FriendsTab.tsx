@@ -1,4 +1,5 @@
 "use client";
+import { pollLive } from "@/lib/floodMode";
 import { lookBgProps } from "@/lib/lookBg";
 import React from "react";
 import EmptyState from "../EmptyState";
@@ -49,8 +50,8 @@ export function FriendsTab({
     void load();
   }, [apiBase, tokenMaybe]);
   React.useEffect(() => {
-    const t = setInterval(load, 60000);
-    return () => clearInterval(t);
+    const t = pollLive(load, 60000);
+    return () => t();
   }, [apiBase, tokenMaybe]);
 
   async function sendRequest() {

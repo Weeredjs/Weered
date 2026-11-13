@@ -1,4 +1,5 @@
 "use client";
+import { pollLive } from "@/lib/floodMode";
 
 // Home's Mplayer moment, done the home way: PEOPLE are the doors. Your
 // friends and crew who are on, with where they are and a one-click Join.
@@ -102,7 +103,7 @@ export default function HomePulse({
   useEffect(() => {
     const refresh = () => loadFriends();
     refresh();
-    const iv = setInterval(refresh, 60_000);
+    const iv = pollLive(refresh, 60_000);
     let t: ReturnType<typeof setTimeout> | null = null;
     const onActivity = () => {
       if (t) clearTimeout(t);
@@ -111,7 +112,7 @@ export default function HomePulse({
     const events = ["weered:presence:join", "weered:presence:leave", "weered:lobby:activity"];
     for (const e of events) window.addEventListener(e, onActivity);
     return () => {
-      clearInterval(iv);
+      iv();
       if (t) clearTimeout(t);
       for (const e of events) window.removeEventListener(e, onActivity);
     };

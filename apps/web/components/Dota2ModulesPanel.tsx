@@ -1,4 +1,5 @@
 "use client";
+import { pollLive } from "@/lib/floodMode";
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import StreamInterceptModal, { type StreamInfo } from "./StreamInterceptModal";
@@ -110,7 +111,7 @@ function StackFinder({ lobbyId, accent }: { lobbyId: string; accent: string }) {
       .catch(() => setLoading(false));
   }, [lobbyId]);
 
-  useEffect(() => { load(); const i = setInterval(load, 12000); return () => clearInterval(i); }, [load]);
+  useEffect(() => { load(); const i = pollLive(load, 12000); return () => i(); }, [load]);
 
   async function create() {
     setCreating(true);
@@ -663,7 +664,7 @@ function LiveMatches({ accent }: { accent: string }) {
     setLoading(false);
   }, []);
 
-  useEffect(() => { void (load()); const i = setInterval(load, 30000); return () => clearInterval(i); }, [load]);
+  useEffect(() => { void (load()); const i = pollLive(load, 30000); return () => i(); }, [load]);
 
   if (loading) return <div style={{ padding: 20, textAlign: "center", opacity: 0.4, fontSize: 13 }}>Loading live matches...</div>;
   if (error) return <div style={{ padding: 20, textAlign: "center", opacity: 0.4, fontSize: 13 }}>Failed to load live matches</div>;
@@ -927,7 +928,7 @@ function TwitchStreams({ lobbyId, accentColor }: { lobbyId: string; accentColor:
     setLoading(false);
   }, []);
 
-  useEffect(() => { void (load()); const i = setInterval(load, 30000); return () => clearInterval(i); }, [load]);
+  useEffect(() => { void (load()); const i = pollLive(load, 30000); return () => i(); }, [load]);
 
   function handleCardClick(s: any) {
     setInterceptStream({

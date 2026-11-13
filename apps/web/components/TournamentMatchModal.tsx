@@ -1,4 +1,5 @@
 "use client";
+import { pollLive } from "@/lib/floodMode";
 
 import React from "react";
 import { onActivate } from "@/lib/a11y";
@@ -78,8 +79,8 @@ export default function TournamentMatchModal({
 
   React.useEffect(() => {
     void fetchMatch();
-    const t = setInterval(fetchMatch, 8000);
-    return () => clearInterval(t);
+    const t = pollLive(fetchMatch, 8000);
+    return () => t();
   }, [fetchMatch]);
 
   React.useEffect(() => {

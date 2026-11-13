@@ -1,4 +1,5 @@
 "use client";
+import { pollLive } from "@/lib/floodMode";
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { getWeeredClient } from "../app/weeredClient";
@@ -760,8 +761,8 @@ function Leaderboard({ lobbyId, mode }: { lobbyId: string; mode: "CASUAL" | "RAN
   useEffect(() => {
     setLoading(true);
     load();
-    const iv = setInterval(load, 10000);
-    return () => clearInterval(iv);
+    const iv = pollLive(load, 10000);
+    return () => iv();
   }, [load]);
 
   if (loading) return <div style={{ padding: 20, textAlign: "center", opacity: 0.3, fontSize: 12 }}>Loading leaderboard...</div>;
@@ -863,8 +864,8 @@ function LobbyPnlTicker({ lobbyId, mode }: { lobbyId: string; mode: "CASUAL" | "
       }).catch(() => {});
     };
     load();
-    const iv = setInterval(load, 5000);
-    return () => { live = false; clearInterval(iv); };
+    const iv = pollLive(load, 5000);
+    return () => { live = false; iv(); };
   }, [lobbyId, mode]);
 
   if (entries.length < 2) return null;
@@ -1002,8 +1003,8 @@ export default function TradingModulesPanel({ lobbyId, accent }: { lobbyId: stri
 
   useEffect(() => {
     loadAccount();
-    const iv = setInterval(loadAccount, 8000);
-    return () => clearInterval(iv);
+    const iv = pollLive(loadAccount, 8000);
+    return () => iv();
   }, [loadAccount]);
 
   useEffect(() => { setHistory(null); }, [mode]);

@@ -1,4 +1,5 @@
 "use client";
+import { pollLive } from "@/lib/floodMode";
 
 import React from "react";
 import TournamentMatchModal from "./TournamentMatchModal";
@@ -71,8 +72,8 @@ export default function TournamentLiveStrip({
 
   React.useEffect(() => {
     void fetchFeatured();
-    const t = setInterval(fetchFeatured, 12_000);
-    return () => clearInterval(t);
+    const t = pollLive(fetchFeatured, 12_000);
+    return () => t();
   }, [fetchFeatured]);
 
   if (items.length === 0) return null;

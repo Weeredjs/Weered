@@ -1,4 +1,5 @@
 "use client";
+import { pollLive } from "@/lib/floodMode";
 
 import React, { useCallback, useEffect, useState } from "react";
 
@@ -244,8 +245,8 @@ export default function HelldiversSquadFinder({
 
   useEffect(() => {
     load();
-    const i = setInterval(load, 15000);
-    return () => clearInterval(i);
+    const i = pollLive(load, 15000);
+    return () => i();
   }, [load]);
 
   async function create() {

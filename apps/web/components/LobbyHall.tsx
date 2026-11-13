@@ -1,4 +1,5 @@
 "use client";
+import { pollLive } from "@/lib/floodMode";
 
 // Mplayer Mode: the lobby's default view. A compact room stack on the left,
 // the lobby CHAT as the centrepiece on the right — you land in a room list
@@ -57,7 +58,7 @@ export default function LobbyHall({
 
   useEffect(() => {
     loadPresence();
-    const iv = setInterval(loadPresence, 30_000);
+    const iv = pollLive(loadPresence, 30_000);
     let t: ReturnType<typeof setTimeout> | null = null;
     const onActivity = () => {
       if (t) clearTimeout(t);
@@ -71,7 +72,7 @@ export default function LobbyHall({
     ];
     for (const e of events) window.addEventListener(e, onActivity);
     return () => {
-      clearInterval(iv);
+      iv();
       if (t) clearTimeout(t);
       for (const e of events) window.removeEventListener(e, onActivity);
     };

@@ -1,4 +1,5 @@
 "use client";
+import { pollLive } from "@/lib/floodMode";
 
 import React, { useEffect, useState } from "react";
 import {
@@ -79,8 +80,8 @@ export default function VaStaffDesk({
         if (r.status === 200 && r.data) setD(r.data);
       });
     void load();
-    const t = setInterval(load, 60_000);
-    return () => clearInterval(t);
+    const t = pollLive(load, 60_000);
+    return () => t();
   }, [lobbyId]);
 
   if (http === 401 || http === 403)

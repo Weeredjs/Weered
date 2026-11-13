@@ -1,4 +1,5 @@
 "use client";
+import { pollLive } from "@/lib/floodMode";
 import React from "react";
 import { useLobbyLang } from "../lib/lobbyLang";
 
@@ -142,8 +143,8 @@ export default function StationBoard({
 
   React.useEffect(() => {
     void load();
-    const iv = setInterval(load, 15_000);
-    return () => clearInterval(iv);
+    const iv = pollLive(load, 15_000);
+    return () => iv();
   }, [load]);
 
   async function openPicker(stationId: string) {

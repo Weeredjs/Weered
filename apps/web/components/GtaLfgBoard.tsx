@@ -1,4 +1,5 @@
 "use client";
+import { pollLive } from "@/lib/floodMode";
 
 import React, { useCallback, useEffect, useState } from "react";
 import { plural } from "../lib/plural";
@@ -131,8 +132,8 @@ export default function GtaLfgBoard({
 
   useEffect(() => {
     load();
-    const i = setInterval(load, 15000);
-    return () => clearInterval(i);
+    const i = pollLive(load, 15000);
+    return () => i();
   }, [load]);
 
   function pickPreset(i: number) {

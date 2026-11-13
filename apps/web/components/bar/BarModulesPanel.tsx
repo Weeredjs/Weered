@@ -1,4 +1,5 @@
 "use client";
+import { pollLive } from "@/lib/floodMode";
 
 import React, { useEffect, useMemo, useState } from "react";
 import ModuleTabBar from "../ModuleTabBar";
@@ -114,10 +115,10 @@ function useMembers(lobbyId: string) {
       }
     };
     void load();
-    const t = setInterval(load, 30_000);
+    const t = pollLive(load, 30_000);
     return () => {
       alive = false;
-      clearInterval(t);
+      t();
     };
   }, [lobbyId]);
   return { data, error };

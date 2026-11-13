@@ -1,4 +1,5 @@
 "use client";
+import { pollLive } from "@/lib/floodMode";
 
 import { useCallback, useEffect, useState } from "react";
 
@@ -69,8 +70,8 @@ export default function RedditFeedTab({
 
   useEffect(() => {
     load();
-    const i = setInterval(load, 5 * 60 * 1000);
-    return () => clearInterval(i);
+    const i = pollLive(load, 5 * 60 * 1000);
+    return () => i();
   }, [load]);
 
   const SORTS: (typeof sort)[] = ["hot", "new", "top", "rising"];

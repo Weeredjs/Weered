@@ -1,4 +1,5 @@
 "use client";
+import { pollLive } from "@/lib/floodMode";
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useOverlay } from "../../components/overlays/OverlayProvider";
@@ -105,8 +106,8 @@ export default function MapContent() {
   }, [loadHexes]);
 
   useEffect(() => {
-    const iv = setInterval(loadHexes, 30000);
-    return () => clearInterval(iv);
+    const iv = pollLive(loadHexes, 30000);
+    return () => iv();
   }, [loadHexes]);
 
   useEffect(() => {

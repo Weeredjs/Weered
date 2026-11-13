@@ -1,4 +1,5 @@
 "use client";
+import { pollLive } from "@/lib/floodMode";
 
 import React from "react";
 import { onActivate } from "@/lib/a11y";
@@ -47,8 +48,8 @@ export default function FlairContestStrip({ lobbyId }: { lobbyId: string }) {
 
   React.useEffect(() => {
     void fetchActive();
-    const t = setInterval(fetchActive, 30_000);
-    return () => clearInterval(t);
+    const t = pollLive(fetchActive, 30_000);
+    return () => t();
   }, [fetchActive]);
 
   if (contests.length === 0) return null;

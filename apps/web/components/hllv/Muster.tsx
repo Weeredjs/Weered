@@ -1,4 +1,5 @@
 "use client";
+import { pollLive } from "@/lib/floodMode";
 // Muster — the unit's roll, its drills, and the quarter.
 //
 // The roll is in-game names, kept by officers, so nobody has to hold a
@@ -104,8 +105,8 @@ export default function Muster({
   };
   useEffect(() => {
     void Promise.all([loadRoll(), loadDrills()]).finally(() => setLoaded(true));
-    const iv = setInterval(loadDrills, 60_000);
-    return () => clearInterval(iv);
+    const iv = pollLive(loadDrills, 60_000);
+    return () => iv();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lobbyId]);
 

@@ -1,4 +1,5 @@
 "use client";
+import { pollLive } from "@/lib/floodMode";
 
 import React, { useEffect, useRef, useState } from "react";
 import ModuleTabBar from "./ModuleTabBar";
@@ -180,12 +181,12 @@ function Floor() {
     };
     void load();
     void loadRooms();
-    const iv = setInterval(load, 30_000);
-    const ivRooms = setInterval(loadRooms, 60_000);
+    const iv = pollLive(load, 30_000);
+    const ivRooms = pollLive(loadRooms, 60_000);
     return () => {
       stop = true;
-      clearInterval(iv);
-      clearInterval(ivRooms);
+      iv();
+      ivRooms();
     };
   }, []);
 
@@ -387,7 +388,7 @@ function Sprint({ accent, currentUserId }: { accent: string; currentUserId?: str
 
   useEffect(() => {
     void load();
-    const iv = setInterval(load, 30_000);
+    const iv = pollLive(load, 30_000);
     const tick = setInterval(() => {
       setLeft((v) => {
         if (v <= 1) {
@@ -398,7 +399,7 @@ function Sprint({ accent, currentUserId }: { accent: string; currentUserId?: str
       });
     }, 1000);
     return () => {
-      clearInterval(iv);
+      iv();
       clearInterval(tick);
     };
   }, []);
@@ -558,8 +559,8 @@ function DayBoard({ currentUserId }: { currentUserId?: string }) {
 
   useEffect(() => {
     void load();
-    const iv = setInterval(load, 45_000);
-    return () => clearInterval(iv);
+    const iv = pollLive(load, 45_000);
+    return () => iv();
   }, []);
 
   const add = async () => {

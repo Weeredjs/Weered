@@ -1,4 +1,5 @@
 "use client";
+import { pollLive } from "@/lib/floodMode";
 
 // The Downgrade (James 2026-11-04: "Oh you like discord? It can downgrade to
 // that"): a lobby drawn the way the old place draws a server, as close as we
@@ -279,10 +280,10 @@ export default function FamiliarView({
         .then((j) => live && Array.isArray(j?.users) && setPeople(j.users))
         .catch(() => {});
     void loadPeople();
-    const iv = setInterval(loadPeople, 30_000);
+    const iv = pollLive(loadPeople, 30_000);
     return () => {
       live = false;
-      clearInterval(iv);
+      iv();
     };
   }, [lobbyId]);
 

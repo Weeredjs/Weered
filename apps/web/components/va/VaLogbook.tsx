@@ -1,4 +1,5 @@
 "use client";
+import { pollLive } from "@/lib/floodMode";
 
 import React, { useEffect, useState } from "react";
 import {
@@ -60,8 +61,8 @@ export default function VaLogbook({
         }
       });
     void load();
-    const t = setInterval(load, 45_000);
-    return () => clearInterval(t);
+    const t = pollLive(load, 45_000);
+    return () => t();
   }, [lobbyId, status, fleet]);
 
   if (http === 401 || http === 403)

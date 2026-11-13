@@ -272,6 +272,12 @@ export default function LobbyCarousel({
               cards.current[i] = a;
             }}
             href={`/lobby/${encodeURIComponent(l.id)}`}
+            // Never fetched ahead. Each card that drifted into view had its
+            // lobby fetched in the background, and the ring never stops: one
+            // open Home tab made about 7,800 of those requests a day, 57% of
+            // everything the web server answered, and each cost the API four
+            // calls more (measured 2026-11-12). A click still opens it.
+            prefetch={false}
             className="weered-drift-card"
             style={{
               width: CARD_W,

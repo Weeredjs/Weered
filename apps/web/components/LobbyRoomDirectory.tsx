@@ -1,4 +1,5 @@
 "use client";
+import { pollLive } from "@/lib/floodMode";
 
 import RoomDescribe from "./build/RoomDescribe";
 import { moduleGlyph, roomMonogram } from "../lib/roomGlyph";
@@ -342,7 +343,7 @@ export default function LobbyRoomDirectory({
   useEffect(() => {
     setLoading(true);
     load();
-    const iv = setInterval(load, 45_000);
+    const iv = pollLive(load, 45_000);
     let t: ReturnType<typeof setTimeout> | null = null;
     const onActivity = () => {
       if (t) clearTimeout(t);
@@ -351,7 +352,7 @@ export default function LobbyRoomDirectory({
     const events = ["weered:lobby:activity", "weered:presence:join", "weered:presence:leave"];
     for (const e of events) window.addEventListener(e, onActivity);
     return () => {
-      clearInterval(iv);
+      iv();
       if (t) clearTimeout(t);
       for (const e of events) window.removeEventListener(e, onActivity);
     };

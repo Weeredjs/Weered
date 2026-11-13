@@ -1,4 +1,5 @@
 "use client";
+import { pollLive } from "@/lib/floodMode";
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -800,13 +801,13 @@ export default function HeadquartersModulesPanel({ lobbyId, accentColor, style }
   }, [fetchRooms, fetchPresence, fetchMembers]);
 
   useEffect(() => {
-    const i = setInterval(fetchRooms, 20_000);
-    return () => clearInterval(i);
+    const i = pollLive(fetchRooms, 20_000);
+    return () => i();
   }, [fetchRooms]);
 
   useEffect(() => {
-    const i = setInterval(fetchPresence, 20_000);
-    return () => clearInterval(i);
+    const i = pollLive(fetchPresence, 20_000);
+    return () => i();
   }, [fetchPresence]);
 
   const injectedRef = useRef(false);

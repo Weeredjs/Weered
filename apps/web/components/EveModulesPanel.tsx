@@ -1,4 +1,5 @@
 "use client";
+import { pollLive } from "@/lib/floodMode";
 
 import React, { useCallback, useEffect, useState } from "react";
 import EmptyState from "./EmptyState";
@@ -114,8 +115,8 @@ function CharacterTab() {
 
   useEffect(() => {
     void (load());
-    const t = setInterval(load, 60_000);
-    return () => clearInterval(t);
+    const t = pollLive(load, 60_000);
+    return () => t();
   }, [load]);
 
   if (linked === null) {
@@ -219,8 +220,8 @@ function KillboardTab() {
 
   useEffect(() => {
     void (load());
-    const t = setInterval(load, 60_000);
-    return () => clearInterval(t);
+    const t = pollLive(load, 60_000);
+    return () => t();
   }, [load]);
 
   if (kills === null) return <div style={{ padding: 24, opacity: 0.4, fontSize: 12 }}>Loading killmails...</div>;
@@ -338,8 +339,8 @@ function LiveTab() {
 
   useEffect(() => {
     void (load());
-    const t = setInterval(load, 120_000);
-    return () => clearInterval(t);
+    const t = pollLive(load, 120_000);
+    return () => t();
   }, [load]);
 
   const fmt = (n: number | null | undefined) => (n == null ? "—" : n.toLocaleString());
@@ -415,8 +416,8 @@ function NewsTab() {
 
   useEffect(() => {
     void (load());
-    const t = setInterval(load, 600_000);
-    return () => clearInterval(t);
+    const t = pollLive(load, 600_000);
+    return () => t();
   }, [load]);
 
   // EVE's own news with its pictures and trailers, cycling, beside the press
@@ -450,8 +451,8 @@ function SovTab() {
 
   useEffect(() => {
     void (load());
-    const t = setInterval(load, 120_000);
-    return () => clearInterval(t);
+    const t = pollLive(load, 120_000);
+    return () => t();
   }, [load]);
 
   if (camps === null) return <div style={{ padding: 24, opacity: 0.4, fontSize: 12 }}>Loading contested space...</div>;
@@ -517,8 +518,8 @@ function MarketTab() {
 
   useEffect(() => {
     void (load());
-    const t = setInterval(load, 300_000);
-    return () => clearInterval(t);
+    const t = pollLive(load, 300_000);
+    return () => t();
   }, [load]);
 
   if (data === null) return <div style={{ padding: 24, opacity: 0.4, fontSize: 12 }}>Loading market...</div>;

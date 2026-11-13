@@ -1,4 +1,5 @@
 "use client";
+import { pollLive } from "@/lib/floodMode";
 import { useState, useEffect, useMemo, useCallback } from "react";
 import EmptyState from "./EmptyState";
 import LoadingState from "./LoadingState";
@@ -59,8 +60,8 @@ export function PortsOfCallTab() {
 
   useEffect(() => {
     void reload();
-    const t = setInterval(reload, 60_000);
-    return () => clearInterval(t);
+    const t = pollLive(reload, 60_000);
+    return () => t();
   }, [reload]);
 
   const rows: PortRow[] = useMemo(() => {

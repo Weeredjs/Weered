@@ -1,4 +1,5 @@
 "use client";
+import { pollLive } from "@/lib/floodMode";
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -561,8 +562,8 @@ function StudyRooms({ lobbyId, accent }: { lobbyId: string; accent: string }) {
 
   useEffect(() => {
     load();
-    const i = setInterval(load, 15000);
-    return () => clearInterval(i);
+    const i = pollLive(load, 15000);
+    return () => i();
   }, [load]);
 
   if (loading)
@@ -731,8 +732,8 @@ function FindPartners({ lobbyId, accent }: { lobbyId: string; accent: string }) 
 
   useEffect(() => {
     load();
-    const i = setInterval(load, 15000);
-    return () => clearInterval(i);
+    const i = pollLive(load, 15000);
+    return () => i();
   }, [load]);
 
   async function create() {

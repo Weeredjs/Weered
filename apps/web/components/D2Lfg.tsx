@@ -1,4 +1,5 @@
 "use client";
+import { pollLive } from "@/lib/floodMode";
 import { useState, useEffect, useCallback } from "react";
 import EmptyState from "./EmptyState";
 import { ACCENT_DESTINY, S, apiFetch } from "./D2Shared";
@@ -48,8 +49,8 @@ export function LfgBoard({ lobbyId }: { lobbyId: string }) {
 
   useEffect(() => {
     load();
-    const i = setInterval(load, 15000);
-    return () => clearInterval(i);
+    const i = pollLive(load, 15000);
+    return () => i();
   }, [load]);
 
   async function create() {

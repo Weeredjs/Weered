@@ -1,4 +1,5 @@
 "use client";
+import { pollLive } from "@/lib/floodMode";
 // Front Line — the unit's own server, live over RCON.
 //
 // For Vietnam this IS the server tab: there is no public list, so the linked
@@ -162,7 +163,7 @@ export default function FrontLines({
 
   useEffect(() => {
     void load();
-    const iv = setInterval(load, 45_000);
+    const iv = pollLive(load, 45_000);
     if (showIntel)
       fetch(`${API}/hllv/intel?game=${game}`)
         .then((r) => r.json())
@@ -170,7 +171,7 @@ export default function FrontLines({
           (j) => j?.ok && setIntel({ playingNow: j.playingNow, news: (j.news || []).slice(0, 3) }),
         )
         .catch(() => {});
-    return () => clearInterval(iv);
+    return () => iv();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lobbyId, game]);
 

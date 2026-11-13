@@ -1,4 +1,5 @@
 "use client";
+import { pollLive } from "@/lib/floodMode";
 
 import React from "react";
 import TournamentBracket from "./TournamentBracket";
@@ -624,8 +625,8 @@ function RaceLeaderboardView({ tournamentId, currentUserId }: { tournamentId: st
 
   React.useEffect(() => {
     void (fetchBoard());
-    const t = setInterval(fetchBoard, 8000);
-    return () => clearInterval(t);
+    const t = pollLive(fetchBoard, 8000);
+    return () => t();
   }, [fetchBoard]);
 
   async function register() {

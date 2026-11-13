@@ -1,4 +1,5 @@
 "use client";
+import { pollLive } from "@/lib/floodMode";
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
 
@@ -70,7 +71,7 @@ function Scoreboard({ accentColor }: { accentColor: string }) {
       .catch(() => { setError("Network error"); setLoading(false); });
   }, [date]);
 
-  useEffect(() => { load(); const i = setInterval(load, 30000); return () => clearInterval(i); }, [load]);
+  useEffect(() => { load(); const i = pollLive(load, 30000); return () => i(); }, [load]);
 
   function shiftDate(delta: number) {
     setDate(prev => { const d = new Date(prev); d.setDate(d.getDate() + delta); return d; });

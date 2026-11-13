@@ -1,4 +1,5 @@
 "use client";
+import { pollLive } from "@/lib/floodMode";
 
 import React, { useCallback, useEffect, useState } from "react";
 import StreamInterceptModal, { type StreamInfo } from "./StreamInterceptModal";
@@ -300,7 +301,7 @@ function FindTeam({ lobbyId, accent }: { lobbyId: string; accent: string }) {
       .catch(() => setLoading(false));
   }, [lobbyId]);
 
-  useEffect(() => { load(); const i = setInterval(load, 12000); return () => clearInterval(i); }, [load]);
+  useEffect(() => { load(); const i = pollLive(load, 12000); return () => i(); }, [load]);
 
   async function create() {
     setCreating(true);
@@ -480,7 +481,7 @@ function TwitchStreams({ lobbyId, accent, twitch }: { lobbyId: string; accent: s
     setLoading(false);
   }, []);
 
-  useEffect(() => { void (load()); const i = setInterval(load, 30000); return () => clearInterval(i); }, [load]);
+  useEffect(() => { void (load()); const i = pollLive(load, 30000); return () => i(); }, [load]);
 
   function handleCardClick(s: any) {
     setInterceptStream({

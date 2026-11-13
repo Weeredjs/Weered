@@ -1,4 +1,5 @@
 "use client";
+import { pollLive } from "@/lib/floodMode";
 
 import React, { useCallback, useEffect, useState } from "react";
 
@@ -143,8 +144,8 @@ function Leaderboard({ accentColor }: { accentColor: string }) {
 
   useEffect(() => {
     load();
-    const i = setInterval(load, 30000);
-    return () => clearInterval(i);
+    const i = pollLive(load, 30000);
+    return () => i();
   }, [load]);
 
   if (loading && players.length === 0) return <div style={{ padding: 20, textAlign: "center", opacity: 0.4, fontSize: 13 }}>Loading leaderboard...</div>;

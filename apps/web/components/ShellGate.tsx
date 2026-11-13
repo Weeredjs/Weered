@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import SiteFooter from "./SiteFooter";
 import { LogoMenu } from "./LogoMenu";
 import { onActivate } from "@/lib/a11y";
+import { poll } from "@/lib/floodMode";
 import { NO_SHELL_ROUTES } from "../lib/lobbyThemes";
 import { useShellDesign } from "../lib/shellDesign";
 import { useWeered } from "./WeeredProvider";
@@ -513,10 +514,13 @@ export default function ShellGate({
       } catch {}
     };
     void tick();
-    const id = setInterval(tick, 30_000);
+    // Through poll (lib/floodMode.ts), like every other timed refresh. This one
+    // ran on a bare timer, in hidden tabs too, and was the busiest call the
+    // API answered: 60,000 in a quiet week (2026-11-12).
+    const stop = poll(() => void tick(), 30_000);
     return () => {
       cancelled = true;
-      clearInterval(id);
+      stop();
     };
   }, []);
 

@@ -1,4 +1,5 @@
 "use client";
+import { pollLive } from "@/lib/floodMode";
 
 import React, { useCallback, useEffect, useState } from "react";
 import StreamInterceptModal, { type StreamInfo } from "./StreamInterceptModal";
@@ -181,8 +182,8 @@ function TwitchStreams({
 
   useEffect(() => {
     void load();
-    const i = setInterval(load, 30000);
-    return () => clearInterval(i);
+    const i = pollLive(load, 30000);
+    return () => i();
   }, [load]);
 
   const parentHost = typeof window !== "undefined" ? window.location.hostname : "weered.ca";

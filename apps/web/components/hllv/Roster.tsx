@@ -1,4 +1,5 @@
 "use client";
+import { pollLive } from "@/lib/floodMode";
 // Roster — who is on the unit's server right now, by team and squad.
 //
 // This is the thing a unit officer opens before a drill: is the platoon
@@ -208,10 +209,10 @@ export default function RosterTab({
       }
     };
     void load();
-    const iv = setInterval(load, 20_000);
+    const iv = pollLive(load, 20_000);
     return () => {
       stop = true;
-      clearInterval(iv);
+      iv();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lobbyId, pick]);
