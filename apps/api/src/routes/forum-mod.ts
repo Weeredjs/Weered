@@ -1,6 +1,7 @@
-import { swallow } from "../lib/logger";
+import { log, swallow } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
+import { MEMBER_FLAGS, testWithin } from "../lib/timedRegex";
 import {
   LobbyRole,
   ForumReportReason,
@@ -29,6 +30,11 @@ const REPORT_REASONS = [
 const REPORT_STATUSES = ["PENDING", "REVIEWED", "ACTIONED", "DISMISSED"];
 const AUTOMOD_KINDS = ["REGEX_FILTER", "KARMA_MIN", "ACCOUNT_AGE_MIN", "LINK_BLOCK", "WORD_BLOCK"];
 const AUTOMOD_ACTIONS = ["REPORT", "REMOVE", "SHADOW_REMOVE", "REQUIRE_REVIEW"];
+// Every rule is tried on every post and comment in its lobby, so there is a
+// ceiling on how many a lobby has and on how long a rule's lists are.
+const AUTOMOD_MAX_RULES = 50;
+const AUTOMOD_MAX_LIST = 200;
+const AUTOMOD_MAX_WORD = 60;
 
 let _automodReporterId: string | null = null;
 async function getAutomodReporterId(): Promise<string> {
@@ -117,7 +123,11 @@ export async function runAutoMod(
   if (!lobbyId) return { blocked: false };
   let rules: any[] = [];
   try {
-    rules = await prisma.forumAutoModRule.findMany({ where: { lobbyId, enabled: true } });
+    rules = await prisma.forumAutoModRule.findMany({
+      where: { lobbyId, enabled: true },
+      orderBy: { createdAt: "asc" },
+      take: AUTOMOD_MAX_RULES,
+    });
   } catch {
     return { blocked: false };
   }
@@ -144,14 +154,25 @@ export async function runAutoMod(
       if (rule.kind === ForumAutoModKind.REGEX_FILTER) {
         const pattern = String(cfg.pattern || "");
         if (!pattern) continue;
-        const flags = String(cfg.flags || "i");
-        const re = new RegExp(pattern, flags);
-        if (re.test(text)) {
+        // A lobby's own moderators wrote this pattern. It runs with a time
+        // limit (lib/timedRegex.ts); one that runs out of time is turned off,
+        // so it is tried once and never again.
+        const r = testWithin(pattern, String(cfg.flags || "i"), text);
+        if (r.timedOut) {
+          log.warn(`[automod] rule ${rule.id} turned off: its pattern ran out of time`);
+          await prisma.forumAutoModRule
+            .update({ where: { id: rule.id }, data: { enabled: false } })
+            .catch(swallow);
+          continue;
+        }
+        if (r.matched) {
           trigger = true;
           reason = `regex match: ${pattern}`;
         }
       } else if (rule.kind === ForumAutoModKind.WORD_BLOCK) {
-        const words: string[] = Array.isArray(cfg.words) ? cfg.words : [];
+        const words: string[] = Array.isArray(cfg.words)
+          ? cfg.words.slice(0, AUTOMOD_MAX_LIST)
+          : [];
         for (const w of words) {
           const lw = String(w || "")
             .toLowerCase()
@@ -164,7 +185,7 @@ export async function runAutoMod(
         }
       } else if (rule.kind === ForumAutoModKind.LINK_BLOCK) {
         const allowed: string[] = Array.isArray(cfg.allowedDomains)
-          ? cfg.allowedDomains.map((d: any) => String(d).toLowerCase())
+          ? cfg.allowedDomains.slice(0, AUTOMOD_MAX_LIST).map((d: any) => String(d).toLowerCase())
           : [];
         const urlRe = /https?:\/\/([^\s/]+)/gi;
         let m: RegExpExecArray | null;
@@ -603,7 +624,13 @@ export default async function forumModRoutes(app: FastifyInstance, opts: Opts) {
     const isOwner = await isLobbyOwnerOrStaff(u.id, lobbyId, opts);
     if (!isOwner) return reply.code(403).send({ error: "forbidden" });
     const cfg = validateAutoModConfig(kind, config);
-    if (cfg.error) return reply.code(400).send({ error: cfg.error });
+    if (cfg.error) return reply.code(400).send({ error: cfg.error, message: cfg.message });
+    const have = await prisma.forumAutoModRule.count({ where: { lobbyId } });
+    if (have >= AUTOMOD_MAX_RULES)
+      return reply.code(400).send({
+        error: "too_many_rules",
+        message: `A lobby can have ${AUTOMOD_MAX_RULES} auto-moderation rules. Remove one to add another.`,
+      });
     const rule = await prisma.forumAutoModRule.create({
       data: {
         lobbyId,
@@ -634,8 +661,11 @@ export default async function forumModRoutes(app: FastifyInstance, opts: Opts) {
     if (body.kind && AUTOMOD_KINDS.includes(body.kind)) data.kind = body.kind;
     if (body.config !== undefined) {
       const cfg = validateAutoModConfig(data.kind || existing.kind, body.config);
-      if (cfg.error) return reply.code(400).send({ error: cfg.error });
+      if (cfg.error) return reply.code(400).send({ error: cfg.error, message: cfg.message });
       data.config = cfg.value;
+    } else if (data.kind && data.kind !== existing.kind) {
+      // A rule of another kind needs that kind's settings with it.
+      return reply.code(400).send({ error: "config_required" });
     }
     const rule = await prisma.forumAutoModRule.update({ where: { id }, data });
     return reply.send({ ok: true, rule });
@@ -654,37 +684,61 @@ export default async function forumModRoutes(app: FastifyInstance, opts: Opts) {
   });
 }
 
-function validateAutoModConfig(kind: string, raw: any): { value?: any; error?: string } {
+// A list in a rule: at most AUTOMOD_MAX_LIST entries of AUTOMOD_MAX_WORD
+// characters. Over that, the rule is refused with the reason; nothing is cut.
+function ruleList(
+  raw: unknown,
+  what: string,
+): { list?: string[]; error?: string; message?: string } {
+  if (!Array.isArray(raw)) return { list: [] };
+  if (raw.length > AUTOMOD_MAX_LIST)
+    return {
+      error: "list_too_long",
+      message: `A rule can list ${AUTOMOD_MAX_LIST} ${what} at most. This one lists ${raw.length}.`,
+    };
+  const list: string[] = [];
+  for (const item of raw) {
+    const s = (typeof item === "string" || typeof item === "number" ? String(item) : "").trim();
+    if (!s) continue;
+    if (s.length > AUTOMOD_MAX_WORD)
+      return {
+        error: "entry_too_long",
+        message: `Each entry can be ${AUTOMOD_MAX_WORD} characters at most.`,
+      };
+    list.push(s);
+  }
+  return { list };
+}
+
+function validateAutoModConfig(
+  kind: string,
+  raw: any,
+): { value?: any; error?: string; message?: string } {
   const cfg = raw && typeof raw === "object" ? raw : {};
   if (kind === "REGEX_FILTER") {
     const pattern = String(cfg.pattern || "");
     if (!pattern) return { error: "pattern_required" };
     if (pattern.length > 200) return { error: "pattern_too_long" };
+    const flags = String(cfg.flags || "i");
+    if (!MEMBER_FLAGS.test(flags))
+      return { error: "invalid_flags", message: "A pattern's flags can be i, m, s and u." };
     try {
-      new RegExp(pattern, String(cfg.flags || "i"));
+      new RegExp(pattern, flags);
     } catch {
       return { error: "invalid_regex" };
     }
-    return { value: { pattern, flags: String(cfg.flags || "i") } };
+    return { value: { pattern, flags } };
   }
   if (kind === "WORD_BLOCK") {
-    const words = Array.isArray(cfg.words)
-      ? cfg.words.map((w: any) => String(w || "").trim()).filter(Boolean)
-      : [];
-    if (!words.length) return { error: "words_required" };
-    return { value: { words } };
+    const words = ruleList(cfg.words, "words");
+    if (words.error) return words;
+    if (!words.list!.length) return { error: "words_required" };
+    return { value: { words: words.list } };
   }
   if (kind === "LINK_BLOCK") {
-    const allowedDomains = Array.isArray(cfg.allowedDomains)
-      ? cfg.allowedDomains
-          .map((d: any) =>
-            String(d || "")
-              .trim()
-              .toLowerCase(),
-          )
-          .filter(Boolean)
-      : [];
-    return { value: { allowedDomains } };
+    const domains = ruleList(cfg.allowedDomains, "sites");
+    if (domains.error) return domains;
+    return { value: { allowedDomains: domains.list!.map((d) => d.toLowerCase()) } };
   }
   if (kind === "KARMA_MIN") {
     const min = Number(cfg.min);

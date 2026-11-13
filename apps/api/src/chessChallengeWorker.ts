@@ -1,4 +1,5 @@
 import { log, swallow } from "./lib/logger";
+import { testWithin } from "./lib/timedRegex";
 import type { PrismaClient } from "@prisma/client";
 
 const POLL_INTERVAL_MS = 60_000;
@@ -42,17 +43,14 @@ function matchesChessFilters(g: ChessGameRow, f: ChessFilters | undefined): bool
   if (typeof f.rated === "boolean" && g.rated !== f.rated) return false;
   if (f.ecoPrefix && !(g.ecoCode || "").startsWith(f.ecoPrefix)) return false;
   if (f.opening) {
-    try {
-      const re = new RegExp(f.opening, "i");
-      if (!re.test(String(g.openingName || ""))) return false;
-    } catch {
-      if (
-        !String(g.openingName || "")
-          .toLowerCase()
-          .includes(f.opening.toLowerCase())
-      )
-        return false;
-    }
+    // Whoever wrote the challenge wrote this pattern: it runs with a time
+    // limit (lib/timedRegex.ts). One that isn't a pattern, or runs out of
+    // time, is read as plain words.
+    const name = String(g.openingName || "");
+    const r = testWithin(String(f.opening).slice(0, 200), "i", name);
+    if (r.invalid || r.timedOut) {
+      if (!name.toLowerCase().includes(String(f.opening).toLowerCase())) return false;
+    } else if (!r.matched) return false;
   }
   return true;
 }
