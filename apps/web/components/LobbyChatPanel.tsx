@@ -459,7 +459,8 @@ export default function LobbyChatPanel(
             weeredToast.error("Media privileges are currently revoked.");
           else if (j?.error === "failed_screen" || j?.error === "blocked_content")
             weeredToast.error("That one didn\u2019t pass the door check.");
-          else weeredToast.error("Upload failed.");
+          // The API's own words when it has them (too many pictures at once).
+          else weeredToast.error(typeof j?.message === "string" ? j.message : "Upload failed.");
           return;
         }
         setPendingAtt(j.attachment as ChatAtt);
