@@ -65,8 +65,8 @@ describe("forum markdown", () => {
     expect(
       parse("[docs](https://example.com/a`b`c)").host.querySelector("a")?.getAttribute("href"),
     ).toBe("https://example.com/a`b`c");
-    const img = parse("![pic](https://example.com/x*y*z.png) and *real emphasis*").host;
-    expect(img.querySelector("img")?.getAttribute("src")).toBe("https://example.com/x*y*z.png");
+    const img = parse("![pic](https://api.weered.ca/x*y*z.png) and *real emphasis*").host;
+    expect(img.querySelector("img")?.getAttribute("src")).toBe("https://api.weered.ca/x*y*z.png");
     expect(img.querySelector("em")?.textContent).toBe("real emphasis");
     expect(
       parse('[q](https://example.com/"quoted)').host.querySelector("a")?.getAttribute("href"),
@@ -84,8 +84,19 @@ describe("forum markdown", () => {
 
   it("points links with other schemes nowhere", () => {
     const { host } = parse("[x](javascript:void(0)) ![y](data:image/png,zz)");
-    expect(host.querySelector("a")?.getAttribute("href")).toBe("#");
-    expect(host.querySelector("img")?.getAttribute("src")).toBe("#");
+    const links = [...host.querySelectorAll("a")].map((a) => a.getAttribute("href"));
+    expect(links).toEqual(["#", "#"]);
+    expect(host.querySelector("img")).toBeNull();
+  });
+
+  it("draws pictures uploaded here, and links a picture on another site", () => {
+    const own = parse("![a](/uploads/forum/x.webp) ![b](https://media.tenor.com/g.gif)").host;
+    expect([...own.querySelectorAll("img")].length).toBe(2);
+    const outside = parse("![cat](https://example.com/cat.png)").host;
+    expect(outside.querySelector("img")).toBeNull();
+    const a = outside.querySelector("a");
+    expect(a?.getAttribute("href")).toBe("https://example.com/cat.png");
+    expect(a?.textContent).toBe("Picture: cat (example.com)");
   });
 
   it("still renders ordinary formatting", () => {
