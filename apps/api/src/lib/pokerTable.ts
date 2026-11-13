@@ -24,6 +24,8 @@ export type PokerSeat = {
   allIn: boolean;
   bet: number;
   seatIndex: number;
+  /** Chips put into this hand so far, from the rounds already swept into the pot. */
+  committed?: number;
 };
 
 export type SidePot = { amount: number; eligible: number[] };
@@ -182,6 +184,7 @@ export function resetForNewHand(table: PokerTable) {
       seat.folded = false;
       seat.allIn = false;
       seat.bet = 0;
+      seat.committed = 0;
     }
   }
 }
@@ -262,43 +265,103 @@ export function collectBetsIntoPot(table: PokerTable) {
   for (const seat of table.seats) {
     if (seat) {
       table.pot += seat.bet;
+      seat.committed = (seat.committed || 0) + seat.bet;
       seat.bet = 0;
     }
   }
   table.currentBet = 0;
 }
 
+// Side pots (hardening pass 2026-11-12). The showdown used to hand the whole
+// pot to the best hand at the table. Someone all-in for 100 against a bet of
+// 300 then won 400, the 200 nobody had matched included; with three players
+// the short stack took chips two others had bet only against each other. A
+// function named buildSidePots sat here, never called, working a folded
+// player's share out and throwing it away.
+//
+// Now each player can win, from each opponent, no more than they put in
+// themselves: the rule at every poker table.
+
+/** What each seat has in the hand, once every round's bets are swept. */
+const putIn = (table: PokerTable) =>
+  table.seats.map((s) => (s ? Math.max(0, s.committed || 0) : 0));
+
+/** Chips in the pot from someone no longer seated (they left mid-hand). */
+function deadMoney(table: PokerTable): number {
+  return table.pot - putIn(table).reduce((a, b) => a + b, 0);
+}
+
+/** A bet nobody could match goes back to whoever made it, before anything is
+ *  won: A bets 300 and B is all-in for 100, so 200 of A's was never in play.
+ *  Returns what was handed back. */
+export function returnUncalledBet(table: PokerTable): number {
+  // With chips from an empty seat in the pot, who matched whom is no longer
+  // known: nothing is handed back.
+  if (deadMoney(table) !== 0) return 0;
+  const put = putIn(table);
+  let top = -1;
+  let most = 0;
+  let next = 0;
+  put.forEach((p, i) => {
+    if (p > most) {
+      next = most;
+      most = p;
+      top = i;
+    } else if (p > next) next = p;
+  });
+  const seat = top >= 0 ? table.seats[top] : null;
+  const extra = most - next;
+  if (!seat || seat.folded || extra <= 0) return 0;
+  seat.committed = next;
+  seat.chips += extra;
+  table.pot -= extra;
+  return extra;
+}
+
+/** The pots at showdown, smallest stake first: each holds what every player
+ *  put in up to that stake, and only those who went that far can win it. A
+ *  folded player's chips stay in the pots they reached; they can win none. */
 export function buildSidePots(table: PokerTable): SidePot[] {
-  const activeBets: { seatIndex: number; totalBet: number }[] = [];
-  for (let i = 0; i < table.seats.length; i++) {
-    const s = table.seats[i];
-    if (s && !s.folded) {
-      activeBets.push({ seatIndex: i, totalBet: s.bet });
-    }
-  }
-  if (activeBets.length === 0) return [];
+  const put = putIn(table);
+  const live = (i: number) => !!table.seats[i] && !table.seats[i]!.folded;
+  const everyoneIn = table.seats.map((_, i) => i).filter(live);
+  const dead = deadMoney(table);
+  // Chips that don't add up (they shouldn't happen): one pot, as it was.
+  if (dead < 0 || put.every((p) => p === 0))
+    return table.pot > 0 ? [{ amount: table.pot, eligible: everyoneIn }] : [];
 
-  activeBets.sort((a, b) => a.totalBet - b.totalBet);
+  const stakes = [...new Set(everyoneIn.map((i) => put[i]).filter((p) => p > 0))].sort(
+    (a, b) => a - b,
+  );
   const pots: SidePot[] = [];
-  let prevBet = 0;
-
-  for (let i = 0; i < activeBets.length; i++) {
-    const bet = activeBets[i].totalBet;
-    if (bet > prevBet) {
-      const contrib = bet - prevBet;
-      const eligible = activeBets.filter((_, j) => j >= i).map((b) => b.seatIndex);
-      const amount = contrib * (activeBets.length - i);
-      for (const seat of table.seats) {
-        if (seat && seat.folded && seat.bet > prevBet) {
-          const foldedContrib = Math.min(seat.bet - prevBet, contrib);
-        }
-      }
-      pots.push({ amount, eligible });
-      prevBet = bet;
-    }
+  let prev = 0;
+  for (const stake of stakes) {
+    let amount = 0;
+    for (const p of put) amount += Math.max(0, Math.min(p, stake) - prev);
+    pots.push({ amount, eligible: everyoneIn.filter((i) => put[i] >= stake) });
+    prev = stake;
   }
-
+  if (!pots.length) return table.pot > 0 ? [{ amount: table.pot, eligible: everyoneIn }] : [];
+  // A folded player who put in more than anyone still in: into the last pot.
+  for (const p of put) pots[pots.length - 1].amount += Math.max(0, p - prev);
+  // An empty seat's chips are everyone's to win: into the first.
+  pots[0].amount += dead;
   return pots;
+}
+
+/** Who wins what: each pot to the best hand among those who can win it, split
+ *  evenly on a tie with the odd chip to the first. Seat index to chips won. */
+export function settleShowdown(table: PokerTable): Map<number, number> {
+  const won = new Map<number, number>();
+  for (const pot of buildSidePots(table)) {
+    const seats = table.seats.map((s, i) => (pot.eligible.includes(i) ? s : null));
+    const best = determineWinners(seats, table.communityCards);
+    if (!best.length || pot.amount <= 0) continue;
+    const share = Math.floor(pot.amount / best.length);
+    const odd = pot.amount - share * best.length;
+    best.forEach((idx, k) => won.set(idx, (won.get(idx) || 0) + share + (k === 0 ? odd : 0)));
+  }
+  return won;
 }
 
 export function dealCommunityCards(table: PokerTable, count: number) {
@@ -392,15 +455,13 @@ export function advancePokerGame(table: PokerTable) {
 export async function resolveShowdown(table: PokerTable) {
   table.phase = "showdown";
 
-  const winnerIndices = determineWinners(table.seats, table.communityCards);
-  const share = Math.floor(table.pot / winnerIndices.length);
-  const remainder = table.pot - share * winnerIndices.length;
+  // A bet nobody matched goes back first; then each pot to its best hand.
+  returnUncalledBet(table);
+  const won = settleShowdown(table);
 
   const winners: any[] = [];
-  for (let i = 0; i < winnerIndices.length; i++) {
-    const idx = winnerIndices[i];
+  for (const [idx, payout] of [...won].sort((a, b) => b[1] - a[1])) {
     const seat = table.seats[idx]!;
-    const payout = share + (i === 0 ? remainder : 0);
     seat.chips += payout;
     const handEval = evaluateHand([...seat.cards, ...table.communityCards]);
     winners.push({
