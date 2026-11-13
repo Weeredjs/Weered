@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useRef, useState } from "react";
+import { LOBBY_TEXT } from "../lib/lobbyLimits";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "https://api.weered.ca";
 
@@ -66,7 +67,8 @@ export default function LobbyBranding({
             <Field label="Lobby name">
               <input
                 value={value.name}
-                onChange={(e) => onChange({ name: e.target.value.slice(0, 40) })}
+                onChange={(e) => onChange({ name: e.target.value })}
+                maxLength={40}
                 placeholder="e.g. Night Shift Gaming"
                 style={inputStyle}
               />
@@ -74,7 +76,8 @@ export default function LobbyBranding({
             <Field label="Description" optional>
               <textarea
                 value={value.description}
-                onChange={(e) => onChange({ description: e.target.value.slice(0, 200) })}
+                onChange={(e) => onChange({ description: e.target.value })}
+                maxLength={LOBBY_TEXT.description}
                 placeholder="What's this lobby about?"
                 rows={3}
                 style={{ ...inputStyle, resize: "vertical", minHeight: 70, fontFamily: "inherit" }}
@@ -87,7 +90,8 @@ export default function LobbyBranding({
                   marginTop: 2,
                 }}
               >
-                {value.description.length}/200
+                {value.description.length.toLocaleString("en-CA")}/
+                {LOBBY_TEXT.description.toLocaleString("en-CA")}
               </div>
             </Field>
           </>

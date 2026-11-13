@@ -22,6 +22,7 @@ import { isAnyCore, isCore, keyOf, PANEL_CORES, stockShell, type AnyCore, type P
 import AnyCoreSection from "./shell/AnyCoreSection";
 import { useOfficeSkin } from "./useOfficeSkin";
 import { plural } from "../lib/plural";
+import { lobbyInPath } from "../lib/lobbyPath";
 
 const STOCK_SHELL = stockShell();
 
@@ -1368,13 +1369,9 @@ function DiscoverLobbiesPanel({ currentLobbyId }: { currentLobbyId: string }) {
 /** Which lobby and room the panel sections speak for, from the path. */
 export function useRailScope(lobbyId?: string): { lobbyId: string; currentRoomId: string } {
   const pathname = usePathname() || "";
-  const resolvedLobbyId = lobbyId ?? (() => {
-    if (pathname === "/lobby" || pathname.startsWith("/lobby/")) {
-      const seg = pathname.replace("/lobby/", "").replace("/lobby", "").split("/")[0];
-      return seg ? decodeURIComponent(seg) : "lobby";
-    }
-    return "lobby";
-  })();
+  // The builder's address (/lobby/create) is no lobby: there, as on any page
+  // outside a lobby, the panels speak for the main one (lib/lobbyPath.ts).
+  const resolvedLobbyId = lobbyId ?? (lobbyInPath(pathname) || "lobby");
   const currentRoomId = pathname.startsWith("/room/")
     ? decodeURIComponent(pathname.replace("/room/", ""))
     : resolvedLobbyId;

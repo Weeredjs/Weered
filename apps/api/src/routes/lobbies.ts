@@ -11,6 +11,7 @@ import { registerFrontDesk } from "./frontDesk";
 import { isPlaceId } from "./places";
 import { lobbyIdFree } from "../lib/lobbyAccess";
 import { brandProblem } from "../lib/brandValues";
+import { isLobbyKind, lobbyAddressProblem, lobbyWordsProblem } from "../lib/lobbyFields";
 import { z } from "zod";
 import { LobbyRole } from "@prisma/client";
 import { lastMessageMap } from "../lib/roomRecency";
@@ -411,6 +412,21 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
           error: "name_reserved",
           message: "Addresses starting with u- are for members' places.",
         });
+      // The address and the words are held to one set of rules, checked before
+      // anything is looked up (lib/lobbyFields.ts). This route used to take
+      // any text of any length for all of them.
+      const sent = req.body as any;
+      const badAddress = lobbyAddressProblem(sent?.id, isStaff);
+      if (badAddress)
+        return reply
+          .code(badAddress.error === "name_reserved" ? 403 : 400)
+          .send({ ok: false, ...badAddress });
+      const badWords = lobbyWordsProblem(sent);
+      if (badWords) return reply.code(400).send({ ok: false, ...badWords });
+      if (sent?.moduleType != null && !isLobbyKind(sent.moduleType))
+        return reply
+          .code(400)
+          .send({ ok: false, error: "bad_kind", message: "That isn't a kind of lobby." });
 
       // Lobbies are free for everyone, up to three each (James 2026-11-02);
       // Kingpin and staff have no limit. A free account's new lobby is held
@@ -507,9 +523,9 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
         where: { id: String(id) },
         update: {
           name: String(name),
-          description: String(description),
+          description: String(description ?? ""),
           pinned: shouldPin,
-          moduleType,
+          moduleType: moduleType ?? "NONE",
           moduleConfig: safeModuleConfig ?? undefined,
           keywords: Array.isArray(keywords) ? keywords.map(String) : [],
           accentColor: accentColor ?? null,
@@ -520,11 +536,11 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
         create: {
           id: String(id),
           name: String(name),
-          description: String(description),
+          description: String(description ?? ""),
           pinned: shouldPin,
           verified: true,
           ownerId: u.id,
-          moduleType,
+          moduleType: moduleType ?? "NONE",
           moduleConfig: safeModuleConfig ?? undefined,
           keywords: Array.isArray(keywords) ? keywords.map(String) : [],
           accentColor: accentColor ?? null,
@@ -735,14 +751,21 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
       });
       if (badBrand)
         return reply.code(400).send({ ok: false, error: "bad_branding", message: badBrand });
+      // Text over a limit is refused with the reason, never cut. This route
+      // used to cut a description to 500 characters and answer "Saved.", and
+      // the Branding tab sends the description with every save, so saving a
+      // colour shortened a long one mid-sentence (lib/lobbyFields.ts).
+      const badWords = lobbyWordsProblem(body);
+      if (badWords) return reply.code(400).send({ ok: false, ...badWords });
       const data: any = {};
-      if (typeof body.name === "string") data.name = body.name.slice(0, 100);
-      if (typeof body.description === "string") data.description = body.description.slice(0, 500);
-      if (typeof body.accentColor === "string") data.accentColor = body.accentColor.slice(0, 20);
-      if (typeof body.logoUrl === "string") data.logoUrl = body.logoUrl.slice(0, 500);
-      if (typeof body.bannerUrl === "string") data.bannerUrl = body.bannerUrl.slice(0, 500);
-      if (typeof body.websiteUrl === "string") data.websiteUrl = body.websiteUrl.slice(0, 500);
-      if (Array.isArray(body.keywords)) data.keywords = body.keywords.map(String).slice(0, 20);
+      if (typeof body.name === "string") data.name = body.name;
+      if (typeof body.description === "string") data.description = body.description;
+      // An emptied box takes the colour or the link off. The Branding tab
+      // sends null for one, and null used to be skipped here: a logo or a
+      // website, once set, could never be removed, and the tab said "Saved."
+      for (const k of ["accentColor", "logoUrl", "bannerUrl", "websiteUrl"] as const)
+        if (body[k] === null || typeof body[k] === "string") data[k] = body[k] || null;
+      if (Array.isArray(body.keywords)) data.keywords = body.keywords;
 
       if (Object.keys(data).length === 0)
         return reply.code(400).send({ ok: false, error: "nothing_to_update" });

@@ -14,6 +14,7 @@ import { setFloodFlag } from "@/lib/floodMode";
 import { watchSession } from "@/lib/staleSession";
 import { holdChat, releaseChat, type HeldChat } from "@/lib/chatOutbox";
 import { plural } from "../lib/plural";
+import { lobbyInPath } from "../lib/lobbyPath";
 import { lightEffectsOn } from "../lib/displaySettings";
 import { rememberedRole, rememberRole } from "../lib/roleMemory"; import { endBoot } from "../lib/bootMark";
 
@@ -339,16 +340,15 @@ export function WeeredProvider({ children }: { children: React.ReactNode }) {
         const rid = decodeURIComponent(roomMatch[1]);
         if (rid && rid !== "@me") { activeRoomIdRef.current = rid; setActiveRoomId(rid); return; }
       }
-    if (pathname.startsWith("/lobby")) {
-      // The lobby id is the first segment only: /lobby/vocn/admin is lobby
-      // "vocn", not "vocn/admin" (which 404ed and joined a bogus room).
-      const seg = pathname.replace("/lobby/", "").replace("/lobby", "").trim().split("/")[0];
-      const staticRoutes = ["create", "admin", "settings"];
-      if (seg && staticRoutes.includes(seg.split("/")[0])) return;
-      const rid = seg ? decodeURIComponent(seg) : "lobby";
+    if (pathname === "/lobby" || pathname.startsWith("/lobby/")) {
+      // The lobby is the first segment only (/lobby/vocn/admin is "vocn"), and
+      // the builder's address is no lobby at all (lib/lobbyPath.ts).
+      const named = lobbyInPath(pathname);
+      if (named === null) return;
+      const rid = named || "lobby";
       activeRoomIdRef.current = rid;
       setActiveRoomId(rid);
-      if (seg) setCurrentLobbyId(decodeURIComponent(seg));
+      if (named) setCurrentLobbyId(named);
       return;
     }
     if (pathname === "/home" || pathname.startsWith("/home/")) {

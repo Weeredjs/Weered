@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { weeredToast } from "../../lib/toast";
+import { hasAccount } from "../../lib/hasAccount";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
@@ -138,13 +139,18 @@ export default function SubscribeContent() {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
+    setTimeout(() => setVisible(true), 100);
+    // Only an account has a plan to ask about (lib/hasAccount.ts).
+    if (!hasAccount()) {
+      setLoading(false);
+      return;
+    }
     apiFetch("/subscribe/status")
       .then((j) => {
         if (j.ok) setSub(j);
         setLoading(false);
       })
       .catch(() => setLoading(false));
-    setTimeout(() => setVisible(true), 100);
   }, []);
 
   async function checkout(tier: string) {

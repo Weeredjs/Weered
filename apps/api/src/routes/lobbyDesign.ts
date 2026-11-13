@@ -11,6 +11,7 @@ import {
   weeredHostLobby,
 } from "../lib/weeredHosts";
 import { hasLobbyPerm } from "../lib/lobbyPerms";
+import { lobbyWordsProblem } from "../lib/lobbyFields";
 import { logLobbyAudit } from "../lib/lobbyAudit";
 import { sendMail } from "../lib/email";
 import { isPlaceId } from "./places";
@@ -177,9 +178,16 @@ export default async function lobbyDesignRoutes(app: FastifyInstance, opts: Opts
     }
     if (typeof body.accentColor === "string" && /^#[0-9a-f]{6}$/i.test(body.accentColor))
       data.accentColor = body.accentColor;
-    if (typeof body.name === "string" && body.name.trim())
-      data.name = body.name.trim().slice(0, 100);
-    if (typeof body.description === "string") data.description = body.description.slice(0, 500);
+    // Over a limit is refused, never cut (lib/lobbyFields.ts): this used to
+    // shorten a long description to 500 characters without saying so.
+    const newName = typeof body.name === "string" ? body.name.trim() : "";
+    const badWords = lobbyWordsProblem({
+      name: newName || undefined,
+      description: typeof body.description === "string" ? body.description : undefined,
+    });
+    if (badWords) return reply.code(400).send({ ok: false, ...badWords });
+    if (newName) data.name = newName;
+    if (typeof body.description === "string") data.description = body.description;
     if (Array.isArray(body.enabledModules))
       data.enabledModules = isPlaceId(ctx.lobby.id)
         ? [] // members' places are text only (routes/places.ts)

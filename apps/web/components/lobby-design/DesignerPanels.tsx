@@ -14,6 +14,7 @@ import {
   type TabId,
 } from "../../lib/lobbyLayout";
 import { API, chip, input, label } from "./designerKit";
+import { LOBBY_TEXT } from "../../lib/lobbyLimits";
 
 type Room = { id: string; name: string };
 
@@ -295,14 +296,16 @@ export function LobbyWords({
       <div style={label}>Name</div>
       <input
         value={name}
-        onChange={(e) => onName(e.target.value.slice(0, 100))}
+        onChange={(e) => onName(e.target.value)}
+        maxLength={LOBBY_TEXT.name}
         style={input}
         aria-label="Lobby name"
       />
       <div style={label}>One-liner</div>
       <textarea
         value={desc}
-        onChange={(e) => onDesc(e.target.value.slice(0, 500))}
+        onChange={(e) => onDesc(e.target.value)}
+        maxLength={LOBBY_TEXT.description}
         rows={3}
         style={{ ...input, resize: "vertical" }}
         aria-label="Lobby description"

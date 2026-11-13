@@ -57,7 +57,8 @@ export function BrandingTab({ lobby, onRefresh }: { lobby: LobbyData; onRefresh:
       }),
     });
     setSaving(false);
-    setMsg(j.ok ? "Saved." : j.error || "Failed.");
+    // The API says why in words (a description over the limit is refused, not cut).
+    setMsg(j.ok ? "Saved." : j.message || j.error || "Failed.");
     if (j.ok) onRefresh();
   }
 

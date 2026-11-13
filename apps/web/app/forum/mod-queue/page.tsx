@@ -4,6 +4,7 @@ import React, { Suspense, useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useWeered } from "../../../components/WeeredProvider";
 import { apiFetch } from "../../../lib/api";
+import { hasAccount } from "../../../lib/hasAccount";
 import { weeredToast } from "../../../lib/toast";
 
 export default function ModQueuePageWrapper() {
@@ -71,6 +72,13 @@ function ModQueuePage() {
   const [forbidden, setForbidden] = useState(false);
 
   const load = useCallback(async () => {
+    // A moderator is an account. With none signed in the page used to ask, be
+    // refused, and tell a stranger "Queue is clear."
+    if (!hasAccount()) {
+      setForbidden(true);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setForbidden(false);
     const params = new URLSearchParams();

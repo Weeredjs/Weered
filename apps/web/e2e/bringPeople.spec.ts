@@ -202,10 +202,17 @@ test.describe("bringing people in", () => {
   // The builder's own address, followed by someone who has never signed in:
   // Create account, headed for the builder. It said "Welcome back, sign in".
   test("a stranger at the builder is asked to make an account", async ({ page }) => {
+    // The sidebars used to take the builder's address for a lobby called
+    // "create" and ask the API about it: a "not found" on every visit.
+    const askedAboutCreate: string[] = [];
+    page.on("request", (r) => {
+      if (/\/lobbies\/create(?:[/?]|$)/.test(r.url())) askedAboutCreate.push(r.url());
+    });
     await page.goto("/lobby/create");
     await expect(page).toHaveURL(/\/login\?mode=register&next=%2Flobby%2Fcreate/, {
       timeout: 15000,
     });
     await expect(page.locator(".wl-btn")).toHaveText("Create account");
+    expect(askedAboutCreate).toEqual([]);
   });
 });

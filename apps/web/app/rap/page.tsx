@@ -6,6 +6,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import RapSheetCard from "../../components/rap/RapSheetCard";
 import { rapLink, rapPath, type RapChoices, type RapSheet } from "../../lib/rapSheet";
+import { whoIsHere } from "../../lib/hasAccount";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 const ACCENT = "#ff4d9d";
@@ -67,6 +68,13 @@ export default function RapSheetEditor() {
   const zone = useMemo(browserZone, []);
 
   useEffect(() => {
+    // Nobody signed in, or a guest: the answer is known without asking, and
+    // asking was a refused call (lib/hasAccount.ts).
+    const here = whoIsHere();
+    if (here !== "account") {
+      setState(here === "guest" ? "no_account" : "signed_out");
+      return;
+    }
     fetch(`${API}/rapsheet/me`, { credentials: "include" })
       .then(async (r) => {
         if (r.status === 401) return setState("signed_out");

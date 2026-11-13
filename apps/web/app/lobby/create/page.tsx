@@ -47,6 +47,7 @@ import LaunchOverlay from "../../../components/composer/LaunchOverlay";
 import CustomRooms from "../../../components/composer/CustomRooms";
 import DescribeBox from "../../../components/build/DescribeBox";
 import { extraBlocks, planLobby, type LobbyPlan, type RoomKind } from "../../../lib/aiBuild";
+import { isKeptAddress } from "../../../lib/lobbyPath";
 import {
   ComposerStyles,
   FAINT,
@@ -216,6 +217,11 @@ export default function CreateLobbyPage() {
   useEffect(() => {
     if (!slug || slug.length < 2) {
       setSlugStatus("idle");
+      return;
+    }
+    // Weered's own addresses (lib/lobbyPath.ts): the API would refuse at launch.
+    if (isKeptAddress(slug)) {
+      setSlugStatus("reserved");
       return;
     }
     setSlugStatus("checking");

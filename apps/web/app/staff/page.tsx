@@ -3,6 +3,7 @@ import { Fragment, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, MessageSquare } from "lucide-react";
 import { useWeered } from "../../components/WeeredProvider";
+import { hasAccount } from "../../lib/hasAccount";
 import LobbyChatPanel from "../../components/LobbyChatPanel";
 import AnalyticsTab from "../../components/AnalyticsTab";
 import { GlobalRole, NAV_GROUPS, NAV_ITEMS, NavId, apiFetch, canSeeNav } from "./shared";
@@ -62,6 +63,11 @@ export default function StaffPage() {
   }, []);
 
   useEffect(() => {
+    // Staff are accounts: with none signed in there is nothing to ask.
+    if (!hasAccount()) {
+      router.replace("/lobby");
+      return;
+    }
     apiFetch("/staff/me")
       .then((j) => {
         if (!j.ok || !["SUPPORT", "STAFF", "ADMIN", "GOD"].includes(j.globalRole)) {
