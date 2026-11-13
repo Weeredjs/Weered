@@ -1,3 +1,4 @@
+import { BoundedMap } from "./boundedMap";
 /**
  * Signing an account out everywhere.
  *
@@ -23,10 +24,10 @@ export function cutoffNow(): Date {
  * stolen session could otherwise still mint a fresh token that outlived the
  * reset (fan-out audit, 2026-11-13).
  */
-export const accountChecks = new Map<
+export const accountChecks = new BoundedMap<
   string,
   { ok: boolean; validAfter: Date | null; at: number }
->();
+>(50_000);
 export function forgetAccount(userId: string): void {
   accountChecks.delete(userId);
 }
