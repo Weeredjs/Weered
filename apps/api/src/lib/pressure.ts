@@ -1,5 +1,5 @@
 import os from "node:os";
-import { readFileSync } from "node:fs";
+import { readFileSync, statfsSync } from "node:fs";
 import { monitorEventLoopDelay } from "node:perf_hooks";
 import { prisma } from "./prisma";
 import { log, swallow } from "./logger";
@@ -119,4 +119,53 @@ export function startPressureWatch(deps: { sockets: () => number }) {
     latest = { at: Date.now(), ...reading, level: levelOf(reading) };
     void watch(latest).catch(swallow);
   }, EVERY_MS).unref();
+
+  // The disk, every ten minutes and once a minute after starting.
+  const disk = makeDiskWatch(alertGods);
+  const lookAtDisk = () => void disk(diskLeftPct()).catch(swallow);
+  setTimeout(lookAtDisk, 60_000).unref();
+  setInterval(lookAtDisk, DISK_EVERY_MS).unref();
+}
+
+/**
+ * The disk watch (hardening pass 2026-11-13). The uploads, the database and
+ * the logs share one disk. Ceilings stand in front of every way that was found
+ * to fill it; this is for a way nobody found, and for plain growth. One mail
+ * to the GOD accounts when less than 20% is left, another under 10%, and
+ * nothing more until it has been back over 25%.
+ */
+const DISK_EVERY_MS = 10 * 60_000;
+
+/** Disk left where the API runs, in percent; null where that can't be read. */
+export function diskLeftPct(path: string = process.cwd()): number | null {
+  try {
+    const s = statfsSync(path);
+    const blocks = Number(s.blocks);
+    return blocks > 0 ? Math.round((Number(s.bavail) / blocks) * 100) : null;
+  } catch {
+    return null;
+  }
+}
+
+/** What the watch does with one reading; pure apart from the mail. */
+export function makeDiskWatch(alert: (subject: string, body: string) => Promise<void>) {
+  // The lowest line already reported: 0 none, 20 "under 20%", 10 "under 10%".
+  let told: 0 | 20 | 10 = 0;
+  return async (leftPct: number | null) => {
+    if (leftPct == null) return;
+    if (leftPct > 25) {
+      told = 0;
+      return;
+    }
+    const line = leftPct < 10 ? 10 : leftPct < 20 ? 20 : 0;
+    if (!line || (told !== 0 && line >= told)) return;
+    told = line;
+    await alert(
+      `Weered: the server's disk is down to ${leftPct}% free`,
+      `The disk that holds the uploads, the database and the logs has ${leftPct}% left. ` +
+        (line === 10
+          ? "Under 10% the database can stop taking writes. Look now: du -xsh /root /opt /var on the server shows where it went."
+          : "Nothing is wrong yet. Worth a look at what grew: du -xsh /root /opt /var on the server shows where it went."),
+    );
+  };
 }
