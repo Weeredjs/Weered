@@ -13,9 +13,20 @@ import { isStaffRole } from "../lib/lobbyAuth";
 // and the AccessToken SDK are voice-exclusive and live here. Room state + the
 // room helpers are shared and injected; `rooms` MUST be the same live Map
 // reference the WS voice handlers mutate, or publish permissions desync.
-const LIVEKIT_URL = process.env.LIVEKIT_URL || process.env.LIVEKIT_WS_URL || "ws://127.0.0.1:7880";
-const LIVEKIT_API_KEY = process.env.LIVEKIT_API_KEY || "";
-const LIVEKIT_API_SECRET = process.env.LIVEKIT_API_SECRET || "";
+//
+// The settings are read when a token is signed, never when this file loads.
+// Every file loads before index.ts reads apps/api/.env, so a setting read at
+// load time comes from the process's starting environment instead, and the
+// process manager hands the API a saved copy of some settings (these three
+// among them). While the copies agree nothing shows; change the key in .env
+// and a load-time reader keeps signing with the old one (2026-11-13).
+export function livekitSettings() {
+  return {
+    url: process.env.LIVEKIT_URL || process.env.LIVEKIT_WS_URL || "ws://127.0.0.1:7880",
+    key: process.env.LIVEKIT_API_KEY || "",
+    secret: process.env.LIVEKIT_API_SECRET || "",
+  };
+}
 
 type Opts = {
   authFromHeader: (h?: string) => { id: string; name: string; globalRole?: string } | null;
@@ -47,7 +58,8 @@ export default async function voiceRoutes(app: FastifyInstance, opts: Opts) {
     async (req, reply) => {
       const u = authFromHeader((req as any).headers?.authorization);
       if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
-      if (!LIVEKIT_API_KEY || !LIVEKIT_API_SECRET)
+      const lk = livekitSettings();
+      if (!lk.key || !lk.secret)
         return reply.code(500).send({ ok: false, error: "livekit_not_configured" });
       const body: any = (req as any).body || {};
       const roomIdRaw = String(body.roomId || body.room || "")
@@ -158,7 +170,7 @@ export default async function voiceRoutes(app: FastifyInstance, opts: Opts) {
         swallow(e);
       }
 
-      const at = new AccessToken(LIVEKIT_API_KEY, LIVEKIT_API_SECRET, {
+      const at = new AccessToken(lk.key, lk.secret, {
         identity: u.id,
         name: u.name,
       });
@@ -188,7 +200,7 @@ export default async function voiceRoutes(app: FastifyInstance, opts: Opts) {
         )
         .catch(() => null);
       const quality = streamQuality(owner?.tier, isStaffRole(owner?.globalRole));
-      return reply.send({ ok: true, url: LIVEKIT_URL, token, canPublish, quality });
+      return reply.send({ ok: true, url: lk.url, token, canPublish, quality });
     },
   );
 }

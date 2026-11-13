@@ -106,3 +106,7 @@ seo-tools/gsc-sa.json
 office-hours.json
 office-waiting.json
 office-ratecards.json
+
+# The office note board: visitors' private notes. Written by the API at run
+# time; a nightly job on the server commits whatever is in this folder.
+office-board.json
