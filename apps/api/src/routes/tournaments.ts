@@ -3,6 +3,23 @@ import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
 import { z } from "zod";
 import { isStaffUser as sharedIsStaffUser } from "../lib/isStaffUser";
+import { isRealDate, sizeProblem } from "../lib/fieldSize";
+
+// What a tournament may hold (lib/fieldSize.ts). The longest live title is 34
+// characters and description 406; rules and rewards are under 100 as JSON.
+const TOURNAMENT_LIMITS = {
+  title: 200,
+  description: 4000,
+  iconUrl: 500,
+  format: 40,
+  entryType: 40,
+  lobbyId: 64,
+  featuredMode: 80,
+  raceWinCondition: 40,
+  scoringRule: 4000,
+  rewards: 8000,
+  challengePoolIds: 4000,
+} as const;
 
 type Opts = {
   authFromHeader: (h?: string) => { id: string; globalRole?: string } | null;
@@ -103,7 +120,16 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
     async (req, reply) => {
       const u = authFromHeader((req as any).headers?.authorization);
       if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
-      const body = req.body as any;
+      const body = (req.body || {}) as any;
+      // Sizes first (lib/fieldSize.ts): this stored whatever it was sent.
+      const big = sizeProblem(body, TOURNAMENT_LIMITS);
+      if (big) return reply.code(400).send({ ok: false, ...big });
+      if (!isRealDate(body.startsAt) || !isRealDate(body.endsAt))
+        return reply.code(400).send({
+          ok: false,
+          error: "bad_date",
+          message: "A tournament needs a start and an end.",
+        });
       const lobbyId = body.lobbyId || null;
       const staff = await isStaffUser(u.id);
 

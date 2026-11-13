@@ -2,6 +2,36 @@ import { EventStatus } from "@prisma/client";
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
 import { randomUUID } from "crypto";
+import { isSafeLink } from "../lib/brandValues";
+import { isRealDate, sizeProblem } from "../lib/fieldSize";
+
+// What an event may hold (lib/fieldSize.ts). The longest live title is 39
+// characters and description 206. These routes stored whatever they were sent,
+// and anyone with a lobby of their own can make events in it.
+const EVENT_LIMITS = {
+  title: 200,
+  description: 4000,
+  category: 60,
+  coverImageUrl: 500,
+  timezone: 64,
+  status: 20,
+} as const;
+const EVENT_STATUSES = Object.values(EventStatus) as string[];
+
+/** What's wrong with what was sent for an event, if anything. Only the fields
+ *  that were sent are checked, so it serves the create and the edit. */
+function eventProblem(body: any): { error: string; message: string } | null {
+  const big = sizeProblem(body, EVENT_LIMITS);
+  if (big) return big;
+  for (const k of ["startsAt", "endsAt"] as const)
+    if (body[k] != null && body[k] !== "" && !isRealDate(body[k]))
+      return { error: "bad_date", message: "That isn't a date and time." };
+  if (body.coverImageUrl && !isSafeLink(String(body.coverImageUrl)))
+    return { error: "bad_link", message: "A picture's link must start with https://." };
+  if (body.status != null && !EVENT_STATUSES.includes(String(body.status).toUpperCase()))
+    return { error: "bad_status", message: "That isn't a status an event can have." };
+  return null;
+}
 
 type Opts = {
   authFromHeader: (h?: string) => { id: string; name: string } | null;
@@ -53,6 +83,8 @@ export default async function eventsRoutes(app: FastifyInstance, opts: Opts) {
     const body: any = (req as any).body || {};
     const title = String(body.title || "").trim();
     if (!title) return reply.code(400).send({ ok: false, error: "title_required" });
+    const bad = eventProblem(body);
+    if (bad) return reply.code(400).send({ ok: false, ...bad });
     const event = await prisma.event.create({
       data: {
         title,
@@ -92,16 +124,20 @@ export default async function eventsRoutes(app: FastifyInstance, opts: Opts) {
     });
     if (!existing) return reply.code(404).send({ ok: false, error: "event_not_found" });
     const body: any = (req as any).body || {};
+    const bad = eventProblem(body);
+    if (bad) return reply.code(400).send({ ok: false, ...bad });
     const data: any = {};
     if (body.title !== undefined) data.title = String(body.title).trim();
     if (body.description !== undefined) data.description = String(body.description).trim();
     if (body.category !== undefined) data.category = String(body.category).trim();
     if (body.coverImageUrl !== undefined)
       data.coverImageUrl = body.coverImageUrl ? String(body.coverImageUrl).trim() : null;
-    if (body.startsAt !== undefined) data.startsAt = new Date(body.startsAt);
+    // An event always has a start: a blank one is left as it was (it used to
+    // become 1970, or a server error).
+    if (body.startsAt != null && body.startsAt !== "") data.startsAt = new Date(body.startsAt);
     if (body.endsAt !== undefined) data.endsAt = body.endsAt ? new Date(body.endsAt) : null;
-    if (body.timezone !== undefined) data.timezone = String(body.timezone);
-    if (body.status !== undefined) data.status = String(body.status).toUpperCase();
+    if (body.timezone != null) data.timezone = String(body.timezone);
+    if (body.status != null) data.status = String(body.status).toUpperCase();
     const event = await prisma.event.update({ where: { id: eventId }, data });
     await prisma.lobbyAudit.create({
       data: {

@@ -12,6 +12,7 @@ import { usePathname } from "next/navigation";
 import { useWeered } from "./WeeredProvider";
 import { THEMEABLE_LOBBY_IDS } from "../lib/lobbyThemes";
 import { keepsDefaultTheme } from "../lib/lobbyChrome";
+import { lobbyInPath } from "../lib/lobbyPath";
 import { sanitizeLayout, type LobbyTheme } from "../lib/lobbyLayout";
 import { PRESET_BY_ID } from "../lib/lobbyThemePresets";
 import { PREFS_EVENT, customPalette, nebulaVars, paintUiPrefs, readUiPrefs } from "../lib/uiPrefs";
@@ -31,11 +32,11 @@ const worth = (t: LobbyTheme | null | undefined) => (t && (t.accent || t.preset)
 export default function SpaceTheme() {
   const pathname = usePathname() || "";
   const ctx: any = useWeered();
-  const lobbyId = pathname.startsWith("/lobby/")
-    ? decodeURIComponent(pathname.split("/")[2] || "")
-    : pathname.startsWith("/room/")
-      ? String(ctx?.currentLobbyId || "")
-      : "";
+  // In a room, the lobby the room belongs to; else the lobby the address names
+  // (lib/lobbyPath.ts: the builder at /lobby/create is not one).
+  const lobbyId = pathname.startsWith("/room/")
+    ? String(ctx?.currentLobbyId || "")
+    : (lobbyInPath(pathname) ?? "");
   const [theme, setTheme] = useState<LobbyTheme | null>(null);
   const [repaint, setRepaint] = useState(0);
 

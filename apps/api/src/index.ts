@@ -3,6 +3,7 @@ import { decodeEntities, stripTags } from "./lib/htmlText";
 import { log, logger, swallow } from "./lib/logger";
 import { shortMessage } from "./lib/zodSafe";
 import { makeVerifyToken } from "./lib/sessionToken";
+import { registerWriteBudget } from "./lib/writeBudget";
 import { lobbyLevelOf } from "./lib/lobbyAccess";
 // Before anything decodes an image: switches off the vulnerable HEIF/AVIF loader.
 import "./lib/sharpSafety";
@@ -995,6 +996,11 @@ async function main() {
       retryAfterSec: Math.ceil(ctx.ttl / 1000),
     }),
   });
+
+  // That limit counts requests. This one counts bytes, per account and per
+  // address, so no route can be sent gigabytes whether or not it checks its
+  // own input (lib/writeBudget.ts).
+  registerWriteBudget(app, (bearer) => verifyToken(bearer)?.id ?? null);
 
   app.addHook("preParsing", async (req, _reply, payload) => {
     if (req.url === "/subscribe/webhook") {

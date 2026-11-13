@@ -94,7 +94,8 @@ export async function recordModAction(
         kind,
         targetType,
         targetId,
-        reason: reason || "",
+        // The moderation log's own note: kept to a size, whoever sends it.
+        reason: String(reason || "").slice(0, 1000),
         meta: meta || {},
       },
     });

@@ -3,6 +3,24 @@ import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
 import { z } from "zod";
 import { LobbyRole, GlobalRole } from "@prisma/client";
+import { sizeProblem } from "../lib/fieldSize";
+
+// What a challenge may hold (lib/fieldSize.ts). The longest live title is 74
+// characters, description 239, and objectives 750 as JSON.
+const CHALLENGE_LIMITS = {
+  title: 200,
+  description: 2000,
+  iconUrl: 500,
+  category: 50,
+  scope: 40,
+  lobbyId: 64,
+  crewId: 64,
+  badgeId: 64,
+  objectives: 20_000,
+  recurSchedule: 2000,
+  requiredModifiers: 4000,
+  requireDifficultyTier: 200,
+} as const;
 
 type Opts = {
   authFromHeader: (h?: string) => { id: string; name?: string; globalRole?: string } | null;
@@ -167,7 +185,10 @@ export default async function challengesRoutes(app: FastifyInstance, opts: Opts)
       const u = authFromHeader((req as any).headers?.authorization);
       if (!u) return reply.code(401).send({ ok: false, error: "unauthorized" });
 
-      const body = req.body as any;
+      const body = (req.body || {}) as any;
+      // Sizes first (lib/fieldSize.ts): this stored whatever it was sent.
+      const big = sizeProblem(body, CHALLENGE_LIMITS);
+      if (big) return reply.code(400).send({ ok: false, ...big });
       const role = await getGlobalRole(u.id);
       const isStaff = isStaffRole(role);
       if (!isStaff) {
@@ -380,6 +401,9 @@ export default async function challengesRoutes(app: FastifyInstance, opts: Opts)
         return reply.code(403).send({ ok: false, error: "forbidden" });
       }
       const body = (req as any).body || {};
+      // The words are cut to size below; the objectives had no limit at all.
+      const big = sizeProblem(body, { objectives: CHALLENGE_LIMITS.objectives });
+      if (big) return reply.code(400).send({ ok: false, ...big });
       const data: any = {};
       if (body.title !== undefined)
         data.title = String(body.title || "")

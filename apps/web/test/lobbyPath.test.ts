@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { LOBBY_ROUTE_NAMES, isKeptAddress, lobbyInPath } from "../lib/lobbyPath";
 
@@ -59,14 +59,47 @@ describe("an address the builder can't have", () => {
 });
 
 describe("who reads the lobby out of the address", () => {
-  // Two copies of this rule is how the builder came to be asked about as a
-  // lobby: the provider knew the builder's address and the sidebars didn't.
-  it("is this one helper, in the sidebars and the provider", () => {
-    for (const file of ["RightRail.tsx", "WeeredProvider.tsx"]) {
-      const src = readFileSync(join(__dirname, "../components", file), "utf8");
-      expect(src, file).toContain("lobbyInPath(pathname)");
-      expect(src, file).not.toMatch(/pathname\.replace\("\/lobby\/", ""\)/);
-    }
+  // Four copies of this rule is how the builder came to be asked about as a
+  // lobby: the provider knew the builder's address, and the two sidebars and
+  // the theme did not. One of them also took a lobby's admin page for a lobby
+  // called "<id>/admin".
+  const sources = (): Array<[string, string]> => {
+    const out: Array<[string, string]> = [];
+    const walk = (dir: string) => {
+      for (const e of readdirSync(dir, { withFileTypes: true })) {
+        const p = join(dir, e.name);
+        if (e.isDirectory()) {
+          if (e.name !== "node_modules" && e.name !== ".next") walk(p);
+        } else if (/\.tsx?$/.test(e.name)) out.push([p, readFileSync(p, "utf8")]);
+      }
+    };
+    for (const d of ["components", "app", "lib"]) walk(join(__dirname, "..", d));
+    return out;
+  };
+
+  it("is this one helper, in the sidebars, the theme and the provider", () => {
+    for (const file of [
+      "RightRail.tsx",
+      "RightRailSwitch.tsx",
+      "SpaceTheme.tsx",
+      "WeeredProvider.tsx",
+    ])
+      expect(readFileSync(join(__dirname, "../components", file), "utf8"), file).toContain(
+        "lobbyInPath(pathname)",
+      );
+  });
+
+  it("is nobody else: no file cuts a lobby out of the address by hand", () => {
+    const byHand = [
+      /\.replace\("\/lobby\/", ?""\)/, // pathname.replace("/lobby/", "")
+      /\.slice\("\/lobby\/"\.length\)/, // pathname.slice("/lobby/".length)
+      /startsWith\("\/lobby\/"\)[\s\S]{0,80}split\("\/"\)\[2\]/, // …split("/")[2]
+    ];
+    const found = sources()
+      .filter(([p]) => !p.endsWith(join("lib", "lobbyPath.ts")))
+      .filter(([, src]) => byHand.some((re) => re.test(src)))
+      .map(([p]) => p.split(/[\\/]apps[\\/]web[\\/]/)[1]);
+    expect(found).toEqual([]);
   });
 
   it("builds on a real page: /lobby/create is still the builder", () => {
