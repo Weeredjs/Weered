@@ -113,9 +113,14 @@ export function handleCanvasRelay(
     if (!mayAct(room, ws.user)) return true;
     if (!relayAllowed(ws)) return true;
     if (JSON.stringify(msg).length > RELAY_MAX_CHARS) return true;
+    // The frame is passed on without any `payload` of its own and with its
+    // type fixed: a nested payload used to reach other browsers whole, and
+    // they opened it as a frame of whatever type it named.
+    const { payload: _p, _from: _f, type: _t, ...fields } = msg;
+    const frame = { ...fields, type: msg.type, roomId, _from: ws.user.id };
     for (const s of room.sockets) {
       if (s === ws) continue;
-      opts.send(s, { ...msg, roomId, _from: ws.user.id });
+      opts.send(s, frame);
     }
     return true;
   }

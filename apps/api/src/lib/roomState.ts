@@ -13,6 +13,7 @@ import { type ReactionAgg } from "./chatHelpers";
 import { hostAvatar } from "./hostAvatar";
 import { lobbyLevelOf } from "./lobbyAccess";
 import { floodOn } from "./flood";
+import { openFrame } from "./socketFrames";
 
 // In-memory room/WS state engine extracted from index.ts. wss is injected
 // once from main() so the lobby-activity ping can still reach all clients.
@@ -596,11 +597,7 @@ export function safeJson(raw: any): any | null {
   try {
     const s = typeof raw === "string" ? raw : raw?.toString?.("utf8");
     if (!s) return null;
-    const o = JSON.parse(s);
-    if (o && typeof o === "object" && o.payload && typeof o.payload === "object") {
-      return { ...o, ...o.payload };
-    }
-    return o;
+    return openFrame(JSON.parse(s));
   } catch {
     return null;
   }

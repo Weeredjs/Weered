@@ -3,6 +3,7 @@ import { prisma } from "../lib/prisma";
 import { RoomRole } from "@prisma/client";
 import { removeFromVoice } from "../lib/livekitAdmin";
 import { rankIn, rankOf, roleOf } from "../lib/roomState";
+import { roomForOneMore } from "../lib/socketFrames";
 
 /** How long a kick keeps someone out of the room. */
 export const KICK_MS = 10 * 60_000;
@@ -349,6 +350,7 @@ export async function handleRoomMod(
     if (!actorIsMod) return;
     const targetId = String(msg.userId || "");
     if (!targetId || targetId === actorId || !(await outranks(targetId))) return;
+    if (!roomForOneMore(room.muted, targetId)) return;
     room.muted.add(targetId);
     saveMuted(room);
     for (const s of findSocketsByUser(room, targetId)) send(s, { type: "mod:muted", ...where });
@@ -410,6 +412,7 @@ export async function handleRoomMod(
     if (!actorIsMod) return;
     const targetId = String(msg.userId || "");
     if (!targetId || targetId === actorId || !(await outranks(targetId))) return;
+    if (!roomForOneMore(room.banned, targetId)) return;
     room.banned.add(targetId);
     room.users.delete(targetId);
     room.mods.delete(targetId);
@@ -461,6 +464,7 @@ export async function handleRoomMod(
     if (!actorIsOwner) return;
     const targetId = String(msg.userId || "");
     if (!targetId || targetId === actorId || !(await outranks(targetId))) return;
+    if (!roomForOneMore(room.mods, targetId)) return;
     room.mods.add(targetId);
     if (room.roomId !== "lobby") {
       void prisma.roomMember

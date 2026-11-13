@@ -310,6 +310,7 @@ import { sayRestarting } from "./lib/restartNotice";
 import { allowEmptyJsonBody } from "./lib/emptyJson";
 import { mayEnterStaffRoom } from "./lib/staffRooms";
 import { withinBudget } from "./lib/roomGate";
+import { idsAreShort } from "./lib/socketFrames";
 import { awardPaper } from "./lib/economy";
 import { BoundedMap } from "./lib/boundedMap";
 
@@ -1712,8 +1713,25 @@ async function main() {
         if (!withinBudget(ws, "all", 200, 10_000)) return;
         // Signing in costs three lookups, so it gets a small one of its own.
         if (msg.type === "auth:hello" && !withinBudget(ws, "hello", 6, 10_000)) return;
+        // No id field longer than any id the site makes (lib/socketFrames.ts).
+        if (!idsAreShort(msg)) return;
 
         if (msg.type === "auth:hello") {
+          // A socket that is already someone may sign in again as the same
+          // person (a refreshed token), never as someone else: the socket kept
+          // its room, and every way of removing the first person looked for
+          // their id and no longer found it. A new person gets a new socket.
+          if (ws.user) {
+            const next = verifyAnyToken(msg.token, true);
+            if (!next || next.id !== ws.user.id) {
+              try {
+                ws.close(4009, "identity_change");
+              } catch (e) {
+                swallow(e);
+              }
+              return;
+            }
+          }
           await handleAuthHello(ws, msg, {
             // The one place a socket ticket is good (lib/sessionToken.ts).
             verifyToken: (t?: string) => verifyAnyToken(t, true),

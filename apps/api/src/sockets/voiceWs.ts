@@ -1,6 +1,7 @@
 import { swallow } from "../lib/logger";
 import { VoiceRoomMode } from "@prisma/client";
 import { prisma } from "../lib/prisma";
+import { roomForOneMore } from "../lib/socketFrames";
 
 // Voice WS handlers extracted from the index.ts main message handler:
 // voice:mode/raise/lower/approve/revoke + the two voice-exclusive helpers
@@ -95,6 +96,7 @@ export function handleVoice(ws: any, msg: any, opts: Opts): void {
     if (!target) return;
     if (!room.voiceSpeakers) room.voiceSpeakers = new Set();
     room.voiceQueue?.delete(target);
+    if (!roomForOneMore(room.voiceSpeakers, target)) return;
     room.voiceSpeakers.add(target);
     broadcastVoiceState(room);
     pushVoicePermission(room, target);

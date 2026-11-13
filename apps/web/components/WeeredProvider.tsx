@@ -136,7 +136,7 @@ export type Ctx = {
 };
 
 function normalizeInbound(msg: any) {
-  if (msg?.payload && typeof msg.payload === "object") return { ...msg, ...msg.payload };
+  if (msg?.payload && typeof msg.payload === "object") return { ...msg, ...msg.payload, type: msg.type };
   return msg;
 }
 
