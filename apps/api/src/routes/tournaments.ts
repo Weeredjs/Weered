@@ -190,7 +190,10 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
           endsAt: new Date(body.endsAt),
           maxEntries: Number.parseInt(body.maxEntries) || 100,
           minEntries: Number.parseInt(body.minEntries) || 2,
-          rewards: body.rewards || [],
+          // Prizes are staff's to set (POST /tournaments/:id/rewards): a
+          // member-made tournament could name any flair as its prize and have
+          // it minted to the winner (fan-out audit, 2026-11-13).
+          rewards: staff ? body.rewards || [] : [],
           featuredMode: body.featuredMode || null,
           pointsPerCompletion: isRace ? Number.parseInt(body.pointsPerCompletion) || 100 : 100,
           pointsToWin: isRace && body.pointsToWin != null ? Number(body.pointsToWin) : null,
