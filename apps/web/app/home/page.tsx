@@ -5,6 +5,7 @@ import React, { useMemo, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
+import { resizerTakes } from "@/lib/sizedImage";
 import { useWeered, useUsersByRoom } from "../../components/WeeredProvider";
 import DmPreviewStrip from "../../components/DmPreviewStrip";
 import ActivityFeed from "../../components/ActivityFeed";
@@ -156,7 +157,7 @@ function HeroBanner({ lobby, onJoin }: { lobby: any; onJoin: (id: string, pinned
           sizes="(max-width: 1024px) 100vw, 1500px"
           priority
           style={{ objectFit: "cover", opacity: 0.55, pointerEvents: "none" }}
-          unoptimized={banner.startsWith("/")}
+          unoptimized={!resizerTakes(banner)}
         />
       )}
 
@@ -620,7 +621,7 @@ function LobbyCard({ room, idx, onJoin }: { room: any; idx: number; onJoin: (id:
             sizes="(max-width: 768px) 100vw, 400px"
             loading="lazy"
             style={{ objectFit: "cover", opacity: 0.5, pointerEvents: "none" }}
-            unoptimized={banner.startsWith("/")}
+            unoptimized={!resizerTakes(banner)}
           />
           <div style={{ position: "absolute", inset: 0, zIndex: 0, pointerEvents: "none", background: "linear-gradient(180deg, rgba(18,20,24,.36) 0%, rgba(18,20,24,.72) 100%)" }} />
         </>
@@ -717,7 +718,7 @@ function LeadLobbyCard({ lobby, onVisit }: { lobby: any; onVisit: (id: string) =
           fill
           sizes="(max-width: 760px) 100vw, 900px"
           style={{ objectFit: "cover", pointerEvents: "none" }}
-          unoptimized={banner.startsWith("/")}
+          unoptimized={!resizerTakes(banner)}
         />
       )}
       {/* The words sit on the shade, so Blizzard (components/shell/BlizzardGuard.tsx)

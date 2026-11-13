@@ -4,6 +4,7 @@ import { pollLive } from "@/lib/floodMode";
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import { resizerTakes } from "@/lib/sizedImage";
 import StoryInterceptModal from "./StoryInterceptModal";
 import EmptyState from "./EmptyState";
 import LoadingState from "./LoadingState";
@@ -222,7 +223,7 @@ function FeedRow({
             sizes="88px"
             loading="lazy"
             style={{ objectFit: "cover", display: "block" }}
-            unoptimized={item.thumbnail.startsWith("/")}
+            unoptimized={!resizerTakes(item.thumbnail)}
           />
         )}
         <div
