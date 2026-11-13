@@ -7,6 +7,7 @@ import { join } from "path";
 import sharp from "sharp";
 import { prisma } from "../lib/prisma";
 import { grantFlairToUser, mintFlairItem } from "../lib/flair";
+import { safeFileName } from "../lib/safeFileName";
 
 type Opts = {
   authFromHeader: (h?: string) => { id: string; name?: string; globalRole?: string } | null;
@@ -576,7 +577,7 @@ export default async function flairContestsRoutes(app: FastifyInstance, opts: Op
   });
 
   app.get("/flair-contests-img/:filename", async (req, reply) => {
-    const fn = String((req as any).params?.filename || "").replaceAll(/[^a-zA-Z0-9._-]/g, "");
+    const fn = safeFileName((req as any).params?.filename);
     if (!fn) return reply.code(400).send("bad request");
     const fp = join(FLAIR_DIR, fn);
     if (!existsSync(fp)) return reply.code(404).send("not found");

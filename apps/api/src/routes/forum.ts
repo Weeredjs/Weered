@@ -11,6 +11,7 @@ import { z } from "zod";
 import { LobbyRole } from "@prisma/client";
 import { applyAutoModSideEffects, fileAutoModReport } from "./forum-mod";
 import { listedBody } from "../lib/forumPreview";
+import { safeFileName } from "../lib/safeFileName";
 
 const FORUM_UPLOAD_DIR = join(process.cwd(), "uploads", "forum");
 if (!existsSync(FORUM_UPLOAD_DIR)) mkdirSync(FORUM_UPLOAD_DIR, { recursive: true });
@@ -1018,7 +1019,7 @@ export default async function forumRoutes(app: FastifyInstance, opts: Opts) {
   );
 
   app.get("/forum-img/:filename", async (req, reply) => {
-    const fn = String((req as any).params?.filename || "").replaceAll(/[^a-zA-Z0-9._-]/g, "");
+    const fn = safeFileName((req as any).params?.filename);
     if (!fn) return reply.code(400).send("bad request");
     const fp = join(FORUM_UPLOAD_DIR, fn);
     if (!existsSync(fp)) return reply.code(404).send("not found");

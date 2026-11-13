@@ -7,6 +7,7 @@ import { join } from "path";
 import sharp from "sharp";
 import { isAllowedRaster } from "../lib/sharpSafety";
 import { BoundedMap } from "../lib/boundedMap";
+import { safeFileName } from "../lib/safeFileName";
 
 type Opts = {
   authFromHeader: (h?: string) => { id: string; name?: string } | null;
@@ -620,7 +621,7 @@ export default async function windroseBuildsRoutes(app: FastifyInstance, opts: O
   });
 
   app.get("/builds/:filename", async (req, reply) => {
-    const filename = String((req as any).params?.filename || "").replaceAll(/[^a-zA-Z0-9._-]/g, "");
+    const filename = safeFileName((req as any).params?.filename);
     if (!filename) return reply.code(400).send("bad request");
     const filepath = join(BUILDS_DIR, filename);
     if (!existsSync(filepath)) return reply.code(404).send("not found");

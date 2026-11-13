@@ -1,4 +1,6 @@
 import { describe, it, expect } from "vitest";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { mayAct, withinBudget } from "../../src/lib/roomGate";
 import { makeEmptyRoom } from "../../src/lib/roomState";
 import { handleYoutube } from "../../src/sockets/roomMedia";
@@ -40,6 +42,18 @@ describe("who may act in a room", () => {
     let n = 0;
     for (let i = 0; i < 20; i++) if (withinBudget(ws, "x", 12, 2000)) n++;
     expect(n).toBe(12);
+  });
+
+  it("every message a socket sends is counted, before anything looks at its kind", () => {
+    // The dispatcher lives in index.ts, which starts the server when loaded, so
+    // this reads it: the overall allowance comes first in the message handler,
+    // ahead of the sign-in branch and of every per-kind handler.
+    const src = readFileSync(join(__dirname, "..", "..", "src", "index.ts"), "utf8");
+    const handler = src.slice(src.indexOf('ws.on("message"'));
+    const overall = handler.indexOf('withinBudget(ws, "all"');
+    const signIn = handler.indexOf('if (msg.type === "auth:hello") {');
+    expect(overall).toBeGreaterThan(0);
+    expect(signIn).toBeGreaterThan(overall);
   });
 });
 

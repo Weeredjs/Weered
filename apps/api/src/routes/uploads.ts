@@ -6,6 +6,7 @@ import { join } from "path";
 import { existsSync, mkdirSync, writeFileSync, unlinkSync } from "fs";
 import { moderateProfileImage } from "../lib/imageModeration";
 import { canFloatPicture } from "../lib/tiers";
+import { safeFileName } from "../lib/safeFileName";
 
 type Opts = {
   authFromHeader: (h?: string) => { id: string; name?: string } | null;
@@ -121,7 +122,7 @@ export default async function uploadsRoutes(app: FastifyInstance, opts: Opts) {
   );
 
   app.get("/avatars/:filename", async (req, reply) => {
-    const filename = String((req as any).params?.filename || "").replaceAll(/[^a-zA-Z0-9._-]/g, "");
+    const filename = safeFileName((req as any).params?.filename);
     if (!filename) return reply.code(400).send("bad request");
     const filepath = join(AVATAR_DIR, filename);
     if (!existsSync(filepath)) return reply.code(404).send("not found");
@@ -395,7 +396,7 @@ export default async function uploadsRoutes(app: FastifyInstance, opts: Opts) {
   );
 
   app.get("/symbols/:filename", async (req, reply) => {
-    const filename = String((req as any).params?.filename || "").replaceAll(/[^a-zA-Z0-9._-]/g, "");
+    const filename = safeFileName((req as any).params?.filename);
     if (!filename.endsWith(".webp")) return reply.code(400).send("bad request");
     const filepath = join(SYMBOL_DIR, filename);
     if (!existsSync(filepath)) return reply.code(404).send("not found");
@@ -406,7 +407,7 @@ export default async function uploadsRoutes(app: FastifyInstance, opts: Opts) {
   });
 
   app.get("/banners/:filename", async (req, reply) => {
-    const filename = String((req as any).params?.filename || "").replaceAll(/[^a-zA-Z0-9._-]/g, "");
+    const filename = safeFileName((req as any).params?.filename);
     if (!filename) return reply.code(400).send("bad request");
     const filepath = join(BANNER_DIR, filename);
     if (!existsSync(filepath)) return reply.code(404).send("not found");

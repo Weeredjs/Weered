@@ -303,7 +303,7 @@ import { startNexusPoller } from "./nexusPoller";
 import { prisma } from "./lib/prisma";
 import { canEnterGatedRoom } from "./lib/lobbyAccess";
 import { isOfficeRoom } from "./lib/officeRooms";
-import { guestMayCall } from "./lib/guestAllow";
+import { guestMayCall, hostMayCall } from "./lib/guestAllow";
 import { issuedBeforeCutoff } from "./lib/sessionCutoff";
 import { sessionHook } from "./lib/sessionHook";
 import { sayRestarting } from "./lib/restartNotice";
@@ -833,8 +833,13 @@ async function main() {
     } catch {
       return;
     }
-    if (!decoded?.guest) return;
     const path = String(req.url || "").split("?")[0];
+    // A host pass is fenced the same way (lib/guestAllow.ts hostMayCall).
+    if (decoded?.host) {
+      if (!hostMayCall(path)) return reply.code(403).send({ ok: false, error: "host_forbidden" });
+      return;
+    }
+    if (!decoded?.guest) return;
     const lobbyGuestRead = isLobbyGuest(decoded) && req.method === "GET";
     if (!guestMayCall(String(req.method || ""), path, lobbyGuestRead)) {
       return reply.code(403).send({ ok: false, error: "guest_forbidden" });
@@ -1698,6 +1703,15 @@ async function main() {
       (async () => {
         const msg = safeJson(raw);
         if (!msg || typeof msg.type !== "string") return;
+
+        // A ceiling on everything one socket sends, whatever the kind. Chat,
+        // presence, lists and a few relays each had an allowance of their own;
+        // every other kind (a room's module, the launch pad, the map, dice,
+        // reactions, poker, moderation) had none. The busiest thing a page
+        // does, a game's block frames, is eight a second; this allows twenty.
+        if (!withinBudget(ws, "all", 200, 10_000)) return;
+        // Signing in costs three lookups, so it gets a small one of its own.
+        if (msg.type === "auth:hello" && !withinBudget(ws, "hello", 6, 10_000)) return;
 
         if (msg.type === "auth:hello") {
           await handleAuthHello(ws, msg, {
