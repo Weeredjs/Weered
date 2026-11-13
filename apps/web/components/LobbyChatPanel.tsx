@@ -130,16 +130,6 @@ export default function LobbyChatPanel(
     } catch {}
   }, [ctx]);
 
-  const mentionLookup = useMemo(() => {
-    const out: Record<string, string> = { operator: "The Operator" };
-    const roomUsers: any[] = liveRoomUsers;
-    for (const u of roomUsers) {
-      const key = String(u?.usernameKey || "").toLowerCase();
-      if (key && u?.name) out[key] = u.name;
-    }
-    return out;
-  }, [liveRoomUsers, effectiveRoomId]);
-
   const mentionCandidates = useMemo(() => {
     if (!mentionState) return [] as any[];
     const q = mentionState.query.toLowerCase();
@@ -323,8 +313,6 @@ export default function LobbyChatPanel(
     userName: string;
     body: string;
   } | null>(null);
-
-  const QUICK_REACTIONS = ["👍", "❤️", "😂", "🔥", "🎉", "😢", "😮", "🙌"];
 
   function toggleReaction(msgId: string, emoji: string) {
     try {

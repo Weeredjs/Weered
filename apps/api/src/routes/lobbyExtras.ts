@@ -110,7 +110,7 @@ const view = (a: any) => ({
 });
 
 export default async function lobbyExtrasRoutes(app: FastifyInstance, opts: Opts) {
-  const { authFromHeader, lobbyAdminAccess, getGlobalRole, canAccessStaff } = opts;
+  const { authFromHeader, lobbyAdminAccess, getGlobalRole } = opts;
 
   /** The lobby's staff with this power, or null (the reply is sent). */
   async function staff(req: any, reply: any, perm = "edit_branding", minLevel = 4) {

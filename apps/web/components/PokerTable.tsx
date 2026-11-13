@@ -1026,8 +1026,6 @@ export default function PokerTable({ roomId, myId, myName: _myName }: Props) {
     return ts.seats?.find((s) => s && s.userId === myId) || null;
   }, [ts, myId]);
 
-  const mySeatIndex = mySeat?.seatIndex ?? -1;
-  const isMyTurn = mySeat && ts.turnIndex === mySeatIndex && !mySeat.folded;
   const isShowdown = ts.phase === "showdown";
   const isSeated = !!mySeat;
 

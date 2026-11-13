@@ -660,10 +660,6 @@ export default async function tournamentsRoutes(app: FastifyInstance, opts: Opts
     return reply.send({ ok: true, archive });
   });
 
-  function isStaff(role?: string | null) {
-    return ["GOD", "ADMIN", "STAFF"].includes(String(role || ""));
-  }
-
   function buildSeedPairs(numEntries: number): Array<[number | null, number | null]> {
     let size = 1;
     while (size < numEntries) size <<= 1;

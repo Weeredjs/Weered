@@ -87,7 +87,6 @@ export default async function LobbyAboutPage(props: { params: Promise<{ id: stri
   const params = await props.params;
   const id = decodeURIComponent(params.id);
   const { lobby, rooms, posts, challenges } = await loadLobbyBundle(id);
-  const isThin = !lobby?.description || lobby.description.length < 500;
   const lfgGuideIds = new Set<string>([
     "destiny2",
     "league-of-legends",

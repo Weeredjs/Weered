@@ -188,7 +188,6 @@ export default function LeftRail() {
   const isHomeActive = pathname.startsWith("/home") || pathname === "/";
 
   const rawRoomKey = pickFirstString(joinedRoomId, activeRoomId, "");
-  const roomLabel = useMemo(() => normRoomKey(rawRoomKey), [rawRoomKey]);
 
   const [lobbyPresence, setLobbyPresence] = useState<any[]>([]);
   const lobbyPresenceId = isLobbyActive ? currentLobbyId || "" : "";

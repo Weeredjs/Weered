@@ -109,54 +109,6 @@ const ICO_STAR = (
     <polygon points="12 2.5 14.9 8.5 21.5 9.3 16.7 13.9 17.8 20.5 12 17.3 6.2 20.5 7.3 13.9 2.5 9.3 9.1 8.5 12 2.5" />
   </svg>
 );
-const ICO_CONTROLS = (
-  <svg
-    width="20"
-    height="20"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2.2"
-    strokeLinecap="round"
-  >
-    <circle cx="12" cy="12" r="2.5" />
-    <path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.93 4.93l2.12 2.12M16.95 16.95l2.12 2.12M4.93 19.07l2.12-2.12M16.95 7.05l2.12-2.12" />
-  </svg>
-);
-const ICO_ROOMS = (
-  <svg
-    width="20"
-    height="20"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <rect x="3" y="3" width="7.5" height="7.5" rx="2" />
-    <rect x="13.5" y="3" width="7.5" height="7.5" rx="2" />
-    <rect x="3" y="13.5" width="7.5" height="7.5" rx="2" />
-    <rect x="13.5" y="13.5" width="7.5" height="7.5" rx="2" />
-  </svg>
-);
-const ICO_FRIENDS = (
-  <svg
-    width="20"
-    height="20"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2.2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <circle cx="9" cy="7.5" r="3" />
-    <path d="M3 21v-1a5 5 0 015-5h2a5 5 0 015 5v1" />
-    <circle cx="17.5" cy="8.5" r="2.5" />
-    <path d="M21 21v-.5a4 4 0 00-3-3.85" />
-  </svg>
-);
 
 const LEFT_ICONS = [
   { id: "nav", icon: ICO_NAV, label: "Navigate" },

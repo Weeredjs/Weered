@@ -34,7 +34,6 @@ const SERIF = "Georgia, 'Iowan Old Style', Cambria, 'Times New Roman', serif";
 const UIFONT = "'Segoe UI', Inter, system-ui, -apple-system, sans-serif";
 const INK_TEXT = "rgba(236,242,250,.95)";
 const MUTED_TEXT = "rgba(163,180,202,.72)";
-const PAPER = "#F7F4EC";
 const PAPER_INK = "#10233F";
 
 // --- shared types ---

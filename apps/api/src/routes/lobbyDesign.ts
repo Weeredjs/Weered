@@ -147,7 +147,7 @@ async function lobbyForHost(host: string): Promise<string | null> {
 }
 
 export default async function lobbyDesignRoutes(app: FastifyInstance, opts: Opts) {
-  const { authFromHeader, getGlobalRole, canAccessStaff, lobbyAdminAccess } = opts;
+  const { authFromHeader, getGlobalRole, lobbyAdminAccess } = opts;
 
   async function designer(req: any, reply: any) {
     const ctx = await lobbyAdminAccess(req, reply, 4);

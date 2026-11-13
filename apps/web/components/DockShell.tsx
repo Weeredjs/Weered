@@ -15,7 +15,6 @@ import {
   applyWeeredTheme,
   pickFirstString,
   normRole,
-  decodeJwtClaims,
   fmtTime,
   fmtRelative,
   Avatar,
@@ -146,12 +145,6 @@ export default function DockShell(props: { forceMode?: "rail" | "floating" } = {
     );
   }, [ctx, me]);
 
-  const claims = useMemo(() => decodeJwtClaims(tokenMaybe), [tokenMaybe]);
-  const globalRole = useMemo(
-    () =>
-      normRole(pickFirstString(me?.globalRole, me?.global_role, claims?.globalRole, claims?.gr)),
-    [me, claims],
-  );
   const meName = pickFirstString(me?.name, me?.username, "Guest");
   const roomTitle = pickFirstString(meta?.name, viewId, "");
   const roomRole = normRole(pickFirstString(role, joinStatus?.role));

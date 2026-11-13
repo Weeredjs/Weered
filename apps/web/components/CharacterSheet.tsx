@@ -179,7 +179,6 @@ export default function CharacterSheet({ roomId, lobbyId }: { roomId: string; lo
     if (c.ownerUserId !== me?.id) return;
     const slot = c.spellSlots?.[level] || { current: 0, max: 0 };
     const filled = index < slot.current;
-    const op = filled ? "use" : "restore";
     let nextCurrent = slot.current;
     if (filled) nextCurrent = index;
     else nextCurrent = Math.min(slot.max, index + 1);

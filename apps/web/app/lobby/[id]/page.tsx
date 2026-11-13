@@ -156,26 +156,6 @@ const WindroseModulesPanel = dynamic(() => import("../../../components/WindroseM
   loading: panelLoading,
   ssr: false,
 });
-const HelldiversWarMapPanel = dynamic(() => import("../../../components/HelldiversWarMapPanel"), {
-  loading: panelLoading,
-  ssr: false,
-});
-const HelldiversMajorOrderPanel = dynamic(
-  () => import("../../../components/HelldiversMajorOrderPanel"),
-  { loading: panelLoading, ssr: false },
-);
-const HelldiversDispatchesPanel = dynamic(
-  () => import("../../../components/HelldiversDispatchesPanel"),
-  { loading: panelLoading, ssr: false },
-);
-const HelldiversSliceBPanel = dynamic(() => import("../../../components/HelldiversSliceBPanel"), {
-  loading: panelLoading,
-  ssr: false,
-});
-const HelldiversLoadoutBrowser = dynamic(
-  () => import("../../../components/HelldiversLoadoutBrowser"),
-  { loading: panelLoading, ssr: false },
-);
 const HelldiversModulesPanel = dynamic(() => import("../../../components/HelldiversModulesPanel"), {
   loading: panelLoading,
   ssr: false,

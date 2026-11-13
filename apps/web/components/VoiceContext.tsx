@@ -16,19 +16,6 @@ import {
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
-function getToken(): string {
-  try {
-    return (
-      localStorage.getItem("weered_token") ||
-      localStorage.getItem("weered:token") ||
-      sessionStorage.getItem("weered_token") ||
-      ""
-    );
-  } catch {
-    return "";
-  }
-}
-
 export type VoiceConnState = "idle" | "connecting" | "connected" | "error";
 
 export interface ParticipantTile {

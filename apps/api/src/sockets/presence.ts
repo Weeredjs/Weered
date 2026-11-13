@@ -33,7 +33,6 @@ export async function handlePresence(ws: any, msg: any, opts: Opts): Promise<voi
   const {
     rooms,
     send,
-    broadcast,
     normalizeRoomId,
     ensureRoomLoaded,
     isModOrOwner,

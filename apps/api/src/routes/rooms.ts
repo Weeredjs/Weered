@@ -31,7 +31,6 @@ export default async function roomsRoutes(app: FastifyInstance, opts: Opts) {
     authFromHeader,
     verifyToken,
     getGlobalRole,
-    canAccessStaff,
     rooms,
     ensureRoomLoaded,
     normalizeRoomId,

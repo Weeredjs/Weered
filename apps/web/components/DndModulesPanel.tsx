@@ -1210,7 +1210,6 @@ function TavernBoard({ lobbyId }: { lobbyId: string }) {
       ) : (
         <div className="dnd-corkboard weered-flow" data-flow="wide" style={{ display: "flex", flexDirection: "column", gap: 4 }}>
           {posts.map(p => {
-            const meta = p.metadata || {};
             const isLFDM = (p.tags || []).includes("Looking for DM");
             return (
               <div key={p.id} className="dnd-scroll" style={{ display: "flex", flexDirection: "column", gap: 7 }}>
@@ -1333,7 +1332,6 @@ export default function DndModulesPanel({
 }: {
   lobbyId: string; accentColor?: string; gameName?: string; style?: React.CSSProperties;
 }) {
-  const accent = accentColor || ACCENT;
   const [tab, setTab] = useState<TabId>("compendium");
   useWatchHere(useCallback(() => { setTab("streams"); }, []));
   const [compTab, setCompTab] = useState<CompTabId>("spells");

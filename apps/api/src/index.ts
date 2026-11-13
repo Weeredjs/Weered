@@ -322,7 +322,6 @@ const HTTP_PORT = Number(process.env.PORT || 4000);
 const WS_PORT = Number(process.env.WS_PORT || 4001);
 
 let wss: WebSocketServer;
-let broadcastToLobbyRef: ((lobbyId: string, event: any) => void) | undefined;
 
 async function seedLobbies() {
   for (const l of SEED_LOBBIES) {
@@ -1499,8 +1498,6 @@ async function main() {
     }
   }
 
-  const NEWS_CACHE_TTL = 5 * 60 * 1000;
-
   async function runNewsWorker() {
     log.log("[news] worker starting fetch...");
     try {
@@ -2249,7 +2246,6 @@ async function main() {
       swallow(e);
     }
   }
-  broadcastToLobbyRef = broadcastToLobby;
 
   function countLobbyActiveUsers(lobbyId: string): number {
     const uids = new Set<string>();

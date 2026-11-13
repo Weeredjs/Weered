@@ -79,7 +79,6 @@ export default async function LfgGuidePage(props: { params: Promise<{ id: string
 
   const pageUrl = `${SITE}/lfg/${g.lobby_id}`;
   const lobbyUrl = `${SITE}/lobby/${g.lobby_id}`;
-  const aboutUrl = `${SITE}/about/lobby/${g.lobby_id}`;
 
   const breadcrumbLd = {
     "@context": "https://schema.org",

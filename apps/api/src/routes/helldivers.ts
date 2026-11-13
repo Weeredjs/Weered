@@ -212,7 +212,6 @@ export default async function helldiversRoutes(app: FastifyInstance, _opts: Opts
       const planet = c.planet || {};
       const event = planet.event || null;
       const isDefense = !!event;
-      const liberation = Number(planet?.statistics?.percentage ?? planet?.health ?? 0);
       let liberationPct = 0;
       if (
         typeof planet.health === "number" &&

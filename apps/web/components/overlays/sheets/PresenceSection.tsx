@@ -380,18 +380,6 @@ export default function PresenceSection() {
     setSaving("");
   }
 
-  const inputStyle: React.CSSProperties = {
-    width: 220,
-    padding: "6px 10px",
-    borderRadius: 8,
-    border: "1px solid var(--weered-border, rgba(255,255,255,.12))",
-    background: "var(--weered-panel2, rgba(0,0,0,.3))",
-    color: "var(--weered-text, rgba(243,244,246,.95))",
-    fontFamily: "ui-monospace, monospace",
-    fontSize: 12,
-    outline: "none",
-  };
-
   const stackedInputStyle: React.CSSProperties = {
     flex: 1,
     minWidth: 0,

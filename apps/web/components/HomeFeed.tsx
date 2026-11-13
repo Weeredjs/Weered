@@ -2,7 +2,6 @@
 import { pollLive } from "@/lib/floodMode";
 
 import React, { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { resizerTakes } from "@/lib/sizedImage";
 import StoryInterceptModal from "./StoryInterceptModal";
@@ -356,7 +355,6 @@ export default function HomeFeed({
   domain,
   defaultCategory,
 }: { domain?: string; defaultCategory?: string } = {}) {
-  const router = useRouter();
   const initialCat =
     defaultCategory && CATEGORIES.includes(defaultCategory as Category)
       ? (defaultCategory as Category)

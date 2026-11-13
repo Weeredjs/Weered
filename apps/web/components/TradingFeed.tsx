@@ -6,7 +6,6 @@ import { getWeeredClient } from "../app/weeredClient";
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 const GREEN = "#22c55e";
 const RED = "#ef4444";
-const ACCENT = "#F5C518";
 
 function authHeaders(): Record<string, string> {
   try {
@@ -55,7 +54,6 @@ export default function TradingFeed({
   mode?: "CASUAL" | "RANKED";
   accent?: string;
 }) {
-  const accentColor = accent || ACCENT;
   const [items, setItems] = useState<FeedItem[]>([]);
   const [loading, setLoading] = useState(true);
 

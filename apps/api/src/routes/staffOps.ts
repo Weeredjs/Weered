@@ -19,7 +19,7 @@ type Opts = {
 };
 
 export default async function staffOpsRoutes(app: FastifyInstance, opts: Opts) {
-  const { authFromHeader, getGlobalRole, canAccessStaff, rooms, globalAudit } = opts;
+  const { authFromHeader, getGlobalRole, rooms, globalAudit } = opts;
 
   app.get("/staff/outreach", async (req, reply) => {
     const u = authFromHeader((req as any).headers?.authorization);

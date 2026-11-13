@@ -13,7 +13,7 @@ type Opts = {
 const RARITY_RANK: Record<string, number> = { LEGENDARY: 4, EPIC: 3, RARE: 2, COMMON: 1 };
 
 export default async function flairRoutes(app: FastifyInstance, opts: Opts) {
-  const { authFromHeader, getGlobalRole, canAccessStaff } = opts;
+  const { authFromHeader } = opts;
 
   const isStaff = (userId: string) => isStaffUser(userId);
 

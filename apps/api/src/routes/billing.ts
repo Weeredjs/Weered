@@ -32,14 +32,7 @@ type Opts = {
 };
 
 export default async function billingRoutes(app: FastifyInstance, opts: Opts) {
-  const {
-    authFromHeader,
-    getGlobalRole,
-    canAccessStaff,
-    canAssignRoles,
-    globalAudit,
-    lobbyAdminAccess,
-  } = opts;
+  const { authFromHeader, getGlobalRole, canAssignRoles, globalAudit, lobbyAdminAccess } = opts;
 
   app.get("/lobbies/:id/tiers", async (req, reply) => {
     const lobbyId = String((req as any).params?.id || "");

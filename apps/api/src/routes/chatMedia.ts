@@ -2,7 +2,7 @@ import { log, swallow } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { prisma } from "../lib/prisma";
-import sharp, { type Metadata } from "sharp";
+import sharp from "sharp";
 import { isAllowedRaster } from "../lib/sharpSafety";
 import * as fs from "fs";
 import * as path from "path";
@@ -108,10 +108,9 @@ export default async function chatMediaRoutes(app: FastifyInstance, opts: Opts) 
         return reply.code(413).send({ ok: false, error: "too_large", maxBytes: MAX_BYTES });
       if (!isAllowedRaster(buf)) return reply.code(400).send({ ok: false, error: "bad_image" });
 
-      let full: Buffer, thumb: Buffer, meta: Metadata;
+      let full: Buffer, thumb: Buffer;
       try {
         const img = sharp(buf, { animated: false }).rotate(); // bakes EXIF orientation, then EXIF is dropped by re-encode
-        meta = await img.metadata();
         full = await img
           .resize(MAX_DIM, MAX_DIM, { fit: "inside", withoutEnlargement: true })
           .webp({ quality: 82 })

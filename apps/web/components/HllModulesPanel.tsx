@@ -889,16 +889,6 @@ type GarrisonServer = {
   rotation: string[];
 };
 
-function fmtClock(secs: number): string {
-  if (!secs || secs <= 0) return "—";
-  const h = Math.floor(secs / 3600);
-  const m = Math.floor((secs % 3600) / 60);
-  const s = Math.floor(secs % 60);
-  return h > 0
-    ? `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`
-    : `${m}:${String(s).padStart(2, "0")}`;
-}
-
 function Garrison({
   accent,
   lobbyId,

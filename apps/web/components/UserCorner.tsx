@@ -256,7 +256,7 @@ export default function UserCorner() {
     tagShape: string | null;
   } | null>(null);
   const [_notorietyRank, setNotorietyRank] = useState<string>("");
-  const [notorietyScore, setNotorietyScore] = useState<number | null>(null);
+  const [, setNotorietyScore] = useState<number | null>(null);
   const [nameEffect, setNameEffect] = useState<string | null>(null);
   const [avatarFrame, setAvatarFrame] = useState<string | null>(null);
 

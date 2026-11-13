@@ -148,7 +148,6 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
     catch { mq.addListener(apply); return () => mq.removeListener(apply); }
   }, []);
   const CHAT_WIDTH = isMobile ? CHAT_WIDTH_MOBILE : CHAT_WIDTH_DESKTOP;
-  const CHAT_HEIGHT = isMobile ? "100%" : CHAT_HEIGHT_DESKTOP;
 
   const initialModuleAppliedRef = useRef(false);
   useEffect(() => {
@@ -517,7 +516,6 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
   const linksKey = `weered.room.links.${roomId}`;
   const [about,       setAbout      ] = useState("");
   const [links,       setLinks      ] = useState<string[]>([]);
-  const [newLink,     setNewLink    ] = useState("");
 
   useEffect(() => {
     try {
@@ -537,16 +535,7 @@ export default function RoomCanvas({ roomId }: { roomId: string }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [links, roomId]);
 
-  const addLink = () => {
-    const v = String(newLink || "").trim();
-    if (!v) return;
-    const normalized = v.startsWith("http://") || v.startsWith("https://") ? v : `https://${v}`;
-    if (links.includes(normalized)) { setNewLink(""); return; }
-    setLinks([normalized, ...links].slice(0, 20));
-    setNewLink("");
-  };
 
-  const removeLink = (v: string) => setLinks(links.filter((x) => x !== v));
 
   const handleModuleClick = (id: NonNullable<StageMode>) => {
     // Office is a LOCAL-only surface: toggle it, close any synced module behind

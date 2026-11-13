@@ -11,7 +11,6 @@ import { onActivate } from "@/lib/a11y";
 import { noun } from "../lib/plural";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
-const POE_NINJA = "https://poe.ninja/api/data";
 
 function authHeaders(): Record<string, string> {
   try { const t = localStorage.getItem("weered_token") || ""; return t ? { Authorization: `Bearer ${t}` } : {}; } catch { return {}; }
@@ -57,52 +56,14 @@ const GAME_CFG: Record<
   },
 };
 
-const ITEM_CATEGORIES = [
-  { id: "UniqueWeapon",    label: "Weapons" },
-  { id: "UniqueArmour",    label: "Armour" },
-  { id: "UniqueAccessory", label: "Accessories" },
-  { id: "UniqueFlask",     label: "Flasks" },
-  { id: "UniqueJewel",     label: "Jewels" },
-];
 
 const POE_REGIONS = ["Any", "NA", "EU", "Asia", "Oceania"];
 const POE_ACTIVITIES = ["Mapping", "Bossing", "Delve", "Heist", "Lab Runs", "Leveling", "Trading", "Crafting", "Other"];
 
 const ninjaCache = new Map<string, { data: any; ts: number }>();
-const NINJA_TTL = 120000;
 
-async function ninjaFetch(url: string) {
-  const cached = ninjaCache.get(url);
-  if (cached && Date.now() - cached.ts < NINJA_TTL) return cached.data;
-  const r = await fetch(url);
-  if (!r.ok) throw new Error(`poe.ninja ${r.status}`);
-  const j = await r.json();
-  ninjaCache.set(url, { data: j, ts: Date.now() });
-  return j;
-}
 
-function MiniSparkline({ data, width = 60, height = 20, color }: { data: number[]; width?: number; height?: number; color: string }) {
-  if (!data || data.length < 2) return null;
-  const min = Math.min(...data);
-  const max = Math.max(...data);
-  const range = max - min || 1;
-  const step = width / (data.length - 1);
-  const points = data.map((v, i) => `${i * step},${height - ((v - min) / range) * (height - 2) - 1}`).join(" ");
-  return (
-    <svg width={width} height={height} style={{ display: "block", flexShrink: 0 }}>
-      <polyline points={points} fill="none" stroke={color} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
 
-function trendColor(sparkline: number[] | null | undefined): string {
-  if (!sparkline || sparkline.length < 2) return "rgba(148,163,184,.5)";
-  const last = sparkline[sparkline.length - 1];
-  const first = sparkline[0];
-  if (last > first) return "#22c55e";
-  if (last < first) return "#ef4444";
-  return "rgba(148,163,184,.5)";
-}
 
 
 const TABS = [

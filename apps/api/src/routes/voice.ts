@@ -32,7 +32,6 @@ type Opts = {
 export default async function voiceRoutes(app: FastifyInstance, opts: Opts) {
   const {
     authFromHeader,
-    rooms,
     loadExistingRoom,
     normalizeRoomId,
     isModOrOwner,
