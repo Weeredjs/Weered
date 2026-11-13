@@ -12,6 +12,7 @@ import {
   THEMEABLE_LOBBY_IDS,
 } from "../lib/lobbyThemes";
 import {
+  BAR_TEXT_ON_JS,
   NB_CUSTOM_KEY,
   PREFS_KEY,
   SITE_THEME_IDS,
@@ -150,7 +151,11 @@ try {
   if (up && up.stars === false) d.setAttribute('data-weered-stars', 'off');
   if (up && up.skyMotion === true) d.setAttribute('data-weered-sky-motion', 'on');
   if (up && (up.bars === 'solid' || up.bars === 'slant')) d.setAttribute('data-weered-bars', up.bars);
-  if (up && /^#[0-9a-f]{6}$/i.test(up.barColor || '')) d.style.setProperty('--nb-bar', up.barColor);
+  if (up && /^#[0-9a-f]{6}$/i.test(up.barColor || '')) {
+    d.style.setProperty('--nb-bar', up.barColor);
+    // The text that reads on it, by the same rule as lib/uiPrefs.ts paintUiPrefs.
+    d.style.setProperty('--nb-bar-on', (${BAR_TEXT_ON_JS})(up.barColor));
+  }
   if (s && s.density) d.setAttribute('data-weered-density', s.density);
   if (s && s.reduceMotion) d.setAttribute('data-weered-reduce-motion', '1');
   // Light effects (lib/displaySettings.ts): as chosen here, else as this device draws.

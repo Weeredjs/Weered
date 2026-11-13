@@ -293,6 +293,23 @@ function luminance(hex: string): number {
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
 
+/** The text colour that reads on a section bar of this colour. */
+export function barTextOn(hex: string): string {
+  return luminance(hex) > 0.5 ? "#111114" : "#ffffff";
+}
+
+/**
+ * The same rule as source text, for the boot script in app/layout.tsx. That
+ * script paints the look before any module has loaded, so it can't import this
+ * file; it used to set the bar's colour and leave the text to the colourway's
+ * own "text on an accent", which on Void and Graphite is near-black. A dark
+ * bar of your own choosing then had black titles on every load after the
+ * first of a session (James's second account, 2026-11-13).
+ * test/bootPaint.test.ts runs this and barTextOn on the same colours.
+ */
+export const BAR_TEXT_ON_JS =
+  "function(h){var n=parseInt(h.slice(1),16),f=function(v){v/=255;return v<=0.03928?v/12.92:Math.pow((v+0.055)/1.055,2.4)};return 0.2126*f(n>>16&255)+0.7152*f(n>>8&255)+0.0722*f(n&255)>0.5?'#111114':'#ffffff'}";
+
 /** A whole colourway from one colour: deep accent, second glow, light tint,
  *  and a near-black sky tinted with the same hue. A second colour (accent2,
  *  2026-11-02) takes over the deep accent and the second glow, so gradients
@@ -385,10 +402,7 @@ export function paintUiPrefs(p: UiPrefs) {
   else d.removeAttribute("data-weered-bars");
   if (isHexColour(p.barColor)) {
     d.style.setProperty("--nb-bar", p.barColor as string);
-    d.style.setProperty(
-      "--nb-bar-on",
-      luminance(p.barColor as string) > 0.5 ? "#111114" : "#ffffff",
-    );
+    d.style.setProperty("--nb-bar-on", barTextOn(p.barColor as string));
   } else {
     d.style.removeProperty("--nb-bar");
     d.style.removeProperty("--nb-bar-on");

@@ -71,14 +71,15 @@ describe("testWithin", () => {
   });
 
   it("gives the same answer however many times it is asked", () => {
-    // No clock in this one: each call starts a watchdog, and how long that
-    // takes depends on what else the machine is doing (a third of a
-    // millisecond idle, a hundredth of a second with every core busy).
+    // No clock in this one, and few calls: each starts a watchdog, and how
+    // long that takes depends on what else the machine is doing (a third of a
+    // millisecond idle, a fiftieth of a second with every core busy, which is
+    // how the whole suite runs).
     let hits = 0;
-    for (let i = 0; i < 300; i++)
+    for (let i = 0; i < 30; i++)
       if (testWithin("spam|scam", "i", i % 3 ? "an ordinary post" : "a SCAM post").matched) hits++;
-    expect(hits).toBe(100);
-  });
+    expect(hits).toBe(10);
+  }, 30_000);
 });
 
 describe("a pattern from stored data never runs bare", () => {
