@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 import { stamp as uniqueStamp } from "./names";
 
 // Authenticated journey. Registration needs a captcha-free backend, which only
@@ -41,13 +41,24 @@ test.describe("auth journey", () => {
 // Sign in bounced back to /home (2026-11-03). No account needed: the
 // remembered member is made up and has no cookie.
 test.describe("an ended session", () => {
-  const remember = () =>
-    localStorage.setItem("weered_user", JSON.stringify({ id: "e2e-ended", name: "ended_member" }));
+  // The remembered member is planted before the page's own scripts run, once
+  // per tab. Planting it from an open /login raced that page: its provider,
+  // still starting up, found the member, checked the session and forgot the
+  // member again, so /home opened to a browser that remembered nobody and the
+  // test landed on the front page now and then (2026-11-13).
+  const remember = (page: Page) =>
+    page.addInitScript(() => {
+      if (sessionStorage.getItem("e2e:planted")) return;
+      sessionStorage.setItem("e2e:planted", "1");
+      localStorage.setItem(
+        "weered_user",
+        JSON.stringify({ id: "e2e-ended", name: "ended_member" }),
+      );
+      localStorage.setItem("weered:returning", "ended_member");
+    });
 
   test("goes to Sign in with the name filled in", async ({ page }) => {
-    await page.goto("/login");
-    await page.evaluate(remember);
-    await page.evaluate(() => localStorage.setItem("weered:returning", "ended_member"));
+    await remember(page);
     await page.goto("/home");
     await expect(page).toHaveURL(/\/login\?error=session_ended&next=%2Fhome/, { timeout: 15000 });
     await expect(page.getByText("Your session ran out. Sign in again.")).toBeVisible();
@@ -56,8 +67,7 @@ test.describe("an ended session", () => {
   });
 
   test("Sign in stays put instead of bouncing to /home", async ({ page }) => {
-    await page.goto("/login");
-    await page.evaluate(remember);
+    await remember(page);
     await page.goto("/login");
     await page.waitForTimeout(3000);
     await expect(page).toHaveURL(/\/login$/);
