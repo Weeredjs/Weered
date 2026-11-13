@@ -91,7 +91,9 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
 
   app.get("/lobbies/:lobbyId/rooms", async (req, reply) => {
     const lobbyId = String((req as any).params?.lobbyId || "");
-    const lobby = await prisma.lobby.findUnique({ where: { id: lobbyId } });
+    // Only whether it exists: this read the whole lobby, design and all, to
+    // throw it away, on one of the API's busiest calls.
+    const lobby = await prisma.lobby.findUnique({ where: { id: lobbyId }, select: { id: true } });
     if (!lobby) return reply.code(404).send({ ok: false, error: "lobby_not_found" });
     const list = await prisma.room.findMany({
       where: { lobbyId },

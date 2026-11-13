@@ -10,6 +10,10 @@ const SENTRY_RELEASE = (() => {
 const nextConfig = {
   // No X-Powered-By: Next.js header (review 2026-10-06).
   poweredByHeader: false,
+  // The workspace is this repository, said outright. On the server Next
+  // guessed /opt, the folder above it (a stray /opt/package-lock.json), and
+  // warned about it on every start: 43 times in a week's error log.
+  outputFileTracingRoot: require("path").join(__dirname, "../.."),
   // A deploy builds beside the live site (NEXT_DIST_DIR=.next-staged) and
   // swaps it in when done (scripts/deploy.sh); everything else uses .next.
   distDir: process.env.NEXT_DIST_DIR || ".next",

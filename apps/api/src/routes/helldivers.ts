@@ -1,6 +1,7 @@
 import { log, swallow } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
+import { makeFeed } from "../lib/upstreamFeed";
 
 type Opts = {
   authFromHeader?: (h?: string) => { id: string; name?: string } | null;
@@ -15,50 +16,55 @@ export default async function helldiversRoutes(app: FastifyInstance, _opts: Opts
     Accept: "application/json",
   };
 
-  const cache = new Map<string, { data: any; expiresAt: number }>();
-  const TTL_MS = 160_000; // outlives the 120s refresh so a failed cycle serves stale, not empty
+  // What we last heard, current for 160 s (it outlives the 120 s refresh) and
+  // still shown for half an hour while the API is failing; and when to leave
+  // the API alone (lib/upstreamFeed.ts).
+  const feed = makeFeed({ freshMs: 160_000, staleMs: 30 * 60_000 });
 
-  function cacheGet(key: string) {
-    const c = cache.get(key);
-    if (c && c.expiresAt > Date.now()) return c.data;
-    return null;
-  }
-  function cacheSet(key: string, data: any) {
-    cache.set(key, { data, expiresAt: Date.now() + TTL_MS });
+  /** One failure: noted, and said once when it starts a rest. */
+  function failed(why: string) {
+    if (feed.failed())
+      log.warn(`[helldivers2] ${why}; leaving the API alone for ${feed.restMinutes()} min`);
   }
 
   async function hd2Get(path: string): Promise<any | null> {
+    // A failing API is left alone a while: asking it again only made every
+    // caller wait for the timeout.
+    if (feed.resting()) return null;
     try {
       // Bound the upstream call so a hung/slow community API can't pin the
-      // handler; expected upstream failures (rate-limit / 5xx / network) are
-      // operational WARNINGS, not errors — graceful degradation returns null
-      // and the route serves stale/empty cache.
+      // handler. Its failures (rate limit, 5xx, network) are expected: the
+      // caller is given what we last heard, or nothing.
       const res = await fetch(`${HD2_BASE}${path}`, {
         headers: HD2_HEADERS,
         signal: AbortSignal.timeout(8000),
       });
-      if (res.status === 429) {
-        log.warn("[helldivers2] rate limited", path);
-        return null;
-      }
       if (res.status === 404) return null;
       if (!res.ok) {
-        log.warn(`[helldivers2] upstream ${res.status} ${path}`);
+        failed(
+          res.status === 429 ? `rate limited on ${path}` : `upstream ${res.status} on ${path}`,
+        );
         return null;
       }
-      return await res.json();
+      const data = await res.json();
+      feed.ok();
+      return data;
     } catch (e) {
-      log.warn(`[helldivers2] fetch failed ${path}: ${(e as any)?.message || e}`);
+      failed(`fetch failed on ${path}: ${(e as any)?.message || e}`);
       return null;
     }
   }
 
   async function warmCache() {
+    if (feed.resting()) return;
     try {
       // The community API allows roughly 5 requests per 10s. The old parallel
       // burst fired all five at once (plus the worker's own two), so the tail
       // requests — planets and dispatches — got 429'd every single cycle.
-      // Sequential with spacing keeps a full refresh comfortably under the cap.
+      // Sequential with spacing keeps a full refresh under the cap. At 2.5 s
+      // apart the five sat exactly on it, and with the worker's two alongside
+      // the fourth was told to slow down about six times an hour (measured
+      // 2026-11-12): 3.5 s apart now.
       const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
       const PATHS: [string, string][] = [
         ["war", "/war"],
@@ -70,8 +76,9 @@ export default async function helldiversRoutes(app: FastifyInstance, _opts: Opts
       for (let i = 0; i < PATHS.length; i++) {
         const [key, path] = PATHS[i];
         const data = await hd2Get(path);
-        if (data) cacheSet(key, data);
-        if (i < PATHS.length - 1) await delay(2500);
+        if (data) feed.set(key, data);
+        if (feed.resting()) return;
+        if (i < PATHS.length - 1) await delay(3500);
       }
     } catch (e) {
       log.warn(`[helldivers2] warmCache failed: ${(e as any)?.message || e}`);
@@ -84,10 +91,13 @@ export default async function helldiversRoutes(app: FastifyInstance, _opts: Opts
   }, 120_000);
 
   async function getOrFetch(key: string, path: string) {
-    const hit = cacheGet(key);
-    if (hit) return hit;
+    // What we last heard, even if it's a few minutes old: the refresh above
+    // brings the next one, and nobody waits on a slow API for it. Only with
+    // nothing at all to show is the API asked while the caller waits.
+    const kept = feed.fresh(key) ?? feed.last(key);
+    if (kept) return kept;
     const fresh = await hd2Get(path);
-    if (fresh) cacheSet(key, fresh);
+    if (fresh) feed.set(key, fresh);
     return fresh;
   }
 

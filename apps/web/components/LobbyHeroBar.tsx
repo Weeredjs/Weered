@@ -6,6 +6,7 @@ import { onActivate } from "@/lib/a11y";
 import { noun } from "../lib/plural";
 import { descriptionLead } from "../lib/descriptionLead";
 import { showMembers } from "../lib/socialProof";
+import { sizedImage } from "../lib/sizedImage";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
@@ -192,7 +193,10 @@ export default function LobbyHeroBar({
             style={{
               position: "absolute",
               inset: 0,
-              backgroundImage: `url(${effectiveBanner})`,
+              // Through the resizer (lib/sizedImage.ts): the built-in banners are
+              // 1.5 to 1.9 MB PNGs, and this strip sent them whole. Three
+              // seconds a view, measured on the live site 2026-11-12.
+              backgroundImage: `url("${sizedImage(effectiveBanner, 1920)}")`,
               backgroundSize: "cover",
               // Centre, not "center top". The hero is a FIXED 196px tall with a
               // FLUID width, so its aspect runs ~5.1:1 to ~5.6:1+ depending on
@@ -364,7 +368,7 @@ export default function LobbyHeroBar({
             >
               {logoUrl ? (
                 <img
-                  src={logoUrl}
+                  src={sizedImage(logoUrl, 128)}
                   alt={lobbyName}
                   style={{
                     width: "100%",

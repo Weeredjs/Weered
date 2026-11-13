@@ -8,6 +8,7 @@ import AlertsPanel from "./build/AlertsPanel";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useWeered } from "./WeeredProvider";
+import { sizedImage } from "../lib/sizedImage";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
@@ -720,7 +721,8 @@ export default function LobbyRoomDirectory({
             style={{
               position: "absolute",
               inset: "-20px",
-              backgroundImage: `url(${lobbyBanner})`,
+              // Blurred to a glow, so a small copy does (lib/sizedImage.ts).
+              backgroundImage: `url("${sizedImage(lobbyBanner, 640)}")`,
               backgroundSize: "cover",
               backgroundPosition: "center",
               filter: "blur(40px) saturate(0.6) brightness(0.25)",

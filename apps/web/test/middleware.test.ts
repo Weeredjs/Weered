@@ -85,3 +85,42 @@ describe("hosts in the web middleware", () => {
     expect((await visit("https://joe.weered.ca/login?lobby=u-joe")).next).toBe(true);
   });
 });
+
+// The app has no server actions, so a request that names one is a scanner
+// (about 200 a week in the error log, hardening pass 2026-11-12).
+describe("a request for a server action", () => {
+  it("is told there's nothing here, on any host, before anything else runs", async () => {
+    const { middleware } = await import("../middleware");
+    for (const url of ["https://weered.ca/", "https://club.example.com/lobby/club"]) {
+      const res = await middleware(
+        new NextRequest(url, {
+          method: "POST",
+          headers: { host: new URL(url).host, "next-action": "x" },
+        }),
+      );
+      expect(res.status).toBe(404);
+      expect(res.headers.get("x-middleware-next")).toBeNull();
+    }
+  });
+
+  it('and the app still has none: nothing under app, components or lib says "use server"', async () => {
+    const { readdirSync, readFileSync, statSync } = await import("node:fs");
+    const { join } = await import("node:path");
+    const found: string[] = [];
+    const walk = (dir: string) => {
+      for (const name of readdirSync(dir)) {
+        if (name === "node_modules" || name.startsWith(".next")) continue;
+        const p = join(dir, name);
+        if (statSync(p).isDirectory()) walk(p);
+        else if (
+          /\.(ts|tsx)$/.test(name) &&
+          /^\s*["']use server["']/m.test(readFileSync(p, "utf8"))
+        )
+          found.push(p);
+      }
+    };
+    for (const d of ["app", "components", "lib"]) walk(join(__dirname, "..", d));
+    // If one is ever added, middleware.ts must stop refusing Next-Action first.
+    expect(found).toEqual([]);
+  });
+});

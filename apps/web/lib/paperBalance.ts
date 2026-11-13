@@ -25,7 +25,18 @@ export function usePaperBalance(): {
     return tok ? { Authorization: `Bearer ${tok}` } : {};
   };
   useEffect(() => {
+    // Only for an account: a signed-out visitor's page asked every thirty
+    // seconds and was refused every time (2026-11-12), and a guest has no Paper.
+    const hasAccount = () => {
+      try {
+        const u = JSON.parse(localStorage.getItem("weered_user") || "null");
+        return !!u?.id && !u.isGuest;
+      } catch {
+        return false;
+      }
+    };
     const load = () => {
+      if (!hasAccount()) return;
       fetch(`${API}/paper/wallet`, { headers: auth() })
         .then((r) => r.json())
         .then((j) => {

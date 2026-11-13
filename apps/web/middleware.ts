@@ -40,6 +40,11 @@ async function lobbyFor(host: string): Promise<string | null | undefined> {
 const OFFICE_HOST = /^(office|meet)\.eastcoastemployeebenefits\.com$/i;
 
 export async function middleware(req: NextRequest) {
+  // This app has no server actions (test/middleware.test.ts keeps it so). A
+  // request that names one is a scanner trying the holes Next's server actions
+  // have had: about 200 a week were reaching the code that looks one up, and
+  // filling the error log (2026-11-12). They're told there's nothing here.
+  if (req.headers.has("next-action")) return new NextResponse(null, { status: 404 });
   const host = (req.headers.get("x-forwarded-host") || req.headers.get("host") || "")
     .split(",")[0]
     .trim()
