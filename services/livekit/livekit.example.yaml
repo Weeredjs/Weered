@@ -1,0 +1,30 @@
+# The voice server's settings. Copy this file to livekit.yaml (same folder) on
+# the server and replace the pair under "keys" with a key name and a long
+# random secret of your own. The same pair goes in apps/api/.env as
+# LIVEKIT_API_KEY and LIVEKIT_API_SECRET; then restart the livekit container.
+# livekit.yaml itself is ignored by git: it holds the key that signs every
+# voice pass, and this repository is public.
+port: 7880
+
+redis:
+  address: redis:6379
+
+rtc:
+  port_range_start: 50000
+  port_range_end: 50100
+  tcp_port: 7881
+  use_external_ip: false
+  node_ip: 142.93.148.29
+keys:
+  your_key_name: your-secret-of-at-least-32-characters
+
+logging:
+  level: info
+  pion_level: error
+  json: false
+
+room:
+  auto_create: true
+  empty_timeout: 300
+  departure_timeout: 20
+  max_participants: 0

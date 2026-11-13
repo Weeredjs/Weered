@@ -110,3 +110,9 @@ office-ratecards.json
 # The office note board: visitors' private notes. Written by the API at run
 # time; a nightly job on the server commits whatever is in this folder.
 office-board.json
+
+# The voice server's settings hold the key that signs every voice pass. The
+# repository keeps services/livekit/livekit.example.yaml; the real file lives
+# on the server only.
+services/livekit/livekit.yaml
+services/livekit/*.bak*

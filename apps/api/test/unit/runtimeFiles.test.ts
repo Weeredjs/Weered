@@ -48,6 +48,21 @@ describe("files the API writes in the site's folder", () => {
     const published = [...written].filter((name) => !SHIPPED.has(name) && !ignored.includes(name));
     expect(published, "written at run time but not in .gitignore").toEqual([]);
   });
+
+  it("the voice server's settings, which hold its key, are ignored too", () => {
+    // The key that signs every voice pass sat in the tracked settings file,
+    // in a public repository, from the first commit until 2026-11-13. It was
+    // replaced that day; the file now lives on the server only.
+    expect(ignored).toContain("services/livekit/livekit.yaml");
+    const example = readFileSync(join(ROOT, "services", "livekit", "livekit.example.yaml"), "utf8");
+    const keys = /^keys:\s*\n((?:[ \t]+\S.*\n)+)/m.exec(example);
+    expect(keys, "the example keeps a keys block, to show where the pair goes").not.toBeNull();
+    const pairs = keys![1]
+      .split("\n")
+      .map((l) => l.trim())
+      .filter(Boolean);
+    expect(pairs).toEqual(["your_key_name: your-secret-of-at-least-32-characters"]);
+  });
 });
 
 describe("the voice key is read when a token is signed", () => {
