@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { weeredToast } from "../lib/toast";
+import { hasAccount } from "../lib/hasAccount";
 
 const API = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
@@ -48,7 +49,10 @@ export default function LobbyTierCards({ lobbyId }: { lobbyId: string }) {
   const load = useCallback(async () => {
     const [tiersRes, myRes] = await Promise.all([
       apiFetch(`/lobbies/${encodeURIComponent(lobbyId)}/tiers`),
-      apiFetch(`/lobbies/${encodeURIComponent(lobbyId)}/my-tier`).catch(() => ({ ok: false })),
+      // Only an account has a tier (lib/hasAccount.ts).
+      hasAccount()
+        ? apiFetch(`/lobbies/${encodeURIComponent(lobbyId)}/my-tier`).catch(() => ({ ok: false }))
+        : Promise.resolve({ ok: false } as any),
     ]);
     if (tiersRes.ok) {
       setTiers(tiersRes.tiers);

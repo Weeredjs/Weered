@@ -481,10 +481,15 @@ export default function LeftRail() {
   const [favMeta, setFavMeta] = useState<Record<string, { name: string; logoUrl: string | null }>>(
     {},
   );
+  // Each is asked about once. A rerun of this effect dropped the answer already
+  // on its way and asked again: four requests per favourite on every page load.
+  const favAsked = useRef(new Set<string>());
   useEffect(() => {
-    const missing = favs.filter((id) => !favMeta[id] && !serverRecentMap.get(id)?.name);
+    const missing = favs.filter(
+      (id) => !favMeta[id] && !serverRecentMap.get(id)?.name && !favAsked.current.has(id),
+    );
     if (!missing.length) return;
-    let alive = true;
+    for (const id of missing) favAsked.current.add(id);
     void Promise.all(
       missing.map((id) =>
         fetch(`${API_BASE}/lobbies/${encodeURIComponent(id)}`)
@@ -493,7 +498,6 @@ export default function LeftRail() {
           .catch(() => null),
       ),
     ).then((rows) => {
-      if (!alive) return;
       const add: Record<string, { name: string; logoUrl: string | null }> = {};
       for (const row of rows) {
         if (!row) continue;
@@ -502,9 +506,6 @@ export default function LeftRail() {
       }
       if (Object.keys(add).length) setFavMeta((m) => ({ ...m, ...add }));
     });
-    return () => {
-      alive = false;
-    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [favs, serverRecentMap]);
 
