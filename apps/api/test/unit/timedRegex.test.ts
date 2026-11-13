@@ -87,6 +87,7 @@ describe("a pattern from stored data never runs bare", () => {
   // into it is escaped (a name, a tag), or it goes through testWithin.
   const KNOWN: Record<string, string> = {
     "lib/timedRegex.ts": "the guarded runner itself",
+    "lib/htmlScan.ts": "tag names, escaped, never a pattern from input",
     "lib/lobbyHost.ts": "the host's name, escaped with escapeRe",
     "lib/uiPrefs.ts": "the site's own address, escaped",
     "lib/pressure.ts": "fixed field names from /proc/meminfo",
