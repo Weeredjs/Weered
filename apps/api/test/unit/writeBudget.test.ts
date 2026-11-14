@@ -126,7 +126,9 @@ describe("the size of a body that stated none", () => {
   });
 });
 
-describe("in front of every route", () => {
+// The first test here builds the server cold; under a loaded suite that alone
+// passed 5 s (2026-11-13, twice). The answers are asserted, not the speed.
+describe("in front of every route", { timeout: 30_000 }, () => {
   let app: any;
   afterEach(async () => {
     await app?.close();
