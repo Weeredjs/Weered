@@ -500,12 +500,14 @@ export default function ShellGate({
     });
   };
 
-  // The left sidebar folds the same way (James 2026-11-05), open by default.
-  // Read before paint, so a folded sidebar doesn't flash open on every load.
-  const [leftCollapsed, setLeftCollapsed] = useState(false);
+  // The left sidebar folds the same way (James 2026-11-05). Folded until the
+  // person opens it, like the right (James 2026-11-13: "both rails closed ...
+  // look cleaner"); the folded stack keeps its labelled buttons. A saved
+  // choice wins. Read before paint, so it doesn't flash on every load.
+  const [leftCollapsed, setLeftCollapsed] = useState(true);
   useLayoutEffect(() => {
     try {
-      if (localStorage.getItem("weered_left_collapsed") === "1") setLeftCollapsed(true);
+      if (localStorage.getItem("weered_left_collapsed") === "0") setLeftCollapsed(false);
     } catch {}
   }, []);
   const setLeft = React.useCallback((folded: boolean) => {
