@@ -2,6 +2,17 @@ import { log, swallow } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 import { fetchWithTimeout } from "../lib/fetchWithTimeout";
 
+/** Compare "1.2.10" with "1.2.9" by number, not as text. */
+export function compareVersions(a: string, b: string): number {
+  const pa = a.split(".").map(Number);
+  const pb = b.split(".").map(Number);
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    const d = (pa[i] || 0) - (pb[i] || 0);
+    if (d) return d;
+  }
+  return 0;
+}
+
 // Tauri desktop auto-updater endpoints (extracted from index.ts). Polls the
 // GitHub releases of the desktop repo for the latest desktop-v* build and serves
 // the Tauri update manifest. Self-contained: GitHub fetch + an in-process cache.
@@ -67,9 +78,12 @@ export default async function desktopRoutes(app: FastifyInstance) {
       if (!res.ok) throw new Error(`GitHub releases ${res.status}`);
       const releases = (await res.json()) as GhRelease[];
 
-      const latest = releases.find(
-        (r) => !r.draft && !r.prerelease && r.tag_name.startsWith("desktop-v"),
-      );
+      // The highest version, by its numbers. GitHub's list put desktop-v0.1.9
+      // ahead of desktop-v0.1.10, and taking the first one meant no install
+      // would ever be offered 0.1.10 (2026-11-14).
+      const latest = releases
+        .filter((r) => !r.draft && !r.prerelease && /^desktop-v\d+\.\d+\.\d+$/.test(r.tag_name))
+        .sort((a, b) => compareVersions(b.tag_name.slice(9), a.tag_name.slice(9)))[0];
       if (!latest) {
         manifest = null;
       } else {
