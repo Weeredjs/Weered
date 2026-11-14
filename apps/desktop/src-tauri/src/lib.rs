@@ -20,6 +20,15 @@ const TRAY_ICON_DOT_BYTES: &[u8] = include_bytes!("../icons/tray-dot.png");
 const UNREAD_OBSERVER_JS: &str = r#"(function(){if(window.__weeredTrayObserver)return;window.__weeredTrayObserver=true;var last=null;function send(u){try{var ti=window.__TAURI_INTERNALS__||(window.__TAURI__&&window.__TAURI__.core);if(ti&&ti.invoke)ti.invoke('cmd_set_unread',{unread:u});}catch(_){}}function check(){var u=/^\(\d+\)\s+/.test(document.title);if(u!==last){last=u;send(u);}}function start(){var t=document.querySelector('title');if(!t){setTimeout(start,250);return;}new MutationObserver(check).observe(t,{childList:true,characterData:true,subtree:true});check();}if(document.readyState!=='loading')start();else document.addEventListener('DOMContentLoaded',start);})();"#;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
+async fn update_on_start(app: tauri::AppHandle) -> tauri_plugin_updater::Result<()> {
+    use tauri_plugin_updater::UpdaterExt;
+    if let Some(update) = app.updater()?.check().await? {
+        update.download_and_install(|_, _| {}, || {}).await?;
+        app.restart();
+    }
+    Ok(())
+}
+
 pub fn run() {
     let mut builder = tauri::Builder::default()
         // Single instance: focus existing window if user re-launches the app
@@ -73,6 +82,17 @@ pub fn run() {
     builder
         .setup(|app| {
             build_tray(app.handle())?;
+
+            // Updates: checked once at start, before anyone is in a call. A
+            // newer signed release is downloaded, installed and the app
+            // restarted on it. Nothing ever called the updater before 0.1.9,
+            // so installs up to 0.1.8 never updated themselves.
+            let update_handle = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                if let Err(e) = update_on_start(update_handle).await {
+                    eprintln!("[updater] {e}");
+                }
+            });
 
             // Register the global shortcut.
             #[cfg(desktop)]

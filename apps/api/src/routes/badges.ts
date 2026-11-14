@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma";
 import { getGlobalRole, isStaffRole } from "../lib/lobbyAuth";
+import { adoptPicture, pictureName, pictureSize } from "../lib/adoptPicture";
 
 type Opts = {
   authFromHeader: (h?: string) => { id: string } | null;
@@ -47,11 +48,20 @@ export default async function badgesRoutes(app: FastifyInstance, opts: Opts) {
         return reply.code(403).send({ ok: false, error: "forbidden" });
       }
       const body = req.body as any;
+      // Linked from another site: copied in and screened (lib/adoptPicture.ts).
+      const icon = await adoptPicture(String(body.iconUrl || "").trim(), {
+        kind: "banners",
+        name: pictureName.badge(),
+        uploaderId: u.id,
+        ...pictureSize.icon,
+      });
+      if (!icon.ok)
+        return reply.code(icon.code).send({ ok: false, error: icon.error, message: icon.message });
       const badge = await prisma.challengeBadge.create({
         data: {
           name: String(body.name || "").trim(),
           description: String(body.description || "").trim(),
-          iconUrl: String(body.iconUrl || "").trim(),
+          iconUrl: icon.url || "",
           rarity: Number.parseInt(body.rarity) || 1,
         },
       });

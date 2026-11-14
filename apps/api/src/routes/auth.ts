@@ -1,3 +1,4 @@
+import { adoptAvatarSoon } from "../lib/adoptPicture";
 import { log, swallow } from "../lib/logger";
 import type { FastifyInstance } from "fastify";
 import { fetchWithTimeout } from "../lib/fetchWithTimeout";
@@ -633,6 +634,8 @@ export default async function authRoutes(app: FastifyInstance, opts: Opts) {
             ? `${customRedirect}${customRedirect.includes("?") ? "&" : "?"}error=account_suspended`
             : `${WEB_URL}/login?error=account_suspended`,
         );
+      // A Google picture is copied onto Weered (lib/adoptPicture.ts).
+      adoptAvatarSoon(user.id).catch(swallow);
       const token = jwt.sign({ sub: user.id, name: user.name }, JWT_SECRET, { expiresIn: "7d" });
       setAuthCookie(reply, token);
       const userParam = encodeURIComponent(JSON.stringify({ id: user.id, name: user.name }));

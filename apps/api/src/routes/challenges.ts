@@ -4,6 +4,7 @@ import { prisma } from "../lib/prisma";
 import { z } from "zod";
 import { LobbyRole, GlobalRole } from "@prisma/client";
 import { isRealDate, sizeProblem } from "../lib/fieldSize";
+import { adoptPicture, pictureName, pictureSize } from "../lib/adoptPicture";
 
 // What a challenge may hold (lib/fieldSize.ts). The longest live title is 74
 // characters, description 239, and objectives 750 as JSON.
@@ -226,11 +227,20 @@ export default async function challengesRoutes(app: FastifyInstance, opts: Opts)
         }
       }
 
+      // Linked from another site: copied in and screened (lib/adoptPicture.ts).
+      const icon = await adoptPicture(body.iconUrl ? String(body.iconUrl) : null, {
+        kind: "banners",
+        name: pictureName.challenge(String(body.lobbyId || "global")),
+        uploaderId: u.id,
+        ...pictureSize.icon,
+      });
+      if (!icon.ok)
+        return reply.code(icon.code).send({ ok: false, error: icon.error, message: icon.message });
       const def = await prisma.challengeDefinition.create({
         data: {
           title: String(body.title || "").trim(),
           description: String(body.description || "").trim(),
-          iconUrl: body.iconUrl || null,
+          iconUrl: icon.url,
           category: String(body.category || "").trim(),
           difficulty: Number.parseInt(body.difficulty) || 1,
           scope: body.scope || "GLOBAL",
@@ -441,8 +451,20 @@ export default async function challengesRoutes(app: FastifyInstance, opts: Opts)
         data.description = String(body.description || "")
           .trim()
           .slice(0, 2000);
-      if (body.iconUrl !== undefined)
-        data.iconUrl = body.iconUrl ? String(body.iconUrl).slice(0, 500) : null;
+      if (body.iconUrl !== undefined) {
+        // Linked from another site: copied in and screened (lib/adoptPicture.ts).
+        const icon = await adoptPicture(body.iconUrl ? String(body.iconUrl).slice(0, 500) : null, {
+          kind: "banners",
+          name: pictureName.challenge(String(def.lobbyId || "global")),
+          uploaderId: u.id,
+          ...pictureSize.icon,
+        });
+        if (!icon.ok)
+          return reply
+            .code(icon.code)
+            .send({ ok: false, error: icon.error, message: icon.message });
+        data.iconUrl = icon.url;
+      }
       if (body.category !== undefined)
         data.category = String(body.category || "")
           .trim()

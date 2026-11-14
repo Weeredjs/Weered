@@ -4,6 +4,7 @@ import { prisma } from "../lib/prisma";
 import { randomUUID } from "crypto";
 import { isSafeLink } from "../lib/brandValues";
 import { isRealDate, sizeProblem } from "../lib/fieldSize";
+import { adoptPicture, pictureName, pictureSize } from "../lib/adoptPicture";
 
 // What an event may hold (lib/fieldSize.ts). The longest live title is 39
 // characters and description 206. These routes stored whatever they were sent,
@@ -85,12 +86,24 @@ export default async function eventsRoutes(app: FastifyInstance, opts: Opts) {
     if (!title) return reply.code(400).send({ ok: false, error: "title_required" });
     const bad = eventProblem(body);
     if (bad) return reply.code(400).send({ ok: false, ...bad });
+    // Linked from another site: copied in and screened (lib/adoptPicture.ts).
+    const cover = await adoptPicture(
+      body.coverImageUrl ? String(body.coverImageUrl).trim() : null,
+      {
+        kind: "banners",
+        name: pictureName.event(ctx.lobby.id),
+        uploaderId: ctx.user.id,
+        ...pictureSize.banner,
+      },
+    );
+    if (!cover.ok)
+      return reply.code(cover.code).send({ ok: false, error: cover.error, message: cover.message });
     const event = await prisma.event.create({
       data: {
         title,
         description: String(body.description || "").trim(),
         category: String(body.category || "").trim(),
-        coverImageUrl: body.coverImageUrl ? String(body.coverImageUrl).trim() : null,
+        coverImageUrl: cover.url,
         startsAt: new Date(body.startsAt || Date.now()),
         endsAt: body.endsAt ? new Date(body.endsAt) : null,
         timezone: String(body.timezone || "UTC"),
@@ -130,8 +143,23 @@ export default async function eventsRoutes(app: FastifyInstance, opts: Opts) {
     if (body.title !== undefined) data.title = String(body.title).trim();
     if (body.description !== undefined) data.description = String(body.description).trim();
     if (body.category !== undefined) data.category = String(body.category).trim();
-    if (body.coverImageUrl !== undefined)
-      data.coverImageUrl = body.coverImageUrl ? String(body.coverImageUrl).trim() : null;
+    if (body.coverImageUrl !== undefined) {
+      // Linked from another site: copied in and screened (lib/adoptPicture.ts).
+      const cover = await adoptPicture(
+        body.coverImageUrl ? String(body.coverImageUrl).trim() : null,
+        {
+          kind: "banners",
+          name: pictureName.event(ctx.lobby.id),
+          uploaderId: ctx.user.id,
+          ...pictureSize.banner,
+        },
+      );
+      if (!cover.ok)
+        return reply
+          .code(cover.code)
+          .send({ ok: false, error: cover.error, message: cover.message });
+      data.coverImageUrl = cover.url;
+    }
     // An event always has a start: a blank one is left as it was (it used to
     // become 1970, or a server error).
     if (body.startsAt != null && body.startsAt !== "") data.startsAt = new Date(body.startsAt);

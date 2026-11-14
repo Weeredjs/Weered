@@ -14,6 +14,7 @@ import { lobbyOnlineCount } from "../lib/lobbyCount";
 import { BoundedMap } from "../lib/boundedMap";
 import { getAI } from "../lib/ai";
 import { isSafeLink } from "../lib/brandValues";
+import { adoptPicture, pictureName, pictureSize } from "../lib/adoptPicture";
 
 type Opts = {
   authFromHeader: (h?: string) => { id: string; name: string } | null;
@@ -412,6 +413,24 @@ export default async function roomsRoutes(app: FastifyInstance, opts: Opts) {
               .filter((m: string) => isValidRoomModule(m)),
           ),
         );
+      }
+      // A picture linked from another site is copied in and screened like an
+      // upload (lib/adoptPicture.ts); the old copy is removed.
+      for (const [key, slot, size] of [
+        ["iconUrl", "icon", pictureSize.icon],
+        ["bannerUrl", "banner", pictureSize.banner],
+      ] as const) {
+        if (typeof data[key] !== "string" || data[key] === r[key]) continue;
+        const got = await adoptPicture(data[key], {
+          kind: "banners",
+          name: pictureName.room(roomId, slot),
+          uploaderId: u.id,
+          replacing: r[key] ?? null,
+          ...size,
+        });
+        if (!got.ok)
+          return reply.code(got.code).send({ ok: false, error: got.error, message: got.message });
+        data[key] = got.url;
       }
       if (Object.keys(data).length === 0)
         return reply.code(400).send({ ok: false, error: "no_changes" });

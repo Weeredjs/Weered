@@ -1,3 +1,4 @@
+import { adoptAvatarSoon } from "../lib/adoptPicture";
 import type { FastifyInstance } from "fastify";
 import jwt from "jsonwebtoken";
 import { randomBytes } from "crypto";
@@ -127,6 +128,8 @@ export default async function discordAuthRoutes(app: FastifyInstance, opts: Opts
         Promise.resolve(seedWelcomeDM(user.id)).catch(swallow);
       }
       if (user.banned) return fail(reply, "account_suspended");
+      // A Discord picture is copied onto Weered (lib/adoptPicture.ts).
+      adoptAvatarSoon(user.id).catch(swallow);
       const token = jwt.sign({ sub: user.id, name: user.name }, JWT_SECRET, { expiresIn: "7d" });
       setAuthCookie(reply, token);
       // The session is the cookie; the page only needs who signed in.

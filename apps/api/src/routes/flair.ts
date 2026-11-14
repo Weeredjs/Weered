@@ -3,6 +3,7 @@ import { prisma } from "../lib/prisma";
 import { z } from "zod";
 import { isStaffUser } from "../lib/isStaffUser";
 import { grantFlairToUser, getEquippedFlair, mintFlairItem } from "../lib/flair";
+import { adoptPicture, pictureName, pictureSize } from "../lib/adoptPicture";
 
 type Opts = {
   authFromHeader: (h?: string) => { id: string; globalRole?: string } | null;
@@ -138,13 +139,22 @@ export default async function flairRoutes(app: FastifyInstance, opts: Opts) {
         return reply.code(400).send({ ok: false, error: "bad_source" });
       }
 
+      // Linked from another site: copied in and screened (lib/adoptPicture.ts).
+      const pic = await adoptPicture(body.imageUrl ? String(body.imageUrl) : null, {
+        kind: "banners",
+        name: pictureName.flair(slug),
+        uploaderId: u.id,
+        ...pictureSize.icon,
+      });
+      if (!pic.ok)
+        return reply.code(pic.code).send({ ok: false, error: pic.error, message: pic.message });
       try {
         const created = await mintFlairItem(prisma, {
           slug,
           name,
           description: body.description ? String(body.description) : "",
           kind: kind as any,
-          imageUrl: body.imageUrl ? String(body.imageUrl) : null,
+          imageUrl: pic.url,
           color: body.color ? String(body.color) : null,
           rarity: body.rarity ? String(body.rarity).toUpperCase() : "COMMON",
           source: source as any,

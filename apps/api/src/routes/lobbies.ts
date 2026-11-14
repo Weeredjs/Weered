@@ -32,6 +32,7 @@ import { alertNewBuilder } from "../lib/growthSignals";
 import { homeLobbiesOf } from "../lib/lobbyHomes";
 import { lobbyUrl, pingIndexNow } from "../lib/indexNow";
 import { endLobbyTier } from "../lib/lobbyTierEnd";
+import { adoptPicture, pictureName, pictureSize } from "../lib/adoptPicture";
 
 type Opts = {
   authFromHeader: (h?: string) => { id: string; name: string } | null;
@@ -512,6 +513,26 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
           error: "lobby_exists",
           message: "That name is taken. Try another.",
         });
+      // A logo or banner linked from another site is copied in and screened
+      // like an upload (lib/adoptPicture.ts).
+      const logo = await adoptPicture(logoUrl, {
+        kind: "banners",
+        name: pictureName.lobby(String(id), "logo"),
+        uploaderId: u.id,
+        ...pictureSize.logo,
+      });
+      if (!logo.ok)
+        return reply.code(logo.code).send({ ok: false, error: logo.error, message: logo.message });
+      const banner = await adoptPicture(bannerUrl, {
+        kind: "banners",
+        name: pictureName.lobby(String(id), "banner"),
+        uploaderId: u.id,
+        ...pictureSize.banner,
+      });
+      if (!banner.ok)
+        return reply
+          .code(banner.code)
+          .send({ ok: false, error: banner.error, message: banner.message });
       // moduleConfig drives server-side behaviour (workers, integrations, the
       // virtual-airline Dispatch voice), so only staff set it through here. The
       // create page never sends it.
@@ -530,8 +551,8 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
           moduleConfig: safeModuleConfig ?? undefined,
           keywords: Array.isArray(keywords) ? keywords.map(String) : [],
           accentColor: accentColor ?? null,
-          logoUrl: logoUrl ?? null,
-          bannerUrl: bannerUrl ?? null,
+          logoUrl: logo.url ?? null,
+          bannerUrl: banner.url ?? null,
           websiteUrl: websiteUrl ?? null,
         },
         create: {
@@ -545,8 +566,8 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
           moduleConfig: safeModuleConfig ?? undefined,
           keywords: Array.isArray(keywords) ? keywords.map(String) : [],
           accentColor: accentColor ?? null,
-          logoUrl: logoUrl ?? null,
-          bannerUrl: bannerUrl ?? null,
+          logoUrl: logo.url ?? null,
+          bannerUrl: banner.url ?? null,
           websiteUrl: websiteUrl ?? null,
           ...(held ? { unlisted: true, listingHeld: true } : {}),
           ...createExtras,
@@ -766,6 +787,24 @@ export default async function lobbiesRoutes(app: FastifyInstance, opts: Opts) {
       // website, once set, could never be removed, and the tab said "Saved."
       for (const k of ["accentColor", "logoUrl", "bannerUrl", "websiteUrl"] as const)
         if (body[k] === null || typeof body[k] === "string") data[k] = body[k] || null;
+      // A logo or banner linked from another site is copied in and screened
+      // like an upload (lib/adoptPicture.ts); the old copy is removed.
+      for (const [k, slot] of [
+        ["logoUrl", "logo"],
+        ["bannerUrl", "banner"],
+      ] as const) {
+        if (typeof data[k] !== "string" || data[k] === ctx.lobby[k]) continue;
+        const got = await adoptPicture(data[k], {
+          kind: "banners",
+          name: pictureName.lobby(ctx.lobby.id, slot),
+          uploaderId: ctx.user.id,
+          replacing: ctx.lobby[k] ?? null,
+          ...pictureSize[slot],
+        });
+        if (!got.ok)
+          return reply.code(got.code).send({ ok: false, error: got.error, message: got.message });
+        data[k] = got.url;
+      }
       if (Array.isArray(body.keywords)) data.keywords = body.keywords;
 
       if (Object.keys(data).length === 0)
