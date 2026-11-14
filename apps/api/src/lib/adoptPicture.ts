@@ -113,7 +113,7 @@ export async function adoptPicture(
       rasterAddress(url.trim()),
       {
         headers: {
-          accept: "image/avif,image/webp,image/png,image/jpeg,image/gif;q=0.9,*/*;q=0.5",
+          accept: "image/webp,image/png,image/jpeg,image/gif;q=0.9",
           "user-agent": "Mozilla/5.0 (compatible; WeeredBot/1.0; +https://weered.ca)",
         },
       },
