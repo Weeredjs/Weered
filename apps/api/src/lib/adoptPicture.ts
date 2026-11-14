@@ -144,7 +144,8 @@ export async function adoptPicture(
   if (o.replacing && o.replacing.startsWith(mine)) {
     const prev = o.replacing.slice(`${SITE_BASE}/${o.kind}/`.length);
     // Exactly `<name>-<time>.webp`: lobby "x" must never match lobby "x-logo"'s file.
-    if (new RegExp(`^${o.name}-\\d+\\.webp$`).test(prev) && prev !== filename) {
+    const tail = prev.slice(o.name.length + 1);
+    if (prev.startsWith(`${o.name}-`) && /^\d+\.webp$/.test(tail) && prev !== filename) {
       try {
         unlinkSync(join(dir, prev));
       } catch (e) {
