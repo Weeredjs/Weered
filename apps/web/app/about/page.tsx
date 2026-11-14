@@ -4,11 +4,11 @@ import AboutContent from "./AboutContent";
 export const metadata: Metadata = {
   title: "About Weered | Real-Time Community Platform",
   description:
-    "Weered is a real-time community platform built around lobbies, rooms, and presence. Think lobbies, not servers. Rooms, not channels. Presence, not status dots.",
+    "Weered is one town of communities: describe a place and it's built, every lobby sits on the same street, and the Town Square is where everyone talks. Lobbies, not servers. Rooms, not channels.",
   openGraph: {
     title: "About Weered | Real-Time Community Platform",
     description:
-      "Lobbies, rooms, presence, and modules. A dark, cinematic community platform that feels like a place, not a product.",
+      "One town of communities. Describe a place and it's built; walk from one lobby into the next.",
     url: "https://weered.ca/about",
   },
   twitter: {

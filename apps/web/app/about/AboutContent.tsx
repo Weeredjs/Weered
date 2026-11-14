@@ -137,16 +137,16 @@ export default function AboutContent() {
             </a>
           </div>
           <div className="about-wordmark">weered</div>
-          <div className="about-tagline">communities · presence · rooms</div>
+          <div className="about-tagline">one town · rooms · presence</div>
 
           <div className="about-block">
             <div className="about-label">origin</div>
             <div className="about-text">
-              Weered came out of a simple problem: the tools gaming communities live in are built
-              for everyone, so they fit no one in particular.
+              Weered came out of a simple problem: every community lives on its own island. You need
+              an invite to find one, you set it up by hand, and nothing connects it to the next.
               <br />
-              We built the opposite. A platform that knows what you&apos;re playing and gives each
-              community the tools it actually needs, wired straight into the games.
+              We built the opposite. One town, where every community is a building on the same
+              street, and you get one by describing it.
             </div>
           </div>
 
@@ -159,9 +159,16 @@ export default function AboutContent() {
               Think lobbies, not servers. Rooms, not channels. Presence, not status dots.
               <br />
               <br />
-              <em>Lobbies</em> are living spaces: communities built around games, trading, studying,
-              business, whatever pulls people in. Each one has its own identity, roles, events, and
-              deep integrations.
+              <em>The town</em> holds them all. Downtown lists every public lobby; the Town Square
+              is where everyone on Weered talks, and the tag beside each name is a door to that
+              person&apos;s lobby.
+              <br />
+              <br />
+              <em>Lobbies</em> are built by describing them: say what you want in a sentence and the
+              rooms, the look and the welcome page appear. One link brings your people in from any
+              phone, no download. Lobbies are living spaces: communities built around games,
+              trading, studying, business, whatever pulls people in. Each one has its own identity,
+              roles, events, and deep integrations.
               <br />
               <br />
               <em>Rooms</em> are where things happen. Voice chat, video, screen share, watch
@@ -218,8 +225,8 @@ export default function AboutContent() {
             <div className="about-text">
               Early access, and moving fast. We ship most days.
               <br />
-              30+ lobbies. Voice, video, screen share. Poker. Paper trading. AI quiz generator.
-              Focus rooms.
+              A town of lobbies, and a builder that makes yours in seconds. 30+ game lobbies wired
+              to live data. Voice, video, screen share. A desktop app that updates itself.
               <br />
               It&apos;s not finished. It&apos;s being built in the open, and you&apos;re early.
             </div>

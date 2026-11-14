@@ -3,10 +3,15 @@ import Link from "next/link";
 import MarketingHeader from "../../components/MarketingHeader";
 import { safeJsonLd } from "@/lib/jsonLd";
 
-const TITLE = "What Weered does: a real lobby for every game";
+// Rewritten 2026-11-14 to the premise (James: the town is "the entire premise
+// of the platform"; "Update accordingly"). It used to stop at the games: every
+// fact here is checked against what the site does today.
+const TITLE = "What Weered does: every lobby in one town";
 const DESC =
-  "Weered gives every game its own lobby wired to the game itself: live PoE economy and skill tree, Bungie-verified Destiny tournaments, EVE killboards, voice rooms, crews, an earned reputation economy, and cross-platform presence. Web, desktop, and mobile.";
+  "Describe a place in a sentence and Weered builds it. Every lobby sits in one town: Downtown lists them all, the Town Square is where everyone talks, and one link brings your people in from any phone. Voice, video, games wired to live data. Free in your browser.";
 const URL = "https://weered.ca/features";
+// Create account, headed for the builder (the same door as /alternatives/discord).
+const BUILD = "/login?mode=register&next=%2Flobby%2Fcreate";
 
 export const metadata: Metadata = {
   title: { absolute: TITLE },
@@ -21,10 +26,10 @@ const appLd = {
   "@type": "SoftwareApplication",
   name: "Weered",
   applicationCategory: "SocialNetworkingApplication",
-  operatingSystem: "Web, Windows, macOS, iOS, Android",
+  operatingSystem: "Web, Windows, Linux",
   description:
-    "A lobby-first gaming community platform. Each game gets a lobby wired to its own live data, with self-verifying tournaments, voice rooms, crews, and an earned reputation economy.",
-  offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+    "A town of communities. Describe a place and Weered builds the lobby; every lobby sits in one town with a shared Town Square, voice and video rooms, crews, and game lobbies wired to live data.",
+  offers: { "@type": "Offer", price: "0", priceCurrency: "CAD" },
 };
 
 export default function FeaturesPage() {
@@ -38,20 +43,19 @@ export default function FeaturesPage() {
           <div className="mkt-wrap">
             <span className="mkt-eyebrow">What Weered is</span>
             <h1 className="mkt-h1">
-              Every game gets a <span className="accent">real lobby</span>, wired to the game
-              itself.
+              Every lobby sits in <span className="accent">one town</span>.
             </h1>
             <p className="mkt-sub">
-              Most community apps hand you a text channel with a game&apos;s logo slapped on it.
-              Weered gives each game a lobby that actually talks to the game. Your clears, your loot
-              prices, your killboard, live in the room.
+              Other apps hand you an empty server on an island. On Weered your place is a building
+              on a street people already walk down: describe it, it&apos;s built in seconds, and
+              everyone you bring walks into the same town.
             </p>
             <div className="mkt-cta-row">
-              <Link href="/explore" className="mkt-cta-primary">
-                Browse the lobbies
+              <Link href={BUILD} className="mkt-cta-primary">
+                Describe your place
               </Link>
-              <Link href="/why-not-discord" className="mkt-cta-secondary">
-                Why not just Discord?
+              <Link href="/explore" className="mkt-cta-secondary">
+                Walk around Downtown
               </Link>
             </div>
           </div>
@@ -59,19 +63,53 @@ export default function FeaturesPage() {
 
         <section className="mkt-section">
           <div className="mkt-wrap">
-            <h2 className="mkt-h2">It&apos;s wired into the games, not just named after them</h2>
+            <h2 className="mkt-h2">One town, not a pile of islands</h2>
             <p className="mkt-p">
-              The <Link href="/play/path-of-exile">Path of Exile</Link> lobby pulls the live
-              currency exchange and renders your actual passive tree from the official API. The{" "}
-              <Link href="/lobby/destiny2">Destiny 2</Link> lobby reads your fireteam&apos;s clears
-              straight from Bungie. <Link href="/lobby/eve">EVE</Link> shows your killboard and
-              sovereignty timers. The same idea runs across more than thirty game lobbies, from
-              Helldivers war maps to a paper-trading floor. A logo on a chat channel can&apos;t do
-              any of that.
+              <Link href="/explore">Downtown</Link> lists every public lobby side by side. The Town
+              Square is where everyone on Weered talks, and each name there carries a tag for the
+              lobby that person comes from. The tag is a door: click it and you&apos;re standing in
+              their place. One account, one friends list, and you walk from one community into the
+              next without hunting for an invite.
             </p>
+          </div>
+        </section>
+
+        <section className="mkt-section">
+          <div className="mkt-wrap">
+            <h2 className="mkt-h2">Don&apos;t set it up. Describe it.</h2>
             <p className="mkt-p">
-              <Link href="/explore">Browse what&apos;s live</Link> and you&apos;ll find the game you
-              play already has a home.
+              Type what you want in a sentence (a speakeasy for your poker night, a study hall, a
+              bridge club, a shop&apos;s front counter) and Weered builds the lobby: the rooms, the
+              look, the welcome page. Then change anything by hand. Three lobbies of your own are
+              free. If you want something it can&apos;t build yet,{" "}
+              <Link href="/contact">tell us</Link> and we&apos;ll put it together.
+            </p>
+          </div>
+        </section>
+
+        <section className="mkt-section">
+          <div className="mkt-wrap">
+            <h2 className="mkt-h2">One link brings your people</h2>
+            <p className="mkt-p">
+              When the build finishes, Weered hands you the link. Send it by WhatsApp, Facebook,
+              email or text. A guest link opens on any phone or computer, in the browser, with no
+              download and no account, so a friend is in the room talking before they&apos;ve
+              decided to sign up. When they like it, they make an account and they&apos;re a member.
+            </p>
+          </div>
+        </section>
+
+        <section className="mkt-section">
+          <div className="mkt-wrap">
+            <h2 className="mkt-h2">For anything, and the games are wired in</h2>
+            <p className="mkt-p">
+              Clubs, study groups, crews and businesses all build here. The games go further than a
+              logo on a chat channel: the <Link href="/play/path-of-exile">Path of Exile</Link>{" "}
+              lobby pulls the live currency exchange and your actual passive tree,{" "}
+              <Link href="/lobby/destiny2">Destiny 2</Link> reads your fireteam&apos;s clears
+              straight from Bungie, and <Link href="/lobby/eve">EVE</Link> shows your killboard.
+              More than thirty game lobbies work this way, from Helldivers war maps to a
+              paper-trading floor.
             </p>
           </div>
         </section>
@@ -80,7 +118,7 @@ export default function FeaturesPage() {
           <div className="mkt-wrap">
             <h2 className="mkt-h2">Everything else it does</h2>
             <p className="mkt-p">
-              The lobbies are the point, but the table stakes are all here too. The short version:
+              The town is the point, but the table stakes are all here too. The short version:
             </p>
             <div
               style={{
@@ -134,7 +172,7 @@ export default function FeaturesPage() {
                 {
                   h: "Yours, everywhere",
                   items: [
-                    "Web, a Tauri desktop app, mobile in progress",
+                    "Web, phone browser, and a desktop app that updates itself",
                     "Notoriety reputation and Paper currency, earned",
                     "Bounties, tips, poker and tournament buy-ins",
                   ],
@@ -233,12 +271,13 @@ export default function FeaturesPage() {
 
         <section className="mkt-section">
           <div className="mkt-wrap">
-            <h2 className="mkt-h2">Friends, DMs, and media that can&apos;t ambush you</h2>
+            <h2 className="mkt-h2">Friends, DMs, and pictures that can&apos;t ambush you</h2>
             <p className="mkt-p">
               Add friends, send DMs and group messages, invite people to your room, and decide
-              exactly who&apos;s allowed to join you or invite you anywhere. Every image is screened
-              before it ever shows on your screen. The full story is on the{" "}
-              <Link href="/safety">safety page</Link>.
+              exactly who&apos;s allowed to join you or invite you anywhere. Every picture is
+              screened before it shows on your screen, including ones linked from other sites: those
+              are copied onto Weered and checked first, so the other site never sees who looked. The
+              full story is on the <Link href="/safety">safety page</Link>.
             </p>
           </div>
         </section>
@@ -247,21 +286,22 @@ export default function FeaturesPage() {
           <div className="mkt-wrap">
             <h2 className="mkt-h2">Web, desktop, and your phone</h2>
             <p className="mkt-p">
-              Weered runs in any browser, as a native <Link href="/desktop">desktop app</Link>, and
-              on mobile. Your lobbies, crews, and friends follow you across all three.
+              Weered runs in any browser, on a phone as well as a computer, and as a{" "}
+              <Link href="/desktop">desktop app</Link> that keeps itself up to date. Your lobbies,
+              crews and friends follow you everywhere.
             </p>
           </div>
         </section>
 
         <section className="mkt-wrap">
           <div className="mkt-final-cta">
-            <h2>Pick a game. There&apos;s probably already a lobby.</h2>
+            <h2>Describe your place. Bring your people.</h2>
             <p>
-              More than thirty game communities are live right now, each wired to the thing you
-              actually play.
+              It&apos;s built in seconds, it&apos;s free, and it sits on the same street as every
+              other community on Weered.
             </p>
-            <Link href="/explore" className="mkt-cta-primary">
-              Browse the lobbies →
+            <Link href={BUILD} className="mkt-cta-primary">
+              Describe your place →
             </Link>
           </div>
         </section>
