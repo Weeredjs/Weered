@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "ca.weered.app",
+      "sha256_cert_fingerprints": [
+        "49:95:88:47:F9:21:E1:51:FF:AF:40:89:63:19:E0:B0:6C:BE:98:32:E0:66:C7:55:B5:5B:A5:65:1F:1F:4E:4F"
+      ]
+    }
+  }
+]
