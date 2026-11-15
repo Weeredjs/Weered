@@ -63,6 +63,9 @@ afterAll(async () => {
   await prisma.lobbyMember.deleteMany({ where: { lobbyId: L } }).catch(() => {});
   await prisma.room.deleteMany({ where: { lobbyId: L } }).catch(() => {});
   await prisma.lobby.deleteMany({ where: { id: L } }).catch(() => {});
+  await prisma.subscription
+    .deleteMany({ where: { userId: { in: Object.values(id) } } })
+    .catch(() => {});
   await prisma.user.deleteMany({ where: { id: { in: Object.values(id) } } }).catch(() => {});
   await prisma.$disconnect();
 });
@@ -111,6 +114,14 @@ describe("handing a lobby over", () => {
       select: { userId: true, roleLevel: true },
     });
     expect(members).toEqual([{ userId: id.streamer, roleLevel: 5 }]);
+    // The paid plan the email promised, free.
+    const me = await prisma.user.findUnique({ where: { id: id.streamer }, select: { tier: true } });
+    expect(me?.tier).toBe("FELON");
+    const sub = await prisma.subscription.findUnique({
+      where: { userId: id.streamer },
+      select: { tier: true, status: true },
+    });
+    expect(sub).toEqual({ tier: "FELON", status: "active" });
   });
 
   it("the link works once", async () => {

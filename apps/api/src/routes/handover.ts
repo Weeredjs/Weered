@@ -5,6 +5,23 @@ import { prisma } from "../lib/prisma";
 import { log, swallow } from "../lib/logger";
 import { isStaffRole } from "../lib/lobbyAuth";
 import { sendMail } from "../lib/email";
+import { tierAtLeast } from "../lib/tiers";
+import { paidThroughStripe } from "../lib/stripeTier";
+
+/** The plan a taken lobby comes with (the $14 Felon: its own <lobby>.weered.ca and
+ *  AI-built blocks), free while they stream on it. Someone already on Felon or above,
+ *  or paying through Stripe, keeps what they have. Returns whether it was granted. */
+async function grantStreamerPlan(userId: string, tier: unknown): Promise<boolean> {
+  if (tierAtLeast(tier, "FELON")) return false;
+  if (await paidThroughStripe(userId)) return false;
+  await prisma.user.update({ where: { id: userId }, data: { tier: "FELON" } });
+  await prisma.subscription.upsert({
+    where: { userId },
+    update: { tier: "FELON", status: "active" },
+    create: { userId, tier: "FELON", status: "active" },
+  });
+  return true;
+}
 
 // Handing a lobby to its person (James 2026-11-15, the streamer campaign). We build
 // a streamer's lobby before asking; it stays hidden (unlisted, link only) until they
@@ -137,7 +154,7 @@ export default async function handoverRoutes(
     if (!lobby || lobby.deletedAt) return reply.code(404).send({ ok: false, error: "not_found" });
     const me = await prisma.user.findUnique({
       where: { id: u.id },
-      select: { name: true, usernameKey: true, isGuest: true, email: true },
+      select: { name: true, usernameKey: true, isGuest: true, email: true, tier: true },
     });
     if (!me || me.isGuest) return reply.code(403).send({ ok: false, error: "account_needed" });
     const prev = lobby.ownerId;
@@ -182,9 +199,16 @@ export default async function handoverRoutes(
       for (const r of rooms.values())
         if (r?.lobbyId === lobby.id && r.ownerId === prev) r.ownerId = u.id;
 
+    // The email promised it: the paid plan, free while they stream on it.
+    const planGranted = await grantStreamerPlan(u.id, me.tier).catch((e: any) => {
+      log.warn("[handover plan]", e?.message || e);
+      return false;
+    });
+
     void audit({ id: u.id, name: me.name || u.name }, "lobby.handover.taken", lobby.id, {
       from: prev,
       builtBy: t.by,
+      planGranted,
     });
     const who = `${me.name || me.usernameKey}${me.usernameKey && me.usernameKey !== me.name ? ` (@${me.usernameKey})` : ""}`;
     const link = `${WEB}/lobby/${encodeURIComponent(lobby.id)}`;
@@ -192,8 +216,8 @@ export default async function handoverRoutes(
       to: NOTIFY_TO,
       ...(me.email ? { replyTo: me.email } : {}),
       subject: `[weered.ca] ${lobby.name} was taken by ${me.name || me.usernameKey}`,
-      text: `${who} took ${lobby.name}: ${link}\n\nIt's theirs now and in the town.${me.email ? ` Their email: ${me.email}.` : ""}`,
-      html: `<p>${esc(who)} took ${esc(lobby.name)}: <a href="${link}">${link}</a></p><p>It's theirs now and in the town.${me.email ? ` Their email: ${esc(me.email)}.` : ""}</p>`,
+      text: `${who} took ${lobby.name}: ${link}\n\nIt's theirs now and in the town.${planGranted ? " They're on Felon, free." : ""}${me.email ? ` Their email: ${me.email}.` : ""}`,
+      html: `<p>${esc(who)} took ${esc(lobby.name)}: <a href="${link}">${link}</a></p><p>It's theirs now and in the town.${planGranted ? " They're on Felon, free." : ""}${me.email ? ` Their email: ${esc(me.email)}.` : ""}</p>`,
     }).catch((e: any) => log.warn("[handover mail]", e?.message || e));
     return reply.send({ ok: true, lobbyId: lobby.id });
   });
