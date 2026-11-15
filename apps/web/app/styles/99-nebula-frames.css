@@ -1,0 +1,42 @@
+/* Frames off (Change your drip → Frames; James 2026-11-15: "is there any way
+   around just have the modules float?"). The three columns, the left rail,
+   the centre and the right panel, lose their glass, edge and shadow; the
+   cards inside keep theirs and float on the sky. The columns still scroll;
+   their scrollbars show only while the pointer is over them. The border goes
+   transparent rather than away so nothing shifts by a pixel when toggled.
+   Loaded last, so it wins over the textures, lines, shapes and Blizzard. */
+html[data-weered-theme="nebula"][data-weered-frames="off"]:not([data-weered-lobby]):not(#nb)
+  :is(.weered-left, .weered-right, main.weered-center) {
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  clip-path: none !important;
+}
+html[data-weered-theme="nebula"][data-weered-frames="off"]:not([data-weered-lobby]):not(#nb)
+  :is(.weered-left, .weered-right, main.weered-center)::before,
+html[data-weered-theme="nebula"][data-weered-frames="off"]:not([data-weered-lobby]):not(#nb)
+  :is(.weered-left, .weered-right, main.weered-center)::after {
+  display: none !important;
+}
+
+/* Scrollbars wait for the pointer. */
+html[data-weered-theme="nebula"][data-weered-frames="off"]:not([data-weered-lobby]):not(#nb)
+  :is(.weered-left, .weered-right, .weered-center-body) {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+html[data-weered-theme="nebula"][data-weered-frames="off"]:not([data-weered-lobby]):not(#nb)
+  :is(.weered-left, .weered-right, .weered-center-body):hover {
+  scrollbar-color: rgb(var(--nb-a) / 0.28) transparent;
+}
+html[data-weered-theme="nebula"][data-weered-frames="off"]:not([data-weered-lobby]):not(#nb)
+  :is(.weered-left, .weered-right, .weered-center-body)::-webkit-scrollbar-thumb {
+  background: transparent;
+}
+html[data-weered-theme="nebula"][data-weered-frames="off"]:not([data-weered-lobby]):not(#nb)
+  :is(.weered-left, .weered-right, .weered-center-body):hover::-webkit-scrollbar-thumb {
+  background: rgb(var(--nb-a) / 0.28);
+  border-radius: 99px;
+}

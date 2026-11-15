@@ -725,6 +725,13 @@ export function LookTab({ accent, look }: { accent: string; look: ShellLook }) {
             title="Moving sky"
             blurb="The clouds and stars drift, and now and then a star shoots."
           />
+          <Toggle
+            on={look.frames}
+            accent={accent}
+            onClick={() => editLook({ frames: !look.frames })}
+            title="Frames"
+            blurb="A glass frame around each column. Off, the modules float on the sky."
+          />
           <EffectControls accent={accent} look={look} c={colours} />
           <StructureControls accent={accent} look={look} c={colours} />
         </>

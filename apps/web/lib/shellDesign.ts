@@ -52,6 +52,8 @@ export type ShellLook = {
   stars: boolean;
   /** The sky drifts; off unless chosen (lib/uiPrefs.ts skyMotion). */
   skyMotion: boolean;
+  /** The frame around each column; off floats the modules (uiPrefs frames). */
+  frames: boolean;
   density: "comfortable" | "compact";
   shape: ShellShape;
   /** The side buttons' shape (styles/99-nebula-buttons.css). */
@@ -214,6 +216,7 @@ export function lookFromPrefs(p: UiPrefs): ShellLook {
     font: p.font || "default",
     stars: p.stars !== false,
     skyMotion: p.skyMotion === true,
+    frames: p.frames !== false,
     shape: p.shape || "soft",
     buttons: p.buttons && BUTTONS.includes(p.buttons) ? p.buttons : "tile",
     lines: p.lines || "soft",
@@ -250,6 +253,7 @@ function cleanLook(raw: any, base: ShellLook): ShellLook {
     font: (NEBULA_FONT_IDS as string[]).includes(r.font) ? r.font : base.font,
     stars: typeof r.stars === "boolean" ? r.stars : base.stars,
     skyMotion: typeof r.skyMotion === "boolean" ? r.skyMotion : base.skyMotion,
+    frames: typeof r.frames === "boolean" ? r.frames : base.frames,
     density: r.density === "compact" || r.density === "comfortable" ? r.density : base.density,
     shape: SHAPES.includes(r.shape) ? r.shape : base.shape,
     buttons: BUTTONS.includes(r.buttons) ? r.buttons : base.buttons,
@@ -395,6 +399,7 @@ export async function saveDesign(): Promise<AccountSave> {
     font: d.look.font,
     stars: d.look.stars,
     skyMotion: d.look.skyMotion,
+    frames: d.look.frames,
     density: d.look.density,
     shape: d.look.shape,
     buttons: d.look.buttons,

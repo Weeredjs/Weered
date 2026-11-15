@@ -268,6 +268,27 @@ export default function PrivacyContent() {
             </div>
           </div>
 
+          <div className="legal-section" id="delete-account">
+            <div className="legal-heading">Deleting your Weered account</div>
+            <div className="legal-text">
+              On the website, the desktop app or the Android app: open <strong>Settings</strong>,
+              then <strong>Privacy &amp; Safety</strong>, then <strong>Delete my account</strong>.
+              It takes effect at once. Can&apos;t sign in? Email <strong>privacy@weered.ca</strong>{" "}
+              from the address on the account and we&apos;ll delete it for you.
+              <ul>
+                <li>
+                  <strong>Deleted:</strong> your profile, sign-in, linked accounts (Steam, Twitch,
+                  Xbox and others), location and push subscriptions.
+                </li>
+                <li>
+                  <strong>Kept:</strong> messages you posted stay in their rooms under a generic
+                  &quot;deleted user&quot; name. A lobby you own passes to its top moderator; one
+                  with no moderator, and your place, is deleted after 30 days.
+                </li>
+              </ul>
+            </div>
+          </div>
+
           <div className="legal-section">
             <div className="legal-heading">8. Cookies & Local Storage</div>
             <div className="legal-text">

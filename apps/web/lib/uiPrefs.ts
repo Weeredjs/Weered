@@ -66,6 +66,9 @@ export type UiPrefs = {
   /** Nebula's sky drifts (clouds, aurora, star field, shooting stars). Off
    *  unless chosen: the sky holds still and its bright stars still twinkle. */
   skyMotion?: boolean;
+  /** The glass frame around each column (the rails and the centre). Off lets
+   *  the modules float on the sky (James 2026-11-15). On unless chosen. */
+  frames?: boolean;
   density?: "comfortable" | "compact";
   rail?: { order: RailSection[]; hidden: RailSection[] };
   /** The viewer's own layout (lib/shellLayout.ts); absent = stock. */
@@ -118,6 +121,7 @@ export const DEFAULT_LOOK: UiPrefs = {
   backdrop: "sky",
   stars: true,
   skyMotion: false,
+  frames: true,
   density: "comfortable",
   fx: "none",
   fxIntensity: 1,
@@ -423,6 +427,8 @@ export function paintUiPrefs(p: UiPrefs) {
   else d.removeAttribute("data-weered-stars");
   if (p.skyMotion === true) d.setAttribute("data-weered-sky-motion", "on");
   else d.removeAttribute("data-weered-sky-motion");
+  if (p.frames === false) d.setAttribute("data-weered-frames", "off");
+  else d.removeAttribute("data-weered-frames");
   if (p.density) d.setAttribute("data-weered-density", p.density);
 }
 

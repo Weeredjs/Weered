@@ -150,6 +150,7 @@ try {
   if (up && up.backdrop && up.backdrop !== 'sky') d.setAttribute('data-weered-backdrop', up.backdrop);
   if (up && up.stars === false) d.setAttribute('data-weered-stars', 'off');
   if (up && up.skyMotion === true) d.setAttribute('data-weered-sky-motion', 'on');
+  if (up && up.frames === false) d.setAttribute('data-weered-frames', 'off');
   if (up && (up.bars === 'solid' || up.bars === 'slant')) d.setAttribute('data-weered-bars', up.bars);
   if (up && /^#[0-9a-f]{6}$/i.test(up.barColor || '')) {
     d.style.setProperty('--nb-bar', up.barColor);
