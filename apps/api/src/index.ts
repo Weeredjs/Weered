@@ -184,6 +184,7 @@ import mapsRoutes from "./routes/maps";
 import supportRoutes from "./routes/support";
 import publicRoutes from "./routes/public";
 import overlayRoutes from "./routes/overlay";
+import handoverRoutes from "./routes/handover";
 import { seedSyntheticActivity, capturePublicActivity } from "./lib/publicActivity";
 import jwt from "jsonwebtoken";
 import { WebSocketServer } from "ws";
@@ -1063,6 +1064,8 @@ async function main() {
   await app.register(discordAuthRoutes, { JWT_SECRET, getSiteConfig, seedWelcomeDM });
   await app.register(guestJoinRoutes, { JWT_SECRET });
   await app.register(lobbyDeleteRoutes, { authFromHeader, getGlobalRole });
+  // A prebuilt lobby handed to its person by a one-time link (routes/handover.ts).
+  await app.register(handoverRoutes, { authFromHeader, getGlobalRole, rooms });
   startLobbyPurgeSweep();
 
   const WEB_URL = process.env.APP_URL || "https://weered.ca";

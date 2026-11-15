@@ -85,6 +85,34 @@ export function LobbiesTab({ myRole }: { myRole: GlobalRole }) {
       );
   }
 
+  // A lobby built for someone (the streamer campaign): a one-time link that makes it
+  // theirs. Making it hides the lobby until it's taken (api routes/handover.ts).
+  async function handOver(l: StaffLobby) {
+    if (
+      !confirm(
+        `Make a hand-over link for ${l.name || l.id}? It hides the lobby until it's taken; any older link stops working.`,
+      )
+    )
+      return;
+    const j = await apiFetch(`/staff/lobbies/${encodeURIComponent(l.id)}/handover`, {
+      method: "POST",
+    });
+    if (j?.ok && j.url) {
+      setLobbies((prev) => prev.map((x) => (x.id === l.id ? { ...x, unlisted: true } : x)));
+      try {
+        await navigator.clipboard.writeText(j.url);
+      } catch {
+        /* shown below either way */
+      }
+      setMsg(`Hand-over link (copied, good 30 days): ${j.url}`);
+    } else
+      setMsg(
+        j?.error === "pinned_lobby"
+          ? "Built-in lobbies can't be handed over."
+          : j?.error || "Failed.",
+      );
+  }
+
   async function setFeatured(id: string) {
     const clearing = featuredId === id;
     const j = await apiFetch("/staff/featured", {
@@ -286,6 +314,15 @@ export function LobbiesTab({ myRole }: { myRole: GlobalRole }) {
                   >
                     Clear Chat
                   </button>
+                  {!l.pinned && (
+                    <button
+                      style={{ ...S.btn, fontSize: 11, padding: "4px 8px" }}
+                      onClick={() => void handOver(l)}
+                      title="A one-time link that makes this lobby someone's own"
+                    >
+                      Hand over
+                    </button>
+                  )}
                   <button
                     style={{ ...S.danger, fontSize: 11, padding: "4px 8px" }}
                     onClick={() => void deleteLobby(l)}
