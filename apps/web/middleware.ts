@@ -62,6 +62,10 @@ export async function middleware(req: NextRequest) {
       const to = req.cookies.get("weered_token")?.value ? "/api/office/host-pass" : "/foyer";
       return NextResponse.redirect(new URL(to, `https://${host}`), 307);
     }
+    // The public booking page (app/foyer/book; 2026-11-16): the short link
+    // prospects get, office.eastcoastemployeebenefits.com/book.
+    if (path === "/book" || path === "/calendar")
+      return NextResponse.redirect(new URL("/foyer/book", `https://${host}`), 307);
     // One office (James 2026-11-11: "combine the two spaces"): the old Weered
     // room for it goes to the Review Room too.
     if (path.startsWith("/room/mtg-eceb"))

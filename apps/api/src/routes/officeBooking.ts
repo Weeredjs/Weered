@@ -248,6 +248,9 @@ async function mailReminder(b: Booking) {
   });
 }
 
+/** Bookings made without James in a day, at most (the public page's ceiling). */
+const PUBLIC_PER_DAY = 25;
+
 export default async function officeBookingRoutes(app: FastifyInstance, opts: Opts) {
   const { authFromHeader, officeHostFromReq } = opts;
 
@@ -274,9 +277,22 @@ export default async function officeBookingRoutes(app: FastifyInstance, opts: Op
     async (req, reply) => {
       const host = await officeHostFromReq(req);
       const visitor = host ? null : visitorOf(req);
-      if (!host && !visitor) return reply.code(401).send({ ok: false, error: "office_only" });
       const body: any = req.body || {};
       const store = readStore();
+      // Anyone may book from the public page (app/foyer/book, 2026-11-16).
+      // Guards: the per-address rate limit above, two upcoming per email
+      // (book()), a field only a bot fills, and a ceiling on public bookings
+      // a day so nobody can use it to mail strangers in bulk.
+      if (!host && !visitor) {
+        if (typeof body.website === "string" && body.website.trim())
+          return reply.code(400).send({ ok: false, error: "rejected" });
+        const day = Date.now() - 86400_000;
+        const today = store.bookings.filter(
+          (b) => b.by === "visitor" && Date.parse(b.createdAt) > day,
+        ).length;
+        if (today >= PUBLIC_PER_DAY)
+          return reply.code(429).send({ ok: false, error: "calendar_full" });
+      }
       const r = book(store, {
         start: body.start,
         name: body.name,

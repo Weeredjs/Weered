@@ -1017,7 +1017,26 @@ function ClientView({
           {phase === "error" ? (
             <>
               <p style={{ ...S.err, marginTop: 14 }}>{err}</p>
-              <button style={S.btn} onClick={() => setPhase("enter")}>
+              {/* Closed: book a time instead of a dead end (2026-11-16). */}
+              {/appointment/.test(err) && (
+                <a
+                  href="/foyer/book"
+                  style={{
+                    ...S.btn,
+                    display: "block",
+                    textDecoration: "none",
+                    textAlign: "center",
+                    boxSizing: "border-box",
+                    marginBottom: 8,
+                  }}
+                >
+                  Book a time with James
+                </a>
+              )}
+              <button
+                style={/appointment/.test(err) ? { ...S.textBtn, width: "100%" } : S.btn}
+                onClick={() => setPhase("enter")}
+              >
                 Try again
               </button>
             </>

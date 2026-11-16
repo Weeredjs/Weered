@@ -99,20 +99,66 @@ function Modal({
   );
 }
 
+/** The public page's card: the same body, no close (app/foyer/book). */
+function PageCard({
+  title,
+  children,
+}: {
+  title: string;
+  onClose: () => void;
+  children: ReactNode;
+  wide?: boolean;
+}) {
+  return (
+    <div style={{ ...B.card, maxWidth: 620, maxHeight: "none" }}>
+      <div style={B.head}>
+        <span style={B.title}>{title}</span>
+      </div>
+      <div style={B.body}>{children}</div>
+    </div>
+  );
+}
+
 // ---------------------------------------------------------------------------
-// Book a follow-up (a visitor, or James for a visitor)
+// Book a follow-up (a visitor, James for a visitor, or anyone on the public
+// page: Daily Ops 2026-11-16, for James, "a page anyone can open, see open
+// slots, and book in one step")
 // ---------------------------------------------------------------------------
 export function BookFollowUp({
   host,
   getToken,
   defaultName = "",
   onClose,
+  page = false,
 }: {
   host: boolean;
   getToken: () => string | null;
   defaultName?: string;
   onClose: () => void;
+  /** The public page: no modal, no sign-in, the visitor's own time shown too. */
+  page?: boolean;
 }) {
+  const Frame = page ? PageCard : Modal;
+  // Prospects are across Canada: their own clock beside Atlantic time. Read
+  // after mount so the server's zone never lands in the page.
+  const [localTz, setLocalTz] = useState("");
+  useEffect(() => {
+    try {
+      setLocalTz(Intl.DateTimeFormat().resolvedOptions().timeZone || "");
+    } catch {
+      /* Atlantic only */
+    }
+  }, []);
+  const yours = (iso: string) => {
+    if (!localTz || localTz === TZ) return "";
+    const l = new Intl.DateTimeFormat("en-CA", {
+      timeZone: localTz,
+      hour: "numeric",
+      minute: "2-digit",
+    }).format(new Date(iso));
+    return l !== timeOf(iso) ? l : "";
+  };
+  const [trap, setTrap] = useState("");
   const [slots, setSlots] = useState<string[] | null>(null);
   const [slotMin, setSlotMin] = useState(30);
   const [day, setDay] = useState("");
@@ -149,13 +195,14 @@ export function BookFollowUp({
     setBusy(true);
     setErr("");
     try {
+      const token = getToken();
       const r = await fetch(`${API}/office/booking`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${getToken() || ""}`,
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify({ start: pick, name, email, note }),
+        body: JSON.stringify({ start: pick, name, email, note, website: trap }),
       });
       const j = await r.json().catch(() => ({}));
       if (r.status === 429) setErr("Too many tries. Try again in a little while.");
@@ -175,30 +222,40 @@ export function BookFollowUp({
 
   if (done)
     return (
-      <Modal title="Booked" onClose={onClose}>
+      <Frame title={page ? "You're booked" : "Booked"} onClose={onClose}>
         <p style={B.lead}>
-          {host ? `${name}'s follow-up` : "Your follow-up"} is on <b>{longWhen(done)}</b>{" "}
-          <span style={{ color: MUTED }}>(Atlantic time)</span>.
+          {host ? `${name}'s time is` : page ? "We're booked for" : "Your follow-up is on"}{" "}
+          <b>{longWhen(done)}</b> <span style={{ color: MUTED }}>Atlantic</span>
+          {yours(done) ? <span style={{ color: MUTED }}> ({yours(done)} your time)</span> : null}.
         </p>
         <p style={B.p}>
-          An invite with the office link is on its way to <b>{email}</b>.
+          An invite with the link is on its way to <b>{email}</b>.
           {host
             ? " It's on your office calendar too."
-            : " At that time, open the same office link."}
+            : page
+              ? " When it's time, come to the office: office.eastcoastemployeebenefits.com. No app, no sign-in."
+              : " At that time, open the same office link."}
         </p>
-        <button style={B.primary} onClick={onClose}>
-          Done
-        </button>
-      </Modal>
+        {!page && (
+          <button style={B.primary} onClick={onClose}>
+            Done
+          </button>
+        )}
+      </Frame>
     );
 
   return (
-    <Modal title={host ? "Book a follow-up" : "Book a follow-up with James"} onClose={onClose}>
+    <Frame
+      title={host ? "Book a follow-up" : page ? "Pick a time" : "Book a follow-up with James"}
+      onClose={onClose}
+    >
       {slots === null ? (
         <p style={B.p}>Loading open times…</p>
       ) : slots.length === 0 ? (
         <p style={B.p}>
-          No open times right now. Leave James a note on the board and he&apos;ll find one.
+          {page
+            ? "No open times right now. Email james@eastcoastemployeebenefits.com and he'll find one."
+            : "No open times right now. Leave James a note on the board and he'll find one."}
         </p>
       ) : (
         <>
@@ -241,6 +298,11 @@ export function BookFollowUp({
                 onClick={() => setPick(t)}
               >
                 {timeOf(t)}
+                {yours(t) ? (
+                  <span style={{ display: "block", fontSize: 10.5, opacity: 0.7, fontWeight: 400 }}>
+                    {yours(t)} yours
+                  </span>
+                ) : null}
               </button>
             ))}
           </div>
@@ -279,6 +341,16 @@ export function BookFollowUp({
               maxLength={400}
             />
           </label>
+          {/* A field people never see; a form-filling bot does. */}
+          <input
+            tabIndex={-1}
+            autoComplete="off"
+            aria-hidden="true"
+            name="website"
+            value={trap}
+            onChange={(e) => setTrap(e.target.value)}
+            style={{ position: "absolute", left: -9999, width: 1, height: 1, opacity: 0 }}
+          />
           {err && <div style={B.err}>{err}</div>}
           <div
             style={{
@@ -290,7 +362,9 @@ export function BookFollowUp({
             }}
           >
             <span style={{ color: MUTED, fontSize: 12.5 }}>
-              {pick ? longWhen(pick) : "Pick a day and a time."}
+              {pick
+                ? `${longWhen(pick)} Atlantic${yours(pick) ? ` · ${yours(pick)} your time` : ""}`
+                : "Pick a day and a time."}
             </span>
             <button
               style={{ ...B.primary, opacity: busy || !pick ? 0.6 : 1 }}
@@ -303,7 +377,7 @@ export function BookFollowUp({
         </>
       )}
       <style>{BK_CSS}</style>
-    </Modal>
+    </Frame>
   );
 }
 
