@@ -1986,6 +1986,7 @@ async function main() {
           msg.type === "room:slow" ||
           msg.type === "room:admit" ||
           msg.type === "room:deny" ||
+          msg.type === "room:release" ||
           msg.type === "staff:kick" ||
           msg.type === "mod:mute" ||
           msg.type === "mod:unmute" ||

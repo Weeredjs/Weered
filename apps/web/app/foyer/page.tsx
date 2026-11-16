@@ -39,7 +39,8 @@ const PAPER_INK = "#10233F";
 // --- shared types ---
 type Scope = { office?: string; foyer?: string; lobbyId?: string | null };
 type Msg = { id: string; name: string; body: string };
-type Person = { id: string; name: string };
+/** guest: a visitor (not the host); only visitors can be stepped back out. */
+type Person = { id: string; name: string; guest?: boolean };
 type Knock = { id: string; name: string };
 
 /** What a client is sent: the office's address, which opens on this door. */
@@ -368,6 +369,9 @@ function pushMsg(prev: Msg[], m: any): Msg[] {
 // only lists people who connected A/V — unreliable, the source of the host's empty
 // office). Drops the AI operator + system rows. Self is pinned first + labelled, or
 // excluded entirely (the host must not appear in his own waiting room).
+/** A visitor to the office: a guest session, not a Weered account. */
+const isVisitor = (u: any) => !!u?.isGuest || String(u?.id || "").startsWith("guest_");
+
 function toPeople(users: any[], selfId: string, excludeSelf: boolean): Person[] {
   const out: Person[] = [];
   for (const u of users || []) {
@@ -376,7 +380,7 @@ function toPeople(users: any[], selfId: string, excludeSelf: boolean): Person[] 
     if (u.id === selfId) {
       if (!excludeSelf) out.unshift({ id: u.id, name: `${u.name || "You"} (you)` });
     } else {
-      out.push({ id: u.id, name: u.name || "Guest" });
+      out.push({ id: u.id, name: u.name || "Guest", guest: isVisitor(u) });
     }
   }
   return out;
@@ -733,7 +737,12 @@ function ClientView({
             resetOfficeYt();
             clearEntryTimers();
             setEntry("in");
-            setInfo("The review has ended.");
+            // released: the host stepped them back out (room:release); they may knock again.
+            setInfo(
+              m.reason === "released"
+                ? "You're back in the waiting room. Knock when you'd like to come in again."
+                : "The review has ended.",
+            );
             setPhase("foyer");
             switchTo(foyerRoom.current).catch(() => {
               setErr("The review has ended.");
@@ -1240,6 +1249,22 @@ function HostView({ jwt, title, accent }: { jwt: string; title: string; accent: 
   const [foyerMessages, setFoyerMessages] = useState<Msg[]>([]);
   const [knocks, setKnocks] = useState<Knock[]>([]);
   const [officeRoster, setOfficeRoster] = useState<Person[]>([]);
+  // The participants list's open menu (James 2026-11-16: "No participants
+  // list? Not even to navigate through a menu to?").
+  const [menuFor, setMenuFor] = useState<string | null>(null);
+  useEffect(() => {
+    if (!menuFor) return;
+    const close = (e: MouseEvent) => {
+      if (!(e.target as HTMLElement)?.closest?.("[data-person-menu]")) setMenuFor(null);
+    };
+    const esc = (e: KeyboardEvent) => e.key === "Escape" && setMenuFor(null);
+    document.addEventListener("mousedown", close);
+    document.addEventListener("keydown", esc);
+    return () => {
+      document.removeEventListener("mousedown", close);
+      document.removeEventListener("keydown", esc);
+    };
+  }, [menuFor]);
   const [officeMessages, setOfficeMessages] = useState<Msg[]>([]);
   const [chatInput, setChatInput] = useState("");
   const [micOn, setMicOn] = useState(true);
@@ -1404,6 +1429,7 @@ function HostView({ jwt, title, accent }: { jwt: string; title: string; accent: 
                           m.user.id === hostId
                             ? `${m.user.name || "You"} (you)`
                             : m.user.name || "Guest",
+                        guest: m.user.id !== hostId && isVisitor(m.user),
                       },
                     ],
               );
@@ -1663,6 +1689,52 @@ function HostView({ jwt, title, accent }: { jwt: string; title: string; accent: 
 
         <aside style={S.side}>
           <div style={S.sideHead}>In the office ({officeRoster.length})</div>
+          <ul style={S.roster}>
+            {officeRoster.map((p) => {
+              const nm = (p.name || "Guest").replace(/\(you\)/i, "").trim();
+              const isYou = p.id === hostId;
+              return (
+                <li
+                  key={p.id}
+                  className="fx-row"
+                  data-person-menu
+                  style={{ ...S.rosterItem, position: "relative" }}
+                >
+                  <span style={S.medallion}>{nm.charAt(0).toUpperCase() || "·"}</span>
+                  <span style={S.rosterName}>{nm}</span>
+                  {isYou && <span style={S.youTag}>You</span>}
+                  {p.guest && (
+                    <button
+                      style={S.dots}
+                      aria-haspopup="menu"
+                      aria-expanded={menuFor === p.id}
+                      aria-label={`Options for ${nm}`}
+                      title="Options"
+                      onClick={() => setMenuFor(menuFor === p.id ? null : p.id)}
+                    >
+                      ⋯
+                    </button>
+                  )}
+                  <span style={S.presDot} />
+                  {menuFor === p.id && (
+                    <div role="menu" style={S.menu}>
+                      <button
+                        role="menuitem"
+                        className="fx-row"
+                        style={S.menuItem}
+                        onClick={() => {
+                          sendOffice({ type: "room:release", userId: p.id });
+                          setMenuFor(null);
+                        }}
+                      >
+                        Send to the waiting room
+                      </button>
+                    </div>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
           <div style={{ ...S.chat, maxHeight: 220 }}>
             {officeMessages.length === 0 && <div style={S.chatEmpty}>No messages yet.</div>}
             {officeMessages.map((m) => (
@@ -2124,6 +2196,45 @@ const S: Record<string, CSSProperties> = {
     fontFamily: UIFONT,
     cursor: "pointer",
     transition: `background-color 260ms ${EASE}`,
+  },
+  // The office's participants list: a person's menu (HostView).
+  dots: {
+    width: 26,
+    height: 22,
+    padding: 0,
+    borderRadius: 4,
+    border: "1px solid transparent",
+    background: "transparent",
+    color: MUTED_TEXT,
+    fontSize: 16,
+    lineHeight: "18px",
+    cursor: "pointer",
+    flexShrink: 0,
+  },
+  menu: {
+    position: "absolute",
+    right: 10,
+    top: "100%",
+    zIndex: 20,
+    minWidth: 210,
+    padding: 4,
+    borderRadius: 6,
+    border: "1px solid #1E3A5F",
+    background: "#0B1A2E",
+    boxShadow: "0 12px 28px rgba(0,0,0,.45)",
+  },
+  menuItem: {
+    display: "block",
+    width: "100%",
+    padding: "7px 10px",
+    borderRadius: 4,
+    border: 0,
+    background: "transparent",
+    color: INK_TEXT,
+    fontSize: 13,
+    fontFamily: UIFONT,
+    textAlign: "left",
+    cursor: "pointer",
   },
   miniBtnQuiet: {
     padding: "3px 10px",

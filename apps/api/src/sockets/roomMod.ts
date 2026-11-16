@@ -2,7 +2,8 @@ import { swallow } from "../lib/logger";
 import { prisma } from "../lib/prisma";
 import { RoomRole } from "@prisma/client";
 import { removeFromVoice } from "../lib/livekitAdmin";
-import { rankIn, rankOf, roleOf } from "../lib/roomState";
+import { leaveRoom, rankIn, rankOf, roleOf } from "../lib/roomState";
+import { isOfficeRoom } from "../lib/officeRooms";
 import { roomForOneMore } from "../lib/socketFrames";
 import { mayActOn } from "../lib/roleLadder";
 
@@ -253,6 +254,26 @@ export async function handleRoomMod(
     }
     removePending(room, targetId);
     audit(room, { type: "room:deny", actorId, actorName, targetId });
+    publishState(room);
+    return;
+  }
+
+  // The office host steps a seated visitor back out to the waiting room
+  // (James 2026-11-16, the office's participants list). Visitors only, and
+  // only in an office: they can knock again, so nothing holds them out. They
+  // hear room:denied with a reason, which the guest page reads as "back to
+  // the waiting room"; leaveRoom takes them off the call and settles the door.
+  if (msg.type === "room:release") {
+    if (!actorIsMod || !isOfficeRoom(roomId) || roomId.endsWith("-foyer")) return;
+    const targetId = String(msg.userId || "");
+    if (!targetId || targetId === actorId) return;
+    const seated: any = room.users.get(targetId);
+    if (!seated?.isGuest) return;
+    for (const s of findSocketsByUser(room, targetId)) {
+      send(s, { type: "room:denied", roomId, reason: "released" });
+      leaveRoom(s);
+    }
+    audit(room, { type: "room:release", actorId, actorName, targetId });
     publishState(room);
     return;
   }
