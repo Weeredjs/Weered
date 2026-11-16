@@ -16,6 +16,7 @@ import { PlanModule, PresentedPlanViewer } from "./PlanModule";
 import OfficeWindow from "./OfficeWindow";
 import OfficeWall, { officeYt, resetOfficeYt } from "./OfficeWall";
 import { BookFollowUp, BookingsDesk } from "./BookingPanel";
+import { Faces } from "./Faces";
 
 const YT_FRAMES = new Set([
   "youtube:state",
@@ -1168,10 +1169,20 @@ function ClientView({
         <div style={S.body}>
           <main style={S.stage}>
             {!inOffice && (
-              <div style={S.parlourWrap}>
-                <div style={S.card}>
-                  <div style={S.kicker}>East Coast Employee Benefits</div>
-                  <div style={S.serifH}>Welcome{name.trim() ? `, ${name.trim()}` : ""}.</div>
+              // The waiting room, full screen over a dimmed window (James
+              // 2026-11-16: "make the Welcome Dan thing full screen. Have our
+              // logo on it ... a faded overlay so you can see out the window").
+              <div style={S.welcome} role="dialog" aria-label="Waiting for James">
+                <style>{`@keyframes fx-knock{0%,80%,100%{opacity:.25;transform:translateY(0)}40%{opacity:1;transform:translateY(-3px)}}`}</style>
+                <div style={S.welcomeInner}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src="/brand/eceb-logo-white.png?v=2"
+                    alt="East Coast Employee Benefits"
+                    style={{ height: 96, width: "auto", marginBottom: 26 }}
+                  />
+                  <div style={S.welcomeH}>Welcome{name.trim() ? `, ${name.trim()}` : ""}.</div>
+                  <div style={S.welcomeRule} />
                   {(phase === "knocking" || autoKnock.current) && doorOpen ? (
                     /* An open door: the "knock" seats them; this shows for a beat. */
                     <p style={S.parlourLine}>{"The door's open. Walking you in…"}</p>
@@ -1184,17 +1195,65 @@ function ClientView({
                       <p style={S.parlourLine}>{"When he's ready, the door opens on its own."}</p>
                       <p style={S.parlourLine}>Your review is prepared and waiting.</p>
                       {info && <p style={{ ...S.parlourLine, color: INK_TEXT }}>{info}</p>}
-                      <button style={{ ...S.textBtn, marginTop: 12 }} onClick={cancelKnock}>
-                        Cancel
-                      </button>
+                      <div style={S.knockDots} aria-hidden>
+                        {[0, 1, 2].map((i) => (
+                          <span
+                            key={i}
+                            style={{
+                              ...S.knockDot,
+                              animation: `fx-knock 1.4s ${i * 0.18}s infinite ease-in-out`,
+                            }}
+                          />
+                        ))}
+                      </div>
+                      <div
+                        style={{
+                          display: "flex",
+                          gap: 10,
+                          justifyContent: "center",
+                          marginTop: 8,
+                          flexWrap: "wrap",
+                        }}
+                      >
+                        <button
+                          className="fx-ctl"
+                          style={S.welcomeGhost}
+                          onClick={() => setBookOpen(true)}
+                        >
+                          Book a time instead
+                        </button>
+                        <button style={S.textBtn} onClick={cancelKnock}>
+                          Cancel
+                        </button>
+                      </div>
                     </>
                   ) : (
                     <>
                       <p style={S.parlourLine}>{"Take a seat. Whenever you're ready:"}</p>
                       {info && <p style={{ ...S.parlourLine, color: INK_TEXT }}>{info}</p>}
-                      <button style={{ ...S.btn, marginTop: 10 }} onClick={knock}>
+                      <button style={{ ...S.btn, marginTop: 10, maxWidth: 340 }} onClick={knock}>
                         {"Let James know you're here"}
                       </button>
+                      <div
+                        style={{
+                          display: "flex",
+                          gap: 10,
+                          justifyContent: "center",
+                          marginTop: 14,
+                          flexWrap: "wrap",
+                        }}
+                      >
+                        <button
+                          className="fx-ctl"
+                          style={S.welcomeGhost}
+                          onClick={() => setBookOpen(true)}
+                        >
+                          Book a time instead
+                        </button>
+                        <button style={S.textBtn} onClick={leave}>
+                          Leave
+                        </button>
+                      </div>
                     </>
                   )}
                 </div>
@@ -1202,7 +1261,7 @@ function ClientView({
             )}
             {inOffice && <PresentedPlanViewer getToken={() => token.current} accent={accent} />}
             <div ref={screenEl} style={S.screen} />
-            <div ref={tilesEl} style={S.tiles} />
+            <Faces tilesEl={tilesEl} people={roster} selfId={selfId.current} show={inOffice} />
             {inOffice && <OfficeWall host={false} getToken={() => token.current} send={() => {}} />}
           </main>
           <aside style={S.side}>
@@ -1763,7 +1822,7 @@ function HostView({ jwt, title, accent }: { jwt: string; title: string; accent: 
         <main style={S.stage}>
           <PlanModule jwt={jwt} accent={accent} />
           <div ref={screenEl} style={S.screen} />
-          <div ref={tilesEl} style={S.tiles} />
+          <Faces tilesEl={tilesEl} people={officeRoster} selfId={hostId} show />
           <OfficeWall
             host
             getToken={() => jwt}
@@ -2054,7 +2113,7 @@ const S: Record<string, CSSProperties> = {
   },
   parlourLine: {
     fontFamily: UIFONT,
-    fontSize: 14,
+    fontSize: 15.5,
     color: MUTED_TEXT,
     margin: "0 0 8px",
     lineHeight: 1.55,
@@ -2216,6 +2275,61 @@ const S: Record<string, CSSProperties> = {
     gap: 12,
   },
   parlourWrap: { display: "flex", justifyContent: "center", padding: "9vh 0 24px" },
+  // The waiting room over the window: dim enough to read, clear enough to see out.
+  welcome: {
+    position: "fixed",
+    inset: 0,
+    zIndex: 60,
+    display: "grid",
+    placeItems: "center",
+    padding: 24,
+    background:
+      "radial-gradient(ellipse at 50% 42%, rgba(8,20,38,.55) 0%, rgba(6,15,29,.78) 70%, rgba(4,10,20,.88) 100%)",
+    backdropFilter: "blur(2px)",
+    WebkitBackdropFilter: "blur(2px)",
+  },
+  welcomeInner: {
+    width: "100%",
+    maxWidth: 560,
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    textAlign: "center",
+  },
+  welcomeH: {
+    fontFamily: SERIF,
+    fontSize: 46,
+    fontWeight: 400,
+    color: "#F3E9D2",
+    letterSpacing: ".01em",
+    lineHeight: 1.1,
+    textShadow: "0 2px 18px rgba(0,0,0,.45)",
+  },
+  welcomeRule: {
+    width: 64,
+    height: 2,
+    margin: "18px 0 18px",
+    background: GOLD_GRAD,
+    borderRadius: 2,
+  },
+  knockDots: { display: "flex", gap: 8, justifyContent: "center", margin: "10px 0 12px" },
+  knockDot: {
+    width: 8,
+    height: 8,
+    borderRadius: "50%",
+    background: "#C6A15B",
+    display: "inline-block",
+  },
+  welcomeGhost: {
+    padding: "9px 16px",
+    borderRadius: 4,
+    border: "1px solid rgba(198,161,91,.6)",
+    background: "rgba(10,29,53,.55)",
+    color: INK_TEXT,
+    fontSize: 13.5,
+    fontFamily: UIFONT,
+    cursor: "pointer",
+  },
   knockBox: {
     display: "flex",
     flexDirection: "column",
