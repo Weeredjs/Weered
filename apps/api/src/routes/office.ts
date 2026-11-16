@@ -222,7 +222,12 @@ export default async function officeRoutes(app: FastifyInstance, opts: Opts) {
       hostIn,
       doorOpen: await doorOpen(),
       walkIn: st.walkIn,
-      open: st.open,
+      // "open" is what the ECEB site's badge reads (its WordPress proxy passes
+      // only open + schedule), so it means receiving: James 2026-11-16, in the
+      // office with the badge saying "Office closed" "Even after refreshes".
+      // The bare sign stays readable as `sign`.
+      open: st.open || hostIn,
+      sign: st.open,
       schedule: st.schedule,
       note: st.note,
       auto: st.auto,
