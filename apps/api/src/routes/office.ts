@@ -6,7 +6,7 @@ import type { FastifyInstance } from "fastify";
 import jwt from "jsonwebtoken";
 import { randomBytes } from "crypto";
 import { readFileSync, writeFileSync } from "fs";
-import { sendPush } from "../lib/notifications";
+import { alertOffice } from "../lib/officeAlert";
 import { prisma } from "../lib/prisma";
 import { sendMail } from "../lib/email";
 import {
@@ -285,14 +285,8 @@ export default async function officeRoutes(app: FastifyInstance, opts: Opts) {
           .trim()
           .slice(0, 40) || "Visitor";
       pushWaiting(visitorName);
-      if (host?.id) {
-        sendPush(host.id, {
-          title: "Someone's at your office door",
-          body: `${visitorName} just walked in. Tap to greet them.`,
-          url: "/foyer",
-          tag: "office-walkin",
-        }).catch(() => {});
-      }
+      // No push here: this only hands them a pass. Their knock or walk-in
+      // rings James's phone (sockets/presence.ts, lib/officeAlert.ts).
       return reply.send({ ok: true, url: `/foyer?invite=${token}&title=Office%20Hours` });
     },
   );
@@ -341,16 +335,11 @@ export default async function officeRoutes(app: FastifyInstance, opts: Opts) {
       if ("error" in r) return reply.code(400).send({ ok: false, error: r.error });
       writeBoard(r.notes);
       if (r.note.private) {
-        const host = await prisma.user
-          .findUnique({ where: { usernameKey: "eceb-host" }, select: { id: true } })
-          .catch(() => null);
-        if (host?.id)
-          sendPush(host.id, {
-            title: `${r.note.by} left you a note`,
-            body: r.note.body.slice(0, 120),
-            url: "/foyer",
-            tag: "office-note",
-          }).catch(() => {});
+        // To James's own accounts: eceb-host has no phone (lib/officeAlert.ts).
+        void alertOffice("note", r.note.id, {
+          title: `${r.note.by} left you a note`,
+          body: r.note.body.slice(0, 120),
+        });
         const esc = (s: string) =>
           s.replace(
             /[&<>"]/g,

@@ -20,6 +20,7 @@ import { randomBytes } from "node:crypto";
 import nodemailer, { type Transporter } from "nodemailer";
 import type { FastifyInstance } from "fastify";
 import { sendMail } from "../lib/email";
+import { alertOffice } from "../lib/officeAlert";
 import { swallow } from "../lib/logger";
 import {
   active,
@@ -303,6 +304,11 @@ export default async function officeBookingRoutes(app: FastifyInstance, opts: Op
       if (!r.ok) return reply.code(409).send(r);
       writeStore(store);
       void mailBooked(r.booking);
+      if (!host)
+        void alertOffice("booking", r.booking.id, {
+          title: `${r.booking.name} booked ${whenPlain(r.booking.start)}`,
+          body: "Atlantic time. It's on your office calendar.",
+        });
       return reply.send({ ok: true, booking: { start: r.booking.start, end: r.booking.end } });
     },
   );

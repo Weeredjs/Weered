@@ -3,6 +3,7 @@ import { canEnterGatedRoom, lobbyLevelOf } from "../lib/lobbyAccess";
 import { announcePresence, banExempt } from "../lib/roomState";
 import { isLobbyDeleted } from "../lib/lobbyDelete";
 import { isOfficeRoom } from "../lib/officeRooms";
+import { alertOffice } from "../lib/officeAlert";
 import { guestMayEnter } from "../lib/guestScope";
 import { isStaffRoomId, mayEnterStaffRoom } from "../lib/staffRooms";
 import bcrypt from "bcryptjs";
@@ -242,6 +243,12 @@ export async function handlePresence(ws: any, msg: any, opts: Opts): Promise<voi
       ws.pendingRoomId = roomId;
       send(ws, { type: "room:knock:queued", roomId });
       if (knocked) return;
+      // A visitor at the office door rings James's phone (lib/officeAlert.ts).
+      if (isOfficeRoom(roomId) && !roomId.endsWith("-foyer") && (ws.user as any).guest)
+        void alertOffice("knock", uid, {
+          title: `${ws.user.name || "Someone"} is knocking`,
+          body: "At your office door. Tap to let them in.",
+        });
       for (const s of room.sockets) {
         const sid = s.user?.id;
         if (!sid || !isModOrOwner(room, sid)) continue;
@@ -250,6 +257,18 @@ export async function handlePresence(ws: any, msg: any, opts: Opts): Promise<voi
       publishState(room);
       return;
     }
+    // A visitor walking straight in (Walk-ins on) rings James too; a page
+    // rejoining after a restart doesn't (alertOffice keeps quiet a while).
+    if (
+      isOfficeRoom(roomId) &&
+      !roomId.endsWith("-foyer") &&
+      (ws.user as any).guest &&
+      !room.users.has(uid)
+    )
+      void alertOffice("walkin", uid, {
+        title: `${ws.user.name || "Someone"} walked into your office`,
+        body: "The door was open. Tap to go in.",
+      });
     await doJoin(ws, roomId);
     return;
   }
