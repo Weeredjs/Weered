@@ -20,6 +20,7 @@ import {
 import { doorShouldBeLocked, officeStateFile, walkInsOn } from "../lib/officeDoor";
 import { settleOfficeDoor } from "../lib/roomState";
 import { BoundedMap } from "../lib/boundedMap";
+import officeBookingRoutes from "./officeBooking";
 
 type Opts = {
   authFromHeader: (h?: string) => { id: string; name: string } | null;
@@ -1024,4 +1025,7 @@ export default async function officeRoutes(app: FastifyInstance, opts: Opts) {
       return reply.code(404).send("control not found");
     }
   });
+
+  // Follow-up bookings and the calendar feed (routes/officeBooking.ts).
+  await officeBookingRoutes(app, { authFromHeader, officeHostFromReq });
 }

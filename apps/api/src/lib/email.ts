@@ -46,8 +46,15 @@ export async function sendMail(opts: {
   text?: string;
   /** Where a reply goes (the contact form: the person who wrote in). */
   replyTo?: string;
+  /** The sender's shown name; the address stays the verified one (the office
+   *  mails as East Coast Employee Benefits, 2026-11-16). */
+  fromName?: string;
+  /** Files with the mail: the office's calendar invites (text/calendar). */
+  attachments?: Array<{ filename: string; content: string; contentType: string }>;
 }): Promise<SendMailResult> {
-  const from = process.env.MAIL_FROM || process.env.SMTP_FROM || "Weered <onboarding@resend.dev>";
+  const baseFrom =
+    process.env.MAIL_FROM || process.env.SMTP_FROM || "Weered <onboarding@resend.dev>";
+  const from = opts.fromName ? withName(baseFrom, opts.fromName) : baseFrom;
 
   const resend = getResend();
   if (resend) {
@@ -59,7 +66,16 @@ export async function sendMail(opts: {
         html: opts.html,
         text: opts.text || stripHtml(opts.html),
         ...(opts.replyTo ? { replyTo: opts.replyTo } : {}),
-      });
+        ...(opts.attachments?.length
+          ? {
+              attachments: opts.attachments.map((a) => ({
+                filename: a.filename,
+                content: Buffer.from(a.content, "utf8"),
+                contentType: a.contentType,
+              })),
+            }
+          : {}),
+      } as any);
       if ((r as any).error) {
         log.error("[email:resend] send failed:", (r as any).error);
         return { ok: false, error: String((r as any).error?.message || (r as any).error) };
@@ -92,12 +108,20 @@ export async function sendMail(opts: {
       html: opts.html,
       text: opts.text || stripHtml(opts.html),
       ...(opts.replyTo ? { replyTo: opts.replyTo } : {}),
+      ...(opts.attachments?.length ? { attachments: opts.attachments } : {}),
     });
     return { ok: true, messageId: info.messageId };
   } catch (e: any) {
     log.error("[email:smtp] send failed:", e?.message || e);
     return { ok: false, error: e?.message || "send_failed" };
   }
+}
+
+/** "Name <a@b>" with another name; a bare address gets one. */
+export function withName(from: string, name: string): string {
+  const addr = from.match(/<([^>]+)>/)?.[1] || from.trim();
+  const safe = name.replace(/["<>\r\n]/g, "").trim();
+  return safe ? `"${safe}" <${addr}>` : from;
 }
 
 function stripHtml(html: string): string {

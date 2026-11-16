@@ -12,6 +12,10 @@ export const GUEST_ALLOWED_PATHS = new Set([
   // notes, and leaves James a note only he sees (routes/office.ts, lib/officeBoard.ts).
   // The end-to-end run on prod found visitors stopped here with an empty board.
   "/office/board",
+  // Follow-up bookings (2026-11-16): a visitor sees open times and books one
+  // (routes/officeBooking.ts re-checks the guest's office scope).
+  "/office/booking/slots",
+  "/office/booking",
 ]);
 
 /** A visitor takes down a note of their own (the route checks it's theirs). */

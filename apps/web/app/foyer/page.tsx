@@ -15,6 +15,7 @@ import { Room, RoomEvent, Track } from "livekit-client";
 import { PlanModule, PresentedPlanViewer } from "./PlanModule";
 import OfficeWindow from "./OfficeWindow";
 import OfficeWall, { officeYt, resetOfficeYt } from "./OfficeWall";
+import { BookFollowUp, BookingsDesk } from "./BookingPanel";
 
 const YT_FRAMES = new Set([
   "youtube:state",
@@ -477,6 +478,8 @@ function ClientView({
 }) {
   const [phase, setPhase] = useState<ClientPhase>("enter");
   const [name, setName] = useState("");
+  // Book a follow-up (BookingPanel.tsx; James 2026-11-16).
+  const [bookOpen, setBookOpen] = useState(false);
   const [err, setErr] = useState("");
   const [info, setInfo] = useState(""); // transient non-fatal notice (e.g. denied knock)
   const [roster, setRoster] = useState<Person[]>([]);
@@ -1180,6 +1183,15 @@ function ClientView({
             {inOffice && <OfficeWall host={false} getToken={() => token.current} send={() => {}} />}
           </main>
           <aside style={S.side}>
+            <div style={{ padding: "12px 14px 4px" }}>
+              <button
+                className="fx-ctl"
+                style={{ ...S.ctl, width: "100%", justifyContent: "center", borderColor: accent }}
+                onClick={() => setBookOpen(true)}
+              >
+                Book a follow-up
+              </button>
+            </div>
             <div style={S.sideHead}>
               {inOffice ? "In the room" : "Reception"} ({roster.length})
             </div>
@@ -1224,6 +1236,14 @@ function ClientView({
           </aside>
         </div>
       </div>
+      {bookOpen && (
+        <BookFollowUp
+          host={false}
+          getToken={() => token.current}
+          defaultName={name}
+          onClose={() => setBookOpen(false)}
+        />
+      )}
     </div>
   );
 }
@@ -1252,6 +1272,9 @@ function HostView({ jwt, title, accent }: { jwt: string; title: string; accent: 
   // The participants list's open menu (James 2026-11-16: "No participants
   // list? Not even to navigate through a menu to?").
   const [menuFor, setMenuFor] = useState<string | null>(null);
+  // Bookings (BookingPanel.tsx): the desk, and a follow-up for someone.
+  const [deskOpen, setDeskOpen] = useState(false);
+  const [bookFor, setBookFor] = useState<{ name: string } | null>(null);
   useEffect(() => {
     if (!menuFor) return;
     const close = (e: MouseEvent) => {
@@ -1658,6 +1681,13 @@ function HostView({ jwt, title, accent }: { jwt: string; title: string; accent: 
                   : "Walk-ins on"
                 : "Walk-ins off: they knock"}
           </button>
+          <button
+            style={S.ctl}
+            onClick={() => setDeskOpen(true)}
+            title="Follow-ups, your hours, and the Outlook calendar"
+          >
+            Bookings
+          </button>
           <button style={S.ctl} onClick={toggleMic}>
             {micOn ? "Mute" : "Unmute"}
           </button>
@@ -1728,6 +1758,17 @@ function HostView({ jwt, title, accent }: { jwt: string; title: string; accent: 
                         }}
                       >
                         Send to the waiting room
+                      </button>
+                      <button
+                        role="menuitem"
+                        className="fx-row"
+                        style={S.menuItem}
+                        onClick={() => {
+                          setBookFor({ name: nm });
+                          setMenuFor(null);
+                        }}
+                      >
+                        Book a follow-up
                       </button>
                     </div>
                   )}
@@ -1807,6 +1848,24 @@ function HostView({ jwt, title, accent }: { jwt: string; title: string; accent: 
           </div>
         </aside>
       </div>
+      {deskOpen && (
+        <BookingsDesk
+          getToken={() => jwt}
+          onClose={() => setDeskOpen(false)}
+          onBook={() => {
+            setDeskOpen(false);
+            setBookFor({ name: "" });
+          }}
+        />
+      )}
+      {bookFor && (
+        <BookFollowUp
+          host
+          getToken={() => jwt}
+          defaultName={bookFor.name}
+          onClose={() => setBookFor(null)}
+        />
+      )}
     </div>
   );
 }
