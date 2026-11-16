@@ -646,7 +646,21 @@ function ClientView({
     }
   }
 
-  async function connectWS() {
+  // A dropped socket (a server restart: every deploy) comes back on its own and
+  // takes its seat again. Before, the page looked fine while the server had
+  // forgotten the visitor, so a walk-in office could open its door mid-meeting
+  // (found 2026-11-16).
+  const reconnectTries = useRef(0);
+  function scheduleReconnect(dead: WebSocket) {
+    const wait = Math.min(15000, 1000 * 2 ** Math.min(reconnectTries.current++, 4));
+    setTimeout(() => {
+      if (ws.current !== dead || leaving.current) return;
+      if (!["foyer", "knocking", "office"].includes(phaseRef.current)) return;
+      connectWS(true).catch(() => scheduleReconnect(dead));
+    }, wait);
+  }
+
+  async function connectWS(rejoin = false) {
     const tr = await fetch(`${API}/auth/ws-ticket`, {
       headers: { Authorization: `Bearer ${token.current}` },
     });
@@ -664,7 +678,14 @@ function ClientView({
       }
       switch (m.type) {
         case "auth:ok":
+          reconnectTries.current = 0;
+          // Back after a drop, seated: straight back into the office.
+          if (rejoin && phaseRef.current === "office" && officeRoom.current) {
+            sock.send(JSON.stringify({ type: "presence:join", roomId: officeRoom.current }));
+            break;
+          }
           sock.send(JSON.stringify({ type: "presence:join", roomId: foyerRoom.current }));
+          if (rejoin) break;
           // Arrival knock: the client already asked for James at the gate. It
           // follows the foyer seat (sendArrivalKnock), never races it.
           if (autoKnock.current && officeRoom.current) {
@@ -774,7 +795,9 @@ function ClientView({
       if (e.code === 4001 && !leaving.current) {
         setErr("This guest session was revoked.");
         setPhase("error");
+        return;
       }
+      if (!leaving.current && ws.current === sock) scheduleReconnect(sock);
     };
   }
 
@@ -1336,9 +1359,15 @@ function HostView({ jwt, title, accent }: { jwt: string; title: string; accent: 
     setWaiting(toPeople(users, hostId, true)); // exclude the host himself from his waiting room
   }
 
+  // The host's sockets come back on their own after a drop (a server restart:
+  // every deploy) and rejoin their room. Before, the page looked fine while the
+  // server had James out of the office: the ECEB site said "Office closed" and
+  // knocks went nowhere until a reload (James 2026-11-16).
   async function openSocket(
     roomId: string,
     handlers: (sock: WebSocket, m: any) => void,
+    ref: { current: WebSocket | null },
+    tries = 0,
   ): Promise<WebSocket> {
     const tr = await fetch(`${API}/auth/ws-ticket`, {
       headers: { Authorization: `Bearer ${jwt}` },
@@ -1372,8 +1401,24 @@ function HostView({ jwt, title, accent }: { jwt: string; title: string; accent: 
       if (e.code === 4001 && !leaving.current) {
         setErr("This host session was revoked.");
         setPhase("error");
+        return;
       }
+      if (leaving.current || ref.current !== sock) return;
+      const again = (n: number) =>
+        setTimeout(
+          () => {
+            if (leaving.current || ref.current !== sock) return;
+            openSocket(roomId, handlers, ref, n)
+              .then((next) => {
+                if (ref.current === sock) ref.current = next;
+              })
+              .catch(() => again(n + 1));
+          },
+          Math.min(15000, 1000 * 2 ** Math.min(n, 4)),
+        );
+      again(tries);
     };
+    ref.current = sock;
     return sock;
   }
 
@@ -1390,37 +1435,41 @@ function HostView({ jwt, title, accent }: { jwt: string; title: string; accent: 
     }
     try {
       // FOYER socket: see who is waiting (roster + chat). Presence only.
-      foyerWS.current = await openSocket(foyerRoom, (_sock, m) => {
-        switch (m.type) {
-          case "presence:state":
-            if (m.roomId === foyerRoom) applyFoyerState(m.users);
-            break;
-          case "presence:join":
-            // reject synthetic/system users + the host himself.
-            if (
-              m.roomId === foyerRoom &&
-              m.user &&
-              m.user.id &&
-              m.user.id !== "operator" &&
-              m.user.id !== hostId &&
-              m.user.role !== "SYSTEM"
-            )
-              setWaiting((w) =>
-                w.some((x) => x.id === m.user.id)
-                  ? w
-                  : [...w, { id: m.user.id, name: m.user.name || "Guest" }],
-              );
-            break;
-          case "presence:leave":
-            if (m.roomId === foyerRoom) setWaiting((w) => w.filter((x) => x.id !== m.userId));
-            break;
-          case "chat:new":
-            setFoyerMessages((x) => pushMsg(x, m));
-            break;
-          default:
-            break;
-        }
-      });
+      await openSocket(
+        foyerRoom,
+        (_sock, m) => {
+          switch (m.type) {
+            case "presence:state":
+              if (m.roomId === foyerRoom) applyFoyerState(m.users);
+              break;
+            case "presence:join":
+              // reject synthetic/system users + the host himself.
+              if (
+                m.roomId === foyerRoom &&
+                m.user &&
+                m.user.id &&
+                m.user.id !== "operator" &&
+                m.user.id !== hostId &&
+                m.user.role !== "SYSTEM"
+              )
+                setWaiting((w) =>
+                  w.some((x) => x.id === m.user.id)
+                    ? w
+                    : [...w, { id: m.user.id, name: m.user.name || "Guest" }],
+                );
+              break;
+            case "presence:leave":
+              if (m.roomId === foyerRoom) setWaiting((w) => w.filter((x) => x.id !== m.userId));
+              break;
+            case "chat:new":
+              setFoyerMessages((x) => pushMsg(x, m));
+              break;
+            default:
+              break;
+          }
+        },
+        foyerWS,
+      );
 
       // OFFICE socket: host OWNS it -> joins the locked room directly. Receives knocks;
       // sends admit/deny/lock/unlock here.
@@ -1431,84 +1480,89 @@ function HostView({ jwt, title, accent }: { jwt: string; title: string; accent: 
       // fails, the server replies room:knock:queued / room:denied instead of
       // presence:state — so we surface a HARD error rather than hang on an empty
       // office the host can never enter or moderate.
-      officeWS.current = await openSocket(officeRoom, (_sock, m) => {
-        switch (m.type) {
-          case "presence:state":
-            if (m.roomId === officeRoom) {
-              setOfficeRoster(toPeople(m.users, hostId, false));
-              if (typeof m.locked === "boolean") setLocked(m.locked);
-            }
-            break;
-          case "presence:join":
-            if (m.roomId === officeRoom && m.user && m.user.id && m.user.id !== "operator")
-              setOfficeRoster((r) =>
-                r.some((x) => x.id === m.user.id)
-                  ? r
-                  : [
-                      ...r,
-                      {
-                        id: m.user.id,
-                        name:
-                          m.user.id === hostId
-                            ? `${m.user.name || "You"} (you)`
-                            : m.user.name || "Guest",
-                        guest: m.user.id !== hostId && isVisitor(m.user),
-                      },
-                    ],
-              );
-            break;
-          case "presence:leave":
-            if (m.roomId === officeRoom) setOfficeRoster((r) => r.filter((x) => x.id !== m.userId));
-            break;
-          case "room:adminState":
-            // surfaces knocks queued before we were connected
-            if (m.roomId === officeRoom && Array.isArray(m.knocks)) {
-              setKnocks((prev) => {
-                const merged = [...prev];
-                for (const k of m.knocks) {
-                  if (k && k.userId && !merged.some((x) => x.id === k.userId))
-                    merged.push({ id: k.userId, name: k.name || "Guest" });
-                }
-                return merged;
-              });
-              if (typeof m.locked === "boolean") setLocked(m.locked);
-            }
-            break;
-          case "room:knock":
-            if (m.roomId === officeRoom && m.user && m.user.id)
-              setKnocks((k) =>
-                k.some((x) => x.id === m.user.id)
-                  ? k
-                  : [...k, { id: m.user.id, name: m.user.name || "Guest" }],
-              );
-            break;
-          case "room:locked":
-            if (m.roomId === officeRoom && typeof m.locked === "boolean") setLocked(m.locked);
-            break;
-          case "chat:new":
-            setOfficeMessages((x) => pushMsg(x, m));
-            break;
-          case "youtube:state":
-          case "youtube:load":
-          case "youtube:play":
-          case "youtube:pause":
-          case "youtube:stop":
-            if (m.roomId === officeRoom) officeYt(m);
-            break;
-          // Defensive: if the server did NOT recognize us as owner of the office,
-          // our presence:join is parked as a knock or rejected. Make that visible.
-          case "room:knock:queued":
-          case "room:denied":
-            if (m.roomId === officeRoom) {
-              leaving.current = true;
-              setErr("Couldn't take ownership of the office. Check the host link.");
-              setPhase("error");
-            }
-            break;
-          default:
-            break;
-        }
-      });
+      await openSocket(
+        officeRoom,
+        (_sock, m) => {
+          switch (m.type) {
+            case "presence:state":
+              if (m.roomId === officeRoom) {
+                setOfficeRoster(toPeople(m.users, hostId, false));
+                if (typeof m.locked === "boolean") setLocked(m.locked);
+              }
+              break;
+            case "presence:join":
+              if (m.roomId === officeRoom && m.user && m.user.id && m.user.id !== "operator")
+                setOfficeRoster((r) =>
+                  r.some((x) => x.id === m.user.id)
+                    ? r
+                    : [
+                        ...r,
+                        {
+                          id: m.user.id,
+                          name:
+                            m.user.id === hostId
+                              ? `${m.user.name || "You"} (you)`
+                              : m.user.name || "Guest",
+                          guest: m.user.id !== hostId && isVisitor(m.user),
+                        },
+                      ],
+                );
+              break;
+            case "presence:leave":
+              if (m.roomId === officeRoom)
+                setOfficeRoster((r) => r.filter((x) => x.id !== m.userId));
+              break;
+            case "room:adminState":
+              // surfaces knocks queued before we were connected
+              if (m.roomId === officeRoom && Array.isArray(m.knocks)) {
+                setKnocks((prev) => {
+                  const merged = [...prev];
+                  for (const k of m.knocks) {
+                    if (k && k.userId && !merged.some((x) => x.id === k.userId))
+                      merged.push({ id: k.userId, name: k.name || "Guest" });
+                  }
+                  return merged;
+                });
+                if (typeof m.locked === "boolean") setLocked(m.locked);
+              }
+              break;
+            case "room:knock":
+              if (m.roomId === officeRoom && m.user && m.user.id)
+                setKnocks((k) =>
+                  k.some((x) => x.id === m.user.id)
+                    ? k
+                    : [...k, { id: m.user.id, name: m.user.name || "Guest" }],
+                );
+              break;
+            case "room:locked":
+              if (m.roomId === officeRoom && typeof m.locked === "boolean") setLocked(m.locked);
+              break;
+            case "chat:new":
+              setOfficeMessages((x) => pushMsg(x, m));
+              break;
+            case "youtube:state":
+            case "youtube:load":
+            case "youtube:play":
+            case "youtube:pause":
+            case "youtube:stop":
+              if (m.roomId === officeRoom) officeYt(m);
+              break;
+            // Defensive: if the server did NOT recognize us as owner of the office,
+            // our presence:join is parked as a knock or rejected. Make that visible.
+            case "room:knock:queued":
+            case "room:denied":
+              if (m.roomId === officeRoom) {
+                leaving.current = true;
+                setErr("Couldn't take ownership of the office. Check the host link.");
+                setPhase("error");
+              }
+              break;
+            default:
+              break;
+          }
+        },
+        officeWS,
+      );
 
       // Host LiveKit -> the office.
       const res = await conn.connect(officeRoom, micOn);
