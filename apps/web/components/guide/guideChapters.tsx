@@ -602,10 +602,10 @@ function Yours({ actions }: { actions: GuideActions }) {
         <Facts
           items={[
             [
-              "Turn off all animations",
-              "in Settings → Display. Your device's reduce-motion setting is always respected too.",
+              "Animations and Full effects",
+              "under Change your drip: switch either off to hold things still. Your device's reduce-motion setting is always respected too.",
             ],
-            ["Density:", "compact or roomy."],
+            ["Size:", "Roomy, Standard, Compact or Dense, under Change your drip."],
             ["Classic themes", "if you'd rather not use Nebula."],
             ["Your colors", "style your ID card and your row in themed lobbies."],
           ]}

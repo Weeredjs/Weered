@@ -149,20 +149,53 @@ html[data-weered-theme="gray"] {
 }
 
 /* =============================================
-   DENSITY PRESETS
+   SIZE (data-weered-density; Change your drip → Size)
+   James 2026-11-16: Compact alone was "a negligible upscale in use of space"
+   and should have "a few settings". Each step zooms the shell's columns, so
+   every row, card and font in them grows or shrinks together and the page
+   shows more or less at once. "comfortable" is Standard and draws as before.
+   Desktop widths only: a phone keeps its own layout and its touch targets.
    ============================================= */
+html {
+  --wz: 1;
+}
+html[data-weered-density="roomy"] {
+  --wz: 1.1;
+}
 html[data-weered-density="compact"] {
+  --wz: 0.9;
+}
+html[data-weered-density="dense"] {
+  --wz: 0.8;
+}
+@media (min-width: 1024px) {
+  /* The left handle stays out: it sits in the gap by pixel margins. */
+  html[data-weered-density]:not([data-weered-density="comfortable"])
+    .weered-shell
+    > :not(.weered-left-handle) {
+    zoom: var(--wz);
+  }
+  /* A zoomed column's own lengths scale too, so its viewport-tall cap is
+     divided back out or it would stop short of the bottom. Important to beat
+     the minimal chrome's 100vh cap (80-chrome-min.css). */
+  html[data-weered-density]:not([data-weered-density="comfortable"])
+    .weered-shell
+    > :is(.weered-left, .weered-right, .weered-icon-strip) {
+    max-height: calc((100vh - var(--wtb-h, 0px)) / var(--wz)) !important;
+  }
+}
+html:is([data-weered-density="compact"], [data-weered-density="dense"]) {
   --weered-pad-x: 14px;
   --weered-pad-y: 14px;
   --weered-radius: 12px;
 }
-html[data-weered-density="compact"] .weered-shell {
+html:is([data-weered-density="compact"], [data-weered-density="dense"]) .weered-shell {
   gap: 12px;
   padding: 12px;
 }
-html[data-weered-density="compact"] input,
-html[data-weered-density="compact"] textarea,
-html[data-weered-density="compact"] select {
+html:is([data-weered-density="compact"], [data-weered-density="dense"]) input,
+html:is([data-weered-density="compact"], [data-weered-density="dense"]) textarea,
+html:is([data-weered-density="compact"], [data-weered-density="dense"]) select {
   padding: 8px 10px;
   border-radius: 10px;
 }

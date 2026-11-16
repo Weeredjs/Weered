@@ -561,7 +561,7 @@ export type DripLook = Partial<{
   fxSymbol: string;
   fxPicture: boolean;
   stars: boolean;
-  density: "comfortable" | "compact";
+  density: "roomy" | "comfortable" | "compact" | "dense";
 }>;
 
 export function cleanDrip(
@@ -595,7 +595,7 @@ export function cleanDrip(
   // Their own uploaded picture, on or off; the builder never sets the picture.
   if (bool(l.fxPicture) !== undefined) look.fxPicture = l.fxPicture;
   if (bool(l.stars) !== undefined) look.stars = l.stars;
-  if (l.density === "comfortable" || l.density === "compact") look.density = l.density;
+  if (["roomy", "comfortable", "compact", "dense"].includes(l.density)) look.density = l.density;
   // A Nebula-only change under a Classic skin would do nothing: switch to Nebula.
   if (NEBULA_ONLY.some((k) => k in look) && (look.theme ?? currentTheme) !== "nebula")
     look.theme = "nebula";
@@ -685,7 +685,7 @@ You get their current look as JSON.
 - texture (the card surface): glass, grid, lines, dots, solid. backdrop: sky, grid, plain.
 - fx (moving background): none, snow, blizzard, embers, rain, petals, bubbles, fireflies, matrix (code rain), symbol (their emoji or up to 3 characters in fxSymbol). fxIntensity 0.2 to 1.5.
 - fxPicture: true floats the picture they uploaded (fxImage in their look) instead of the characters, with fx symbol; false goes back to the characters. Asked for their logo or a picture with no fxImage: use a fitting symbol and say in the summary they can upload a picture under Your symbol.
-- stars: the starfield behind everything. density: comfortable or compact.
+- stars: the starfield behind everything. density (size): roomy (larger, for a TV or a big screen), comfortable (standard), compact, or dense (most on screen).
 - layout, only if they ask to rearrange: ${DRIP_PRESETS.map((p) => `${p.id} (${p.blurb})`).join("; ")}
 - summary: one short plain sentence (20 words at most) saying what changed.
 
@@ -839,7 +839,7 @@ export const DRIP_TOOL = {
           fxSymbol: S(),
           fxPicture: { type: "boolean" },
           stars: { type: "boolean" },
-          density: E(["comfortable", "compact"]),
+          density: E(["roomy", "comfortable", "compact", "dense"]),
         },
       },
       layout: E(DRIP_PRESET_IDS),

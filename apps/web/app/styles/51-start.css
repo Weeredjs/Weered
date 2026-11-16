@@ -736,7 +736,7 @@ button.weered-wayin:hover .weered-wayin-go {
   margin-left: -16px;
   z-index: 6;
 }
-html[data-weered-density="compact"] .weered-left-handle {
+html:is([data-weered-density="compact"], [data-weered-density="dense"]) .weered-left-handle {
   margin-left: -12px;
 }
 .weered-left-handle > button {
@@ -763,7 +763,9 @@ html[data-weered-density="compact"] .weered-left-handle {
     box-shadow 0.2s,
     background 0.2s;
 }
-html[data-weered-density="compact"] .weered-left-handle > button {
+html:is([data-weered-density="compact"], [data-weered-density="dense"])
+  .weered-left-handle
+  > button {
   left: -1px;
 }
 .weered-left-handle > button svg {

@@ -39,6 +39,13 @@ export type NebulaFont = "default" | "condensed" | "serif" | "stencil" | "clean"
 /** Corners: round (Nebula's own), soft, square (all corners), cut (chamfered). */
 export type ShellShape = "round" | "soft" | "square" | "cut";
 /** The side buttons (Crew, Friends, DMs, Panel): styles/99-nebula-buttons.css. */
+/** Size (Change your drip → Size; James 2026-11-16: "a few settings"). The
+ *  shell's columns draw larger or smaller (styles/00-base.css); "comfortable"
+ *  is Standard, the name kept so saved looks still read. */
+export type Density = "roomy" | "comfortable" | "compact" | "dense";
+export const DENSITIES: Density[] = ["roomy", "comfortable", "compact", "dense"];
+export const isDensity = (v: unknown): v is Density =>
+  typeof v === "string" && (DENSITIES as string[]).includes(v);
 export type RailButtons = "tile" | "chevron" | "cut" | "pill";
 /** Line weight: soft glow hairlines, or hard crisp edges. */
 export type ShellLines = "soft" | "hard";
@@ -69,7 +76,10 @@ export type UiPrefs = {
   /** The glass frame around each column (the rails and the centre). Off lets
    *  the modules float on the sky (James 2026-11-15). On unless chosen. */
   frames?: boolean;
-  density?: "comfortable" | "compact";
+  /** Size (Change your drip → Size): the shell drawn larger or smaller.
+   *  "comfortable" is Standard (James 2026-11-16: "a few settings"). */
+  /** Size, larger or smaller (Density below). */
+  density?: Density;
   rail?: { order: RailSection[]; hidden: RailSection[] };
   /** The viewer's own layout (lib/shellLayout.ts); absent = stock. */
   shell?: ShellLayout;
@@ -429,7 +439,7 @@ export function paintUiPrefs(p: UiPrefs) {
   else d.removeAttribute("data-weered-sky-motion");
   if (p.frames === false) d.setAttribute("data-weered-frames", "off");
   else d.removeAttribute("data-weered-frames");
-  if (p.density) d.setAttribute("data-weered-density", p.density);
+  if (isDensity(p.density)) d.setAttribute("data-weered-density", p.density);
 }
 
 /** Paint the prefs onto <html> and remember the look where the boot script

@@ -151,7 +151,8 @@ export type UiPrefs = {
   skyMotion?: boolean;
   /** The frame around each column; off floats the modules (web lib/uiPrefs.ts). */
   frames?: boolean;
-  density?: "comfortable" | "compact";
+  /** Size: the shell larger or smaller; "comfortable" is Standard (web lib/uiPrefs.ts). */
+  density?: "roomy" | "comfortable" | "compact" | "dense";
   rail?: { order: RailSection[]; hidden: RailSection[] };
   shell?: ShellPrefs;
   setup?: "done" | "skipped";
@@ -306,7 +307,7 @@ export function sanitizeUiPrefs(raw: unknown): UiPrefs {
   if (typeof src.stars === "boolean") out.stars = src.stars;
   if (typeof src.skyMotion === "boolean") out.skyMotion = src.skyMotion;
   if (typeof src.frames === "boolean") out.frames = src.frames;
-  const density = oneOf(["comfortable", "compact"] as const, src.density);
+  const density = oneOf(["roomy", "comfortable", "compact", "dense"] as const, src.density);
   if (density) out.density = density;
   if (src.rail && typeof src.rail === "object") {
     const order = listOf(RAIL_SECTIONS, src.rail.order) || [];

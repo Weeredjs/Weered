@@ -39,6 +39,12 @@ describe("UI prefs", () => {
     expect(sanitizeUiPrefs({ skyMotion: "on" })).toEqual({});
   });
 
+  it("keeps each Size step and nothing else", () => {
+    for (const density of ["roomy", "comfortable", "compact", "dense"] as const)
+      expect(sanitizeUiPrefs({ density }).density).toBe(density);
+    expect(sanitizeUiPrefs({ density: "huge" }).density).toBeUndefined();
+  });
+
   it("rejects bad values without throwing", () => {
     expect(sanitizeUiPrefs(null)).toEqual({});
     expect(sanitizeUiPrefs("nebula")).toEqual({});

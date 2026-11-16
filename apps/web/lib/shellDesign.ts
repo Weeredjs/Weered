@@ -18,6 +18,7 @@ import {
 import {
   PREFS_EVENT,
   PREFS_KEY,
+  isDensity,
   isHexColour,
   isSiteTheme,
   paintUiPrefs,
@@ -25,6 +26,7 @@ import {
   saveUiPrefsToAccount,
   NEBULA_FONT_IDS,
   PALETTE_IDS,
+  type Density,
   type NebulaFont,
   type Palette,
   type RailButtons,
@@ -54,7 +56,7 @@ export type ShellLook = {
   skyMotion: boolean;
   /** The frame around each column; off floats the modules (uiPrefs frames). */
   frames: boolean;
-  density: "comfortable" | "compact";
+  density: Density;
   shape: ShellShape;
   /** The side buttons' shape (styles/99-nebula-buttons.css). */
   buttons: RailButtons;
@@ -230,11 +232,12 @@ export function lookFromPrefs(p: UiPrefs): ShellLook {
     fxFront: p.fxFront === true,
     // Settings → Display keeps density in its own store; what's on the page
     // is the truth when the prefs don't say.
-    density:
-      p.density ||
-      (document.documentElement.getAttribute("data-weered-density") === "compact"
-        ? "compact"
-        : "comfortable"),
+    density: isDensity(p.density)
+      ? p.density
+      : (() => {
+          const a = document.documentElement.getAttribute("data-weered-density");
+          return isDensity(a) ? a : "comfortable";
+        })(),
   };
 }
 
@@ -254,7 +257,7 @@ function cleanLook(raw: any, base: ShellLook): ShellLook {
     stars: typeof r.stars === "boolean" ? r.stars : base.stars,
     skyMotion: typeof r.skyMotion === "boolean" ? r.skyMotion : base.skyMotion,
     frames: typeof r.frames === "boolean" ? r.frames : base.frames,
-    density: r.density === "compact" || r.density === "comfortable" ? r.density : base.density,
+    density: isDensity(r.density) ? r.density : base.density,
     shape: SHAPES.includes(r.shape) ? r.shape : base.shape,
     buttons: BUTTONS.includes(r.buttons) ? r.buttons : base.buttons,
     lines: r.lines === "hard" || r.lines === "soft" ? r.lines : base.lines,

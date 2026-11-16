@@ -32,6 +32,7 @@ import {
   PALETTES,
   PALETTE_IDS,
   customPalette,
+  type Density,
   type SiteThemeId,
 } from "../../lib/uiPrefs";
 import { editLayout, editLook, selectItem, type ShellLook } from "../../lib/shellDesign";
@@ -481,6 +482,23 @@ function SectionBars({ accent, look, deep }: { accent: string; look: ShellLook; 
 
 /** This device's display switches (lib/displaySettings.ts): they apply at
  *  once, outside the draft, as they did in Settings. */
+/** Size (uiPrefs Density; styles/00-base.css draws each step). James
+ *  2026-11-16: Compact alone was "a negligible upscale in use of space". */
+const SIZES: { id: Density; name: string; blurb: string }[] = [
+  {
+    id: "roomy",
+    name: "Roomy",
+    blurb: "Everything larger. For a TV or a big screen across the room.",
+  },
+  { id: "comfortable", name: "Standard", blurb: "Weered at its usual size." },
+  { id: "compact", name: "Compact", blurb: "A size smaller: more rows and more chat on screen." },
+  {
+    id: "dense",
+    name: "Dense",
+    blurb: "Smallest: the most on screen at once. Best on a large monitor.",
+  },
+];
+
 function DeviceSwitches({ accent }: { accent: string }) {
   const [d, setD] = useState<DisplaySwitches>({
     reduceMotion: false,
@@ -496,22 +514,26 @@ function DeviceSwitches({ accent }: { accent: string }) {
   const light = d.lightEffects ?? software;
   return (
     <>
+      {/* Both read on = moving (James 2026-11-16: "This switch seems
+          backwards ... This should show them as on currently while everything
+          is moving around"). They store what they always did: reduceMotion and
+          lightEffects, flipped here. */}
       <Toggle
-        on={d.reduceMotion}
+        on={!d.reduceMotion}
         accent={accent}
         onClick={() => setD(setDisplay({ reduceMotion: !d.reduceMotion }))}
-        title="Turn off all animations"
-        blurb="No effects, starfield or transitions, here or in lobbies. On this device, right away."
+        title="Animations"
+        blurb="Effects, the starfield and transitions, here and in lobbies. Off stops all of it. On this device."
       />
       <Toggle
-        on={light}
+        on={!light}
         accent={accent}
         onClick={() => setD(setDisplay({ lightEffects: !light }))}
-        title="Light effects"
+        title="Full effects"
         blurb={
           d.lightEffects === null && software
-            ? "On by itself here: this device draws without a graphics card. The sky holds still; the snow, the glows and the carousel stop."
-            : "The sky holds still; the snow, the glows and the carousel stop, and menus still move. Easier on fans and batteries. On this device."
+            ? "Off by itself here: this device draws without a graphics card, so the sky holds still and the snow, the glows and the carousel stop."
+            : "The sky, the snow, the glows and the carousel move. Off, they hold still and menus still move: easier on fans and batteries. On this device."
         }
       />
       <Toggle
@@ -767,15 +789,24 @@ export function LookTab({ accent, look }: { accent: string; look: ShellLook }) {
         </>
       )}
 
-      <Toggle
-        on={look.density === "compact"}
-        accent={accent}
-        onClick={() =>
-          editLook({ density: look.density === "compact" ? "comfortable" : "compact" })
-        }
-        title="Compact"
-        blurb="Tighter rows, more on screen."
-      />
+      <div style={{ ...label, marginTop: 12 }}>Size</div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6 }}>
+        {SIZES.map((z) => (
+          <button
+            key={z.id}
+            type="button"
+            aria-pressed={look.density === z.id}
+            title={z.blurb}
+            onClick={() => editLook({ density: z.id })}
+            style={{ ...chip(look.density === z.id, accent), padding: "7px 4px" }}
+          >
+            {z.name}
+          </button>
+        ))}
+      </div>
+      <div style={{ fontSize: 11, opacity: 0.5, marginTop: 6, lineHeight: 1.4 }}>
+        {SIZES.find((z) => z.id === look.density)?.blurb}
+      </div>
       <DeviceSwitches accent={accent} />
       <div style={{ fontSize: 11, opacity: 0.5, marginTop: 12, lineHeight: 1.45 }}>
         Lobbies with their own theme keep it, unless you switch that off above. Your layout comes

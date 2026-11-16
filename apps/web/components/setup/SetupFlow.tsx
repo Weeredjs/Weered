@@ -105,7 +105,11 @@ export default function SetupFlow({
   );
   const [palette, setPalette] = useState<Palette>(prefs0.palette || "violet");
   const [stars, setStars] = useState(prefs0.stars !== false);
-  const [compact, setCompact] = useState(prefs0.density === "compact");
+  // Smaller than Standard reads as compact here; an untouched switch keeps the
+  // exact Size step chosen under Change your drip.
+  const [compact, setCompact] = useState(
+    prefs0.density === "compact" || prefs0.density === "dense",
+  );
   // Start from the viewer's own layout; a preset it matches shows as picked.
   const layout0 = useMemo(() => shellFromPrefs(prefs0), [prefs0]);
   const [layout, setLayout] = useState<ShellLayout>(layout0);
@@ -265,7 +269,13 @@ export default function SetupFlow({
       theme: look === "nebula" ? "nebula" : classicTheme,
       palette,
       stars,
-      density: compact ? "compact" : "comfortable",
+      density: compact
+        ? prefs0.density === "dense"
+          ? "dense"
+          : "compact"
+        : prefs0.density === "roomy"
+          ? "roomy"
+          : "comfortable",
       shell: layout,
       rail: railFromShell(layout),
       ...(mode === "first" || prefs0.setup !== "done"

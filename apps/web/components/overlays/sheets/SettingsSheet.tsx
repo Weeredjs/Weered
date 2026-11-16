@@ -34,7 +34,7 @@ export async function settingsFetch(url: string, init: RequestInit = {}): Promis
 }
 type Settings = {
   theme: "stone" | "slate" | "zinc" | "gray" | "ishimura" | "broadcast" | "press" | "nebula";
-  density: "comfortable" | "compact";
+  density: "roomy" | "comfortable" | "compact" | "dense";
   reduceMotion: boolean;
   keepDefaultTheme: boolean;
 
@@ -470,7 +470,7 @@ function AppearancePointers() {
         {door({
           title: "How Weered looks to you",
           blurb: "Your whole Weered: move any section, pick a colourway or two colours of your own, and dress it.",
-          has: ["Theme", "Colourway", "Two colours", "Section bars", "Type", "Effects", "Corners", "Compact", "Animations"],
+          has: ["Theme", "Colourway", "Two colours", "Section bars", "Type", "Effects", "Corners", "Size", "Animations"],
           img: "/brand/settings/drip-preview.webp",
           label: "Change your drip",
           go: () => {
