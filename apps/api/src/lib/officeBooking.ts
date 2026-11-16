@@ -64,8 +64,12 @@ export function readStore(file = BOOKING_FILE()): Store {
   try {
     if (existsSync(file)) {
       const j = JSON.parse(readFileSync(file, "utf8"));
-      const settings = cleanSettings(j?.settings, defaultSettings());
-      if (!j?.settings?.feedKey) settings.feedKey = defaultSettings().feedKey;
+      // The stored key is kept: cleanSettings carries the base's key, and a
+      // fresh default here made a new one on every read (feed answered 404).
+      const base = defaultSettings();
+      if (typeof j?.settings?.feedKey === "string" && j.settings.feedKey.length >= 20)
+        base.feedKey = j.settings.feedKey;
+      const settings = cleanSettings(j?.settings, base);
       const bookings = Array.isArray(j?.bookings) ? j.bookings.filter(isBooking) : [];
       const s = { settings, bookings };
       if (!j?.settings?.feedKey) writeStore(s, file);

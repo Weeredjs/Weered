@@ -1,3 +1,6 @@
+import { mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   book,
@@ -7,6 +10,8 @@ import {
   icsEvent,
   localToUtc,
   openSlots,
+  readStore,
+  writeStore,
   whenText,
   type Store,
 } from "../../src/lib/officeBooking";
@@ -96,6 +101,17 @@ describe("office follow-up bookings", () => {
     expect(c.hours).toEqual({ "1": [["10:00", "12:00"]] });
     expect(c.slotMin).toBe(30);
     expect(c.feedKey).toBe(s.settings.feedKey);
+  });
+
+  it("keeps the calendar feed's key from one read to the next", () => {
+    const file = join(mkdtempSync(join(tmpdir(), "bk-")), "office-bookings.json");
+    const first = readStore(file);
+    expect(readStore(file).settings.feedKey).toBe(first.settings.feedKey);
+    first.settings.slotMin = 45;
+    writeStore(first, file);
+    const again = readStore(file);
+    expect(again.settings.feedKey).toBe(first.settings.feedKey);
+    expect(again.settings.slotMin).toBe(45);
   });
 
   it("writes a calendar Outlook reads", () => {
