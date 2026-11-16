@@ -17,6 +17,7 @@ import OfficeWindow from "./OfficeWindow";
 import OfficeWall, { officeYt, resetOfficeYt } from "./OfficeWall";
 import { BookFollowUp, BookingsDesk } from "./BookingPanel";
 import { Faces } from "./Faces";
+import { ScreenStage } from "./ScreenStage";
 
 const YT_FRAMES = new Set([
   "youtube:state",
@@ -1260,7 +1261,7 @@ function ClientView({
               </div>
             )}
             {inOffice && <PresentedPlanViewer getToken={() => token.current} accent={accent} />}
-            <div ref={screenEl} style={S.screen} />
+            <ScreenStage screenEl={screenEl} />
             <Faces tilesEl={tilesEl} people={roster} selfId={selfId.current} show={inOffice} />
             {inOffice && <OfficeWall host={false} getToken={() => token.current} send={() => {}} />}
           </main>
@@ -1821,7 +1822,7 @@ function HostView({ jwt, title, accent }: { jwt: string; title: string; accent: 
             nothing on it, the view. */}
         <main style={S.stage}>
           <PlanModule jwt={jwt} accent={accent} />
-          <div ref={screenEl} style={S.screen} />
+          <ScreenStage screenEl={screenEl} />
           <Faces tilesEl={tilesEl} people={officeRoster} selfId={hostId} show />
           <OfficeWall
             host
