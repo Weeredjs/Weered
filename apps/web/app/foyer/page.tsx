@@ -1698,7 +1698,7 @@ function HostView({ jwt, title, accent }: { jwt: string; title: string; accent: 
                   key={p.id}
                   className="fx-row"
                   data-person-menu
-                  style={{ ...S.rosterItem, position: "relative" }}
+                  style={{ ...S.rosterItem, flexWrap: "wrap" }}
                 >
                   <span style={S.medallion}>{nm.charAt(0).toUpperCase() || "·"}</span>
                   <span style={S.rosterName}>{nm}</span>
@@ -2211,12 +2211,11 @@ const S: Record<string, CSSProperties> = {
     cursor: "pointer",
     flexShrink: 0,
   },
+  // Opens under the row, in the list: the side panel scrolls, so anything
+  // absolutely placed was clipped to a sliver (e2e still, 2026-11-16).
   menu: {
-    position: "absolute",
-    right: 10,
-    top: "100%",
-    zIndex: 20,
-    minWidth: 210,
+    flexBasis: "100%",
+    marginLeft: 36,
     padding: 4,
     borderRadius: 6,
     border: "1px solid #1E3A5F",

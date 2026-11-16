@@ -1935,6 +1935,9 @@ const PM_CSS = (accent: string) => `
 .pm-bar:hover{border-color:#334155!important;background:#141a23!important}
 .pm-field:focus-within{border-color:${accent}!important;box-shadow:0 0 0 3px ${accent}26}
 .pm-field input::placeholder{color:#6e7a88}
+.pm-field input,.pm-field input:focus{background:transparent!important;border:0!important;box-shadow:none!important;outline:none!important;padding:0!important;border-radius:0!important;height:100%!important}
+.pm-row,.pm-row span{font-weight:500}
+.pm-row span:first-child{font-weight:700}
 .pm-row:hover{background:#151c26!important}
 .pm-row:focus-visible,.pm-tool:focus-visible,.pm-seg:focus-visible,.pm-icon:focus-visible{outline:2px solid ${accent};outline-offset:-2px}
 .pm-tool:hover{background:#18202b!important;color:#f0f3f6!important}
