@@ -32,6 +32,22 @@ const wsBase = () => `${location.protocol === "https:" ? "wss" : "ws"}://${locat
 
 // --- Review Room design tokens (visual only; no behavior lives here) ---
 const EASE = "cubic-bezier(0.22,0.61,0.36,1)";
+/** The office on a phone (James 2026-11-16, the host view on his phone):
+ *  one column, the header's buttons in a row that scrolls, the plan and the
+ *  wall left to the PC. Also used by the visitor's view. */
+const HOST_MOBILE_CSS = `
+.fx-hbtns button{white-space:nowrap}
+@media (max-width: 760px){
+  .fx-hlive{height:auto!important;min-height:100vh;padding:8px!important;gap:10px!important}
+  .fx-hbar{flex-direction:column;align-items:stretch!important;gap:10px;padding:10px 12px!important}
+  .fx-hbar img{height:40px!important}
+  .fx-hbtns{overflow-x:auto;flex-wrap:nowrap;padding-bottom:4px;-webkit-overflow-scrolling:touch}
+  .fx-hbtns button{flex:0 0 auto}
+  .fx-hbody{flex-direction:column!important;min-height:0}
+  .fx-hside{width:auto!important;max-height:none!important;overflow:visible!important}
+  .fx-hdesk{display:none!important}
+}
+`;
 const GOLD_GRAD = "linear-gradient(180deg,#D9B878,#C6A15B 55%,#A8853F)";
 const SERIF = "Georgia, 'Iowan Old Style', Cambria, 'Times New Roman', serif";
 const UIFONT = "'Segoe UI', Inter, system-ui, -apple-system, sans-serif";
@@ -91,6 +107,10 @@ function makeRoomConn(opts: {
   // local screen-share ended (incl. the browser's native "Stop sharing")
   onLocalScreenEnd: () => void;
   leavingRef: { current: boolean };
+  /** The host's device (a phone beside the PC): its own participant. */
+  device?: string;
+  /** Companion mode: this device plays nothing (the phone carries the sound). */
+  silent?: () => boolean;
 }) {
   const ref: { current: Room | null } = { current: null };
   const connId = `c${++_connSeq}`;
@@ -171,7 +191,7 @@ function makeRoomConn(opts: {
     const vr = await fetch(`${API}/voice/token`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${opts.getToken()}` },
-      body: JSON.stringify({ roomId }),
+      body: JSON.stringify({ roomId, ...(opts.device ? { device: opts.device } : {}) }),
     });
     if (!vr.ok) throw new Error("Couldn't start audio/video.");
     const { url, token: lkToken } = await vr.json();
@@ -190,6 +210,7 @@ function makeRoomConn(opts: {
         const a = el as HTMLAudioElement;
         a.autoplay = true;
         a.volume = 1;
+        a.muted = !!opts.silent?.();
         a.style.display = "none";
         a.setAttribute("data-lk-audio", participant.identity);
         a.setAttribute("data-lk-conn", connId);
@@ -1071,7 +1092,8 @@ function ClientView({
   // ---- live stage (foyer / knocking / office) ----
   const inOffice = phase === "office";
   return (
-    <div style={S.live}>
+    <div style={S.live} className="fx-hlive">
+      <style>{HOST_MOBILE_CSS}</style>
       <style>{`
         .fx-ctl:hover{background:rgba(16,35,63,.07)!important;border-color:rgba(16,35,63,.42)!important}
         .fx-leave:hover{background:rgba(181,74,68,.1)!important;border-color:rgba(181,74,68,.45)!important;color:#9B3B36!important}
@@ -1101,7 +1123,7 @@ function ClientView({
           pointerEvents: inOffice && entry === "hold" ? "none" : "auto",
         }}
       >
-        <header style={inOffice ? S.paperBar : S.bar}>
+        <header style={inOffice ? S.paperBar : S.bar} className="fx-hbar">
           {inOffice ? (
             <div style={S.letterhead}>
               <span style={S.seal}>
@@ -1140,7 +1162,7 @@ function ClientView({
               <div style={{ ...S.serifH, fontSize: 17, margin: "2px 0 0" }}>{title}</div>
             </div>
           )}
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }} className="fx-hbtns">
             <button
               className="fx-ctl"
               style={inOffice ? S.ctlPaper : S.ctl}
@@ -1186,7 +1208,7 @@ function ClientView({
           </div>
         </header>
 
-        <div style={S.body}>
+        <div style={S.body} className="fx-hbody">
           <main style={S.stage}>
             {!inOffice && (
               // The waiting room, full screen over a dimmed window (James
@@ -1284,7 +1306,7 @@ function ClientView({
             <Faces tilesEl={tilesEl} people={roster} selfId={selfId.current} show={inOffice} />
             {inOffice && <OfficeWall host={false} getToken={() => token.current} send={() => {}} />}
           </main>
-          <aside style={S.side}>
+          <aside style={S.side} className="fx-hside">
             <div style={{ padding: "12px 14px 4px" }}>
               <button
                 className="fx-ctl"
@@ -1403,11 +1425,41 @@ function HostView({ jwt, title, accent }: { jwt: string; title: string; accent: 
   const leaving = useRef(false);
   const started = useRef(false);
 
+  // Phone for camera and mic, the PC to run the meeting (James 2026-11-16:
+  // "I'll just want to be using my phone for cam and mic like I do for
+  // teams"). Each tab is its own device in the call; on the PC, companion
+  // mode turns its mic, camera and speakers off so the phone's mic never
+  // hears the client back out of the PC (no echo).
+  const device = useRef(
+    (() => {
+      try {
+        let d = sessionStorage.getItem("eceb_device");
+        if (!d) {
+          d = Math.random().toString(36).slice(2, 10);
+          sessionStorage.setItem("eceb_device", d);
+        }
+        return d;
+      } catch {
+        return Math.random().toString(36).slice(2, 10);
+      }
+    })(),
+  );
+  const [companion, setCompanion] = useState(() => {
+    try {
+      return localStorage.getItem("eceb_companion") === "1";
+    } catch {
+      return false;
+    }
+  });
+  const companionRef = useRef(companion);
+
   const conn = useRef(
     makeRoomConn({
       getToken: () => jwt,
       tilesEl: () => tilesEl.current,
       screenEl: () => screenEl.current,
+      device: device.current,
+      silent: () => companionRef.current,
       selfLabel: () => hostName,
       onRoster: () => {}, // office roster comes from WS presence:state, not LiveKit
       onDropped: () => {
@@ -1644,7 +1696,7 @@ function HostView({ jwt, title, accent }: { jwt: string; title: string; accent: 
       );
 
       // Host LiveKit -> the office.
-      const res = await conn.connect(officeRoom, micOn);
+      const res = await conn.connect(officeRoom, micOn && !companionRef.current);
       if (leaving.current) return; // teardown happened while connecting
       setMicOn(res.micOn); // reflect a denied/absent mic in the toolbar
       // office roster arrives via WS presence:state
@@ -1724,6 +1776,21 @@ function HostView({ jwt, title, accent }: { jwt: string; title: string; accent: 
     const actual = await conn.setCam(next);
     setCamOn(actual);
   };
+  const toggleCompanion = async () => {
+    const next = !companion;
+    setCompanion(next);
+    companionRef.current = next;
+    try {
+      localStorage.setItem("eceb_companion", next ? "1" : "0");
+    } catch {}
+    document
+      .querySelectorAll<HTMLAudioElement>("audio[data-lk-audio]")
+      .forEach((a) => (a.muted = next));
+    if (next) {
+      if (micOn) setMicOn(await conn.setMic(false));
+      if (camOn) setCamOn(await conn.setCam(false));
+    }
+  };
   const toggleScreen = async () => {
     const next = !screenOn;
     const actual = await conn.setScreen(next);
@@ -1778,8 +1845,9 @@ function HostView({ jwt, title, accent }: { jwt: string; title: string; accent: 
   }
 
   return (
-    <div style={S.live}>
-      <header style={S.bar}>
+    <div style={S.live} className="fx-hlive">
+      <style>{HOST_MOBILE_CSS}</style>
+      <header style={S.bar} className="fx-hbar">
         <div style={{ lineHeight: 1.15 }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
@@ -1791,7 +1859,7 @@ function HostView({ jwt, title, accent }: { jwt: string; title: string; accent: 
             {title} · {hostName}
           </div>
         </div>
-        <div style={{ display: "flex", gap: 8 }}>
+        <div style={{ display: "flex", gap: 8 }} className="fx-hbtns">
           {/* The one link a client needs (James 2026-11-11). */}
           <button style={{ ...S.ctl, color: "#D9B878" }} onClick={copyGuestLink} title={GUEST_LINK}>
             {copied ? "Link copied" : "Copy guest link"}
@@ -1821,10 +1889,29 @@ function HostView({ jwt, title, accent }: { jwt: string; title: string; accent: 
           >
             Bookings
           </button>
-          <button style={S.ctl} onClick={toggleMic}>
+          <button
+            style={{ ...S.ctl, ...(companion ? { color: "#D9B878", borderColor: "#A8853F" } : {}) }}
+            onClick={() => void toggleCompanion()}
+            title={
+              companion
+                ? "On: this device's mic, camera and sound are off; your phone carries them. Click to use this device's own."
+                : "Use your phone for camera and mic: open the office on your phone too, then turn this on here. This device goes quiet so there's no echo."
+            }
+          >
+            {companion ? "Phone is cam & mic" : "Use phone for cam & mic"}
+          </button>
+          <button
+            style={{ ...S.ctl, opacity: companion ? 0.45 : 1 }}
+            onClick={toggleMic}
+            disabled={companion}
+          >
             {micOn ? "Mute" : "Unmute"}
           </button>
-          <button style={S.ctl} onClick={toggleCam}>
+          <button
+            style={{ ...S.ctl, opacity: companion ? 0.45 : 1 }}
+            onClick={toggleCam}
+            disabled={companion}
+          >
             {camOn ? "Stop video" : "Start video"}
           </button>
           <button
@@ -1836,21 +1923,25 @@ function HostView({ jwt, title, accent }: { jwt: string; title: string; accent: 
         </div>
       </header>
 
-      <div style={S.body}>
+      <div style={S.body} className="fx-hbody">
         {/* The stage: the plan you present, a shared screen, the faces. With
             nothing on it, the view. */}
         <main style={S.stage}>
-          <PlanModule jwt={jwt} accent={accent} />
+          <div className="fx-hdesk">
+            <PlanModule jwt={jwt} accent={accent} />
+          </div>
           <ScreenStage screenEl={screenEl} />
           <Faces tilesEl={tilesEl} people={officeRoster} selfId={hostId} show />
-          <OfficeWall
-            host
-            getToken={() => jwt}
-            send={(f) => sendOffice({ ...f, roomId: officeRoom })}
-          />
+          <div className="fx-hdesk">
+            <OfficeWall
+              host
+              getToken={() => jwt}
+              send={(f) => sendOffice({ ...f, roomId: officeRoom })}
+            />
+          </div>
         </main>
 
-        <aside style={S.side}>
+        <aside style={S.side} className="fx-hside">
           <div style={S.sideHead}>In the office ({officeRoster.length})</div>
           <ul style={S.roster}>
             {officeRoster.map((p) => {

@@ -31,7 +31,8 @@ function useCameraIds(tilesEl: RefObject<HTMLDivElement | null>): Set<string> {
       setIds(
         new Set(
           Array.from(el.querySelectorAll("[data-pid]")).map(
-            (n) => n.getAttribute("data-pid") || "",
+            // A host on a second device joins as "<id>~<device>" (api routes/voice.ts).
+            (n) => (n.getAttribute("data-pid") || "").split("~")[0],
           ),
         ),
       );

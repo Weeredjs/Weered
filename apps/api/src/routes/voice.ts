@@ -181,8 +181,16 @@ export default async function voiceRoutes(app: FastifyInstance, opts: Opts) {
       // rejoin a call long after leaving it, or after a kick or a ban. The
       // voice server renews the pass of someone already in a call itself, so a
       // call in progress is unaffected (fan-out audit, 2026-11-13).
+      // The office host on two devices at once (James 2026-11-16: his phone
+      // for camera and mic, the PC to run the meeting): each device is its own
+      // participant, or the second join drops the first. Host passes only, so
+      // a kick (which removes the plain id) still reaches everyone else.
+      const device =
+        (u as any).host && typeof body.device === "string" && /^[a-z0-9]{4,16}$/i.test(body.device)
+          ? body.device
+          : "";
       const at = new AccessToken(lk.key, lk.secret, {
-        identity: u.id,
+        identity: device ? `${u.id}~${device}` : u.id,
         name: u.name,
         ttl: "10m",
       });
