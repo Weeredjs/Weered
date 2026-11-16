@@ -288,9 +288,29 @@ export default function CreateLobbyPage() {
   // ── Describe it (components/build/DescribeBox.tsx) ──────────────────────
   // What a description adds beyond the steps: rooms by name, the Home
   // banner's words, extra blocks, a front door, a symbol.
-  type AiHome = Pick<LobbyPlan, "welcome" | "extras" | "door"> & { symbol?: string };
+  // planName: the name the builder wrote the banner around.
+  type AiHome = Pick<LobbyPlan, "welcome" | "extras" | "door"> & {
+    symbol?: string;
+    planName?: string;
+  };
   const [customRooms, setCustomRooms] = useState<{ name: string; kind: RoomKind }[] | null>(null);
   const [aiHome, setAiHome] = useState<AiHome | null>(null);
+  // The banner follows the name box. A lobby launched 2026-11-16 as "yen" said
+  // "Welcome to Darl": the builder named it Darl, its owner renamed it, and the
+  // banner kept the builder's name. Whatever the name is now, the banner says it.
+  const aiWelcome = React.useMemo(() => {
+    if (!aiHome) return undefined;
+    const from = (aiHome.planName || "").trim();
+    const to = name.trim();
+    if (!from || !to || from === to) return aiHome.welcome;
+    const re = new RegExp(from.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi");
+    const swap = (t: string) => t.replace(re, () => to);
+    return {
+      ...aiHome.welcome,
+      title: swap(aiHome.welcome.title),
+      body: swap(aiHome.welcome.body),
+    };
+  }, [aiHome, name]);
   const [describeAsk, setDescribeAsk] = useState("");
   // Words from Home start a new lobby, even over a draft left in this browser.
   const freshAsk = useRef(true);
@@ -407,10 +427,10 @@ export default function CreateLobbyPage() {
       if (welcome) {
         welcome.props = {
           ...welcome.props,
-          title: (aiHome?.welcome.title || `Welcome to ${name.trim()}`).slice(0, 120),
-          ...(aiHome?.welcome.cta ? { cta: aiHome.welcome.cta } : {}),
+          title: (aiWelcome?.title || `Welcome to ${name.trim()}`).slice(0, 120),
+          ...(aiWelcome?.cta ? { cta: aiWelcome.cta } : {}),
           body:
-            aiHome?.welcome.body ||
+            aiWelcome?.body ||
             description.trim() ||
             (gameId === "OFFICE"
               ? "Take a seat in Reception and ring the desk. Someone will be right with you."
@@ -517,7 +537,7 @@ export default function CreateLobbyPage() {
       rooms:
         customRooms ||
         starterRooms.map((r) => ({ name: r.name, kind: (r.module || "text") as RoomKind })),
-      welcome: aiHome.welcome,
+      welcome: aiWelcome || aiHome.welcome,
       extras: aiHome.extras,
       door: aiHome.door,
       summary: "",
@@ -545,6 +565,7 @@ export default function CreateLobbyPage() {
       welcome: p.welcome,
       extras: p.extras,
       door: p.door,
+      planName: p.name,
       ...(symbol ? { symbol } : {}),
     });
     return () => {
@@ -1390,7 +1411,7 @@ export default function CreateLobbyPage() {
             features={features}
             spinKey={spinKey}
             replayKey={replayKey}
-            welcome={aiHome?.welcome}
+            welcome={aiWelcome}
           />
           <div style={{ marginTop: 14 }}>{launchButton(false)}</div>
         </aside>
