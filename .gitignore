@@ -111,6 +111,11 @@ office-ratecards.json
 # time; a nightly job on the server commits whatever is in this folder.
 office-board.json
 
+# Office follow-up bookings: clients' names and emails, and the calendar
+# feed's key (api lib/officeBooking.ts). Written at run time, never committed.
+office-bookings.json
+office-bookings.json.tmp
+
 # The voice server's settings hold the key that signs every voice pass. The
 # repository keeps services/livekit/livekit.example.yaml; the real file lives
 # on the server only.
