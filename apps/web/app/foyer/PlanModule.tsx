@@ -1223,11 +1223,14 @@ export function PlanModule({ jwt, accent }: { jwt: string; accent: string }) {
   if (!open) {
     return (
       <div style={PM.barWrap}>
-        <button style={{ ...PM.bar, borderColor: accent }} onClick={() => setOpen(true)}>
-          <span style={{ color: accent, fontWeight: 800 }}>◧ Client plan</span>
-          <span style={{ color: "#8b949e", fontSize: 13 }}>
-            Pull up a client&apos;s plan of record
+        <style>{PM_CSS(accent)}</style>
+        <button className="pm-bar" style={PM.tBar} onClick={() => setOpen(true)}>
+          <span style={PM.titleRow}>
+            <span style={{ ...PM.badge, color: accent, borderColor: `${accent}55` }}>◧</span>
+            <span style={PM.titleText}>Client plan</span>
+            <span style={PM.titleSub}>Pull up a client&apos;s plan of record</span>
           </span>
+          <span style={PM.kbd}>Open</span>
         </button>
       </div>
     );
@@ -1239,70 +1242,96 @@ export function PlanModule({ jwt, accent }: { jwt: string; accent: string }) {
   const sp = spec();
 
   return (
-    <div style={{ ...PM.panel, borderColor: accent }}>
-      <div style={PM.head}>
-        <strong style={{ color: accent }}>◧ Client plan{presenting ? " · presenting" : ""}</strong>
-        <button style={PM.x} onClick={hidePanel}>
-          Hide
-        </button>
+    // A proper tool (James 2026-11-16: "Make it look more like a proper
+    // tool"): a toolbar head, the book as a segmented switch, a search field
+    // with its icon, results as a table, the client's tools as one strip.
+    <div style={PM.tPanel}>
+      <style>{PM_CSS(accent)}</style>
+      <div style={PM.tHead}>
+        <div style={PM.titleRow}>
+          <span style={{ ...PM.badge, color: accent, borderColor: `${accent}55` }}>◧</span>
+          <span style={PM.titleText}>Client plan</span>
+          <span style={PM.titleSub}>
+            {book === "eceb" ? "ECEB book" : "Demo book"} · plan of record
+          </span>
+          {presenting && <span style={PM.live}>● Presenting</span>}
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          {!detail && (
+            <div style={PM.seg} role="tablist" aria-label="Book">
+              {(["eceb", "demo"] as const).map((b) => (
+                <button
+                  key={b}
+                  role="tab"
+                  aria-selected={book === b}
+                  className="pm-seg"
+                  style={{
+                    ...PM.segBtn,
+                    ...(book === b ? { background: "#1c2430", color: "#f0f3f6" } : {}),
+                  }}
+                  onClick={() => pickBook(b)}
+                >
+                  {b === "eceb" ? "ECEB book" : "Demo book"}
+                </button>
+              ))}
+            </div>
+          )}
+          <button className="pm-icon" style={PM.tX} onClick={hidePanel} title="Hide the panel">
+            Hide
+          </button>
+        </div>
       </div>
 
       {!detail ? (
-        <div style={{ padding: 12 }}>
-          <div style={PM.books}>
-            <button
-              style={{
-                ...PM.bookBtn,
-                ...(book === "eceb" ? { background: accent, color: "#08120b" } : {}),
-              }}
-              onClick={() => pickBook("eceb")}
-            >
-              ECEB book
-            </button>
-            <button
-              style={{
-                ...PM.bookBtn,
-                ...(book === "demo" ? { background: accent, color: "#08120b" } : {}),
-              }}
-              onClick={() => pickBook("demo")}
-            >
-              Demo book
-            </button>
-          </div>
-          <div style={{ display: "flex", gap: 8 }}>
+        <div style={{ padding: 14 }}>
+          <div className="pm-field" style={PM.field}>
+            <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden style={{ flexShrink: 0 }}>
+              <circle cx="11" cy="11" r="7" fill="none" stroke="#6e7a88" strokeWidth="2" />
+              <path d="M20 20l-3.5-3.5" stroke="#6e7a88" strokeWidth="2" strokeLinecap="round" />
+            </svg>
             <input
-              style={PM.input}
+              style={PM.fieldInput}
               value={q}
               onChange={(e) => setQ(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && runSearch()}
-              placeholder="Search clients by name…"
+              placeholder="Find a client by name"
+              aria-label="Find a client by name"
               autoFocus
             />
-            <button style={{ ...PM.go, background: accent }} onClick={runSearch}>
-              {loading ? "…" : "Search"}
-            </button>
+            <span style={PM.kbd}>{loading ? "Searching" : "Enter"}</span>
           </div>
           {err && <div style={PM.err}>{err}</div>}
-          <div style={{ marginTop: 10 }}>
-            {results.map((e) => (
-              <button key={e.id} style={PM.result} onClick={() => openClient(e.id)}>
-                <span style={{ fontWeight: 700 }}>{e.name}</span>
-                <span style={{ color: "#8b949e", fontSize: 12 }}>
-                  {[e.carrier, e.renewalMonth, e.lives ? `${e.lives} lives` : null]
-                    .filter(Boolean)
-                    .join(" · ") || e.status}
-                </span>
-              </button>
-            ))}
-            {loading && results.length === 0 && (
-              <div style={{ color: "#8b949e", fontSize: 13, padding: "8px 2px" }}>Searching…</div>
-            )}
-            {!loading && searched && results.length === 0 && !err && (
-              <div style={{ color: "#8b949e", fontSize: 13, padding: "8px 2px" }}>
-                No clients matched &ldquo;{q}&rdquo;.
+          {results.length > 0 && (
+            <div style={PM.table}>
+              <div style={{ ...PM.tr, ...PM.th }}>
+                <span>Client</span>
+                <span>Carrier</span>
+                <span>Renews</span>
+                <span style={{ textAlign: "right" }}>Lives</span>
               </div>
-            )}
-          </div>
+              {results.map((e) => (
+                <button
+                  key={e.id}
+                  className="pm-row"
+                  style={{ ...PM.tr, ...PM.td }}
+                  onClick={() => openClient(e.id)}
+                >
+                  <span style={PM.cellName}>{e.name}</span>
+                  <span style={PM.cell}>{e.carrier || e.status || "—"}</span>
+                  <span style={PM.cell}>{e.renewalMonth || "—"}</span>
+                  <span style={{ textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
+                    {e.lives || "—"}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+          {!loading && searched && results.length === 0 && !err && (
+            <div style={PM.empty}>No clients matched &ldquo;{q}&rdquo;.</div>
+          )}
+          {!searched && !loading && !err && (
+            <div style={PM.empty}>Start typing a name. The list fills in as you type.</div>
+          )}
         </div>
       ) : (
         <div style={{ padding: 12, maxHeight: "66vh", overflowY: "auto" }}>
@@ -1318,70 +1347,53 @@ export function PlanModule({ jwt, accent }: { jwt: string; accent: string }) {
           <PlanBody detail={detail} accent={accent} />
           {rateCard && <RateCardTable card={rateCard} accent={accent} title="Renewal rates" />}
 
-          <div style={{ display: "flex", gap: 8, marginTop: 14, flexWrap: "wrap" }}>
+          <div style={PM.tools} role="toolbar" aria-label="Client tools">
+            <div style={PM.toolGroup}>
+              {[
+                { on: reviewOpen, label: "Renewal review", icon: "▣", act: toggleReviewPanel },
+                ...(detail.plan
+                  ? [
+                      {
+                        on: editing,
+                        label: "Adjust plan",
+                        icon: "✎",
+                        act: () => setEditing((v) => !v),
+                      },
+                    ]
+                  : []),
+                { on: projOpen, label: "Model", icon: "◇", act: toggleProjPanel },
+                { on: rcOpen, label: "Rates", icon: "▤", act: () => setRcOpen((v) => !v) },
+                { on: proposalOpen, label: "Proposal", icon: "≡", act: toggleProposalPanel },
+              ].map((t) => (
+                <button
+                  key={t.label}
+                  className="pm-tool"
+                  aria-pressed={t.on}
+                  title={t.on ? `Close: ${t.label}` : t.label}
+                  style={{
+                    ...PM.tool,
+                    ...(t.on
+                      ? {
+                          background: "#1c2430",
+                          color: "#f0f3f6",
+                          boxShadow: `inset 0 -2px 0 ${accent}`,
+                        }
+                      : {}),
+                  }}
+                  onClick={t.act}
+                >
+                  <span style={{ color: accent }}>{t.icon}</span>
+                  {t.label}
+                </button>
+              ))}
+            </div>
             <button
+              className="pm-present"
               style={{
-                ...PM.adjust,
-                borderColor: accent,
-                color: reviewOpen ? "#08120b" : accent,
-                background: reviewOpen ? accent : "transparent",
-              }}
-              onClick={toggleReviewPanel}
-            >
-              {reviewOpen ? "Close the review" : "▣ Renewal review"}
-            </button>
-            {detail.plan && (
-              <button
-                style={{
-                  ...PM.adjust,
-                  borderColor: accent,
-                  color: editing ? "#08120b" : accent,
-                  background: editing ? accent : "transparent",
-                }}
-                onClick={() => setEditing((v) => !v)}
-              >
-                {editing ? "Done adjusting" : "✎ Adjust plan"}
-              </button>
-            )}
-            <button
-              style={{
-                ...PM.adjust,
-                borderColor: accent,
-                color: projOpen ? "#08120b" : accent,
-                background: projOpen ? accent : "transparent",
-              }}
-              onClick={toggleProjPanel}
-            >
-              {projOpen ? "Close the model" : "◇ Model the renewal"}
-            </button>
-            <button
-              style={{
-                ...PM.adjust,
-                borderColor: accent,
-                color: rcOpen ? "#08120b" : accent,
-                background: rcOpen ? accent : "transparent",
-              }}
-              onClick={() => setRcOpen((v) => !v)}
-            >
-              {rcOpen ? "Done with rates" : "▤ Renewal rates"}
-            </button>
-            <button
-              style={{
-                ...PM.adjust,
-                borderColor: accent,
-                color: proposalOpen ? "#08120b" : accent,
-                background: proposalOpen ? accent : "transparent",
-              }}
-              onClick={toggleProposalPanel}
-            >
-              {proposalOpen ? "Close the proposal" : "≡ Proposal"}
-            </button>
-            <button
-              style={{
-                ...PM.adjust,
-                borderColor: presenting ? "#3fb950" : "#8b949e",
-                color: presenting ? "#08120b" : "#c9d4e0",
-                background: presenting ? "#3fb950" : "transparent",
+                ...PM.present,
+                ...(presenting
+                  ? { background: "#238636", borderColor: "#2ea043", color: "#fff" }
+                  : { background: accent, borderColor: accent, color: "#0b0f14" }),
               }}
               onClick={togglePresent}
               disabled={busy === "present"}
@@ -1918,6 +1930,19 @@ export function PlanModule({ jwt, accent }: { jwt: string; accent: string }) {
   );
 }
 
+/** Hover and focus for the host's plan tool, which inline styles can't say. */
+const PM_CSS = (accent: string) => `
+.pm-bar:hover{border-color:#334155!important;background:#141a23!important}
+.pm-field:focus-within{border-color:${accent}!important;box-shadow:0 0 0 3px ${accent}26}
+.pm-field input::placeholder{color:#6e7a88}
+.pm-row:hover{background:#151c26!important}
+.pm-row:focus-visible,.pm-tool:focus-visible,.pm-seg:focus-visible,.pm-icon:focus-visible{outline:2px solid ${accent};outline-offset:-2px}
+.pm-tool:hover{background:#18202b!important;color:#f0f3f6!important}
+.pm-seg:hover{color:#f0f3f6!important}
+.pm-icon:hover{background:#1c2430!important;color:#f0f3f6!important}
+.pm-present:hover{filter:brightness(1.08)}
+`;
+
 const PM: Record<string, CSSProperties> = {
   barWrap: { marginBottom: 12 },
   bar: {
@@ -1959,6 +1984,203 @@ const PM: Record<string, CSSProperties> = {
     padding: "4px 10px",
     fontSize: 12,
     cursor: "pointer",
+  },
+  // The host's tool (James 2026-11-16: "a proper tool"). panel/head above stay
+  // as they were: the client's light document builds on them.
+  tBar: {
+    width: "100%",
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 10,
+    padding: "9px 10px 9px 12px",
+    borderRadius: 10,
+    border: "1px solid #232c39",
+    background: "#0f141b",
+    color: "#e6edf3",
+    cursor: "pointer",
+    textAlign: "left",
+  },
+  tPanel: {
+    marginBottom: 12,
+    border: "1px solid #232c39",
+    borderRadius: 10,
+    background: "#0f141b",
+    color: "#e6edf3",
+    boxShadow: "0 10px 30px rgba(0,0,0,.35)",
+    overflow: "hidden",
+    flexShrink: 0,
+  },
+  tHead: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 10,
+    padding: "8px 10px 8px 12px",
+    borderBottom: "1px solid #1d2531",
+    background: "#0c1016",
+  },
+  tX: {
+    border: "1px solid #232c39",
+    background: "transparent",
+    color: "#9aa5b1",
+    borderRadius: 6,
+    padding: "5px 10px",
+    fontSize: 12,
+    fontWeight: 600,
+    cursor: "pointer",
+  },
+  titleRow: { display: "flex", alignItems: "center", gap: 9, minWidth: 0 },
+  badge: {
+    width: 24,
+    height: 24,
+    display: "grid",
+    placeItems: "center",
+    borderRadius: 6,
+    border: "1px solid",
+    fontSize: 13,
+    flexShrink: 0,
+  },
+  titleText: { fontSize: 13.5, fontWeight: 700, color: "#f0f3f6", whiteSpace: "nowrap" },
+  titleSub: {
+    fontSize: 12,
+    color: "#7d8896",
+    whiteSpace: "nowrap",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+  },
+  live: {
+    fontSize: 11,
+    fontWeight: 700,
+    color: "#3fb950",
+    padding: "2px 7px",
+    borderRadius: 99,
+    background: "rgba(63,185,80,.12)",
+    border: "1px solid rgba(63,185,80,.35)",
+    whiteSpace: "nowrap",
+  },
+  seg: {
+    display: "flex",
+    padding: 2,
+    gap: 2,
+    borderRadius: 7,
+    border: "1px solid #232c39",
+    background: "#0a0e13",
+  },
+  segBtn: {
+    padding: "4px 11px",
+    borderRadius: 5,
+    border: 0,
+    background: "transparent",
+    color: "#8a95a3",
+    fontSize: 12,
+    fontWeight: 600,
+    cursor: "pointer",
+    whiteSpace: "nowrap",
+  },
+  field: {
+    display: "flex",
+    alignItems: "center",
+    gap: 9,
+    height: 38,
+    padding: "0 8px 0 11px",
+    borderRadius: 8,
+    border: "1px solid #232c39",
+    background: "#0a0e13",
+    transition: "border-color .12s, box-shadow .12s",
+  },
+  fieldInput: {
+    flex: 1,
+    minWidth: 0,
+    height: "100%",
+    border: 0,
+    outline: "none",
+    background: "transparent",
+    color: "#e6edf3",
+    fontSize: 14,
+  },
+  kbd: {
+    fontSize: 11,
+    color: "#7d8896",
+    padding: "2px 7px",
+    borderRadius: 5,
+    border: "1px solid #232c39",
+    background: "#11171f",
+    whiteSpace: "nowrap",
+  },
+  empty: { color: "#6e7a88", fontSize: 12.5, padding: "10px 2px 0" },
+  table: { marginTop: 10, border: "1px solid #1d2531", borderRadius: 8, overflow: "hidden" },
+  tr: {
+    width: "100%",
+    display: "grid",
+    gridTemplateColumns: "minmax(0,2.2fr) minmax(0,1.3fr) minmax(0,1fr) 60px",
+    gap: 12,
+    alignItems: "center",
+    padding: "8px 12px",
+    textAlign: "left",
+  },
+  th: {
+    fontSize: 10.5,
+    fontWeight: 700,
+    letterSpacing: ".08em",
+    textTransform: "uppercase",
+    color: "#6e7a88",
+    background: "#0c1016",
+  },
+  td: {
+    border: 0,
+    borderTop: "1px solid #161d27",
+    background: "transparent",
+    color: "#a9b4c0",
+    fontSize: 13,
+    cursor: "pointer",
+  },
+  cellName: {
+    fontWeight: 700,
+    color: "#f0f3f6",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+  },
+  cell: { overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
+  tools: {
+    display: "flex",
+    alignItems: "stretch",
+    justifyContent: "space-between",
+    gap: 10,
+    marginTop: 14,
+    flexWrap: "wrap",
+  },
+  toolGroup: {
+    display: "flex",
+    flexWrap: "wrap",
+    border: "1px solid #232c39",
+    borderRadius: 8,
+    overflow: "hidden",
+    background: "#0a0e13",
+  },
+  tool: {
+    display: "flex",
+    alignItems: "center",
+    gap: 7,
+    padding: "8px 13px",
+    border: 0,
+    borderRight: "1px solid #1d2531",
+    background: "transparent",
+    color: "#a9b4c0",
+    fontSize: 12.5,
+    fontWeight: 600,
+    cursor: "pointer",
+    whiteSpace: "nowrap",
+  },
+  present: {
+    padding: "8px 16px",
+    borderRadius: 8,
+    border: "1px solid",
+    fontSize: 13,
+    fontWeight: 700,
+    cursor: "pointer",
+    whiteSpace: "nowrap",
   },
   books: { display: "flex", gap: 6, marginBottom: 10 },
   bookBtn: {
