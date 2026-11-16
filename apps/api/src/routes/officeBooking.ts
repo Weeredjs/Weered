@@ -10,8 +10,14 @@
 // - POST /office/booking/settings    host: hours, length, time away
 // - GET  /office/calendar/:key       the feed Outlook subscribes to
 //
-// Mail goes out under East Coast Employee Benefits' name, replies to James.
+// Mail (copy settled with the Daily Ops session, 2026-11-16, verbatim). Until
+// James sets up office@eastcoastemployeebenefits.com, it goes out through
+// Weered's signed sender under ECEB's name with a PUBLISH invite. With
+// OFFICE_SMTP_HOST/USER/PASS and OFFICE_MAIL_FROM set on the server, it goes
+// from ECEB's own domain through Websavers and the invite becomes a REQUEST
+// (an Accept bar) with a matching CANCEL. Config only, no rebuild.
 import { randomBytes } from "node:crypto";
+import nodemailer, { type Transporter } from "nodemailer";
 import type { FastifyInstance } from "fastify";
 import { sendMail } from "../lib/email";
 import { swallow } from "../lib/logger";
@@ -19,17 +25,21 @@ import {
   active,
   book,
   cleanSettings,
+  firstName,
   icsCalendar,
   icsEvent,
   openSlots,
   readStore,
-  whenText,
+  timeText,
+  whenPlain,
   writeStore,
   type Booking,
 } from "../lib/officeBooking";
 
 const OFFICE_LINK = "https://office.eastcoastemployeebenefits.com";
+const OFFICE_SHOWN = "office.eastcoastemployeebenefits.com";
 const FROM_NAME = "James Stirling · East Coast Employee Benefits";
+const PHONE = "902-830-7423";
 const JAMES = () => process.env.OFFICE_BOOKING_TO || "james@eastcoastemployeebenefits.com";
 
 type Opts = {
@@ -40,11 +50,92 @@ type Opts = {
 const esc = (s: string) =>
   s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
 
-const event = (b: Booking) =>
+// --- The sender -------------------------------------------------------------
+
+/** ECEB's own mailbox, when the server has it (OFFICE_SMTP_*); else null. */
+let officeTransport: Transporter | null | undefined;
+function officeSmtp() {
+  if (officeTransport !== undefined) return officeTransport;
+  const host = process.env.OFFICE_SMTP_HOST;
+  const user = process.env.OFFICE_SMTP_USER;
+  const pass = process.env.OFFICE_SMTP_PASS;
+  const from = process.env.OFFICE_MAIL_FROM;
+  if (!host || !user || !pass || !from) return (officeTransport = null);
+  const port = Number(process.env.OFFICE_SMTP_PORT || 465);
+  officeTransport = nodemailer.createTransport({
+    host,
+    port,
+    secure: port === 465,
+    auth: { user, pass },
+  });
+  return officeTransport;
+}
+const officeAddress = () => process.env.OFFICE_MAIL_FROM || "";
+/** ECEB's own domain is sending: invites can carry an organizer and an Accept bar. */
+const ownDomain = () => !!officeSmtp();
+
+type Mail = {
+  to: string;
+  subject: string;
+  html: string;
+  text: string;
+  replyTo: string;
+  fromName?: string;
+  ics?: { content: string; method: "PUBLISH" | "REQUEST" | "CANCEL" };
+};
+
+async function send(m: Mail) {
+  const t = officeSmtp();
+  const attachments = m.ics
+    ? [
+        {
+          filename: "invite.ics",
+          content: m.ics.content,
+          contentType: `text/calendar; charset=utf-8; method=${m.ics.method}`,
+        },
+      ]
+    : undefined;
+  if (t) {
+    try {
+      await t.sendMail({
+        from: `"${m.fromName || FROM_NAME}" <${officeAddress()}>`,
+        to: m.to,
+        replyTo: m.replyTo,
+        subject: m.subject,
+        html: m.html,
+        text: m.text,
+        ...(m.ics ? { icalEvent: { method: m.ics.method, content: m.ics.content } } : {}),
+      });
+      return;
+    } catch (e) {
+      swallow(e); // fall through to Weered's sender rather than lose the mail
+    }
+  }
+  await sendMail({
+    to: m.to,
+    fromName: m.fromName || FROM_NAME,
+    replyTo: m.replyTo,
+    subject: m.subject,
+    html: m.html,
+    text: m.text,
+    ...(attachments ? { attachments } : {}),
+  }).catch(swallow);
+}
+
+// --- The invite --------------------------------------------------------------
+
+const clientEvent = (b: Booking, sequence = 0) =>
   icsEvent(b, {
-    summary: `Follow-up with James Stirling (East Coast Employee Benefits)`,
-    description: `Your follow-up in James's office. Open this link at the time:\n${OFFICE_LINK}${b.note ? `\n\nNote: ${b.note}` : ""}`,
+    summary: "James Stirling, East Coast Employee Benefits",
+    description: `When it's time, come to the office: ${OFFICE_LINK}\nNo app, no sign-in.\n\nNeed a different time? Reply to the email or call ${PHONE}.`,
     location: OFFICE_LINK,
+    sequence,
+    ...(ownDomain()
+      ? {
+          organizer: { name: "James Stirling", email: officeAddress() },
+          attendee: { name: b.name, email: b.email },
+        }
+      : {}),
   });
 const jamesEvent = (b: Booking) =>
   icsEvent(b, {
@@ -53,93 +144,108 @@ const jamesEvent = (b: Booking) =>
     location: OFFICE_LINK,
   });
 
-/** A plain mail in ECEB's colours: the document, not Weered's game look. */
-const mailHtml = (heading: string, body: string) =>
+// --- The words ---------------------------------------------------------------
+
+const SIGN_TEXT = `James Stirling\nEast Coast Employee Benefits\n${PHONE} · Halifax, Nova Scotia`;
+const officeA = `<a href="${OFFICE_LINK}" style="color:#a8843f">${OFFICE_SHOWN}</a>`;
+
+/** ECEB's cream and navy: a letter, not Weered's game look. */
+const mailHtml = (paras: string[]) =>
   `<!DOCTYPE html><html><body style="margin:0;background:#f4f1ea;font-family:Georgia,serif;color:#1b2a3d;padding:32px 16px">
   <table role="presentation" width="100%" style="max-width:560px;margin:0 auto;background:#fff;border:1px solid #e3dccb;border-radius:6px;padding:28px">
   <tr><td>
-  <div style="font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:#a8843f">East Coast Employee Benefits</div>
-  <h1 style="font-size:21px;margin:14px 0 14px;color:#10233d">${heading}</h1>
-  <div style="font-family:system-ui,sans-serif;font-size:15px;line-height:1.6;color:#2b3a4c">${body}</div>
-  <div style="margin-top:26px;padding-top:14px;border-top:1px solid #eee5d3;font-family:system-ui,sans-serif;font-size:12px;color:#7b8794">James Stirling · East Coast Employee Benefits · Halifax, Nova Scotia</div>
+  <div style="font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:#a8843f;margin-bottom:18px">East Coast Employee Benefits</div>
+  <div style="font-family:system-ui,sans-serif;font-size:15px;line-height:1.6;color:#2b3a4c">${paras.map((p) => `<p style="margin:0 0 14px">${p}</p>`).join("")}</div>
+  <div style="margin-top:22px;padding-top:14px;border-top:1px solid #eee5d3;font-family:system-ui,sans-serif;font-size:13px;line-height:1.5;color:#5b6876">James Stirling<br>East Coast Employee Benefits<br>${PHONE} · Halifax, Nova Scotia</div>
   </td></tr></table></body></html>`;
 
 async function mailBooked(b: Booking) {
-  const when = whenText(b.start);
-  await sendMail({
+  const when = whenPlain(b.start);
+  const first = firstName(b.name);
+  await send({
     to: b.email,
-    fromName: FROM_NAME,
     replyTo: JAMES(),
-    subject: `Your follow-up with James: ${when}`,
-    html: mailHtml(
-      "You're booked",
-      `<p>Hi ${esc(b.name)},</p><p>Your follow-up with James is on <b>${esc(when)}</b>.</p>
-       <p>At that time, open the office: <a href="${OFFICE_LINK}" style="color:#a8843f">${OFFICE_LINK.replace("https://", "")}</a>. No app or sign-in needed.</p>
-       <p>The invite attached adds it to your calendar. To change the time, just reply to this email.</p>`,
-    ),
-    text: `Hi ${b.name},\n\nYour follow-up with James is on ${when}.\n\nAt that time, open the office: ${OFFICE_LINK}\nNo app or sign-in needed.\n\nThe invite attached adds it to your calendar. To change the time, just reply to this email.`,
-    attachments: [
-      {
-        filename: "follow-up.ics",
-        content: icsCalendar([event(b)], "East Coast Employee Benefits", "PUBLISH"),
-        contentType: "text/calendar; charset=utf-8; method=PUBLISH",
-      },
-    ],
-  }).catch(swallow);
-  await sendMail({
+    subject: `Booked: ${when} Atlantic`,
+    html: mailHtml([
+      `Hi ${esc(first)},`,
+      `We're booked for <b>${esc(when)} Atlantic</b>.`,
+      `When it's time, come to the office: ${officeA}. No app, no sign-in.`,
+      `The invite is attached for your calendar.`,
+      `Need a different time? Reply to this email or call me at ${PHONE}.`,
+      `James`,
+    ]),
+    text: `Hi ${first},\n\nWe're booked for ${when} Atlantic.\n\nWhen it's time, come to the office: ${OFFICE_SHOWN}. No app, no sign-in.\n\nThe invite is attached for your calendar.\n\nNeed a different time? Reply to this email or call me at ${PHONE}.\n\nJames\n\n${SIGN_TEXT}`,
+    ics: ownDomain()
+      ? {
+          method: "REQUEST",
+          content: icsCalendar([clientEvent(b)], "East Coast Employee Benefits", "REQUEST"),
+        }
+      : {
+          method: "PUBLISH",
+          content: icsCalendar([clientEvent(b)], "East Coast Employee Benefits", "PUBLISH"),
+        },
+  });
+  const who = b.by === "host" ? "you" : "them";
+  await send({
     to: JAMES(),
     fromName: "The office",
     replyTo: b.email,
-    subject: `[office] Follow-up booked: ${b.name}, ${when}`,
-    html: `<p><b>${esc(b.name)}</b> (${esc(b.email)}) booked a follow-up for <b>${esc(when)}</b>${b.by === "host" ? " (you booked it)" : ""}.</p>${b.note ? `<blockquote>${esc(b.note)}</blockquote>` : ""}<p>It's on your office calendar. Reply to write to them.</p>`,
-    text: `${b.name} (${b.email}) booked a follow-up for ${when}.${b.note ? `\n\n${b.note}` : ""}\n\nIt's on your office calendar. Reply to write to them.`,
-    attachments: [
-      {
-        filename: "follow-up.ics",
-        content: icsCalendar([jamesEvent(b)], "Office follow-ups", "PUBLISH"),
-        contentType: "text/calendar; charset=utf-8; method=PUBLISH",
-      },
-    ],
-  }).catch(swallow);
+    subject: `[office] Booked: ${b.name}, ${when}`,
+    html: `<p>${esc(b.name)} (${esc(b.email)}) booked ${esc(when)} Atlantic. Booked by ${who}.</p>${b.note ? `<p>${esc(b.note)}</p>` : ""}<p>It's on your office calendar. Reply to write to them.</p>`,
+    text: `${b.name} (${b.email}) booked ${when} Atlantic. Booked by ${who}.${b.note ? `\n\n${b.note}` : ""}\n\nIt's on your office calendar. Reply to write to them.`,
+    ics: {
+      method: "PUBLISH",
+      content: icsCalendar([jamesEvent(b)], "Office follow-ups", "PUBLISH"),
+    },
+  });
 }
 
 async function mailCancelled(b: Booking) {
-  const when = whenText(b.start);
-  await sendMail({
+  const when = whenPlain(b.start);
+  const first = firstName(b.name);
+  const own = ownDomain();
+  const calLine = own
+    ? "Your calendar updates on its own."
+    : "Please delete the old invite from your calendar.";
+  await send({
     to: b.email,
-    fromName: FROM_NAME,
     replyTo: JAMES(),
-    subject: `Your follow-up on ${when} is cancelled`,
-    html: mailHtml(
-      "Your follow-up is cancelled",
-      `<p>Hi ${esc(b.name)},</p><p>James has cancelled the follow-up on <b>${esc(when)}</b>. Reply to this email to find another time.</p>`,
-    ),
-    text: `Hi ${b.name},\n\nJames has cancelled the follow-up on ${when}. Reply to this email to find another time.`,
-    attachments: [
-      {
-        filename: "follow-up.ics",
-        content: icsCalendar([event(b)], "East Coast Employee Benefits", "PUBLISH"),
-        contentType: "text/calendar; charset=utf-8; method=PUBLISH",
-      },
-    ],
-  }).catch(swallow);
+    subject: `Cancelled: ${when}`,
+    html: mailHtml([
+      `Hi ${esc(first)},`,
+      `I have to cancel our time on ${esc(when)}. Sorry for the shuffle.`,
+      `Reply with a time that suits you, or pick a new one at ${officeA}.`,
+      calLine,
+      `James`,
+    ]),
+    text: `Hi ${first},\n\nI have to cancel our time on ${when}. Sorry for the shuffle.\n\nReply with a time that suits you, or pick a new one at ${OFFICE_SHOWN}.\n\n${calLine}\n\nJames\n\n${SIGN_TEXT}`,
+    ...(own
+      ? {
+          ics: {
+            method: "CANCEL" as const,
+            content: icsCalendar([clientEvent(b, 1)], "East Coast Employee Benefits", "CANCEL"),
+          },
+        }
+      : {}),
+  });
 }
 
 async function mailReminder(b: Booking) {
-  const when = whenText(b.start);
-  await sendMail({
+  const time = timeText(b.start);
+  const first = firstName(b.name);
+  await send({
     to: b.email,
-    fromName: FROM_NAME,
     replyTo: JAMES(),
-    subject: `Tomorrow: your follow-up with James`,
-    html: mailHtml(
-      "See you tomorrow",
-      `<p>Hi ${esc(b.name)},</p><p>A reminder: your follow-up with James is <b>${esc(when)}</b>.</p>
-       <p>At that time, open the office: <a href="${OFFICE_LINK}" style="color:#a8843f">${OFFICE_LINK.replace("https://", "")}</a>.</p>
-       <p>Can't make it? Reply to this email.</p>`,
-    ),
-    text: `Hi ${b.name},\n\nA reminder: your follow-up with James is ${when}.\n\nAt that time, open the office: ${OFFICE_LINK}\n\nCan't make it? Reply to this email.`,
-  }).catch(swallow);
+    subject: `Tomorrow at ${time} Atlantic`,
+    html: mailHtml([
+      `Hi ${esc(first)},`,
+      `A reminder: we meet tomorrow at <b>${esc(time)} Atlantic</b>.`,
+      `When it's time, come to the office: ${officeA}.`,
+      `Can't make it? Reply to this email or call ${PHONE}.`,
+      `James`,
+    ]),
+    text: `Hi ${first},\n\nA reminder: we meet tomorrow at ${time} Atlantic.\n\nWhen it's time, come to the office: ${OFFICE_SHOWN}.\n\nCan't make it? Reply to this email or call ${PHONE}.\n\nJames\n\n${SIGN_TEXT}`,
+  });
 }
 
 export default async function officeBookingRoutes(app: FastifyInstance, opts: Opts) {

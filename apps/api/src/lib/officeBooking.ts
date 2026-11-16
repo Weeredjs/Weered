@@ -287,14 +287,35 @@ const fold = (line: string) => {
   return out.join("\r\n");
 };
 
+type Party = { name: string; email: string };
+const cn = (s: string) => `"${s.replace(/["\\\r\n]/g, "")}"`;
+
 export function icsEvent(
   b: Booking,
-  opts: { summary: string; description: string; location: string; stamp?: string },
+  opts: {
+    summary: string;
+    description: string;
+    location: string;
+    stamp?: string;
+    /** A REQUEST/CANCEL invite names who sends it and who it's for. */
+    organizer?: Party;
+    attendee?: Party;
+    sequence?: number;
+  },
 ): string[] {
   return [
     "BEGIN:VEVENT",
     `UID:${b.id}@office.eastcoastemployeebenefits.com`,
     `DTSTAMP:${icsTime(opts.stamp || b.createdAt)}`,
+    ...(opts.sequence ? [`SEQUENCE:${opts.sequence}`] : []),
+    ...(opts.organizer
+      ? [`ORGANIZER;CN=${cn(opts.organizer.name)}:mailto:${opts.organizer.email}`]
+      : []),
+    ...(opts.attendee
+      ? [
+          `ATTENDEE;CN=${cn(opts.attendee.name)};ROLE=REQ-PARTICIPANT;PARTSTAT=ACCEPTED;RSVP=FALSE:mailto:${opts.attendee.email}`,
+        ]
+      : []),
     `DTSTART:${icsTime(b.start)}`,
     `DTEND:${icsTime(b.end)}`,
     `SUMMARY:${icsText(opts.summary)}`,
@@ -306,7 +327,11 @@ export function icsEvent(
   ];
 }
 
-export function icsCalendar(events: string[][], name: string, method?: "PUBLISH"): string {
+export function icsCalendar(
+  events: string[][],
+  name: string,
+  method?: "PUBLISH" | "REQUEST" | "CANCEL",
+): string {
   return (
     [
       "BEGIN:VCALENDAR",
@@ -340,3 +365,20 @@ export function whenText(iso: string): string {
   }).format(d);
   return `${day} at ${time} Atlantic time`;
 }
+
+/** "Tuesday, November 18 at 2:30 p.m." in Halifax, no zone (the mails add "Atlantic"). */
+export function whenPlain(iso: string): string {
+  return whenText(iso).replace(/ Atlantic time$/, "");
+}
+
+/** "2:30 p.m." in Halifax. */
+export function timeText(iso: string): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: TZ,
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(new Date(iso));
+}
+
+/** The first word of the name they typed: "Hi Pat". */
+export const firstName = (name: string) => (name.trim().split(/\s+/)[0] || name).slice(0, 40);

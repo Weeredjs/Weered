@@ -13,6 +13,9 @@ import {
   readStore,
   writeStore,
   whenText,
+  whenPlain,
+  timeText,
+  firstName,
   type Store,
 } from "../../src/lib/officeBooking";
 
@@ -112,6 +115,47 @@ describe("office follow-up bookings", () => {
     const again = readStore(file);
     expect(again.settings.feedKey).toBe(first.settings.feedKey);
     expect(again.settings.slotMin).toBe(45);
+  });
+
+  it("names the organizer and the client on a REQUEST, and words the mails", () => {
+    const s = store();
+    const r = book(
+      s,
+      {
+        start: openSlots(s, MON_8AM)[0],
+        name: "Pat O'Neil",
+        email: "pat@example.com",
+        by: "visitor",
+      },
+      MON_8AM,
+    );
+    if (!r.ok) throw new Error("not booked");
+    const ics = icsCalendar(
+      [
+        icsEvent(r.booking, {
+          summary: "x",
+          description: "y",
+          location: "https://o",
+          sequence: 1,
+          organizer: { name: "James Stirling", email: "office@eastcoastemployeebenefits.com" },
+          attendee: { name: `Pat "P" O'Neil`, email: "pat@example.com" },
+        }),
+      ],
+      "ECEB",
+      "CANCEL",
+    );
+    const flat = ics.replace(/\r\n /g, "");
+    expect(ics).toContain("METHOD:CANCEL");
+    expect(ics).toContain("SEQUENCE:1");
+    expect(flat).toContain(
+      `ORGANIZER;CN="James Stirling":mailto:office@eastcoastemployeebenefits.com`,
+    );
+    expect(flat).toContain(
+      `ATTENDEE;CN="Pat P O'Neil";ROLE=REQ-PARTICIPANT;PARTSTAT=ACCEPTED;RSVP=FALSE:mailto:pat@example.com`,
+    );
+    expect(whenPlain("2026-11-17T13:00:00.000Z")).toBe("Tuesday, November 17 at 9:00 a.m.");
+    expect(timeText("2026-11-17T13:00:00.000Z")).toBe("9:00 a.m.");
+    expect(firstName("  Pat O'Neil ")).toBe("Pat");
   });
 
   it("writes a calendar Outlook reads", () => {
