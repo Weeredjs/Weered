@@ -7,7 +7,8 @@ import { DEFAULT_LOOK, paintUiPrefs } from "../lib/uiPrefs";
 // James 2026-11-08: "Can we have the background animation off by default.
 // Stars are fine." Nebula's sky holds still unless Moving sky is chosen.
 const WEB = join(__dirname, "..");
-const css = readFileSync(join(WEB, "app/styles/95-nebula.css"), "utf8");
+// Normalised: a Windows checkout (core.autocrlf) hands the file over with CRLF.
+const css = readFileSync(join(WEB, "app/styles/95-nebula.css"), "utf8").replace(/\r\n/g, "\n");
 const attr = () => document.documentElement.getAttribute("data-weered-sky-motion");
 
 describe("the sky", () => {
