@@ -53,4 +53,30 @@ describe("parseBarLaunch", () => {
     expect(parseBarLaunch({ ...good, mode: "ranked" }, room)).toBeNull();
     expect(parseBarLaunch({ ...good, difficulty: "nightmare" }, room)!.difficulty).toBe("normal");
   });
+
+  it("carries a Crew vs AI game plan and rejects a malformed one", () => {
+    const setup = {
+      name: "Last Stand",
+      enemies: ["hard", "medium"],
+      startPosType: 0,
+      modoptions: { tweakdefs1: "bG9jYWwgYSA9IDE=", unit_restrictions_nonukes: "1" },
+    };
+    const vs = { ...good, mode: "vs-ai" };
+    const cfg = parseBarLaunch({ ...vs, setup }, room)!;
+    expect(cfg.setup).toEqual({ ...setup, allies: [] });
+    expect(parseBarLaunch({ ...good, setup }, room)).toBeNull(); // only for Crew vs AI
+    expect(parseBarLaunch({ ...vs, setup: { ...setup, enemies: [] } }, room)).toBeNull();
+    expect(parseBarLaunch({ ...vs, setup: { ...setup, enemies: ["godlike"] } }, room)).toBeNull();
+    expect(
+      parseBarLaunch({ ...vs, setup: { ...setup, modoptions: { x: "1;[GAME]" } } }, room),
+    ).toBeNull();
+    expect(
+      parseBarLaunch({ ...vs, setup: { ...setup, modoptions: { "Bad Key": "1" } } }, room),
+    ).toBeNull();
+    expect(parseBarLaunch({ ...vs, setup: { ...setup, startPosType: 7 } }, room)).toBeNull();
+    expect(
+      parseBarLaunch({ ...vs, setup: { ...setup, modoptions: { big: "A".repeat(60_000) } } }, room),
+    ).toBeNull();
+    expect(parseBarLaunch(vs, room)!.setup).toBeUndefined();
+  });
 });

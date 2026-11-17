@@ -77,6 +77,7 @@ export type LaunchTarget = {
     hostUserId: string;
     hostAddress: string;
     password: string;
+    setup?: import("../lib/bar/startScript").BarSetup;
   };
   display: string;
   note?: string;

@@ -9,6 +9,8 @@ import MapThumb from "../bar/MapThumb";
 import {
   BAR_DEFAULT_PORT,
   BAR_MODE_LABEL,
+  describeSetup,
+  parseSetupCode,
   scriptFor,
   type BarDifficulty,
   type BarMode,
@@ -166,7 +168,7 @@ export function BarTargetSummary({ target, users }: { target: LaunchTarget; user
   const host = users.find((u) => u.id === cfg.hostUserId)?.name || "host";
   return (
     <span>
-      {BAR_MODE_LABEL[cfg.mode]} · host {host}
+      {cfg.setup ? describeSetup(cfg.setup) : BAR_MODE_LABEL[cfg.mode]} · host {host}
       {cfg.mode === "team" ? ` · ${plural(cfg.teams, "team")}` : ""}
       {!isDesktopApp() ? <span style={{ opacity: 0.6 }}> · desktop app needed to play</span> : null}
     </span>
@@ -196,6 +198,18 @@ export function BarSetupDialog({
   const [hostUserId, setHostUserId] = useState(prior?.hostUserId || members[0]?.id || "");
   const [hostAddress, setHostAddress] = useState(prior?.hostAddress || "");
   const [note, setNote] = useState(initial?.note || "");
+  // A setup code carries a whole Crew vs AI plan (AIs, difficulty, game options,
+  // custom units) and its map, which may be a private map not in BAR's list.
+  const [code, setCode] = useState("");
+  const [setup, setSetup] = useState(prior?.setup || null);
+  const codeResult = useMemo(() => (code.trim() ? parseSetupCode(code) : null), [code]);
+  const codeBad = !!code.trim() && !codeResult;
+  useEffect(() => {
+    if (!codeResult) return;
+    setSetup(codeResult.setup);
+    setMap(codeResult.map);
+    setMode("vs-ai");
+  }, [codeResult]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -205,7 +219,7 @@ export function BarSetupDialog({
 
   const needsAddress = mode !== "vs-ai";
   const addressOk = !needsAddress || ADDR_RE.test(hostAddress.trim());
-  const canSubmit = !!map && !!hostUserId && addressOk;
+  const canSubmit = !!map && !!hostUserId && addressOk && !codeBad;
 
   function submit() {
     if (!canSubmit) return;
@@ -213,7 +227,15 @@ export function BarSetupDialog({
       kind: "bar",
       display: map,
       note: note.trim() ? note.trim().slice(0, 300) : undefined,
-      bar: { map, mode, teams, difficulty, hostUserId, hostAddress: hostAddress.trim() },
+      bar: {
+        map,
+        mode,
+        teams,
+        difficulty,
+        hostUserId,
+        hostAddress: hostAddress.trim(),
+        ...(mode === "vs-ai" && setup ? { setup } : {}),
+      },
     });
   }
 
@@ -226,7 +248,39 @@ export function BarSetupDialog({
         <div style={eyebrow}>Beyond All Reason</div>
         <div style={title}>{initial ? "Change the game" : "Set up a game"}</div>
 
-        <div style={label}>Map</div>
+        <div style={label}>Setup code (optional)</div>
+        <textarea
+          value={code}
+          onChange={(e) => setCode(e.target.value.slice(0, 70_000))}
+          placeholder="Paste a WBAR1. code to load a whole Crew vs AI game"
+          rows={2}
+          style={{
+            ...input,
+            resize: "vertical",
+            fontFamily: "ui-monospace, monospace",
+            fontSize: 11,
+            borderColor: codeBad ? "rgba(239,68,68,.5)" : "rgba(255,255,255,.1)",
+          }}
+        />
+        {codeBad ? (
+          <div style={{ ...hint, color: "rgba(248,113,113,.9)" }}>That code isn't valid.</div>
+        ) : setup && mode === "vs-ai" ? (
+          <div style={{ ...hint, color: "rgba(147,197,253,.9)" }}>
+            {describeSetup(setup)} on {map}.{" "}
+            <button
+              type="button"
+              onClick={() => {
+                setSetup(null);
+                setCode("");
+              }}
+              style={{ ...ghostBtn, padding: "1px 6px", fontSize: 10 }}
+            >
+              Clear
+            </button>
+          </div>
+        ) : null}
+
+        <div style={{ ...label, marginTop: 12 }}>Map</div>
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value.slice(0, 60))}
@@ -291,6 +345,8 @@ export function BarSetupDialog({
               </select>
             </div>
           ) : mode === "ffa" ? (
+            <div />
+          ) : mode === "vs-ai" && setup ? (
             <div />
           ) : (
             <div>

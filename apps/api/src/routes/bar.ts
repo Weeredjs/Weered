@@ -1,4 +1,6 @@
 import type { FastifyInstance } from "fastify";
+import fs from "node:fs";
+import path from "node:path";
 import { prisma } from "../lib/prisma";
 import { swallow } from "../lib/logger";
 import {
@@ -22,6 +24,8 @@ type Opts = {
   authFromHeader: (h?: string) => { id: string; name?: string } | null;
 };
 
+const PRIVATE_MAP_DIR = path.join(process.cwd(), "uploads", "bar-maps");
+
 const lobbyCache = new Map<string, { at: number; value: any }>();
 const LOBBY_TTL = 30_000;
 
@@ -44,6 +48,31 @@ function battleSummary(b: BarBattle) {
 export default async function barRoutes(app: FastifyInstance, opts: Opts) {
   const { authFromHeader } = opts;
   const authed = (req: any) => authFromHeader(req?.headers?.authorization);
+
+  // Private BAR maps (custom maps not on BAR's public map host) for friends'
+  // room games. Each map sits in uploads/bar-maps/<32-hex token>/ and the link
+  // itself is the key: shared in a DM, never listed, revoked by deleting the
+  // folder. A link click can't carry the bearer token, hence no sign-in here.
+  app.get("/bar/private-maps/:token/:file", async (req, reply) => {
+    const { token, file } = (req as any).params || {};
+    if (!/^[a-f0-9]{32}$/.test(String(token)) || !/^[a-z0-9_]{1,60}\.sd7$/.test(String(file))) {
+      return reply.code(404).send();
+    }
+    const fp = path.join(PRIVATE_MAP_DIR, token, file);
+    let size = 0;
+    try {
+      size = fs.statSync(fp).size;
+    } catch {
+      return reply.code(404).send();
+    }
+    reply.header("Content-Type", "application/octet-stream");
+    reply.header("Content-Length", String(size));
+    reply.header("Content-Disposition", `attachment; filename="${file}"`);
+    reply.header("Cache-Control", "private, no-store");
+    reply.header("X-Robots-Tag", "noindex");
+    reply.header("Referrer-Policy", "no-referrer");
+    return reply.send(fs.createReadStream(fp));
+  });
 
   app.get("/bar/battles", async (_req, reply) => {
     try {

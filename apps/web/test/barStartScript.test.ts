@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   assignNames,
   buildClientScript,
+  describeSetup,
+  parseSetupCode,
   scriptFor,
   splitAddress,
   type BarConfig,
@@ -86,5 +88,95 @@ describe("BAR start scripts", () => {
   it("defaults the port when the address has none", () => {
     expect(splitAddress("10.0.0.5")).toEqual({ host: "10.0.0.5", port: 8452 });
     expect(splitAddress("host.example:9000")).toEqual({ host: "host.example", port: 9000 });
+  });
+});
+
+const siege = {
+  name: "Last Stand",
+  enemies: ["hard", "hard", "medium", "medium"] as const,
+  allies: [] as const,
+  startPosType: 0 as const,
+  modoptions: { unit_restrictions_nonukes: "1", tweakdefs1: "bG9jYWwgYSA9IDE=" },
+};
+const encode = (obj: unknown) =>
+  "WBAR1." +
+  Buffer.from(JSON.stringify(obj))
+    .toString("base64")
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/, "");
+
+describe("Crew vs AI game plans", () => {
+  const duo = players.slice(0, 2);
+  const hostWith = (cfg: Partial<BarConfig>) => {
+    const r = scriptFor({
+      game: "g",
+      cfg: { ...base, mode: "vs-ai", ...cfg },
+      players: duo,
+      observers: [],
+      myUserId: "u1",
+    });
+    if ("error" in r) throw new Error(r.error);
+    return r.script;
+  };
+
+  it("sends the chosen difficulty to the AI, not just the label", () => {
+    const s = hostWith({ difficulty: "hard" });
+    expect((s.match(/profile=hard;/g) || []).length).toBe(2);
+    expect(hostWith({ difficulty: "normal" })).toContain("profile=medium;");
+  });
+
+  it("seats 2 humans against 4 AIs with fixed starts, profiles and options", () => {
+    const s = hostWith({
+      map: "Four Keeps Siege 1",
+      setup: { ...siege, enemies: [...siege.enemies], allies: [] },
+    });
+    expect(s).toContain("StartPosType=0;");
+    expect((s.match(/ShortName=BARb;/g) || []).length).toBe(4);
+    expect(s.match(/profile=(\w+);/g)).toEqual([
+      "profile=hard;",
+      "profile=hard;",
+      "profile=medium;",
+      "profile=medium;",
+    ]);
+    expect(allyTeams(s)).toEqual([0, 0, 1, 1, 1, 1]);
+    expect(s).toContain("tweakdefs1=bG9jYWwgYSA9IDE=;");
+    expect(s).toContain("unit_restrictions_nonukes=1;");
+    expect(s).toMatch(/\[TEAM5\]/);
+  });
+
+  it("puts AI allies on the crew's side, before the enemy", () => {
+    const s = hostWith({ setup: { ...siege, enemies: ["easy"], allies: ["medium"] } });
+    expect(allyTeams(s)).toEqual([0, 0, 0, 1]);
+  });
+
+  it("never writes an option that could break out of the script", () => {
+    const s = hostWith({
+      setup: {
+        ...siege,
+        enemies: ["easy"],
+        allies: [],
+        modoptions: { evil: "1;}[GAME]{", ok: "2" },
+      },
+    });
+    expect(s).not.toContain("evil");
+    expect(s).toContain("ok=2;");
+  });
+
+  it("decodes a setup code and rejects bad ones", () => {
+    const r = parseSetupCode(encode({ map: "Four Keeps Siege 1", setup: siege }));
+    expect(r?.map).toBe("Four Keeps Siege 1");
+    expect(r?.setup.enemies).toHaveLength(4);
+    expect(describeSetup(r!.setup)).toBe(
+      "Last Stand · 4 enemy AIs (2 Hard, 2 Medium) · 2 game options",
+    );
+    expect(parseSetupCode("WBAR1.notjson")).toBeNull();
+    expect(parseSetupCode(encode({ map: "x;[GAME]", setup: siege }))).toBeNull();
+    expect(
+      parseSetupCode(encode({ map: "m", setup: { ...siege, enemies: ["godlike"] } })),
+    ).toBeNull();
+    expect(
+      parseSetupCode(encode({ map: "m", setup: { ...siege, modoptions: { a: "x;y" } } })),
+    ).toBeNull();
   });
 });

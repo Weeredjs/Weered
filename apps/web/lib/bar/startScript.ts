@@ -11,6 +11,25 @@
 export type BarMode = "team" | "ffa" | "coop-raptors" | "coop-scavengers" | "vs-ai";
 export type BarDifficulty = "easy" | "normal" | "hard";
 
+/** BARb difficulty profiles, as BAR's own lobby names them. */
+export type BarProfile = "easy" | "medium" | "hard" | "hard_aggressive";
+export const BAR_PROFILE_LABEL: Record<BarProfile, string> = {
+  easy: "Easy",
+  medium: "Medium",
+  hard: "Hard",
+  hard_aggressive: "Hard Aggressive",
+};
+
+/** A Crew vs AI game plan (validated again by the API, which is the authority). */
+export type BarSetup = {
+  name: string;
+  enemies: BarProfile[];
+  allies: BarProfile[];
+  /** 0 fixed map starts, 1 random, 2 choose in game. */
+  startPosType: 0 | 1 | 2;
+  modoptions: Record<string, string>;
+};
+
 export type BarConfig = {
   map: string;
   mode: BarMode;
@@ -19,7 +38,78 @@ export type BarConfig = {
   hostUserId: string;
   hostAddress: string;
   password: string;
+  setup?: BarSetup;
 };
+
+const PROFILE_FOR: Record<BarDifficulty, BarProfile> = {
+  easy: "easy",
+  normal: "medium",
+  hard: "hard",
+};
+const PROFILES: BarProfile[] = ["easy", "medium", "hard", "hard_aggressive"];
+const OPT_KEY_RE = /^[a-z][a-z0-9_]{0,47}$/;
+const OPT_VAL_RE = /^[A-Za-z0-9+/_.,:-]*={0,2}$/;
+export const SETUP_CODE_PREFIX = "WBAR1.";
+
+/**
+ * Decode a setup code ("WBAR1." + base64url JSON {map, setup}). Returns null on
+ * anything malformed; the dialog shows that instead of guessing.
+ */
+export function parseSetupCode(code: string): { map: string; setup: BarSetup } | null {
+  const text = String(code || "").replace(/\s+/g, "");
+  if (!text.startsWith(SETUP_CODE_PREFIX) || text.length > 70_000) return null;
+  let obj: any;
+  try {
+    const b64 = text.slice(SETUP_CODE_PREFIX.length).replace(/-/g, "+").replace(/_/g, "/");
+    const bin = atob(b64 + "===".slice((b64.length + 3) % 4));
+    const bytes = Uint8Array.from(bin, (c) => c.charCodeAt(0));
+    obj = JSON.parse(new TextDecoder().decode(bytes));
+  } catch {
+    return null;
+  }
+  const map = String(obj?.map || "").trim();
+  const s = obj?.setup;
+  if (!/^[A-Za-z0-9 _\-.'()+&]{1,120}$/.test(map) || !s || typeof s !== "object") return null;
+  const list = (v: unknown, max: number) =>
+    Array.isArray(v) && v.length <= max && v.every((p) => PROFILES.includes(p as BarProfile))
+      ? (v as BarProfile[])
+      : null;
+  const enemies = list(s.enemies, 10);
+  const allies = list(s.allies ?? [], 6);
+  if (!enemies || !allies || enemies.length === 0) return null;
+  const startPosType = Number(s.startPosType ?? 0);
+  if (![0, 1, 2].includes(startPosType)) return null;
+  const modoptions: Record<string, string> = {};
+  for (const [k, v] of Object.entries(s.modoptions ?? {})) {
+    if (!OPT_KEY_RE.test(k) || !OPT_VAL_RE.test(String(v))) return null;
+    modoptions[k] = String(v);
+  }
+  const name = String(s.name || "Custom game").slice(0, 40);
+  return {
+    map,
+    setup: { name, enemies, allies, startPosType: startPosType as 0 | 1 | 2, modoptions },
+  };
+}
+
+/** "Last Stand · 4 AIs (2 Hard, 2 Medium) · 1 AI ally · 3 custom options" */
+export function describeSetup(s: BarSetup): string {
+  const count = (list: BarProfile[]) => {
+    const by = new Map<BarProfile, number>();
+    for (const p of list) by.set(p, (by.get(p) || 0) + 1);
+    return [...by].map(([p, n]) => `${n} ${BAR_PROFILE_LABEL[p]}`).join(", ");
+  };
+  const parts = [
+    s.name,
+    `${s.enemies.length} enemy AI${s.enemies.length === 1 ? "" : "s"} (${count(s.enemies)})`,
+  ];
+  if (s.allies.length)
+    parts.push(
+      `${s.allies.length} AI all${s.allies.length === 1 ? "y" : "ies"} (${count(s.allies)})`,
+    );
+  const opts = Object.keys(s.modoptions).length;
+  if (opts) parts.push(`${opts} game option${opts === 1 ? "" : "s"}`);
+  return parts.join(" · ");
+}
 
 export type RosterEntry = { userId: string; name: string };
 
@@ -106,15 +196,23 @@ export function buildHostScript(game: string, cfg: BarConfig, plan: Plan): strin
         : ally("crew"),
   );
 
-  const aiNames: string[] =
-    cfg.mode === "coop-raptors"
-      ? [AI.raptors]
-      : cfg.mode === "coop-scavengers"
-        ? [AI.scavengers]
-        : cfg.mode === "vs-ai"
-          ? humans.map(() => AI.skirmish)
-          : [];
-  const aiAlly = aiNames.length ? ally("ai") : -1;
+  // AI teams follow the humans, so with fixed starts (StartPosType 0) the humans
+  // take the map's first start positions, then AI allies, then the enemy.
+  type AiSeat = { shortName: string; allyTeam: number; profile?: BarProfile };
+  const setup = cfg.mode === "vs-ai" ? cfg.setup : undefined;
+  const ais: AiSeat[] = [];
+  if (cfg.mode === "coop-raptors") ais.push({ shortName: AI.raptors, allyTeam: ally("ai") });
+  if (cfg.mode === "coop-scavengers") ais.push({ shortName: AI.scavengers, allyTeam: ally("ai") });
+  if (cfg.mode === "vs-ai" && setup) {
+    for (const p of setup.allies)
+      ais.push({ shortName: AI.skirmish, allyTeam: ally("crew"), profile: p });
+    for (const p of setup.enemies)
+      ais.push({ shortName: AI.skirmish, allyTeam: ally("ai"), profile: p });
+  } else if (cfg.mode === "vs-ai") {
+    const profile = PROFILE_FOR[cfg.difficulty] || "medium";
+    humans.forEach(() => ais.push({ shortName: AI.skirmish, allyTeam: ally("ai"), profile }));
+  }
+  const modoptions: Record<string, string> = { ...(setup?.modoptions || {}) };
 
   const out: string[] = [];
   const line = (depth: number, s: string) => out.push("\t".repeat(depth) + s);
@@ -134,11 +232,14 @@ export function buildHostScript(game: string, cfg: BarConfig, plan: Plan): strin
     line(1, `MyPlayerName=${names.get(cfg.hostUserId) || "host"};`);
     line(1, `MyPasswd=${cfg.password};`);
     line(1, `NumPlayers=${humans.length};`);
-    line(1, "StartPosType=2;");
+    line(1, `StartPosType=${setup ? setup.startPosType : 2};`);
 
     block(1, "MODOPTIONS", () => {
       if (cfg.mode === "coop-raptors") line(2, `raptor_difficulty=${cfg.difficulty};`);
       if (cfg.mode === "coop-scavengers") line(2, `scav_difficulty=${cfg.difficulty};`);
+      for (const [k, v] of Object.entries(modoptions)) {
+        if (OPT_KEY_RE.test(k) && OPT_VAL_RE.test(v)) line(2, `${k}=${v};`);
+      }
     });
 
     entries.forEach((e, idx) => {
@@ -162,17 +263,18 @@ export function buildHostScript(game: string, cfg: BarConfig, plan: Plan): strin
       });
     });
 
-    aiNames.forEach((shortName, k) => {
+    ais.forEach((ai, k) => {
       const team = humans.length + k;
       block(1, `TEAM${team}`, () => {
         line(2, `TeamLeader=${hostIdx};`);
-        line(2, `AllyTeam=${aiAlly};`);
+        line(2, `AllyTeam=${ai.allyTeam};`);
       });
       block(1, `AI${k}`, () => {
-        line(2, `Name=${shortName}${k + 1};`);
-        line(2, `ShortName=${shortName};`);
+        line(2, `Name=${ai.shortName}${k + 1};`);
+        line(2, `ShortName=${ai.shortName};`);
         line(2, `Team=${team};`);
         line(2, `Host=${hostIdx};`);
+        if (ai.profile) block(2, "Options", () => line(3, `profile=${ai.profile};`));
       });
     });
 
