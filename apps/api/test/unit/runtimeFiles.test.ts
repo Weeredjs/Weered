@@ -54,7 +54,11 @@ describe("files the API writes in the site's folder", () => {
     // in a public repository, from the first commit until 2026-11-13. It was
     // replaced that day; the file now lives on the server only.
     expect(ignored).toContain("services/livekit/livekit.yaml");
-    const example = readFileSync(join(ROOT, "services", "livekit", "livekit.example.yaml"), "utf8");
+    // Windows checkouts (core.autocrlf) hand the file over with CRLF endings.
+    const example = readFileSync(
+      join(ROOT, "services", "livekit", "livekit.example.yaml"),
+      "utf8",
+    ).replace(/\r\n/g, "\n");
     const keys = /^keys:\s*\n((?:[ \t]+\S.*\n)+)/m.exec(example);
     expect(keys, "the example keeps a keys block, to show where the pair goes").not.toBeNull();
     const pairs = keys![1]
