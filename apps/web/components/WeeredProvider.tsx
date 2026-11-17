@@ -69,16 +69,7 @@ export type LaunchTarget = {
   connect: string;
   /** Absent on targets set before BAR existed; treat as "steam". */
   kind?: "steam" | "bar";
-  bar?: {
-    map: string;
-    mode: "team" | "ffa" | "coop-raptors" | "coop-scavengers" | "vs-ai";
-    teams: number;
-    difficulty: "easy" | "normal" | "hard";
-    hostUserId: string;
-    hostAddress: string;
-    password: string;
-    setup?: import("../lib/bar/startScript").BarSetup;
-  };
+  bar?: import("../lib/bar/startScript").BarConfig;
   display: string;
   note?: string;
   setBy: string;
