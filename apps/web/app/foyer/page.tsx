@@ -183,9 +183,30 @@ function makeRoomConn(opts: {
   // now be answered while the foyer connect is still in flight).
   let gen = 0;
 
+  // A camera or screen that is already on when we join arrives during
+  // connect(), before the call view (and its tile area) is on the page. It used
+  // to be dropped, so whoever joined second never saw it (found 2026-11-21: a
+  // PC joining after the phone saw no picture). Wait for the area instead, for
+  // as long as the track is still live.
+  function whenMounted(
+    el: () => HTMLDivElement | null,
+    video: HTMLVideoElement,
+    put: (host: HTMLDivElement) => void,
+    tries = 0,
+  ) {
+    const host = el();
+    if (host) return put(host);
+    const live = (video.srcObject as MediaStream | null)
+      ?.getVideoTracks()
+      .some((t) => t.readyState === "live");
+    if (tries >= 75 || !ref.current || live === false) return;
+    setTimeout(() => whenMounted(el, video, put, tries + 1), 200);
+  }
+
   function addTile(pid: string, label: string, video: HTMLVideoElement) {
-    const host = opts.tilesEl();
-    if (!host) return;
+    whenMounted(opts.tilesEl, video, (host) => putTile(host, pid, label, video));
+  }
+  function putTile(host: HTMLDivElement, pid: string, label: string, video: HTMLVideoElement) {
     removeTile(pid);
     const wrap = document.createElement("div");
     wrap.setAttribute("data-pid", pid);
@@ -212,8 +233,9 @@ function makeRoomConn(opts: {
   // A screen-share renders LARGE (the focus of a consult), not as a grid tile.
   // Only one screen at a time — a new share replaces the old.
   function setScreenVideo(video: HTMLVideoElement, label: string) {
-    const host = opts.screenEl();
-    if (!host) return;
+    whenMounted(opts.screenEl, video, (host) => putScreen(host, video, label));
+  }
+  function putScreen(host: HTMLDivElement, video: HTMLVideoElement, label: string) {
     host.innerHTML = "";
     video.autoplay = true;
     video.playsInline = true;
