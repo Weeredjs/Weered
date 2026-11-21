@@ -46,6 +46,7 @@ const HOST_MOBILE_CSS = `
   .fx-hbody{flex-direction:column!important;min-height:0}
   .fx-hside{width:auto!important;max-height:none!important;overflow:visible!important}
   .fx-hdesk{display:none!important}
+  .fx-hcomp{display:none!important}
 }
 `;
 const GOLD_GRAD = "linear-gradient(180deg,#D9B878,#C6A15B 55%,#A8853F)";
@@ -96,6 +97,62 @@ let _connSeq = 0;
 // if two Rooms transiently coexist (StrictMode remount, host+preview, etc.).
 // TrackUnsubscribed may not fire per-track on a hard disconnect, hence the tag.
 // ============================================================================
+/** What to tell someone whose mic or camera didn't start, from the browser's
+ *  reason. On 11-18 the host's phone joined a client meeting and sent nothing,
+ *  with no word on the page about why (James 2026-11-21: "Ok sound good"). */
+function mediaHelp(kind: "mic" | "cam", reason: string): string {
+  const what = kind === "mic" ? "microphone" : "camera";
+  if (
+    reason === "NotAllowedError" ||
+    reason === "SecurityError" ||
+    reason === "PermissionDeniedError"
+  )
+    return `Your ${what} is blocked in this browser. Tap the lock or \u24D8 beside the address, then Permissions, allow the ${what}, and reload the page.`;
+  if (
+    reason === "NotFoundError" ||
+    reason === "OverconstrainedError" ||
+    reason === "DevicesNotFoundError"
+  )
+    return `No ${what} found on this device.${kind === "mic" ? " Plug one in, or use your phone for camera and mic." : ""}`;
+  if (reason === "NotReadableError" || reason === "TrackStartError" || reason === "AbortError")
+    return `Your ${what} is busy in another app (Teams, Zoom or a call). Close it there, then try again.`;
+  return `Your ${what} didn't start. Check this site's permissions in the browser, then reload the page.`;
+}
+
+function MediaNote({ text, onClose }: { text: string; onClose: () => void }) {
+  if (!text) return null;
+  return (
+    <div role="alert" style={MEDIA_NOTE}>
+      <span style={{ flex: 1 }}>{text}</span>
+      <button style={MEDIA_NOTE_X} onClick={onClose} aria-label="Dismiss">
+        {"\u00D7"}
+      </button>
+    </div>
+  );
+}
+const MEDIA_NOTE: React.CSSProperties = {
+  display: "flex",
+  alignItems: "flex-start",
+  gap: 10,
+  margin: "0 0 10px",
+  padding: "10px 14px",
+  borderRadius: 8,
+  border: "1px solid #C0533F",
+  background: "rgba(122, 32, 20, 0.92)",
+  color: "#FBEDE6",
+  fontSize: 14,
+  lineHeight: 1.45,
+};
+const MEDIA_NOTE_X: React.CSSProperties = {
+  background: "transparent",
+  border: 0,
+  color: "#FBEDE6",
+  fontSize: 20,
+  lineHeight: 1,
+  cursor: "pointer",
+  padding: 0,
+};
+
 function makeRoomConn(opts: {
   getToken: () => string;
   tilesEl: () => HTMLDivElement | null;
@@ -114,6 +171,10 @@ function makeRoomConn(opts: {
 }) {
   const ref: { current: Room | null } = { current: null };
   const connId = `c${++_connSeq}`;
+  // Why the mic or camera last failed to start (the browser's error name), so
+  // the page can say so instead of quietly joining listen-only.
+  const lastErr: { mic?: string; cam?: string } = {};
+  const errName = (e: unknown) => String((e as any)?.name || (e as any)?.message || "Error");
   // Connection generation. Every connect() and disconnect() bumps it; an in-flight
   // connect() re-checks it after each await and ABORTS if superseded. Without this,
   // disconnect() during connect()'s token fetch is a no-op (ref not yet assigned) and
@@ -294,8 +355,9 @@ function makeRoomConn(opts: {
       try {
         await r.localParticipant.setMicrophoneEnabled(true);
         micOn = true;
-      } catch {
-        /* listen-only */
+        lastErr.mic = "";
+      } catch (e) {
+        lastErr.mic = errName(e); // listen-only; the page says why
       }
     }
     if (myGen !== gen) throw new Error("superseded"); // torn down by whoever superseded us
@@ -339,9 +401,11 @@ function makeRoomConn(opts: {
     if (!r) return on;
     try {
       await r.localParticipant.setMicrophoneEnabled(on);
+      if (on) lastErr.mic = "";
       return on;
-    } catch {
+    } catch (e) {
       // mic blocked/absent: stay off regardless of requested state
+      if (on) lastErr.mic = errName(e);
       return false;
     }
   }
@@ -352,9 +416,11 @@ function makeRoomConn(opts: {
       await r.localParticipant.setCameraEnabled(on);
       // setCameraEnabled(false) may NOT fire LocalTrackUnpublished — clear the tile manually.
       if (!on) removeTile(r.localParticipant.identity);
+      if (on) lastErr.cam = "";
       return on;
-    } catch {
+    } catch (e) {
       if (!on) removeTile(r.localParticipant.identity);
+      if (on) lastErr.cam = errName(e);
       return false;
     }
   }
@@ -372,7 +438,19 @@ function makeRoomConn(opts: {
     }
   }
 
-  return { ref, connect, disconnect, roster, setMic, setCam, setScreen, addTile, removeTile };
+  const lastError = (k: "mic" | "cam") => lastErr[k] || "";
+  return {
+    ref,
+    connect,
+    disconnect,
+    roster,
+    setMic,
+    setCam,
+    setScreen,
+    addTile,
+    removeTile,
+    lastError,
+  };
 }
 
 // dedupe-on-append helper shared by every chat:new handler
@@ -510,6 +588,7 @@ function ClientView({
   const [chatInput, setChatInput] = useState("");
   const [micOn, setMicOn] = useState(true);
   const [camOn, setCamOn] = useState(false);
+  const [mediaNote, setMediaNote] = useState("");
   const [screenOn, setScreenOn] = useState(false);
   // The host's Door open: a visitor walks straight in instead of knocking
   // (James 2026-11-12: "Have it like a space people can walk into").
@@ -653,6 +732,7 @@ function ClientView({
       }
       // sync mic UI to reality (denied mic -> listen-only)
       setMicOn(res.micOn);
+      if (micOnRef.current && !res.micOn) setMediaNote(mediaHelp("mic", conn.lastError("mic")));
       // re-enable camera if it was on before the switch (LiveKit does not carry it).
       if (camOnRef.current) {
         const cam = await conn.setCam(true);
@@ -913,6 +993,7 @@ function ClientView({
       joinEpoch = switchEpoch.current;
       const res = await conn.connect(foyerRoom.current, micOnRef.current);
       setMicOn(res.micOn); // reflect a denied mic in the toolbar
+      if (micOnRef.current && !res.micOn) setMediaNote(mediaHelp("mic", conn.lastError("mic")));
       // roster now arrives via WS presence:state for the foyer
     } catch (e: any) {
       if (joinEpoch !== switchEpoch.current || phaseRef.current === "office") {
@@ -952,13 +1033,15 @@ function ClientView({
     const next = !micOn;
     const actual = await conn.setMic(next); // guarded: rejects when mic blocked
     setMicOn(actual);
-    if (next && !actual) setInfo("Your microphone is blocked or unavailable.");
+    if (next && !actual) setMediaNote(mediaHelp("mic", conn.lastError("mic")));
+    else if (actual) setMediaNote("");
   };
   const toggleCam = async () => {
     const next = !camOn;
     const actual = await conn.setCam(next);
     setCamOn(actual);
-    if (next && !actual) setInfo("Your camera is blocked or unavailable.");
+    if (next && !actual) setMediaNote(mediaHelp("cam", conn.lastError("cam")));
+    else if (actual) setMediaNote("");
   };
   const toggleScreen = async () => {
     const next = !screenOn;
@@ -1207,6 +1290,7 @@ function ClientView({
             </button>
           </div>
         </header>
+        <MediaNote text={mediaNote} onClose={() => setMediaNote("")} />
 
         <div style={S.body} className="fx-hbody">
           <main style={S.stage}>
@@ -1416,6 +1500,7 @@ function HostView({ jwt, title, accent }: { jwt: string; title: string; accent: 
   const [chatInput, setChatInput] = useState("");
   const [micOn, setMicOn] = useState(true);
   const [camOn, setCamOn] = useState(false);
+  const [mediaNote, setMediaNote] = useState("");
   const [screenOn, setScreenOn] = useState(false);
 
   const foyerWS = useRef<WebSocket | null>(null);
@@ -1444,8 +1529,15 @@ function HostView({ jwt, title, accent }: { jwt: string; title: string; accent: 
       }
     })(),
   );
+  // Companion is for the PC. On a phone it would silence the very device that
+  // carries the camera and mic, and the setting sticks, so a phone never has it
+  // (and loses one left over from before; its button is hidden there too).
   const [companion, setCompanion] = useState(() => {
     try {
+      if (window.matchMedia("(max-width: 760px)").matches) {
+        localStorage.removeItem("eceb_companion");
+        return false;
+      }
       return localStorage.getItem("eceb_companion") === "1";
     } catch {
       return false;
@@ -1699,6 +1791,8 @@ function HostView({ jwt, title, accent }: { jwt: string; title: string; accent: 
       const res = await conn.connect(officeRoom, micOn && !companionRef.current);
       if (leaving.current) return; // teardown happened while connecting
       setMicOn(res.micOn); // reflect a denied/absent mic in the toolbar
+      if (micOn && !companionRef.current && !res.micOn)
+        setMediaNote(mediaHelp("mic", conn.lastError("mic")));
       // office roster arrives via WS presence:state
       setPhase("live");
     } catch (e: any) {
@@ -1770,11 +1864,15 @@ function HostView({ jwt, title, accent }: { jwt: string; title: string; accent: 
     const next = !micOn;
     const actual = await conn.setMic(next);
     setMicOn(actual);
+    if (next && !actual) setMediaNote(mediaHelp("mic", conn.lastError("mic")));
+    else if (actual) setMediaNote("");
   };
   const toggleCam = async () => {
     const next = !camOn;
     const actual = await conn.setCam(next);
     setCamOn(actual);
+    if (next && !actual) setMediaNote(mediaHelp("cam", conn.lastError("cam")));
+    else if (actual) setMediaNote("");
   };
   const toggleCompanion = async () => {
     const next = !companion;
@@ -1786,6 +1884,7 @@ function HostView({ jwt, title, accent }: { jwt: string; title: string; accent: 
     document
       .querySelectorAll<HTMLAudioElement>("audio[data-lk-audio]")
       .forEach((a) => (a.muted = next));
+    if (next) setMediaNote("");
     if (next) {
       if (micOn) setMicOn(await conn.setMic(false));
       if (camOn) setCamOn(await conn.setCam(false));
@@ -1890,6 +1989,7 @@ function HostView({ jwt, title, accent }: { jwt: string; title: string; accent: 
             Bookings
           </button>
           <button
+            className="fx-hcomp"
             style={{ ...S.ctl, ...(companion ? { color: "#D9B878", borderColor: "#A8853F" } : {}) }}
             onClick={() => void toggleCompanion()}
             title={
@@ -1922,6 +2022,7 @@ function HostView({ jwt, title, accent }: { jwt: string; title: string; accent: 
           </button>
         </div>
       </header>
+      <MediaNote text={mediaNote} onClose={() => setMediaNote("")} />
 
       <div style={S.body} className="fx-hbody">
         {/* The stage: the plan you present, a shared screen, the faces. With
