@@ -153,6 +153,17 @@ const MEDIA_NOTE_X: React.CSSProperties = {
   padding: 0,
 };
 
+/** The host's other device in the call (the phone, seen from the PC). */
+type Twin = { present: boolean; mic: boolean; cam: boolean };
+const NO_TWIN: Twin = { present: false, mic: false, cam: false };
+// The PC tells the phone to turn its mic or camera on/off over the call's data
+// channel (James 2026-11-24: "Those top buttons do not control the phone. I
+// have to use them on the phone."). Only a device on the same host pass is
+// heard: LiveKit sets every identity from its server-issued token, and only a
+// host pass gets the `<id>~<device>` form.
+const CTL_TOPIC = "eceb-ctl";
+const hostOf = (identity: string) => (identity.includes("~") ? identity.split("~")[0] : "");
+
 function makeRoomConn(opts: {
   getToken: () => string;
   tilesEl: () => HTMLDivElement | null;
@@ -168,6 +179,10 @@ function makeRoomConn(opts: {
   device?: string;
   /** Companion mode: this device plays nothing (the phone carries the sound). */
   silent?: () => boolean;
+  /** The host's other device asked this one to turn its mic or camera on/off. */
+  onControl?: (cmd: { mic?: boolean; cam?: boolean }) => void;
+  /** The host's other device came, went, or changed its mic or camera. */
+  onTwin?: (t: Twin) => void;
 }) {
   const ref: { current: Room | null } = { current: null };
   const connId = `c${++_connSeq}`;
@@ -363,6 +378,35 @@ function makeRoomConn(opts: {
       }
     });
 
+    // The host's two devices: commands from the other one, and its state.
+    r.on(RoomEvent.DataReceived, (payload, participant, _kind, topic) => {
+      if (ref.current !== r || topic !== CTL_TOPIC || !participant) return;
+      const me = r.localParticipant.identity;
+      if (!hostOf(me) || hostOf(participant.identity) !== hostOf(me) || participant.identity === me)
+        return;
+      try {
+        const m = JSON.parse(new TextDecoder().decode(payload));
+        const cmd: { mic?: boolean; cam?: boolean } = {};
+        if (typeof m?.mic === "boolean") cmd.mic = m.mic;
+        if (typeof m?.cam === "boolean") cmd.cam = m.cam;
+        if ("mic" in cmd || "cam" in cmd) opts.onControl?.(cmd);
+      } catch {
+        /* not ours */
+      }
+    });
+    const twinChanged = () => {
+      if (ref.current === r) opts.onTwin?.(twin());
+    };
+    for (const ev of [
+      RoomEvent.ParticipantConnected,
+      RoomEvent.ParticipantDisconnected,
+      RoomEvent.TrackPublished,
+      RoomEvent.TrackUnpublished,
+      RoomEvent.TrackMuted,
+      RoomEvent.TrackUnmuted,
+    ])
+      r.on(ev as any, twinChanged);
+
     await r.connect(url, lkToken);
     // Superseded while LiveKit connected: hand the zombie straight back. Null ref
     // only if it is still ours (a newer connect may already own it).
@@ -384,7 +428,45 @@ function makeRoomConn(opts: {
     }
     if (myGen !== gen) throw new Error("superseded"); // torn down by whoever superseded us
     opts.onRoster();
+    opts.onTwin?.(twin());
     return { micOn };
+  }
+
+  // The host's other devices in this call (the phone, seen from the PC).
+  function twins() {
+    const r = ref.current;
+    if (!r) return [];
+    const me = r.localParticipant.identity;
+    const h = hostOf(me);
+    if (!h) return [];
+    return [...r.remoteParticipants.values()].filter(
+      (p) => p.identity !== me && hostOf(p.identity) === h,
+    );
+  }
+  function twin(): Twin {
+    const t = twins();
+    if (!t.length) return NO_TWIN;
+    return {
+      present: true,
+      mic: t.some((p) => p.isMicrophoneEnabled),
+      cam: t.some((p) => p.isCameraEnabled),
+    };
+  }
+  // Ask the other device to turn its mic or camera on/off. False when there's none.
+  async function control(cmd: { mic?: boolean; cam?: boolean }): Promise<boolean> {
+    const r = ref.current;
+    const to = twins().map((p) => p.identity);
+    if (!r || !to.length) return false;
+    try {
+      await r.localParticipant.publishData(new TextEncoder().encode(JSON.stringify(cmd)), {
+        reliable: true,
+        topic: CTL_TOPIC,
+        destinationIdentities: to,
+      });
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   // Purge ONLY this connection's body-appended <audio> + clear the tile host.
@@ -472,6 +554,8 @@ function makeRoomConn(opts: {
     addTile,
     removeTile,
     lastError,
+    twin,
+    control,
   };
 }
 
@@ -1566,6 +1650,10 @@ function HostView({ jwt, title, accent }: { jwt: string; title: string; accent: 
     }
   });
   const companionRef = useRef(companion);
+  // The phone, as the PC sees it, and the phone's handler for the PC's asks.
+  const [twin, setTwin] = useState<Twin>(NO_TWIN);
+  const twinRef = useRef<Twin>(NO_TWIN);
+  const onControlRef = useRef<(cmd: { mic?: boolean; cam?: boolean }) => void>(() => {});
 
   const conn = useRef(
     makeRoomConn({
@@ -1574,6 +1662,11 @@ function HostView({ jwt, title, accent }: { jwt: string; title: string; accent: 
       screenEl: () => screenEl.current,
       device: device.current,
       silent: () => companionRef.current,
+      onControl: (cmd) => onControlRef.current(cmd),
+      onTwin: (t) => {
+        twinRef.current = t;
+        setTwin(t);
+      },
       selfLabel: () => hostName,
       onRoster: () => {}, // office roster comes from WS presence:state, not LiveKit
       onDropped: () => {
@@ -1882,20 +1975,42 @@ function HostView({ jwt, title, accent }: { jwt: string; title: string; accent: 
     }
   };
 
-  const toggleMic = async () => {
-    const next = !micOn;
+  const setMicTo = async (next: boolean) => {
     const actual = await conn.setMic(next);
     setMicOn(actual);
     if (next && !actual) setMediaNote(mediaHelp("mic", conn.lastError("mic")));
     else if (actual) setMediaNote("");
   };
-  const toggleCam = async () => {
-    const next = !camOn;
+  const setCamTo = async (next: boolean) => {
     const actual = await conn.setCam(next);
     setCamOn(actual);
     if (next && !actual) setMediaNote(mediaHelp("cam", conn.lastError("cam")));
     else if (actual) setMediaNote("");
   };
+  // This device is the phone and the PC asked: do it here. Never while this
+  // device is itself the quiet one (companion), which is the PC.
+  onControlRef.current = (cmd) => {
+    if (companionRef.current) return;
+    if (typeof cmd.mic === "boolean" && cmd.mic !== micOn) void setMicTo(cmd.mic);
+    if (typeof cmd.cam === "boolean" && cmd.cam !== camOn) void setCamTo(cmd.cam);
+  };
+  // In companion mode the PC's Mute and Start video work the phone.
+  const askPhone = async (k: "mic" | "cam") => {
+    const want = !twinRef.current[k];
+    if (!(await conn.control({ [k]: want }))) {
+      setMediaNote("Your phone isn't in the office. Open your host link on the phone first.");
+      return;
+    }
+    setMediaNote("");
+    setTimeout(() => {
+      if (companionRef.current && twinRef.current.present && twinRef.current[k] !== want)
+        setMediaNote(
+          `Your phone didn't turn its ${k === "mic" ? "microphone" : "camera"} ${want ? "on" : "off"}. Keep the office open on the phone with its screen on, and check the phone for a permission prompt.`,
+        );
+    }, 6000);
+  };
+  const toggleMic = () => (companion ? askPhone("mic") : setMicTo(!micOn));
+  const toggleCam = () => (companion ? askPhone("cam") : setCamTo(!camOn));
   const toggleCompanion = async () => {
     const next = !companion;
     setCompanion(next);
@@ -2023,18 +2138,38 @@ function HostView({ jwt, title, accent }: { jwt: string; title: string; accent: 
             {companion ? "Phone is cam & mic" : "Use phone for cam & mic"}
           </button>
           <button
-            style={{ ...S.ctl, opacity: companion ? 0.45 : 1 }}
-            onClick={toggleMic}
-            disabled={companion}
+            style={{ ...S.ctl, opacity: companion && !twin.present ? 0.45 : 1 }}
+            onClick={() => void toggleMic()}
+            disabled={companion && !twin.present}
+            title={
+              companion
+                ? twin.present
+                  ? "Your phone's microphone"
+                  : "Open your host link on the phone first"
+                : undefined
+            }
           >
-            {micOn ? "Mute" : "Unmute"}
+            {companion ? (twin.mic ? "Mute phone" : "Unmute phone") : micOn ? "Mute" : "Unmute"}
           </button>
           <button
-            style={{ ...S.ctl, opacity: companion ? 0.45 : 1 }}
-            onClick={toggleCam}
-            disabled={companion}
+            style={{ ...S.ctl, opacity: companion && !twin.present ? 0.45 : 1 }}
+            onClick={() => void toggleCam()}
+            disabled={companion && !twin.present}
+            title={
+              companion
+                ? twin.present
+                  ? "Your phone's camera"
+                  : "Open your host link on the phone first"
+                : undefined
+            }
           >
-            {camOn ? "Stop video" : "Start video"}
+            {companion
+              ? twin.cam
+                ? "Stop phone video"
+                : "Start phone video"
+              : camOn
+                ? "Stop video"
+                : "Start video"}
           </button>
           <button
             style={{ ...S.ctl, background: screenOn ? "#1E3A5F" : "#122A4A" }}
