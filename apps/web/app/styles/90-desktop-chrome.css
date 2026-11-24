@@ -78,3 +78,26 @@ html[data-weered-desktop] body {
 .weered-titlebar .wtb-btn svg {
   display: block;
 }
+
+/* Full-screen layers start under the title bar, not behind it (James 11-24:
+   the Settings sheet's Close sat under the window controls). body padding
+   can't move a viewport-fixed element, so every fixed layer pinned to the
+   top edge is moved down by the bar's height. Inline styles serialize as
+   "position: fixed; inset: 0px" / "; top: 0px", which these match; layers
+   placed by measured coordinates (top: 123px) are already right and untouched. */
+html[data-weered-desktop]
+  :is(
+    [style*="position: fixed"][style*="inset: 0"],
+    [style*="position: fixed"][style^="top: 0"],
+    [style*="position: fixed"][style*="; top: 0"],
+    .fixed.inset-0,
+    .fixed.top-0,
+    .weered-overlay-backdrop,
+    .weered-gallery,
+    .weered-downgrade-layer
+  ):not(.weered-titlebar) {
+  top: var(--wtb-h) !important;
+}
+html[data-weered-desktop] .weered-overlay-panel {
+  top: calc(var(--wtb-h) + 12px);
+}
