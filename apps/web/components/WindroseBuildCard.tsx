@@ -211,7 +211,7 @@ export default function WindroseBuildCard({
             borderRadius: 999,
             flexShrink: 0,
             background: author.avatar
-              ? "rgba(255,255,255,.08)"
+              ? "transparent"
               : author.avatarColor || "rgba(201,160,102,.4)",
             display: "flex",
             alignItems: "center",

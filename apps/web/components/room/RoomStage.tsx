@@ -594,7 +594,7 @@ function VoiceCard({ tile, moduleType, roomUsers, getVideoElement }: { tile: any
 
           <div style={{
             width: 40, height: 40, borderRadius: "50%", position: "absolute", top: 28, left: 12,
-            background: userAvatar ? "var(--weered-room-line-2)" : avatarColor(tile.name, tile.isLocal),
+            background: userAvatar ? "transparent" : avatarColor(tile.name, tile.isLocal),
             border: "2.5px solid rgba(10,10,20,.9)",
             display: "flex", alignItems: "center", justifyContent: "center",
             fontSize: 16, fontWeight: 900, color: "#fff",

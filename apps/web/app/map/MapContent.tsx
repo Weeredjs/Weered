@@ -623,7 +623,11 @@ export default function MapContent() {
                     <div
                       className="nearby-avatar"
                       style={{
-                        background: u.avatarColor ? `${u.avatarColor}22` : "rgba(212,146,10,0.1)",
+                        background: u.avatar
+                          ? u.avatarColor || "transparent"
+                          : u.avatarColor
+                            ? `${u.avatarColor}22`
+                            : "rgba(212,146,10,0.1)",
                         color: u.avatarColor || "#d4920a",
                       }}
                     >

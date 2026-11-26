@@ -1304,7 +1304,7 @@ export default function LobbyRoomDirectory({
                                     fontWeight: 700,
                                     color: "rgba(255,255,255,.85)",
                                     background: u.avatar
-                                      ? "rgba(255,255,255,.08)"
+                                      ? "transparent"
                                       : `linear-gradient(135deg, ${color}55, ${color}aa)`,
                                     flexShrink: 0,
                                   }}

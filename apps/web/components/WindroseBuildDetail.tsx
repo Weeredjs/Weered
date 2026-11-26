@@ -395,7 +395,7 @@ export default function WindroseBuildDetail({
                 borderRadius: 999,
                 flexShrink: 0,
                 background: build.author.avatar
-                  ? "rgba(255,255,255,.08)"
+                  ? "transparent"
                   : build.author.avatarColor || "rgba(201,160,102,.4)",
                 display: "flex",
                 alignItems: "center",
@@ -634,7 +634,7 @@ export default function WindroseBuildDetail({
                       borderRadius: 999,
                       flexShrink: 0,
                       background: c.user?.avatar
-                        ? "rgba(255,255,255,.08)"
+                        ? "transparent"
                         : c.user?.avatarColor || "rgba(201,160,102,.35)",
                       display: "flex",
                       alignItems: "center",

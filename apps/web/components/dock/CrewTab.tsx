@@ -604,9 +604,7 @@ export function CrewTab({
                                 height: 28,
                                 borderRadius: 999,
                                 overflow: "hidden",
-                                background: m.avatar
-                                  ? "rgba(255,255,255,.08)"
-                                  : bg || "rgba(255,255,255,.1)",
+                                background: m.avatar ? "transparent" : bg || "rgba(255,255,255,.1)",
                                 display: "flex",
                                 alignItems: "center",
                                 justifyContent: "center",

@@ -16,9 +16,11 @@ export const AVATAR_DEFAULT_BG = "#c8860b";
  *  it goes when another account signs in here (lib/uiPrefs.ts). */
 export const MY_COLOR_KEY = "weered:avatarColor";
 
-/** Behind a picture when no colour is chosen: a faint fill, so a see-through
- *  picture still reads as a circle. */
-export const PICTURE_FILL = "rgba(255,255,255,.08)";
+/** Behind a picture when no colour is chosen: nothing, so a see-through
+ *  picture keeps its own shape everywhere (James 2026-11-26: "maintain avatar
+ *  BG transparency across the platform"). A colour its owner picked still
+ *  shows behind it. */
+export const PICTURE_FILL = "transparent";
 
 function myColor(): string | null {
   try {

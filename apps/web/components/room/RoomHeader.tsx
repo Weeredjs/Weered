@@ -73,7 +73,7 @@ function AvatarStack({ users, max = 4 }: { users: any[]; max?: number }) {
       {shown.map((u, i) => {
         const name = u?.name || u?.username || "?";
         const avatar = u?.avatar || null;
-        const bg = avatar ? "var(--weered-room-line-2)" : avatarBg(name);
+        const bg = avatar ? u?.avatarColor || "transparent" : avatarBg(name);
         return (
           <div
             key={u?.id || i}

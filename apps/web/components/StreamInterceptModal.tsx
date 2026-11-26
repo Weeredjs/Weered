@@ -226,7 +226,7 @@ export default function StreamInterceptModal({
                 height: 34,
                 borderRadius: 10,
                 flexShrink: 0,
-                background: meAvatar ? "rgba(255,255,255,.08)" : `${accent}30`,
+                background: meAvatar ? "transparent" : `${accent}30`,
                 border: `1.5px solid ${accent}50`,
                 display: "flex",
                 alignItems: "center",

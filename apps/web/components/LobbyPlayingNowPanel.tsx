@@ -211,9 +211,7 @@ export default function LobbyPlayingNowPanel({
                     height: 24,
                     borderRadius: 999,
                     flexShrink: 0,
-                    background: p.avatar
-                      ? "rgba(255,255,255,.08)"
-                      : p.avatarColor || "rgba(255,215,0,.3)",
+                    background: p.avatar ? "transparent" : p.avatarColor || "rgba(255,215,0,.3)",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",

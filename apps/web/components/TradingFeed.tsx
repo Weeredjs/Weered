@@ -211,9 +211,7 @@ export default function TradingFeed({
                 height: 32,
                 borderRadius: 999,
                 flexShrink: 0,
-                background: it.avatar
-                  ? "rgba(255,255,255,.08)"
-                  : it.avatarColor || "rgba(124,58,237,.25)",
+                background: it.avatar ? "transparent" : it.avatarColor || "rgba(124,58,237,.25)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",

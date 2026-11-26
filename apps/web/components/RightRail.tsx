@@ -250,7 +250,7 @@ function AvatarStack({ users, size = 18 }: { users: any[]; size?: number }) {
         return (
           <div key={i} style={{
             width: size, height: size, borderRadius: "50%", flexShrink: 0,
-            background: u?.avatar ? "rgba(0,0,0,0.4)" : bg,
+            background: bg,
             border: "1.5px solid rgba(10,10,18,1)",
             marginLeft: i > 0 ? -5 : 0,
             display: "flex", alignItems: "center", justifyContent: "center",

@@ -287,7 +287,7 @@ function LiveRoomCard({ room, onJoin }: { room: any; onJoin: (id: string, pinned
             style={{
               width: 26, height: 26, borderRadius: "50%",
               marginLeft: i === 0 ? 0 : -8,
-              background: a.avatar ? "rgba(255,255,255,.08)" : (a.avatarColor || "#5800E5"),
+              background: a.avatar ? a.avatarColor || "transparent" : (a.avatarColor || "#5800E5"),
               border: "2px solid rgba(10,10,18,.95)",
               display: "flex", alignItems: "center", justifyContent: "center",
               fontSize: 11, fontWeight: 800, color: "#fff",
