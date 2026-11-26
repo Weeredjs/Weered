@@ -526,9 +526,20 @@ function makeRoomConn(opts: {
     const r = ref.current;
     if (!r) return on;
     try {
+      // A camera turned off is only muted, so turning it back on fires no
+      // LocalTrackPublished and the self-view never came back (James 11-26: the
+      // PC saw the phone's camera again, the phone showed nothing). Put it back.
+      const had = !!r.localParticipant.getTrackPublication(Track.Source.Camera)?.track;
       await r.localParticipant.setCameraEnabled(on);
       // setCameraEnabled(false) may NOT fire LocalTrackUnpublished — clear the tile manually.
       if (!on) removeTile(r.localParticipant.identity);
+      const cam = r.localParticipant.getTrackPublication(Track.Source.Camera)?.track;
+      if (on && had && cam)
+        addTile(
+          r.localParticipant.identity,
+          `${opts.selfLabel()} (you)`,
+          cam.attach() as HTMLVideoElement,
+        );
       if (on) lastErr.cam = "";
       return on;
     } catch (e) {
