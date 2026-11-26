@@ -353,11 +353,9 @@ export default function LobbyHeroBar({
                 height: 56,
                 borderRadius: 3,
                 flexShrink: 0,
-                background: logoUrl
-                  ? lobbyId === "dnd"
-                    ? "transparent"
-                    : "rgba(0,0,0,0.35)"
-                  : `${heroAccent}28`,
+                // A see-through logo keeps its shape (James 11-26); the tint
+                // stays only behind a letter.
+                background: logoUrl ? "transparent" : `${heroAccent}28`,
                 border: `2px solid ${heroAccent}60`,
                 display: "flex",
                 alignItems: "center",
