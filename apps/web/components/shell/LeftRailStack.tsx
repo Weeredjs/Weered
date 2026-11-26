@@ -225,7 +225,11 @@ export default function LeftRailStack({ onOpen }: { onOpen: (at?: string) => voi
         onClick={() => onOpen("card")}
         style={
           avatar
-            ? { backgroundImage: `url("${avatar.replace(/["\\]/g, "")}")` }
+            ? {
+                backgroundImage: `url("${avatar.replace(/["\\]/g, "")}")`,
+                // A see-through picture keeps its shape (James 11-26).
+                backgroundColor: "transparent",
+              }
             : { background: avatarBg(name || "?", true) }
         }
       >
