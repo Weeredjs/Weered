@@ -1206,6 +1206,14 @@ async function main() {
   await app.register(geoRoutes, { authFromHeader });
 
   const onAvatarChanged = (userId: string, avatarUrl: string) => {
+    // Past messages in loaded rooms carry the picture they were sent with; give
+    // them the new one, as a reload from the DB already does (James 11-26: an
+    // earlier message still showed the old initial beside the new picture).
+    for (const room of rooms.values()) {
+      for (const m of room.msgs as any[]) {
+        if (m?.user?.id === userId) m.user = { ...m.user, avatar: avatarUrl };
+      }
+    }
     for (const sock of wss.clients) {
       const s = sock as Sock;
       if (s.user?.id === userId) {
