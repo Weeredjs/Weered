@@ -2015,14 +2015,18 @@ function HostView({ jwt, title, accent }: { jwt: string; title: string; accent: 
     if (typeof cmd.cam === "boolean" && cmd.cam !== camOn) void setCamTo(cmd.cam);
   };
   // In companion mode the PC's Mute and Start video work the phone.
+  // One pending check per button: a Stop's 6-second check must not fire after a
+  // quick Start (it then saw the camera on and said "didn't turn its camera off").
+  const askTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const askPhone = async (k: "mic" | "cam") => {
+    clearTimeout(askTimers.current[k]);
     const want = !twinRef.current[k];
     if (!(await conn.control({ [k]: want }))) {
       setMediaNote("Your phone isn't in the office. Open your host link on the phone first.");
       return;
     }
     setMediaNote("");
-    setTimeout(() => {
+    askTimers.current[k] = setTimeout(() => {
       if (companionRef.current && twinRef.current.present && twinRef.current[k] !== want)
         setMediaNote(
           `Your phone didn't turn its ${k === "mic" ? "microphone" : "camera"} ${want ? "on" : "off"}. Keep the office open on the phone with its screen on, and check the phone for a permission prompt.`,
