@@ -11,7 +11,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
-import { Room, RoomEvent, Track } from "livekit-client";
+import { Room, RoomEvent, Track, VideoPresets } from "livekit-client";
 import { PlanModule, PresentedPlanViewer } from "./PlanModule";
 import OfficeWindow from "./OfficeWindow";
 import OfficeWall, { officeYt, resetOfficeYt } from "./OfficeWall";
@@ -296,7 +296,16 @@ function makeRoomConn(opts: {
     // A disconnect()/newer connect() won while we fetched the token: abort BEFORE
     // creating a Room or touching ref (the ref-stomp half of the fast-admit race).
     if (myGen !== gen) throw new Error("superseded");
-    const r = new Room({ adaptiveStream: true, dynacast: true });
+    // Camera quality (James 11-26: "HD on my phone", soft on the PC). With the
+    // defaults a ~300px tile on a 1x screen asked for the 320x180 copy. Ask for
+    // twice the tile's size, and send no copy smaller than 640x360: an office
+    // call is two or three people, so the bandwidth is there.
+    const r = new Room({
+      adaptiveStream: { pixelDensity: 2 },
+      dynacast: true,
+      videoCaptureDefaults: { resolution: VideoPresets.h720.resolution },
+      publishDefaults: { videoSimulcastLayers: [VideoPresets.h360, VideoPresets.h540] },
+    });
     ref.current = r;
 
     // Every handler captures its own `r` and ignores events once this room is no
