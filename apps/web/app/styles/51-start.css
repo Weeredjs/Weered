@@ -1123,3 +1123,10 @@ html:is([data-weered-density="compact"], [data-weered-density="dense"])
     animation: none;
   }
 }
+
+/* A see-through logo or avatar keeps its own shape (James 11-26); the dark
+   tile stays only behind an initial. */
+img.weered-art-chip,
+img.weered-art-card-logo {
+  background: transparent;
+}
