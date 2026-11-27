@@ -65,7 +65,7 @@ export async function findLobbiesAndRooms(
       ? { unlisted: true, deletedAt: null, id: { in: memberOf } }
       : { unlisted: true, deletedAt: null, id: q };
 
-  const [allPinned, matchingRooms, unlistedHits] = await Promise.all([
+  const [allPinned, listedHits, matchingRooms, unlistedHits] = await Promise.all([
     prisma.lobby.findMany({
       where: { pinned: true, deletedAt: null },
       select: {
@@ -84,6 +84,32 @@ export async function findLobbiesAndRooms(
         _count: { select: { rooms: true, members: true } },
       },
       take: 100,
+    }),
+    // Listed lobbies that aren't pinned (James 11-27: "Beyond All Reason isn't
+    // listed?" It is in Downtown, so search finds it too). Name or id.
+    prisma.lobby.findMany({
+      where: {
+        pinned: false,
+        unlisted: false,
+        deletedAt: null,
+        OR: [{ name: { contains: q, mode: "insensitive" } }, { id: { contains: q.toLowerCase() } }],
+      },
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        verified: true,
+        moduleType: true,
+        moduleConfig: true,
+        keywords: true,
+        accentColor: true,
+        logoUrl: true,
+        bannerUrl: true,
+        websiteUrl: true,
+        ownerId: true,
+        _count: { select: { rooms: true, members: true } },
+      },
+      take: 20,
     }),
     prisma.room.findMany({
       // The lobby filter matters as much as the pinned one above: a room
@@ -161,7 +187,7 @@ export async function findLobbiesAndRooms(
       ? { ...x, moduleConfig: publicModuleConfig(x.moduleConfig) }
       : x;
   return {
-    pinned: [...unlistedHits, ...pinned].map(scrub),
+    pinned: [...unlistedHits, ...pinned, ...listedHits].map(scrub),
     rooms: [...unlistedRooms, ...matchingRooms].map(scrub),
   };
 }
