@@ -746,10 +746,13 @@ export function BookingsDesk({
             <button
               style={B.primary}
               onClick={() => {
-                navigator.clipboard?.writeText(feed).then(() => {
-                  setCopied(true);
-                  setTimeout(() => setCopied(false), 1800);
-                });
+                navigator.clipboard
+                  ?.writeText(feed)
+                  .then(() => {
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 1800);
+                  })
+                  .catch(() => setCopied(false)); // copy blocked: the link stays on screen to copy by hand
               }}
             >
               {copied ? "Copied" : "Copy"}

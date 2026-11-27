@@ -38,7 +38,7 @@ describe("a new lobby's address", () => {
       "../etc",
       "dеstiny2", // a Cyrillic "e": a look-alike of a real lobby's address
       "café",
-      "a‮b",
+      "a\u202Eb", // a right-to-left override, written as an escape
     ])
       expect(lobbyAddressProblem(bad)?.error, JSON.stringify(bad)).toBe("bad_address");
     for (const notText of [undefined, null, 7, {}, ["a"]])
